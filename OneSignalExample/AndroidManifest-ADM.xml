@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:amazon="http://schemas.amazon.com/apk/res/android"
+    package="com.onesignal.example"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="9"
+        android:targetSdkVersion="19" />
+    
+    <!-- ##START## OneSignal Permissions -->
+    
+    <!-- INTERNET and amazon device messaging are basic requirements for push messages from Amazon. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.amazon.device.messaging.permission.RECEIVE" />
+    
+    <!-- Create a unique permission for your app and use it so only your app can receive your OneSignal messages. -->
+    <permission android:name="com.onesignal.example.permission.RECEIVE_ADM_MESSAGE" android:protectionLevel="signature" />
+	<uses-permission android:name="com.onesignal.example.permission.RECEIVE_ADM_MESSAGE" />
+    
+    <!-- Required, makes sure notifications are delivered on time. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Required so the device vibrates on receiving a push notification.
+    	 Vibration settings of the device still apply. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    
+    <!-- ##END## OneSignal Permissions -->
+
+    <application
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        
+        <!-- Standard activity that starts when opening your app normally. -->
+        <activity
+            android:name="com.onesignal.example.MainActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <!-- Application tag requirements below for OneSignal -->
+        <!-- ##START## OneSignal -->
+        <amazon:enable-feature android:name="com.amazon.device.messaging" android:required="false"/>
+        
+        <activity android:name="com.onesignal.NotificationOpenedActivity"/>
+        
+        <service android:name="com.onesignal.ADMMessageHandler" android:exported="false" />
+		<receiver
+		   android:name="com.onesignal.ADMMessageHandler$Receiver"
+		   android:permission="com.amazon.device.messaging.permission.SEND" >
+            
+		   <intent-filter>
+			   <action android:name="com.amazon.device.messaging.intent.REGISTRATION" />
+			   <action android:name="com.amazon.device.messaging.intent.RECEIVE" />
+			   <category android:name="com.onesignal.example" />
+		   </intent-filter>
+		
+		</receiver>
+     	<!-- ##END## OneSignal -->
+     	
+    </application>
+</manifest>
