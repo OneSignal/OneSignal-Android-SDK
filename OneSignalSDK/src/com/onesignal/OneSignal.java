@@ -630,7 +630,7 @@ public class OneSignal {
          runNotificationOpenedCallback(data, false, false);
    }
 
-   private static void sendNotificationOpened(Context inContext, Bundle data) {
+   public static void sendNotificationOpened(Context inContext, Bundle data) {
       try {
          JSONObject customJson = new JSONObject(data.getString("custom"));
          String notificationId = customJson.getString("i");
