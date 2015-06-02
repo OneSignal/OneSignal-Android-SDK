@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.onesignal">
+
+    <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages from Google. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
+    <!-- Create a unique permission for your app and use it so only your app can receive your OneSignal messages. -->
+    <permission android:name="${manifestApplicationId}.permission.C2D_MESSAGE" android:protectionLevel="signature" />
+    <uses-permission android:name="${manifestApplicationId}.permission.C2D_MESSAGE" />
+
+    <!-- Required, makes sure notifications are delivered on time. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Required so the device vibrates on receiving a push notification.
+    	 Vibration settings of the device still apply. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application>
+        <activity android:name="com.onesignal.NotificationOpenedActivity"/>
+
+        <receiver
+            android:name="com.onesignal.GcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <category android:name="${manifestApplicationId}" />
+            </intent-filter>
+        </receiver>
+        <service android:name="com.onesignal.GcmIntentService" />
+    </application>
+
+</manifest>
