@@ -100,17 +100,17 @@ class GenerateNotification {
 
                         Bundle bundle = new Bundle(gcmBundle);
                         bundle.putString("custom", customJson.toString());
-                        OneSignal.handleNotificationOpened(context, bundle);
+                        OneSignal.handleNotificationOpened(bundle);
                      } catch (Throwable t) {}
                   }
                   else
-                     OneSignal.handleNotificationOpened(context, gcmBundle);
+                     OneSignal.handleNotificationOpened(gcmBundle);
                }
             };
             builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
                @Override
                public void onCancel(DialogInterface dialogInterface) {
-                  OneSignal.handleNotificationOpened(context, gcmBundle);
+                  OneSignal.handleNotificationOpened(gcmBundle);
                }
             });
 

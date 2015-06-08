@@ -14,6 +14,9 @@ import com.onesignal.OneSignal.NotificationOpenedHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Field;
+import java.util.HashMap;
+
 
 public class MainActivity extends ActionBarActivity {
 
@@ -32,23 +35,23 @@ public class MainActivity extends ActionBarActivity {
         // Pass in your app's Context, Google Project number, OneSignal App ID, and a NotificationOpenedHandler
         OneSignal.init(this, "703322744261", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new ExampleNotificationOpenedHandler());
         //OneSignal.init(this, "703322744261", "5eb5a37e-b458-11e3-ac11-000c2940e62c", new ExampleNotificationOpenedHandler());
-        //OneSignal.enableInAppAlertNotification(true);
+        OneSignal.enableInAppAlertNotification(false);
         OneSignal.enableNotificationsWhenActive(true);
         //OneSignal.setSubscription(false);
 
-//        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
-//            @Override
-//            public void idsAvailable(String userId, String registrationId) {
-//                Log.i("OneSignal Example:", "UserID: " + userId + ", RegId: " + (registrationId != null ? registrationId : "null"));
-//
-//                try {
-//                    // OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + userId + "']}"));
-//                    OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + "86480bb0-ef9a-11e4-8cf1-000c29917011', '2def6d7a-4395-11e4-890a-000c2940e62c" + "']}"), null);
-//                } catch (JSONException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
+        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+            @Override
+            public void idsAvailable(String userId, String registrationId) {
+                Log.i("OneSignal Example:", "UserID: " + userId + ", RegId: " + (registrationId != null ? registrationId : "null"));
+
+                try {
+                    OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + userId + "']}"), null);
+                    //OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + "86480bb0-ef9a-11e4-8cf1-000c29917011', '2def6d7a-4395-11e4-890a-000c2940e62c" + "']}"), null);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     @Override
@@ -85,6 +88,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     // NotificationOpenedHandler is implemented in its own class instead of adding implements to MainActivity so we don't hold on to a reference of our first activity if it gets recreated.
+    @OneSignal.TiedToCurrentActivity
     private class ExampleNotificationOpenedHandler implements NotificationOpenedHandler {
         /**
          * Callback to implement in your app to handle when a notification is opened from the Android status bar or
@@ -97,7 +101,7 @@ public class MainActivity extends ActionBarActivity {
          */
         @Override
         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            String messageTitle = "OneSignal Example", messageBody = message;
+            String messageTitle = "OneSignal Example:" + isActive, messageBody = message;
 
             try {
                 if (additionalData != null) {

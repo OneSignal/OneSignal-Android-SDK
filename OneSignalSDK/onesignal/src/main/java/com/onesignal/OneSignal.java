@@ -30,6 +30,10 @@ package com.onesignal;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -59,6 +63,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.TypedValue;
@@ -71,6 +76,10 @@ public class OneSignal {
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
+
+   @Retention(RetentionPolicy.RUNTIME)
+   @Target(ElementType.TYPE)
+   public @interface TiedToCurrentActivity {}
 
    public interface NotificationOpenedHandler {
       /**
@@ -130,13 +139,16 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "010900";
+   public static final String VERSION = "010901";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
    private static int deviceType;
    public static String sdkType = "native";
+
+   private static JSONObject nextInitAdditionalDataJSON = null;
+   private static String nextInitMessage = null;
 
    public static void init(Activity context, String googleProjectNumber, String oneSignalAppId) {
       init(context, googleProjectNumber, oneSignalAppId, null);
@@ -184,8 +196,23 @@ public class OneSignal {
          currentSubscription = -4;
       }
 
-      if (initDone)
+      if (initDone) {
+         if (context != null)
+            appContext = context;
+         if (inNotificationOpenedHandler != null)
+            notificationOpenedHandler = inNotificationOpenedHandler;
+
+         onResumed();
+
+         if (nextInitMessage != null && notificationOpenedHandler != null) {
+            fireNotificationOpenedHandler(nextInitMessage, nextInitAdditionalDataJSON, false);
+
+            nextInitMessage = null;
+            nextInitAdditionalDataJSON = null;
+         }
+
          return;
+      }
 
       // END: Init validation
 
@@ -236,12 +263,16 @@ public class OneSignal {
 
       // Called from tapping on a Notification from the status bar when the activity is completely dead and not open in any state.
       if (appContext.getIntent() != null && appContext.getIntent().getBundleExtra("data") != null)
-         runNotificationOpenedCallback(appContext.getIntent().getBundleExtra("data"), false, true);
+         runNotificationOpenedCallback(appContext.getIntent().getBundleExtra("data"), false);
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
 
       initDone = true;
+
+      // In the future on Android 4.0 (API 14)+ devices use registerActivityLifecycleCallbacks
+      //    instead of requiring developers to call onPause and onResume in each activity.
+      // Might be able to use registerOnActivityPausedListener in Android 2.3.3 (API 10) to 3.2 (API 13) for backwards compatibility
    }
 
    private static void updateRegistrationId(String id) {
@@ -784,7 +815,7 @@ public class OneSignal {
       }
    }
 
-   private static void runNotificationOpenedCallback(final Bundle data, final boolean isActive, boolean isUiThread) {
+   private static void runNotificationOpenedCallback(final Bundle data, final boolean isActive) {
       try {
          JSONObject customJSON = new JSONObject(data.getString("custom"));
 
@@ -823,31 +854,43 @@ public class OneSignal {
             if (additionalDataJSON.equals(new JSONObject()))
                additionalDataJSON = null;
 
-            final JSONObject finalAdditionalDataJSON = additionalDataJSON;
-            Runnable callBack = new Runnable() {
-               @Override
-               public void run() {
-                  notificationOpenedHandler.notificationOpened(data.getString("alert"), finalAdditionalDataJSON, isActive);
-               }
-            };
+            if (appContext.isFinishing()
+               &&  (notificationOpenedHandler.getClass().isAnnotationPresent(TiedToCurrentActivity.class)
+                 || notificationOpenedHandler instanceof Activity )) {
 
-            if (isUiThread)
-               callBack.run();
-            else
-               appContext.runOnUiThread(callBack);
+               // Activity is finished or isFinishing, run callback later when OneSignal.init is called again from anther Activity.
+               nextInitAdditionalDataJSON = additionalDataJSON;
+               nextInitMessage = data.getString("alert");
+               return;
+            }
+
+            fireNotificationOpenedHandler(data.getString("alert"), additionalDataJSON, isActive);
          }
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to run callback from notification opened.", t);
       }
    }
 
+   private static void fireNotificationOpenedHandler(final String message, final JSONObject additionalDataJSON, final boolean isActive) {
+      if (Looper.getMainLooper().getThread() == Thread.currentThread()) // isUIThread
+         notificationOpenedHandler.notificationOpened(message, additionalDataJSON, isActive);
+      else {
+         appContext.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+               notificationOpenedHandler.notificationOpened(message, additionalDataJSON, isActive);
+            }
+         });
+      }
+   }
+
    // Called when receiving GCM message when app is open and in focus.
    static void handleNotificationOpened(Bundle data) {
       sendNotificationOpened(appContext, data);
-      runNotificationOpenedCallback(data, true, false);
+      runNotificationOpenedCallback(data, true);
    }
 
-   // Called when opening a notification when the app is suspended in the background.
+   // Called when opening a notification when the app is suspended in the background or when it is dead
    public static void handleNotificationOpened(Context inContext, Bundle data) {
       sendNotificationOpened(inContext, data);
 
@@ -885,7 +928,7 @@ public class OneSignal {
       }
 
       if (initDone)
-         runNotificationOpenedCallback(data, false, false);
+         runNotificationOpenedCallback(data, false);
    }
 
    private static void sendNotificationOpened(Context inContext, Bundle data) {

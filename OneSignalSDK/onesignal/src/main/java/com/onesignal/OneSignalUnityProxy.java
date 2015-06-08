@@ -131,13 +131,13 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
 
    public void enableSound(boolean enable) { OneSignal.enableSound(enable); }
 
-   public void enableVibrate(boolean enable) {
-      OneSignal.enableVibrate(enable);
-   }
+   public void enableVibrate(boolean enable) { OneSignal.enableVibrate(enable); }
 
    public void enableNotificationsWhenActive(boolean enable) { OneSignal.enableNotificationsWhenActive(enable); }
 
    public void enableInAppAlertNotification(boolean enable) { OneSignal.enableInAppAlertNotification(enable); }
+
+   public void setSubscription(boolean enable) { OneSignal.setSubscription(enable); }
 
    public void postNotification(String json) {
       OneSignal.postNotification(json, new PostNotificationResponseHandler() {
