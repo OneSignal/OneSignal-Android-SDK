@@ -35,8 +35,8 @@ public class MainActivity extends ActionBarActivity {
         // Pass in your app's Context, Google Project number, OneSignal App ID, and a NotificationOpenedHandler
         OneSignal.init(this, "703322744261", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new ExampleNotificationOpenedHandler());
         //OneSignal.init(this, "703322744261", "5eb5a37e-b458-11e3-ac11-000c2940e62c", new ExampleNotificationOpenedHandler());
-        OneSignal.enableInAppAlertNotification(false);
-        OneSignal.enableNotificationsWhenActive(true);
+        //OneSignal.enableInAppAlertNotification(false);
+        //OneSignal.enableNotificationsWhenActive(true);
         //OneSignal.setSubscription(false);
 
         OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {

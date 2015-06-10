@@ -139,7 +139,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "010901";
+   public static final String VERSION = "010902";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -155,6 +155,16 @@ public class OneSignal {
    }
 
    public static void init(Activity context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler inNotificationOpenedHandler) {
+
+      try {
+         Class.forName("com.amazon.device.messaging.ADM");
+         pushRegistrator = new PushRegistratorADM();
+         deviceType = 2;
+      } catch (ClassNotFoundException e) {
+         pushRegistrator = new PushRegistratorGPS();
+         deviceType = 1;
+      }
+
       // START: Init validation
       try {
          UUID.fromString(oneSignalAppId);
@@ -166,14 +176,22 @@ public class OneSignal {
       if ("b2f7f966-d8cc-11eg-bed1-df8f05be55ba".equals(oneSignalAppId) || "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
          Log(LOG_LEVEL.WARN, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
 
-      try {
-         Double.parseDouble(googleProjectNumber);
-         if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
-            throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
-      }
-      catch (Throwable t) {
-         Log(LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t, context);
-         currentSubscription = -6;
+      if (deviceType == 1) {
+         try {
+            Double.parseDouble(googleProjectNumber);
+            if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
+               throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
+         } catch (Throwable t) {
+            Log(LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t, context);
+            currentSubscription = -6;
+         }
+         
+         try {
+            Class.forName("com.google.android.gms.common.GooglePlayServicesUtil");
+         } catch (ClassNotFoundException e) {
+            Log(LOG_LEVEL.FATAL, "The Google Play services client library was not found. Please make sure to include it in your project.", e, context);
+            currentSubscription = -4;
+         }
       }
 
       try {
@@ -187,13 +205,6 @@ public class OneSignal {
       } catch (ClassNotFoundException e) {
          Log(LOG_LEVEL.FATAL, "Could not find the Android Support Library v4. Please make sure android-support-v4.jar has been correctly added to your project.", e, context);
          currentSubscription = -3;
-      }
-
-      try {
-         Class.forName("com.google.android.gms.common.GooglePlayServicesUtil");
-      } catch (ClassNotFoundException e) {
-         Log(LOG_LEVEL.FATAL, "The Google Play services client library was not found. Please make sure to include it in your project.", e, context);
-         currentSubscription = -4;
       }
 
       if (initDone) {
@@ -227,15 +238,6 @@ public class OneSignal {
          Class.forName("com.amazon.device.iap.PurchasingListener");
          trackAmazonPurchase = new TrackAmazonPurchase(appContext);
       } catch (ClassNotFoundException e) {}
-
-      try {
-         Class.forName("com.amazon.device.messaging.ADM");
-         pushRegistrator = new PushRegistratorADM();
-         deviceType = 2;
-      } catch (ClassNotFoundException e) {
-         pushRegistrator = new PushRegistratorGPS();
-         deviceType = 1;
-      }
 
       // Re-register user if the app id changed, this might happen when a dev is testing.
       String oldAppId = getSavedAppId();

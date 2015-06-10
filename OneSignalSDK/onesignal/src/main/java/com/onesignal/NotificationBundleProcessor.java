@@ -46,7 +46,8 @@ public class NotificationBundleProcessor {
          boolean isActive = OneSignal.initDone && OneSignal.isForeground();
          boolean display = OneSignal.getNotificationsWhenActiveEnabled(context)
                            || showAsAlert
-                           || isActive;
+                           || !isActive;
+         
          prepareBundle(bundle);
 
          BackgroundBroadcaster.Invoke(context, bundle, isActive);
@@ -54,7 +55,9 @@ public class NotificationBundleProcessor {
          if (!bundle.containsKey("alert") || bundle.getString("alert") == null || bundle.getString("alert").equals(""))
             return;
 
-         if (!display) {
+         if (display)// Build notification from the Bundle
+            GenerateNotification.fromBundle(context, bundle, notificationOpenedActivityClass, showAsAlert && isActive);
+         else {
             final Bundle finalBundle = bundle;
             // Current thread is meant to be short lived. Make a new thread to do our OneSignal work on.
             new Thread(new Runnable() {
@@ -62,8 +65,7 @@ public class NotificationBundleProcessor {
                   OneSignal.handleNotificationOpened(finalBundle);
                }
             }).start();
-         } else // Build notification from the Bundle
-            GenerateNotification.fromBundle(context, bundle, notificationOpenedActivityClass, showAsAlert && isActive);
+         }
       }
    }
 
