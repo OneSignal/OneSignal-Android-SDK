@@ -23,6 +23,14 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:22.1.1'
+
     //compile 'com.onesignal:OneSignal:1.8.1+@aar'
     compile project(':onesignal')
+
+    testCompile 'junit:junit:4.12'
+    // testCompile 'org.robolectric:shadows-support-v4:3.0'
+    testCompile('org.robolectric:robolectric:3.0-rc3') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+    }
 }

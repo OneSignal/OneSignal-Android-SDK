@@ -7,6 +7,7 @@ import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.NotificationOpenedHandler;
@@ -30,7 +31,7 @@ public class MainActivity extends ActionBarActivity {
         currentActivity = this;
 
         // Enable Logging below to debug issues. (LogCat level, Visual level);
-        // OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.DEBUG);
+        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
 
         // Pass in your app's Context, Google Project number, OneSignal App ID, and a NotificationOpenedHandler
         OneSignal.init(this, "703322744261", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new ExampleNotificationOpenedHandler());
@@ -52,6 +53,14 @@ public class MainActivity extends ActionBarActivity {
                 }
             }
         });
+    }
+
+    public void onSubscribeClicked(View v) {
+        OneSignal.setSubscription(true);
+    }
+
+    public void onUnsubscribeClicked(View v) {
+        OneSignal.setSubscription(false);
     }
 
     @Override

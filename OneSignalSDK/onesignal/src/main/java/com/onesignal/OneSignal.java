@@ -122,7 +122,7 @@ public class OneSignal {
 
    private static String registrationId, userId = null;
    private static JSONObject pendingTags;
-   private static int savedSubscription;
+   private static int savedSubscription, syncedSubscription;
    private static int currentSubscription = 1;
    private static final int UNSUBSCRIBE_VALUE = -2;
 
@@ -139,7 +139,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "010902";
+   public static final String VERSION = "010903";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -169,11 +169,11 @@ public class OneSignal {
       try {
          UUID.fromString(oneSignalAppId);
       } catch (Throwable t) {
-         Log(LOG_LEVEL.FATAL, "OneSignal AppId format is invalid.\nExample: 'b2f7f966-d8cc-11eg-bed1-df8f05be55ba'\n", t, context);
+         Log(LOG_LEVEL.FATAL, "OneSignal AppId format is invalid.\nExample: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba'\n", t, context);
          return;
       }
 
-      if ("b2f7f966-d8cc-11eg-bed1-df8f05be55ba".equals(oneSignalAppId) || "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
+      if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) || "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
          Log(LOG_LEVEL.WARN, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
 
       if (deviceType == 1) {
@@ -228,6 +228,9 @@ public class OneSignal {
       // END: Init validation
 
       savedSubscription = getSubscription(context);
+      syncedSubscription = getSyncedSubscription(context);
+      if (currentSubscription > 0)
+         currentSubscription = savedSubscription;
 
       appId = oneSignalAppId;
       appContext = context;
@@ -475,7 +478,7 @@ public class OneSignal {
                String packageName = appContext.getPackageName();
                PackageManager packageManager = appContext.getPackageManager();
 
-               JSONObject jsonBody = new JSONObject();
+               final JSONObject jsonBody = new JSONObject();
                jsonBody.put("app_id", appId);
                if (registrationId != null)
                   jsonBody.put("identifier", registrationId);
@@ -505,7 +508,7 @@ public class OneSignal {
                jsonBody.put("device_model", Build.MODEL);
                jsonBody.put("device_type", deviceType);
 
-               if (savedSubscription != currentSubscription)
+               if (syncedSubscription != currentSubscription)
                   jsonBody.put("notification_types", currentSubscription);
 
                try {
@@ -549,9 +552,12 @@ public class OneSignal {
                JsonHttpResponseHandler jsonHandler = new JsonHttpResponseHandler() {
                   @Override
                   public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                     saveSubscription(currentSubscription);
-
                      try {
+                        try {
+                           if (jsonBody.has("notification_types"))
+                              saveSyncedSubscription(jsonBody.getInt("notification_types"));
+                        } catch (JSONException e) { e.printStackTrace(); }
+
                         if (response.has("id")) {
                            saveUserId(response.getString("id"));
                            sendPendingIdData();
@@ -650,12 +656,20 @@ public class OneSignal {
       return jsonBody;
    }
 
-   private static void postPlayerUpdate(JSONObject postBody) {
+   private static void postPlayerUpdate(final JSONObject postBody) {
       try {
          OneSignalRestClient.put(appContext, "players/" + getUserId(), postBody, new JsonHttpResponseHandler() {
             @Override
             public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
                logHttpError("player update failed!", statusCode, throwable, errorResponse);
+            }
+
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+               try {
+                  if (postBody.has("notification_types"))
+                     saveSyncedSubscription(postBody.getInt("notification_types"));
+               } catch (JSONException e) { e.printStackTrace(); }
             }
          });
       } catch (UnsupportedEncodingException e) {
@@ -777,10 +791,10 @@ public class OneSignal {
    }
 
    public static void idsAvailable(IdsAvailableHandler inIdsAvailableHandler) {
+      idsAvailableHandler = inIdsAvailableHandler;
+
       if (getUserId() != null)
-         inIdsAvailableHandler.idsAvailable(getUserId(), GetRegistrationId());
-      else
-         idsAvailableHandler = inIdsAvailableHandler;
+         internalFireIdsAvailableCallback();
    }
 
    private static void fireIdsAvailableCallback() {
@@ -788,13 +802,20 @@ public class OneSignal {
          appContext.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-               String regId = GetRegistrationId();
-               idsAvailableHandler.idsAvailable(getUserId(), regId);
-               if (regId != null)
-                  idsAvailableHandler = null;
+               internalFireIdsAvailableCallback();
             }
          });
       }
+   }
+
+   private static void internalFireIdsAvailableCallback() {
+      String regId = GetRegistrationId();
+      if (currentSubscription < 1)
+         regId = null;
+
+      idsAvailableHandler.idsAvailable(getUserId(), regId);
+      if (regId != null)
+         idsAvailableHandler = null;
    }
 
    static void sendPurchases(JSONArray purchases, boolean newAsExisting, ResponseHandlerInterface httpHandler) {
@@ -1081,9 +1102,9 @@ public class OneSignal {
       }
 
       currentSubscription = currentSubscription < UNSUBSCRIBE_VALUE ? currentSubscription : (enable ? 1 : UNSUBSCRIBE_VALUE);
-      if (savedSubscription == currentSubscription)
-         return;
       saveSubscription(currentSubscription);
+      if (syncedSubscription == currentSubscription)
+         return;
 
       try {
          if (getUserId() != null) {
@@ -1101,6 +1122,20 @@ public class OneSignal {
       SharedPreferences.Editor editor = prefs.edit();
       editor.putInt("ONESIGNAL_SUBSCRIPTION", value);
       editor.commit();
+      savedSubscription = value;
+   }
+
+   private static void saveSyncedSubscription(int value) {
+      final SharedPreferences prefs = getGcmPreferences(appContext);
+      SharedPreferences.Editor editor = prefs.edit();
+      editor.putInt("ONESIGNAL_SYNCED_SUBSCRIPTION", value);
+      editor.commit();
+      syncedSubscription = value;
+   }
+
+   static int getSyncedSubscription(Context context) {
+      final SharedPreferences prefs = getGcmPreferences(context);
+      return prefs.getInt("ONESIGNAL_SYNCED_SUBSCRIPTION", 1);
    }
 
    static int getSubscription(Context context) {
