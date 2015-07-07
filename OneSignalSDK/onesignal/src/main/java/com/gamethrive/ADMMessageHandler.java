@@ -49,7 +49,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
 	@Override
 	protected void onMessage(Intent intent) {
-		NotificationBundleProcessor.Process(this, intent.getExtras(), com.gamethrive.NotificationOpenedActivity.class);
+		NotificationBundleProcessor.Process(this, intent.getExtras());
 	}
 
 	@Override
@@ -62,7 +62,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 	protected void onRegistrationError(String error) {
 		Log.e("OneSignal", "ADM:onRegistrationError: " + error);
 		if ("INVALID_SENDER".equals(error))
-			Log.e("OneSignal", "Please double check that you have a mathcing package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.");
+			Log.e("OneSignal", "Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.");
 		
 		PushRegistratorADM.fireCallback(null);
 	}

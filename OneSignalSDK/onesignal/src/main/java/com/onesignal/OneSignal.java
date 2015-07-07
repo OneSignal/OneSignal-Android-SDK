@@ -40,7 +40,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -58,6 +57,8 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -70,6 +71,8 @@ import android.util.TypedValue;
 
 import com.loopj.android.http.*;
 import com.stericson.RootTools.internal.RootToolsInternalMethods;
+
+import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class OneSignal {
 
@@ -135,11 +138,10 @@ public class OneSignal {
 
    private static long lastTrackedTime, unSentActiveTime = -1;
 
-   private static String lastNotificationIdOpened;
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "010903";
+   public static final String VERSION = "011000";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -229,7 +231,7 @@ public class OneSignal {
 
       savedSubscription = getSubscription(context);
       syncedSubscription = getSyncedSubscription(context);
-      if (currentSubscription > 0)
+      if (currentSubscription > 0 && savedSubscription > -3)
          currentSubscription = savedSubscription;
 
       appId = oneSignalAppId;
@@ -267,8 +269,14 @@ public class OneSignal {
       });
 
       // Called from tapping on a Notification from the status bar when the activity is completely dead and not open in any state.
-      if (appContext.getIntent() != null && appContext.getIntent().getBundleExtra("data") != null)
-         runNotificationOpenedCallback(appContext.getIntent().getBundleExtra("data"), false);
+      if (appContext.getIntent() != null) {
+         Bundle oneSignalDataBundle = appContext.getIntent().getBundleExtra("onesignal_data");
+         if (oneSignalDataBundle != null) {
+            JSONArray dataArray = NotificationBundleProcessor.bundleAsJsonArray(oneSignalDataBundle);
+            openWebURLFromNotification(dataArray);
+            runNotificationOpenedCallback(dataArray, false);
+         }
+      }
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
@@ -282,7 +290,7 @@ public class OneSignal {
 
    private static void updateRegistrationId(String id) {
       String orgRegId = GetRegistrationId();
-      if (!id.equals(orgRegId)) {
+      if (id != null && !id.equals(orgRegId)) {
          SaveRegistrationId(id);
          fireIdsAvailableCallback();
          try {
@@ -669,7 +677,9 @@ public class OneSignal {
                try {
                   if (postBody.has("notification_types"))
                      saveSyncedSubscription(postBody.getInt("notification_types"));
-               } catch (JSONException e) { e.printStackTrace(); }
+               } catch (JSONException e) {
+                  e.printStackTrace();
+               }
             }
          });
       } catch (UnsupportedEncodingException e) {
@@ -838,60 +848,105 @@ public class OneSignal {
       }
    }
 
-   private static void runNotificationOpenedCallback(final Bundle data, final boolean isActive) {
-      try {
-         JSONObject customJSON = new JSONObject(data.getString("custom"));
+   private static void openWebURLFromNotification(JSONArray dataArray) {
+      int jsonArraySize = dataArray.length();
 
-         if (!isActive && customJSON.has("u")) {
-            String url = customJSON.getString("u");
-            if (!url.startsWith("http://") && !url.startsWith("https://"))
-               url = "http://" + url;
-            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            appContext.startActivity(browserIntent);
-         }
-
-         if (notificationOpenedHandler != null) {
-            JSONObject additionalDataJSON = new JSONObject();
-
-            if (customJSON.has("a"))
-               additionalDataJSON = customJSON.getJSONObject("a");
-
-            if (data.containsKey("title"))
-               additionalDataJSON.put("title", data.getString("title"));
-
-            if (customJSON.has("u"))
-               additionalDataJSON.put("launchURL", customJSON.getString("u"));
-
-            if (data.containsKey("sound"))
-               additionalDataJSON.put("sound", data.getString("sound"));
-
-            if (data.containsKey("sicon"))
-               additionalDataJSON.put("smallIcon", data.getString("sicon"));
-
-            if (data.containsKey("licon"))
-               additionalDataJSON.put("largeIcon", data.getString("licon"));
-
-            if (data.containsKey("bicon"))
-               additionalDataJSON.put("bigPicture", data.getString("bicon"));
-
-            if (additionalDataJSON.equals(new JSONObject()))
-               additionalDataJSON = null;
-
-            if (appContext.isFinishing()
-               &&  (notificationOpenedHandler.getClass().isAnnotationPresent(TiedToCurrentActivity.class)
-                 || notificationOpenedHandler instanceof Activity )) {
-
-               // Activity is finished or isFinishing, run callback later when OneSignal.init is called again from anther Activity.
-               nextInitAdditionalDataJSON = additionalDataJSON;
-               nextInitMessage = data.getString("alert");
+      for (int i = 0; i < jsonArraySize; i++) {
+         try {
+            JSONObject data = dataArray.getJSONObject(i);
+            if (!data.has("custom"))
                return;
+
+            JSONObject customJSON = new JSONObject(data.getString("custom"));
+
+            if (customJSON.has("u")) {
+               String url = customJSON.getString("u");
+               if (!url.startsWith("http://") && !url.startsWith("https://"))
+                  url = "http://" + url;
+               Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+               appContext.startActivity(browserIntent);
+            }
+         } catch (Throwable t) {
+            Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for launching a web URL.", t);
+         }
+      }
+   }
+
+   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean isActive) {
+      if (notificationOpenedHandler == null)
+         return;
+
+      int jsonArraySize = dataArray.length();
+
+      JSONObject completeAdditionalData = null;
+      String firstMessage = null;
+
+      for (int i = 0; i < jsonArraySize; i++) {
+         try {
+            JSONObject data = dataArray.getJSONObject(i);
+
+            JSONObject additionalDataJSON = null;
+
+            // Summary notifications will not have custom set
+            if (data.has("custom")) {
+               JSONObject customJSON = new JSONObject(data.getString("custom"));
+               additionalDataJSON = new JSONObject();
+
+               if (customJSON.has("a"))
+                  additionalDataJSON = customJSON.getJSONObject("a");
+
+               if (data.has("title"))
+                  additionalDataJSON.put("title", data.getString("title"));
+
+               if (customJSON.has("u"))
+                  additionalDataJSON.put("launchURL", customJSON.getString("u"));
+
+               if (data.has("sound"))
+                  additionalDataJSON.put("sound", data.getString("sound"));
+
+               if (data.has("sicon"))
+                  additionalDataJSON.put("smallIcon", data.getString("sicon"));
+
+               if (data.has("licon"))
+                  additionalDataJSON.put("largeIcon", data.getString("licon"));
+
+               if (data.has("bicon"))
+                  additionalDataJSON.put("bigPicture", data.getString("bicon"));
+
+               if (additionalDataJSON.equals(new JSONObject()))
+                  additionalDataJSON = null;
             }
 
-            fireNotificationOpenedHandler(data.getString("alert"), additionalDataJSON, isActive);
+            if (firstMessage == null) {
+               completeAdditionalData = additionalDataJSON;
+               firstMessage = data.getString("alert");
+            }
+            else {
+               if (completeAdditionalData == null)
+                  completeAdditionalData = new JSONObject();
+               if (!completeAdditionalData.has("stacked_notifications"))
+                  completeAdditionalData.put("stacked_notifications", new JSONArray());
+
+               additionalDataJSON.put("message", data.getString("alert"));
+
+               completeAdditionalData.getJSONArray("stacked_notifications").put(additionalDataJSON);
+            }
+         } catch (Throwable t) {
+            Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for callback.", t);
          }
-      } catch (Throwable t) {
-         Log(LOG_LEVEL.ERROR, "Failed to run callback from notification opened.", t);
       }
+
+      if (appContext.isFinishing()
+        && (notificationOpenedHandler.getClass().isAnnotationPresent(TiedToCurrentActivity.class)
+        || notificationOpenedHandler instanceof Activity)) {
+
+         // Activity is finished or isFinishing, run callback later when OneSignal.init is called again from anther Activity.
+         nextInitAdditionalDataJSON = completeAdditionalData;
+         nextInitMessage = firstMessage;
+         return;
+      }
+
+      fireNotificationOpenedHandler(firstMessage, completeAdditionalData, isActive);
    }
 
    private static void fireNotificationOpenedHandler(final String message, final JSONObject additionalDataJSON, final boolean isActive) {
@@ -907,14 +962,14 @@ public class OneSignal {
       }
    }
 
-   // Called when receiving GCM message when app is open and in focus.
-   static void handleNotificationOpened(Bundle data) {
+   // Called when receiving GCM message when app is open, in focus, and is not set to display when active.
+   static void handleNotificationOpened(JSONArray data) {
       sendNotificationOpened(appContext, data);
       runNotificationOpenedCallback(data, true);
    }
 
    // Called when opening a notification when the app is suspended in the background or when it is dead
-   public static void handleNotificationOpened(Context inContext, Bundle data) {
+   public static void handleNotificationOpened(Context inContext, JSONArray data) {
       sendNotificationOpened(inContext, data);
 
       // Open/Resume app when opening the notification.
@@ -923,13 +978,12 @@ public class OneSignal {
 
       boolean isCustom = false;
 
-      Intent intent = new Intent();
-      intent.setAction("com.onesignal.NotificationOpened.RECEIVE");
-      intent.setPackage(inContext.getPackageName());
+      Intent intent = new Intent().setAction("com.onesignal.NotificationOpened.RECEIVE")
+                                  .setPackage(inContext.getPackageName());
 
       List<ResolveInfo> resolveInfo = packageManager.queryBroadcastReceivers(intent, PackageManager.GET_INTENT_FILTERS);
       if (resolveInfo.size() > 0) {
-         intent.putExtra("data", data);
+         intent.putExtra("onesignal_data", data.toString());
          inContext.sendBroadcast(intent);
          isCustom = true;
       }
@@ -938,46 +992,59 @@ public class OneSignal {
       if (resolveInfo.size() > 0) {
          isCustom = true;
          if (!isCustom)
-            intent.putExtra("data", data);
+            intent.putExtra("onesignal_data", data.toString());
          intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
          inContext.startActivity(intent);
       }
 
       if (!isCustom) {
-         Log(LOG_LEVEL.DEBUG, "normal start");
-         Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName()).putExtra("data", data);
-         launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-         inContext.startActivity(launchIntent);
+         Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
+
+         if (launchIntent != null) {
+            launchIntent.putExtra("onesignal_data", data.toString())
+                        .setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            inContext.startActivity(launchIntent);
+         }
       }
 
-      if (initDone)
+      if (initDone) {
+         openWebURLFromNotification(data);
          runNotificationOpenedCallback(data, false);
+      }
    }
 
-   private static void sendNotificationOpened(Context inContext, Bundle data) {
-      try {
-         JSONObject customJson = new JSONObject(data.getString("custom"));
-         String notificationId = customJson.getString("i");
+   private static void sendNotificationOpened(Context inContext, JSONArray dataArray) {
+      for (int i = 0; i < dataArray.length(); i++) {
+         try {
+            JSONObject data = dataArray.getJSONObject(i);
 
-         // In some rare cases this can double fire, preventing that here.
-         if (notificationId.equals(lastNotificationIdOpened))
-            return;
+            // Summary notifications do not always have a custom field.
+            if (!data.has("custom"))
+               continue;
 
-         lastNotificationIdOpened = notificationId;
+            JSONObject customJson = new JSONObject(data.getString("custom"));
 
-         JSONObject jsonBody = new JSONObject();
-         jsonBody.put("app_id", getSavedAppId(inContext));
-         jsonBody.put("player_id", getSavedUserId(inContext));
-         jsonBody.put("opened", true);
+            // ... they also never have a OneSignal notification id.
+            if (!customJson.has("i"))
+               continue;
 
-         OneSignalRestClient.put(inContext, "notifications/" + customJson.getString("i"), jsonBody, new JsonHttpResponseHandler() {
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-               logHttpError("sending Notification Opened Failed", statusCode, throwable, errorResponse);
-            }
-         });
-      } catch (Throwable t) { // JSONException and UnsupportedEncodingException
-         Log(LOG_LEVEL.ERROR, "Failed to generate JSON to send notification opened.", t);
+            String notificationId = customJson.getString("i");
+
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("app_id", getSavedAppId(inContext));
+            jsonBody.put("player_id", getSavedUserId(inContext));
+            jsonBody.put("opened", true);
+
+            OneSignalRestClient.put(inContext, "notifications/" + notificationId, jsonBody, new JsonHttpResponseHandler() {
+               @Override
+               public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                  logHttpError("sending Notification Opened Failed", statusCode, throwable, errorResponse);
+               }
+            });
+         }
+         catch(Throwable t){ // JSONException and UnsupportedEncodingException
+            Log(LOG_LEVEL.ERROR, "Failed to generate JSON to send notification opened.", t);
+         }
       }
    }
 
@@ -1174,63 +1241,31 @@ public class OneSignal {
       return context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
    }
 
-   private static LinkedList<String> notificationsReceivedStack;
-
-   private static void GetNotificationsReceived(Context context) {
-      if (notificationsReceivedStack == null && context != null ) {
-         notificationsReceivedStack = new LinkedList<String>();
-
-         final SharedPreferences prefs = getGcmPreferences(context);
-         String jsonListStr = prefs.getString("GT_RECEIVED_NOTIFICATION_LIST", null);
-
-         if (jsonListStr != null) {
-            try {
-               JSONArray notificationsReceivedList = new JSONArray(jsonListStr);
-               for (int i = 0; i < notificationsReceivedList.length(); i++)
-                  notificationsReceivedStack.push(notificationsReceivedList.getString(i));
-            } catch (Throwable t) {
-               Log(LOG_LEVEL.ERROR, "Failed to get notification received list.", t);
-            }
-         }
-      }
-   }
-
-   private static void AddNotificationIdToList(String id, Context context) {
-      GetNotificationsReceived(context);
-      if (notificationsReceivedStack == null)
-         return;
-
-      if (notificationsReceivedStack.size() >= 10)
-         notificationsReceivedStack.removeLast();
-
-      notificationsReceivedStack.addFirst(id);
-
-      JSONArray jsonArray = new JSONArray();
-      String notificationId;
-      for (int i = notificationsReceivedStack.size() - 1; i > -1; i--) {
-         notificationId = notificationsReceivedStack.get(i);
-         if (notificationId == null)
-            continue;
-         jsonArray.put(notificationsReceivedStack.get(i));
-      }
-
-      final SharedPreferences prefs = getGcmPreferences(context);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putString("GT_RECEIVED_NOTIFICATION_LIST", jsonArray.toString());
-      editor.commit();
-   }
-
    static boolean isDuplicateNotification(String id, Context context) {
-      GetNotificationsReceived(context);
-      if (notificationsReceivedStack == null || id == null || "".equals(id))
+      if (id == null || "".equals(id))
          return false;
 
-      if (notificationsReceivedStack.contains(id)) {
+      OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
+      SQLiteDatabase readableDb = dbHelper.getReadableDatabase();
+
+      String[] retColumn = { NotificationTable.COLUMN_NAME_NOTIFICATION_ID };
+      String[] whereArgs = { id };
+
+      Cursor cursor = readableDb.query(
+            NotificationTable.TABLE_NAME,
+            retColumn,
+            NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",   // Where String
+            whereArgs,
+            null, null, null);
+
+      boolean exists = cursor.moveToFirst();
+      readableDb.close();
+
+      if (exists) {
          Log(LOG_LEVEL.DEBUG, "Duplicate GCM message received, skipping processing. " + id);
          return true;
       }
-      
-      AddNotificationIdToList(id, context);
+
       return false;
    }
    
@@ -1245,12 +1280,12 @@ public class OneSignal {
             if (customJSON.has("i"))
                return !OneSignal.isDuplicateNotification(customJSON.getString("i"), context);
             else
-               Log(LOG_LEVEL.DEBUG, "Not a OneSignal formated GCM message. No 'i' field in custom.");
+               Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
          }
          else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formated GCM message. No 'custom' field in the bundle.");
+            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the bundle.");
       } catch (Throwable t) {
-         Log(LOG_LEVEL.INFO, "Could not parse bundle for duplicate.", t);
+         Log(LOG_LEVEL.DEBUG, "Could not parse bundle for duplicate, probably not a OneSignal notification.", t);
       }
 
       return false;

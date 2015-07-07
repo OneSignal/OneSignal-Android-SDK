@@ -27,36 +27,25 @@
 
 package com.gamethrive;
 
-import com.onesignal.OneSignal;
+import com.onesignal.NotificationOpenedProcessor;
 
 import android.app.Activity;
-import android.app.NotificationManager;
 import android.content.Intent;
 import android.os.Bundle;
 
 public class NotificationOpenedActivity extends Activity {
+
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
-      processNotification();
+      NotificationOpenedProcessor.processFromActivity(this, getIntent());
+      finish();
    }
 
    @Override
    protected void onNewIntent(Intent intent) {
       super.onNewIntent(intent);
-      processNotification();
-   }
-
-   private void processNotification() {
-      Intent intent = getIntent();
-      int notificationId = intent.getIntExtra("notificationId", 0);
-
-      if (notificationId != 0) { // Pressed an action button need to clear the notification manually
-         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-         notificationManager.cancel(notificationId);
-      }
-
-      OneSignal.handleNotificationOpened(this, intent.getBundleExtra("data"));
+      NotificationOpenedProcessor.processFromActivity(this, getIntent());
       finish();
    }
 }

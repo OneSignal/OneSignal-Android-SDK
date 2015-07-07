@@ -1,12 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:amazon="http://schemas.amazon.com/apk/res/android"
     package="com.onesignal.example" >
+
+    <uses-permission android:name="com.amazon.device.messaging.permission.RECEIVE" />
+    <permission android:name="com.onesignal.example.permission.RECEIVE_ADM_MESSAGE" android:protectionLevel="signature" />
+    <uses-permission android:name="com.onesignal.example.permission.RECEIVE_ADM_MESSAGE" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
+
+        <!--
+        <amazon:enable-feature android:name="com.amazon.device.messaging" android:required="false"/>
+        <service android:name="com.onesignal.ADMMessageHandler" android:exported="false" />
+        <receiver
+            android:name="com.onesignal.ADMMessageHandler$Receiver"
+            android:permission="com.amazon.device.messaging.permission.SEND" >
+            <intent-filter>
+                <action android:name="com.amazon.device.messaging.intent.REGISTRATION" />
+                <action android:name="com.amazon.device.messaging.intent.RECEIVE" />
+                <category android:name="com.onesignal.example" />
+            </intent-filter>
+        </receiver>
+
+        -->
+
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name" >
@@ -19,12 +40,13 @@
             android:name=".MainActivity2Activity"
             android:label="@string/title_activity_main_activity2"
             android:exported="false" >
-            <intent-filter>
+           <!-- <intent-filter>
                 <action android:name="com.onesignal.NotificationOpened.RECEIVE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            -->
         </activity>
-
+<!--
         <receiver
             android:name="com.onesignal.example.TestNotificationOpenedReceiver"
             android:exported="false">
@@ -32,6 +54,15 @@
                 <action android:name="com.onesignal.NotificationOpened.RECEIVE" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name="com.onesignal.example.OneSignalBackgroundDataReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.onesignal.BackgroundBroadcast.RECEIVE" />
+            </intent-filter>
+        </receiver>
+-->
     </application>
 
 </manifest>

@@ -6,12 +6,9 @@ import android.util.Log;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;
 
-import org.apache.http.entity.StringEntity;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
-import org.robolectric.annotation.internal.Instrument;
 
 import java.io.UnsupportedEncodingException;
 

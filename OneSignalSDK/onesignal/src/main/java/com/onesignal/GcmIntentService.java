@@ -30,8 +30,6 @@
 
 package com.onesignal;
 
-import com.onesignal.NotificationBundleProcessor;
-
 import android.app.IntentService;
 import android.content.Intent;
 import android.os.Bundle;
@@ -45,7 +43,7 @@ import android.os.Bundle;
  */
 public class GcmIntentService extends IntentService {
 
-   private static final String GCM_RECIEVE = "com.google.android.c2dm.intent.RECEIVE";
+   private static final String GCM_RECEIVE = "com.google.android.c2dm.intent.RECEIVE";
    private static final String GCM_TYPE = "gcm";
 
    public GcmIntentService() {
@@ -53,7 +51,7 @@ public class GcmIntentService extends IntentService {
    }
 
    private static boolean isGcmMessage(Intent intent) {
-      if (GCM_RECIEVE.equals(intent.getAction())) {
+      if (GCM_RECEIVE.equals(intent.getAction())) {
          String messageType = intent.getStringExtra("message_type");
          return (messageType == null || GCM_TYPE.equals(messageType));
       }
@@ -65,7 +63,7 @@ public class GcmIntentService extends IntentService {
       Bundle extras = intent.getExtras();
       
       if (isGcmMessage(intent))
-         NotificationBundleProcessor.Process(this, extras, com.onesignal.NotificationOpenedActivity.class);
+         NotificationBundleProcessor.Process(this, extras);
 
       // Release the wake lock provided by the WakefulBroadcastReceiver.
       GcmBroadcastReceiver.completeWakefulIntent(intent);

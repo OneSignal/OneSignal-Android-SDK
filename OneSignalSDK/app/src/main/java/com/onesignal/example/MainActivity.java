@@ -12,6 +12,7 @@ import android.view.View;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -36,23 +37,23 @@ public class MainActivity extends ActionBarActivity {
         // Pass in your app's Context, Google Project number, OneSignal App ID, and a NotificationOpenedHandler
         OneSignal.init(this, "703322744261", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new ExampleNotificationOpenedHandler());
         //OneSignal.init(this, "703322744261", "5eb5a37e-b458-11e3-ac11-000c2940e62c", new ExampleNotificationOpenedHandler());
-        //OneSignal.enableInAppAlertNotification(false);
-        //OneSignal.enableNotificationsWhenActive(true);
+        OneSignal.enableInAppAlertNotification(true);
+        OneSignal.enableNotificationsWhenActive(false);
         //OneSignal.setSubscription(false);
 
-        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
-            @Override
-            public void idsAvailable(String userId, String registrationId) {
-                Log.i("OneSignal Example:", "UserID: " + userId + ", RegId: " + (registrationId != null ? registrationId : "null"));
-
-                try {
-                    OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + userId + "']}"), null);
-                    //OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + "86480bb0-ef9a-11e4-8cf1-000c29917011', '2def6d7a-4395-11e4-890a-000c2940e62c" + "']}"), null);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+//        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+//            @Override
+//            public void idsAvailable(String userId, String registrationId) {
+//                Log.i("OneSignal Example:", "UserID: " + userId + ", RegId: " + (registrationId != null ? registrationId : "null"));
+//
+//                try {
+//                    OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + userId + "']}"), null);
+//                    //OneSignal.postNotification(new JSONObject("{'contents': {'en':'Test Message'}, 'include_player_ids': ['" + "86480bb0-ef9a-11e4-8cf1-000c29917011', '2def6d7a-4395-11e4-890a-000c2940e62c" + "']}"), null);
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
     }
 
     public void onSubscribeClicked(View v) {
@@ -110,6 +111,10 @@ public class MainActivity extends ActionBarActivity {
          */
         @Override
         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
+           Log.i("OneSignalExample", "message: " + message);
+           Log.i("OneSignalExample", "additionalData: " + additionalData.toString());
+
+           /*
             String messageTitle = "OneSignal Example:" + isActive, messageBody = message;
 
             try {
@@ -129,6 +134,7 @@ public class MainActivity extends ActionBarActivity {
                     .setCancelable(true)
                     .setPositiveButton("OK", null)
                     .create().show();
+                    */
         }
     }
 }

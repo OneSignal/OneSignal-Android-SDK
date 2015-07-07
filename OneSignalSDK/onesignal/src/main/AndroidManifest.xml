@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application>
-        <activity android:name="com.onesignal.NotificationOpenedActivity"/>
+        <activity android:name="com.onesignal.NotificationOpenedActivity" android:theme="@android:style/Theme.NoDisplay" />
 
         <receiver
             android:name="com.onesignal.GcmBroadcastReceiver"

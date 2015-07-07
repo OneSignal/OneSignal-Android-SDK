@@ -31,16 +31,20 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.onesignal.OneSignal;
+import com.onesignal.OneSignalDbContract.NotificationTable;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+
+import java.util.Set;
 
 public class NotificationBundleProcessor {
 
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
-   public static void Process(Context context, Bundle bundle, Class<?> notificationOpenedActivityClass) {
+   public static void Process(Context context, Bundle bundle) {
       if (OneSignal.isValidAndNotDuplicated(context, bundle)) {
          boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
          boolean isActive = OneSignal.initDone && OneSignal.isForeground();
@@ -55,18 +59,83 @@ public class NotificationBundleProcessor {
          if (!bundle.containsKey("alert") || bundle.getString("alert") == null || bundle.getString("alert").equals(""))
             return;
 
+         int notificationId = -1;
+
          if (display)// Build notification from the Bundle
-            GenerateNotification.fromBundle(context, bundle, notificationOpenedActivityClass, showAsAlert && isActive);
+            notificationId = GenerateNotification.fromBundle(context, bundle, showAsAlert && isActive);
          else {
             final Bundle finalBundle = bundle;
             // Current thread is meant to be short lived. Make a new thread to do our OneSignal work on.
             new Thread(new Runnable() {
                public void run() {
-                  OneSignal.handleNotificationOpened(finalBundle);
+                  OneSignal.handleNotificationOpened(NotificationBundleProcessor.bundleAsJsonArray(finalBundle));
                }
             }).start();
          }
+
+         saveNotification(context, bundle, !display, notificationId);
       }
+   }
+
+   private static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+      try {
+         JSONObject customJSON = new JSONObject(bundle.getString("custom"));
+
+         OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
+         SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+
+         ContentValues values = new ContentValues();
+         values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.getString("i"));
+         if (bundle.containsKey("grp"))
+            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, bundle.getString("grp"));
+
+         values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
+         if (!opened)
+            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationId);
+
+         if (bundle.containsKey("title"))
+            values.put(NotificationTable.COLUMN_NAME_TITLE, bundle.getString("title"));
+         values.put(NotificationTable.COLUMN_NAME_MESSAGE, bundle.getString("alert"));
+
+         values.put(NotificationTable.COLUMN_NAME_FULL_DATA, bundleAsJSONObject(bundle).toString());
+
+         writableDb.insert(NotificationTable.TABLE_NAME, null, values);
+
+         // Clean up old records that have been dismissed or opened already after 1 week.
+         writableDb.delete(NotificationTable.TABLE_NAME,
+               NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000) - 604800) + " AND " +
+                     "(" + NotificationTable.COLUMN_NAME_DISMISSED + " = 1 OR " + NotificationTable.COLUMN_NAME_OPENED + " = 1" + ")",
+               null);
+
+         writableDb.close();
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+   }
+
+   public static JSONArray newJsonArray(JSONObject jsonObject) {
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(jsonObject);
+      return jsonArray;
+   }
+
+   public static JSONArray bundleAsJsonArray(Bundle bundle) {
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(bundleAsJSONObject(bundle));
+      return jsonArray;
+   }
+
+   public static JSONObject bundleAsJSONObject(Bundle bundle) {
+      JSONObject json = new JSONObject();
+      Set<String> keys = bundle.keySet();
+
+      for (String key : keys) {
+         try {
+            json.put(key, bundle.get(key));
+         } catch (JSONException e) {}
+      }
+
+      return json;
    }
 
    // Format our short keys into more readable ones.
