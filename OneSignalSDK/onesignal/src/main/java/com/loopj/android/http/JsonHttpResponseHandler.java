@@ -63,7 +63,7 @@ public class JsonHttpResponseHandler extends TextHttpResponseHandler {
      * @param response   parsed response if any
      */
     public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-        Log.w(LOG_TAG, "onSuccess(int, Header[], JSONObject) was not overriden, but callback was received");
+        //Log.w(LOG_TAG, "onSuccess(int, Header[], JSONObject) was not overriden, but callback was received");
     }
 
     /**
@@ -74,7 +74,7 @@ public class JsonHttpResponseHandler extends TextHttpResponseHandler {
      * @param response   parsed response if any
      */
     public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
-        Log.w(LOG_TAG, "onSuccess(int, Header[], JSONArray) was not overriden, but callback was received");
+        //Log.w(LOG_TAG, "onSuccess(int, Header[], JSONArray) was not overriden, but callback was received");
     }
 
     /**
@@ -86,7 +86,7 @@ public class JsonHttpResponseHandler extends TextHttpResponseHandler {
      * @param errorResponse parsed response if any
      */
     public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-        Log.w(LOG_TAG, "onFailure(int, Header[], Throwable, JSONObject) was not overriden, but callback was received", throwable);
+        //Log.w(LOG_TAG, "onFailure(int, Header[], Throwable, JSONObject) was not overriden, but callback was received", throwable);
     }
 
     /**
@@ -98,17 +98,17 @@ public class JsonHttpResponseHandler extends TextHttpResponseHandler {
      * @param errorResponse parsed response if any
      */
     public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONArray errorResponse) {
-        Log.w(LOG_TAG, "onFailure(int, Header[], Throwable, JSONArray) was not overriden, but callback was received", throwable);
+        //Log.w(LOG_TAG, "onFailure(int, Header[], Throwable, JSONArray) was not overriden, but callback was received", throwable);
     }
 
     @Override
     public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-        Log.w(LOG_TAG, "onFailure(int, Header[], String, Throwable) was not overriden, but callback was received", throwable);
+        //Log.w(LOG_TAG, "onFailure(int, Header[], String, Throwable) was not overriden, but callback was received", throwable);
     }
 
     @Override
     public void onSuccess(int statusCode, Header[] headers, String responseString) {
-        Log.w(LOG_TAG, "onSuccess(int, Header[], String) was not overriden, but callback was received");
+        //Log.w(LOG_TAG, "onSuccess(int, Header[], String) was not overriden, but callback was received");
     }
 
     @Override

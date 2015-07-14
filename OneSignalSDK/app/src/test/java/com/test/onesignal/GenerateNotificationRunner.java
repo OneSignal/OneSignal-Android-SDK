@@ -1,9 +1,41 @@
+/**
+ * Modified MIT License
+ *
+ * Copyright 2015 OneSignal
+ *
+ * Portions Copyright 2013 Google Inc.
+ * This file includes portions from the Google GcmClient demo project
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * 1. The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * 2. All copies of substantial portions of the Software may only be used in connection
+ * with services provided by OneSignal.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package com.test.onesignal;
 
 import android.app.Activity;
 import android.app.Notification;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -53,10 +85,13 @@ public class GenerateNotificationRunner {
 
    @Before // Before each test
    public void beforeEachTest() throws Exception {
+      ShadowRoboNotificationManager.notifications.clear();
+
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
 
       blankActiviy = Robolectric.buildActivity(BlankActivity.class).create().get();
+      blankActiviy.getApplicationInfo().name = "UnitTestApp";
 
       // Add our launcher Activity to the run time to simulate a real app.
       // getRobolectricPackageManager is null if run in BeforeClass for some reason.
@@ -70,10 +105,15 @@ public class GenerateNotificationRunner {
       RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
    }
 
+
    private Bundle getBaseNotifBundle() {
+      return getBaseNotifBundle("UUID");
+   }
+
+   private Bundle getBaseNotifBundle(String id) {
       Bundle bundle = new Bundle();
       bundle.putString("alert", notifMessage);
-      bundle.putString("custom", "{\"i\": \"UUID\"}");
+      bundle.putString("custom", "{\"i\": \"" + id + "\"}");
 
       return bundle;
    }
@@ -89,8 +129,21 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   public void shouldSetTitleCorrectly() throws Exception {
+      // Should use app's Title by default
+      Bundle bundle = getBaseNotifBundle();
+      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+
+      // Should allow title from GCM payload.
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("title", "title123");
+      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      Assert.assertEquals("title123", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+   }
+
+   @Test
    public void shouldHandleBasicNotifications() throws Exception {
-      System.out.println("" + System.currentTimeMillis());
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor.Process(blankActiviy, bundle);
@@ -118,9 +171,7 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(1, cursor.getCount());
 
       // Display a second notification
-      bundle = new Bundle();
-      bundle.putString("alert", notifMessage);
-      bundle.putString("custom", "{\"i\": \"UUID2\"}");
+      bundle = getBaseNotifBundle("UUID2");
       NotificationBundleProcessor.Process(blankActiviy, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, "android_notification_id <> " + firstNotifId, null, null, null, null);
       cursor.moveToFirst();
@@ -132,9 +183,7 @@ public class GenerateNotificationRunner {
       // Display a 3rd notification
       // Should of been added for a total of 2 records now.
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
-      bundle = new Bundle();
-      bundle.putString("alert", notifMessage);
-      bundle.putString("custom", "{\"i\": \"UUID3\"}");
+      bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor.Process(blankActiviy, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, null, null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());

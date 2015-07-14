@@ -1,8 +1,8 @@
 /**
  * Modified MIT License
- * 
+ *
  * Copyright 2015 OneSignal
- * 
+ *
  * Portions Copyright 2013 Google Inc.
  * This file includes portions from the Google GcmClient demo project
  *
@@ -12,13 +12,13 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,8 +34,8 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
-
 
 /**
  * This {@code WakefulBroadcastReceiver} takes care of creating and managing a
@@ -48,13 +48,20 @@ import android.support.v4.content.WakefulBroadcastReceiver;
 
 public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        // Explicitly specify that GcmIntentService will handle the intent.
-        ComponentName comp = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
-        
-        // Start the service, keeping the device awake while it is launching.
-        startWakefulService(context, (intent.setComponent(comp)));
-        setResultCode(Activity.RESULT_OK);
-    }
+   @Override
+   public void onReceive(Context context, Intent intent) {
+      // Google Play services started sending an extra non-ordered broadcast with the bundle:
+      //    { "COM": "RST_FULL", "from": "google.com/iid" }
+      // Result codes are not valid with non-ordered broadcasts so omit it to prevent errors to the log.
+      Bundle bundle = intent.getExtras();
+      if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
+         return;
+
+      // Explicitly specify that GcmIntentService will handle the intent.
+      ComponentName comp = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
+
+      // Start the service, keeping the device awake while it is launching.
+      startWakefulService(context, (intent.setComponent(comp)));
+      setResultCode(Activity.RESULT_OK);
+   }
 }

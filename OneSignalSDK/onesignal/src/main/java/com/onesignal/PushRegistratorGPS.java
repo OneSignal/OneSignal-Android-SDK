@@ -46,7 +46,7 @@ import android.content.pm.PackageManager;
 
 import java.io.IOException;
 
-class PushRegistratorGPS implements PushRegistrator {
+public class PushRegistratorGPS implements PushRegistrator {
 
    private Context appContext;
    private RegisteredHandler registeredHandler;
@@ -168,6 +168,7 @@ class PushRegistratorGPS implements PushRegistrator {
                   }
                } catch (Throwable t) {
                   OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error Getting Google Registration ID", t);
+                  registeredHandler.complete(null);
                   break;
                }
             }

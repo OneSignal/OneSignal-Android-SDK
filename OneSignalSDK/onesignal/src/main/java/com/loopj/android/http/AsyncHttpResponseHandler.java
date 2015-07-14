@@ -149,7 +149,7 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
         // A looper must be prepared before setting asynchronous mode.
         if (!sync && looper == null) {
             sync = true;
-            Log.w(LOG_TAG, "Current thread has not called Looper.prepare(). Forcing synchronous mode.");
+            //Log.w(LOG_TAG, "Current thread has not called Looper.prepare(). Forcing synchronous mode.");
         }
 
         // If using asynchronous mode.

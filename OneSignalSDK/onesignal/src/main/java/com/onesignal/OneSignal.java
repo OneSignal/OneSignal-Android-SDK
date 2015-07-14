@@ -141,7 +141,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "011000";
+   public static final String VERSION = "011002";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -189,9 +189,9 @@ public class OneSignal {
          }
          
          try {
-            Class.forName("com.google.android.gms.common.GooglePlayServicesUtil");
+            Class.forName("com.google.android.gms.gcm.GoogleCloudMessaging");
          } catch (ClassNotFoundException e) {
-            Log(LOG_LEVEL.FATAL, "The Google Play services client library was not found. Please make sure to include it in your project.", e, context);
+            Log(LOG_LEVEL.FATAL, "The GCM Google Play services client library was not found. Please make sure to include it in your project.", e, context);
             currentSubscription = -4;
          }
       }

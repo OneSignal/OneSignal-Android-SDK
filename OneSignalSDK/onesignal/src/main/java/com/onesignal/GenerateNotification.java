@@ -179,7 +179,8 @@ class GenerateNotification {
 
    private static CharSequence getTitle(JSONObject gcmBundle) {
       CharSequence title = null;
-      try { gcmBundle.getString("title"); } catch (Throwable t) {}
+      try { title = gcmBundle.getString("title"); } catch (Throwable t) {}
+
       if (title != null)
          return title;
 

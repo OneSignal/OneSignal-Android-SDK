@@ -34,6 +34,7 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 /**
@@ -49,6 +50,13 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
    @Override
    public void onReceive(Context context, Intent intent) {
+      // Google Play services started sending an extra non-ordered broadcast with the bundle:
+      //    { "COM": "RST_FULL", "from": "google.com/iid" }
+      // Result codes are not valid with non-ordered broadcasts so omit it to prevent errors to the log.
+      Bundle bundle = intent.getExtras();
+      if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
+         return;
+
       // Explicitly specify that GcmIntentService will handle the intent.
       ComponentName comp = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
 

@@ -32,14 +32,34 @@ package com.onesignal;
 
 import android.content.Context;
 
+import com.google.android.gms.gcm.GoogleCloudMessaging;
+
+import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
+import org.robolectric.annotation.RealObject;
+import org.robolectric.internal.ShadowExtractor;
 
-@Implements(PushRegistratorGPS.class)
-public class ShadowPushRegistratorGPS {
+import static org.robolectric.Shadows.shadowOf;
 
-    public static final String regId = "aspdfoh0fhj02hr-2h";
+@Implements(GoogleCloudMessaging.class)
+public class ShadowGoogleCloudMessaging {
+   public static boolean exists = true;
 
-    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
-        callback.complete(regId);
-    }
+   @Implementation
+   public static synchronized GoogleCloudMessaging getInstance(Context context) throws ClassNotFoundException {
+      if (!exists)
+         throw new ClassNotFoundException();
+
+      // This does not quite do what the real GoogleCloudMessaging.getInstance(Context) does but seems close enought.
+      return new GoogleCloudMessaging();
+
+      // @RealObject does not work with static methods, even if I create an instance with new then get it from the object.
+      // Last thing to try if this is needed is to use reflection.
+      //GoogleCloudMessaging gcm = new GoogleCloudMessaging();
+      //ShadowGoogleCloudMessaging shadowOfGcm = (ShadowGoogleCloudMessaging)ShadowExtractor.extract(gcm);
+
+      //return shadowOfGcm.realInstance.getInstance(context);
+      //return com.google.android.gms.gcm.GoogleCloudMessaging.getInstance(context);
+      //return GoogleCloudMessaging.getInstance(context);
+   }
 }

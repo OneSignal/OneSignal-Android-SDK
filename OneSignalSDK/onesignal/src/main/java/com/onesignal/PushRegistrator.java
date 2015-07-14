@@ -29,7 +29,7 @@ package com.onesignal;
 
 import android.content.Context;
 
-interface PushRegistrator {
+public interface PushRegistrator {
 
    interface RegisteredHandler {
       void complete(String id);

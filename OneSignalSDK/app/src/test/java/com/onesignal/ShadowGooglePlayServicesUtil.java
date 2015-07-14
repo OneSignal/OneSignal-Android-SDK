@@ -32,14 +32,15 @@ package com.onesignal;
 
 import android.content.Context;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+
 import org.robolectric.annotation.Implements;
 
-@Implements(PushRegistratorGPS.class)
-public class ShadowPushRegistratorGPS {
+@Implements(GooglePlayServicesUtil.class)
+public class ShadowGooglePlayServicesUtil {
 
-    public static final String regId = "aspdfoh0fhj02hr-2h";
-
-    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
-        callback.complete(regId);
-    }
+   public static int isGooglePlayServicesAvailable(Context context) {
+      return ConnectionResult.SUCCESS;
+   }
 }
