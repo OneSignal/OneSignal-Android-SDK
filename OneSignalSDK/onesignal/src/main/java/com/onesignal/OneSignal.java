@@ -141,7 +141,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "011002";
+   public static final String VERSION = "011003";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -270,11 +270,15 @@ public class OneSignal {
 
       // Called from tapping on a Notification from the status bar when the activity is completely dead and not open in any state.
       if (appContext.getIntent() != null) {
-         Bundle oneSignalDataBundle = appContext.getIntent().getBundleExtra("onesignal_data");
-         if (oneSignalDataBundle != null) {
-            JSONArray dataArray = NotificationBundleProcessor.bundleAsJsonArray(oneSignalDataBundle);
-            openWebURLFromNotification(dataArray);
-            runNotificationOpenedCallback(dataArray, false);
+         String oneSignalDataJsonString = appContext.getIntent().getStringExtra("onesignal_data");
+         if (oneSignalDataJsonString != null) {
+            try {
+               JSONArray dataArray = new JSONArray(oneSignalDataJsonString);
+               openWebURLFromNotification(dataArray);
+               runNotificationOpenedCallback(dataArray, false);
+            } catch (JSONException e) {
+               Log(LOG_LEVEL.ERROR, "Failed to process onesignal_data intent on app cold start.");
+            }
          }
       }
 

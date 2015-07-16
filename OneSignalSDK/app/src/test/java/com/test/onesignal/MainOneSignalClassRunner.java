@@ -31,8 +31,10 @@
 package com.test.onesignal;
 
 import android.app.Activity;
+import android.content.Intent;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.NotificationBundleProcessor;
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGPS;
@@ -40,6 +42,8 @@ import com.onesignal.example.BlankActivity;
 
 import junit.framework.Assert;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,6 +65,7 @@ public class MainOneSignalClassRunner {
    private static Field OneSignal_CurrentSubscription;
    private Activity blankActiviy;
    private static String callBackUseId, getCallBackRegId;
+   private static String notificationOpenedMessage;
 
    public static void GetIdsAvailable() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
@@ -92,17 +97,72 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.failNext = false;
       ShadowOneSignalRestClient.testThread = Thread.currentThread();
       GetIdsAvailable();
+      notificationOpenedMessage = null;
+   }
+
+   @Test
+   public void testOpenFromNotificationWhenAppIsDead() throws Exception {
+      Intent intent = new Intent();
+      intent.putExtra("onesignal_data", "[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]");
+
+      blankActiviy.setIntent(intent);
+      OneSignal.init(blankActiviy, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
+            notificationOpenedMessage = message;
+         }
+      });
+
+      Assert.assertEquals("Test Msg", notificationOpenedMessage);
+   }
+
+   @Test
+   public void testOpenFromNotificationWhenAppIsInBackground() throws Exception {
+      OneSignal.init(blankActiviy, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
+            notificationOpenedMessage = message;
+         }
+      });
+      Assert.assertNull(notificationOpenedMessage);
+
+      OneSignal.handleNotificationOpened(blankActiviy, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"));
+      Assert.assertEquals("Test Msg", notificationOpenedMessage);
+   }
+
+   @Test
+   public void testNotificationReceivedWhenAppInFocus() throws Exception {
+      // Tests seem to be over lapping when running them all. Wait a bit before running this test.
+      try {Thread.sleep(1000);} catch (Throwable t) {}
+
+      OneSignal.init(blankActiviy, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
+            notificationOpenedMessage = message;
+         }
+      });
+      try {Thread.sleep(5000);} catch (Throwable t) {}
+      Assert.assertNull(notificationOpenedMessage);
+
+      NotificationBundleProcessor.Process(blankActiviy, GenerateNotificationRunner.getBaseNotifBundle());
+      try {Thread.sleep(100);} catch (Throwable t) {}
+      Robolectric.getForegroundThreadScheduler().runOneTask();
+      Robolectric.getForegroundThreadScheduler().runOneTask();
+      Assert.assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
    public void testInvalidGoogleProjectNumber() throws Exception {
+      // Tests seem to be over lapping when running them all. Wait a bit before running this test.
+      try {Thread.sleep(1000);} catch (Throwable t) {}
+
       OneSignal.init(blankActiviy, "NOT A VALID Google project number", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
 
       try {Thread.sleep(5000);} catch (Throwable t) {}
+      Robolectric.getForegroundThreadScheduler().runOneTask();
       Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      Robolectric.getForegroundThreadScheduler().runOneTask();
       Assert.assertEquals(ShadowOneSignalRestClient.testUserId, callBackUseId);
    }
 
@@ -196,6 +256,8 @@ public class MainOneSignalClassRunner {
       try {Thread.sleep(5000);} catch (Throwable t) {}
 
       OneSignal.setSubscription(false);
+      try {Thread.sleep(5000);} catch (Throwable t) {}
+
       Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value

@@ -106,11 +106,11 @@ public class GenerateNotificationRunner {
    }
 
 
-   private Bundle getBaseNotifBundle() {
+   public static Bundle getBaseNotifBundle() {
       return getBaseNotifBundle("UUID");
    }
 
-   private Bundle getBaseNotifBundle(String id) {
+   public static Bundle getBaseNotifBundle(String id) {
       Bundle bundle = new Bundle();
       bundle.putString("alert", notifMessage);
       bundle.putString("custom", "{\"i\": \"" + id + "\"}");
@@ -118,10 +118,10 @@ public class GenerateNotificationRunner {
       return bundle;
    }
 
-   private Intent createOpenIntent(int notifId, Bundle bundle) {
+   static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
             .putExtra("notificationId", notifId)
-            .putExtra("data", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
+            .putExtra("onesignal_data", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
    }
 
    private Intent createOpenIntent(Bundle bundle) {
