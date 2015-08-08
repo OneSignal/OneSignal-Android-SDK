@@ -55,7 +55,7 @@ class OneSignalRestClient {
    }
 
    static void put(final Context context, final String url, JSONObject jsonBody, final ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      final StringEntity entity = new StringEntity(jsonBody.toString());
+      final StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
 
       new Thread(new Runnable() {
          public void run() {
@@ -65,8 +65,7 @@ class OneSignalRestClient {
    }
 
    static void post(final Context context, final String url, JSONObject jsonBody, final ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      final StringEntity entity = new StringEntity(jsonBody.toString());
-
+      final StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
       new Thread(new Runnable() {
          public void run() {
             clientSync.post(context, BASE_URL + url, entity, "application/json", responseHandler);
@@ -83,12 +82,12 @@ class OneSignalRestClient {
    }
 
    static void putSync(Context context, String url, JSONObject jsonBody, ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      StringEntity entity = new StringEntity(jsonBody.toString());
+      StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
       clientSync.put(context, BASE_URL + url, entity, "application/json", responseHandler);
    }
 
    static void postSync(Context context, String url, JSONObject jsonBody, ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      StringEntity entity = new StringEntity(jsonBody.toString());
+      StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
       clientSync.post(context, BASE_URL + url, entity, "application/json", responseHandler);
    }
 
