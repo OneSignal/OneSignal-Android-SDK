@@ -39,7 +39,11 @@ public class ShadowPushRegistratorGPS {
 
     public static final String regId = "aspdfoh0fhj02hr-2h";
 
+    public static boolean failFirst = false;
+
     public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
+        if (failFirst)
+            callback.complete(null);
         callback.complete(regId);
     }
 }

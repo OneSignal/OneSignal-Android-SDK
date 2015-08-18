@@ -35,7 +35,8 @@ dependencies {
 
     // Use for released SDK
     //compile 'com.onesignal:OneSignal:1.10.+@aar'
-    //compile 'com.google.android.gms:play-services:7.3.+'
+    //compile 'com.google.android.gms:play-services-gcm:7.3.+'
+    //compile 'com.google.android.gms:play-services-analytics:7.3.+'
 
     testCompile 'junit:junit:4.12'
     //    testCompile 'org.robolectric:shadows-support-v4:3.0'

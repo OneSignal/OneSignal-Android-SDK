@@ -141,7 +141,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "011004";
+   public static final String VERSION = "011005";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -827,7 +827,12 @@ public class OneSignal {
       if (currentSubscription < 1)
          regId = null;
 
-      idsAvailableHandler.idsAvailable(getUserId(), regId);
+      String userId = getUserId();
+      if (userId == null)
+         return;
+
+      idsAvailableHandler.idsAvailable(userId, regId);
+
       if (regId != null)
          idsAvailableHandler = null;
    }

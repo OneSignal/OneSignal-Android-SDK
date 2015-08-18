@@ -96,7 +96,7 @@ public class MainOneSignalClassRunner {
 
       ShadowOneSignalRestClient.failNext = false;
       ShadowOneSignalRestClient.testThread = Thread.currentThread();
-      GetIdsAvailable();
+      ShadowPushRegistratorGPS.failFirst = false;
       notificationOpenedMessage = null;
    }
 
@@ -153,6 +153,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testInvalidGoogleProjectNumber() throws Exception {
+      GetIdsAvailable();
       // Tests seem to be over lapping when running them all. Wait a bit before running this test.
       try {Thread.sleep(1000);} catch (Throwable t) {}
 
@@ -168,6 +169,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testUnsubcribeShouldMakeRegIdNullToIdsAvailable() throws Exception {
+      GetIdsAvailable();
       OneSignal.init(blankActiviy, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       try {Thread.sleep(5000);} catch (Throwable t) {}
       Assert.assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
@@ -274,5 +276,23 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.setSubscription(true);
       Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   private static boolean userIdWasNull = false;
+   @Test
+   public void shouldNotFireIdsAvailableWithoutUserId() throws Exception {
+      ShadowOneSignalRestClient.failNext = true;
+      ShadowPushRegistratorGPS.failFirst = true;
+
+      OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+         @Override
+         public void idsAvailable(String userId, String registrationId) {
+            if (userId == null)
+               userIdWasNull = true;
+         }
+      });
+      OneSignal.init(blankActiviy, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+
+      Assert.assertFalse(userIdWasNull);
    }
 }
