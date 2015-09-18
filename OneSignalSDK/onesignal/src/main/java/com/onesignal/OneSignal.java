@@ -339,16 +339,16 @@ public class OneSignal {
    private static boolean atLogLevel(LOG_LEVEL level) {
       return level.compareTo(visualLogLevel) < 1 || level.compareTo(logCatLevel) < 1;
    }
-   
-   public static void Log(LOG_LEVEL level, String message) {
+
+   static void Log(LOG_LEVEL level, String message) {
       Log(level, message, null, appContext);
    }
 
-   public static void Log(final LOG_LEVEL level, String message, Throwable throwable) {
+   static void Log(final LOG_LEVEL level, String message, Throwable throwable) {
       Log(level, message, throwable, appContext);
    }
    
-   public static void Log(final LOG_LEVEL level, String message, Throwable throwable, final Context context) {
+   private static void Log(final LOG_LEVEL level, String message, Throwable throwable, final Activity context) {
       if (level.compareTo(logCatLevel) < 1) {
          if (level == LOG_LEVEL.VERBOSE)
             Log.v(TAG, message, throwable);
@@ -375,7 +375,7 @@ public class OneSignal {
             
             final String finalFullMessage = fullMessage;
 
-            ((Activity)context).runOnUiThread(new Runnable() {
+            context.runOnUiThread(new Runnable() {
                @Override
                public void run() {
                   new AlertDialog.Builder(context)
