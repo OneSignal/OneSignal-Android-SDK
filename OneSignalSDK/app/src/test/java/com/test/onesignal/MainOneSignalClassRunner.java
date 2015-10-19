@@ -37,6 +37,7 @@ import com.onesignal.BuildConfig;
 import com.onesignal.NotificationBundleProcessor;
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorGPS;
 import com.onesignal.example.BlankActivity;
 
@@ -57,7 +58,7 @@ import java.lang.reflect.Field;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
-      shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class},
+      shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowPushRegistratorADM.class},
       sdk = 21)
 @RunWith(CustomRobolectricTestRunner.class)
 public class MainOneSignalClassRunner {

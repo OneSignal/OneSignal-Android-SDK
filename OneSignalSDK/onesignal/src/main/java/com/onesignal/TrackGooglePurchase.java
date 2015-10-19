@@ -130,7 +130,9 @@ class TrackGooglePurchase {
 
          Intent serviceIntent = new Intent("com.android.vending.billing.InAppBillingService.BIND");
          serviceIntent.setPackage("com.android.vending");
-         appContext.bindService(serviceIntent, mServiceConn, Context.BIND_AUTO_CREATE);
+
+         Context applicationContext = appContext.getApplicationContext();
+         applicationContext.bindService(serviceIntent, mServiceConn, Context.BIND_AUTO_CREATE);
       } else if (mIInAppBillingService != null)
          QueryBoughtItems();
    }

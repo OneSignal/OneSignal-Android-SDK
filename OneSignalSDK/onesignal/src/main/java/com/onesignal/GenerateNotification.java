@@ -63,7 +63,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
-import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
