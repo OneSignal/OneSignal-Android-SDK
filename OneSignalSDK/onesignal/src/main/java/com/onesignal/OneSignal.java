@@ -141,7 +141,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "011006";
+   public static final String VERSION = "011007";
 
    private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -999,9 +999,9 @@ public class OneSignal {
 
       resolveInfo = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
       if (resolveInfo.size() > 0) {
-         isCustom = true;
          if (!isCustom)
             intent.putExtra("onesignal_data", data.toString());
+         isCustom = true;
          intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
          inContext.startActivity(intent);
       }
