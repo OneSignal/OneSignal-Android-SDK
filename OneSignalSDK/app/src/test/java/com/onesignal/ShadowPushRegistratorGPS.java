@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -31,19 +28,30 @@
 package com.onesignal;
 
 import android.content.Context;
+import android.os.SystemClock;
 
 import org.robolectric.annotation.Implements;
 
 @Implements(PushRegistratorGPS.class)
 public class ShadowPushRegistratorGPS {
 
-    public static final String regId = "aspdfoh0fhj02hr-2h";
+   public static final String regId = "aspdfoh0fhj02hr-2h";
 
-    public static boolean failFirst = false;
+   public static boolean fail = false;
+   public static int waitTimer = 0;
 
-    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
-        if (failFirst)
-            callback.complete(null);
-        callback.complete(regId);
-    }
+   private static PushRegistrator.RegisteredHandler lastCallback;
+
+   public static void manualFireRegisterForPush() {
+      lastCallback.complete(regId);
+   }
+
+   public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
+      lastCallback = callback;
+
+      if (waitTimer > 0)
+         SystemClock.sleep(waitTimer);
+
+      callback.complete(fail ? null : regId);
+   }
 }

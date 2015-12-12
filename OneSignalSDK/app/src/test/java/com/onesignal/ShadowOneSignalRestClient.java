@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -30,74 +27,99 @@
 
 package com.onesignal;
 
-import android.content.Context;
-import android.util.Log;
-
-import com.loopj.android.http.JsonHttpResponseHandler;
-import com.loopj.android.http.ResponseHandlerInterface;
-
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.annotation.Implements;
-
-import java.io.UnsupportedEncodingException;
 
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
 
-    public static JSONObject lastPost;
-    public static Thread testThread;
-    public static boolean failNext;
+   public static JSONObject lastPost;
+   public static Thread testThread;
+   public static boolean failNext, failAll;
+   public static String failResponse = "{}";
+   public static int networkCallCount;
 
-    public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
+   public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
 
-    static void postSync(Context context, String url, JSONObject jsonBody, ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-        Log.i("SHADOW_postSync", "url: " + url);
-        lastPost = jsonBody;
+   public static boolean interruptibleDelayNext;
+   private static Thread lastInteruptiableDelayThread;
 
-        if (failNext) {
-            ((JsonHttpResponseHandler)responseHandler).onFailure(400, null, new Exception(),new JSONObject());
-            testThread.interrupt();
-            return;
-        }
+   public static void interruptHTTPDelay() {
+      if (lastInteruptiableDelayThread != null) { //&& lastInteruptiableDelayThread.getState() == Thread.State.TIMED_WAITING) {
+         lastInteruptiableDelayThread.interrupt();
+         lastInteruptiableDelayThread = null;
+      }
+   }
 
-        String retJson = null;
-        if (url.contains("on_session"))
-            retJson = "{}";
-        else
-            retJson = "{\"id\": \"" + testUserId + "\"}";
+   static void safeInterrupt() {
+      if (testThread.getState() == Thread.State.TIMED_WAITING)
+         testThread.interrupt();
+   }
 
-        try {
-            ((JsonHttpResponseHandler)responseHandler).onSuccess(200, null, new JSONObject(retJson));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+   private static void doInterruptibleDelay() {
+      if (interruptibleDelayNext) {
+         lastInteruptiableDelayThread = Thread.currentThread();
+         interruptibleDelayNext = false;
+         try { Thread.sleep(20000); } catch (InterruptedException e) {}
+      }
+   }
 
-        testThread.interrupt();
-    }
+   private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler) {
+      if (failNext || failAll) {
+         responseHandler.onFailure(400, failResponse, new Exception());
+         safeInterrupt();
+         failNext = false;
+         return true;
+      }
 
-    static void putSync(Context context, String url, JSONObject jsonBody, ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-        Log.i("SHADOW_putSync", "url: " + url);
-        lastPost = jsonBody;
+      return false;
+   }
 
-        try {
-            ((JsonHttpResponseHandler)responseHandler).onSuccess(200, null, new JSONObject("{\"id\": \"" + testUserId + "\"}"));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+   static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      networkCallCount++;
+      lastPost = jsonBody;
 
-        testThread.interrupt();
-    }
+      doInterruptibleDelay();
+      if (doFail(responseHandler)) return;
 
-    static void put(final Context context, final String url, JSONObject jsonBody, final ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-        Log.i("SHADOW_put", "url: " + url);
+      String retJson = null;
+      if (url.contains("on_session"))
+         retJson = "{}";
+      else
+         retJson = "{\"id\": \"" + testUserId + "\"}";
 
-        lastPost = jsonBody;
+      responseHandler.onSuccess(retJson);
 
-        try {
-            ((JsonHttpResponseHandler)responseHandler).onSuccess(200, null, new JSONObject("{}"));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
+      safeInterrupt();
+   }
+
+   static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      networkCallCount++;
+      lastPost = jsonBody;
+
+      System.out.println("lastPost:jsonBody: " + lastPost.toString());
+      System.out.println("testThread.getState()" + testThread.getState());
+
+      doInterruptibleDelay();
+      if (doFail(responseHandler)) return;
+
+      responseHandler.onSuccess("{\"id\": \"" + testUserId + "\"}");
+
+      safeInterrupt();
+   }
+
+   static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      networkCallCount++;
+      lastPost = jsonBody;
+
+      doInterruptibleDelay();
+      if (doFail(responseHandler)) return;
+
+      System.out.println("lastPost:jsonBody: " + lastPost.toString());
+      System.out.println("testThread.getState()" + testThread.getState());
+
+      responseHandler.onSuccess("{}");
+
+      safeInterrupt();
+   }
 }

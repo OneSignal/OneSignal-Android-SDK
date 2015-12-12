@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -33,44 +30,45 @@ package com.onesignal.example;
 import android.app.Activity;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import com.onesignal.OneSignal;
+import com.onesignal.*;
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Field;
-import java.util.HashMap;
+import com.onesignal.example.iap.IabHelper;
+import com.onesignal.example.iap.IabResult;
 
 
 public class MainActivity extends ActionBarActivity {
 
-    private static Activity currentActivity;
+   private static Activity currentActivity;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+   IabHelper mHelper;
 
-        currentActivity = this;
+   @Override
+   protected void onCreate(Bundle savedInstanceState) {
+      super.onCreate(savedInstanceState);
+      setContentView(R.layout.activity_main);
 
-        // Enable Logging below to debug issues. (LogCat level, Visual level);
-        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      currentActivity = this;
 
-        // Pass in your app's Context, Google Project number, OneSignal App ID, and a NotificationOpenedHandler
-        OneSignal.init(this, "703322744261", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new ExampleNotificationOpenedHandler());
-        //OneSignal.init(this, "703322744261", "5eb5a37e-b458-11e3-ac11-000c2940e62c", new ExampleNotificationOpenedHandler());
-        OneSignal.enableInAppAlertNotification(false);
-        OneSignal.enableNotificationsWhenActive(false);
-         OneSignal.sendTag("test1", "test1");
-        //OneSignal.setSubscription(false);
+      // Enable Logging below to debug issues. (LogCat level, Visual level);
+      // OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+
+      OneSignal.startInit(this)
+          .setAutoPromptLocation(true)
+          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
+          .init();
+
+      OneSignal.enableInAppAlertNotification(true);
+      OneSignal.enableNotificationsWhenActive(false);
+      OneSignal.sendTag("test1", "test1");
+      //OneSignal.setSubscription(false);
 
 //        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
 //            @Override
@@ -85,87 +83,80 @@ public class MainActivity extends ActionBarActivity {
 //                }
 //            }
 //        });
-    }
 
-    public void onSubscribeClicked(View v) {
-        OneSignal.setSubscription(true);
-    }
 
-    public void onUnsubscribeClicked(View v) {
-        OneSignal.setSubscription(false);
-    }
+      // compute your public key and store it in base64EncodedPublicKey
+      mHelper = new IabHelper(this, "sdafsfds");
+      mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
+         public void onIabSetupFinished(IabResult result) {
+            if (!result.isSuccess()) {
+               // Oh noes, there was a problem.
+               Log.d("OneSignalExample", "Problem setting up In-app Billing: " + result);
+            }
+            // Hooray, IAB is fully set up!
+         }
+      });
+   }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        OneSignal.onPaused();
-    }
-    @Override
-    protected void onResume() {
-        super.onResume();
-        OneSignal.onResumed();
-    }
+   public void onSubscribeClicked(View v) {
+      OneSignal.setSubscription(true);
+      OneSignal.promptLocation();
+   }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+   public void onUnsubscribeClicked(View v) {
+      OneSignal.setSubscription(false);
+   }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+   @Override
+   protected void onPause() {
+      super.onPause();
+      mHelper.dispose();
+   }
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
+   @Override
+   public void onDestroy() {
+      super.onDestroy();
+      if (mHelper != null) mHelper.dispose();
+      mHelper = null;
+   }
 
-        return super.onOptionsItemSelected(item);
-    }
+   @Override
+   public boolean onCreateOptionsMenu(Menu menu) {
+      // Inflate the menu; this adds items to the action bar if it is present.
+      getMenuInflater().inflate(R.menu.menu_main, menu);
+      return true;
+   }
 
-    // NotificationOpenedHandler is implemented in its own class instead of adding implements to MainActivity so we don't hold on to a reference of our first activity if it gets recreated.
-    @OneSignal.TiedToCurrentActivity
-    private class ExampleNotificationOpenedHandler implements NotificationOpenedHandler {
-        /**
-         * Callback to implement in your app to handle when a notification is opened from the Android status bar or
-         * a new one comes in while the app is running.
-         * This method is located in this activity as an example, you may have any class you wish implement NotificationOpenedHandler and define this method.
-         *
-         * @param message        The message string the user seen/should see in the Android status bar.
-         * @param additionalData The additionalData key value pair section you entered in on onesignal.com.
-         * @param isActive       Was the app in the foreground when the notification was received.
-         */
-        @Override
-        public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-           Log.i("OneSignalExample", "message: " + message);
-           Log.i("OneSignalExample", "additionalData: " + additionalData.toString());
+   @Override
+   public boolean onOptionsItemSelected(MenuItem item) {
+      // Handle action bar item clicks here. The action bar will
+      // automatically handle clicks on the Home/Up button, so long
+      // as you specify a parent activity in AndroidManifest.xml.
+      int id = item.getItemId();
 
-           /*
-            String messageTitle = "OneSignal Example:" + isActive, messageBody = message;
+      //noinspection SimplifiableIfStatement
+      if (id == R.id.action_settings)
+         return true;
 
-            try {
-                if (additionalData != null) {
-                    if (additionalData.has("title"))
-                        messageTitle = additionalData.getString("title");
-                    if (additionalData.has("actionSelected"))
-                        messageBody += "\nPressed ButtonID: " + additionalData.getString("actionSelected");
+      return super.onOptionsItemSelected(item);
+   }
 
-                    messageBody = message + "\n\nFull additionalData:\n" + additionalData.toString();
-                }
-            } catch (JSONException e) {}
-
-            new AlertDialog.Builder(MainActivity.currentActivity)
-                    .setTitle(messageTitle)
-                    .setMessage(messageBody)
-                    .setCancelable(true)
-                    .setPositiveButton("OK", null)
-                    .create().show();
-                    */
-        }
-    }
+   // NotificationOpenedHandler is implemented in its own class instead of adding implements to MainActivity so we don't hold on to a reference of our first activity if it gets recreated.
+   @OneSignal.TiedToCurrentActivity
+   private class ExampleNotificationOpenedHandler implements NotificationOpenedHandler {
+      /**
+       * Callback to implement in your app to handle when a notification is opened from the Android status bar or
+       * a new one comes in while the app is running.
+       * This method is located in this activity as an example, you may have any class you wish implement NotificationOpenedHandler and define this method.
+       *
+       * @param message        The message string the user seen/should see in the Android status bar.
+       * @param additionalData The additionalData key value pair section you entered in on onesignal.com.
+       * @param isActive       Was the app in the foreground when the notification was received.
+       */
+      @Override
+      public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
+         Log.i("OneSignalExample", "message: " + message);
+         Log.i("OneSignalExample", "additionalData: " + additionalData.toString());
+      }
+   }
 }

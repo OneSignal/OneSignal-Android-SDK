@@ -29,27 +29,24 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import org.apache.http.Header;
 import org.json.*;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -59,27 +56,28 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
-import android.util.TypedValue;
 
-import com.loopj.android.http.*;
 import com.stericson.RootTools.internal.RootToolsInternalMethods;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class OneSignal {
-
+   
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
 
+   static final long MIN_ON_FOCUS_TIME = 60;
+
+   // TODO: The interface and the code using it may not be needed since the Activity Context is being dereferenced correctly.
+   //       Check with Corona, Cordova, and see if it fixes the Marmalade bug around this.
    @Retention(RetentionPolicy.RUNTIME)
    @Target(ElementType.TYPE)
    public @interface TiedToCurrentActivity {}
@@ -112,22 +110,45 @@ public class OneSignal {
       void onFailure(JSONObject response);
    }
 
+   public static class Builder {
+      Context mContext;
+      NotificationOpenedHandler mNotificationOpenedHandler;
+      boolean mPromptLocation;
+
+      private Builder() {}
+
+      private Builder(Context context) {
+         mContext = context;
+      }
+
+      public Builder setNotificationOpenedHandler(NotificationOpenedHandler handler) {
+         mNotificationOpenedHandler = handler;
+         return this;
+      }
+
+      public Builder setAutoPromptLocation(boolean enable) {
+         mPromptLocation = enable;
+         return this;
+      }
+
+      public void init() {
+         OneSignal.init(this);
+      }
+   }
+
    /**
     * Tag used on log messages.
     */
    static final String TAG = "OneSignal";
 
-   private static String appId;
-   static Activity appContext;
+   static String appId;
+   static Context appContext;
    
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
-   private static String registrationId, userId = null;
-   private static JSONObject pendingTags;
-   private static int savedSubscription, syncedSubscription;
-   private static int currentSubscription = 1;
-   private static final int UNSUBSCRIBE_VALUE = -2;
+   private static String userId = null;
+   private static int subscribableStatus = 1;
 
    private static NotificationOpenedHandler notificationOpenedHandler;
 
@@ -136,14 +157,13 @@ public class OneSignal {
 
    private static IdsAvailableHandler idsAvailableHandler;
 
-   private static long lastTrackedTime, unSentActiveTime = -1;
+   private static long lastTrackedTime = 1, unSentActiveTime = -1;
 
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "011007";
+   public static final String VERSION = "020000";
 
-   private static PushRegistrator pushRegistrator;
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
    private static int deviceType;
@@ -152,26 +172,58 @@ public class OneSignal {
    private static JSONObject nextInitAdditionalDataJSON = null;
    private static String nextInitMessage = null;
 
-   public static void init(Activity context, String googleProjectNumber, String oneSignalAppId) {
+   private static OSUtils osUtils;
+
+   private static boolean ranSessionInitThread;
+
+   private static String lastRegistrationId;
+   private static boolean registerForPushFired, locationFired;
+   private static Double lastLocLat, lastLocLong;
+   private static OneSignal.Builder mInitBuilder;
+
+   static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<JSONArray>();
+
+   public static OneSignal.Builder startInit(Context context) {
+      return new OneSignal.Builder(context);
+   }
+
+   private static void init(OneSignal.Builder inBuilder) {
+      mInitBuilder = inBuilder;
+
+      Context context = mInitBuilder.mContext;
+      mInitBuilder.mContext = null; // Clear to prevent leaks.
+
+      try {
+         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+         Bundle bundle = ai.metaData;
+         OneSignal.init(context, bundle.getString("onesignal_google_project_number").substring(4), bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler);
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
+   }
+
+   public static void init(Context context, String googleProjectNumber, String oneSignalAppId) {
       init(context, googleProjectNumber, oneSignalAppId, null);
    }
 
-   public static void init(Activity context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler inNotificationOpenedHandler) {
+   public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler inNotificationOpenedHandler) {
+      if (mInitBuilder == null)
+         mInitBuilder = new OneSignal.Builder();
 
-      try {
-         Class.forName("com.amazon.device.messaging.ADM");
+      osUtils = new OSUtils();
+
+      deviceType = osUtils.getDeviceType();
+      PushRegistrator pushRegistrator;
+      if (deviceType == 2)
          pushRegistrator = new PushRegistratorADM();
-         deviceType = 2;
-      } catch (ClassNotFoundException e) {
+      else
          pushRegistrator = new PushRegistratorGPS();
-         deviceType = 1;
-      }
 
       // START: Init validation
       try {
          UUID.fromString(oneSignalAppId);
       } catch (Throwable t) {
-         Log(LOG_LEVEL.FATAL, "OneSignal AppId format is invalid.\nExample: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba'\n", t, context);
+         Log(LOG_LEVEL.FATAL, "OneSignal AppId format is invalid.\nExample: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba'\n", t);
          return;
       }
 
@@ -184,15 +236,15 @@ public class OneSignal {
             if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
                throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
          } catch (Throwable t) {
-            Log(LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t, context);
-            currentSubscription = -6;
+            Log(LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t);
+            subscribableStatus = -6;
          }
          
          try {
             Class.forName("com.google.android.gms.gcm.GoogleCloudMessaging");
          } catch (ClassNotFoundException e) {
-            Log(LOG_LEVEL.FATAL, "The GCM Google Play services client library was not found. Please make sure to include it in your project.", e, context);
-            currentSubscription = -4;
+            Log(LOG_LEVEL.FATAL, "The GCM Google Play services client library was not found. Please make sure to include it in your project.", e);
+            subscribableStatus = -4;
          }
       }
 
@@ -201,21 +253,19 @@ public class OneSignal {
          try {
             Class.forName("android.support.v4.content.WakefulBroadcastReceiver");
          } catch (ClassNotFoundException e) {
-            Log(LOG_LEVEL.FATAL, "The included Android Support Library v4 is to old. Please update your project's android-support-v4.jar to the latest revision.", e, context);
-            currentSubscription = -5;
+            Log(LOG_LEVEL.FATAL, "The included Android Support Library v4 is to old. Please update your project's android-support-v4.jar to the latest revision.", e);
+            subscribableStatus = -5;
          }
       } catch (ClassNotFoundException e) {
-         Log(LOG_LEVEL.FATAL, "Could not find the Android Support Library v4. Please make sure android-support-v4.jar has been correctly added to your project.", e, context);
-         currentSubscription = -3;
+         Log(LOG_LEVEL.FATAL, "Could not find the Android Support Library v4. Please make sure android-support-v4.jar has been correctly added to your project.", e);
+         subscribableStatus = -3;
       }
 
       if (initDone) {
          if (context != null)
-            appContext = context;
+            appContext = context.getApplicationContext();
          if (inNotificationOpenedHandler != null)
             notificationOpenedHandler = inNotificationOpenedHandler;
-
-         onResumed();
 
          if (nextInitMessage != null && notificationOpenedHandler != null) {
             fireNotificationOpenedHandler(nextInitMessage, nextInitAdditionalDataJSON, false);
@@ -229,15 +279,20 @@ public class OneSignal {
 
       // END: Init validation
 
-      savedSubscription = getSubscription(context);
-      syncedSubscription = getSyncedSubscription(context);
-      if (currentSubscription > 0 && savedSubscription > -3)
-         currentSubscription = savedSubscription;
-
       appId = oneSignalAppId;
-      appContext = context;
+      appContext = context.getApplicationContext();
+      if (context instanceof Activity)
+         ActivityLifecycleHandler.curActivity = (Activity)context;
       notificationOpenedHandler = inNotificationOpenedHandler;
       lastTrackedTime = SystemClock.elapsedRealtime();
+
+      OneSignalStateSynchronizer.initUserState(appContext);
+      appContext.startService(new Intent(appContext, SyncService.class));
+
+      if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB_MR2)
+         ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
+      else
+         ActivityLifecycleListenerCompat.startListener();
 
       try {
          Class.forName("com.amazon.device.iap.PurchasingListener");
@@ -249,59 +304,51 @@ public class OneSignal {
       if (oldAppId != null) {
          if (!oldAppId.equals(appId)) {
             Log(LOG_LEVEL.DEBUG, "APP ID changed, clearing user id as it is no longer valid.");
-            saveUserId(null);
             SaveAppId(appId);
+            OneSignalStateSynchronizer.resetCurrentState();
          }
       }
       else
          SaveAppId(appId);
 
       pushRegistrator.registerForPush(appContext, googleProjectNumber, new PushRegistrator.RegisteredHandler() {
-         private boolean firstRun = true;
          @Override
          public void complete(String id) {
-            if (firstRun)
-               registerUser(id);
-            else
-               updateRegistrationId(id);
-            firstRun = false;
+            lastRegistrationId = id;
+            registerForPushFired = true;
+            registerUser();
          }
       });
 
-      // Called from tapping on a Notification from the status bar when the activity is completely dead and not open in any state.
-      if (appContext.getIntent() != null) {
-         String oneSignalDataJsonString = appContext.getIntent().getStringExtra("onesignal_data");
-         if (oneSignalDataJsonString != null) {
-            try {
-               JSONArray dataArray = new JSONArray(oneSignalDataJsonString);
-               openWebURLFromNotification(dataArray);
-               runNotificationOpenedCallback(dataArray, false);
-            } catch (JSONException e) {
-               Log(LOG_LEVEL.ERROR, "Failed to process onesignal_data intent on app cold start.");
-            }
+      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation,  new LocationGMS.LocationHandler() {
+         @Override
+         public void complete(Double lat, Double log) {
+            lastLocLat = lat; lastLocLong = log;
+            locationFired = true;
+            registerUser();
          }
-      }
+      });
+
+      fireCallbackForOpenedNotifications();
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
 
       initDone = true;
-
-      // In the future on Android 4.0 (API 14)+ devices use registerActivityLifecycleCallbacks
-      //    instead of requiring developers to call onPause and onResume in each activity.
-      // Might be able to use registerOnActivityPausedListener in Android 2.3.3 (API 10) to 3.2 (API 13) for backwards compatibility
    }
 
-   private static void updateRegistrationId(String id) {
-      String orgRegId = GetRegistrationId();
-      if (id != null && !id.equals(orgRegId)) {
-         SaveRegistrationId(id);
+   private static void fireCallbackForOpenedNotifications() {
+      for(JSONArray dataArray : unprocessedOpenedNotifis)
+         runNotificationOpenedCallback(dataArray, false);
+
+      unprocessedOpenedNotifis.clear();
+   }
+
+   private static void updateRegistrationId() {
+      String orgRegId = OneSignalStateSynchronizer.getRegistrationId();
+      if (lastRegistrationId != null && !lastRegistrationId.equals(orgRegId)) {
+         OneSignalStateSynchronizer.updateIdentifier(lastRegistrationId);
          fireIdsAvailableCallback();
-         try {
-            JSONObject jsonBody = playerUpdateBaseJSON();
-            jsonBody.put("identifier", registrationId);
-            postPlayerUpdate(jsonBody);
-         } catch (JSONException e) {}
       }
    }
 
@@ -341,14 +388,10 @@ public class OneSignal {
    }
 
    static void Log(LOG_LEVEL level, String message) {
-      Log(level, message, null, appContext);
+      Log(level, message, null);
    }
 
    static void Log(final LOG_LEVEL level, String message, Throwable throwable) {
-      Log(level, message, throwable, appContext);
-   }
-   
-   private static void Log(final LOG_LEVEL level, String message, Throwable throwable, final Activity context) {
       if (level.compareTo(logCatLevel) < 1) {
          if (level == LOG_LEVEL.VERBOSE)
             Log.v(TAG, message, throwable);
@@ -362,7 +405,7 @@ public class OneSignal {
             Log.e(TAG, message, throwable);
       }
       
-      if (context != null && level.compareTo(visualLogLevel) < 1) {
+      if (level.compareTo(visualLogLevel) < 1 && ActivityLifecycleHandler.curActivity != null) {
          try {
             String fullMessage = message + "\n";
             if (throwable != null) {
@@ -374,14 +417,14 @@ public class OneSignal {
             }
             
             final String finalFullMessage = fullMessage;
-
-            context.runOnUiThread(new Runnable() {
+            runOnUiThread(new Runnable() {
                @Override
                public void run() {
-                  new AlertDialog.Builder(context)
-                     .setTitle(level.toString())
-                     .setMessage(finalFullMessage)
-                     .show();
+                  if (ActivityLifecycleHandler.curActivity != null)
+                     new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+                         .setTitle(level.toString())
+                         .setMessage(finalFullMessage)
+                         .show();
                }
             });
          } catch(Throwable t) {
@@ -390,24 +433,38 @@ public class OneSignal {
       }
    }
 
-   private static void logHttpError(String errorString, int statusCode, Throwable throwable, JSONObject errorResponse) {
+   private static void logHttpError(String errorString, int statusCode, Throwable throwable, String errorResponse) {
       String jsonError = "";
       if (errorResponse != null && atLogLevel(LOG_LEVEL.INFO))
-         jsonError = "\n" + errorResponse.toString() + "\n";
+         jsonError = "\n" + errorResponse + "\n";
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
    }
 
+   /**
+    * Now automatically tracked, remove from your Activities.
+    *
+    * @deprecated Automatically tracked.
+    * @Deprecated Automatically tracked.
+    */
    public static void onPaused() {
+      Log(LOG_LEVEL.INFO, "Deprecated! onPaused is now tracked automatically, please remove calls to OneSignal.onPaused() and OneSignal.onResume().");
+   }
+
+   static void onAppLostFocus(boolean onlySave) {
       foreground = false;
+
+      if (!initDone) return;
 
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
+
+      if (lastTrackedTime  == -1)
+         return;
 
       long time_elapsed = (long) (((SystemClock.elapsedRealtime() - lastTrackedTime) / 1000d) + 0.5d);
       lastTrackedTime = SystemClock.elapsedRealtime();
       if (time_elapsed < 0 || time_elapsed > 604800)
          return;
-
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
          return;
@@ -416,14 +473,15 @@ public class OneSignal {
       long unSentActiveTime = GetUnsentActiveTime();
       long totalTimeActive = unSentActiveTime + time_elapsed;
 
-      if (totalTimeActive < 30) {
+      if (onlySave || totalTimeActive < MIN_ON_FOCUS_TIME || getUserId() == null) {
          SaveUnsentActiveTime(totalTimeActive);
          return;
       }
 
-      if (getUserId() == null)
-         return;
+      sendOnFocus(totalTimeActive, true);
+   }
 
+   static void sendOnFocus(long totalTimeActive, boolean synchronous) {
       JSONObject jsonBody = new JSONObject();
       try {
          jsonBody.put("app_id", appId);
@@ -431,20 +489,39 @@ public class OneSignal {
          jsonBody.put("active_time", totalTimeActive);
          addNetType(jsonBody);
 
-         OneSignalRestClient.post(appContext, "players/" + getUserId() + "/on_focus", jsonBody, new JsonHttpResponseHandler() {
+         String url = "players/" + getUserId() + "/on_focus";
+         OneSignalRestClient.ResponseHandler responseHandler =  new OneSignalRestClient.ResponseHandler() {
             @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-               logHttpError("sending on_focus Failed", statusCode, throwable, errorResponse);
+            void onFailure(int statusCode, String response, Throwable throwable) {
+               logHttpError("sending on_focus Failed", statusCode, throwable, response);
             }
-         });
 
-         SaveUnsentActiveTime(0);
+            @Override
+            void onSuccess(String response) {
+               SaveUnsentActiveTime(0);
+            }
+         };
+
+         if (synchronous)
+            OneSignalRestClient.postSync(url, jsonBody, responseHandler);
+         else
+            OneSignalRestClient.post(url, jsonBody, responseHandler);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
       }
    }
 
+   /**
+    * Now automatically tracked, remove from your Activities.
+    *
+    * @deprecated Automatically tracked.
+    * @Deprecated Automatically tracked.
+    */
    public static void onResumed() {
+      Log(LOG_LEVEL.INFO, "Deprecated! onResumed is now tracked automatically, please remove calls to OneSignal.onPaused() and OneSignal.onResume().");
+   }
+
+   static void onAppFocus() {
       foreground = true;
       lastTrackedTime = SystemClock.elapsedRealtime();
 
@@ -458,163 +535,76 @@ public class OneSignal {
 
    private static void addNetType(JSONObject jsonObj) {
       try {
-         ConnectivityManager cm = (ConnectivityManager) appContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-         NetworkInfo netInfo = cm.getActiveNetworkInfo();
-
-         int networkType = netInfo.getType();
-         int netType = 1;
-         if (networkType == ConnectivityManager.TYPE_WIFI || networkType == ConnectivityManager.TYPE_ETHERNET)
-            netType = 0;
-         jsonObj.put("net_type", netType);
+         jsonObj.put("net_type", osUtils.getNetType());
       } catch (Throwable t) {}
    }
    
    private static int getTimeZoneOffset() {
-      TimeZone timzone = Calendar.getInstance().getTimeZone();
-      int offset = timzone.getRawOffset();
+      TimeZone timezone = Calendar.getInstance().getTimeZone();
+      int offset = timezone.getRawOffset();
       
-      if (timzone.inDaylightTime(new Date()))
-          offset = offset + timzone.getDSTSavings();
+      if (timezone.inDaylightTime(new Date()))
+          offset = offset + timezone.getDSTSavings();
       
       return offset / 1000;
    }
 
-   private static void registerUser(String id) {
-      if (id != null)
-         SaveRegistrationId(id);
+   private static LocationGMS locationGMS;
 
-      // Must run in its own thread due to the use of getAdvertisingId
+   private static void registerUser() {
+      if (!registerForPushFired || !locationFired)
+         return;
+
+      if (ranSessionInitThread) {
+         updateRegistrationId();
+         return;
+      }
+
+      ranSessionInitThread = true;
+
       new Thread(new Runnable() {
          public void run() {
+            OneSignalStateSynchronizer.UserState userState = OneSignalStateSynchronizer.getNewUserState();
+
+            String packageName = appContext.getPackageName();
+            PackageManager packageManager = appContext.getPackageManager();
+
+            userState.set("app_id", appId);
+            userState.set("identifier", lastRegistrationId);
+
+            String adId = mainAdIdProvider.getIdentifier(appContext);
+            // "... must use the advertising ID (when available on a device) in lieu of any other device identifiers ..."
+            // https://play.google.com/about/developer-content-policy.html
+            if (adId == null)
+               adId = new AdvertisingIdProviderFallback().getIdentifier(appContext);
+            userState.set("ad_id", adId);
+            userState.set("device_os", Build.VERSION.RELEASE);
+            userState.set("timezone", getTimeZoneOffset());
+            userState.set("language", Locale.getDefault().getLanguage());
+            userState.set("sdk", VERSION);
+            userState.set("sdk_type", sdkType);
+            userState.set("android_package", packageName);
+            userState.set("device_model", Build.MODEL);
+            userState.set("device_type", deviceType);
+            userState.setState("subscribableStatus", subscribableStatus);
+
             try {
-               String packageName = appContext.getPackageName();
-               PackageManager packageManager = appContext.getPackageManager();
+               userState.set("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
+            } catch (PackageManager.NameNotFoundException e) {}
 
-               final JSONObject jsonBody = new JSONObject();
-               jsonBody.put("app_id", appId);
-               if (registrationId != null)
-                  jsonBody.put("identifier", registrationId);
-               
-               String adId = mainAdIdProvider.getIdentifier(appContext);
-               // "... must use the advertising ID (when available on a device) in lieu of any other device identifiers ..."
-               // https://play.google.com/about/developer-content-policy.html
-               if (adId != null)
-                  jsonBody.put("ad_id", adId);
-               else {
-                  adId = new AdvertisingIdProviderFallback().getIdentifier(appContext);
-                  if (adId != null)
-                     jsonBody.put("ad_id", adId);
-               }
+            List<PackageInfo> packList = packageManager.getInstalledPackages(0);
+            int count = -1;
+            for (int i = 0; i < packList.size(); i++)
+               count += ((packList.get(i).applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) ? 1 : 0;
+            userState.set("pkgc", count);
+            userState.set("net_type", osUtils.getNetType());
+            userState.set("carrier", osUtils.getCarrierName());
+            userState.set("rooted", RootToolsInternalMethods.isRooted());
+            userState.set("lat", lastLocLat); userState.set("long", lastLocLong);
 
-               jsonBody.put("device_os", Build.VERSION.RELEASE);
-               jsonBody.put("timezone", getTimeZoneOffset());
-               jsonBody.put("language", Locale.getDefault().getLanguage());
-               jsonBody.put("sdk", VERSION);
-
-               if (getUserId() == null) {
-                  jsonBody.put("android_package", packageName);
-                  jsonBody.put("sdk_type", sdkType);
-               }
-
-               // These values would never change as well but need to send them in case the user has been deleted via the dashboard.
-               jsonBody.put("device_model", Build.MODEL);
-               jsonBody.put("device_type", deviceType);
-
-               if (syncedSubscription != currentSubscription)
-                  jsonBody.put("notification_types", currentSubscription);
-
-               try {
-                  jsonBody.put("game_version", "" + packageManager.getPackageInfo(packageName, 0).versionCode);
-               } catch (PackageManager.NameNotFoundException e) {}
-               List<PackageInfo> packList = packageManager.getInstalledPackages(0);
-               int count = -1;
-               for(int i = 0; i < packList.size(); i++)
-                  count += ((packList.get(i).applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) ? 1 : 0;
-               jsonBody.put("pkgc", count);
-
-               addNetType(jsonBody);
-
-               if (RootToolsInternalMethods.isRooted())
-                  jsonBody.put("rooted", true);
-
-               try {
-                  Field[] fields = Class.forName(packageName + ".R$raw").getFields();
-                  JSONArray soundList = new JSONArray();
-                  TypedValue fileType = new TypedValue();
-                  String fileName;
-
-                  for (int i = 0; i < fields.length; i++) {
-                     appContext.getResources().getValue(fields[i].getInt(null), fileType, true);
-                     fileName = fileType.string.toString().toLowerCase();
-
-                     if (fileName.endsWith(".wav") || fileName.endsWith(".mp3"))
-                        soundList.put(fields[i].getName());
-                  }
-
-                  if (soundList.length() > 0)
-                     jsonBody.put("sounds", soundList);
-               } catch (Throwable t) {}
-
-               String urlStr;
-               if (getUserId() == null)
-                  urlStr = "players";
-               else
-                  urlStr = "players/" + getUserId() + "/on_session";
-
-               JsonHttpResponseHandler jsonHandler = new JsonHttpResponseHandler() {
-                  @Override
-                  public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                     try {
-                        try {
-                           if (jsonBody.has("notification_types"))
-                              saveSyncedSubscription(jsonBody.getInt("notification_types"));
-                        } catch (JSONException e) { e.printStackTrace(); }
-
-                        if (response.has("id")) {
-                           saveUserId(response.getString("id"));
-                           sendPendingIdData();
-
-                           fireIdsAvailableCallback();
-                           
-                           Log(LOG_LEVEL.INFO, "Device registered with OneSignal, UserId = " + response.getString("id"));
-                        }
-                        else
-                           Log(LOG_LEVEL.INFO, "Device session registered with OneSignal, UserId = " + getUserId());
-                     } catch (Throwable t) {
-                        Log(LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
-                     }
-                  }
-
-                  @Override
-                  public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                     logHttpError("Create or on_session for user failed to send!", statusCode, throwable, errorResponse);
-                  }
-               };
-               OneSignalRestClient.postSync(appContext, urlStr, jsonBody, jsonHandler);
-
-            } catch (Throwable t) { // JSONException and UnsupportedEncodingException
-               Log(LOG_LEVEL.ERROR, "Generating JSON create or on_session for user failed!", t);
-            }
+            OneSignalStateSynchronizer.postSession(userState);
          }
       }).start();
-   }
-
-   private static void sendPendingIdData() {
-      if (pendingTags != null || currentSubscription != 1) {
-         try {
-            JSONObject json = playerUpdateBaseJSON();
-            if (pendingTags != null) {
-               json.put("tags", pendingTags);
-               pendingTags = null;
-            }
-
-            if (currentSubscription != 1)
-               json.put("notification_types", currentSubscription);
-            postPlayerUpdate(json);
-         } catch (JSONException e) {
-            e.printStackTrace();
-         }
-      }
    }
 
    public static void sendTag(String key, String value) {
@@ -634,61 +624,8 @@ public class OneSignal {
    }
 
    public static void sendTags(JSONObject keyValues) {
-      try {
-         if (getUserId() == null) {
-            if (pendingTags == null)
-               pendingTags = new JSONObject();
-            Iterator<String> keys = keyValues.keys();
-            String key;
-            while (keys.hasNext()) {
-               key = keys.next();
-               pendingTags.put(key, keyValues.get(key));
-            }
-         } else {
-            JSONObject jsonBody = playerUpdateBaseJSON();
-            if (keyValues != null)
-               jsonBody.put("tags", keyValues);
-
-            postPlayerUpdate(jsonBody);
-         }
-      } catch (Throwable t) { // JSONException and UnsupportedEncodingException
-         Log(LOG_LEVEL.ERROR, "Generating JSON sendTags failed!", t);
-      }
-   }
-
-   private static JSONObject playerUpdateBaseJSON() {
-      JSONObject jsonBody = new JSONObject();
-      try {
-         jsonBody.put("app_id", appId);
-         addNetType(jsonBody);
-      } catch (JSONException e) {
-         Log(LOG_LEVEL.ERROR, "Generating player update base JSON failed!", e);
-      }
-
-      return jsonBody;
-   }
-
-   private static void postPlayerUpdate(final JSONObject postBody) {
-      try {
-         OneSignalRestClient.put(appContext, "players/" + getUserId(), postBody, new JsonHttpResponseHandler() {
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-               logHttpError("player update failed!", statusCode, throwable, errorResponse);
-            }
-
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-               try {
-                  if (postBody.has("notification_types"))
-                     saveSyncedSubscription(postBody.getInt("notification_types"));
-               } catch (JSONException e) {
-                  e.printStackTrace();
-               }
-            }
-         });
-      } catch (UnsupportedEncodingException e) {
-         Log(LOG_LEVEL.ERROR, "HTTP player update encoding exception!", e);
-      }
+      if (keyValues == null) return;
+      OneSignalStateSynchronizer.sendTags(keyValues);
    }
 
    public static void postNotification(String json, final PostNotificationResponseHandler handler) {
@@ -703,40 +640,35 @@ public class OneSignal {
       try {
          json.put("app_id", getSavedAppId());
 
-         OneSignalRestClient.post(appContext, "notifications/", json, new JsonHttpResponseHandler() {
+         OneSignalRestClient.post("notifications/", json, new OneSignalRestClient.ResponseHandler() {
             @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+            public void onSuccess(String response) {
                Log(LOG_LEVEL.DEBUG, "HTTP create notification success: " + (response != null ? response : "null"));
-               if (handler != null)
-                  handler.onSuccess(response);
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject response) {
-               logHttpError("create notification failed", statusCode, throwable, response);
-
-               if (statusCode == 0) {
+               if (handler != null) {
                   try {
-                     response = new JSONObject("{'error': 'HTTP no response error'}");
-                  } catch (JSONException e1) {
-                     if (atLogLevel(LOG_LEVEL.INFO))
-                        e1.printStackTrace();
+                     handler.onSuccess(new JSONObject(response));
+                  } catch (Throwable t) {
+                     t.printStackTrace();
                   }
                }
+            }
 
-               if (handler != null)
-                  handler.onFailure(response);
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+               logHttpError("create notification failed", statusCode, throwable, response);
+
+               if (statusCode == 0)
+                  response = "{'error': 'HTTP no response error'}";
+
+               if (handler != null) {
+                  try {
+                     handler.onFailure(new JSONObject(response));
+                  } catch (Throwable t) {
+                     handler.onFailure(null);
+                  }
+               }
             }
          });
-      } catch (UnsupportedEncodingException e) {
-         Log(LOG_LEVEL.ERROR, "HTTP create notification encoding exception!", e);
-         if (handler != null) {
-            try {
-               handler.onFailure(new JSONObject("{'error': 'HTTP create notification encoding exception!'}"));
-            } catch (JSONException e1) {
-               e1.printStackTrace();
-            }
-         }
       } catch (JSONException e) {
          Log(LOG_LEVEL.ERROR, "HTTP create notification json exception!", e);
          if (handler != null) {
@@ -750,26 +682,7 @@ public class OneSignal {
    }
 
    public static void getTags(final GetTagsHandler getTagsHandler) {
-      OneSignalRestClient.get(appContext, "players/" + getUserId(), new JsonHttpResponseHandler() {
-         @Override
-         public void onSuccess(int statusCode, Header[] headers, final JSONObject response) {
-            appContext.runOnUiThread(new Runnable() {
-               @Override
-               public void run() {
-                  try {
-                     getTagsHandler.tagsAvailable(response.getJSONObject("tags"));
-                  } catch (Throwable t) {
-                     Log(LOG_LEVEL.ERROR, "Failed to Parse getTags.", t);
-                  }
-               }
-            });
-         }
-
-         @Override
-         public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-            logHttpError("failed to getTags.", statusCode, throwable, errorResponse);
-         }
-      });
+      getTagsHandler.tagsAvailable(OneSignalStateSynchronizer.getTags());
    }
 
    public static void deleteTag(String key) {
@@ -785,7 +698,7 @@ public class OneSignal {
             jsonTags.put(key, "");
 
          sendTags(jsonTags);
-      } catch (Throwable t) { // JSONException and UnsupportedEncodingException
+      } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for deleteTags.", t);
       }
    }
@@ -799,7 +712,7 @@ public class OneSignal {
             jsonTags.put(jsonArray.getString(i), "");
 
          sendTags(jsonTags);
-      } catch (Throwable t) { // JSONException and UnsupportedEncodingException
+      } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for deleteTags.", t);
       }
    }
@@ -811,9 +724,9 @@ public class OneSignal {
          internalFireIdsAvailableCallback();
    }
 
-   private static void fireIdsAvailableCallback() {
+   static void fireIdsAvailableCallback() {
       if (idsAvailableHandler != null) {
-         appContext.runOnUiThread(new Runnable() {
+         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                internalFireIdsAvailableCallback();
@@ -823,8 +736,11 @@ public class OneSignal {
    }
 
    private static void internalFireIdsAvailableCallback() {
-      String regId = GetRegistrationId();
-      if (currentSubscription < 1)
+      if (idsAvailableHandler == null)
+         return;
+
+      String regId = OneSignalStateSynchronizer.getRegistrationId();
+      if (!OneSignalStateSynchronizer.getSubscribed())
          regId = null;
 
       String userId = getUserId();
@@ -837,7 +753,7 @@ public class OneSignal {
          idsAvailableHandler = null;
    }
 
-   static void sendPurchases(JSONArray purchases, boolean newAsExisting, ResponseHandlerInterface httpHandler) {
+   static void sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       if (getUserId() == null)
          return;
 
@@ -847,38 +763,42 @@ public class OneSignal {
          if (newAsExisting)
             jsonBody.put("existing", true);
          jsonBody.put("purchases", purchases);
-
-         if (httpHandler == null)
-            httpHandler = new JsonHttpResponseHandler();
          
-         OneSignalRestClient.post(appContext, "players/" + getUserId() + "/on_purchase", jsonBody, httpHandler);
-      } catch (Throwable t) { // JSONException and UnsupportedEncodingException
+         OneSignalRestClient.post("players/" + getUserId() + "/on_purchase", jsonBody, responseHandler);
+      } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for sendPurchases.", t);
       }
    }
 
-   private static void openWebURLFromNotification(JSONArray dataArray) {
+   private static boolean openURLFromNotification(JSONArray dataArray) {
       int jsonArraySize = dataArray.length();
+
+      boolean urlOpened = false;
 
       for (int i = 0; i < jsonArraySize; i++) {
          try {
             JSONObject data = dataArray.getJSONObject(i);
             if (!data.has("custom"))
-               return;
+               continue;
 
             JSONObject customJSON = new JSONObject(data.getString("custom"));
 
             if (customJSON.has("u")) {
                String url = customJSON.getString("u");
-               if (!url.startsWith("http://") && !url.startsWith("https://"))
+               if (!url.contains("://"))
                   url = "http://" + url;
-               Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-               appContext.startActivity(browserIntent);
+
+               Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+               intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+               appContext.startActivity(intent);
+               urlOpened = true;
             }
          } catch (Throwable t) {
             Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for launching a web URL.", t);
          }
       }
+
+      return urlOpened;
    }
 
    private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean isActive) {
@@ -945,7 +865,7 @@ public class OneSignal {
          }
       }
 
-      if (appContext.isFinishing()
+      if (ActivityLifecycleHandler.curActivity != null && ActivityLifecycleHandler.curActivity.isFinishing()
         && (notificationOpenedHandler.getClass().isAnnotationPresent(TiedToCurrentActivity.class)
         || notificationOpenedHandler instanceof Activity)) {
 
@@ -962,7 +882,7 @@ public class OneSignal {
       if (Looper.getMainLooper().getThread() == Thread.currentThread()) // isUIThread
          notificationOpenedHandler.notificationOpened(message, additionalDataJSON, isActive);
       else {
-         appContext.runOnUiThread(new Runnable() {
+         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                notificationOpenedHandler.notificationOpened(message, additionalDataJSON, isActive);
@@ -977,12 +897,23 @@ public class OneSignal {
       runNotificationOpenedCallback(data, true);
    }
 
-   // Called when opening a notification when the app is suspended in the background or when it is dead
-   public static void handleNotificationOpened(Context inContext, JSONArray data) {
+   // Called when opening a notification when the app is suspended in the background, from alert type notification, or when it is dead
+   public static void handleNotificationOpened(Context inContext, JSONArray data, boolean fromAlert) {
       sendNotificationOpened(inContext, data);
 
-      // Open/Resume app when opening the notification.
+      boolean urlOpened = openURLFromNotification(data);
 
+      if (initDone)
+         runNotificationOpenedCallback(data, false);
+      else
+         unprocessedOpenedNotifis.add(data);
+
+      // Open/Resume app when opening the notification.
+      if (!fromAlert && !urlOpened)
+         fireIntentFromNotificationOpen(inContext, data);
+   }
+
+   private static void fireIntentFromNotificationOpen(Context inContext, JSONArray data) {
       PackageManager packageManager = inContext.getPackageManager();
 
       boolean isCustom = false;
@@ -997,12 +928,14 @@ public class OneSignal {
          isCustom = true;
       }
 
+
+      // Calling startActivity() from outside of an Activity  context requires the FLAG_ACTIVITY_NEW_TASK flag.
       resolveInfo = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
       if (resolveInfo.size() > 0) {
          if (!isCustom)
             intent.putExtra("onesignal_data", data.toString());
          isCustom = true;
-         intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+         intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
          inContext.startActivity(intent);
       }
 
@@ -1010,15 +943,9 @@ public class OneSignal {
          Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
 
          if (launchIntent != null) {
-            launchIntent.putExtra("onesignal_data", data.toString())
-                        .setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
             inContext.startActivity(launchIntent);
          }
-      }
-
-      if (initDone) {
-         openWebURLFromNotification(data);
-         runNotificationOpenedCallback(data, false);
       }
    }
 
@@ -1044,10 +971,10 @@ public class OneSignal {
             jsonBody.put("player_id", getSavedUserId(inContext));
             jsonBody.put("opened", true);
 
-            OneSignalRestClient.put(inContext, "notifications/" + notificationId, jsonBody, new JsonHttpResponseHandler() {
+            OneSignalRestClient.put("notifications/" + notificationId, jsonBody, new OneSignalRestClient.ResponseHandler() {
                @Override
-               public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                  logHttpError("sending Notification Opened Failed", statusCode, throwable, errorResponse);
+               void  onFailure(int statusCode, String response, Throwable throwable) {
+                  logHttpError("sending Notification Opened Failed", statusCode, throwable, response);
                }
             });
          }
@@ -1066,7 +993,7 @@ public class OneSignal {
       editor.commit();
    }
 
-   private static String getSavedAppId() {
+   static String getSavedAppId() {
       return getSavedAppId(appContext);
    }
 
@@ -1093,7 +1020,7 @@ public class OneSignal {
       return userId;
    }
 
-   private static void saveUserId(String inUserId) {
+   static void saveUserId(String inUserId) {
       userId = inUserId;
       if (appContext == null)
          return;
@@ -1101,14 +1028,6 @@ public class OneSignal {
       SharedPreferences.Editor editor = prefs.edit();
       editor.putString("GT_PLAYER_ID", userId);
       editor.commit();
-   }
-
-   static String GetRegistrationId() {
-      if (registrationId == null && appContext != null) {
-         final SharedPreferences prefs = getGcmPreferences(appContext);
-         registrationId = prefs.getString("GT_REGISTRATION_ID", null);
-      }
-      return registrationId;
    }
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
@@ -1177,61 +1096,26 @@ public class OneSignal {
          return;
       }
 
-      currentSubscription = currentSubscription < UNSUBSCRIBE_VALUE ? currentSubscription : (enable ? 1 : UNSUBSCRIBE_VALUE);
-      saveSubscription(currentSubscription);
-      if (syncedSubscription == currentSubscription)
-         return;
+      OneSignalStateSynchronizer.setSubscription(enable);
+   }
 
-      try {
-         if (getUserId() != null) {
-            JSONObject jsonBody = playerUpdateBaseJSON();
-            jsonBody.put("notification_types", currentSubscription);
-            postPlayerUpdate(jsonBody);
+   public static void promptLocation() {
+      LocationGMS.getLocation(appContext, true,  new LocationGMS.LocationHandler() {
+         @Override
+         public void complete(Double lat, Double log) {
+            if (lat != null && log != null)
+               OneSignalStateSynchronizer.updateLocation(lat, log);
          }
-      } catch (Throwable t) { // JSONException and UnsupportedEncodingException
-         Log(LOG_LEVEL.ERROR, "Generating JSON setSubscription failed!", t);
-      }
+      });
    }
 
-   private static void saveSubscription(int value) {
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putInt("ONESIGNAL_SUBSCRIPTION", value);
-      editor.commit();
-      savedSubscription = value;
-   }
-
-   private static void saveSyncedSubscription(int value) {
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putInt("ONESIGNAL_SYNCED_SUBSCRIPTION", value);
-      editor.commit();
-      syncedSubscription = value;
-   }
-
-   static int getSyncedSubscription(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getInt("ONESIGNAL_SYNCED_SUBSCRIPTION", 1);
-   }
-
-   static int getSubscription(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getInt("ONESIGNAL_SUBSCRIPTION", 1);
-   }
-
-   private static void SaveRegistrationId(String inRegistrationId) {
-      registrationId = inRegistrationId;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putString("GT_REGISTRATION_ID", registrationId);
-      editor.commit();
-   }
-
-   private static long GetUnsentActiveTime() {
+   static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
          final SharedPreferences prefs = getGcmPreferences(appContext);
          unSentActiveTime = prefs.getLong("GT_UNSENT_ACTIVE_TIME", 0);
       }
+
+      Log(LOG_LEVEL.INFO, "GetUnsentActiveTime: " + unSentActiveTime);
 
       return unSentActiveTime;
    }
@@ -1240,6 +1124,9 @@ public class OneSignal {
       unSentActiveTime = time;
       if (appContext == null)
          return;
+
+      Log(LOG_LEVEL.INFO, "SaveUnsentActiveTime: " + unSentActiveTime);
+
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putLong("GT_UNSENT_ACTIVE_TIME", time);
@@ -1276,6 +1163,11 @@ public class OneSignal {
       }
 
       return false;
+   }
+
+   static void runOnUiThread(Runnable action) {
+      Handler handler = new Handler(Looper.getMainLooper());
+      handler.post(action);
    }
    
    static boolean isValidAndNotDuplicated(Context context, Bundle bundle) {

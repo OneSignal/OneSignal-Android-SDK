@@ -2,9 +2,7 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.1"
-
-    useLibrary 'org.apache.http.legacy'
+    buildToolsVersion "23.0.2"
 
     defaultConfig {
         minSdkVersion 10
@@ -21,8 +19,10 @@ android {
 
 dependencies {
     provided fileTree(dir: 'libs', include: ['*.jar'])
-    compile "com.google.android.gms:play-services-gcm:7.3.0"
-    compile "com.google.android.gms:play-services-analytics:7.3.0"
+    compile "com.google.android.gms:play-services-gcm:8.3.0"
+    compile "com.google.android.gms:play-services-analytics:8.3.0"
+    compile "com.google.android.gms:play-services-location:8.3.0"
+    compile 'com.android.support:appcompat-v7:23.1.1'
 }
 
 apply from: 'maven-push.gradle'

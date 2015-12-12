@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -55,7 +52,7 @@ import org.robolectric.shadows.ShadowLog;
 @RunWith(CustomRobolectricTestRunner.class)
 public class PushRegistratorRunner {
 
-   private Activity blankActiviy;
+   private Activity blankActivity;
    private static boolean callbackFired;
 
    @BeforeClass // Runs only once, before any tests
@@ -65,7 +62,7 @@ public class PushRegistratorRunner {
 
    @Before // Before each test
    public void beforeEachTest() throws Exception {
-      blankActiviy = Robolectric.buildActivity(BlankActivity.class).create().get();
+      blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
       callbackFired = false;
       ShadowGoogleCloudMessaging.exists = true;
    }
@@ -75,7 +72,7 @@ public class PushRegistratorRunner {
       PushRegistratorGPS pushReg = new PushRegistratorGPS();
       final Thread testThread = Thread.currentThread();
 
-      pushReg.registerForPush(blankActiviy, "", new PushRegistrator.RegisteredHandler() {
+      pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id) {
             System.out.println("HERE: " + id);
@@ -95,7 +92,7 @@ public class PushRegistratorRunner {
 
       final Thread testThread = Thread.currentThread();
 
-      pushReg.registerForPush(blankActiviy, "", new PushRegistrator.RegisteredHandler() {
+      pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id) {
             System.out.println("HERE: " + id);

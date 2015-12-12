@@ -27,7 +27,6 @@
 
 package com.onesignal;
 
-import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -43,25 +42,25 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class NotificationOpenedProcessor {
 
-   private static Context activity;
+   private static Context context;
    private static Intent intent;
 
-   public static void processFromActivity(Activity inActivity, Intent inIntent) {
+   public static void processFromActivity(Context inContext, Intent inIntent) {
       if (inIntent.getBooleanExtra("action_button", false)) // Pressed an action button, need to clear the notification manually
-         NotificationManagerCompat.from(inActivity).cancel(inIntent.getIntExtra("notificationId", 0));
+         NotificationManagerCompat.from(inContext).cancel(inIntent.getIntExtra("notificationId", 0));
 
-      processIntent(inActivity, inIntent);
+      processIntent(inContext, inIntent);
    }
 
-   static void processIntent(Context inActivity, Intent inIntent) {
-      activity = inActivity;
+   static void processIntent(Context incContext, Intent inIntent) {
+      context = incContext;
       intent = inIntent;
 
       String summaryGroup = intent.getStringExtra("summary");
 
       boolean dismissed = intent.getBooleanExtra("dismissed", false);
 
-      OneSignalDbHelper dbHelper = new OneSignalDbHelper(activity);
+      OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
       SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
 
       JSONArray dataArray = null;
@@ -86,7 +85,7 @@ public class NotificationOpenedProcessor {
       writableDb.close();
 
       if (!dismissed)
-         OneSignal.handleNotificationOpened(activity, dataArray);
+         OneSignal.handleNotificationOpened(context, dataArray, inIntent.getBooleanExtra("from_alert", false));
    }
 
    private static void addChildNotifications(JSONArray dataArray, String summaryGroup, SQLiteDatabase writableDb) {
@@ -149,7 +148,7 @@ public class NotificationOpenedProcessor {
          writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(), NotificationTable.COLUMN_NAME_GROUP_ID + " = ?", new String[] {grpId });
       else {
          try {
-            GenerateNotification.createSummaryNotification(activity, true, new JSONObject("{\"grp\": \"" + grpId + "\"}"));
+            GenerateNotification.createSummaryNotification(context, true, new JSONObject("{\"grp\": \"" + grpId + "\"}"));
          } catch (JSONException e) {}
       }
    }

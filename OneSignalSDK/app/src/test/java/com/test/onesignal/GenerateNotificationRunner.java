@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -34,8 +31,6 @@ import android.app.Activity;
 import android.app.Notification;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -65,8 +60,6 @@ import org.robolectric.shadows.ShadowSystemClock;
 
 import java.util.List;
 
-import static org.robolectric.Shadows.shadowOf;
-
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
       shadows = { ShadowRoboNotificationManager.class, ShadowOneSignalRestClient.class },
@@ -74,7 +67,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(CustomRobolectricTestRunner.class)
 public class GenerateNotificationRunner {
 
-   private Activity blankActiviy;
+   private Activity blankActivity;
 
    private static final String notifMessage = "Robo test message";
 
@@ -90,8 +83,8 @@ public class GenerateNotificationRunner {
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
 
-      blankActiviy = Robolectric.buildActivity(BlankActivity.class).create().get();
-      blankActiviy.getApplicationInfo().name = "UnitTestApp";
+      blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
+      blankActivity.getApplicationInfo().name = "UnitTestApp";
 
       // Add our launcher Activity to the run time to simulate a real app.
       // getRobolectricPackageManager is null if run in BeforeClass for some reason.
@@ -132,13 +125,13 @@ public class GenerateNotificationRunner {
    public void shouldSetTitleCorrectly() throws Exception {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
       Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
 
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
       Assert.assertEquals("title123", ShadowRoboNotificationManager.lastNotif.getContentTitle());
    }
 
@@ -146,11 +139,11 @@ public class GenerateNotificationRunner {
    public void shouldHandleBasicNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
       Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.lastNotif.getContentText());
 
       // Should have 1 DB record with the correct time stamp
-      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActiviy).getReadableDatabase();
+      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
       // Time stamp should be set and within a small range.
@@ -159,20 +152,20 @@ public class GenerateNotificationRunner {
       Assert.assertTrue(cursor.getLong(0) > currentTime - 2 && cursor.getLong(0) <= currentTime);
 
       // Should get marked as opened.
-      NotificationOpenedProcessor.processFromActivity(blankActiviy, createOpenIntent(bundle));
+      NotificationOpenedProcessor.processFromActivity(blankActivity, createOpenIntent(bundle));
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "opened", "android_notification_id" }, null, null, null, null, null);
       cursor.moveToFirst();
       Assert.assertEquals(1, cursor.getInt(0));
       int firstNotifId = cursor.getInt(1);
 
       // Should not display a duplicate notification, count should still be 1
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
 
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, "android_notification_id <> " + firstNotifId, null, null, null, null);
       cursor.moveToFirst();
       int secondNotifId = cursor.getInt(0);
@@ -184,7 +177,7 @@ public class GenerateNotificationRunner {
       // Should of been added for a total of 2 records now.
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, null, null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());
 
@@ -204,7 +197,7 @@ public class GenerateNotificationRunner {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
 
       List<PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(2, postedNotifs.size());
@@ -219,7 +212,7 @@ public class GenerateNotificationRunner {
 
 
       // Should be 2 DB entries (summary and individual)
-      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActiviy).getReadableDatabase();
+      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());
 
@@ -230,7 +223,7 @@ public class GenerateNotificationRunner {
       bundle.putString("alert", "Notif test 2");
       bundle.putString("custom", "{\"i\": \"UUID2\"}");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
 
       postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(2, postedNotifs.size());
@@ -250,7 +243,7 @@ public class GenerateNotificationRunner {
 
       // Open summary notification
       Intent intent = createOpenIntent(postedNotifs.get(0).id, bundle).putExtra("summary", "test1");
-      NotificationOpenedProcessor.processFromActivity(blankActiviy, intent);
+      NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
 
       // Send 3rd notification
       ShadowRoboNotificationManager.notifications.clear();
@@ -258,7 +251,7 @@ public class GenerateNotificationRunner {
       bundle.putString("alert", "Notif test 3");
       bundle.putString("custom", "{\"i\": \"UUID3\"}");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor.Process(blankActiviy, bundle);
+      NotificationBundleProcessor.Process(blankActivity, bundle);
 
       Assert.assertEquals("Notif test 3", postedNotifs.get(0).notif.getContentText());
       Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotifs.get(0).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);

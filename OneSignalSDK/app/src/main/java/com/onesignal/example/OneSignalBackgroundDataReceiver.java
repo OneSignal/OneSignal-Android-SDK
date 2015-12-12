@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -36,17 +33,22 @@ import android.os.Bundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
 import android.util.Log;
 
-public class OneSignalBackgroundDataReceiver extends WakefulBroadcastReceiver {
-    public void onReceive(Context context, Intent intent) {
-        Bundle dataBundle = intent.getBundleExtra("data");
+import org.json.JSONObject;
 
-        try {
-            //Log.i("OneSignalExample", "NotificationTable content: " + dataBundle.getString("alert"));
-            Log.i("OneSignalExample", "NotificationTable title: " + dataBundle.getString("title"));
-            Log.i("OneSignalExample", "Is Your App Active: " + dataBundle.getBoolean("isActive"));
-            Log.i("OneSignalExample", "data addt: " + dataBundle.getString("custom"));
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-    }
+public class OneSignalBackgroundDataReceiver extends WakefulBroadcastReceiver {
+   public void onReceive(Context context, Intent intent) {
+      Bundle dataBundle = intent.getBundleExtra("data");
+
+      try {
+         //Log.i("OneSignalExample", "NotificationTable content: " + dataBundle.getString("alert"));
+         Log.i("OneSignalExample", "NotificationTable title: " + dataBundle.getString("title"));
+         Log.i("OneSignalExample", "Is Your App Active: " + dataBundle.getBoolean("isActive"));
+         Log.i("OneSignalExample", "data addt: " + dataBundle.getString("custom"));
+         JSONObject customJSON = new JSONObject(dataBundle.getString("custom"));
+         if (customJSON.has("a"))
+            Log.i("OneSignalExample", "additionalData:key_a: " + customJSON.getJSONObject("a").getString("a"));
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
+   }
 }

@@ -2,13 +2,14 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.1"
-
-    useLibrary 'org.apache.http.legacy'
+    buildToolsVersion "23.0.2"
 
     defaultConfig {
         applicationId "com.onesignal.example"
-        manifestPlaceholders = [manifestApplicationId: "${applicationId}"]
+        manifestPlaceholders = [manifestApplicationId: "${applicationId}",
+//                              onesignal_app_id: "5eb5a37e-b458-11e3-ac11-000c2940e62c",
+                                onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
+                                onesignal_google_project_number: "703322744261"]
         minSdkVersion 10
         targetSdkVersion 23
         versionCode 1
@@ -22,10 +23,14 @@ android {
     }
     testOptions {
         unitTests.all {
-            maxParallelForks 4
+            maxParallelForks 1
             maxHeapSize "2048m"
         }
     }
+}
+
+repositories {
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
 
 dependencies {
@@ -36,14 +41,20 @@ dependencies {
     compile project(':onesignal')
 
     // Use for released SDK
-    //compile 'com.onesignal:OneSignal:1.10.+@aar'
-    //compile 'com.google.android.gms:play-services-gcm:7.3.+'
-    //compile 'com.google.android.gms:play-services-analytics:7.3.+'
+    //compile 'com.onesignal:OneSignal:2.+@aar'
+    //compile "com.google.android.gms:play-services-gcm:8.3.0"
+    //compile "com.google.android.gms:play-services-analytics:8.3.0"
+    //compile "com.google.android.gms:play-services-location:8.3.0"
+    //compile 'com.android.support:appcompat-v7:23.1.1'
 
-    testCompile 'junit:junit:4.12'
-    //    testCompile 'org.robolectric:shadows-support-v4:3.0'
-    testCompile('org.robolectric:robolectric:3.0') {
-        exclude group: 'commons-logging', module: 'commons-logging'
+//    testCompile 'junit:junit:4.12'
+//    testCompile 'org.robolectric:shadows-support-v4:3.0'
+//    testCompile('org.robolectric:robolectric:3.0') {
+//        exclude group: 'commons-logging', module: 'commons-logging'
+//        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+//    }
+
+    testCompile("org.robolectric:robolectric:3.1-SNAPSHOT") {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
 }

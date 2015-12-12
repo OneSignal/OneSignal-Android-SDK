@@ -36,9 +36,7 @@ import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.apache.http.Header;
 
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.IdsAvailableHandler;
 
@@ -59,7 +57,7 @@ class TrackGooglePurchase {
    private static Class<?> IInAppBillingServiceClass;
    private Object mIInAppBillingService;
    private Method getPurchasesMethod, getSkuDetailsMethod;
-   private Activity appContext;
+   private Context appContext;
 
    private ArrayList<String> purchaseTokens;
    private SharedPreferences.Editor prefsEditor;
@@ -69,7 +67,7 @@ class TrackGooglePurchase {
    private boolean newAsExisting = true;
    private boolean isWaitingForPurchasesRequest = false;
 
-   TrackGooglePurchase(Activity activity) {
+   TrackGooglePurchase(Context activity) {
       appContext = activity;
 
       SharedPreferences prefs = appContext.getSharedPreferences("GTPlayerPurchases", Context.MODE_PRIVATE);
@@ -90,9 +88,9 @@ class TrackGooglePurchase {
       trackIAP();
    }
 
-   static boolean CanTrack(Activity activity) {
+   static boolean CanTrack(Context context) {
       if (iapEnabled == -99)
-         iapEnabled = activity.checkCallingOrSelfPermission("com.android.vending.BILLING");
+         iapEnabled = context.checkCallingOrSelfPermission("com.android.vending.BILLING");
       try {
          if (iapEnabled == PackageManager.PERMISSION_GRANTED)
             IInAppBillingServiceClass = Class.forName("com.android.vending.billing.IInAppBillingService");
@@ -131,8 +129,7 @@ class TrackGooglePurchase {
          Intent serviceIntent = new Intent("com.android.vending.billing.InAppBillingService.BIND");
          serviceIntent.setPackage("com.android.vending");
 
-         Context applicationContext = appContext.getApplicationContext();
-         applicationContext.bindService(serviceIntent, mServiceConn, Context.BIND_AUTO_CREATE);
+         appContext.bindService(serviceIntent, mServiceConn, Context.BIND_AUTO_CREATE);
       } else if (mIInAppBillingService != null)
          QueryBoughtItems();
    }
@@ -230,13 +227,13 @@ class TrackGooglePurchase {
                final JSONArray finalPurchasesToReport = purchasesToReport;
                OneSignal.idsAvailable(new IdsAvailableHandler() {
                   public void idsAvailable(String userId, String registrationId) {
-                     OneSignal.sendPurchases(finalPurchasesToReport, newAsExisting, new JsonHttpResponseHandler() {
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                     OneSignal.sendPurchases(finalPurchasesToReport, newAsExisting, new OneSignalRestClient.ResponseHandler() {
+                        public void onFailure(int statusCode, JSONObject response, Throwable throwable) {
                            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "HTTP sendPurchases failed to send.", throwable);
                            isWaitingForPurchasesRequest = false;
                         }
 
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        public void onSuccess(String response) {
                            purchaseTokens.addAll(newPurchaseTokens);
                            prefsEditor.putString("purchaseTokens", purchaseTokens.toString());
                            prefsEditor.remove("ExistingPurchases");

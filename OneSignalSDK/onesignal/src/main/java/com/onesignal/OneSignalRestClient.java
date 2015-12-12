@@ -27,68 +27,114 @@
 
 package com.onesignal;
 
-import java.io.UnsupportedEncodingException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Scanner;
 
-import org.apache.http.entity.StringEntity;
 import org.json.JSONObject;
 
-import android.content.Context;
-
-import com.loopj.android.http.*;
-
-// We use new Threads for async calls instead of loopj's AsyncHttpClient for 2 reasons:
-// 1. To make sure our callbacks finish in cases where these methods might be called from a short lived thread.
-// 2. If there isn't a looper on the current thread we can't use loopj's built in async implementation without calling
-//    Looper.prepare() which can have unexpected results on the current thread.
-
 class OneSignalRestClient {
+   static class ResponseHandler {
+      void onSuccess(String response) {}
+      void onFailure(int statusCode, String response, Throwable throwable) {}
+   }
+
    private static final String BASE_URL = "https://onesignal.com/api/v1/";
-   private static final int TIMEOUT = 20000;
+   private static final int TIMEOUT = 120000;
 
-   private static SyncHttpClient clientSync = new SyncHttpClient();
-
-   static {
-      // setTimeout method = socket timeout
-      // setMaxRetriesAndTimeout = sleep between retries
-      clientSync.setTimeout(TIMEOUT);
-      clientSync.setMaxRetriesAndTimeout(3, TIMEOUT);
-   }
-
-   static void put(final Context context, final String url, JSONObject jsonBody, final ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      final StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
+   static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
 
       new Thread(new Runnable() {
          public void run() {
-            clientSync.put(context, BASE_URL + url, entity, "application/json", responseHandler);
+            makeRequest(url, "PUT", jsonBody, responseHandler);
          }
       }).start();
    }
 
-   static void post(final Context context, final String url, JSONObject jsonBody, final ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      final StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
+   static void post(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
       new Thread(new Runnable() {
          public void run() {
-            clientSync.post(context, BASE_URL + url, entity, "application/json", responseHandler);
+            makeRequest(url, "POST", jsonBody, responseHandler);
          }
       }).start();
    }
 
-   static void get(final Context context, final String url, final ResponseHandlerInterface responseHandler) {
+   static void get(final String url, final ResponseHandler responseHandler) {
       new Thread(new Runnable() {
          public void run() {
-            clientSync.get(context, BASE_URL + url, responseHandler);
+            makeRequest(url, null, null, responseHandler);
          }
       }).start();
    }
 
-   static void putSync(Context context, String url, JSONObject jsonBody, ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
-      clientSync.put(context, BASE_URL + url, entity, "application/json", responseHandler);
+   static void putSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
+      makeRequest(url, "PUT", jsonBody, responseHandler);
    }
 
-   static void postSync(Context context, String url, JSONObject jsonBody, ResponseHandlerInterface responseHandler) throws UnsupportedEncodingException {
-      StringEntity entity = new StringEntity(jsonBody.toString(), "UTF-8");
-      clientSync.post(context, BASE_URL + url, entity, "application/json", responseHandler);
+   static void postSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
+      makeRequest(url, "POST", jsonBody, responseHandler);
    }
 
+   private static void makeRequest(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler) {
+      HttpURLConnection con = null;
+      int httpResponse = -1;
+      String json;
+
+      try {
+         con = (HttpURLConnection)new URL(BASE_URL + url).openConnection();
+         con.setUseCaches(false);
+         con.setDoOutput(true);
+         con.setConnectTimeout(TIMEOUT);
+         con.setReadTimeout(TIMEOUT);
+
+         if (jsonBody != null)
+            con.setDoInput(true);
+
+         con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+         con.setRequestMethod(method);
+
+         if (jsonBody != null) {
+            String strJsonBody = jsonBody.toString();
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, method + " SEND JSON: " + strJsonBody);
+
+            byte[] sendBytes = strJsonBody.getBytes("UTF-8");
+            con.setFixedLengthStreamingMode(sendBytes.length);
+
+            OutputStream outputStream = con.getOutputStream();
+            outputStream.write(sendBytes);
+         }
+
+         httpResponse = con.getResponseCode();
+
+         if (httpResponse == HttpURLConnection.HTTP_OK) {
+            Scanner scanner = new Scanner(con.getInputStream(), "UTF-8");
+            json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, method + " RECEIVED JSON: " + json);
+
+            if (responseHandler != null)
+               responseHandler.onSuccess(json);
+         }
+         else {
+            Scanner scanner = new Scanner(con.getErrorStream(), "UTF-8");
+            json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " RECEIVED JSON: " + json);
+
+            if (responseHandler != null)
+               responseHandler.onFailure(httpResponse, json, null);
+         }
+      } catch (Throwable t) {
+         if (t instanceof java.net.ConnectException)
+            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Could not send last request, device is offline.");
+         else
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " Error thrown from network stack. ", t);
+
+         if (responseHandler != null)
+            responseHandler.onFailure(httpResponse, null, t);
+      }
+      finally {
+         if (con != null)
+            con.disconnect();
+      }
+   }
 }

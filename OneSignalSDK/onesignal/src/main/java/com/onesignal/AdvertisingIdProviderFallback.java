@@ -32,6 +32,7 @@ import java.util.List;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 
@@ -80,7 +81,8 @@ class AdvertisingIdProviderFallback implements AdvertisingIdentifierProvider {
    // Requires android.permission.ACCESS_WIFI_STATE permission
    private String getWifiMac(Context appContext) {
       try {
-         return ((WifiManager) appContext.getSystemService(Context.WIFI_SERVICE)).getConnectionInfo().getMacAddress();
+         if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            return ((WifiManager) appContext.getSystemService(Context.WIFI_SERVICE)).getConnectionInfo().getMacAddress();
       } catch (RuntimeException e) {}
 
       return null;

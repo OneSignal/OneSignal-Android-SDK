@@ -3,9 +3,6 @@
  *
  * Copyright 2015 OneSignal
  *
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -57,17 +54,6 @@ public class MainActivity2Activity extends ActionBarActivity {
 
         OneSignal.init(this, "703322744261", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new ExampleNotificationOpenedHandler());
         //OneSignal.enableNotificationsWhenActive(true);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        OneSignal.onPaused();
-    }
-    @Override
-    protected void onResume() {
-        super.onResume();
-        OneSignal.onResumed();
     }
 
     @Override

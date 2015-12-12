@@ -28,7 +28,6 @@
 package com.onesignal;
 
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
-import com.onesignal.OneSignal;
 
 import android.content.Context;
 

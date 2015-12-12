@@ -44,13 +44,13 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -70,22 +70,23 @@ class GenerateNotification {
    private static Context currentContext = null;
    private static String packageName = null;
    private static Resources contextResources = null;
-   private static Class<?> notificationOpenedActivityClass;
+   private static Class<?> notificationOpenedClass;
+   private static boolean openerIsBroadcast;
 
    static void setStatics(Context inContext) {
       currentContext = inContext;
       packageName = currentContext.getPackageName();
       contextResources = currentContext.getResources();
 
-      Intent intent = new Intent(currentContext, com.onesignal.NotificationOpenedActivity.class);
-      intent.setPackage(currentContext.getPackageName());
       PackageManager packageManager = currentContext.getPackageManager();
-      List<ResolveInfo> resolveInfo = packageManager.queryIntentActivities(intent, 0);
-
-      if (resolveInfo.size() > 0)
-         notificationOpenedActivityClass = com.onesignal.NotificationOpenedActivity.class;
+      Intent intent = new Intent(currentContext, NotificationOpenedReceiver.class);
+      intent.setPackage(currentContext.getPackageName());
+      if (packageManager.queryBroadcastReceivers(intent, 0).size() > 0) {
+         openerIsBroadcast = true;
+         notificationOpenedClass = NotificationOpenedReceiver.class;
+      }
       else
-         notificationOpenedActivityClass = com.gamethrive.NotificationOpenedActivity.class;
+         notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
    public static int fromBundle(Context inContext, Bundle bundle, boolean showAsAlert) {
@@ -93,19 +94,19 @@ class GenerateNotification {
 
       JSONObject jsonBundle = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
-      if (showAsAlert)
-         return showNotificationAsAlert(jsonBundle, OneSignal.appContext);
+      if (showAsAlert && ActivityLifecycleHandler.curActivity != null)
+         return showNotificationAsAlert(jsonBundle, ActivityLifecycleHandler.curActivity);
 
       return showNotification(jsonBundle);
    }
 
-   private static int showNotificationAsAlert(final JSONObject gcmJson, final Context context) {
+   private static int showNotificationAsAlert(final JSONObject gcmJson, final Activity activity) {
       final int aNotificationId = new Random().nextInt();
 
-      ((Activity) context).runOnUiThread(new Runnable() {
+      activity.runOnUiThread(new Runnable() {
          @Override
          public void run() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
             builder.setTitle(getTitle(gcmJson));
             try {
                builder.setMessage(gcmJson.getString("alert"));
@@ -120,6 +121,7 @@ class GenerateNotification {
 
             Intent buttonIntent = getNewBaseIntent(aNotificationId);
             buttonIntent.putExtra("action_button", true);
+            buttonIntent.putExtra("from_alert", true);
             buttonIntent.putExtra("onesignal_data", gcmJson.toString());
             try {
                if (gcmJson.has("grp"))
@@ -143,10 +145,11 @@ class GenerateNotification {
 
                         finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
 
-                        NotificationOpenedProcessor.processIntent(context, finalButtonIntent);
-                     } catch (Throwable t) {}
+                        NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
+                     } catch (Throwable t) {
+                     }
                   } else // No action buttons, close button simply pressed.
-                     NotificationOpenedProcessor.processIntent(context, finalButtonIntent);
+                     NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
                }
             };
 
@@ -154,7 +157,7 @@ class GenerateNotification {
             builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
                @Override
                public void onCancel(DialogInterface dialogInterface) {
-                  NotificationOpenedProcessor.processIntent(context, finalButtonIntent);
+                  NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
                }
             });
 
@@ -186,17 +189,29 @@ class GenerateNotification {
       return currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo());
    }
 
+   private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
+      if (openerIsBroadcast)
+         return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+   }
+
    private static Intent getNewBaseIntent(int notificationId) {
-      return new Intent(currentContext, notificationOpenedActivityClass)
-              .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
-              .putExtra("notificationId", notificationId);
+      Intent intent = new Intent(currentContext, notificationOpenedClass)
+                        .putExtra("notificationId", notificationId);
+
+      if (openerIsBroadcast)
+         return intent;
+      return intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
    }
 
    private static Intent getNewBaseDeleteIntent(int notificationId) {
-      return new Intent(currentContext, notificationOpenedActivityClass)
-              .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION)
-              .putExtra("notificationId", notificationId)
-              .putExtra("dismissed", true);
+      Intent intent = new Intent(currentContext, notificationOpenedClass)
+          .putExtra("notificationId", notificationId)
+          .putExtra("dismissed", true);
+
+      if (openerIsBroadcast)
+         return intent;
+      return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
    }
 
    private static NotificationCompat.Builder getBaseNotificationCompatBuilder(JSONObject gcmBundle, boolean notify) {
@@ -210,11 +225,6 @@ class GenerateNotification {
       String message = null;
       try {
          message = gcmBundle.getString("alert");
-      } catch (Throwable t) {}
-
-      String group = null;
-      try {
-         group = gcmBundle.getString("grp");
       } catch (Throwable t) {}
 
       NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(currentContext)
@@ -293,18 +303,18 @@ class GenerateNotification {
       addNotificationActionButtons(gcmBundle, notifBuilder, notificationId, null);
 
       if (group != null) {
-         PendingIntent contentIntent = PendingIntent.getActivity(currentContext, random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group), PendingIntent.FLAG_UPDATE_CURRENT);
+         PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group));
          notifBuilder.setContentIntent(contentIntent);
-         PendingIntent deleteIntent = PendingIntent.getActivity(currentContext, random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group), PendingIntent.FLAG_UPDATE_CURRENT);
+         PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
 
          createSummaryNotification(gcmBundle);
       }
       else {
-         PendingIntent contentIntent = PendingIntent.getActivity(currentContext, random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()), PendingIntent.FLAG_UPDATE_CURRENT);
+         PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()));
          notifBuilder.setContentIntent(contentIntent);
-         PendingIntent deleteIntent = PendingIntent.getActivity(currentContext, random.nextInt(), getNewBaseDeleteIntent(notificationId), PendingIntent.FLAG_UPDATE_CURRENT);
+         PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId));
          notifBuilder.setDeleteIntent(deleteIntent);
       }
 
@@ -332,7 +342,7 @@ class GenerateNotification {
       } catch (Throwable t) {}
 
       Random random = new Random();
-      PendingIntent summaryDeleteIntent = PendingIntent.getActivity(currentContext, random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group), PendingIntent.FLAG_UPDATE_CURRENT);
+      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
 
       OneSignalDbHelper dbHelper = new OneSignalDbHelper(currentContext);
       SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
@@ -422,7 +432,7 @@ class GenerateNotification {
                               .putExtra("summary", group)
                               .putExtra("onesignal_data", summaryDataBundle.toString());
 
-         PendingIntent summaryContentIntent = PendingIntent.getActivity(currentContext, random.nextInt(), summaryIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+         PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), summaryIntent);
 
          NotificationCompat.Builder summeryBuilder = getBaseNotificationCompatBuilder(gcmBundle, !updateSummary);
 
@@ -481,7 +491,7 @@ class GenerateNotification {
 
          NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle, !updateSummary);
 
-         PendingIntent summaryContentIntent = PendingIntent.getActivity(currentContext, random.nextInt(), getNewBaseIntent(summaryNotificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("summary", group), PendingIntent.FLAG_UPDATE_CURRENT);
+         PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(summaryNotificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("summary", group));
 
          addNotificationActionButtons(gcmBundle, notifBuilder, summaryNotificationId, group);
          notifBuilder.setContentIntent(summaryContentIntent)
@@ -700,7 +710,7 @@ class GenerateNotification {
                   else if (gcmBundle.has("grp"))
                      buttonIntent.putExtra("grp", gcmBundle.getString("grp"));
 
-                  PendingIntent buttonPIntent = PendingIntent.getActivity(currentContext, notificationId, buttonIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                  PendingIntent buttonPIntent = getNewActionPendingIntent(notificationId, buttonIntent);
 
                   int buttonIcon = 0;
                   if (button.has("icon"))

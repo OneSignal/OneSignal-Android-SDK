@@ -2,9 +2,6 @@
  * Modified MIT License
  * 
  * Copyright 2015 OneSignal
- * 
- * Portions Copyright 2013 Google Inc.
- * This file includes portions from the Google GcmClient demo project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -159,7 +156,8 @@ public class PushRegistratorGPS implements PushRegistrator {
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "GCM_RETRY_COUNT of " + GCM_RETRY_COUNT + " exceed! Could not get a Google Registration Id", e);
                      else {
                         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Google Play services returned SERVICE_NOT_AVAILABLE error. Current retry count: " + currentRetry, e);
-                        if (currentRetry == 0) {
+                        if (currentRetry == 2) {
+                           // Retry 3 times before firing a null response and continuing a few more times.
                            registeredHandler.complete(null);
                            firedComplete = true;
                         }
