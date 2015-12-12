@@ -2,12 +2,15 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+    buildToolsVersion "23.0.2"
 
     defaultConfig {
         applicationId "com.onesignal.example"
-        // Required for OneSignal
-        manifestPlaceholders = [manifestApplicationId:"${applicationId}"]
+
+        // TODO: Please update the Google Project number and OneSignal Id below to yours.
+        manifestPlaceholders = [manifestApplicationId: "${applicationId}",
+                                onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
+                                onesignal_google_project_number: "703322744261"]
 
         minSdkVersion 10
         targetSdkVersion 23
@@ -25,10 +28,12 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.1.0'
+    compile 'com.android.support:appcompat-v7:+'
 
-    // OneSignal
-    compile 'com.onesignal:OneSignal:1.+@aar'
-    compile 'com.google.android.gms:play-services-gcm:8.1.0'
-    compile 'com.google.android.gms:play-services-analytics:8.1.0'
+    // OneSignal and required libraries
+    compile 'com.onesignal:OneSignal:2.+@aar'
+    compile 'com.google.android.gms:play-services-gcm:+'
+    compile 'com.google.android.gms:play-services-analytics:+'
+    compile "com.google.android.gms:play-services-location:+"
+    compile 'com.android.support:appcompat-v7:23.1.1'
 }
