@@ -57,18 +57,11 @@ public class MainActivity extends ActionBarActivity {
 
       currentActivity = this;
 
-      // Enable Logging below to debug issues. (LogCat level, Visual level);
-      // OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-
-      OneSignal.startInit(this)
-          .setAutoPromptLocation(true)
-          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
-          .init();
-
       OneSignal.enableInAppAlertNotification(true);
       OneSignal.enableNotificationsWhenActive(false);
-      OneSignal.sendTag("test1", "test1");
+      OneSignal.sendTag("test3", "test3");
       //OneSignal.setSubscription(false);
+
 
 //        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
 //            @Override

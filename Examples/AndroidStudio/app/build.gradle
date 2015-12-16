@@ -35,5 +35,4 @@ dependencies {
     compile 'com.google.android.gms:play-services-gcm:+'
     compile 'com.google.android.gms:play-services-analytics:+'
     compile "com.google.android.gms:play-services-location:+"
-    compile 'com.android.support:appcompat-v7:23.1.1'
 }

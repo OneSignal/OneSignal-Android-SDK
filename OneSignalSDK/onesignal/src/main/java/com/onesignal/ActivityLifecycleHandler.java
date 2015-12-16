@@ -28,33 +28,45 @@
 package com.onesignal;
 
 import android.app.Activity;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.util.Log;
 
 class ActivityLifecycleHandler {
 
+   interface ActivityAvailableListener {
+      void available(Activity activity);
+   }
+
    static Activity curActivity;
+   private static ActivityAvailableListener mActivityAvailableListener;
    static FocusHandlerThread focusHandlerThread = new FocusHandlerThread();
 
-   static void onActivityCreated(Activity activity) {
-      curActivity = activity;
-
-      logCurActivity();
-      handleFocus();
+   // Note: Only supports one callback, create a list when this needs to be used by more than the permissions dialog.
+   static void setActivityAvailableListener(ActivityAvailableListener activityAvailableListener) {
+      if (curActivity != null) {
+         activityAvailableListener.available(curActivity);
+         mActivityAvailableListener = activityAvailableListener;
+      }
+      else
+         mActivityAvailableListener = activityAvailableListener;
    }
 
-   static void onActivityStarted(Activity activity) {
-      curActivity = activity;
-
-      logCurActivity();
-      handleFocus();
+   public static void removeActivityAvailableListener(ActivityAvailableListener activityAvailableListener) {
+      mActivityAvailableListener = null;
    }
+
+   private static void setCurActivity(Activity activity) {
+      curActivity = activity;
+      if (mActivityAvailableListener != null)
+         mActivityAvailableListener.available(curActivity);
+   }
+
+   static void onActivityCreated(Activity activity) {}
+   static void onActivityStarted(Activity activity) {}
 
    static void onActivityResumed(Activity activity) {
-      curActivity = activity;
+      setCurActivity(activity);
 
       logCurActivity();
       handleFocus();
@@ -88,7 +100,7 @@ class ActivityLifecycleHandler {
    }
 
    static private void logCurActivity() {
-      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? curActivity.getClass().getName() : "null"));
+      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? "" + curActivity.getClass().getName() + ":" + curActivity : "null"));
    }
 
    static private void handleLostFocus() {

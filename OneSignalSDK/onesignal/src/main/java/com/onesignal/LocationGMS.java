@@ -1,14 +1,15 @@
 package com.onesignal;
 
+import com.onesignal.AndroidSupportV4Compat.ContextCompat;
+
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -23,6 +24,8 @@ import java.util.List;
 class LocationGMS {
    private static GoogleApiClient mGoogleApiClient;
    static String requestPermission;
+
+   private static ActivityLifecycleHandler.ActivityAvailableListener activityAvailableListener;
 
    interface LocationHandler {
       void complete(Double lat, Double log);
@@ -59,7 +62,7 @@ class LocationGMS {
                }
 
                if (requestPermission != null && promptLocation)
-                  ActivityLifecycleHandler.curActivity.startActivity(new Intent(context, PermissionsActivity.class));
+                  PermissionsActivity.startPrompt();
                else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED)
                   startGetLocation();
                else
@@ -84,6 +87,8 @@ class LocationGMS {
    }
 
    static void fireFailedComplete() {
+      PermissionsActivity.answered = false;
+
       locationHandler.complete(null, null);
       if (mGoogleApiClient != null)
          mGoogleApiClient.disconnect();
@@ -92,6 +97,8 @@ class LocationGMS {
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
       @Override
       public void onConnected(Bundle bundle) {
+         PermissionsActivity.answered = false;
+
          Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
          // Coarse always gives out 14 digits and has an accuracy 2000. Always rounding to 7 as this is what fine returns.
          if (location != null)

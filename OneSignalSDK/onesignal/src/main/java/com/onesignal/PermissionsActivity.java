@@ -31,12 +31,17 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
+import android.util.Log;
+
+import com.onesignal.AndroidSupportV4Compat.ActivityCompat;
 
 public class PermissionsActivity extends Activity {
 
    private static final int REQUEST_LOCATION = 2;
 
+   static boolean waiting, answered;
+   private static ActivityLifecycleHandler.ActivityAvailableListener activityAvailableListener;
+   
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
@@ -50,11 +55,17 @@ public class PermissionsActivity extends Activity {
    }
 
    private void requestPermission() {
-      ActivityCompat.requestPermissions(this, new String[] {LocationGMS.requestPermission}, REQUEST_LOCATION);
+      if (!waiting) {
+         waiting = true;
+         ActivityCompat.requestPermissions(this, new String[]{LocationGMS.requestPermission}, REQUEST_LOCATION);
+      }
    }
 
    @Override
    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+      answered = true;
+      waiting = false;
+
       if (requestCode == REQUEST_LOCATION) {
          if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             LocationGMS.startGetLocation();
@@ -62,6 +73,26 @@ public class PermissionsActivity extends Activity {
             LocationGMS.fireFailedComplete();
       }
 
+      ActivityLifecycleHandler.removeActivityAvailableListener(activityAvailableListener);
       finish();
+   }
+
+
+   static void startPrompt() {
+      if (PermissionsActivity.waiting || PermissionsActivity.answered)
+         return;
+
+      activityAvailableListener = new ActivityLifecycleHandler.ActivityAvailableListener() {
+         @Override
+         public void available(Activity activity) {
+            if (!activity.getClass().equals(PermissionsActivity.class)) {
+               Intent intent = new Intent(activity, PermissionsActivity.class);
+               intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+               activity.startActivity(intent);
+            }
+         }
+      };
+
+      ActivityLifecycleHandler.setActivityAvailableListener(activityAvailableListener);
    }
 }

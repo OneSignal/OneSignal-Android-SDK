@@ -162,7 +162,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020000";
+   public static final String VERSION = "020001";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -1100,6 +1100,7 @@ public class OneSignal {
    }
 
    public static void promptLocation() {
+
       LocationGMS.getLocation(appContext, true,  new LocationGMS.LocationHandler() {
          @Override
          public void complete(Double lat, Double log) {

@@ -18,6 +18,7 @@ public class ExampleApplication extends Application {
 
       OneSignal.startInit(this)
           .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
+          .setAutoPromptLocation(true)
           .init();
    }
 
