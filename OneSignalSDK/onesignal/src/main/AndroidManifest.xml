@@ -4,10 +4,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
 
-    <!-- Create a unique permission for your app and use it so only your app can receive your OneSignal messages. -->
-    <permission android:name="${manifestApplicationId}.permission.C2D_MESSAGE" android:protectionLevel="signature" />
-    <uses-permission android:name="${manifestApplicationId}.permission.C2D_MESSAGE" />
-
     <!-- Required, makes sure notifications are delivered on time. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -18,23 +14,13 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application>
-        <meta-data android:name="onesignal_app_id" android:value="${onesignal_app_id}" />
-        <meta-data android:name="onesignal_google_project_number" android:value="str:${onesignal_google_project_number}" />
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
-
-        <receiver
-            android:name="com.onesignal.GcmBroadcastReceiver"
-            android:permission="com.google.android.c2dm.permission.SEND" >
-            <intent-filter>
-                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
-                <category android:name="${manifestApplicationId}" />
-            </intent-filter>
-        </receiver>
         <service android:name="com.onesignal.GcmIntentService" />
 
         <service android:name="com.onesignal.SyncService" android:stopWithTask="false" />
-
         <activity android:name="com.onesignal.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
+
+    <!-- NOTE: See release version for tags with placeholders -->
 
 </manifest>

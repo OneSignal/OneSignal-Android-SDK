@@ -72,14 +72,6 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
       }
    }
 
-   public void onPause() {
-      OneSignal.onPaused();
-   }
-
-   public void onResume() {
-      OneSignal.onResumed();
-   }
-
    public void sendTag(String key, String value) {
       OneSignal.sendTag(key, value);
    }

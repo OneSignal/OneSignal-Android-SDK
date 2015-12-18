@@ -505,6 +505,7 @@ class GenerateNotification {
 
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
 
+      cursor.close();
       writableDb.close();
    }
 

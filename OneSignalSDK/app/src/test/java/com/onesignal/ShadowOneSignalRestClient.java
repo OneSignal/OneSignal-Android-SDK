@@ -52,7 +52,7 @@ public class ShadowOneSignalRestClient {
    }
 
    static void safeInterrupt() {
-      if (testThread.getState() == Thread.State.TIMED_WAITING)
+      if (testThread != null && testThread.getState() == Thread.State.TIMED_WAITING)
          testThread.interrupt();
    }
 
@@ -98,7 +98,6 @@ public class ShadowOneSignalRestClient {
       lastPost = jsonBody;
 
       System.out.println("lastPost:jsonBody: " + lastPost.toString());
-      System.out.println("testThread.getState()" + testThread.getState());
 
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
@@ -116,7 +115,6 @@ public class ShadowOneSignalRestClient {
       if (doFail(responseHandler)) return;
 
       System.out.println("lastPost:jsonBody: " + lastPost.toString());
-      System.out.println("testThread.getState()" + testThread.getState());
 
       responseHandler.onSuccess("{}");
 

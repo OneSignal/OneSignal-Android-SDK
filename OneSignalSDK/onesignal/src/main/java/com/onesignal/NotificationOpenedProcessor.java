@@ -113,6 +113,8 @@ public class NotificationOpenedProcessor {
             }
          } while (cursor.moveToNext());
       }
+
+      cursor.close();
    }
 
    private static void markNotificationsConsumed(SQLiteDatabase writableDb) {
@@ -151,6 +153,8 @@ public class NotificationOpenedProcessor {
             GenerateNotification.createSummaryNotification(context, true, new JSONObject("{\"grp\": \"" + grpId + "\"}"));
          } catch (JSONException e) {}
       }
+
+      cursor.close();
    }
 
    private static ContentValues newContentValuesWithConsumed() {

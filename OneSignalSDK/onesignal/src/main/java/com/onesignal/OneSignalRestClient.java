@@ -110,6 +110,7 @@ class OneSignalRestClient {
          if (httpResponse == HttpURLConnection.HTTP_OK) {
             Scanner scanner = new Scanner(con.getInputStream(), "UTF-8");
             json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+            scanner.close();
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, method + " RECEIVED JSON: " + json);
 
             if (responseHandler != null)
@@ -118,6 +119,7 @@ class OneSignalRestClient {
          else {
             Scanner scanner = new Scanner(con.getErrorStream(), "UTF-8");
             json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+            scanner.close();
             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " RECEIVED JSON: " + json);
 
             if (responseHandler != null)

@@ -1156,6 +1156,7 @@ public class OneSignal {
             null, null, null);
 
       boolean exists = cursor.moveToFirst();
+      cursor.close();
       readableDb.close();
 
       if (exists) {
