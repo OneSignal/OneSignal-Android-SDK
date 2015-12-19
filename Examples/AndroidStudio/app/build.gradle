@@ -27,12 +27,14 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
+
     compile 'com.android.support:appcompat-v7:+'
 
-    // OneSignal and required libraries
+    // OneSignal SDK
     compile 'com.onesignal:OneSignal:2.+@aar'
+
+    // OneSignal requires at least version 7.0.0 of GMS but the newest version is recommend.
     compile 'com.google.android.gms:play-services-gcm:+'
     compile 'com.google.android.gms:play-services-analytics:+'
-    compile "com.google.android.gms:play-services-location:+"
+    compile 'com.google.android.gms:play-services-location:+'
 }

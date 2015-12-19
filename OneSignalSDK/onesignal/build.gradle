@@ -25,11 +25,9 @@ android {
 dependencies {
     provided fileTree(dir: 'libs', include: ['*.jar'])
 
-    // Compiling oldest version so we know the minimum required version at compile time.
-    // 7.0.0 depends on Android Support Library v4 22.0.0
-    compile "com.google.android.gms:play-services-gcm:7.0.0"
-    compile "com.google.android.gms:play-services-analytics:7.0.0"
-    compile "com.google.android.gms:play-services-location:7.0.0"
+    compile 'com.google.android.gms:play-services-gcm:8.4.0'
+    compile 'com.google.android.gms:play-services-analytics:8.4.0'
+    compile 'com.google.android.gms:play-services-location:8.4.0'
 }
 
 apply from: 'maven-push.gradle'

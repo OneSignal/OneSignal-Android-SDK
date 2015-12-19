@@ -4,6 +4,9 @@
 
     <!-- All OneSignal manifest entries are added for you automatically from the OneSignal aar gradle entry. -->
 
+    <!-- Optional permission, needed for geo tagging feature. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
