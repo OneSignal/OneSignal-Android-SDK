@@ -7,10 +7,10 @@ android {
     defaultConfig {
         minSdkVersion 10
         targetSdkVersion 23
+        consumerProguardFiles 'consumer-proguard-rules.pro'
     }
 
     buildTypes {
-
         main {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

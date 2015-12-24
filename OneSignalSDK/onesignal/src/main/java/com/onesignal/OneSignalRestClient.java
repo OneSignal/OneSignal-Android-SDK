@@ -126,8 +126,8 @@ class OneSignalRestClient {
                responseHandler.onFailure(httpResponse, json, null);
          }
       } catch (Throwable t) {
-         if (t instanceof java.net.ConnectException)
-            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Could not send last request, device is offline.");
+         if (t instanceof java.net.ConnectException || t instanceof java.net.UnknownHostException)
+            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Could not send last request, device is offline. Throwable: " + t.getClass().getName());
          else
             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " Error thrown from network stack. ", t);
 

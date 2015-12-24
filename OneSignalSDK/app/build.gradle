@@ -16,8 +16,9 @@ android {
         versionName "1.0"
     }
     buildTypes {
-        release {
-            minifyEnabled false
+        debug {
+            // Test with proguard enabled to make sure our consumer rules are correct in the SDK.
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -46,7 +47,7 @@ dependencies {
     }
 
     // Use for released SDK
-    //compile 'com.onesignal:OneSignal:2.+@aar'
+    // compile 'com.onesignal:OneSignal:2.+@aar'
 
     // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
     // This insure that the SDK will work if an app developer is using an older version of GMS.

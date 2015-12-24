@@ -115,7 +115,8 @@ class TrackGooglePurchase {
             public void onServiceConnected(ComponentName name, IBinder service) {
                try {
                   Class<?> stubClass = Class.forName("com.android.vending.billing.IInAppBillingService$Stub");
-                  Method asInterfaceMethod = stubClass.getDeclaredMethod("asInterface", android.os.IBinder.class);
+                  Method asInterfaceMethod = getAsInterfaceMethod(stubClass);
+
                   asInterfaceMethod.setAccessible(true);
                   mIInAppBillingService = asInterfaceMethod.invoke(null, service);
 
@@ -143,7 +144,7 @@ class TrackGooglePurchase {
             isWaitingForPurchasesRequest = true;
             try {
                if (getPurchasesMethod == null) {
-                  getPurchasesMethod = IInAppBillingServiceClass.getDeclaredMethod("getPurchases", int.class, String.class, String.class, String.class);
+                  getPurchasesMethod = getGetPurchasesMethod(IInAppBillingServiceClass);
                   getPurchasesMethod.setAccessible(true);
                }
 
@@ -188,7 +189,7 @@ class TrackGooglePurchase {
    private void sendPurchases(final ArrayList<String> skusToAdd, final ArrayList<String> newPurchaseTokens) {
       try {
          if (getSkuDetailsMethod == null) {
-            getSkuDetailsMethod = IInAppBillingServiceClass.getDeclaredMethod("getSkuDetails", int.class, String.class, String.class, Bundle.class);
+            getSkuDetailsMethod = getGetSkuDetailsMethod(IInAppBillingServiceClass);
             getSkuDetailsMethod.setAccessible(true);
          }
 
@@ -250,5 +251,37 @@ class TrackGooglePurchase {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed to track IAP purchases", t);
       }
+   }
+
+   private static Method getAsInterfaceMethod(Class clazz) {
+      for(Method method : clazz.getMethods()) {
+         Class<?>[] args = method.getParameterTypes();
+         if (args.length == 1 && args[0] == android.os.IBinder.class)
+            return method;
+      }
+
+      return  null;
+   }
+
+   private static Method getGetPurchasesMethod(Class clazz) {
+      for(Method method : clazz.getMethods()) {
+         Class<?>[] args = method.getParameterTypes();
+         if (args.length == 4
+             && args[0] == int.class && args[1] == String.class && args[2] == String.class && args[3] == String.class)
+            return method;
+      }
+
+      return  null;
+   }
+
+   private static Method getGetSkuDetailsMethod(Class clazz) {
+      for(Method method : clazz.getMethods()) {
+         Class<?>[] args = method.getParameterTypes();
+         if (args.length == 4
+             && args[0] == int.class && args[1] == String.class && args[2] == String.class && args[3] == Bundle.class)
+            return method;
+      }
+
+      return  null;
    }
 }
