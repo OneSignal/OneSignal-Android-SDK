@@ -119,6 +119,27 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testInitFromApplicationContext() throws Exception {
+      // Application.onCreate
+      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
+
+      ShadowOneSignalRestClient.lastPost = null;
+      StaticResetHelper.restSetStaticFields();
+
+      // Restart app, should not send onSession automatically
+      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+
+      // Starting of first Activity should trigger onSession
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   @Test
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
       OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 

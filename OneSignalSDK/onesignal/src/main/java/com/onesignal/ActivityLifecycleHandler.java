@@ -34,6 +34,8 @@ import android.os.Looper;
 
 class ActivityLifecycleHandler {
 
+   static boolean nextResumeIsFirstActivity;
+
    interface ActivityAvailableListener {
       void available(Activity activity);
    }
@@ -108,7 +110,8 @@ class ActivityLifecycleHandler {
    }
 
    static private void handleFocus() {
-      if (focusHandlerThread.hasBackgrounded()) {
+      if (focusHandlerThread.hasBackgrounded() || nextResumeIsFirstActivity) {
+         nextResumeIsFirstActivity = false;
          focusHandlerThread.resetBackgroundState();
          OneSignal.onAppFocus();
       }

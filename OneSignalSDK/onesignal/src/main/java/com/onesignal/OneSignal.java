@@ -69,7 +69,7 @@ import com.stericson.RootTools.internal.RootToolsInternalMethods;
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class OneSignal {
-   
+
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
@@ -141,8 +141,10 @@ public class OneSignal {
     */
    static final String TAG = "OneSignal";
 
-   static String appId;
+   static String appId, mGoogleProjectNumber;
    static Context appContext;
+
+   private static boolean startedRegistration;
    
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
@@ -153,7 +155,7 @@ public class OneSignal {
    private static NotificationOpenedHandler notificationOpenedHandler;
 
    static boolean initDone;
-   private static boolean foreground = true;
+   private static boolean foreground;
 
    private static IdsAvailableHandler idsAvailableHandler;
 
@@ -162,7 +164,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020003";
+   public static final String VERSION = "020004";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -213,11 +215,6 @@ public class OneSignal {
       osUtils = new OSUtils();
 
       deviceType = osUtils.getDeviceType();
-      PushRegistrator pushRegistrator;
-      if (deviceType == 2)
-         pushRegistrator = new PushRegistratorADM();
-      else
-         pushRegistrator = new PushRegistratorGPS();
 
       // START: Init validation
       try {
@@ -247,6 +244,8 @@ public class OneSignal {
             subscribableStatus = -4;
          }
       }
+
+      mGoogleProjectNumber = googleProjectNumber;
 
       try {
          Class.forName("android.support.v4.view.MenuCompat");
@@ -278,11 +277,15 @@ public class OneSignal {
       }
 
       // END: Init validation
+      boolean contextIsActivity = (context instanceof Activity);
 
+      foreground = contextIsActivity;
       appId = oneSignalAppId;
       appContext = context.getApplicationContext();
-      if (context instanceof Activity)
+      if (contextIsActivity)
          ActivityLifecycleHandler.curActivity = (Activity)context;
+      else
+         ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
       notificationOpenedHandler = inNotificationOpenedHandler;
       lastTrackedTime = SystemClock.elapsedRealtime();
 
@@ -311,7 +314,30 @@ public class OneSignal {
       else
          SaveAppId(appId);
 
-      pushRegistrator.registerForPush(appContext, googleProjectNumber, new PushRegistrator.RegisteredHandler() {
+      if (foreground || getUserId() == null)
+         startRegistrationOrOnSession();
+
+      fireCallbackForOpenedNotifications();
+
+      if (TrackGooglePurchase.CanTrack(appContext))
+         trackGooglePurchase = new TrackGooglePurchase(appContext);
+
+      initDone = true;
+   }
+
+   private static void startRegistrationOrOnSession() {
+      if (startedRegistration)
+         return;
+
+      startedRegistration = true;
+
+      PushRegistrator pushRegistrator;
+      if (deviceType == 2)
+         pushRegistrator = new PushRegistratorADM();
+      else
+         pushRegistrator = new PushRegistratorGPS();
+
+      pushRegistrator.registerForPush(appContext, mGoogleProjectNumber, new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id) {
             lastRegistrationId = id;
@@ -328,13 +354,6 @@ public class OneSignal {
             registerUser();
          }
       });
-
-      fireCallbackForOpenedNotifications();
-
-      if (TrackGooglePurchase.CanTrack(appContext))
-         trackGooglePurchase = new TrackGooglePurchase(appContext);
-
-      initDone = true;
    }
 
    private static void fireCallbackForOpenedNotifications() {
@@ -524,6 +543,8 @@ public class OneSignal {
    static void onAppFocus() {
       foreground = true;
       lastTrackedTime = SystemClock.elapsedRealtime();
+
+      startRegistrationOrOnSession();
 
       if (trackGooglePurchase != null)
          trackGooglePurchase.trackIAP();
