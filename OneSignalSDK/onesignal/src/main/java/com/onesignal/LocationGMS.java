@@ -101,15 +101,20 @@ class LocationGMS {
    }
 
    static void startGetLocation() {
-      GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
-      GoogleApiClient googleApiClient = new GoogleApiClient.Builder(OneSignal.appContext)
-          .addApi(LocationServices.API)
-          .addConnectionCallbacks(googleApiClientListener)
-          .addOnConnectionFailedListener(googleApiClientListener)
-          .build();
-      mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
+      try {
+         GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
+         GoogleApiClient googleApiClient = new GoogleApiClient.Builder(OneSignal.appContext)
+             .addApi(LocationServices.API)
+             .addConnectionCallbacks(googleApiClientListener)
+             .addOnConnectionFailedListener(googleApiClientListener)
+             .build();
+         mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
 
-      mGoogleApiClient.connect();
+         mGoogleApiClient.connect();
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but there was an error initializing: ", t);
+         fireFailedComplete();
+      }
    }
 
    static void fireFailedComplete() {

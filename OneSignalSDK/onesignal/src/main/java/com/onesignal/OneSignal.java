@@ -164,7 +164,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020004";
+   public static final String VERSION = "020005";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -251,8 +251,9 @@ public class OneSignal {
          Class.forName("android.support.v4.view.MenuCompat");
          try {
             Class.forName("android.support.v4.content.WakefulBroadcastReceiver");
+            Class.forName("android.support.v4.app.NotificationManagerCompat");
          } catch (ClassNotFoundException e) {
-            Log(LOG_LEVEL.FATAL, "The included Android Support Library v4 is to old. Please update your project's android-support-v4.jar to the latest revision.", e);
+            Log(LOG_LEVEL.FATAL, "The included Android Support Library v4 is to old or incomplete. Please update your project's android-support-v4.jar to the latest revision.", e);
             subscribableStatus = -5;
          }
       } catch (ClassNotFoundException e) {
