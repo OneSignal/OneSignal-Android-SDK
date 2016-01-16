@@ -9,7 +9,7 @@ import java.util.Map;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
-   public static void runAllNetworkRunnable() {
+   public static void runAllNetworkRunnables() {
       for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet()) {
          Scheduler scheduler = shadowOf(handlerThread.getValue().getLooper()).getScheduler();
          while (scheduler.advanceToNextPostedRunnable()) {}

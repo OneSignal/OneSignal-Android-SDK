@@ -84,6 +84,8 @@ class ActivityLifecycleHandler {
    }
 
    static void onActivityStopped(Activity activity) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity.getClass().getName());
+
       if (activity == curActivity) {
          curActivity = null;
          handleLostFocus();
@@ -93,6 +95,8 @@ class ActivityLifecycleHandler {
    }
 
    static void onActivityDestroyed(Activity activity) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityDestroyed: " + activity.getClass().getName());
+
       if (activity == curActivity) {
          curActivity = null;
          handleLostFocus();

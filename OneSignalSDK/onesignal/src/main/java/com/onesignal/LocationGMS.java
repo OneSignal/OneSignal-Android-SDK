@@ -35,6 +35,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -49,25 +50,29 @@ class LocationGMS {
    private static GoogleApiClientCompatProxy mGoogleApiClient;
    static String requestPermission;
 
-   private static ActivityLifecycleHandler.ActivityAvailableListener activityAvailableListener;
-
    interface LocationHandler {
-      void complete(Double lat, Double log);
+      void complete(Double lat, Double log, Float accuracy, Integer type);
    }
 
    private static LocationHandler locationHandler;
+
+   private static Thread fallbackFailThread;
+
+   private static boolean locationCoarse;
 
    static void getLocation(Context context, boolean promptLocation, LocationHandler handler) {
       locationHandler = handler;
       int locationCoarsePermission = PackageManager.PERMISSION_DENIED;
 
       int locationFinePermission = ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION");
-      if (locationFinePermission == PackageManager.PERMISSION_DENIED)
+      if (locationFinePermission == PackageManager.PERMISSION_DENIED) {
          locationCoarsePermission = ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION");
+         locationCoarse = true;
+      }
 
       if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
-            handler.complete(null, null);
+            handler.complete(null, null, null, null);
             return;
          }
 
@@ -102,6 +107,15 @@ class LocationGMS {
 
    static void startGetLocation() {
       try {
+         fallbackFailThread = new Thread(new Runnable() {
+            public void run() {
+               SystemClock.sleep(30000);
+               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but GoogleApiClient timedout. Maybe related to mismatch google-play aar versions.");
+               fireFailedComplete();
+            }
+         });
+         fallbackFailThread.start();
+
          GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
          GoogleApiClient googleApiClient = new GoogleApiClient.Builder(OneSignal.appContext)
              .addApi(LocationServices.API)
@@ -120,9 +134,15 @@ class LocationGMS {
    static void fireFailedComplete() {
       PermissionsActivity.answered = false;
 
-      locationHandler.complete(null, null);
+      fireComplete(null, null, null, null);
       if (mGoogleApiClient != null)
          mGoogleApiClient.disconnect();
+   }
+
+   private static void fireComplete(Double lat, Double log, Float accuracy, Integer type) {
+      locationHandler.complete(lat, log, accuracy, type);
+      if (fallbackFailThread != null && !Thread.currentThread().equals(fallbackFailThread))
+         fallbackFailThread.interrupt();
    }
 
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -131,11 +151,16 @@ class LocationGMS {
          PermissionsActivity.answered = false;
 
          Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient.realInstance());
+
          // Coarse always gives out 14 digits and has an accuracy 2000. Always rounding to 7 as this is what fine returns.
-         if (location != null)
-            locationHandler.complete(new BigDecimal(location.getLatitude()).setScale(7, RoundingMode.HALF_UP).doubleValue(), new BigDecimal(location.getLongitude()).setScale(7, RoundingMode.HALF_UP).doubleValue());
+         if (location != null) {
+            location.getAccuracy();
+            Double lat = new BigDecimal(location.getLatitude()).setScale(7, RoundingMode.HALF_UP).doubleValue();
+            Double log = new BigDecimal(location.getLongitude()).setScale(7, RoundingMode.HALF_UP).doubleValue();
+            fireComplete(lat, log, location.getAccuracy(), locationCoarse ? 0 : 1);
+         }
          else
-            locationHandler.complete(null, null);
+            fireComplete(null, null, null, null);
 
          mGoogleApiClient.disconnect();
       }

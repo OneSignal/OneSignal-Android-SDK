@@ -18,6 +18,7 @@ android {
     buildTypes {
         debug {
             // Test with proguard enabled to make sure our consumer rules are correct in the SDK.
+            // minify does not work with GMS 7.0.0 with the current settings. Use 8.4.0 to test.
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -51,10 +52,12 @@ dependencies {
 
     // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
     // This insure that the SDK will work if an app developer is using an older version of GMS.
-    compile "com.google.android.gms:play-services-gcm:7.0.0"
-    compile "com.google.android.gms:play-services-analytics:7.0.0"
-    compile "com.google.android.gms:play-services-location:7.0.0"
-//  compile 'com.android.support:support-v4:23.0.0'
+    compile "com.google.android.gms:play-services-gcm:8.4.0"
+
+    // play-services-analytics is required for AdvertisingIdClient when using GMS 8.1.0 or lower.
+    // 8.3.0 it is included in 'basement' which is required by 'base'.
+    //compile "com.google.android.gms:play-services-analytics:7.0.0"
+    compile "com.google.android.gms:play-services-location:8.4.0"
 
 //    testCompile 'junit:junit:4.12'
 //    testCompile 'org.robolectric:shadows-support-v4:3.0'

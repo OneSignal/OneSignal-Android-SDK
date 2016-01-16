@@ -36,6 +36,7 @@ import android.os.Bundle;
 import com.onesignal.BuildConfig;
 import com.onesignal.NotificationBundleProcessor;
 import com.onesignal.OneSignal;
+import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -66,7 +67,7 @@ import java.lang.reflect.Field;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
-      shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowPushRegistratorADM.class, ShadowOSUtils.class},
+      shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowPushRegistratorADM.class, ShadowOSUtils.class, ShadowLocationGMS.class},
       sdk = 21)
 
 @RunWith(CustomRobolectricTestRunner.class)
@@ -152,6 +153,25 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
+      Assert.assertEquals("Robo test message", notificationOpenedMessage);
+   }
+
+   @Test
+   public void shouldCorrectlyRemoveOpenedHandlerAndFireMissedOnesWhenAddedBack() throws Exception {
+      OneSignal.NotificationOpenedHandler notifHandler = new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
+            notificationOpenedMessage = message;
+         }
+      };
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notifHandler);
+      threadAndTaskWait();
+
+      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      Assert.assertNull(notificationOpenedMessage);
+
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notifHandler);
       Assert.assertEquals("Robo test message", notificationOpenedMessage);
    }
 
@@ -619,6 +639,29 @@ public class MainOneSignalClassRunner {
    }
    */
 
+   // ####### Unit Test Location       ########
+
+   @Test
+   public void shouldUpdateAllLocationFieldsWhenAnyFieldsChange() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
+      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
+      Assert.assertEquals(3.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
+      Assert.assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
+
+      ShadowOneSignalRestClient.lastPost = null;
+      StaticResetHelper.restSetStaticFields();
+      ShadowLocationGMS.lat = 30.0;
+      ShadowLocationGMS.accuracy = 5.0f;
+
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals(30.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
+      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
+      Assert.assertEquals(5.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
+      Assert.assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
+   }
 
    // ####### Unit test helper methods ########
 
@@ -628,7 +671,7 @@ public class MainOneSignalClassRunner {
 
    private void threadAndTaskWait() {
       try {Thread.sleep(300);} catch (Throwable t) {}
-      OneSignalPackagePrivateHelper.runAllNetworkRunnable();
+      OneSignalPackagePrivateHelper.runAllNetworkRunnables();
       OneSignalPackagePrivateHelper.runFocusRunnables();
 
       Robolectric.getForegroundThreadScheduler().runOneTask();

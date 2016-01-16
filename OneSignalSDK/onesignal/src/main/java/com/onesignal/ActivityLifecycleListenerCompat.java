@@ -68,6 +68,7 @@ class ActivityLifecycleListenerCompat {
 
                while (true) {
                   // Wait for new activity events, does not fire for pauses through.
+                  // waitForActivity should also return for onStop and onDestroy according to android/app/Instrumentation.java but this is not happening on a real device.
                   Activity currentActivity = allActivitiesMonitor.waitForActivity();
 
                   if (!currentActivity.isFinishing()) {

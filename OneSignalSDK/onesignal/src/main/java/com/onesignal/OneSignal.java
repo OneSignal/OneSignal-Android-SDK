@@ -29,10 +29,6 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -75,12 +71,6 @@ public class OneSignal {
    }
 
    static final long MIN_ON_FOCUS_TIME = 60;
-
-   // TODO: The interface and the code using it may not be needed since the Activity Context is being dereferenced correctly.
-   //       Check with Corona, Cordova, and see if it fixes the Marmalade bug around this.
-   @Retention(RetentionPolicy.RUNTIME)
-   @Target(ElementType.TYPE)
-   public @interface TiedToCurrentActivity {}
 
    public interface NotificationOpenedHandler {
       /**
@@ -164,15 +154,12 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020005";
+   public static final String VERSION = "020007";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
    private static int deviceType;
    public static String sdkType = "native";
-
-   private static JSONObject nextInitAdditionalDataJSON = null;
-   private static String nextInitMessage = null;
 
    private static OSUtils osUtils;
 
@@ -181,6 +168,8 @@ public class OneSignal {
    private static String lastRegistrationId;
    private static boolean registerForPushFired, locationFired;
    private static Double lastLocLat, lastLocLong;
+   private static Float lastLocAcc;
+   private static Integer lastLocType;
    private static OneSignal.Builder mInitBuilder;
 
    static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<JSONArray>();
@@ -264,15 +253,12 @@ public class OneSignal {
       if (initDone) {
          if (context != null)
             appContext = context.getApplicationContext();
+
          if (inNotificationOpenedHandler != null)
             notificationOpenedHandler = inNotificationOpenedHandler;
 
-         if (nextInitMessage != null && notificationOpenedHandler != null) {
-            fireNotificationOpenedHandler(nextInitMessage, nextInitAdditionalDataJSON, false);
-
-            nextInitMessage = null;
-            nextInitAdditionalDataJSON = null;
-         }
+         if (notificationOpenedHandler != null)
+            fireCallbackForOpenedNotifications();
 
          return;
       }
@@ -318,7 +304,8 @@ public class OneSignal {
       if (foreground || getUserId() == null)
          startRegistrationOrOnSession();
 
-      fireCallbackForOpenedNotifications();
+      if (notificationOpenedHandler != null)
+         fireCallbackForOpenedNotifications();
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
@@ -347,10 +334,13 @@ public class OneSignal {
          }
       });
 
-      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation,  new LocationGMS.LocationHandler() {
+      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation, new LocationGMS.LocationHandler() {
          @Override
-         public void complete(Double lat, Double log) {
-            lastLocLat = lat; lastLocLong = log;
+         public void complete(Double lat, Double log, Float accuracy, Integer type) {
+            lastLocLat = lat;
+            lastLocLong = log;
+            lastLocAcc = accuracy;
+            lastLocType = type;
             locationFired = true;
             registerUser();
          }
@@ -574,6 +564,8 @@ public class OneSignal {
    private static LocationGMS locationGMS;
 
    private static void registerUser() {
+      Log(LOG_LEVEL.DEBUG, "registerUser: registerForPushFired:" + registerForPushFired + ", locationFired: " + locationFired);
+
       if (!registerForPushFired || !locationFired)
          return;
 
@@ -622,7 +614,9 @@ public class OneSignal {
             userState.set("net_type", osUtils.getNetType());
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
+
             userState.set("lat", lastLocLat); userState.set("long", lastLocLong);
+            userState.set("loc_acc", lastLocAcc); userState.set("loc_type", lastLocType);
 
             OneSignalStateSynchronizer.postSession(userState);
          }
@@ -824,8 +818,10 @@ public class OneSignal {
    }
 
    private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean isActive) {
-      if (notificationOpenedHandler == null)
+      if (notificationOpenedHandler == null) {
+         unprocessedOpenedNotifis.add(dataArray);
          return;
+      }
 
       int jsonArraySize = dataArray.length();
 
@@ -887,16 +883,6 @@ public class OneSignal {
          }
       }
 
-      if (ActivityLifecycleHandler.curActivity != null && ActivityLifecycleHandler.curActivity.isFinishing()
-        && (notificationOpenedHandler.getClass().isAnnotationPresent(TiedToCurrentActivity.class)
-        || notificationOpenedHandler instanceof Activity)) {
-
-         // Activity is finished or isFinishing, run callback later when OneSignal.init is called again from anther Activity.
-         nextInitAdditionalDataJSON = completeAdditionalData;
-         nextInitMessage = firstMessage;
-         return;
-      }
-
       fireNotificationOpenedHandler(firstMessage, completeAdditionalData, isActive);
    }
 
@@ -925,10 +911,7 @@ public class OneSignal {
 
       boolean urlOpened = openURLFromNotification(data);
 
-      if (initDone)
-         runNotificationOpenedCallback(data, false);
-      else
-         unprocessedOpenedNotifis.add(data);
+      runNotificationOpenedCallback(data, false);
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened)
@@ -1123,13 +1106,17 @@ public class OneSignal {
 
    public static void promptLocation() {
 
-      LocationGMS.getLocation(appContext, true,  new LocationGMS.LocationHandler() {
+      LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
          @Override
-         public void complete(Double lat, Double log) {
+         public void complete(Double lat, Double log, Float accuracy, Integer type) {
             if (lat != null && log != null)
-               OneSignalStateSynchronizer.updateLocation(lat, log);
+               OneSignalStateSynchronizer.updateLocation(lat, log, accuracy, type);
          }
       });
+   }
+
+   public static void removeNotificationOpenedHandler() {
+      notificationOpenedHandler = null;
    }
 
    static long GetUnsentActiveTime() {

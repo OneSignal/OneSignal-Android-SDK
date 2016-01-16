@@ -25,20 +25,20 @@
  * THE SOFTWARE.
  */
 
-package com.test.onesignal;
+package com.onesignal;
 
-import org.junit.runners.model.InitializationError;
-import org.robolectric.RobolectricGradleTestRunner;
-import org.robolectric.annotation.Config;
-import org.robolectric.internal.bytecode.InstrumentationConfiguration;
+import android.content.Context;
 
-public class CustomRobolectricTestRunner extends RobolectricGradleTestRunner {
-    public CustomRobolectricTestRunner(Class<?> klass) throws InitializationError {
-        super(klass);
-    }
+import org.robolectric.annotation.Implements;
 
-    @Override
-    public InstrumentationConfiguration createClassLoaderConfig(Config config) {
-        return InstrumentationConfiguration.newBuilder().addInstrumentedPackage("com.onesignal").build();
-    }
+@Implements(LocationGMS.class)
+public class ShadowLocationGMS {
+
+   public static Double lat = 1.0, log = 2.0;
+   public static Float accuracy = 3.0f;
+   public static Integer type = 0;
+
+   static void getLocation(Context context, boolean promptLocation, LocationGMS.LocationHandler handler) {
+      handler.complete(lat, log, accuracy, type);
+   }
 }

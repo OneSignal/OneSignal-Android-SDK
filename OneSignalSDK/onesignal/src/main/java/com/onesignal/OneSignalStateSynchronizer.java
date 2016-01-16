@@ -35,9 +35,12 @@ import android.os.HandlerThread;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 class OneSignalStateSynchronizer {
    private static boolean onSessionDone = false, postSessionCalled = false, waitingForSessionResponse = false;
@@ -51,7 +54,10 @@ class OneSignalStateSynchronizer {
 
    private static Context appContext;
 
-   static private JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput) {
+   private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type"};
+   private static final Set<String> LOCATION_FIELDS_SET = new HashSet<String>(Arrays.asList(LOCATION_FIELDS));
+
+   static private JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
       Iterator<String> keys = changedTo.keys();
       String key;
       Object value;
@@ -73,13 +79,25 @@ class OneSignalStateSynchronizer {
                   JSONObject outValue = null;
                   if (baseOutput != null && baseOutput.has(key))
                      outValue = baseOutput.getJSONObject(key);
-                  JSONObject returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue);
+                  JSONObject returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
                   String returnedJsonStr = returnedJson.toString();
                   if (!returnedJsonStr.equals("{}"))
                      output.put(key, new JSONObject(returnedJsonStr));
                }
-               else if (!value.equals(cur.get(key)))
+               else if (includeFields != null && includeFields.contains(key))
                   output.put(key, value);
+               else {
+                  Object curValue = cur.get(key);
+                  if (!value.equals(curValue)) {
+                     // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
+                     if (curValue instanceof Integer) {
+                        if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
+                           output.put(key, value);
+                     }
+                     else
+                        output.put(key, value);
+                  }
+               }
             }
             else {
                if (value instanceof JSONObject)
@@ -104,6 +122,7 @@ class OneSignalStateSynchronizer {
    }
    
    class UserState {
+
       private final int UNSUBSCRIBE_VALUE = -2;
 
       private String persistKey;
@@ -151,9 +170,24 @@ class OneSignalStateSynchronizer {
          return 1;
       }
 
+      private Set<String> getGroupChangeField(JSONObject cur, JSONObject changedTo) {
+         try {
+            if (cur.getDouble("lat") != changedTo.getDouble("lat")
+             || cur.getDouble("long") != changedTo.getDouble("long")
+             || cur.getDouble("loc_acc") != changedTo.getDouble("loc_acc")
+             || cur.getDouble("loc_type") != changedTo.getDouble("loc_type"))
+               return LOCATION_FIELDS_SET;
+         } catch (Throwable t) {
+            return LOCATION_FIELDS_SET;
+         }
+
+         return null;
+      }
+
       private JSONObject generateJsonDiff(UserState newState, boolean isSessionCall) {
          addDependFields(); newState.addDependFields();
-         JSONObject sendJson = OneSignalStateSynchronizer.generateJsonDiff(syncValues, newState.syncValues, null);
+         Set<String> includeFields = getGroupChangeField(syncValues, newState.syncValues);
+         JSONObject sendJson = OneSignalStateSynchronizer.generateJsonDiff(syncValues, newState.syncValues, null, includeFields);
 
          if (!isSessionCall && sendJson.toString().equals("{}"))
             return null;
@@ -239,9 +273,9 @@ class OneSignalStateSynchronizer {
 
       private void persistStateAfterSync(JSONObject inDependValues, JSONObject inSyncValues) {
          if (inDependValues != null)
-            OneSignalStateSynchronizer.generateJsonDiff(dependValues, inDependValues, dependValues);
+            OneSignalStateSynchronizer.generateJsonDiff(dependValues, inDependValues, dependValues, null);
          if (inSyncValues != null)
-            OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues);
+            OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues, null);
 
          if (inDependValues != null || inSyncValues != null)
             persistState();
@@ -313,7 +347,7 @@ class OneSignalStateSynchronizer {
       boolean isSessionCall = !onSessionDone && postSessionCalled && !waitingForSessionResponse;
 
       final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
-      final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null);
+      final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
 
       if (jsonBody == null) {
          currentUserState.persistStateAfterSync(dependDiff, null);
@@ -425,9 +459,9 @@ class OneSignalStateSynchronizer {
 
    static void postSession(UserState postSession) {
       JSONObject toSync = getUserStateForModification().syncValues;
-      generateJsonDiff(toSync, postSession.syncValues, toSync);
+      generateJsonDiff(toSync, postSession.syncValues, toSync, null);
       JSONObject dependValues = getUserStateForModification().dependValues;
-      generateJsonDiff(dependValues, postSession.dependValues, dependValues);
+      generateJsonDiff(dependValues, postSession.dependValues, dependValues, null);
 
       postSessionCalled = true;
    }
@@ -435,7 +469,7 @@ class OneSignalStateSynchronizer {
    static void sendTags(JSONObject newTags) {
       JSONObject userStateTags = getUserStateForModification().syncValues;
       try {
-         generateJsonDiff(userStateTags, new JSONObject().put("tags", newTags), userStateTags);
+         generateJsonDiff(userStateTags, new JSONObject().put("tags", newTags), userStateTags, null);
       } catch (JSONException e) { e.printStackTrace(); }
    }
 
@@ -456,11 +490,13 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   static void updateLocation(Double lat, Double log) {
+   static void updateLocation(Double lat, Double log, Float accuracy, Integer type) {
       UserState userState = getUserStateForModification();
       try {
          userState.syncValues.put("lat", lat);
          userState.syncValues.put("long", log);
+         userState.syncValues.put("loc_acc", accuracy);
+         userState.syncValues.put("loc_type", type);
       } catch (JSONException e) {
          e.printStackTrace();
       }
