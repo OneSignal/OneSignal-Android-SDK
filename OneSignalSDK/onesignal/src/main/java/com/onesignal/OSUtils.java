@@ -35,6 +35,8 @@ import android.telephony.TelephonyManager;
 class OSUtils {
    int getDeviceType() {
       try {
+         // Class only available on the FireOS and only when the following is in the AndroidManifest.xml.
+         // <amazon:enable-feature android:name="com.amazon.device.messaging" android:required="false"/>
          Class.forName("com.amazon.device.messaging.ADM");
          return 2;
       } catch (ClassNotFoundException e) {

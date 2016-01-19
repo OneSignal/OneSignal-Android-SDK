@@ -103,7 +103,8 @@ public class MainActivity extends ActionBarActivity {
    @Override
    protected void onPause() {
       super.onPause();
-      mHelper.dispose();
+      if (mHelper != null)
+         mHelper.dispose();
    }
 
    @Override
@@ -135,7 +136,6 @@ public class MainActivity extends ActionBarActivity {
    }
 
    // NotificationOpenedHandler is implemented in its own class instead of adding implements to MainActivity so we don't hold on to a reference of our first activity if it gets recreated.
-   @OneSignal.TiedToCurrentActivity
    private class ExampleNotificationOpenedHandler implements NotificationOpenedHandler {
       /**
        * Callback to implement in your app to handle when a notification is opened from the Android status bar or

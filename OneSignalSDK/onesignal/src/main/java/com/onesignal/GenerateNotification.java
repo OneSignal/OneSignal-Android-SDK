@@ -660,9 +660,10 @@ class GenerateNotification {
 
    private static Uri getCustomSound(JSONObject gcmBundle) {
       int soundId;
-      String sound;
+      String sound = null;
       try {
-         sound = gcmBundle.getString("sound");
+         if (gcmBundle.has("sound"))
+            sound = gcmBundle.getString("sound");
       } catch (Throwable t) {
          return null;
       }
