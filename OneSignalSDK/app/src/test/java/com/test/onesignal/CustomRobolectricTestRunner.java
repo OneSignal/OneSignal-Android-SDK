@@ -38,7 +38,7 @@ public class CustomRobolectricTestRunner extends RobolectricGradleTestRunner {
     }
 
     @Override
-    public InstrumentationConfiguration createClassLoaderConfig(Config config) {
+    public InstrumentationConfiguration createClassLoaderConfig() {
         return InstrumentationConfiguration.newBuilder().addInstrumentedPackage("com.onesignal").build();
     }
 }

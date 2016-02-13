@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -154,7 +155,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020008";
+   public static final String VERSION = "020100";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -561,8 +562,6 @@ public class OneSignal {
       return offset / 1000;
    }
 
-   private static LocationGMS locationGMS;
-
    private static void registerUser() {
       Log(LOG_LEVEL.DEBUG, "registerUser: registerForPushFired:" + registerForPushFired + ", locationFired: " + locationFired);
 
@@ -640,8 +639,39 @@ public class OneSignal {
    }
 
    public static void sendTags(JSONObject keyValues) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags! Omitting this tag operation.");
+         return;
+      }
+
       if (keyValues == null) return;
-      OneSignalStateSynchronizer.sendTags(keyValues);
+
+      JSONObject existingKeys = OneSignalStateSynchronizer.getTags();
+
+      JSONObject toSend = new JSONObject();
+
+      Iterator<String> keys = keyValues.keys();
+      String key;
+      Object value;
+
+      while (keys.hasNext()) {
+         key = keys.next();
+         try {
+            value = keyValues.get(key);
+            if (value instanceof JSONArray || value instanceof JSONObject)
+               Log(LOG_LEVEL.ERROR, "Omitting key '" + key  + "'! sendTags DO NOT supported nested values!");
+            else if (keyValues.isNull(key) || "".equals(value)) {
+               if (existingKeys.has(key))
+                  toSend.put(key, "");
+            }
+            else
+               toSend.put(key, value.toString());
+         }
+         catch (Throwable t) {}
+      }
+
+      if (!toSend.toString().equals("{}"))
+         OneSignalStateSynchronizer.sendTags(toSend);
    }
 
    public static void postNotification(String json, final PostNotificationResponseHandler handler) {
@@ -698,7 +728,11 @@ public class OneSignal {
    }
 
    public static void getTags(final GetTagsHandler getTagsHandler) {
-      getTagsHandler.tagsAvailable(OneSignalStateSynchronizer.getTags());
+      JSONObject tags = OneSignalStateSynchronizer.getTags();
+      if (tags.toString().equals("{}"))
+         getTagsHandler.tagsAvailable(null);
+      else
+         getTagsHandler.tagsAvailable(OneSignalStateSynchronizer.getTags());
    }
 
    public static void deleteTag(String key) {
@@ -945,6 +979,17 @@ public class OneSignal {
       }
 
       if (!isCustom) {
+         try {
+            ApplicationInfo ai = inContext.getPackageManager().getApplicationInfo(inContext.getPackageName(), PackageManager.GET_META_DATA);
+            Bundle bundle = ai.metaData;
+            String defaultStr = bundle.getString("com.onesignal.NotificationOpened.DEFAULT");
+            isCustom = "DISABLE".equals(defaultStr);
+         } catch (Throwable t) {
+            Log(LOG_LEVEL.ERROR, "", t);
+         }
+      }
+
+      if (!isCustom) {
          Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
 
          if (launchIntent != null) {
@@ -1105,6 +1150,10 @@ public class OneSignal {
    }
 
    public static void promptLocation() {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not prompt for location.");
+         return;
+      }
 
       LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
          @Override

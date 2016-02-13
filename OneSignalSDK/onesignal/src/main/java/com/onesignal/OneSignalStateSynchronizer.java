@@ -90,7 +90,7 @@ class OneSignalStateSynchronizer {
                   Object curValue = cur.get(key);
                   if (!value.equals(curValue)) {
                      // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
-                     if (curValue instanceof Integer) {
+                     if (curValue instanceof Integer && !"".equals(value)) {
                         if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
                            output.put(key, value);
                      }
@@ -111,6 +111,32 @@ class OneSignalStateSynchronizer {
       }
 
       return output;
+   }
+
+
+   private static JSONObject getTagsWithoutDeletedKeys(JSONObject jsonObject) {
+      if (jsonObject.has("tags")) {
+         JSONObject toReturn = new JSONObject();
+
+         JSONObject keyValues = jsonObject.optJSONObject("tags");
+
+         Iterator<String> keys = keyValues.keys();
+         String key;
+         Object value;
+
+         while (keys.hasNext()) {
+            key = keys.next();
+            try {
+               value = keyValues.get(key);
+               if (!"".equals(value))
+                  toReturn.put(key, value);
+            } catch (Throwable t) {}
+         }
+         
+         return toReturn;
+      }
+
+      return null;
    }
    
    public static void stopAndPersist() {
@@ -266,6 +292,7 @@ class OneSignalStateSynchronizer {
       private void persistState() {
          final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
          SharedPreferences.Editor editor = prefs.edit();
+
          editor.putString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, syncValues.toString());
          editor.putString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, dependValues.toString());
          editor.commit();
@@ -274,8 +301,28 @@ class OneSignalStateSynchronizer {
       private void persistStateAfterSync(JSONObject inDependValues, JSONObject inSyncValues) {
          if (inDependValues != null)
             OneSignalStateSynchronizer.generateJsonDiff(dependValues, inDependValues, dependValues, null);
-         if (inSyncValues != null)
+         if (inSyncValues != null) {
             OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues, null);
+
+            if (inSyncValues.has("tags")) {
+               JSONObject tags = inSyncValues.optJSONObject("tags");
+               Iterator<String> keys = tags.keys();
+               String key;
+
+               while (keys.hasNext()) {
+                  key = keys.next();
+                  if ("".equals(tags.optString(key)))
+                     tags.remove(key);
+               }
+
+               try {
+                  if (tags.toString().equals("{}"))
+                     syncValues.remove("tags");
+                  else
+                     syncValues.put("tags", tags);
+               } catch (Throwable t) {}
+            }
+         }
 
          if (inDependValues != null || inSyncValues != null)
             persistState();
@@ -333,6 +380,7 @@ class OneSignalStateSynchronizer {
 
    static void initUserState(Context context) {
       appContext = context;
+
       if (currentUserState != null) return;
 
       currentUserState = new OneSignalStateSynchronizer().new UserState("CURRENT_STATE", true);
@@ -512,7 +560,7 @@ class OneSignalStateSynchronizer {
    }
 
    static JSONObject getTags() {
-      return toSyncUserState.syncValues.optJSONObject("tags");
+      return getTagsWithoutDeletedKeys(toSyncUserState.syncValues);
    }
 
    static void resetCurrentState() {

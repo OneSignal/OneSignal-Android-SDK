@@ -33,8 +33,9 @@ import org.robolectric.annotation.Implements;
 public class ShadowPushRegistratorADM {
     public static boolean testNoClass = true;
 
-    public void __constructor__() throws ClassNotFoundException {
-        if (testNoClass)
-            throw new ClassNotFoundException();
-    }
+// TODO: Does not compile in Robolectric 3.0, try 3.1 once it releases.
+//    public void __constructor__() throws ClassNotFoundException {
+//        if (testNoClass)
+//            throw new ClassNotFoundException();
+//    }
 }

@@ -37,4 +37,7 @@ public class OneSignalPackagePrivateHelper {
    public static void SyncService_onTaskRemoved() {
       SyncService.onTaskRemoved();
    }
+
+
+   public class NotificationTable extends OneSignalDbContract.NotificationTable { }
 }

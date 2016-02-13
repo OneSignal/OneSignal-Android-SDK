@@ -35,7 +35,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -107,14 +106,7 @@ class LocationGMS {
 
    static void startGetLocation() {
       try {
-         fallbackFailThread = new Thread(new Runnable() {
-            public void run() {
-               SystemClock.sleep(30000);
-               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but GoogleApiClient timedout. Maybe related to mismatch google-play aar versions.");
-               fireFailedComplete();
-            }
-         });
-         fallbackFailThread.start();
+         startFallBackThread();
 
          GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
          GoogleApiClient googleApiClient = new GoogleApiClient.Builder(OneSignal.appContext)
@@ -129,6 +121,19 @@ class LocationGMS {
          OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but there was an error initializing: ", t);
          fireFailedComplete();
       }
+   }
+
+   private static void startFallBackThread() {
+      fallbackFailThread = new Thread(new Runnable() {
+         public void run() {
+            try {
+               Thread.sleep(30000);
+               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but GoogleApiClient timedout. Maybe related to mismatch google-play aar versions.");
+               fireFailedComplete();
+            } catch (Throwable t) {}
+         }
+      });
+      fallbackFailThread.start();
    }
 
    static void fireFailedComplete() {

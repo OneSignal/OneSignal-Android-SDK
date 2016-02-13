@@ -44,7 +44,7 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.example.BlankActivity;
-import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 
 import junit.framework.Assert;
 
