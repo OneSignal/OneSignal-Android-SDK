@@ -729,7 +729,7 @@ public class OneSignal {
 
    public static void getTags(final GetTagsHandler getTagsHandler) {
       JSONObject tags = OneSignalStateSynchronizer.getTags();
-      if (tags.toString().equals("{}"))
+      if (tags == null || tags.toString().equals("{}"))
          getTagsHandler.tagsAvailable(null);
       else
          getTagsHandler.tagsAvailable(OneSignalStateSynchronizer.getTags());
