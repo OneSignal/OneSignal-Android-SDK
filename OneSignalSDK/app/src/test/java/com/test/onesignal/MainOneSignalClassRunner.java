@@ -475,7 +475,6 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
       Assert.assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
 
 
@@ -486,7 +485,6 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("key1", "value1");
       threadAndTaskWait();
 
-      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
       Assert.assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length() - 1);
    }
 
@@ -552,7 +550,6 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       threadAndTaskWait();
 
-      System.out.println("lastGetTags: " + lastGetTags);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
       Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
@@ -568,8 +565,7 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit();
       threadAndTaskWait();
-      System.out.println("Saved state: " + prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
-      System.out.println("Deleting tag");
+
       OneSignal.deleteTag("int");
       threadAndTaskWait();
       
@@ -577,15 +573,11 @@ public class MainOneSignalClassRunner {
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            System.out.println("tags: " + tags);
             lastGetTags = tags;
          }
       });
 
       final SharedPreferences prefs2 = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-      System.out.println("Saved state: " + prefs2.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
-
-      System.out.println("lastGetTags: " + lastGetTags);
       Assert.assertNull(lastGetTags);
    }
 
@@ -599,8 +591,6 @@ public class MainOneSignalClassRunner {
             lastGetTags = tags;
          }
       });
-
-      System.out.println(lastGetTags);
 
       Assert.assertEquals(String.class, lastGetTags.get("int").getClass());
       Assert.assertEquals("122", lastGetTags.get("int"));
@@ -692,7 +682,6 @@ public class MainOneSignalClassRunner {
          }
       });
 
-      System.out.println("lastGetTags: " + lastGetTags);
       Assert.assertFalse(lastGetTags.has("int"));
       lastGetTags = null;
 
@@ -710,7 +699,6 @@ public class MainOneSignalClassRunner {
          }
       });
 
-      System.out.println("lastGetTags: " + lastGetTags);
       Assert.assertFalse(lastGetTags.has("int"));
 
       // After the success response it should not store a "" string when saving to storage.
@@ -732,7 +720,7 @@ public class MainOneSignalClassRunner {
 
 
    // ####### GetTags Tests ########
-
+   @Test
    public void testGetTagsWithNoTagsShouldBeNull() throws Exception {
       OneSignalInit();
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
