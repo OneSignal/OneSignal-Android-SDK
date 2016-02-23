@@ -46,8 +46,11 @@ public class NotificationOpenedProcessor {
    private static Intent intent;
 
    public static void processFromActivity(Context inContext, Intent inIntent) {
-      if (inIntent.getBooleanExtra("action_button", false)) // Pressed an action button, need to clear the notification manually
+      // Pressed an action button, need to clear the notification and close the notification area manually.
+      if (inIntent.getBooleanExtra("action_button", false)) {
          NotificationManagerCompat.from(inContext).cancel(inIntent.getIntExtra("notificationId", 0));
+         inContext.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+      }
 
       processIntent(inContext, inIntent);
    }
