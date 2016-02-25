@@ -820,7 +820,7 @@ public class OneSignal {
       }
    }
 
-   private static boolean openURLFromNotification(JSONArray dataArray) {
+   private static boolean openURLFromNotification(Context context, JSONArray dataArray) {
       int jsonArraySize = dataArray.length();
 
       boolean urlOpened = false;
@@ -840,7 +840,7 @@ public class OneSignal {
 
                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-               appContext.startActivity(intent);
+               context.startActivity(intent);
                urlOpened = true;
             }
          } catch (Throwable t) {
@@ -943,7 +943,7 @@ public class OneSignal {
    public static void handleNotificationOpened(Context inContext, JSONArray data, boolean fromAlert) {
       sendNotificationOpened(inContext, data);
 
-      boolean urlOpened = openURLFromNotification(data);
+      boolean urlOpened = openURLFromNotification(inContext, data);
 
       runNotificationOpenedCallback(data, false);
 
