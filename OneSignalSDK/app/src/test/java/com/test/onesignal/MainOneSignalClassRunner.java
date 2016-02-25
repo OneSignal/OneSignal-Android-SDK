@@ -243,6 +243,21 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testOpeningLaunchUrl() throws Exception {
+      // Clear app launching normally
+      Shadows.shadowOf(blankActivity).getNextStartedActivity();
+
+      // No OneSignal init here to test case where it is located in an Activity.
+
+      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+
+      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedActivity();
+      Assert.assertEquals("android.intent.action.VIEW", intent.getAction());
+      Assert.assertEquals("http://google.com", intent.getData().toString());
+      Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
    public void testDisableOpeningLauncherActivityOnNotifiOpen() throws Exception {
       ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().put("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
       RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest(), ShadowApplication.getInstance().getResourceLoader());
