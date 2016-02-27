@@ -692,7 +692,11 @@ public class OneSignal {
                Log(LOG_LEVEL.DEBUG, "HTTP create notification success: " + (response != null ? response : "null"));
                if (handler != null) {
                   try {
-                     handler.onSuccess(new JSONObject(response));
+                     JSONObject jsonObject = new JSONObject(response);
+                     if (jsonObject.has("errors"))
+                        handler.onFailure(jsonObject);
+                     else
+                        handler.onSuccess(new JSONObject(response));
                   } catch (Throwable t) {
                      t.printStackTrace();
                   }
@@ -728,6 +732,11 @@ public class OneSignal {
    }
 
    public static void getTags(final GetTagsHandler getTagsHandler) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! Omitting this tag operation.");
+         return;
+      }
+
       JSONObject tags = OneSignalStateSynchronizer.getTags();
       if (tags == null || tags.toString().equals("{}"))
          getTagsHandler.tagsAvailable(null);

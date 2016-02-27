@@ -36,7 +36,7 @@ public class ShadowOneSignalRestClient {
    public static JSONObject lastPost;
    public static Thread testThread;
    public static boolean failNext, failAll;
-   public static String failResponse = "{}";
+   public static String failResponse = "{}", nextSuccessResponse;
    public static int networkCallCount;
 
    public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
@@ -75,7 +75,7 @@ public class ShadowOneSignalRestClient {
       return false;
    }
 
-   static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       networkCallCount++;
       lastPost = jsonBody;
 
@@ -88,9 +88,22 @@ public class ShadowOneSignalRestClient {
       else
          retJson = "{\"id\": \"" + testUserId + "\"}";
 
-      responseHandler.onSuccess(retJson);
+      if (nextSuccessResponse != null) {
+         responseHandler.onSuccess(nextSuccessResponse);
+         nextSuccessResponse = null;
+      }
+      else
+         responseHandler.onSuccess(retJson);
 
       safeInterrupt();
+   }
+
+   static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      mockPost(url, jsonBody, responseHandler);
+   }
+
+   static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      mockPost(url, jsonBody, responseHandler);
    }
 
    static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
