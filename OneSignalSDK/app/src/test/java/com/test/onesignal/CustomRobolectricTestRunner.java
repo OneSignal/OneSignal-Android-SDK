@@ -27,18 +27,30 @@
 
 package com.test.onesignal;
 
+import com.onesignal.example.BuildConfig;
+
 import org.junit.runners.model.InitializationError;
 import org.robolectric.RobolectricGradleTestRunner;
-import org.robolectric.annotation.Config;
 import org.robolectric.internal.bytecode.InstrumentationConfiguration;
 
 public class CustomRobolectricTestRunner extends RobolectricGradleTestRunner {
-    public CustomRobolectricTestRunner(Class<?> klass) throws InitializationError {
-        super(klass);
-    }
+   public CustomRobolectricTestRunner(Class<?> klass) throws InitializationError {
+      super(klass);
 
-    @Override
-    public InstrumentationConfiguration createClassLoaderConfig() {
-        return InstrumentationConfiguration.newBuilder().addInstrumentedPackage("com.onesignal").build();
-    }
+      // Work around for running tests from console.
+      // working directory not being set to $MODULE_DIR$.
+      String buildVariant = (BuildConfig.FLAVOR.isEmpty() ? "" : BuildConfig.FLAVOR + "/") + BuildConfig.BUILD_TYPE;
+      String intermediatesPath = BuildConfig.class.getResource("").toString().replace("file:", "");
+      intermediatesPath = intermediatesPath.substring(0, intermediatesPath.indexOf("/classes"));
+
+      System.setProperty("android.package", BuildConfig.APPLICATION_ID);
+      System.setProperty("android.manifest", intermediatesPath + "/manifests/full/" + buildVariant + "/AndroidManifest.xml");
+      System.setProperty("android.resources", intermediatesPath + "/res/" + buildVariant);
+      System.setProperty("android.assets", intermediatesPath + "/assets/" + buildVariant);
+   }
+
+   @Override
+   public InstrumentationConfiguration createClassLoaderConfig() {
+      return InstrumentationConfiguration.newBuilder().addInstrumentedPackage("com.onesignal").build();
+   }
 }

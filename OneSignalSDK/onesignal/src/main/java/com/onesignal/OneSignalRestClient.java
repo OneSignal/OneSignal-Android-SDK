@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -79,7 +80,7 @@ class OneSignalRestClient {
    private static void makeRequest(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler) {
       HttpURLConnection con = null;
       int httpResponse = -1;
-      String json;
+      String json = null;
 
       try {
          con = (HttpURLConnection)new URL(BASE_URL + url).openConnection();
@@ -107,8 +108,11 @@ class OneSignalRestClient {
 
          httpResponse = con.getResponseCode();
 
+         InputStream inputStream;
+         Scanner scanner;
          if (httpResponse == HttpURLConnection.HTTP_OK) {
-            Scanner scanner = new Scanner(con.getInputStream(), "UTF-8");
+            inputStream = con.getInputStream();
+            scanner = new Scanner(inputStream, "UTF-8");
             json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
             scanner.close();
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, method + " RECEIVED JSON: " + json);
@@ -117,10 +121,18 @@ class OneSignalRestClient {
                responseHandler.onSuccess(json);
          }
          else {
-            Scanner scanner = new Scanner(con.getErrorStream(), "UTF-8");
-            json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
-            scanner.close();
-            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " RECEIVED JSON: " + json);
+            inputStream = con.getErrorStream();
+            if (inputStream == null)
+               inputStream = con.getInputStream();
+
+            if (inputStream != null) {
+               scanner = new Scanner(inputStream, "UTF-8");
+               json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+               scanner.close();
+               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " RECEIVED JSON: " + json);
+            }
+            else
+               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, method + " HTTP Code: " + httpResponse + " No response body!");
 
             if (responseHandler != null)
                responseHandler.onFailure(httpResponse, json, null);

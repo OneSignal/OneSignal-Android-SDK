@@ -87,12 +87,21 @@ public class MainOneSignalClassRunner {
    private static JSONObject lastGetTags;
    private ActivityController<BlankActivity> blankActivityController;
    
-   public static void GetIdsAvailable() {
+   private static void GetIdsAvailable() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
          @Override
          public void idsAvailable(String userId, String registrationId) {
             callBackUseId = userId;
             getCallBackRegId = registrationId;
+         }
+      });
+   }
+
+   private static void GetTags() {
+      OneSignal.getTags(new OneSignal.GetTagsHandler() {
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            lastGetTags = tags;
          }
       });
    }
@@ -115,6 +124,7 @@ public class MainOneSignalClassRunner {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
 
+      ShadowOneSignalRestClient.nextSuccessResponse = null;
       ShadowOneSignalRestClient.failNext = false;
       ShadowOneSignalRestClient.failAll = false;
       ShadowOneSignalRestClient.interruptibleDelayNext = false;
@@ -556,12 +566,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       OneSignal.sendTags(new JSONObject("{\"test2\": \"value2\"}"));
 
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+      GetTags();
       threadAndTaskWait();
       threadAndTaskWait();
 
@@ -583,14 +588,8 @@ public class MainOneSignalClassRunner {
 
       OneSignal.deleteTag("int");
       threadAndTaskWait();
-      
-      lastGetTags = null;
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+
+      GetTags();
 
       final SharedPreferences prefs2 = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       Assert.assertNull(lastGetTags);
@@ -600,12 +599,7 @@ public class MainOneSignalClassRunner {
    public void testSendTagNonStringValues() throws Exception {
       OneSignalInit();
       OneSignal.sendTags("{\"int\": 122, \"bool\": true, \"null\": null, \"array\": [123], \"object\": {}}");
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+      GetTags();
 
       Assert.assertEquals(String.class, lastGetTags.get("int").getClass());
       Assert.assertEquals("122", lastGetTags.get("int"));
@@ -663,6 +657,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testMethodCallsBeforeInit() throws Exception {
+      GetTags();
       OneSignal.sendTag("key", "value");
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
@@ -690,12 +685,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags("{\"str\": \"str1\", \"int\": 122, \"bool\": true}");
       OneSignal.deleteTag("int");
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+      GetTags();
 
       Assert.assertFalse(lastGetTags.has("int"));
       lastGetTags = null;
@@ -707,12 +697,7 @@ public class MainOneSignalClassRunner {
 
       OneSignal.deleteTag("int");
 
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+      GetTags();
 
       Assert.assertFalse(lastGetTags.has("int"));
 
@@ -722,6 +707,29 @@ public class MainOneSignalClassRunner {
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       String syncValues = prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null);
       Assert.assertFalse(new JSONObject(syncValues).has("tags"));
+   }
+
+
+   @Test
+   public void testDeleteTagsAfterSync() throws Exception {
+      OneSignalInit();
+      OneSignal.sendTags("{\"foo\": \"bar\", \"fuz\": \"baz\"}");
+      threadAndTaskWait();
+      Assert.assertEquals("bar", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
+      Assert.assertEquals("baz", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
+
+      OneSignal.deleteTags("[\"foo\", \"fuz\"]");
+      threadAndTaskWait();
+      Assert.assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
+      Assert.assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
+
+      GetTags();
+
+      Assert.assertNull(lastGetTags);
+
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+      JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+      Assert.assertFalse(syncValues.has("tags"));
    }
 
    @Test
@@ -738,12 +746,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testGetTagsWithNoTagsShouldBeNull() throws Exception {
       OneSignalInit();
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+      GetTags();
 
       Assert.assertNull(lastGetTags);
    }
@@ -753,12 +756,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
-         @Override
-         public void tagsAvailable(JSONObject tags) {
-            lastGetTags = tags;
-         }
-      });
+      GetTags();
 
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
@@ -867,6 +865,40 @@ public class MainOneSignalClassRunner {
       Assert.assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
    }
 
+   // ####### Unit test postNotification #####
+
+   private static JSONObject postNotificationSuccess = null, postNotificationFailure = null;
+
+   @Test
+   public void testPostNotification()  throws Exception {
+      OneSignalInit();
+
+      OneSignal.PostNotificationResponseHandler handler = new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {
+            postNotificationSuccess = response;
+         }
+
+         @Override
+         public void onFailure(JSONObject response) {
+            postNotificationFailure = response;
+         }
+      };
+
+      // Not testing input here, just that HTTP 200 fires a success.
+      OneSignal.postNotification("{}", handler);
+      threadAndTaskWait();
+      Assert.assertNotNull(postNotificationSuccess);
+      Assert.assertNull(postNotificationFailure);
+      postNotificationSuccess = postNotificationFailure = null;
+
+
+      ShadowOneSignalRestClient.nextSuccessResponse = "{\"id\":\"\",\"recipients\":0,\"errors\":[\"All included players are not subscribed\"]}";
+      OneSignal.postNotification("{}", handler);
+      Assert.assertNull(postNotificationSuccess);
+      Assert.assertNotNull(postNotificationFailure);
+   }
+
    // ####### Unit test helper methods ########
 
    private static void threadWait() {
@@ -874,7 +906,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void threadAndTaskWait() {
-      try {Thread.sleep(300);} catch (Throwable t) {}
+      try {Thread.sleep(10);} catch (Throwable t) {}
       OneSignalPackagePrivateHelper.runAllNetworkRunnables();
       OneSignalPackagePrivateHelper.runFocusRunnables();
 

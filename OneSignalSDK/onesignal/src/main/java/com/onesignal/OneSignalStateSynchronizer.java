@@ -305,21 +305,22 @@ class OneSignalStateSynchronizer {
             OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues, null);
 
             if (inSyncValues.has("tags")) {
-               JSONObject tags = inSyncValues.optJSONObject("tags");
-               Iterator<String> keys = tags.keys();
+               JSONObject newTags = new JSONObject();
+               JSONObject curTags = inSyncValues.optJSONObject("tags");
+               Iterator<String> keys = curTags.keys();
                String key;
 
-               while (keys.hasNext()) {
-                  key = keys.next();
-                  if ("".equals(tags.optString(key)))
-                     tags.remove(key);
-               }
-
                try {
-                  if (tags.toString().equals("{}"))
+                  while (keys.hasNext()) {
+                     key = keys.next();
+                     if (!"".equals(curTags.optString(key)))
+                        newTags.put(key, curTags.optString(key));
+                  }
+
+                  if (newTags.toString().equals("{}"))
                      syncValues.remove("tags");
                   else
-                     syncValues.put("tags", tags);
+                     syncValues.put("tags", newTags);
                } catch (Throwable t) {}
             }
          }
