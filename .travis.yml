@@ -1,0 +1,16 @@
+language: android
+sudo: false
+jdk: openjdk7
+android:
+  components:
+    - platform-tools
+    - tools
+    - build-tools-23.0.2
+    - extra-android-support
+    - extra-android-m2repository
+    - extra-google-m2repository
+    - android-23
+  licenses:
+    - '.+'
+before_install: cd OneSignalSDK/app
+script: gradle build
