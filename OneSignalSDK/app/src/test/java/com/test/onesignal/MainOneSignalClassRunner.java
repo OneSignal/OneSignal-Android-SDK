@@ -81,6 +81,7 @@ public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static Field OneSignal_CurrentSubscription;
+   private static int testSleepTime;
    private Activity blankActivity;
    private static String callBackUseId, getCallBackRegId;
    private static String notificationOpenedMessage;
@@ -109,6 +110,8 @@ public class MainOneSignalClassRunner {
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
+
+      testSleepTime = System.getenv("TRAVIS") == "true" ? 600 : 25;
 
       OneSignal_CurrentSubscription = OneSignal.class.getDeclaredField("subscribableStatus");
       OneSignal_CurrentSubscription.setAccessible(true);
@@ -906,7 +909,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void threadAndTaskWait() {
-      try {Thread.sleep(10);} catch (Throwable t) {}
+      try {Thread.sleep(testSleepTime);} catch (Throwable t) {}
       OneSignalPackagePrivateHelper.runAllNetworkRunnables();
       OneSignalPackagePrivateHelper.runFocusRunnables();
 
