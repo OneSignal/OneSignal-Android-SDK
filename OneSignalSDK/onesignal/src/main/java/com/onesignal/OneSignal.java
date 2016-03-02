@@ -61,8 +61,6 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 
-import com.stericson.RootTools.internal.RootToolsInternalMethods;
-
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class OneSignal {
@@ -155,7 +153,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020102";
+   public static final String VERSION = "020103";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
