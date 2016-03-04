@@ -755,6 +755,12 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testGetTagNullCheck() throws Exception {
+      OneSignalInit();
+      OneSignal.getTags(null);
+   }
+
+   @Test
    public void shouldGetTags() throws Exception {
       OneSignalInit();
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
