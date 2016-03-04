@@ -734,6 +734,10 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! Omitting this tag operation.");
          return;
       }
+      if (getTagsHandler == null) {
+         Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
+         return;
+      }
 
       JSONObject tags = OneSignalStateSynchronizer.getTags();
       if (tags == null || tags.toString().equals("{}"))
