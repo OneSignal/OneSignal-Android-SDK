@@ -321,9 +321,14 @@ class GenerateNotification {
       //   stacked notifications on Android 4.2 and older
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
-      if (group == null || android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1)
-         NotificationManagerCompat.from(currentContext).notify(notificationId, notifBuilder.build());
-
+      if (group == null || android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
+         try {
+            if(gcmBundle.has("generateAndroidNotification") && gcmBundle.getBoolean("generateAndroidNotification") || !gcmBundle.has("generateAndroidNotification"))
+               NotificationManagerCompat.from(currentContext).notify(notificationId, notifBuilder.build());
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+      }
       return notificationId;
    }
 
@@ -502,7 +507,12 @@ class GenerateNotification {
          summaryNotification = notifBuilder.build();
       }
 
-      NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
+      try {
+         if(gcmBundle.has("generateAndroidNotification") && gcmBundle.getBoolean("generateAndroidNotification") || !gcmBundle.has("generateAndroidNotification"))
+            NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
 
       cursor.close();
       writableDb.close();
