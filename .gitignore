@@ -29,3 +29,4 @@ proguard/
 /OneSignalSDK/.idea
 /OneSignalSDK/gradle.properties
 /OneSignalSDK/
+/OneSignalSDK/onesignal/maven-push.gradle
