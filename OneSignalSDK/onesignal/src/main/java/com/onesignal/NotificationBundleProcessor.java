@@ -56,6 +56,8 @@ public class NotificationBundleProcessor {
 
          BackgroundBroadcaster.Invoke(context, bundle, isActive);
 
+         if (OneSignal.getPreventDisplayingNotificationEnabled(context)) return;
+
          if (!bundle.containsKey("alert") || bundle.getString("alert") == null || bundle.getString("alert").equals(""))
             return;
 

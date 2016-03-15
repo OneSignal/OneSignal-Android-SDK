@@ -1151,6 +1151,20 @@ public class OneSignal {
       return prefs.getBoolean("ONESIGNAL_INAPP_ALERT", false);
    }
 
+   public static void preventDisplayingNotification(boolean enable) {
+      if (appContext == null)
+         return;
+      final SharedPreferences prefs = getGcmPreferences(appContext);
+      SharedPreferences.Editor editor = prefs.edit();
+      editor.putBoolean("ONESIGNAL_PREVENT_DISPLAYING", enable);
+      editor.commit();
+   }
+
+   static boolean getPreventDisplayingNotificationEnabled(Context context) {
+      final SharedPreferences prefs = getGcmPreferences(context);
+      return prefs.getBoolean("ONESIGNAL_PREVENT_DISPLAYING", false);
+   }
+
    public static void setSubscription(boolean enable) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not set subscription.");
