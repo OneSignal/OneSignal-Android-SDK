@@ -110,7 +110,7 @@ public class MainOneSignalClassRunner {
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
 
-      testSleepTime = System.getenv("TRAVIS") != null ? 300 : 200;
+      testSleepTime = System.getenv("TRAVIS") != null ? 500 : 200;
 
       Field OneSignal_CurrentSubscription = OneSignal.class.getDeclaredField("subscribableStatus");
       OneSignal_CurrentSubscription.setAccessible(true);
