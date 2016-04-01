@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +80,6 @@ import java.lang.reflect.Field;
 public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
-   private static Field OneSignal_CurrentSubscription;
    private static int testSleepTime;
    private Activity blankActivity;
    private static String callBackUseId, getCallBackRegId;
@@ -111,9 +110,9 @@ public class MainOneSignalClassRunner {
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
 
-      testSleepTime = System.getenv("TRAVIS") != null ? 300 : 20;
+      testSleepTime = System.getenv("TRAVIS") != null ? 300 : 200;
 
-      OneSignal_CurrentSubscription = OneSignal.class.getDeclaredField("subscribableStatus");
+      Field OneSignal_CurrentSubscription = OneSignal.class.getDeclaredField("subscribableStatus");
       OneSignal_CurrentSubscription.setAccessible(true);
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
@@ -257,7 +256,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOpeningLaunchUrl() throws Exception {
-      // Clear app launching normally
+      // Removes app launch
       Shadows.shadowOf(blankActivity).getNextStartedActivity();
 
       // No OneSignal init here to test case where it is located in an Activity.
@@ -267,6 +266,20 @@ public class MainOneSignalClassRunner {
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedActivity();
       Assert.assertEquals("android.intent.action.VIEW", intent.getAction());
       Assert.assertEquals("http://google.com", intent.getData().toString());
+      Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
+   public void testOpeningLaunchUrlWithDisableDefault() throws Exception {
+      ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().put("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+      RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest(), ShadowApplication.getInstance().getResourceLoader());
+
+      // Removes app launch
+      Shadows.shadowOf(blankActivity).getNextStartedActivity();
+
+      // No OneSignal init here to test case where it is located in an Activity.
+
+      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
    }
 
@@ -874,12 +887,48 @@ public class MainOneSignalClassRunner {
       Assert.assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
    }
 
+   @Test
+   public void testAppl() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      String baseKey = "pkgs";
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
+
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+      JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+      Assert.assertFalse(syncValues.has(baseKey + "_a"));
+      Assert.assertEquals(1, syncValues.getJSONArray(baseKey).length());
+
+      JSONObject toSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_TOSYNC_STATE", null));
+      Assert.assertFalse(toSyncValues.has(baseKey + "_a"));
+      Assert.assertEquals(1, toSyncValues.getJSONArray(baseKey).length());
+
+      StaticResetHelper.restSetStaticFields();
+      RuntimeEnvironment.getRobolectricPackageManager().addPackage("org.test.app2");
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
+
+      StaticResetHelper.restSetStaticFields();
+      RuntimeEnvironment.getRobolectricPackageManager().removePackage("org.test.app2");
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
+
+      StaticResetHelper.restSetStaticFields();
+      OneSignalInit();
+      threadAndTaskWait();
+      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
+   }
+
    // ####### Unit test postNotification #####
 
    private static JSONObject postNotificationSuccess = null, postNotificationFailure = null;
 
    @Test
-   public void testPostNotification()  throws Exception {
+   public void testPostNotification() throws Exception {
       OneSignalInit();
 
       OneSignal.PostNotificationResponseHandler handler = new OneSignal.PostNotificationResponseHandler() {

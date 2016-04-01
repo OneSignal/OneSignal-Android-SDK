@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,7 @@ import com.onesignal.BuildConfig;
 import com.onesignal.NotificationBundleProcessor;
 import com.onesignal.NotificationOpenedProcessor;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
@@ -62,7 +63,7 @@ import java.util.List;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
-      shadows = { ShadowRoboNotificationManager.class, ShadowOneSignalRestClient.class },
+      shadows = { ShadowRoboNotificationManager.class, ShadowOneSignalRestClient.class, ShadowBadgeCountUpdater.class },
       sdk = 21)
 @RunWith(CustomRobolectricTestRunner.class)
 public class GenerateNotificationRunner {
@@ -96,6 +97,7 @@ public class GenerateNotificationRunner {
       resolveInfo.activityInfo.packageName = "com.onesignal.example";
       resolveInfo.activityInfo.name = "com.onesignal.example.BlankActivity";
       RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
+      ShadowBadgeCountUpdater.lastCount = 0;
    }
 
 
@@ -127,12 +129,14 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor.Process(blankActivity, bundle);
       Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
       NotificationBundleProcessor.Process(blankActivity, bundle);
       Assert.assertEquals("title123", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+      Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
@@ -141,6 +145,7 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor.Process(blankActivity, bundle);
       Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.lastNotif.getContentText());
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should have 1 DB record with the correct time stamp
       SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
@@ -156,12 +161,14 @@ public class GenerateNotificationRunner {
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "opened", "android_notification_id" }, null, null, null, null, null);
       cursor.moveToFirst();
       Assert.assertEquals(1, cursor.getInt(0));
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       int firstNotifId = cursor.getInt(1);
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor.Process(blankActivity, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
 
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
@@ -180,6 +187,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor.Process(blankActivity, bundle);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, null, null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());
+      Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
 
       cursor.moveToFirst();
       boolean foundSecond = true;
@@ -209,6 +217,8 @@ public class GenerateNotificationRunner {
       // Test Android Wear notification
       Assert.assertEquals(notifMessage, postedNotifs.get(1).notif.getContentText());
       Assert.assertEquals(0, postedNotifs.get(1).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      // Badge count should only be one as only one notification is visible in the notification area.
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
 
       // Should be 2 DB entries (summary and individual)
@@ -227,6 +237,7 @@ public class GenerateNotificationRunner {
 
       postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(2, postedNotifs.size());
+      Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
 
       Assert.assertEquals("2 new messages", postedNotifs.get(0).notif.getContentText());
       Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotifs.get(0).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
@@ -244,9 +255,10 @@ public class GenerateNotificationRunner {
       // Open summary notification
       Intent intent = createOpenIntent(postedNotifs.get(0).id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification
-      ShadowRoboNotificationManager.notifications.clear();
       bundle = new Bundle();
       bundle.putString("alert", "Notif test 3");
       bundle.putString("custom", "{\"i\": \"UUID3\"}");
@@ -255,5 +267,6 @@ public class GenerateNotificationRunner {
 
       Assert.assertEquals("Notif test 3", postedNotifs.get(0).notif.getContentText());
       Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotifs.get(0).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    }
 }

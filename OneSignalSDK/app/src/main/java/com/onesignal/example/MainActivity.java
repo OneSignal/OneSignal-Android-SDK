@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,6 +56,12 @@ public class MainActivity extends ActionBarActivity {
       setContentView(R.layout.activity_main);
 
       currentActivity = this;
+
+//      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+//      OneSignal.startInit(this)
+//          .setAutoPromptLocation(true)
+//          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
+//          .init();
 
       OneSignal.enableInAppAlertNotification(true);
       OneSignal.enableNotificationsWhenActive(false);
@@ -148,8 +154,9 @@ public class MainActivity extends ActionBarActivity {
        */
       @Override
       public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-         Log.i("OneSignalExample", "message: " + message);
-         Log.i("OneSignalExample", "additionalData: " + additionalData.toString());
+         Log.e("OneSignalExample", "message: " + message);
+         Log.e("OneSignalExample", "additional data: " + additionalData);
+         //Log.e("OneSignalExample", "additionalData: " + additionalData.toString());
       }
    }
 }

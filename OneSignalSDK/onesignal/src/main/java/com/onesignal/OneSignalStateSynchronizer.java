@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,7 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.HandlerThread;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -84,6 +85,8 @@ class OneSignalStateSynchronizer {
                   if (!returnedJsonStr.equals("{}"))
                      output.put(key, new JSONObject(returnedJsonStr));
                }
+               else if (value instanceof JSONArray)
+                  handleJsonArray(key, (JSONArray) value, cur.getJSONArray(key), output);
                else if (includeFields != null && includeFields.contains(key))
                   output.put(key, value);
                else {
@@ -102,6 +105,8 @@ class OneSignalStateSynchronizer {
             else {
                if (value instanceof JSONObject)
                   output.put(key, new JSONObject(value.toString()));
+               else if (value instanceof JSONArray)
+                  handleJsonArray(key, (JSONArray)value, null, output);
                else
                   output.put(key, value);
             }
@@ -113,6 +118,48 @@ class OneSignalStateSynchronizer {
       return output;
    }
 
+   private static void handleJsonArray(String key, JSONArray newArray, JSONArray curArray, JSONObject output) throws JSONException {
+      if (key.endsWith("_a") || key.endsWith("_d")) {
+         output.put(key, newArray);
+         return;
+      }
+
+      String arrayStr = toStringNE(newArray);
+
+      JSONArray newOutArray = new JSONArray();
+      JSONArray remOutArray = new JSONArray();
+      String curArrayStr = curArray == null ? null : toStringNE(curArray);
+
+      for (int i = 0; i < newArray.length(); i++) {
+         String arrayValue = (String)newArray.get(i);
+         if (curArray == null || !curArrayStr.contains(arrayValue))
+            newOutArray.put(arrayValue);
+      }
+
+      if (curArray != null) {
+         for (int i = 0; i < curArray.length(); i++) {
+            String arrayValue = curArray.getString(i);
+            if (!arrayStr.contains(arrayValue))
+               remOutArray.put(arrayValue);
+         }
+      }
+
+      if (!newOutArray.toString().equals("[]"))
+         output.put(key + "_a", newOutArray);
+      if (!remOutArray.toString().equals("[]"))
+         output.put(key + "_d", remOutArray);
+   }
+
+   private static String toStringNE(JSONArray jsonArray) {
+      String strArray = "[";
+
+      try {
+         for (int i = 0; i < jsonArray.length(); i++)
+            strArray += "\"" + jsonArray.getString(i) + "\"";
+      } catch (Throwable t) {}
+
+      return strArray + "]";
+   }
 
    private static JSONObject getTagsWithoutDeletedKeys(JSONObject jsonObject) {
       if (jsonObject.has("tags")) {
@@ -290,12 +337,43 @@ class OneSignalStateSynchronizer {
       }
 
       private void persistState() {
+         modifySyncValuesJsonArray("pkgs");
+
          final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
          SharedPreferences.Editor editor = prefs.edit();
 
          editor.putString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, syncValues.toString());
          editor.putString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, dependValues.toString());
          editor.commit();
+      }
+
+      private void modifySyncValuesJsonArray(String baseKey) {
+         if (!syncValues.has(baseKey + "_d") && syncValues.has(baseKey + "_d"))
+            return;
+
+         try {
+            JSONArray orgArray = syncValues.has(baseKey) ? syncValues.getJSONArray(baseKey) : new JSONArray();
+            JSONArray tempArray = new JSONArray();
+
+            if (syncValues.has(baseKey + "_d")) {
+               String remArrayStr = toStringNE(syncValues.getJSONArray(baseKey + "_d"));
+               for (int i = 0; i < orgArray.length(); i++)
+                  if (!remArrayStr.contains(orgArray.getString(i)))
+                     tempArray.put(orgArray.get(i));
+            }
+            else
+               tempArray = orgArray;
+
+            if (syncValues.has(baseKey + "_a")) {
+               JSONArray newArray = syncValues.getJSONArray(baseKey + "_a");
+               for (int i = 0; i < newArray.length(); i++)
+                  tempArray.put(newArray.get(i));
+            }
+
+            syncValues.put(baseKey, tempArray);
+            syncValues.remove(baseKey + "_a");
+            syncValues.remove(baseKey + "_d");
+         } catch (Throwable t) {}
       }
 
       private void persistStateAfterSync(JSONObject inDependValues, JSONObject inSyncValues) {
@@ -374,7 +452,7 @@ class OneSignalStateSynchronizer {
       void doRetry() {
          if (currentRetry < MAX_RETRIES && !mHandler.hasMessages(0)) {
             currentRetry++;
-            mHandler.postDelayed(getNewRunnable(), currentRetry * 10000);
+            mHandler.postDelayed(getNewRunnable(), currentRetry * 15000);
          }
       }
    }

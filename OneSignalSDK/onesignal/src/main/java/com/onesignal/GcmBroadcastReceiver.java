@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  * 
  * Portions Copyright 2013 Google Inc.
  * This file includes portions from the Google GcmClient demo project

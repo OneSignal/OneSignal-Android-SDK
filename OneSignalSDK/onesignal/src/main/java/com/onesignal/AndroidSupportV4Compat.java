@@ -1,6 +1,6 @@
 /**
  * Modified MIT License
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Internals Copyright (C) 2012 The Android Open Source Project
  *     Licensed under the Apache License, Version 2.0 (the "License");

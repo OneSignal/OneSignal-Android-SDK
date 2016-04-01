@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
-/**
- * Created by Josh on 5/18/2015.
- */
 public class TestNotificationOpenedReceiver extends BroadcastReceiver {
 
     // You may consider adding a wake lock here if you need to make sure the devices doesn't go to sleep while processing.

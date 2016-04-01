@@ -10,7 +10,7 @@ android {
 //                              onesignal_app_id: "5eb5a37e-b458-11e3-ac11-000c2940e62c",
                                 onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
                                 onesignal_google_project_number: "703322744261"]
-        minSdkVersion 10
+        minSdkVersion 9
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -19,7 +19,7 @@ android {
         debug {
             // Test with proguard enabled to make sure our consumer rules are correct in the SDK.
             // minify does not work with GMS 7.0.0 with the current settings. Use 8.4.0 to test.
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

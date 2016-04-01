@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -133,6 +133,7 @@ public class NotificationOpenedProcessor {
          whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra("notificationId", 0);
 
       writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(), whereStr, whereArgs);
+      BadgeCountUpdater.update(writableDb);
    }
 
    private static void updateSummaryNotification(SQLiteDatabase writableDb) {

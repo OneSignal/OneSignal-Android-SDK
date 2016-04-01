@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,8 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -38,9 +40,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.json.*;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -59,7 +64,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Base64;
 import android.util.Log;
+import android.util.Patterns;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -153,7 +160,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020103";
+   public static final String VERSION = "020200";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -584,8 +591,6 @@ public class OneSignal {
             userState.set("identifier", lastRegistrationId);
 
             String adId = mainAdIdProvider.getIdentifier(appContext);
-            // "... must use the advertising ID (when available on a device) in lieu of any other device identifiers ..."
-            // https://play.google.com/about/developer-content-policy.html
             if (adId == null)
                adId = new AdvertisingIdProviderFallback().getIdentifier(appContext);
             userState.set("ad_id", adId);
@@ -603,11 +608,29 @@ public class OneSignal {
                userState.set("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
             } catch (PackageManager.NameNotFoundException e) {}
 
-            List<PackageInfo> packList = packageManager.getInstalledPackages(0);
-            int count = -1;
-            for (int i = 0; i < packList.size(); i++)
-               count += ((packList.get(i).applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) ? 1 : 0;
-            userState.set("pkgc", count);
+            try {
+               List<PackageInfo> packList = packageManager.getInstalledPackages(0);
+               JSONArray pkgs = new JSONArray();
+               MessageDigest md = MessageDigest.getInstance("SHA-256");
+               for (int i = 0; i < packList.size(); i++) {
+                  if ((packList.get(i).applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0 && !packageName.equals(packList.get(i).packageName)) {
+                     md.update(packList.get(i).packageName.getBytes());
+                     pkgs.put(Base64.encodeToString(md.digest(), Base64.NO_WRAP));
+                  }
+               }
+               userState.set("pkgs", pkgs);
+            } catch (Throwable t) {}
+
+            if (AndroidSupportV4Compat.ContextCompat.checkSelfPermission(appContext, "android.permission.GET_ACCOUNTS") == PackageManager.PERMISSION_GRANTED) {
+               Account[] accounts = AccountManager.get(appContext).getAccounts();
+               for (Account account : accounts) {
+                  if (Patterns.EMAIL_ADDRESS.matcher(account.name).matches()) {
+                     userState.set("email", account.name);
+                     break;
+                  }
+               }
+            }
+
             userState.set("net_type", osUtils.getNetType());
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
@@ -954,22 +977,34 @@ public class OneSignal {
    public static void handleNotificationOpened(Context inContext, JSONArray data, boolean fromAlert) {
       sendNotificationOpened(inContext, data);
 
-      boolean urlOpened = openURLFromNotification(inContext, data);
+      boolean defaultOpenActionDisabled = false;
+      try {
+         ApplicationInfo ai = inContext.getPackageManager().getApplicationInfo(inContext.getPackageName(), PackageManager.GET_META_DATA);
+         Bundle bundle = ai.metaData;
+         String defaultStr = bundle.getString("com.onesignal.NotificationOpened.DEFAULT");
+         defaultOpenActionDisabled = "DISABLE".equals(defaultStr);
+      } catch (Throwable t) {
+         Log(LOG_LEVEL.ERROR, "", t);
+      }
+
+      boolean urlOpened = false;
+
+      if (!defaultOpenActionDisabled)
+         openURLFromNotification(inContext, data);
 
       runNotificationOpenedCallback(data, false);
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened)
-         fireIntentFromNotificationOpen(inContext, data);
+         fireIntentFromNotificationOpen(inContext, data, defaultOpenActionDisabled);
    }
 
-   private static void fireIntentFromNotificationOpen(Context inContext, JSONArray data) {
+   private static void fireIntentFromNotificationOpen(Context inContext, JSONArray data, boolean defaultOpenActionDisabled) {
       PackageManager packageManager = inContext.getPackageManager();
 
       boolean isCustom = false;
 
-      Intent intent = new Intent().setAction("com.onesignal.NotificationOpened.RECEIVE")
-                                  .setPackage(inContext.getPackageName());
+      Intent intent = new Intent().setAction("com.onesignal.NotificationOpened.RECEIVE").setPackage(inContext.getPackageName());
 
       List<ResolveInfo> resolveInfo = packageManager.queryBroadcastReceivers(intent, PackageManager.GET_INTENT_FILTERS);
       if (resolveInfo.size() > 0) {
@@ -977,7 +1012,6 @@ public class OneSignal {
          inContext.sendBroadcast(intent);
          isCustom = true;
       }
-
 
       // Calling startActivity() from outside of an Activity  context requires the FLAG_ACTIVITY_NEW_TASK flag.
       resolveInfo = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
@@ -989,18 +1023,7 @@ public class OneSignal {
          inContext.startActivity(intent);
       }
 
-      if (!isCustom) {
-         try {
-            ApplicationInfo ai = inContext.getPackageManager().getApplicationInfo(inContext.getPackageName(), PackageManager.GET_META_DATA);
-            Bundle bundle = ai.metaData;
-            String defaultStr = bundle.getString("com.onesignal.NotificationOpened.DEFAULT");
-            isCustom = "DISABLE".equals(defaultStr);
-         } catch (Throwable t) {
-            Log(LOG_LEVEL.ERROR, "", t);
-         }
-      }
-
-      if (!isCustom) {
+      if (!isCustom && !defaultOpenActionDisabled) {
          Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
 
          if (launchIntent != null) {
@@ -1241,16 +1264,16 @@ public class OneSignal {
       handler.post(action);
    }
    
-   static boolean isValidAndNotDuplicated(Context context, Bundle bundle) {
+   static boolean notValidOrDuplicated(Context context, Bundle bundle) {
       if (bundle.isEmpty())
-         return false;
+         return true;
 
       try {
          if (bundle.containsKey("custom")) {
             JSONObject customJSON = new JSONObject(bundle.getString("custom"));
            
             if (customJSON.has("i"))
-               return !OneSignal.isDuplicateNotification(customJSON.getString("i"), context);
+               return OneSignal.isDuplicateNotification(customJSON.getString("i"), context);
             else
                Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
          }
@@ -1260,6 +1283,6 @@ public class OneSignal {
          Log(LOG_LEVEL.DEBUG, "Could not parse bundle for duplicate, probably not a OneSignal notification.", t);
       }
 
-      return false;
+      return true;
    }
 }

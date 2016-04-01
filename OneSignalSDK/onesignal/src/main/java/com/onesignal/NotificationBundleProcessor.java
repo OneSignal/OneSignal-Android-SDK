@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2015 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,37 +44,37 @@ public class NotificationBundleProcessor {
 
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
-   public static void Process(Context context, Bundle bundle) {
-      if (OneSignal.isValidAndNotDuplicated(context, bundle)) {
-         boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
-         boolean isActive = OneSignal.initDone && OneSignal.isForeground();
-         boolean display = OneSignal.getNotificationsWhenActiveEnabled(context)
-                           || showAsAlert
-                           || !isActive;
-         
-         prepareBundle(bundle);
+   public static void Process(Context context, final Bundle bundle) {
+      if (OneSignal.notValidOrDuplicated(context, bundle))
+         return;
 
-         BackgroundBroadcaster.Invoke(context, bundle, isActive);
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
+      boolean isActive = OneSignal.initDone && OneSignal.isForeground();
+      boolean display = OneSignal.getNotificationsWhenActiveEnabled(context)
+                        || showAsAlert
+                        || !isActive;
 
-         if (!bundle.containsKey("alert") || bundle.getString("alert") == null || bundle.getString("alert").equals(""))
-            return;
+      prepareBundle(bundle);
 
-         int notificationId = -1;
+      BackgroundBroadcaster.Invoke(context, bundle, isActive);
 
-         if (display)// Build notification from the Bundle
-            notificationId = GenerateNotification.fromBundle(context, bundle, showAsAlert && isActive);
-         else {
-            final Bundle finalBundle = bundle;
-            // Current thread is meant to be short lived. Make a new thread to do our OneSignal work on.
-            new Thread(new Runnable() {
-               public void run() {
-                  OneSignal.handleNotificationOpened(NotificationBundleProcessor.bundleAsJsonArray(finalBundle));
-               }
-            }).start();
-         }
+      if (bundle.getString("alert") == null || "".equals(bundle.getString("alert")))
+         return;
 
-         saveNotification(context, bundle, !display, notificationId);
+      int notificationId = -1;
+
+      if (display)
+         notificationId = GenerateNotification.fromBundle(context, bundle, showAsAlert && isActive);
+      else {
+         // Current thread is meant to be short lived. Make a new thread to do our OneSignal work on.
+         new Thread(new Runnable() {
+            public void run() {
+               OneSignal.handleNotificationOpened(NotificationBundleProcessor.bundleAsJsonArray(bundle));
+            }
+         }).start();
       }
+
+      saveNotification(context, bundle, !display, notificationId);
    }
 
    private static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
@@ -106,6 +106,9 @@ public class NotificationBundleProcessor {
                NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000) - 604800) + " AND " +
                      "(" + NotificationTable.COLUMN_NAME_DISMISSED + " = 1 OR " + NotificationTable.COLUMN_NAME_OPENED + " = 1" + ")",
                null);
+
+         if (!opened)
+            BadgeCountUpdater.update(writableDb);
 
          writableDb.close();
       } catch (JSONException e) {
