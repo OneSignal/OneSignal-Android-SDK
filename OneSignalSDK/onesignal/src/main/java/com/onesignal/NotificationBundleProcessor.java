@@ -108,7 +108,7 @@ public class NotificationBundleProcessor {
                null);
 
          if (!opened)
-            BadgeCountUpdater.update(writableDb);
+            BadgeCountUpdater.update(writableDb, context);
 
          writableDb.close();
       } catch (JSONException e) {

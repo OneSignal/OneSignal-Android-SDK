@@ -31,6 +31,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 
 import com.onesignal.AndroidSupportV4Compat.ActivityCompat;
 
@@ -61,7 +62,7 @@ public class PermissionsActivity extends Activity {
    }
 
    @Override
-   public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+   public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
       answered = true;
       waiting = false;
 

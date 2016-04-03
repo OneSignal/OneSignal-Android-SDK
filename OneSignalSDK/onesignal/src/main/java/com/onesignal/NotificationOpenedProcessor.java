@@ -133,7 +133,7 @@ public class NotificationOpenedProcessor {
          whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra("notificationId", 0);
 
       writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(), whereStr, whereArgs);
-      BadgeCountUpdater.update(writableDb);
+      BadgeCountUpdater.update(writableDb, context);
    }
 
    private static void updateSummaryNotification(SQLiteDatabase writableDb) {

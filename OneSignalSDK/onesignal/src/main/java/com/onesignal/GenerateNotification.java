@@ -235,13 +235,11 @@ class GenerateNotification {
       if (notify)
          notifBuilder.setTicker(message);
 
-      // Android 5.0 accent color to use, only works when AndroidManifest.xml is
-      // targetSdkVersion >= 21
-      if (gcmBundle.has("bgac")) {
-         try {
-            notifBuilder.setColor(new BigInteger(gcmBundle.getString("bgac"), 16).intValue());
-         } catch (Throwable t) {} // Can throw if an old android support lib is used or parse error.
-      }
+      try {
+         BigInteger accentColor = getAccentColor(gcmBundle);
+         if (accentColor != null)
+            notifBuilder.setColor(accentColor.intValue());
+      } catch (Throwable t) {} // Can throw if an old android support lib is used.
 
       BigInteger ledColor = null;
 
@@ -681,6 +679,22 @@ class GenerateNotification {
       soundId = contextResources.getIdentifier("gamethrive_default_sound", "raw", packageName);
       if (soundId != 0)
          return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
+
+      return null;
+   }
+
+   // Android 5.0 accent color to use, only works when AndroidManifest.xml is targetSdkVersion >= 21
+   private static BigInteger getAccentColor(JSONObject gcmBundle) {
+      try {
+         if (gcmBundle.has("bgac"))
+            return new BigInteger(gcmBundle.getString("bgac"), 16);
+      } catch (Throwable t) {} // Can throw a parse error parse error.
+
+      try {
+         String defaultColor = OSUtils.getManifestMeta(currentContext, "com.onesignal.NotificationAccentColor.DEFAULT");
+         if (defaultColor != null)
+            return new BigInteger(defaultColor, 16);
+      } catch (Throwable t) {} // Can throw a parse error parse error.
 
       return null;
    }

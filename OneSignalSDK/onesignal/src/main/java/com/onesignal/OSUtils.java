@@ -28,8 +28,11 @@
 package com.onesignal;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Bundle;
 import android.telephony.TelephonyManager;
 
 class OSUtils {
@@ -62,5 +65,17 @@ class OSUtils {
       TelephonyManager manager = (TelephonyManager)OneSignal.appContext.getSystemService(Context.TELEPHONY_SERVICE);
       String carrierName = manager.getNetworkOperatorName();
       return "".equals(carrierName) ? null : carrierName;
+   }
+
+   static String getManifestMeta(Context context, String metaName) {
+      try {
+         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+         Bundle bundle = ai.metaData;
+         return bundle.getString(metaName);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "", t);
+      }
+
+      return null;
    }
 }

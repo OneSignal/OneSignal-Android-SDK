@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -37,11 +38,11 @@ import com.onesignal.shortcutbadger.ShortcutBadger;
 
 class BadgeCountUpdater {
 
-   static void update(SQLiteDatabase readableDb) {
+   static void update(SQLiteDatabase readableDb, Context context) {
       boolean isEnabled = true;
 
       try {
-         ApplicationInfo ai = OneSignal.appContext.getPackageManager().getApplicationInfo(OneSignal.appContext.getPackageName(), PackageManager.GET_META_DATA);
+         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
          String defaultStr = bundle.getString("com.onesignal.BadgeCount");
          isEnabled = !"DISABLE".equals(defaultStr);
@@ -62,12 +63,12 @@ class BadgeCountUpdater {
              null                                                     // sort order, new to old
          );
 
-         updateCount(cursor.getCount());
+         updateCount(cursor.getCount(), context);
          cursor.close();
       }
    }
 
-   private static void updateCount(int count) {
-      ShortcutBadger.applyCount(OneSignal.appContext, count);
+   private static void updateCount(int count, Context context) {
+      ShortcutBadger.applyCount(context, count);
    }
 }

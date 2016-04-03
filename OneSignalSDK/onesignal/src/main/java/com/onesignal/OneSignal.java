@@ -160,7 +160,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020200";
+   public static final String VERSION = "020300";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -621,7 +621,11 @@ public class OneSignal {
                userState.set("pkgs", pkgs);
             } catch (Throwable t) {}
 
-            if (AndroidSupportV4Compat.ContextCompat.checkSelfPermission(appContext, "android.permission.GET_ACCOUNTS") == PackageManager.PERMISSION_GRANTED) {
+            final SharedPreferences prefs = getGcmPreferences(appContext);
+            String email = prefs.getString("OS_USER_EMAIL", null);
+            if (email != null)
+               userState.set("email", email);
+            else if (AndroidSupportV4Compat.ContextCompat.checkSelfPermission(appContext, "android.permission.GET_ACCOUNTS") == PackageManager.PERMISSION_GRANTED) {
                Account[] accounts = AccountManager.get(appContext).getAccounts();
                for (Account account : accounts) {
                   if (Patterns.EMAIL_ADDRESS.matcher(account.name).matches()) {
@@ -641,6 +645,21 @@ public class OneSignal {
             OneSignalStateSynchronizer.postSession(userState);
          }
       }).start();
+   }
+
+   public static void setEmail(String email) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before setting email! Omitting this operation.");
+         return;
+      }
+
+      if (email != null && !"".equals(email)) {
+         final SharedPreferences prefs = getGcmPreferences(appContext);
+         SharedPreferences.Editor editor = prefs.edit();
+         editor.putString("OS_USER_EMAIL", email);
+         editor.commit();
+         OneSignalStateSynchronizer.setEmail(email);
+      }
    }
 
    public static void sendTag(String key, String value) {
@@ -977,20 +996,11 @@ public class OneSignal {
    public static void handleNotificationOpened(Context inContext, JSONArray data, boolean fromAlert) {
       sendNotificationOpened(inContext, data);
 
-      boolean defaultOpenActionDisabled = false;
-      try {
-         ApplicationInfo ai = inContext.getPackageManager().getApplicationInfo(inContext.getPackageName(), PackageManager.GET_META_DATA);
-         Bundle bundle = ai.metaData;
-         String defaultStr = bundle.getString("com.onesignal.NotificationOpened.DEFAULT");
-         defaultOpenActionDisabled = "DISABLE".equals(defaultStr);
-      } catch (Throwable t) {
-         Log(LOG_LEVEL.ERROR, "", t);
-      }
-
       boolean urlOpened = false;
+      boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(inContext, "com.onesignal.NotificationOpened.DEFAULT"));
 
       if (!defaultOpenActionDisabled)
-         openURLFromNotification(inContext, data);
+         urlOpened = openURLFromNotification(inContext, data);
 
       runNotificationOpenedCallback(data, false);
 

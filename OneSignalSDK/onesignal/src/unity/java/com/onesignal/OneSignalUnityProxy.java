@@ -152,4 +152,11 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
          }
       });
    }
+
+   public void promptLocation() {
+      OneSignal.promptLocation();
+   }
+   public void setEmail(String email) {
+      OneSignal.setEmail(email);
+   }
 }

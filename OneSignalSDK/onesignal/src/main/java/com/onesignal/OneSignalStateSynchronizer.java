@@ -600,6 +600,15 @@ class OneSignalStateSynchronizer {
       } catch (JSONException e) { e.printStackTrace(); }
    }
 
+   static void setEmail(String email) {
+      JSONObject syncValues = getUserStateForModification().syncValues;
+      try {
+         System.out.println("syncValues1: " + syncValues.toString());
+         generateJsonDiff(syncValues, new JSONObject().put("email", email), syncValues, null);
+         System.out.println("syncValues2: " + syncValues.toString());
+      } catch (JSONException e) { e.printStackTrace(); }
+   }
+
    static void setSubscription(boolean enable) {
       try {
          getUserStateForModification().dependValues.put("userSubscribePref", enable);
