@@ -25,6 +25,27 @@
     	 Vibration settings of the device still apply. -->
     <uses-permission android:name="android.permission.VIBRATE" />
     
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- START: ShortcutBadger -->
+	<!--for Samsung-->
+	<uses-permission android:name="com.sec.android.provider.badge.permission.READ"/>
+	<uses-permission android:name="com.sec.android.provider.badge.permission.WRITE"/>
+	
+	<!--for htc-->
+	<uses-permission android:name="com.htc.launcher.permission.READ_SETTINGS"/>
+	<uses-permission android:name="com.htc.launcher.permission.UPDATE_SHORTCUT"/>
+	
+	<!--for sony-->
+	<uses-permission android:name="com.sonyericsson.home.permission.BROADCAST_BADGE"/>
+	
+	<!--for apex-->
+	<uses-permission android:name="com.anddoes.launcher.permission.UPDATE_COUNT"/>
+	
+	<!--for solid-->
+	<uses-permission android:name="com.majeur.launcher.permission.UPDATE_BADGE"/>
+	<!-- End: ShortcutBadger -->
+    
     <!-- ##END## OneSignal Permissions -->
 
     <application
@@ -48,7 +69,10 @@
         <meta-data android:name="com.google.android.gms.version"
            android:value="@integer/google_play_services_version" />
         
-        <activity android:name="com.onesignal.NotificationOpenedActivity"/>
+        <meta-data android:name="onesignal_app_id"
+           android:value="b2f7f966-d8cc-11e4-bed1-df8f05be55ba" />
+        <meta-data android:name="onesignal_google_project_number"
+           android:value="str:703322744261" />
         
         <receiver
             android:name="com.onesignal.GcmBroadcastReceiver"
@@ -58,7 +82,11 @@
             	<category android:name="com.onesignal.example" />
          	</intent-filter>
      	</receiver>
-     	<service android:name="com.onesignal.GcmIntentService" />
+     	
+     	<receiver android:name="com.onesignal.NotificationOpenedReceiver" />
+		<service android:name="com.onesignal.GcmIntentService" />
+		<service android:name="com.onesignal.SyncService" android:stopWithTask="false" />
+		<activity android:name="com.onesignal.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
      	
      	<!-- Optional receiver to get OneSignal Background Data Notifications. -->
      	<receiver
@@ -68,6 +96,7 @@
             	<action android:name="com.onesignal.BackgroundBroadcast.RECEIVE" />
          	</intent-filter>
      	</receiver>
+     	
      	<!-- ##END## OneSignal -->
      	
     </application>

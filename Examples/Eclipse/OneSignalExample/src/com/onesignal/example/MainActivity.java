@@ -54,8 +54,8 @@ public class MainActivity extends Activity {
       // Enable Logging below to debug issues. (LogCat level, Visual level);
       // OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.DEBUG);
 
-      // Pass in your app's Context, Google Project number, OneSignal App ID, and a NotificationOpenedHandler
-      OneSignal.init(this, "703322744261", "5eb5a37e-b458-11e3-ac11-000c2940e62c", new ExampleNotificationOpenedHandler());
+      // Pass in your app's Context
+      OneSignal.startInit(this).setNotificationOpenedHandler(new ExampleNotificationOpenedHandler()).init();
    }
 
    // activity_main.xml defines the link to this method from the button.
@@ -78,21 +78,6 @@ public class MainActivity extends Activity {
             Log.i("OneSignalExample", labelStr + "\n");
          }
       });
-   }
-
-   // onPause and onResume hooks are required so OneSignal knows when to create a notification and when to just call your callback and playtime for segmentation.
-   // To save on adding these hooks to every Activity in your app it might be worth extending android.app.Activity to include this logic if you have many Activity classes in your App.
-   // Anther option is to use this library https://github.com/BoD/android-activitylifecyclecallbacks-compat
-   @Override
-   protected void onPause() {
-      super.onPause();
-      OneSignal.onPaused();
-   }
-
-   @Override
-   protected void onResume() {
-      super.onResume();
-      OneSignal.onResumed();
    }
 
    // NotificationOpenedHandler is implemented in its own class instead of adding implements to MainActivity so we don't hold on to a reference of our first activity if it gets recreated.
