@@ -34,6 +34,7 @@ import org.robolectric.annotation.Implements;
 public class ShadowOneSignalRestClient {
 
    public static JSONObject lastPost;
+   public static String lastUrl;
    public static Thread testThread;
    public static boolean failNext, failAll;
    public static String failResponse = "{}", nextSuccessResponse;
@@ -76,6 +77,7 @@ public class ShadowOneSignalRestClient {
    }
 
    private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
 
@@ -107,6 +109,7 @@ public class ShadowOneSignalRestClient {
    }
 
    static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
 
@@ -121,6 +124,7 @@ public class ShadowOneSignalRestClient {
    }
 
    static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
 
@@ -130,6 +134,22 @@ public class ShadowOneSignalRestClient {
       System.out.println("lastPost:jsonBody: " + lastPost.toString());
 
       responseHandler.onSuccess("{}");
+
+      safeInterrupt();
+   }
+
+   static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      lastUrl = url;
+      networkCallCount++;
+      doInterruptibleDelay();
+      if (doFail(responseHandler)) return;
+
+      if (nextSuccessResponse != null) {
+         responseHandler.onSuccess(nextSuccessResponse);
+         nextSuccessResponse = null;
+      }
+      else
+         responseHandler.onSuccess("{}");
 
       safeInterrupt();
    }

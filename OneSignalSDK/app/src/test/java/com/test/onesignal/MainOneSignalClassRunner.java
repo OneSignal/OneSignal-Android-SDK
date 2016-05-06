@@ -70,6 +70,7 @@ import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
@@ -335,7 +336,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testUnsubcribeShouldMakeRegIdNullToIdsAvailable() throws Exception {
+   public void testUnsubcribedShouldMakeRegIdNullToIdsAvailable() throws Exception {
       GetIdsAvailable();
       OneSignalInit();
       threadAndTaskWait();
@@ -588,7 +589,7 @@ public class MainOneSignalClassRunner {
 
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
@@ -616,6 +617,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags("{\"int\": 122, \"bool\": true, \"null\": null, \"array\": [123], \"object\": {}}");
       GetTags();
+      threadAndTaskWait(); threadAndTaskWait();
 
       Assert.assertEquals(String.class, lastGetTags.get("int").getClass());
       Assert.assertEquals("122", lastGetTags.get("int"));
@@ -702,24 +704,25 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"str\": \"str1\", \"int\": 122, \"bool\": true}");
       OneSignal.deleteTag("int");
       GetTags();
+      threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
 
       Assert.assertFalse(lastGetTags.has("int"));
       lastGetTags = null;
 
-      // Makes sure they get sent
+      // Should only send the tag we added back.
       OneSignal.sendTags("{\"str\": \"str1\", \"int\": 122, \"bool\": true}");
       threadAndTaskWait();
-      Assert.assertEquals("str1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("str"));
+      Assert.assertEquals("{\"int\":\"122\"}", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").toString());
 
+      // Make sure a single delete works.
       OneSignal.deleteTag("int");
-
       GetTags();
-
+      threadAndTaskWait(); threadAndTaskWait();
       Assert.assertFalse(lastGetTags.has("int"));
 
-      // After the success response it should not store a "" string when saving to storage.
+      // Delete all other tags, the 'tags' key should not exists in local storage.
+      OneSignal.deleteTags(Arrays.asList("bool", "str"));
       threadAndTaskWait();
-
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       String syncValues = prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null);
       Assert.assertFalse(new JSONObject(syncValues).has("tags"));
@@ -779,9 +782,41 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
       GetTags();
+      threadAndTaskWait(); threadAndTaskWait();
 
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
+   }
+
+   @Test
+   public void shouldGetTagsFromServerOnFirstCall() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\"}}";
+      GetTags();
+      threadAndTaskWait(); threadAndTaskWait();
+
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals("value1", lastGetTags.getString("test1"));
+      Assert.assertEquals("value2", lastGetTags.getString("test2"));
+
+      GetTags();
+      threadAndTaskWait();
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+   }
+
+   @Test
+   public void getTagsDelayedAfterRegistering() throws Exception {
+      OneSignalInit();
+      GetTags();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\"}}";
+      threadAndTaskWait(); threadAndTaskWait();
+
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals("value1", lastGetTags.getString("test1"));
+      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.testUserId));
    }
 
    // ####### on_focus Tests ########

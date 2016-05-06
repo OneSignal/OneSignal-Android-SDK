@@ -160,7 +160,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020300";
+   public static final String VERSION = "020301";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -179,6 +179,9 @@ public class OneSignal {
    private static OneSignal.Builder mInitBuilder;
 
    static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<JSONArray>();
+
+   private static GetTagsHandler pendingGetTagsHandler;
+   private static boolean getTagsCall;
 
    public static OneSignal.Builder startInit(Context context) {
       return new OneSignal.Builder(context);
@@ -686,7 +689,7 @@ public class OneSignal {
 
       if (keyValues == null) return;
 
-      JSONObject existingKeys = OneSignalStateSynchronizer.getTags();
+      JSONObject existingKeys = OneSignalStateSynchronizer.getTags(false).result;
 
       JSONObject toSend = new JSONObject();
 
@@ -781,11 +784,27 @@ public class OneSignal {
          return;
       }
 
-      JSONObject tags = OneSignalStateSynchronizer.getTags();
-      if (tags == null || tags.toString().equals("{}"))
-         getTagsHandler.tagsAvailable(null);
-      else
-         getTagsHandler.tagsAvailable(OneSignalStateSynchronizer.getTags());
+      if (getUserId() == null) {
+         pendingGetTagsHandler = getTagsHandler;
+         return;
+      }
+      internalFireGetTagsCallback(getTagsHandler);
+   }
+
+   private static void internalFireGetTagsCallback(final GetTagsHandler getTagsHandler) {
+      if (getTagsHandler == null) return;
+
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            final OneSignalStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
+            if (tags.serverSuccess) getTagsCall = true;
+            if (tags.result == null || tags.toString().equals("{}"))
+               getTagsHandler.tagsAvailable(null);
+            else
+               getTagsHandler.tagsAvailable(tags.result);
+         }
+      }).start();
    }
 
    public static void deleteTag(String key) {
@@ -1122,6 +1141,12 @@ public class OneSignal {
       SharedPreferences.Editor editor = prefs.edit();
       editor.putString("GT_PLAYER_ID", userId);
       editor.commit();
+   }
+
+   static void updateUserIdDependents(String userId) {
+      saveUserId(userId);
+      fireIdsAvailableCallback();
+      internalFireGetTagsCallback(pendingGetTagsHandler);
    }
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.

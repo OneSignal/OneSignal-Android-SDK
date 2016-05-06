@@ -46,9 +46,9 @@ import java.util.Set;
 class OneSignalStateSynchronizer {
    private static boolean onSessionDone = false, postSessionCalled = false, waitingForSessionResponse = false;
 
-   // currentUserState - current know state of the user on OneSignal's server.
-   // toSyncUserState - pending state that will be synced to the OneSignal server.
-   //                   diff will be generated between currentUserState when sync call is made to the server.
+   // currentUserState - Current known state of the user on OneSignal's server.
+   // toSyncUserState  - Pending state that will be synced to the OneSignal server.
+   //                    diff will be generated between currentUserState when a sync call is made to the server.
    private static UserState currentUserState, toSyncUserState;
 
    static HashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new HashMap<>();
@@ -537,9 +537,7 @@ class OneSignalStateSynchronizer {
 
                   if (jsonResponse.has("id")) {
                      String userId = jsonResponse.getString("id");
-                     OneSignal.saveUserId(userId);
-
-                     OneSignal.fireIdsAvailableCallback();
+                     OneSignal.updateUserIdDependents(userId);
 
                      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + userId);
                   } else
@@ -647,8 +645,52 @@ class OneSignalStateSynchronizer {
       return toSyncUserState.syncValues.optString("identifier", null);
    }
 
-   static JSONObject getTags() {
-      return getTagsWithoutDeletedKeys(toSyncUserState.syncValues);
+   static class GetTagsResult {
+      public boolean serverSuccess;
+      public JSONObject result;
+
+      GetTagsResult(boolean serverSuccess, JSONObject result) {
+         this.serverSuccess = serverSuccess; this.result = result;
+      }
+   }
+
+   private static JSONObject lastGetTagsResponse;
+   static GetTagsResult getTags(boolean fromServer) {
+      lastGetTagsResponse = null;
+
+      if (fromServer) {
+         String userId = OneSignal.getUserId();
+         OneSignalRestClient.getSync("players/" + userId, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onSuccess(String responseStr) {
+               try {
+                  lastGetTagsResponse = new JSONObject(responseStr);
+                  if (lastGetTagsResponse.has("tags")) {
+                     lastGetTagsResponse = lastGetTagsResponse.optJSONObject("tags");
+                     currentUserState.syncValues.put("tags", lastGetTagsResponse);
+                     currentUserState.persistState();
+
+                     JSONObject tagsToSync = getTagsWithoutDeletedKeys(toSyncUserState.syncValues);
+                     if (tagsToSync != null) {
+                        Iterator<String> keys = tagsToSync.keys();
+                        while (keys.hasNext()) {
+                           String key = keys.next();
+                           lastGetTagsResponse.put(key, tagsToSync.optString(key));
+                        }
+                     }
+                  }
+                  else
+                     lastGetTagsResponse = null;
+               } catch (JSONException e) {
+                  e.printStackTrace();
+               }
+            }
+         });
+      }
+
+      if (lastGetTagsResponse == null)
+         return new GetTagsResult(false, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
+      return new GetTagsResult(true, lastGetTagsResponse);
    }
 
    static void resetCurrentState() {

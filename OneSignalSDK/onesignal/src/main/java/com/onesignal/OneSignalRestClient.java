@@ -61,12 +61,8 @@ class OneSignalRestClient {
       }).start();
    }
 
-   static void get(final String url, final ResponseHandler responseHandler) {
-      new Thread(new Runnable() {
-         public void run() {
-            makeRequest(url, null, null, responseHandler);
-         }
-      }).start();
+   static void getSync(final String url, final ResponseHandler responseHandler) {
+      makeRequest(url, null, null, responseHandler);
    }
 
    static void putSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
@@ -83,17 +79,20 @@ class OneSignalRestClient {
       String json = null;
 
       try {
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, BASE_URL + url);
          con = (HttpURLConnection)new URL(BASE_URL + url).openConnection();
          con.setUseCaches(false);
-         con.setDoOutput(true);
          con.setConnectTimeout(TIMEOUT);
          con.setReadTimeout(TIMEOUT);
 
          if (jsonBody != null)
             con.setDoInput(true);
 
-         con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-         con.setRequestMethod(method);
+         if (method != null) {
+            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            con.setRequestMethod(method);
+            con.setDoOutput(true);
+         }
 
          if (jsonBody != null) {
             String strJsonBody = jsonBody.toString();
