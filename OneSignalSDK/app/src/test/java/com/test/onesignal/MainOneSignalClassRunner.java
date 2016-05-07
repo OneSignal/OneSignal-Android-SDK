@@ -617,7 +617,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags("{\"int\": 122, \"bool\": true, \"null\": null, \"array\": [123], \"object\": {}}");
       GetTags();
-      threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
 
       Assert.assertEquals(String.class, lastGetTags.get("int").getClass());
       Assert.assertEquals("122", lastGetTags.get("int"));
