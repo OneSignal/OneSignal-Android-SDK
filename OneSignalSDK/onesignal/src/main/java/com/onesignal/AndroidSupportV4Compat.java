@@ -33,17 +33,23 @@ package com.onesignal;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 // Designed as a compat for use of Android Support v4 revision 23.+ methods when an older revision of the library is included with the app developer's project.
 class AndroidSupportV4Compat {
 
    static class ContextCompat {
       static int checkSelfPermission(@NonNull Context context, @NonNull String permission) {
-         if (permission == null)
-            throw new IllegalArgumentException("permission is null");
-
-         return context.checkPermission(permission, android.os.Process.myPid(), android.os.Process.myUid());
+         // Catch for rare "Unknown exception code: 1 msg null" exception
+         // See https://github.com/one-signal/OneSignal-Android-SDK/issues/48 for more details.
+         try {
+            return context.checkPermission(permission, android.os.Process.myPid(), android.os.Process.myUid());
+         } catch (Throwable t) {
+            Log.e("OneSignal", "checkSelfPermission failed, returning PERMISSION_DENIED");
+            return PackageManager.PERMISSION_DENIED;
+         }
       }
    }
 
