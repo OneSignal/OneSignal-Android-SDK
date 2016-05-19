@@ -38,7 +38,6 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
-import com.onesignal.NotificationBundleProcessor;
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowOSUtils;
@@ -111,7 +110,7 @@ public class MainOneSignalClassRunner {
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
 
-      testSleepTime = System.getenv("TRAVIS") != null ? 500 : 200;
+      testSleepTime = System.getenv("TRAVIS") != null ? 2000 : 200;
 
       Field OneSignal_CurrentSubscription = OneSignal.class.getDeclaredField("subscribableStatus");
       OneSignal_CurrentSubscription.setAccessible(true);
@@ -197,6 +196,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldNotFireNotificationOpenAgainAfterAppRestart() throws Exception {
+      AddLauncherIntentFilter();
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
          @Override
          public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
@@ -207,7 +207,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Bundle bundle = GenerateNotificationRunner.getBaseNotifBundle();
-      NotificationBundleProcessor.Process(blankActivity, bundle);
+      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       threadAndTaskWait();
 
@@ -317,7 +317,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       Assert.assertNull(notificationOpenedMessage);
 
-      NotificationBundleProcessor.Process(blankActivity, GenerateNotificationRunner.getBaseNotifBundle());
+      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, GenerateNotificationRunner.getBaseNotifBundle());
       threadAndTaskWait();
       Assert.assertEquals("Robo test message", notificationOpenedMessage);
    }
@@ -953,7 +953,7 @@ public class MainOneSignalClassRunner {
       StaticResetHelper.restSetStaticFields();
       OneSignalInit();
       threadAndTaskWait();
-      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
+
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
    }

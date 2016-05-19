@@ -88,7 +88,7 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   public static int fromBundle(Context inContext, Bundle bundle, boolean showAsAlert) {
+   static int fromBundle(Context inContext, Bundle bundle, boolean showAsAlert, NotificationExtenderService.OverrideSettings overrideSettings) {
       setStatics(inContext);
 
       JSONObject jsonBundle = NotificationBundleProcessor.bundleAsJSONObject(bundle);
@@ -96,7 +96,7 @@ class GenerateNotification {
       if (showAsAlert && ActivityLifecycleHandler.curActivity != null)
          return showNotificationAsAlert(jsonBundle, ActivityLifecycleHandler.curActivity);
 
-      return showNotification(jsonBundle);
+      return showNotification(jsonBundle, overrideSettings);
    }
 
    private static int showNotificationAsAlert(final JSONObject gcmJson, final Activity activity) {
@@ -145,8 +145,7 @@ class GenerateNotification {
                         finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
 
                         NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-                     } catch (Throwable t) {
-                     }
+                     } catch (Throwable t) {}
                   } else // No action buttons, close button simply pressed.
                      NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
                }
@@ -285,7 +284,7 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   private static int showNotification(JSONObject gcmBundle) {
+   private static int showNotification(JSONObject gcmBundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       Random random = new Random();
 
       String group = null;
@@ -298,6 +297,9 @@ class GenerateNotification {
       NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle, true);
 
       addNotificationActionButtons(gcmBundle, notifBuilder, notificationId, null);
+
+      if (overrideSettings != null && overrideSettings.extender != null)
+         notifBuilder.extend(overrideSettings.extender);
 
       if (group != null) {
          PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group));
@@ -319,8 +321,9 @@ class GenerateNotification {
       //   stacked notifications on Android 4.2 and older
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
-      if (group == null || android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1)
+      if (group == null || android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          NotificationManagerCompat.from(currentContext).notify(notificationId, notifBuilder.build());
+      }
 
       return notificationId;
    }
@@ -345,10 +348,10 @@ class GenerateNotification {
       SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
 
       String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                              NotificationTable.COLUMN_NAME_FULL_DATA,
-                              NotificationTable.COLUMN_NAME_IS_SUMMARY,
-                              NotificationTable.COLUMN_NAME_TITLE,
-                              NotificationTable.COLUMN_NAME_MESSAGE };
+                             NotificationTable.COLUMN_NAME_FULL_DATA,
+                             NotificationTable.COLUMN_NAME_IS_SUMMARY,
+                             NotificationTable.COLUMN_NAME_TITLE,
+                             NotificationTable.COLUMN_NAME_MESSAGE };
 
       String[] whereArgs = { group };
 
@@ -543,8 +546,7 @@ class GenerateNotification {
 
             return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true);
          }
-      } catch (Throwable t) {
-      }
+      } catch (Throwable t) {}
 
       return bitmap;
    }
@@ -555,8 +557,7 @@ class GenerateNotification {
 
          try {
             bitmap = BitmapFactory.decodeStream(currentContext.getAssets().open(bitmapStr));
-         } catch (Throwable t) {
-         }
+         } catch (Throwable t) {}
 
          if (bitmap != null)
             return bitmap;
@@ -565,8 +566,7 @@ class GenerateNotification {
          for (String extension : image_extensions) {
             try {
                bitmap = BitmapFactory.decodeStream(currentContext.getAssets().open(bitmapStr + extension));
-            } catch (Throwable t) {
-            }
+            } catch (Throwable t) {}
             if (bitmap != null)
                return bitmap;
          }
@@ -574,8 +574,7 @@ class GenerateNotification {
          int bitmapId = getResourceIcon(bitmapStr);
          if (bitmapId != 0)
             return BitmapFactory.decodeResource(contextResources, bitmapId);
-      } catch (Throwable t) {
-      }
+      } catch (Throwable t) {}
 
       return null;
    }
@@ -615,8 +614,7 @@ class GenerateNotification {
       // Get system icon resource
       try {
          return drawable.class.getField(iconName).getInt(null);
-      } catch (Throwable t) {
-      }
+      } catch (Throwable t) {}
 
       return 0;
    }

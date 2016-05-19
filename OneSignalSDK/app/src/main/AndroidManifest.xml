@@ -90,6 +90,16 @@
             </intent-filter>
         </receiver>
 -->
+
+
+        <service
+            android:name=".NotificationExtenderServiceTest"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.onesignal.NotificationExtender" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>
