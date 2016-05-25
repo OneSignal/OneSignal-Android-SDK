@@ -43,27 +43,15 @@ import android.os.Bundle;
  */
 public class GcmIntentService extends IntentService {
 
-   private static final String GCM_RECEIVE = "com.google.android.c2dm.intent.RECEIVE";
-   private static final String GCM_TYPE = "gcm";
-
    public GcmIntentService() {
       super("GcmIntentService");
-   }
-
-   private static boolean isGcmMessage(Intent intent) {
-      if (GCM_RECEIVE.equals(intent.getAction())) {
-         String messageType = intent.getStringExtra("message_type");
-         return (messageType == null || GCM_TYPE.equals(messageType));
-      }
-      return false;
    }
    
    @Override
    protected void onHandleIntent(Intent intent) {
       Bundle extras = intent.getExtras();
-      
-      if (isGcmMessage(intent))
-         NotificationBundleProcessor.Process(this, extras);
+
+      NotificationBundleProcessor.ProcessFromGCMIntentService(this, extras, null);
 
       // Release the wake lock provided by the WakefulBroadcastReceiver.
       GcmBroadcastReceiver.completeWakefulIntent(intent);

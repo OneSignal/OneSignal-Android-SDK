@@ -40,44 +40,37 @@ import android.os.Bundle;
 
 import java.util.Set;
 
-public class NotificationBundleProcessor {
+class NotificationBundleProcessor {
 
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
-   public static void Process(Context context, final Bundle bundle) {
+   static void ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       if (OneSignal.notValidOrDuplicated(context, bundle))
          return;
 
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
-      boolean isActive = OneSignal.initDone && OneSignal.isForeground();
-      boolean display = OneSignal.getNotificationsWhenActiveEnabled(context)
-                        || showAsAlert
-                        || !isActive;
-
-      prepareBundle(bundle);
-
-      BackgroundBroadcaster.Invoke(context, bundle, isActive);
-
-      if (bundle.getString("alert") == null || "".equals(bundle.getString("alert")))
-         return;
-
-      int notificationId = -1;
-
-      if (display)
-         notificationId = GenerateNotification.fromBundle(context, bundle, showAsAlert && isActive);
-      else {
-         // Current thread is meant to be short lived. Make a new thread to do our OneSignal work on.
-         new Thread(new Runnable() {
-            public void run() {
-               OneSignal.handleNotificationOpened(NotificationBundleProcessor.bundleAsJsonArray(bundle));
-            }
-         }).start();
-      }
-
-      saveNotification(context, bundle, !display, notificationId);
+      Process(context, bundle, overrideSettings);
    }
 
-   private static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+   static int Process(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
+
+      int notificationId = GenerateNotification.fromBundle(context, bundle, showAsAlert && OneSignal.isAppActive(), overrideSettings);
+      saveNotification(context, bundle, false, notificationId);
+      return notificationId;
+   }
+
+   static JSONArray bundleAsJsonArray(Bundle bundle) {
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(bundleAsJSONObject(bundle));
+      return jsonArray;
+   }
+
+   // Saving the notification provides the following:
+   //   * Prevent duplicates.
+   //   * Build summary notifications
+   //   * Future - Re-display notifications after reboot and upgrade of app.
+   //   * Future - Developer API to get a list of notifications.
+   static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
       try {
          JSONObject customJSON = new JSONObject(bundle.getString("custom"));
 
@@ -116,19 +109,7 @@ public class NotificationBundleProcessor {
       }
    }
 
-   public static JSONArray newJsonArray(JSONObject jsonObject) {
-      JSONArray jsonArray = new JSONArray();
-      jsonArray.put(jsonObject);
-      return jsonArray;
-   }
-
-   public static JSONArray bundleAsJsonArray(Bundle bundle) {
-      JSONArray jsonArray = new JSONArray();
-      jsonArray.put(bundleAsJSONObject(bundle));
-      return jsonArray;
-   }
-
-   public static JSONObject bundleAsJSONObject(Bundle bundle) {
+   static JSONObject bundleAsJSONObject(Bundle bundle) {
       JSONObject json = new JSONObject();
       Set<String> keys = bundle.keySet();
 
@@ -142,7 +123,7 @@ public class NotificationBundleProcessor {
    }
 
    // Format our short keys into more readable ones.
-   private static void prepareBundle(Bundle gcmBundle) {
+   static void prepareBundle(Bundle gcmBundle) {
       if (gcmBundle.containsKey("o")) {
          try {
             JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));

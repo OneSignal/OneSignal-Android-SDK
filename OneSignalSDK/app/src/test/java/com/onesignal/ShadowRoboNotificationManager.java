@@ -62,9 +62,7 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
       lastNotif = shadowOf(notification);
       lastNotifId = id;
       notifications.add(new PostedNotification(id, lastNotif));
-      System.out.println("notification: " + lastNotif.getContentText());
       super.notify(tag, id, notification);
-      //throw new RuntimeException("Get stack trace!");
    }
 
 }

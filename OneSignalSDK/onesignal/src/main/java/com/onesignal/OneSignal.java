@@ -160,7 +160,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020301";
+   public static final String VERSION = "020400";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -1300,24 +1300,33 @@ public class OneSignal {
    }
    
    static boolean notValidOrDuplicated(Context context, Bundle bundle) {
+      String id = getNotificationIdFromGCMBundle(bundle);
+      return id == null || OneSignal.isDuplicateNotification(id, context);
+   }
+
+   static String getNotificationIdFromGCMBundle(Bundle bundle) {
       if (bundle.isEmpty())
-         return true;
+         return null;
 
       try {
          if (bundle.containsKey("custom")) {
             JSONObject customJSON = new JSONObject(bundle.getString("custom"));
-           
+
             if (customJSON.has("i"))
-               return OneSignal.isDuplicateNotification(customJSON.getString("i"), context);
+               return customJSON.optString("i", null);
             else
                Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
          }
          else
             Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the bundle.");
       } catch (Throwable t) {
-         Log(LOG_LEVEL.DEBUG, "Could not parse bundle for duplicate, probably not a OneSignal notification.", t);
+         Log(LOG_LEVEL.DEBUG, "Could not parse bundle, probably not a OneSignal notification.", t);
       }
 
-      return true;
+      return null;
+   }
+
+   static boolean isAppActive() {
+      return initDone && isForeground();
    }
 }

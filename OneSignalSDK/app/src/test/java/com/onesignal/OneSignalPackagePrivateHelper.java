@@ -1,7 +1,10 @@
 package com.onesignal;
 
+import android.content.Context;
+import android.os.Bundle;
 import android.os.Looper;
 
+import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
 import java.util.Map;
@@ -36,6 +39,18 @@ public class OneSignalPackagePrivateHelper {
 
    public static void SyncService_onTaskRemoved() {
       SyncService.onTaskRemoved();
+   }
+
+   public static JSONObject bundleAsJSONObject(Bundle bundle) {
+      return NotificationBundleProcessor.bundleAsJSONObject(bundle);
+   }
+
+   public static void NotificationBundleProcessor_ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.ProcessFromGCMIntentService(context, bundle, overrideSettings);
+   }
+
+   public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
+      return GcmBroadcastReceiver.processBundle(context, bundle);
    }
 
 

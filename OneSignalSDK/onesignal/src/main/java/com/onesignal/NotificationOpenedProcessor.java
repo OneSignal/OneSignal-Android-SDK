@@ -40,6 +40,8 @@ import org.json.JSONObject;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
+// Used to process opens and dismisses of notifications.
+
 public class NotificationOpenedProcessor {
 
    private static Context context;
@@ -69,7 +71,7 @@ public class NotificationOpenedProcessor {
       JSONArray dataArray = null;
       if (!dismissed) {
          try {
-            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
+            dataArray = newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
          } catch (Throwable t) {
             t.printStackTrace();
          }
@@ -81,7 +83,7 @@ public class NotificationOpenedProcessor {
 
       markNotificationsConsumed(writableDb);
 
-      // Notification is not a summary type and is a single notification part of a group.
+      // Notification is not a summary type but a single notification part of a group.
       if (summaryGroup == null && intent.getStringExtra("grp") != null)
          updateSummaryNotification(writableDb);
 
@@ -172,5 +174,11 @@ public class NotificationOpenedProcessor {
          values.put(NotificationTable.COLUMN_NAME_OPENED, 1);
 
       return values;
+   }
+
+   private static JSONArray newJsonArray(JSONObject jsonObject) {
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(jsonObject);
+      return jsonArray;
    }
 }
