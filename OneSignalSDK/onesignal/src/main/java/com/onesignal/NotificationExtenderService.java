@@ -81,7 +81,7 @@ public abstract class NotificationExtenderService extends IntentService {
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
 
-      OSNotificationDisplayedResult osNotificationDisplayedResult = new OSNotificationDisplayedResult();
+      osNotificationDisplayedResult = new OSNotificationDisplayedResult();
       osNotificationDisplayedResult.notificationId = NotificationBundleProcessor.Process(this, currentExtras, overrideSettings);
       return osNotificationDisplayedResult;
    }
@@ -119,7 +119,9 @@ public abstract class NotificationExtenderService extends IntentService {
          notification.groupMessage = currentExtras.getString("grp_msg");
          notification.backgroundColor = currentExtras.getString("bgac");
          notification.ledColor = currentExtras.getString("ledc");
-         notification.visibility = Integer.parseInt(currentExtras.getString("vis"));
+         String visibility = currentExtras.getString("vis");
+         if (visibility != null)
+            notification.visibility = Integer.parseInt(visibility);
          notification.backgroundData = "1".equals(currentExtras.getString("bgn"));
          notification.fromProjectNumber = currentExtras.getString("from");
 
@@ -143,7 +145,17 @@ public abstract class NotificationExtenderService extends IntentService {
       }
 
       osNotificationDisplayedResult = null;
-      boolean developerProcessed = onNotificationProcessing(notification);
+      boolean developerProcessed = false;
+      try {
+         developerProcessed = onNotificationProcessing(notification);
+      }
+      catch (Throwable t) {
+         //noinspection ConstantConditions - displayNotification might have been called by the developer
+         if (osNotificationDisplayedResult == null)
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification. ", t);
+         else
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
+      }
 
       // If developer did not call displayNotification from onNotificationProcessing
       if (osNotificationDisplayedResult == null) {

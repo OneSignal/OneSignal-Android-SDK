@@ -45,6 +45,7 @@ import com.onesignal.OSNotificationPayload;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
@@ -280,6 +281,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = {ShadowOneSignal.class})
    public void shouldFireNotificationExtenderService() throws Exception {
       Bundle bundle = getBaseNotifBundle();
 
@@ -332,6 +334,24 @@ public class GenerateNotificationRunner {
       Assert.assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
 
       Assert.assertNotSame(-1, service.notificationId);
+
+
+      // Test a basic notification without anything special.
+      testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
+      testIntent.putExtras(getBaseNotifBundle());
+      controller.withIntent(testIntent).startCommand(0, 0);
+      Assert.assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
+
+
+      // Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception.
+      NotificationExtenderServiceTest.throwInAppCode = true;
+      testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
+      testIntent.putExtras(getBaseNotifBundle("NewUUID1"));
+      controller.withIntent(testIntent).startCommand(0, 0);
+
+      Assert.assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
+      List<PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Assert.assertEquals(3, postedNotifs.size());
    }
 
    private static Bundle getBundleWithAllOptionsSet() {
@@ -372,6 +392,7 @@ public class GenerateNotificationRunner {
    public static class NotificationExtenderServiceTest extends NotificationExtenderService {
       public OSNotificationPayload notification;
       public int notificationId = -1;
+      public static boolean throwInAppCode;
 
       // Override onStart to manually call onHandleIntent on the main thread.
       @Override
@@ -382,6 +403,9 @@ public class GenerateNotificationRunner {
 
       @Override
       protected boolean onNotificationProcessing(OSNotificationPayload notification) {
+         if (throwInAppCode)
+            throw new NullPointerException();
+
          this.notification = notification;
          notificationId = displayNotification(new OverrideSettings()).notificationId;
 
