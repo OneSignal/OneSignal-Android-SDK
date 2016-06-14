@@ -69,49 +69,51 @@ class OneSignalStateSynchronizer {
       else
          output = new JSONObject();
 
-      while (keys.hasNext()) {
-         try {
-            key = keys.next();
-            value = changedTo.get(key);
+      synchronized (cur) {
+         while (keys.hasNext()) {
+            try {
+               key = keys.next();
+               value = changedTo.get(key);
 
-            if (cur.has(key)) {
-               if (value instanceof JSONObject) {
-                  JSONObject curValue = cur.getJSONObject(key);
-                  JSONObject outValue = null;
-                  if (baseOutput != null && baseOutput.has(key))
-                     outValue = baseOutput.getJSONObject(key);
-                  JSONObject returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
-                  String returnedJsonStr = returnedJson.toString();
-                  if (!returnedJsonStr.equals("{}"))
-                     output.put(key, new JSONObject(returnedJsonStr));
-               }
-               else if (value instanceof JSONArray)
-                  handleJsonArray(key, (JSONArray) value, cur.getJSONArray(key), output);
-               else if (includeFields != null && includeFields.contains(key))
-                  output.put(key, value);
-               else {
-                  Object curValue = cur.get(key);
-                  if (!value.equals(curValue)) {
-                     // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
-                     if (curValue instanceof Integer && !"".equals(value)) {
-                        if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
+               if (cur.has(key)) {
+                  if (value instanceof JSONObject) {
+                     JSONObject curValue = cur.getJSONObject(key);
+                     JSONObject outValue = null;
+                     if (baseOutput != null && baseOutput.has(key))
+                        outValue = baseOutput.getJSONObject(key);
+                     JSONObject returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
+                     String returnedJsonStr = returnedJson.toString();
+                     if (!returnedJsonStr.equals("{}"))
+                        output.put(key, new JSONObject(returnedJsonStr));
+                  }
+                  else if (value instanceof JSONArray)
+                     handleJsonArray(key, (JSONArray) value, cur.getJSONArray(key), output);
+                  else if (includeFields != null && includeFields.contains(key))
+                     output.put(key, value);
+                  else {
+                     Object curValue = cur.get(key);
+                     if (!value.equals(curValue)) {
+                        // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
+                        if (curValue instanceof Integer && !"".equals(value)) {
+                           if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
+                              output.put(key, value);
+                        }
+                        else
                            output.put(key, value);
                      }
-                     else
-                        output.put(key, value);
                   }
                }
+               else {
+                  if (value instanceof JSONObject)
+                     output.put(key, new JSONObject(value.toString()));
+                  else if (value instanceof JSONArray)
+                     handleJsonArray(key, (JSONArray) value, null, output);
+                  else
+                     output.put(key, value);
+               }
+            } catch (JSONException e) {
+               e.printStackTrace();
             }
-            else {
-               if (value instanceof JSONObject)
-                  output.put(key, new JSONObject(value.toString()));
-               else if (value instanceof JSONArray)
-                  handleJsonArray(key, (JSONArray)value, null, output);
-               else
-                  output.put(key, value);
-            }
-         } catch (JSONException e) {
-            e.printStackTrace();
          }
       }
 
@@ -165,22 +167,24 @@ class OneSignalStateSynchronizer {
       if (jsonObject.has("tags")) {
          JSONObject toReturn = new JSONObject();
 
-         JSONObject keyValues = jsonObject.optJSONObject("tags");
+         synchronized (jsonObject) {
+            JSONObject keyValues = jsonObject.optJSONObject("tags");
 
-         Iterator<String> keys = keyValues.keys();
-         String key;
-         Object value;
+            Iterator<String> keys = keyValues.keys();
+            String key;
+            Object value;
 
-         while (keys.hasNext()) {
-            key = keys.next();
-            try {
-               value = keyValues.get(key);
-               if (!"".equals(value))
-                  toReturn.put(key, value);
-            } catch (Throwable t) {}
-         }
+            while (keys.hasNext()) {
+               key = keys.next();
+               try {
+                  value = keyValues.get(key);
+                  if (!"".equals(value))
+                     toReturn.put(key, value);
+               } catch (Throwable t) {}
+            }
          
-         return toReturn;
+            return toReturn;
+         }
       }
 
       return null;
