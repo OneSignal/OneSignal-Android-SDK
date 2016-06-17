@@ -69,7 +69,9 @@ import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
@@ -629,6 +631,49 @@ public class MainOneSignalClassRunner {
 
       Assert.assertFalse(lastGetTags.has("array"));
       Assert.assertFalse(lastGetTags.has("object"));
+   }
+
+   static boolean failedCurModTest;
+   @Test
+   public void testSendTagsConcurrentModificationException() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      for(int a = 0; a < 10; a++) {
+         List<Thread> threadList = new ArrayList<>(30);
+         for (int i = 0; i < 30; i++) {
+            Thread lastThread = newSendTagTestThread(Thread.currentThread(), i);
+            lastThread.start();
+            threadList.add(lastThread);
+            Assert.assertFalse(failedCurModTest);
+         }
+
+         for(Thread thread : threadList)
+            thread.join();
+         Assert.assertFalse(failedCurModTest);
+      }
+   }
+
+   private static Thread newSendTagTestThread(final Thread mainThread, final int id) {
+      return new Thread(new Runnable() {
+         @Override
+         public void run() {
+            try {
+               for (int i = 0; i < 100; i++) {
+                  if (failedCurModTest)
+                     break;
+                  OneSignal.sendTags("{\"key" + id + "\": " + i + "}");
+               }
+            } catch (Throwable t) {
+               // Ignore the flaky Robolectric null error.
+               if (t.getStackTrace()[0].getClassName().equals("org.robolectric.shadows.ShadowMessageQueue"))
+                  return;
+               failedCurModTest = true;
+               mainThread.interrupt();
+               throw t;
+            }
+         }
+      });
    }
 
    @Test
