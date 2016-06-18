@@ -45,8 +45,17 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
+   public static Bundle createInternalPayloadBundle(Bundle bundle) {
+      Bundle retBundle = new Bundle();
+      retBundle.putString("json_payload", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
+      return retBundle;
+   }
+
    public static void NotificationBundleProcessor_ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromGCMIntentService(context, bundle, overrideSettings);
+      if (overrideSettings == null)
+         overrideSettings = new NotificationExtenderService.OverrideSettings();
+
+      NotificationBundleProcessor.ProcessFromGCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
    }
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {

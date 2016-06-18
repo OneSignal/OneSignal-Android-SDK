@@ -34,11 +34,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignalDbHelper;
+import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
@@ -46,6 +50,7 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorGPS;
+import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
@@ -72,7 +77,11 @@ import org.robolectric.util.ActivityController;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
+import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
@@ -221,7 +230,7 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
-      Bundle bundle = GenerateNotificationRunner.getBaseNotifBundle();
+      Bundle bundle = getBaseNotifBundle();
       OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       threadAndTaskWait();
@@ -332,9 +341,32 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, GenerateNotificationRunner.getBaseNotifBundle());
+      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
       Assert.assertEquals("Robo test message", notificationOpenedMessage);
+   }
+
+   @Test
+   @Config(shadows = {ShadowBadgeCountUpdater.class})
+   public void testBadgeClearOnFirstStart() throws Exception {
+      ShadowBadgeCountUpdater.lastCount = -1;
+
+      // First run should set badge to 0
+      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+
+      // Resume should have no effect on badges.
+      ShadowBadgeCountUpdater.lastCount = -1;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
+
+      // Nor an app restart
+      StaticResetHelper.restSetStaticFields();
+      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+      Assert.assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
@@ -1050,13 +1082,48 @@ public class MainOneSignalClassRunner {
       Assert.assertNotNull(postNotificationFailure);
    }
 
+
+   @Test
+   @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class })
+   public void shouldCancelAndClearNotifications() throws Exception {
+      ShadowRoboNotificationManager.notifications.clear();
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Create 2 notifications
+      Bundle bundle = getBaseNotifBundle();
+      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      bundle = getBaseNotifBundle("UUID2");
+      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+
+      // Test canceling
+      Map<Integer, ShadowRoboNotificationManager.PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, ShadowRoboNotificationManager.PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      ShadowRoboNotificationManager.PostedNotification postedNotification = postedNotifsIterator.next().getValue();
+
+      OneSignal.cancelNotification(postedNotification.id);
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      Assert.assertEquals(1, ShadowRoboNotificationManager.notifications.size());
+
+      OneSignal.clearOneSignalNotifications();
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+
+      // Make sure they are marked dismissed.
+      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
+      Cursor cursor = readableDb.query(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, new String[] { "created_time" },
+          OneSignalPackagePrivateHelper.NotificationTable.COLUMN_NAME_DISMISSED + " = 1", null, null, null, null);
+      Assert.assertEquals(2, cursor.getCount());
+      cursor.close();
+   }
+
    // ####### Unit test helper methods ########
 
    private static void threadWait() {
       try {Thread.sleep(1000);} catch (Throwable t) {}
    }
 
-   private void threadAndTaskWait() {
+   static void threadAndTaskWait() {
       try {Thread.sleep(testSleepTime);} catch (Throwable t) {}
       OneSignalPackagePrivateHelper.runAllNetworkRunnables();
       OneSignalPackagePrivateHelper.runFocusRunnables();

@@ -36,6 +36,7 @@ import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -58,14 +59,22 @@ import java.util.List;
 
 public abstract class NotificationExtenderService extends IntentService {
 
-   public class OverrideSettings {
+   public static class OverrideSettings {
       public NotificationCompat.Extender extender;
+      public Integer androidNotificationId;
 
+      // Note: Make sure future fields are nullable.
       // Possible future options
-      //    int androidNotificationId;
-      //     - Need to consider DB records when replacing.
       //    int badgeCount;
       //   NotificationCompat.Extender summaryExtender;
+
+      void override(OverrideSettings overrideSettings) {
+         if (overrideSettings == null)
+            return;
+
+         if (overrideSettings.androidNotificationId != null)
+            androidNotificationId = overrideSettings.androidNotificationId;
+      }
    }
 
    public NotificationExtenderService() {
@@ -73,7 +82,9 @@ public abstract class NotificationExtenderService extends IntentService {
    }
 
    private OSNotificationDisplayedResult osNotificationDisplayedResult;
-   private Bundle currentExtras;
+   private JSONObject currentJsonPayload;
+   private boolean currentlyRestoring;
+   private OverrideSettings currentBaseOverrideSettings = null;
 
    // Developer may call to override some notification settings.
    //   - If called the normal SDK notification will not be displayed.
@@ -81,8 +92,9 @@ public abstract class NotificationExtenderService extends IntentService {
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
 
+      overrideSettings.override(currentBaseOverrideSettings);
       osNotificationDisplayedResult = new OSNotificationDisplayedResult();
-      osNotificationDisplayedResult.notificationId = NotificationBundleProcessor.Process(this, currentExtras, overrideSettings);
+      osNotificationDisplayedResult.notificationId = NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, overrideSettings);
       return osNotificationDisplayedResult;
    }
 
@@ -97,33 +109,48 @@ public abstract class NotificationExtenderService extends IntentService {
    }
 
    private void processIntent(Intent intent) {
-      currentExtras = intent.getExtras();
+      Bundle bundle = intent.getExtras();
+      try {
+         currentJsonPayload = new JSONObject(bundle.getString("json_payload"));
+         currentlyRestoring = bundle.getBoolean("restoring", false);
+         if (bundle.containsKey("android_notif_id")) {
+            currentBaseOverrideSettings = new OverrideSettings();
+            currentBaseOverrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
+         }
 
-      if (OneSignal.notValidOrDuplicated(this, currentExtras))
-         return;
+         if (!currentlyRestoring && OneSignal.notValidOrDuplicated(this, currentJsonPayload))
+            return;
 
+         processJsonObject(currentJsonPayload, currentlyRestoring);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+   }
+
+   void processJsonObject(JSONObject currentJsonPayload, boolean restoring) {
       OSNotificationPayload notification = new OSNotificationPayload();
       try {
-         JSONObject customJson = new JSONObject(currentExtras.getString("custom"));
+         JSONObject customJson = new JSONObject(currentJsonPayload.optString("custom"));
          notification.notificationId = customJson.optString("i");
          notification.additionalData = customJson.optJSONObject("a");
          notification.launchUrl = customJson.optString("u", null);
 
-         notification.message = currentExtras.getString("alert");
-         notification.title = currentExtras.getString("title");
-         notification.smallIcon = currentExtras.getString("sicon");
-         notification.bigPicture = currentExtras.getString("bicon");
-         notification.largeIcon = currentExtras.getString("licon");
-         notification.sound = currentExtras.getString("sound");
-         notification.group = currentExtras.getString("grp");
-         notification.groupMessage = currentExtras.getString("grp_msg");
-         notification.backgroundColor = currentExtras.getString("bgac");
-         notification.ledColor = currentExtras.getString("ledc");
-         String visibility = currentExtras.getString("vis");
+         notification.message = currentJsonPayload.optString("alert", null);
+         notification.title = currentJsonPayload.optString("title", null);
+         notification.smallIcon = currentJsonPayload.optString("sicon", null);
+         notification.bigPicture = currentJsonPayload.optString("bicon", null);
+         notification.largeIcon = currentJsonPayload.optString("licon", null);
+         notification.sound = currentJsonPayload.optString("sound", null);
+         notification.group = currentJsonPayload.optString("grp", null);
+         notification.groupMessage = currentJsonPayload.optString("grp_msg", null);
+         notification.backgroundColor = currentJsonPayload.optString("bgac", null);
+         notification.ledColor = currentJsonPayload.optString("ledc", null);
+         String visibility = currentJsonPayload.optString("vis", null);
          if (visibility != null)
             notification.visibility = Integer.parseInt(visibility);
-         notification.backgroundData = "1".equals(currentExtras.getString("bgn"));
-         notification.fromProjectNumber = currentExtras.getString("from");
+         notification.backgroundData = "1".equals(currentJsonPayload.optString("bgn", null));
+         notification.fromProjectNumber = currentJsonPayload.optString("from", null);
+         notification.restoring = restoring;
 
          if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {
             JSONArray jsonActionButtons = notification.additionalData.getJSONArray("actionButtons");
@@ -152,7 +179,7 @@ public abstract class NotificationExtenderService extends IntentService {
       catch (Throwable t) {
          //noinspection ConstantConditions - displayNotification might have been called by the developer
          if (osNotificationDisplayedResult == null)
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification. ", t);
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
          else
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
       }
@@ -160,21 +187,22 @@ public abstract class NotificationExtenderService extends IntentService {
       // If developer did not call displayNotification from onNotificationProcessing
       if (osNotificationDisplayedResult == null) {
          // Save as processed to prevent possible duplicate calls from canonical ids.
-         if (developerProcessed)
-            NotificationBundleProcessor.saveNotification(this, currentExtras, true, -1);
+         if (developerProcessed) {
+            if (!restoring)
+               NotificationBundleProcessor.saveNotification(this, currentJsonPayload, true, -1);
+         }
          else
-            NotificationBundleProcessor.Process(this, currentExtras, null);
+            NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, currentBaseOverrideSettings);
       }
    }
 
-   static Intent getIntent(Context context, Bundle extras) {
+   static Intent getIntent(Context context) {
       PackageManager packageManager = context.getPackageManager();
       Intent intent = new Intent().setAction("com.onesignal.NotificationExtender").setPackage(context.getPackageName());
       List<ResolveInfo> resolveInfo = packageManager.queryIntentServices(intent, PackageManager.GET_META_DATA);
       if (resolveInfo.size() < 1)
          return null;
 
-      intent.putExtras(extras);
       return intent;
    }
 }

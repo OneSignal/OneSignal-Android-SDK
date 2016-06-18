@@ -28,6 +28,8 @@
 package com.onesignal.example;
 
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -43,6 +45,8 @@ import org.json.JSONObject;
 import com.onesignal.example.iap.IabHelper;
 import com.onesignal.example.iap.IabResult;
 
+import java.util.Locale;
+
 
 public class MainActivity extends ActionBarActivity {
 
@@ -54,6 +58,8 @@ public class MainActivity extends ActionBarActivity {
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       setContentView(R.layout.activity_main);
+
+      Log.e("tet", Locale.getDefault().getLanguage());
 
       currentActivity = this;
 
@@ -100,6 +106,10 @@ public class MainActivity extends ActionBarActivity {
    public void onSubscribeClicked(View v) {
       OneSignal.setSubscription(true);
       OneSignal.promptLocation();
+
+      String ns = Context.NOTIFICATION_SERVICE;
+      NotificationManager nMgr = (NotificationManager) getApplicationContext().getSystemService(ns);
+      nMgr.cancelAll();
    }
 
    public void onUnsubscribeClicked(View v) {

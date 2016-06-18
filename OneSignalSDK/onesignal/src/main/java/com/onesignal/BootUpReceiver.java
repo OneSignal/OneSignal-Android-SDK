@@ -27,33 +27,18 @@
 
 package com.onesignal;
 
-import org.json.JSONObject;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.support.v4.content.WakefulBroadcastReceiver;
 
-import java.util.List;
+public class BootUpReceiver extends WakefulBroadcastReceiver {
 
-// Notification properties received from OneSignal.
-public class OSNotificationPayload {
-   public String notificationId;
-   public String title, message;
-   public JSONObject additionalData;
-   public String smallIcon;
-   public String bigPicture;
-   public String largeIcon;
-   public String launchUrl;
-   public String sound;
-   public String group;
-   public String backgroundColor;
-   public String ledColor;
-   public int visibility;
-   public String groupMessage;
-   public List<ActionButton> actionButtons;
-   public boolean backgroundData;
-   public String fromProjectNumber;
-   public boolean restoring;
-   
-   public static class ActionButton {
-      public String id;
-      public String text;
-      public String icon;
+   @Override
+   public void onReceive(Context context, Intent intent) {
+      Intent intentForService = new Intent();
+      intentForService.setComponent(new ComponentName(context.getPackageName(),
+                                    NotificationRestoreService.class.getName()));
+      startWakefulService(context, intentForService);
    }
 }

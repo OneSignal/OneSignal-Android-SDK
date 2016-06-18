@@ -71,7 +71,7 @@ class AdvertisingIdProviderFallback implements AdvertisingIdentifierProvider {
       try {
          final String androidId = Settings.Secure.getString(appContext.getContentResolver(), Settings.Secure.ANDROID_ID);
          // see http://code.google.com/p/android/issues/detail?id=10603 for info on this 'dup' id.
-         if (androidId != "9774d56d682e549c")
+         if (!androidId.equals("9774d56d682e549c"))
             return androidId;
       } catch (RuntimeException e) {}
 

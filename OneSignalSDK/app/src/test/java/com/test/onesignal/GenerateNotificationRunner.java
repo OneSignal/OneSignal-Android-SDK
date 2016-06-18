@@ -29,8 +29,9 @@ package com.test.onesignal;
 
 import android.app.Activity;
 import android.app.Notification;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.database.Cursor;
@@ -41,8 +42,8 @@ import com.onesignal.BuildConfig;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.NotificationOpenedProcessor;
-import com.onesignal.OSNotificationDisplayedResult;
 import com.onesignal.OSNotificationPayload;
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -68,7 +69,9 @@ import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ServiceController;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
@@ -88,8 +91,6 @@ public class GenerateNotificationRunner {
 
    @Before // Before each test
    public void beforeEachTest() throws Exception {
-      ShadowRoboNotificationManager.notifications.clear();
-
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
 
@@ -97,6 +98,8 @@ public class GenerateNotificationRunner {
       blankActivity.getApplicationInfo().name = "UnitTestApp";
 
       ShadowBadgeCountUpdater.lastCount = 0;
+      NotificationManager notificationManager = (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+      notificationManager.cancelAll();
    }
 
 
@@ -207,16 +210,20 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
-      List<PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(2, postedNotifs.size());
 
       // Test summary notification
-      Assert.assertEquals(notifMessage, postedNotifs.get(0).notif.getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotifs.get(0).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      PostedNotification postedNotification = postedNotifsIterator.next().getValue();
+
+      Assert.assertEquals(notifMessage, postedNotification.notif.getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY,postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Test Android Wear notification
-      Assert.assertEquals(notifMessage, postedNotifs.get(1).notif.getContentText());
-      Assert.assertEquals(0, postedNotifs.get(1).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      postedNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals(notifMessage, postedNotification.notif.getContentText());
+      Assert.assertEquals(0, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
       // Badge count should only be one as only one notification is visible in the notification area.
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
@@ -239,12 +246,15 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(2, postedNotifs.size());
       Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
 
-      Assert.assertEquals("2 new messages", postedNotifs.get(0).notif.getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotifs.get(0).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      postedNotifsIterator = postedNotifs.entrySet().iterator();
+      postedNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals("2 new messages",postedNotification.notif.getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Test Android Wear notification
-      Assert.assertEquals("Notif test 2", postedNotifs.get(1).notif.getContentText());
-      Assert.assertEquals(0, postedNotifs.get(1).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      postedNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals("Notif test 2", postedNotification.notif.getContentText());
+      Assert.assertEquals(0, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
 
 
       // Should be 3 DB entries (summary and 2 individual)
@@ -253,7 +263,9 @@ public class GenerateNotificationRunner {
 
 
       // Open summary notification
-      Intent intent = createOpenIntent(postedNotifs.get(0).id, bundle).putExtra("summary", "test1");
+      postedNotifsIterator = postedNotifs.entrySet().iterator();
+      postedNotification = postedNotifsIterator.next().getValue();
+      Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       ShadowRoboNotificationManager.notifications.clear();
@@ -265,8 +277,10 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
-      Assert.assertEquals("Notif test 3", postedNotifs.get(0).notif.getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotifs.get(0).notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      postedNotifsIterator = postedNotifs.entrySet().iterator();
+      postedNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals("Notif test 3", postedNotification.notif.getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
    }
@@ -290,8 +304,11 @@ public class GenerateNotificationRunner {
 
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
       Assert.assertEquals("com.onesignal.GcmIntentService", intent.getComponent().getClassName());
-      Assert.assertEquals(null, intent.getStringExtra("o"));
-      JSONObject customJson = new JSONObject(intent.getStringExtra("custom"));
+
+      JSONObject jsonPayload = new JSONObject(intent.getStringExtra("json_payload"));
+
+      Assert.assertEquals(null, jsonPayload.optString("o", null));
+      JSONObject customJson = new JSONObject(jsonPayload.optString("custom"));
       JSONObject additionalData = new JSONObject((customJson.getString("a")));
       Assert.assertEquals("id1", additionalData.getJSONArray("actionButtons").getJSONObject(0).getString("id"));
    }
@@ -319,7 +336,7 @@ public class GenerateNotificationRunner {
       ServiceController<NotificationExtenderServiceTest> controller = Robolectric.buildService(NotificationExtenderServiceTest.class);
       NotificationExtenderServiceTest service = controller.attach().create().get();
       Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(getBundleWithAllOptionsSet());
+      testIntent.putExtras(OneSignalPackagePrivateHelper.createInternalPayloadBundle(getBundleWithAllOptionsSet()));
       controller.withIntent(testIntent).startCommand(0, 0);
 
       OSNotificationPayload notification = service.notification;
@@ -355,7 +372,7 @@ public class GenerateNotificationRunner {
 
       // Test a basic notification without anything special.
       testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(getBaseNotifBundle());
+      testIntent.putExtras(OneSignalPackagePrivateHelper.createInternalPayloadBundle(getBaseNotifBundle()));
       controller.withIntent(testIntent).startCommand(0, 0);
       Assert.assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
 
@@ -363,11 +380,11 @@ public class GenerateNotificationRunner {
       // Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception.
       NotificationExtenderServiceTest.throwInAppCode = true;
       testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(getBaseNotifBundle("NewUUID1"));
+      testIntent.putExtras(OneSignalPackagePrivateHelper.createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")));
       controller.withIntent(testIntent).startCommand(0, 0);
 
       Assert.assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
-      List<PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(3, postedNotifs.size());
    }
 
