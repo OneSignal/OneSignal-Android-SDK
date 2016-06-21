@@ -69,8 +69,11 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       if (processBundle(context, bundle))
          return;
 
-      ComponentName comp = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
-      startWakefulService(context, intent.setComponent(comp));
+      Intent intentForService = new Intent();
+      intentForService.putExtras(bundle);
+      intentForService.setComponent(new ComponentName(context.getPackageName(),
+                                    GcmIntentService.class.getName()));
+      startWakefulService(context, intentForService);
    }
 
    static boolean processBundle(Context context, final Bundle bundle) {

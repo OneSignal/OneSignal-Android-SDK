@@ -89,7 +89,13 @@ public final class ShortcutBadger {
    }
 
    private static void initBadger(Context context) {
-      sComponentName = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName()).getComponent();
+      Intent launcherIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+
+      // App does not have a launcher intent. (AKA app drawer icon.)
+      if (launcherIntent == null)
+         return;
+
+      sComponentName = launcherIntent.getComponent();
 
       Log.d(LOG_TAG, "Finding badger");
 
