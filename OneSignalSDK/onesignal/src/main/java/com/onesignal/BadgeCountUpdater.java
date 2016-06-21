@@ -68,7 +68,7 @@ class BadgeCountUpdater {
       }
    }
 
-   private static void updateCount(int count, Context context) {
+   static void updateCount(int count, Context context) {
       ShortcutBadger.applyCount(context, count);
    }
 }

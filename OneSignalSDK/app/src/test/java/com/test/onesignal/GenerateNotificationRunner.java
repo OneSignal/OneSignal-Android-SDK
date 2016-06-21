@@ -38,6 +38,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.NotificationOpenedProcessor;
 import com.onesignal.OSNotificationDisplayedResult;
@@ -95,16 +96,6 @@ public class GenerateNotificationRunner {
       blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
 
-      // Add our launcher Activity to the run time to simulate a real app.
-      // getRobolectricPackageManager is null if run in BeforeClass for some reason.
-      Intent launchIntent = new Intent(Intent.ACTION_MAIN);
-      launchIntent.setPackage("com.onesignal.example");
-      launchIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-      ResolveInfo resolveInfo = new ResolveInfo();
-      resolveInfo.activityInfo = new ActivityInfo();
-      resolveInfo.activityInfo.packageName = "com.onesignal.example";
-      resolveInfo.activityInfo.name = "com.onesignal.example.BlankActivity";
-      RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
       ShadowBadgeCountUpdater.lastCount = 0;
    }
 
@@ -279,6 +270,32 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
    }
+
+
+
+   @Test
+   public void shouldSetButtonsCorrectly() throws Exception {
+      Intent intentGcm = new Intent();
+      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intentGcm.putExtra("message_type", "gcm");
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
+      intentGcm.putExtras(bundle);
+
+      GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
+      try {
+         gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
+      } // setResultCode throws this error due to onReceive not designed to be called manually.
+      catch (java.lang.IllegalStateException e) {}
+
+      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
+      Assert.assertEquals("com.onesignal.GcmIntentService", intent.getComponent().getClassName());
+      Assert.assertEquals(null, intent.getStringExtra("o"));
+      JSONObject customJson = new JSONObject(intent.getStringExtra("custom"));
+      JSONObject additionalData = new JSONObject((customJson.getString("a")));
+      Assert.assertEquals("id1", additionalData.getJSONArray("actionButtons").getJSONObject(0).getString("id"));
+   }
+
 
    @Test
    @Config(shadows = {ShadowOneSignal.class})

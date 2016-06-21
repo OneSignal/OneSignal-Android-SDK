@@ -54,6 +54,7 @@ import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -83,11 +84,11 @@ public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static int testSleepTime;
-   private Activity blankActivity;
+   private static Activity blankActivity;
    private static String callBackUseId, getCallBackRegId;
    private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
-   private ActivityController<BlankActivity> blankActivityController;
+   private static ActivityController<BlankActivity> blankActivityController;
    
    private static void GetIdsAvailable() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
@@ -108,6 +109,22 @@ public class MainOneSignalClassRunner {
       });
    }
 
+   private static void cleanUp() {
+      callBackUseId = getCallBackRegId = null;
+      StaticResetHelper.restSetStaticFields();
+
+      ShadowOneSignalRestClient.nextSuccessResponse = null;
+      ShadowOneSignalRestClient.failNext = false;
+      ShadowOneSignalRestClient.failAll = false;
+      ShadowOneSignalRestClient.interruptibleDelayNext = false;
+      ShadowOneSignalRestClient.networkCallCount = 0;
+      ShadowOneSignalRestClient.testThread = Thread.currentThread();
+
+      ShadowPushRegistratorGPS.fail = false;
+      notificationOpenedMessage = null;
+      lastGetTags = null;
+   }
+
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
@@ -121,24 +138,20 @@ public class MainOneSignalClassRunner {
       StaticResetHelper.saveStaticValues();
    }
 
-   @Before // Before each test
+   @Before
    public void beforeEachTest() throws Exception {
-      callBackUseId = getCallBackRegId = null;
-      StaticResetHelper.restSetStaticFields();
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
 
-      ShadowOneSignalRestClient.nextSuccessResponse = null;
-      ShadowOneSignalRestClient.failNext = false;
-      ShadowOneSignalRestClient.failAll = false;
-      ShadowOneSignalRestClient.interruptibleDelayNext = false;
-      ShadowOneSignalRestClient.networkCallCount = 0;
-      ShadowOneSignalRestClient.testThread = Thread.currentThread();
-
-      ShadowPushRegistratorGPS.fail = false;
-      notificationOpenedMessage = null;
-      lastGetTags = null;
+      cleanUp();
    }
+
+   @AfterClass
+   public static void afterEverything() {
+      cleanUp();
+   }
+
+
 
    @Test
    public void testInitFromApplicationContext() throws Exception {
