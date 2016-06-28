@@ -30,7 +30,6 @@ package com.onesignal;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import org.json.*;
 
@@ -49,6 +47,8 @@ import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
+import android.app.NotificationManager;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -160,7 +160,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020403";
+   public static final String VERSION = "020500";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -216,6 +216,7 @@ public class OneSignal {
 
       // START: Init validation
       try {
+         //noinspection ResultOfMethodCallIgnored
          UUID.fromString(oneSignalAppId);
       } catch (Throwable t) {
          Log(LOG_LEVEL.FATAL, "OneSignal AppId format is invalid.\nExample: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba'\n", t);
@@ -227,6 +228,7 @@ public class OneSignal {
 
       if (deviceType == 1) {
          try {
+            //noinspection ResultOfMethodCallIgnored
             Double.parseDouble(googleProjectNumber);
             if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
                throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
@@ -278,10 +280,13 @@ public class OneSignal {
       foreground = contextIsActivity;
       appId = oneSignalAppId;
       appContext = context.getApplicationContext();
-      if (contextIsActivity)
-         ActivityLifecycleHandler.curActivity = (Activity)context;
+      if (contextIsActivity) {
+         ActivityLifecycleHandler.curActivity = (Activity) context;
+         NotificationRestorer.asyncRestore(appContext);
+      }
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
+
       notificationOpenedHandler = inNotificationOpenedHandler;
       lastTrackedTime = SystemClock.elapsedRealtime();
 
@@ -307,8 +312,10 @@ public class OneSignal {
             OneSignalStateSynchronizer.resetCurrentState();
          }
       }
-      else
+      else {
+         BadgeCountUpdater.updateCount(0, appContext);
          SaveAppId(appId);
+      }
 
       if (foreground || getUserId() == null)
          startRegistrationOrOnSession();
@@ -548,6 +555,8 @@ public class OneSignal {
 
       if (trackGooglePurchase != null)
          trackGooglePurchase.trackIAP();
+
+      NotificationRestorer.asyncRestore(appContext);
    }
 
    static boolean isForeground() {
@@ -1233,6 +1242,75 @@ public class OneSignal {
       });
    }
 
+   public static void clearOneSignalNotifications() {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notifications.");
+         return;
+      }
+
+      NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+
+      OneSignalDbHelper dbHelper = new OneSignalDbHelper(appContext);
+      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+
+      String[] retColumn = { OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID };
+
+      Cursor cursor = writableDb.query(
+          OneSignalDbContract.NotificationTable.TABLE_NAME,
+          retColumn,
+          OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+              OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
+          null,
+          null,                                                    // group by
+          null,                                                    // filter by row groups
+          null                                                     // sort order
+      );
+
+      if (cursor.moveToFirst()) {
+         do {
+            int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+            notificationManager.cancel(existingId);
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+
+      // Mark all notifications as dismissed unless they were already opened.
+      String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
+      ContentValues values = new ContentValues();
+      values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+      writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+
+      writableDb.close();
+
+      BadgeCountUpdater.updateCount(0, appContext);
+   }
+
+   public static void cancelNotification(int id) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notification id: " + id);
+         return;
+      }
+
+      OneSignalDbHelper dbHelper = new OneSignalDbHelper(appContext);
+      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+      String whereStr;
+
+      whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                 NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id;
+
+      ContentValues values = new ContentValues();
+      values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+
+      writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+      BadgeCountUpdater.update(writableDb, appContext);
+
+      writableDb.close();
+
+      NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+      notificationManager.cancel(id);
+   }
+
    public static void removeNotificationOpenedHandler() {
       notificationOpenedHandler = null;
    }
@@ -1299,8 +1377,8 @@ public class OneSignal {
       handler.post(action);
    }
    
-   static boolean notValidOrDuplicated(Context context, Bundle bundle) {
-      String id = getNotificationIdFromGCMBundle(bundle);
+   static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
+      String id = getNotificationIdFromGCMJsonPayload(jsonPayload);
       return id == null || OneSignal.isDuplicateNotification(id, context);
    }
 
@@ -1323,6 +1401,14 @@ public class OneSignal {
          Log(LOG_LEVEL.DEBUG, "Could not parse bundle, probably not a OneSignal notification.", t);
       }
 
+      return null;
+   }
+
+   static String getNotificationIdFromGCMJsonPayload(JSONObject jsonPayload) {
+      try {
+         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
+         return customJSON.optString("i", null);
+      } catch(Throwable t) {}
       return null;
    }
 

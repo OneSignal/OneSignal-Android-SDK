@@ -46,7 +46,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
    @Override
    protected void onMessage(Intent intent) {
-      NotificationBundleProcessor.Process(this, intent.getExtras(), null);
+      NotificationBundleProcessor.Process(this, false, NotificationBundleProcessor.bundleAsJSONObject(intent.getExtras()), null);
    }
 
    @Override

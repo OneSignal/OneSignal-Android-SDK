@@ -37,7 +37,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.util.Log;
 
+import java.util.Random;
 import java.util.Set;
 
 class NotificationBundleProcessor {
@@ -45,17 +47,33 @@ class NotificationBundleProcessor {
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
    static void ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      if (OneSignal.notValidOrDuplicated(context, bundle))
-         return;
+      try {
+         boolean restoring = bundle.getBoolean("restoring", false);
+         JSONObject jsonPayload = new JSONObject(bundle.getString("json_payload"));
+         if (!restoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
+            return;
 
-      Process(context, bundle, overrideSettings);
+         if (bundle.containsKey("android_notif_id"))
+            overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
+
+         Process(context, restoring, jsonPayload, overrideSettings);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
    }
 
-   static int Process(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   static int Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
       boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
 
-      int notificationId = GenerateNotification.fromBundle(context, bundle, showAsAlert && OneSignal.isAppActive(), overrideSettings);
-      saveNotification(context, bundle, false, notificationId);
+      int notificationId;
+      if (overrideSettings != null && overrideSettings.androidNotificationId != null)
+         notificationId = overrideSettings.androidNotificationId;
+      else
+         notificationId = new Random().nextInt();
+
+      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert && OneSignal.isAppActive(), overrideSettings);
+      if (!restoring)
+         saveNotification(context, jsonPayload, false, notificationId);
       return notificationId;
    }
 
@@ -65,40 +83,41 @@ class NotificationBundleProcessor {
       return jsonArray;
    }
 
+
+   static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+      saveNotification(context, bundleAsJSONObject(bundle), opened, notificationId);
+   }
+
    // Saving the notification provides the following:
    //   * Prevent duplicates.
    //   * Build summary notifications
    //   * Future - Re-display notifications after reboot and upgrade of app.
    //   * Future - Developer API to get a list of notifications.
-   static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+   static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
       try {
-         JSONObject customJSON = new JSONObject(bundle.getString("custom"));
+         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
 
          OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
          SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
 
          ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.getString("i"));
-         if (bundle.containsKey("grp"))
-            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, bundle.getString("grp"));
+         values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
+         if (jsonPayload.has("grp"))
+            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
 
          values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
          if (!opened)
             values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationId);
 
-         if (bundle.containsKey("title"))
-            values.put(NotificationTable.COLUMN_NAME_TITLE, bundle.getString("title"));
-         values.put(NotificationTable.COLUMN_NAME_MESSAGE, bundle.getString("alert"));
+         if (jsonPayload.has("title"))
+            values.put(NotificationTable.COLUMN_NAME_TITLE, jsonPayload.optString("title"));
+         values.put(NotificationTable.COLUMN_NAME_MESSAGE, jsonPayload.optString("alert"));
 
-         values.put(NotificationTable.COLUMN_NAME_FULL_DATA, bundleAsJSONObject(bundle).toString());
+         values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 
          writableDb.insert(NotificationTable.TABLE_NAME, null, values);
 
-         // Clean up old records that have been dismissed or opened already after 1 week.
-         writableDb.delete(NotificationTable.TABLE_NAME,
-               NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000) - 604800) + " AND " +
-                     "(" + NotificationTable.COLUMN_NAME_DISMISSED + " = 1 OR " + NotificationTable.COLUMN_NAME_OPENED + " = 1" + ")",
-               null);
+         deleteOldNotifications(writableDb);
 
          if (!opened)
             BadgeCountUpdater.update(writableDb, context);
@@ -109,6 +128,14 @@ class NotificationBundleProcessor {
       }
    }
 
+   // Clean up old records that have been dismissed or opened already after 1 week.
+   static void deleteOldNotifications(SQLiteDatabase writableDb) {
+      writableDb.delete(NotificationTable.TABLE_NAME,
+          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000) - 604800) + " AND " +
+              "(" + NotificationTable.COLUMN_NAME_DISMISSED + " = 1 OR " + NotificationTable.COLUMN_NAME_OPENED + " = 1" + ")",
+          null);
+   }
+
    static JSONObject bundleAsJSONObject(Bundle bundle) {
       JSONObject json = new JSONObject();
       Set<String> keys = bundle.keySet();
@@ -116,7 +143,9 @@ class NotificationBundleProcessor {
       for (String key : keys) {
          try {
             json.put(key, bundle.get(key));
-         } catch (JSONException e) {}
+         } catch (JSONException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "bundleAsJSONObject error for key: " + key, e);
+         }
       }
 
       return json;

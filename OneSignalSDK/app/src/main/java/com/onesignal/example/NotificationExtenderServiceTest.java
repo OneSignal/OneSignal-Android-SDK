@@ -15,7 +15,7 @@ public class NotificationExtenderServiceTest extends NotificationExtenderService
       printObject(notification);
       if (notification.actionButtons != null) {
          for(OSNotificationPayload.ActionButton button : notification.actionButtons) {
-            System.out.println("button:");
+           // System.out.println("button:");
             printObject(button);
          }
       }
@@ -39,7 +39,7 @@ public class NotificationExtenderServiceTest extends NotificationExtenderService
          String name = field.getName();
          try {
             Object value = field.get(obj);
-            System.out.printf("Field name: %s, Field value: %s%n", name, value);
+          //  System.out.printf("Field name: %s, Field value: %s%n", name, value);
          } catch (Throwable t){}
       }
    }

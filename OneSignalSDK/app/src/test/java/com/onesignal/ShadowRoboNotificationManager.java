@@ -34,8 +34,7 @@ import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowNotification;
 import org.robolectric.shadows.ShadowNotificationManager;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
 
 import static org.robolectric.Shadows.shadowOf;
 
@@ -55,13 +54,21 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    public static ShadowNotification lastNotif;
    public static int lastNotifId;
 
-   public static List<PostedNotification> notifications = new ArrayList<PostedNotification>();
+   public static LinkedHashMap<Integer, PostedNotification> notifications = new LinkedHashMap<>();
+
+   public void cancelAll() {
+      notifications.clear();
+   }
+
+   public void cancel(String tag, int id) {
+      notifications.remove(id);
+   }
 
    @Override
    public void notify(String tag, int id, Notification notification) {
       lastNotif = shadowOf(notification);
       lastNotifId = id;
-      notifications.add(new PostedNotification(id, lastNotif));
+      notifications.put(id, new PostedNotification(id, lastNotif));
       super.notify(tag, id, notification);
    }
 

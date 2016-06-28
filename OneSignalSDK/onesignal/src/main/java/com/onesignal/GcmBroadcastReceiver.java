@@ -51,7 +51,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    public void onReceive(Context context, Intent intent) {
       // Google Play services started sending an extra non-ordered broadcast with the bundle:
       //    { "COM": "RST_FULL", "from": "google.com/iid" }
-      // Result codes are not valid with non-ordered broadcasts so omit it to prevent errors to the log.
+      // Result codes are not valid with non-ordered broadcasts so omit it to prevent errors to the logcat.
       Bundle bundle = intent.getExtras();
       if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
          return;
@@ -65,12 +65,12 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       if (!isGcmMessage(intent))
          return;
 
-      // Return if the notification will not be handled by normal GcmIntentService display flow.
+      // Return if the notification will NOT be handled by normal GcmIntentService display flow.
       if (processBundle(context, bundle))
          return;
 
       Intent intentForService = new Intent();
-      intentForService.putExtras(bundle);
+      intentForService.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
       intentForService.setComponent(new ComponentName(context.getPackageName(),
                                     GcmIntentService.class.getName()));
       startWakefulService(context, intentForService);
@@ -91,8 +91,9 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
       BackgroundBroadcaster.Invoke(context, bundle, isActive);
 
-      Intent overrideIntent = NotificationExtenderService.getIntent(context, bundle);
+      Intent overrideIntent = NotificationExtenderService.getIntent(context);
       if (overrideIntent != null) {
+         overrideIntent.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
          startWakefulService(context, overrideIntent);
          return true;
       }
