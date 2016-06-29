@@ -60,10 +60,12 @@ public class PushRegistratorGPS implements PushRegistrator {
             registerInBackground(googleProjectNumber);
          else {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No valid Google Play services APK found.");
+            OneSignal.subscribableStatus = -7;
             registeredHandler.complete(null);
          }
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not register with GCM due to an error with the AndroidManifest.xml file or with 'Google Play services'.", t);
+         OneSignal.subscribableStatus = -8;
          registeredHandler.complete(null);
       }
    }
@@ -111,6 +113,7 @@ public class PushRegistratorGPS implements PushRegistrator {
             final Activity activity = ActivityLifecycleHandler.curActivity;
             if (activity == null)
                return;
+
             AlertDialog.Builder builder = new AlertDialog.Builder(activity);
             builder.setMessage("To receive push notifications please press 'Update' to enable 'Google Play services'.").setPositiveButton("Update", new OnClickListener() {
                @Override

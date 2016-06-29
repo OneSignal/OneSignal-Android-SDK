@@ -152,20 +152,16 @@ public abstract class NotificationExtenderService extends IntentService {
          notification.fromProjectNumber = currentJsonPayload.optString("from", null);
          notification.restoring = restoring;
 
-         if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {
-            JSONArray jsonActionButtons = notification.additionalData.getJSONArray("actionButtons");
-            notification.actionButtons = new ArrayList<>();
+         try {
+            setActionButtons(notification);
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.actionButtons values!", t);
+         }
 
-            for (int i = 0; i < jsonActionButtons.length(); i++) {
-               JSONObject jsonActionButton = jsonActionButtons.getJSONObject(i);
-               OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
-               actionButton.id = jsonActionButton.getString("id");
-               actionButton.text = jsonActionButton.getString("text");
-               actionButton.icon = jsonActionButton.optString("icon", null);
-               notification.actionButtons.add(actionButton);
-            }
-            notification.additionalData.remove("actionSelected");
-            notification.additionalData.remove("actionButtons");
+         try {
+            setBackgroundImageLayout(notification, currentJsonPayload);
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.backgroundImageLayout values!", t);
          }
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload values!", t);
@@ -193,6 +189,35 @@ public abstract class NotificationExtenderService extends IntentService {
          }
          else
             NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, currentBaseOverrideSettings);
+      }
+   }
+
+   private static void setActionButtons(OSNotificationPayload notification) throws Throwable {
+      if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {
+         JSONArray jsonActionButtons = notification.additionalData.getJSONArray("actionButtons");
+         notification.actionButtons = new ArrayList<>();
+
+         for (int i = 0; i < jsonActionButtons.length(); i++) {
+            JSONObject jsonActionButton = jsonActionButtons.getJSONObject(i);
+            OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
+            actionButton.id = jsonActionButton.optString("id", null);
+            actionButton.text = jsonActionButton.optString("text", null);
+            actionButton.icon = jsonActionButton.optString("icon", null);
+            notification.actionButtons.add(actionButton);
+         }
+         notification.additionalData.remove("actionSelected");
+         notification.additionalData.remove("actionButtons");
+      }
+   }
+
+   private static void setBackgroundImageLayout(OSNotificationPayload notification, JSONObject currentJsonPayload) throws Throwable {
+      String jsonStrBgImage = currentJsonPayload.optString("bg_img", null);
+      if (jsonStrBgImage != null) {
+         JSONObject jsonBgImage = new JSONObject(jsonStrBgImage);
+         notification.backgroundImageLayout = new OSNotificationPayload.BackgroundImageLayout();
+         notification.backgroundImageLayout.image = jsonBgImage.optString("img");
+         notification.backgroundImageLayout.titleTextColor = jsonBgImage.optString("tc");
+         notification.backgroundImageLayout.bodyTextColor = jsonBgImage.optString("bc");
       }
    }
 
