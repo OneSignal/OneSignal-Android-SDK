@@ -53,8 +53,11 @@ class NotificationBundleProcessor {
          if (!restoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
             return;
 
-         if (bundle.containsKey("android_notif_id"))
+         if (bundle.containsKey("android_notif_id")) {
+            if (overrideSettings == null)
+               overrideSettings = new NotificationExtenderService.OverrideSettings();
             overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
+         }
 
          Process(context, restoring, jsonPayload, overrideSettings);
       } catch (JSONException e) {

@@ -43,7 +43,6 @@ import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.NotificationOpenedProcessor;
 import com.onesignal.OSNotificationPayload;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -70,8 +69,11 @@ import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ServiceController;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
+import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
@@ -129,23 +131,33 @@ public class GenerateNotificationRunner {
    public void shouldSetTitleCorrectly() throws Exception {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       Assert.assertEquals("title123", ShadowRoboNotificationManager.lastNotif.getContentTitle());
       Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
+   }
+
+   @Test
+   public void shouldProcessRestore() throws Exception {
+      Bundle bundle = createInternalPayloadBundle(getBaseNotifBundle());
+      bundle.putInt("android_notif_id", 0);
+      bundle.putBoolean("restoring", true);
+
+      NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
+      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
    }
 
    @Test
    public void shouldHandleBasicNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.lastNotif.getContentText());
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
@@ -167,14 +179,14 @@ public class GenerateNotificationRunner {
       int firstNotifId = cursor.getInt(1);
 
       // Should not display a duplicate notification, count should still be 1
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
 
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, "android_notification_id <> " + firstNotifId, null, null, null, null);
       cursor.moveToFirst();
       int secondNotifId = cursor.getInt(0);
@@ -186,7 +198,7 @@ public class GenerateNotificationRunner {
       // Should of been added for a total of 2 records now.
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, null, null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());
       Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
@@ -208,7 +220,7 @@ public class GenerateNotificationRunner {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("grp", "test1");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(2, postedNotifs.size());
@@ -240,7 +252,7 @@ public class GenerateNotificationRunner {
       bundle.putString("alert", "Notif test 2");
       bundle.putString("custom", "{\"i\": \"UUID2\"}");
       bundle.putString("grp", "test1");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(2, postedNotifs.size());
@@ -275,7 +287,7 @@ public class GenerateNotificationRunner {
       bundle.putString("alert", "Notif test 3");
       bundle.putString("custom", "{\"i\": \"UUID3\"}");
       bundle.putString("grp", "test1");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
@@ -336,7 +348,7 @@ public class GenerateNotificationRunner {
       ServiceController<NotificationExtenderServiceTest> controller = Robolectric.buildService(NotificationExtenderServiceTest.class);
       NotificationExtenderServiceTest service = controller.attach().create().get();
       Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(OneSignalPackagePrivateHelper.createInternalPayloadBundle(getBundleWithAllOptionsSet()));
+      testIntent.putExtras(createInternalPayloadBundle(getBundleWithAllOptionsSet()));
       controller.withIntent(testIntent).startCommand(0, 0);
 
       OSNotificationPayload notification = service.notification;
@@ -372,7 +384,7 @@ public class GenerateNotificationRunner {
 
       // Test a basic notification without anything special.
       testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(OneSignalPackagePrivateHelper.createInternalPayloadBundle(getBaseNotifBundle()));
+      testIntent.putExtras(createInternalPayloadBundle(getBaseNotifBundle()));
       controller.withIntent(testIntent).startCommand(0, 0);
       Assert.assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
 
@@ -380,7 +392,7 @@ public class GenerateNotificationRunner {
       // Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception.
       NotificationExtenderServiceTest.throwInAppCode = true;
       testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(OneSignalPackagePrivateHelper.createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")));
+      testIntent.putExtras(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")));
       controller.withIntent(testIntent).startCommand(0, 0);
 
       Assert.assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));

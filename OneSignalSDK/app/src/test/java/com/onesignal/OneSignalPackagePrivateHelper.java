@@ -52,10 +52,11 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void NotificationBundleProcessor_ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
-
       NotificationBundleProcessor.ProcessFromGCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+   }
+
+   public static void NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.ProcessFromGCMIntentService(context, bundle, overrideSettings);
    }
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
