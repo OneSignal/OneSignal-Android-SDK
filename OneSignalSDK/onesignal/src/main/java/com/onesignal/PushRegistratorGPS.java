@@ -80,6 +80,8 @@ public class PushRegistratorGPS implements PushRegistrator {
    }
 
    private boolean checkPlayServices() {
+      // GoogleApiAvailability is the replacement for GooglePlayServicesUtil added in 7.3.
+
       int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(appContext);
       if (resultCode != ConnectionResult.SUCCESS) {
          if (GooglePlayServicesUtil.isUserRecoverableError(resultCode) && isGooglePlayStoreInstalled()) {
@@ -103,15 +105,18 @@ public class PushRegistratorGPS implements PushRegistrator {
    }
 
    private void ShowUpdateGPSDialog(final int resultCode) {
-      ((Activity) appContext).runOnUiThread(new Runnable() {
+      OneSignal.runOnUiThread(new Runnable() {
          @Override
          public void run() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(appContext);
+            final Activity activity = ActivityLifecycleHandler.curActivity;
+            if (activity == null)
+               return;
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
             builder.setMessage("To receive push notifications please press 'Update' to enable 'Google Play services'.").setPositiveButton("Update", new OnClickListener() {
                @Override
                public void onClick(DialogInterface dialog, int which) {
                   try {
-                     GooglePlayServicesUtil.getErrorPendingIntent(resultCode, appContext, 0).send();
+                     GooglePlayServicesUtil.getErrorPendingIntent(resultCode, activity, 0).send();
                   } catch (CanceledException e) {
                   } catch (Throwable e) {
                      e.printStackTrace();
@@ -121,7 +126,7 @@ public class PushRegistratorGPS implements PushRegistrator {
             }).setNegativeButton("Skip", new OnClickListener() {
                @Override
                public void onClick(DialogInterface dialog, int which) {
-                  final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
+                  final SharedPreferences prefs = OneSignal.getGcmPreferences(activity);
                   SharedPreferences.Editor editor = prefs.edit();
                   editor.putBoolean("GT_DO_NOT_SHOW_MISSING_GPS", true);
                   editor.commit();
