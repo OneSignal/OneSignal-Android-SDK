@@ -57,12 +57,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
-import android.util.Log;
+import android.widget.RemoteViews;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -130,8 +129,8 @@ class GenerateNotification {
 
                   if (finalButtonIds.size() > 1) {
                      try {
-                        JSONObject customJson = new JSONObject(gcmJson.getString("custom"));
-                        JSONObject additionalDataJSON = customJson.getJSONObject("a");
+                        JSONObject customJson = new JSONObject(gcmJson.optString("custom"));
+                        JSONObject additionalDataJSON = customJson.optJSONObject("a");
                         additionalDataJSON.put("actionSelected", finalButtonIds.get(index));
 
                         JSONObject newJsonData = new JSONObject(gcmJson.toString());
@@ -171,8 +170,7 @@ class GenerateNotification {
    }
 
    private static CharSequence getTitle(JSONObject gcmBundle) {
-      CharSequence title = null;
-      try { title = gcmBundle.getString("title"); } catch (Throwable t) {}
+      CharSequence title = gcmBundle.optString("title", null);
 
       if (title != null)
          return title;
@@ -213,10 +211,7 @@ class GenerateNotification {
       if (OneSignal.getVibrate(currentContext))
          notificationDefaults = Notification.DEFAULT_VIBRATE;
 
-      String message = null;
-      try {
-         message = gcmBundle.getString("alert");
-      } catch (Throwable t) {}
+      String message = gcmBundle.optString("alert", null);
 
       NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(currentContext)
             .setAutoCancel(true)
@@ -236,7 +231,7 @@ class GenerateNotification {
 
       if (gcmBundle.has("ledc")) {
          try {
-            ledColor = new BigInteger(gcmBundle.getString("ledc"), 16);
+            ledColor = new BigInteger(gcmBundle.optString("ledc"), 16);
             notifBuilder.setLights(ledColor.intValue(), 2000, 5000);
          } catch (Throwable t) {
             notificationDefaults |= Notification.DEFAULT_LIGHTS;
@@ -247,7 +242,7 @@ class GenerateNotification {
       try {
          int visibility = Notification.VISIBILITY_PUBLIC;
          if (gcmBundle.has("vis"))
-            visibility = Integer.parseInt(gcmBundle.getString("vis"));
+            visibility = Integer.parseInt(gcmBundle.optString("vis"));
          notifBuilder.setVisibility(visibility);
       } catch (Throwable t) {} // Can throw if an old android support lib is used or parse error
 
@@ -255,7 +250,7 @@ class GenerateNotification {
       if (largeIcon != null)
          notifBuilder.setLargeIcon(largeIcon);
 
-      Bitmap bigPictureIcon = getBitmapIcon(gcmBundle, "bicon");
+      Bitmap bigPictureIcon = getBitmap(gcmBundle.optString("bicon", null));
       if (bigPictureIcon != null)
          notifBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
 
@@ -288,6 +283,11 @@ class GenerateNotification {
       NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle);
 
       addNotificationActionButtons(gcmBundle, notifBuilder, notificationId, null);
+      try {
+         addBackgroundImage(gcmBundle, notifBuilder);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not set background notification image!", t);
+      }
 
       if (overrideSettings != null && overrideSettings.extender != null)
          notifBuilder.extend(overrideSettings.extender);
@@ -316,7 +316,7 @@ class GenerateNotification {
       //   stacked notifications on Android 4.2 and older
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
-      if (group == null || android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
+      if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          NotificationManagerCompat.from(currentContext).notify(notificationId, notifBuilder.build());
       }
    }
@@ -403,15 +403,11 @@ class GenerateNotification {
       if (summeryList != null && (!updateSummary || summeryList.size() > 1)) {
          int notificationCount = summeryList.size() + (updateSummary ? 0 : 1);
 
-         String summaryMessage = null;
-
-         if (gcmBundle.has("grp_msg")) {
-            try {
-               summaryMessage = gcmBundle.getString("grp_msg").replace("$[notif_count]", "" + notificationCount);
-            } catch (Throwable t) {}
-         }
+         String summaryMessage = gcmBundle.optString("grp_msg", null);
          if (summaryMessage == null)
             summaryMessage = notificationCount + " new messages";
+         else
+            summaryMessage = summaryMessage.replace("$[notif_count]", "" + notificationCount);
 
          JSONObject summaryDataBundle = new JSONObject();
          try {
@@ -446,20 +442,14 @@ class GenerateNotification {
 
          // Add the latest notification to the summary
          if (!updateSummary) {
-            try {
-               line1Title = gcmBundle.getString("title");
-            } catch (Throwable t) {}
+            line1Title = gcmBundle.optString("title", null);
 
             if (line1Title == null)
                line1Title = "";
             else
                line1Title += " ";
 
-            String message = "";
-            try {
-               message = gcmBundle.getString("alert");
-            } catch (Throwable t) {}
-
+            String message = gcmBundle.optString("alert");
             SpannableString spannableString = new SpannableString(line1Title + message);
             if (line1Title.length() > 0)
                spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, line1Title.length(), 0);
@@ -504,6 +494,56 @@ class GenerateNotification {
       writableDb.close();
    }
 
+   // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available if the app project isn't setup correctly.
+   private static void addBackgroundImage(JSONObject gcmBundle, NotificationCompat.Builder notifBuilder) throws Throwable {
+      Bitmap bg_image = null;
+      JSONObject jsonBgImage = null;
+      String jsonStrBgImage = gcmBundle.optString("bg_img", null);
+
+      if (jsonStrBgImage != null) {
+         jsonBgImage = new JSONObject(jsonStrBgImage);
+         bg_image = getBitmap(jsonBgImage.optString("img", null));
+      }
+
+      if (bg_image == null)
+         bg_image = getBitmapFromAssetsOrResourceName("onesignal_bgimage_default_image");
+
+      if (bg_image != null) {
+         RemoteViews customView = new RemoteViews(currentContext.getPackageName(), R.layout.onesignal_bgimage_notif_layout);
+         customView.setTextViewText(R.id.os_bgimage_notif_title, getTitle(gcmBundle));
+         customView.setTextViewText(R.id.os_bgimage_notif_body, gcmBundle.optString("alert"));
+         setTextColor(customView, jsonBgImage, R.id.os_bgimage_notif_title, "tc", "onesignal_bgimage_notif_title_color");
+         setTextColor(customView, jsonBgImage, R.id.os_bgimage_notif_body, "bc", "onesignal_bgimage_notif_body_color");
+
+         customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bg_image);
+         notifBuilder.setContent(customView);
+
+         // Remove style to prevent expanding by the user.
+         // Will need to create an extended image option and consider the layout.
+         notifBuilder.setStyle(null);
+      }
+   }
+
+   private static void setTextColor(RemoteViews customView, JSONObject gcmBundle, int viewId, String colorPayloadKey, String colorDefaultResource) {
+      Integer color = safeGetColorFromHex(gcmBundle, colorPayloadKey);
+      if (color != null)
+         customView.setTextColor(viewId, color);
+      else {
+         int colorId = contextResources.getIdentifier(colorDefaultResource, "color", packageName);
+         if (colorId != 0)
+            customView.setTextColor(viewId, AndroidSupportV4Compat.ContextCompat.getColor(currentContext, colorId));
+      }
+   }
+
+   private static Integer safeGetColorFromHex(JSONObject gcmBundle, String colorKey) {
+      try {
+         if (gcmBundle != null && gcmBundle.has(colorKey)) {
+            return new BigInteger(gcmBundle.optString(colorKey), 16).intValue();
+         }
+      } catch (Throwable t) {}
+      return null;
+   }
+
    private static boolean isValidResourceName(String name) {
       return (name != null && !name.matches("^[0-9]"));
    }
@@ -512,7 +552,7 @@ class GenerateNotification {
       if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
          return null;
 
-      Bitmap bitmap = getBitmapIcon(gcmBundle, "licon");
+      Bitmap bitmap = getBitmap(gcmBundle.optString("licon"));
       if (bitmap == null)
          bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
       if (bitmap == null)
@@ -521,8 +561,7 @@ class GenerateNotification {
       if (bitmap == null)
          return null;
 
-      // Check to see if we need to shrink the bitmap to prevent cropping when
-      // displayed.
+      // Resize to prevent extra cropping and boarders.
       try {
          int systemLargeIconHeight = (int) contextResources.getDimension(android.R.dimen.notification_large_icon_height);
          int systemLargeIconWidth = (int) contextResources.getDimension(android.R.dimen.notification_large_icon_width);
@@ -582,20 +621,13 @@ class GenerateNotification {
       return null;
    }
 
-   private static Bitmap getBitmapIcon(JSONObject gcmBundle, String key) {
-      if (gcmBundle.has(key)) {
-         String bitmapStr = null;
-         try {
-            bitmapStr = gcmBundle.getString(key);
-         } catch (Throwable t) {}
+   private static Bitmap getBitmap(String name) {
+      if (name == null)
+         return null;
+      if (name.startsWith("http://") || name.startsWith("https://"))
+         return getBitmapFromURL(name);
 
-         if (bitmapStr.startsWith("http://") || bitmapStr.startsWith("https://"))
-            return getBitmapFromURL(bitmapStr);
-
-         return getBitmapFromAssetsOrResourceName(bitmapStr);
-      }
-
-      return null;
+      return getBitmapFromAssetsOrResourceName(name);
    }
 
    private static int getResourceIcon(String iconName) {
@@ -615,15 +647,9 @@ class GenerateNotification {
    }
 
    private static int getSmallIconId(JSONObject gcmBundle) {
-      int notificationIcon = 0;
-
-      if (gcmBundle.has("sicon")) {
-         try {
-            notificationIcon = getResourceIcon(gcmBundle.getString("sicon"));
-         } catch (Throwable t) {}
-         if (notificationIcon != 0)
-            return notificationIcon;
-      }
+      int notificationIcon = getResourceIcon(gcmBundle.optString("sicon", null));
+      if (notificationIcon != 0)
+         return notificationIcon;
 
       notificationIcon = getDrawableId("ic_stat_onesignal_default");
       if (notificationIcon != 0)
@@ -651,13 +677,7 @@ class GenerateNotification {
 
    private static Uri getCustomSound(JSONObject gcmBundle) {
       int soundId;
-      String sound = null;
-      try {
-         if (gcmBundle.has("sound"))
-            sound = gcmBundle.getString("sound");
-      } catch (Throwable t) {
-         return null;
-      }
+      String sound = gcmBundle.optString("sound", null);
 
       if (isValidResourceName(sound)) {
          soundId = contextResources.getIdentifier(sound, "raw", packageName);
@@ -680,7 +700,7 @@ class GenerateNotification {
    private static BigInteger getAccentColor(JSONObject gcmBundle) {
       try {
          if (gcmBundle.has("bgac"))
-            return new BigInteger(gcmBundle.getString("bgac"), 16);
+            return new BigInteger(gcmBundle.optString("bgac", null), 16);
       } catch (Throwable t) {} // Can throw a parse error parse error.
 
       try {
@@ -694,7 +714,7 @@ class GenerateNotification {
 
    private static void addNotificationActionButtons(JSONObject gcmBundle, NotificationCompat.Builder mBuilder, int notificationId, String groupSummary) {
       try {
-         JSONObject customJson = new JSONObject(gcmBundle.getString("custom"));
+         JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
 
          if (customJson.has("a")) {
             JSONObject additionalDataJSON = customJson.getJSONObject("a");
@@ -703,8 +723,8 @@ class GenerateNotification {
                JSONArray buttons = additionalDataJSON.getJSONArray("actionButtons");
 
                for (int i = 0; i < buttons.length(); i++) {
-                  JSONObject button = buttons.getJSONObject(i);
-                  additionalDataJSON.put("actionSelected", button.getString("id"));
+                  JSONObject button = buttons.optJSONObject(i);
+                  additionalDataJSON.put("actionSelected", button.optString("id"));
                   
                   JSONObject bundle = new JSONObject(gcmBundle.toString());
                   bundle.put("custom", customJson.toString());
@@ -716,38 +736,38 @@ class GenerateNotification {
                   if (groupSummary != null)
                      buttonIntent.putExtra("summary", groupSummary);
                   else if (gcmBundle.has("grp"))
-                     buttonIntent.putExtra("grp", gcmBundle.getString("grp"));
+                     buttonIntent.putExtra("grp", gcmBundle.optString("grp"));
 
                   PendingIntent buttonPIntent = getNewActionPendingIntent(notificationId, buttonIntent);
 
                   int buttonIcon = 0;
                   if (button.has("icon"))
-                     buttonIcon = getResourceIcon(button.getString("icon"));
+                     buttonIcon = getResourceIcon(button.optString("icon"));
 
-                  mBuilder.addAction(buttonIcon, button.getString("text"), buttonPIntent);
+                  mBuilder.addAction(buttonIcon, button.optString("text"), buttonPIntent);
                }
             }
          }
-      } catch (JSONException e) {
-         e.printStackTrace();
+      } catch (Throwable t) {
+         t.printStackTrace();
       }
    }
 
    private static void addAlertButtons(JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
       try {
-         JSONObject customJson = new JSONObject(gcmBundle.getString("custom"));
+         JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
 
          if (customJson.has("a")) {
             JSONObject additionalDataJSON = customJson.getJSONObject("a");
             if (additionalDataJSON.has("actionButtons")) {
 
-               JSONArray buttons = additionalDataJSON.getJSONArray("actionButtons");
+               JSONArray buttons = additionalDataJSON.optJSONArray("actionButtons");
 
                for (int i = 0; i < buttons.length(); i++) {
                   JSONObject button = buttons.getJSONObject(i);
 
-                  buttonsLabels.add(button.getString("text"));
-                  buttonsIds.add(button.getString("id"));
+                  buttonsLabels.add(button.optString("text"));
+                  buttonsIds.add(button.optString("id"));
                }
             }
          }
@@ -756,8 +776,8 @@ class GenerateNotification {
             buttonsLabels.add("Close");
             buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
          }
-      } catch (JSONException e) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse buttons for alert dialog.", e);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse buttons for alert dialog.", t);
       }
    }
 }

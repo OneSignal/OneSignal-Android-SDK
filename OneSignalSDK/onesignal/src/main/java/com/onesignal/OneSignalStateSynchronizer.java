@@ -236,15 +236,9 @@ class OneSignalStateSynchronizer {
       }
 
       private int getNotificationTypes() {
-         try {
-            int subscribableStatus = dependValues.getInt("subscribableStatus");
-            boolean userSubscribePref = dependValues.getBoolean("userSubscribePref");
-            return subscribableStatus < UNSUBSCRIBE_VALUE ? subscribableStatus : (userSubscribePref ? 1 : UNSUBSCRIBE_VALUE);
-         } catch (JSONException e) {
-            e.printStackTrace();
-         }
-
-         return 1;
+         int subscribableStatus = dependValues.optInt("subscribableStatus", 1);
+         boolean userSubscribePref = dependValues.optBoolean("userSubscribePref", true);
+         return subscribableStatus < UNSUBSCRIBE_VALUE ? subscribableStatus : (userSubscribePref ? 1 : UNSUBSCRIBE_VALUE);
       }
 
       private Set<String> getGroupChangeField(JSONObject cur, JSONObject changedTo) {
@@ -540,11 +534,12 @@ class OneSignalStateSynchronizer {
                   JSONObject jsonResponse = new JSONObject(response);
 
                   if (jsonResponse.has("id")) {
-                     String userId = jsonResponse.getString("id");
+                     String userId = jsonResponse.optString("id");
                      OneSignal.updateUserIdDependents(userId);
 
                      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + userId);
-                  } else
+                  }
+                  else
                      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + OneSignal.getUserId());
                } catch (Throwable t) {
                   OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);

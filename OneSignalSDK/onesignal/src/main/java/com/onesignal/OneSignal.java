@@ -42,8 +42,6 @@ import java.util.UUID;
 
 import org.json.*;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -66,7 +64,6 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Base64;
 import android.util.Log;
-import android.util.Patterns;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -146,7 +143,7 @@ public class OneSignal {
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
    private static String userId = null;
-   private static int subscribableStatus = 1;
+   static int subscribableStatus = 1;
 
    private static NotificationOpenedHandler notificationOpenedHandler;
 
@@ -160,7 +157,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020502";
+   public static final String VERSION = "020600";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -644,15 +641,6 @@ public class OneSignal {
             String email = prefs.getString("OS_USER_EMAIL", null);
             if (email != null)
                userState.set("email", email);
-            else if (AndroidSupportV4Compat.ContextCompat.checkSelfPermission(appContext, "android.permission.GET_ACCOUNTS") == PackageManager.PERMISSION_GRANTED) {
-               Account[] accounts = AccountManager.get(appContext).getAccounts();
-               for (Account account : accounts) {
-                  if (Patterns.EMAIL_ADDRESS.matcher(account.name).matches()) {
-                     userState.set("email", account.name);
-                     break;
-                  }
-               }
-            }
 
             userState.set("net_type", osUtils.getNetType());
             userState.set("carrier", osUtils.getCarrierName());
@@ -919,10 +907,10 @@ public class OneSignal {
             if (!data.has("custom"))
                continue;
 
-            JSONObject customJSON = new JSONObject(data.getString("custom"));
+            JSONObject customJSON = new JSONObject(data.optString("custom"));
 
             if (customJSON.has("u")) {
-               String url = customJSON.getString("u");
+               String url = customJSON.optString("u", null);
                if (!url.contains("://"))
                   url = "http://" + url;
 
@@ -958,29 +946,29 @@ public class OneSignal {
 
             // Summary notifications will not have custom set
             if (data.has("custom")) {
-               JSONObject customJSON = new JSONObject(data.getString("custom"));
+               JSONObject customJSON = new JSONObject(data.optString("custom"));
                additionalDataJSON = new JSONObject();
 
                if (customJSON.has("a"))
-                  additionalDataJSON = customJSON.getJSONObject("a");
+                  additionalDataJSON = customJSON.optJSONObject("a");
 
                if (data.has("title"))
-                  additionalDataJSON.put("title", data.getString("title"));
+                  additionalDataJSON.put("title", data.optString("title"));
 
                if (customJSON.has("u"))
-                  additionalDataJSON.put("launchURL", customJSON.getString("u"));
+                  additionalDataJSON.put("launchURL", customJSON.optString("u"));
 
                if (data.has("sound"))
-                  additionalDataJSON.put("sound", data.getString("sound"));
+                  additionalDataJSON.put("sound", data.optString("sound"));
 
                if (data.has("sicon"))
-                  additionalDataJSON.put("smallIcon", data.getString("sicon"));
+                  additionalDataJSON.put("smallIcon", data.optString("sicon"));
 
                if (data.has("licon"))
-                  additionalDataJSON.put("largeIcon", data.getString("licon"));
+                  additionalDataJSON.put("largeIcon", data.optString("licon"));
 
                if (data.has("bicon"))
-                  additionalDataJSON.put("bigPicture", data.getString("bicon"));
+                  additionalDataJSON.put("bigPicture", data.optString("bicon"));
 
                if (additionalDataJSON.equals(new JSONObject()))
                   additionalDataJSON = null;
@@ -988,7 +976,7 @@ public class OneSignal {
 
             if (firstMessage == null) {
                completeAdditionalData = additionalDataJSON;
-               firstMessage = data.getString("alert");
+               firstMessage = data.optString("alert", null);
             }
             else {
                if (completeAdditionalData == null)
@@ -996,7 +984,7 @@ public class OneSignal {
                if (!completeAdditionalData.has("stacked_notifications"))
                   completeAdditionalData.put("stacked_notifications", new JSONArray());
 
-               additionalDataJSON.put("message", data.getString("alert"));
+               additionalDataJSON.put("message", data.optString("alert", null));
 
                completeAdditionalData.getJSONArray("stacked_notifications").put(additionalDataJSON);
             }
@@ -1087,13 +1075,13 @@ public class OneSignal {
             if (!data.has("custom"))
                continue;
 
-            JSONObject customJson = new JSONObject(data.getString("custom"));
+            JSONObject customJson = new JSONObject(data.optString("custom", null));
 
             // ... they also never have a OneSignal notification id.
             if (!customJson.has("i"))
                continue;
 
-            String notificationId = customJson.getString("i");
+            String notificationId = customJson.optString("i", null);
 
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("app_id", getSavedAppId(inContext));
@@ -1173,7 +1161,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean("GT_VIBRATE_ENABLED", enable);
-      editor.commit();
+      editor.apply();
    }
 
    static boolean getVibrate(Context context) {
@@ -1189,7 +1177,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean("GT_SOUND_ENABLED", enable);
-      editor.commit();
+      editor.apply();
    }
 
    static boolean getSoundEnabled(Context context) {
@@ -1203,7 +1191,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean("ONESIGNAL_ALWAYS_SHOW_NOTIF", enable);
-      editor.commit();
+      editor.apply();
    }
 
    static boolean getNotificationsWhenActiveEnabled(Context context) {
@@ -1217,7 +1205,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean("ONESIGNAL_INAPP_ALERT", enable);
-      editor.commit();
+      editor.apply();
    }
 
    static boolean getInAppAlertNotificationEnabled(Context context) {

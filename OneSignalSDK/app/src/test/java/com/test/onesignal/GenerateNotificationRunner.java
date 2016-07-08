@@ -375,6 +375,10 @@ public class GenerateNotificationRunner {
       Assert.assertEquals("button2", notification.actionButtons.get(1).text);
       Assert.assertEquals("ic_menu_send", notification.actionButtons.get(1).icon);
 
+      Assert.assertEquals("test_image_url", notification.backgroundImageLayout.image);
+      Assert.assertEquals("FF000000", notification.backgroundImageLayout.titleTextColor);
+      Assert.assertEquals("FFFFFFFF", notification.backgroundImageLayout.bodyTextColor);
+
       JSONObject additionalData = notification.additionalData;
       Assert.assertEquals("myValue", additionalData.getString("myKey"));
       Assert.assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
@@ -416,6 +420,9 @@ public class GenerateNotificationRunner {
       bundle.putString("sound", "test_sound");
       bundle.putString("grp_msg", "You test $[notif_count] MSGs!");
       bundle.putString("collapse_key", "do_not_collapse");
+      bundle.putString("bg_img", "{\"img\": \"test_image_url\"," +
+                                  "\"tc\": \"FF000000\"," +
+                                  "\"bc\": \"FFFFFFFF\"}");
 
 
       bundle.putString("custom",

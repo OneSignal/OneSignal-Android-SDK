@@ -50,10 +50,17 @@ public class OSNotificationPayload {
    public boolean backgroundData;
    public String fromProjectNumber;
    public boolean restoring;
+   public BackgroundImageLayout backgroundImageLayout;
    
    public static class ActionButton {
       public String id;
       public String text;
       public String icon;
+   }
+
+   public static class BackgroundImageLayout {
+      public String image;
+      public String titleTextColor;
+      public String bodyTextColor;
    }
 }

@@ -161,7 +161,6 @@ public class MainOneSignalClassRunner {
    }
 
 
-
    @Test
    public void testInitFromApplicationContext() throws Exception {
       // Application.onCreate

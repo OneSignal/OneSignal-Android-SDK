@@ -29,11 +29,11 @@
 
 package com.onesignal;
 
-
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -50,6 +50,12 @@ class AndroidSupportV4Compat {
             Log.e("OneSignal", "checkSelfPermission failed, returning PERMISSION_DENIED");
             return PackageManager.PERMISSION_DENIED;
          }
+      }
+
+      public static int getColor(Context context, int id) {
+         if (Build.VERSION.SDK_INT > 22)
+            return context.getColor(id);
+         return context.getResources().getColor(id);
       }
    }
 

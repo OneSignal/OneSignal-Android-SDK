@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent" >
+    <!--android:background="#00FF00"-->
+
+    <!--- Messes with image ratio -->
+    <!--android:scaleType="fitXY"-->
+
+    <!--- Doesn't seem to do a thing -->
+    <!--android:adjustViewBounds="true"-->
+
+    <!-- Note: Can add to darken image -->
+    <!-- android:tint="#44000000" -->
+
+    <ImageView
+        android:id="@+id/os_bgimage_notif_bgimage"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:scaleType="centerCrop"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" />
+
+    <!-- android:src="@drawable/test_image" -->
+
+    <!--android:textAppearance="@android:style/TextAppearance.Material.Notification.Title"-->
+    <!-- API21 -->
+    <!--android:textAppearance="@android:style/TextAppearance.StatusBar.EventContent.Title"-->
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_marginStart="@android:dimen/notification_large_icon_width"
+        android:layout_width="fill_parent"
+        android:layout_height="64dp">
+        <TextView
+            android:id="@+id/os_bgimage_notif_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@android:style/TextAppearance.StatusBar.EventContent.Title"
+            android:text="Medium Text"
+            android:paddingTop="8dp"
+            android:paddingLeft="4dp"
+            android:singleLine="true"
+            android:ellipsize="marquee"/>
+        <TextView
+            android:id="@+id/os_bgimage_notif_body"
+            android:text="Small Text"
+            android:layout_width="match_parent"
+            android:textAppearance="@android:style/TextAppearance.StatusBar.EventContent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:singleLine="true"
+            android:ellipsize="marquee"
+            android:fadingEdge="horizontal"
+            android:paddingLeft="4dp"/>
+    </LinearLayout>
+</RelativeLayout>
