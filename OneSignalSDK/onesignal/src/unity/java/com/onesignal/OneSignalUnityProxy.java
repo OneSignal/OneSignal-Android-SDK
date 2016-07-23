@@ -159,4 +159,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
    public void setEmail(String email) {
       OneSignal.setEmail(email);
    }
+   public void clearOneSignalNotifications () {
+      OneSignal.clearOneSignalNotifications();
+   }
 }

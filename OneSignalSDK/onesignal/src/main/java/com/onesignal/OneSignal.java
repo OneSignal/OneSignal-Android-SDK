@@ -107,7 +107,8 @@ public class OneSignal {
       Context mContext;
       NotificationOpenedHandler mNotificationOpenedHandler;
       boolean mPromptLocation;
-
+      boolean mDisableGmsMissingPrompt;
+   
       private Builder() {}
 
       private Builder(Context context) {
@@ -121,6 +122,11 @@ public class OneSignal {
 
       public Builder setAutoPromptLocation(boolean enable) {
          mPromptLocation = enable;
+         return this;
+      }
+
+      public Builder disableGmsMissingPrompt(boolean disable) {
+         mDisableGmsMissingPrompt = disable;
          return this;
       }
 
@@ -157,7 +163,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020600";
+   public static final String VERSION = "020601";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -173,7 +179,7 @@ public class OneSignal {
    private static Double lastLocLat, lastLocLong;
    private static Float lastLocAcc;
    private static Integer lastLocType;
-   private static OneSignal.Builder mInitBuilder;
+   static OneSignal.Builder mInitBuilder;
 
    static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<JSONArray>();
 

@@ -40,6 +40,7 @@ import android.content.SharedPreferences;
 import android.content.DialogInterface.OnClickListener;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 
 import java.io.IOException;
 
@@ -106,16 +107,29 @@ public class PushRegistratorGPS implements PushRegistrator {
       return true;
    }
 
+   private String getResourceString(Context context, String key, String defaultStr) {
+      Resources resources = context.getResources();
+      int bodyResId = resources.getIdentifier(key, "string", context.getPackageName());
+      if (bodyResId != 0)
+         return resources.getString(bodyResId);
+      return defaultStr;
+   }
+
    private void ShowUpdateGPSDialog(final int resultCode) {
       OneSignal.runOnUiThread(new Runnable() {
          @Override
          public void run() {
             final Activity activity = ActivityLifecycleHandler.curActivity;
-            if (activity == null)
+            if (activity == null || OneSignal.mInitBuilder.mDisableGmsMissingPrompt)
                return;
 
+            String alertBodyText = getResourceString(activity, "onesignal_gms_missing_alert_text", "To receive push notifications please press 'Update' to enable 'Google Play services'.");
+            String alertButtonUpdate = getResourceString(activity, "onesignal_gms_missing_alert_button_update", "Update");
+            String alertButtonSkip = getResourceString(activity, "onesignal_gms_missing_alert_button_skip", "Skip");
+            String alertButtonClose = getResourceString(activity, "onesignal_gms_missing_alert_button_close", "Close");
+
             AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setMessage("To receive push notifications please press 'Update' to enable 'Google Play services'.").setPositiveButton("Update", new OnClickListener() {
+            builder.setMessage(alertBodyText).setPositiveButton(alertButtonUpdate, new OnClickListener() {
                @Override
                public void onClick(DialogInterface dialog, int which) {
                   try {
@@ -126,7 +140,7 @@ public class PushRegistratorGPS implements PushRegistrator {
                   }
 
                }
-            }).setNegativeButton("Skip", new OnClickListener() {
+            }).setNegativeButton(alertButtonSkip, new OnClickListener() {
                @Override
                public void onClick(DialogInterface dialog, int which) {
                   final SharedPreferences prefs = OneSignal.getGcmPreferences(activity);
@@ -134,7 +148,7 @@ public class PushRegistratorGPS implements PushRegistrator {
                   editor.putBoolean("GT_DO_NOT_SHOW_MISSING_GPS", true);
                   editor.commit();
                }
-            }).setNeutralButton("Close", null).create().show();
+            }).setNeutralButton(alertButtonClose, null).create().show();
          }
       });
    }

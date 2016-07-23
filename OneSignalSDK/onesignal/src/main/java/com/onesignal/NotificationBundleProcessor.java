@@ -103,6 +103,8 @@ class NotificationBundleProcessor {
          OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
          SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
 
+         deleteOldNotifications(writableDb);
+
          ContentValues values = new ContentValues();
          values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
          if (jsonPayload.has("grp"))
@@ -120,8 +122,6 @@ class NotificationBundleProcessor {
 
          writableDb.insert(NotificationTable.TABLE_NAME, null, values);
 
-         deleteOldNotifications(writableDb);
-
          if (!opened)
             BadgeCountUpdater.update(writableDb, context);
 
@@ -131,11 +131,10 @@ class NotificationBundleProcessor {
       }
    }
 
-   // Clean up old records that have been dismissed or opened already after 1 week.
+   // Clean up old records after 4 weeks.
    static void deleteOldNotifications(SQLiteDatabase writableDb) {
       writableDb.delete(NotificationTable.TABLE_NAME,
-          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000) - 604800) + " AND " +
-              "(" + NotificationTable.COLUMN_NAME_DISMISSED + " = 1 OR " + NotificationTable.COLUMN_NAME_OPENED + " = 1" + ")",
+          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000L) - 2419200L),
           null);
    }
 
