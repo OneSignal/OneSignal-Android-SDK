@@ -35,6 +35,8 @@ import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 
+import java.util.Locale;
+
 class OSUtils {
    int getDeviceType() {
       try {
@@ -77,5 +79,19 @@ class OSUtils {
       }
 
       return null;
+   }
+
+   static String getCorrectedLanguage() {
+      String lang = Locale.getDefault().getLanguage();
+
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/64
+      if (lang.equals("iw"))
+         return "he";
+      if (lang.equals("in"))
+         return "id";
+      if (lang.equals("ji"))
+         return "yi";
+
+      return lang;
    }
 }

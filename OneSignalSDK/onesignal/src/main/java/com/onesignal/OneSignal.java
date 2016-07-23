@@ -36,7 +36,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -618,7 +617,7 @@ public class OneSignal {
             userState.set("ad_id", adId);
             userState.set("device_os", Build.VERSION.RELEASE);
             userState.set("timezone", getTimeZoneOffset());
-            userState.set("language", Locale.getDefault().getLanguage());
+            userState.set("language", OSUtils.getCorrectedLanguage());
             userState.set("sdk", VERSION);
             userState.set("sdk_type", sdkType);
             userState.set("android_package", packageName);
