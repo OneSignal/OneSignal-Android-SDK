@@ -65,4 +65,5 @@ public class OneSignalPackagePrivateHelper {
 
 
    public class NotificationTable extends OneSignalDbContract.NotificationTable { }
+   public class NotificationRestorer extends com.onesignal.NotificationRestorer { }
 }

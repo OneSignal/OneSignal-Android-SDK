@@ -40,6 +40,7 @@ import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.GcmBroadcastReceiver;
+import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.NotificationOpenedProcessor;
 import com.onesignal.OSNotificationPayload;
@@ -52,6 +53,7 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
+import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 
 import junit.framework.Assert;
 
@@ -169,6 +171,7 @@ public class GenerateNotificationRunner {
       long currentTime = System.currentTimeMillis() / 1000;
       cursor.moveToFirst();
       Assert.assertTrue(cursor.getLong(0) > currentTime - 2 && cursor.getLong(0) <= currentTime);
+      cursor.close();
 
       // Should get marked as opened.
       NotificationOpenedProcessor.processFromActivity(blankActivity, createOpenIntent(bundle));
@@ -177,42 +180,53 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(1, cursor.getInt(0));
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       int firstNotifId = cursor.getInt(1);
+      cursor.close();
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      cursor.close();
 
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, "android_notification_id <> " + firstNotifId, null, null, null, null);
-      cursor.moveToFirst();
-      int secondNotifId = cursor.getInt(0);
 
-      // Go forward 1 week.
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604801 * 1000);
+      // Go forward 4 weeks
+      // Note: Does not effect the SQL function strftime
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 2419201L * 1000L);
 
       // Display a 3rd notification
       // Should of been added for a total of 2 records now.
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id" }, null, null, null, null, null);
-      Assert.assertEquals(2, cursor.getCount());
-      Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
+      cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id", "created_time" }, null, null, null, null, null);
 
-      cursor.moveToFirst();
-      boolean foundSecond = false;
-      do {
-         Assert.assertTrue(cursor.getInt(0) != firstNotifId);
-         if (cursor.getInt(0) == secondNotifId)
-            foundSecond = true;
-      } while (cursor.moveToNext());
+      Assert.assertEquals(1, cursor.getCount());
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
-      Assert.assertTrue(foundSecond);
       cursor.close();
+   }
+
+   @Test
+   public void shouldRestoreNotifications() throws Exception {
+      NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
+
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+
+      NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
+      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
+      Assert.assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+
+      // Go forward 1 week
+      // Note: Does not effect the SQL function strftime
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604801L * 1000L);
+
+      // Restorer should not fire service since the notification is over 1 week old.
+      NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
+      Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
    }
 
    @Test
