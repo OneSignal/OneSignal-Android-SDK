@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.onesignal.example" >
+          xmlns:tools="http://schemas.android.com/tools"
+          package="com.onesignal.example">
 
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <!--<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>-->
-
 
     <application
         android:allowBackup="true"
@@ -72,33 +72,13 @@
             </intent-filter>
         </activity>
 
-
-        <!--
-        <receiver
-            android:name="com.onesignal.example.TestNotificationOpenedReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.onesignal.NotificationOpened.RECEIVE" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name="com.onesignal.example.OneSignalBackgroundDataReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.onesignal.BackgroundBroadcast.RECEIVE" />
-            </intent-filter>
-        </receiver>
--->
-
-
-        <service
-            android:name=".NotificationExtenderServiceTest"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.onesignal.NotificationExtender" />
-            </intent-filter>
-        </service>
+        <!--<service-->
+            <!--android:name=".NotificationExtenderServiceTest"-->
+            <!--android:exported="false">-->
+            <!--<intent-filter>-->
+                <!--<action android:name="com.onesignal.NotificationExtender" />-->
+            <!--</intent-filter>-->
+        <!--</service>-->
 
     </application>
 
