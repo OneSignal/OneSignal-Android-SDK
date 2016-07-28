@@ -58,7 +58,16 @@ class OneSignalStateSynchronizer {
    private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type"};
    private static final Set<String> LOCATION_FIELDS_SET = new HashSet<String>(Arrays.asList(LOCATION_FIELDS));
 
+   // Object to synchronize to prevent concurrent modifications on syncValues and dependValues
+   private static final Object syncLock = new Object() {};
+
    static private JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
+      synchronized (syncLock) {
+         return synchronizedGenerateJsonDiff(cur, changedTo, baseOutput, includeFields);
+      }
+   }
+
+   static private JSONObject synchronizedGenerateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
       Iterator<String> keys = changedTo.keys();
       String key;
       Object value;
@@ -69,51 +78,49 @@ class OneSignalStateSynchronizer {
       else
          output = new JSONObject();
 
-      synchronized (cur) {
-         while (keys.hasNext()) {
-            try {
-               key = keys.next();
-               value = changedTo.get(key);
+      while (keys.hasNext()) {
+         try {
+            key = keys.next();
+            value = changedTo.get(key);
 
-               if (cur.has(key)) {
-                  if (value instanceof JSONObject) {
-                     JSONObject curValue = cur.getJSONObject(key);
-                     JSONObject outValue = null;
-                     if (baseOutput != null && baseOutput.has(key))
-                        outValue = baseOutput.getJSONObject(key);
-                     JSONObject returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
-                     String returnedJsonStr = returnedJson.toString();
-                     if (!returnedJsonStr.equals("{}"))
-                        output.put(key, new JSONObject(returnedJsonStr));
-                  }
-                  else if (value instanceof JSONArray)
-                     handleJsonArray(key, (JSONArray) value, cur.getJSONArray(key), output);
-                  else if (includeFields != null && includeFields.contains(key))
-                     output.put(key, value);
-                  else {
-                     Object curValue = cur.get(key);
-                     if (!value.equals(curValue)) {
-                        // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
-                        if (curValue instanceof Integer && !"".equals(value)) {
-                           if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
-                              output.put(key, value);
-                        }
-                        else
+            if (cur.has(key)) {
+               if (value instanceof JSONObject) {
+                  JSONObject curValue = cur.getJSONObject(key);
+                  JSONObject outValue = null;
+                  if (baseOutput != null && baseOutput.has(key))
+                     outValue = baseOutput.getJSONObject(key);
+                  JSONObject returnedJson = synchronizedGenerateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
+                  String returnedJsonStr = returnedJson.toString();
+                  if (!returnedJsonStr.equals("{}"))
+                     output.put(key, new JSONObject(returnedJsonStr));
+               }
+               else if (value instanceof JSONArray)
+                  handleJsonArray(key, (JSONArray) value, cur.getJSONArray(key), output);
+               else if (includeFields != null && includeFields.contains(key))
+                  output.put(key, value);
+               else {
+                  Object curValue = cur.get(key);
+                  if (!value.equals(curValue)) {
+                     // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
+                     if (curValue instanceof Integer && !"".equals(value)) {
+                        if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
                            output.put(key, value);
                      }
+                     else
+                        output.put(key, value);
                   }
                }
-               else {
-                  if (value instanceof JSONObject)
-                     output.put(key, new JSONObject(value.toString()));
-                  else if (value instanceof JSONArray)
-                     handleJsonArray(key, (JSONArray) value, null, output);
-                  else
-                     output.put(key, value);
-               }
-            } catch (JSONException e) {
-               e.printStackTrace();
             }
+            else {
+               if (value instanceof JSONObject)
+                  output.put(key, new JSONObject(value.toString()));
+               else if (value instanceof JSONArray)
+                  handleJsonArray(key, (JSONArray) value, null, output);
+               else
+                  output.put(key, value);
+            }
+         } catch (JSONException e) {
+            e.printStackTrace();
          }
       }
 
@@ -167,7 +174,7 @@ class OneSignalStateSynchronizer {
       if (jsonObject.has("tags")) {
          JSONObject toReturn = new JSONObject();
 
-         synchronized (jsonObject) {
+         synchronized (syncLock) {
             JSONObject keyValues = jsonObject.optJSONObject("tags");
 
             Iterator<String> keys = keyValues.keys();
@@ -335,14 +342,16 @@ class OneSignalStateSynchronizer {
       }
 
       private void persistState() {
-         modifySyncValuesJsonArray("pkgs");
+         synchronized(syncLock) {
+            modifySyncValuesJsonArray("pkgs");
 
-         final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
-         SharedPreferences.Editor editor = prefs.edit();
+            final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
+            SharedPreferences.Editor editor = prefs.edit();
 
-         editor.putString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, syncValues.toString());
-         editor.putString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, dependValues.toString());
-         editor.commit();
+            editor.putString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, syncValues.toString());
+            editor.putString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, dependValues.toString());
+            editor.commit();
+         }
       }
 
       private void modifySyncValuesJsonArray(String baseKey) {
@@ -380,24 +389,26 @@ class OneSignalStateSynchronizer {
          if (inSyncValues != null) {
             OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues, null);
 
-            if (inSyncValues.has("tags")) {
-               JSONObject newTags = new JSONObject();
-               JSONObject curTags = inSyncValues.optJSONObject("tags");
-               Iterator<String> keys = curTags.keys();
-               String key;
+            synchronized (syncLock) {
+               if (inSyncValues.has("tags")) {
+                  JSONObject newTags = new JSONObject();
+                  JSONObject curTags = inSyncValues.optJSONObject("tags");
+                  Iterator<String> keys = curTags.keys();
+                  String key;
 
-               try {
-                  while (keys.hasNext()) {
-                     key = keys.next();
-                     if (!"".equals(curTags.optString(key)))
-                        newTags.put(key, curTags.optString(key));
-                  }
+                  try {
+                     while (keys.hasNext()) {
+                        key = keys.next();
+                        if (!"".equals(curTags.optString(key)))
+                           newTags.put(key, curTags.optString(key));
+                     }
 
-                  if (newTags.toString().equals("{}"))
-                     syncValues.remove("tags");
-                  else
-                     syncValues.put("tags", newTags);
-               } catch (Throwable t) {}
+                     if (newTags.toString().equals("{}"))
+                        syncValues.remove("tags");
+                     else
+                        syncValues.put("tags", newTags);
+                  } catch (Throwable t) {}
+               }
             }
          }
 
