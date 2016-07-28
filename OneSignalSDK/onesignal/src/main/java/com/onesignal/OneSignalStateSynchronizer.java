@@ -36,6 +36,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -608,11 +609,30 @@ class OneSignalStateSynchronizer {
       } catch (JSONException e) { e.printStackTrace(); }
    }
 
-   static void setEmail(String email) {
+   static void syncHashedEmail(String email) {
       JSONObject syncValues = getUserStateForModification().syncValues;
       try {
-         generateJsonDiff(syncValues, new JSONObject().put("email", email), syncValues, null);
-      } catch (JSONException e) { e.printStackTrace(); }
+         JSONObject emailFields = new JSONObject();
+         emailFields.put("em_m", hexDigest(email, "MD5"));
+         emailFields.put("em_s", hexDigest(email, "SHA-1"));
+
+         generateJsonDiff(syncValues, emailFields, syncValues, null);
+      } catch (Throwable t) { t.printStackTrace(); }
+   }
+
+   private static String hexDigest(String str, String digestInstance) throws Throwable {
+      MessageDigest digest = java.security.MessageDigest.getInstance(digestInstance);
+      digest.update(str.getBytes("UTF-8"));
+      byte messageDigest[] = digest.digest();
+
+      StringBuilder hexString = new StringBuilder();
+      for (byte aMessageDigest : messageDigest) {
+         String h = Integer.toHexString(0xFF & aMessageDigest);
+         while (h.length() < 2)
+            h = "0" + h;
+         hexString.append(h);
+      }
+      return hexString.toString();
    }
 
    static void setSubscription(boolean enable) {

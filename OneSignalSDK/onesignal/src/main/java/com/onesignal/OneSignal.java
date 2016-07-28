@@ -52,7 +52,6 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -72,21 +71,18 @@ public class OneSignal {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
 
+   public enum OSDefaultDisplay {
+      NONE, InAppAlert, Notification
+   }
+
    static final long MIN_ON_FOCUS_TIME = 60;
 
    public interface NotificationOpenedHandler {
-      /**
-       * Callback to implement in your app to handle when a notification is
-       * opened from the Android status bar or a new one comes in while the app is running.
-       *
-       * @param message
-       *           The message string the user seen/should see in the Android status bar.
-       * @param additionalData
-       *           The additionalData key value pair section you entered in on onesignal.com.
-       * @param isActive
-       *           Was the app in the foreground when the notification was received.
-       */
-      void notificationOpened(String message, JSONObject additionalData, boolean isActive);
+      void notificationOpened(OSNotificationOpenResult result);
+   }
+
+   public interface NotificationReceivedHandler {
+      void notificationReceived(OSNotification notification);
    }
 
    public interface IdsAvailableHandler {
@@ -105,8 +101,10 @@ public class OneSignal {
    public static class Builder {
       Context mContext;
       NotificationOpenedHandler mNotificationOpenedHandler;
+      NotificationReceivedHandler mNotificationReceivedHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
+      OSDefaultDisplay mDisplayOption = OSDefaultDisplay.InAppAlert;
    
       private Builder() {}
 
@@ -119,7 +117,12 @@ public class OneSignal {
          return this;
       }
 
-      public Builder setAutoPromptLocation(boolean enable) {
+      public Builder setNotificationReceivedHandler(NotificationReceivedHandler handler) {
+         mNotificationReceivedHandler = handler;
+         return this;
+      }
+
+      public Builder autoPromptLocation(boolean enable) {
          mPromptLocation = enable;
          return this;
       }
@@ -129,13 +132,18 @@ public class OneSignal {
          return this;
       }
 
+      public Builder inFocusDisplaying(OSDefaultDisplay displayOption) {
+         mDisplayOption = displayOption;
+         return this;
+      }
+
       public void init() {
          OneSignal.init(this);
       }
    }
 
    /**
-    * Tag used on log messages.
+    * Tag used on logcat messages.
     */
    static final String TAG = "OneSignal";
 
@@ -162,7 +170,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "020602";
+   public static final String VERSION = "029000";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -180,7 +188,7 @@ public class OneSignal {
    private static Integer lastLocType;
    static OneSignal.Builder mInitBuilder;
 
-   static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<JSONArray>();
+   static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
 
    private static GetTagsHandler pendingGetTagsHandler;
    private static boolean getTagsCall;
@@ -374,7 +382,7 @@ public class OneSignal {
 
    private static void fireCallbackForOpenedNotifications() {
       for(JSONArray dataArray : unprocessedOpenedNotifis)
-         runNotificationOpenedCallback(dataArray, false);
+         runNotificationOpenedCallback(dataArray, false, false);
 
       unprocessedOpenedNotifis.clear();
    }
@@ -475,16 +483,6 @@ public class OneSignal {
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
    }
 
-   /**
-    * Now automatically tracked, remove from your Activities.
-    *
-    * @deprecated Automatically tracked.
-    * @Deprecated Automatically tracked.
-    */
-   public static void onPaused() {
-      Log(LOG_LEVEL.INFO, "Deprecated! onPaused is now tracked automatically, please remove calls to OneSignal.onPaused() and OneSignal.onResume().");
-   }
-
    static void onAppLostFocus(boolean onlySave) {
       foreground = false;
 
@@ -544,16 +542,6 @@ public class OneSignal {
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
       }
-   }
-
-   /**
-    * Now automatically tracked, remove from your Activities.
-    *
-    * @deprecated Automatically tracked.
-    * @Deprecated Automatically tracked.
-    */
-   public static void onResumed() {
-      Log(LOG_LEVEL.INFO, "Deprecated! onResumed is now tracked automatically, please remove calls to OneSignal.onPaused() and OneSignal.onResume().");
    }
 
    static void onAppFocus() {
@@ -659,19 +647,14 @@ public class OneSignal {
       }).start();
    }
 
-   public static void setEmail(String email) {
+   public static void syncHashedEmail(String email) {
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before setting email! Omitting this operation.");
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before calling syncHashedEmail! Omitting this operation.");
          return;
       }
 
-      if (email != null && !"".equals(email)) {
-         final SharedPreferences prefs = getGcmPreferences(appContext);
-         SharedPreferences.Editor editor = prefs.edit();
-         editor.putString("OS_USER_EMAIL", email);
-         editor.commit();
-         OneSignalStateSynchronizer.setEmail(email);
-      }
+      if (email != null && !"".equals(email))
+         OneSignalStateSynchronizer.syncHashedEmail(email.toLowerCase());
    }
 
    public static void sendTag(String key, String value) {
@@ -932,7 +915,7 @@ public class OneSignal {
       return urlOpened;
    }
 
-   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean isActive) {
+   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean isActive, boolean fromAlert) {
       if (notificationOpenedHandler == null) {
          unprocessedOpenedNotifis.add(dataArray);
          return;
@@ -940,89 +923,72 @@ public class OneSignal {
 
       int jsonArraySize = dataArray.length();
 
-      JSONObject completeAdditionalData = null;
-      String firstMessage = null;
+      boolean firstMessage = true;
+
+      OSNotificationOpenResult openResult = new OSNotificationOpenResult();
+      OSNotification notification = new OSNotification();
+      notification.active = isAppActive();
+      notification.shown = true;
+      notification.androidNotificationId =  dataArray.optJSONObject(0).optInt("notificationId");
+
+      String actionSelected = null;
 
       for (int i = 0; i < jsonArraySize; i++) {
          try {
             JSONObject data = dataArray.getJSONObject(i);
 
-            JSONObject additionalDataJSON = null;
-
             // Summary notifications will not have custom set
             if (data.has("custom")) {
-               JSONObject customJSON = new JSONObject(data.optString("custom"));
-               additionalDataJSON = new JSONObject();
-
-               if (customJSON.has("a"))
-                  additionalDataJSON = customJSON.optJSONObject("a");
-
-               if (data.has("title"))
-                  additionalDataJSON.put("title", data.optString("title"));
-
-               if (customJSON.has("u"))
-                  additionalDataJSON.put("launchURL", customJSON.optString("u"));
-
-               if (data.has("sound"))
-                  additionalDataJSON.put("sound", data.optString("sound"));
-
-               if (data.has("sicon"))
-                  additionalDataJSON.put("smallIcon", data.optString("sicon"));
-
-               if (data.has("licon"))
-                  additionalDataJSON.put("largeIcon", data.optString("licon"));
-
-               if (data.has("bicon"))
-                  additionalDataJSON.put("bigPicture", data.optString("bicon"));
-
-               if (additionalDataJSON.equals(new JSONObject()))
-                  additionalDataJSON = null;
+               notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
+               if (actionSelected == null && data.has("actionSelected"))
+                  actionSelected = data.optString("actionSelected", null);
             }
 
-            if (firstMessage == null) {
-               completeAdditionalData = additionalDataJSON;
-               firstMessage = data.optString("alert", null);
-            }
+            if (firstMessage)
+               firstMessage = false;
             else {
-               if (completeAdditionalData == null)
-                  completeAdditionalData = new JSONObject();
-               if (!completeAdditionalData.has("stacked_notifications"))
-                  completeAdditionalData.put("stacked_notifications", new JSONArray());
-
-               additionalDataJSON.put("message", data.optString("alert", null));
-
-               completeAdditionalData.getJSONArray("stacked_notifications").put(additionalDataJSON);
+               if (notification.groupedNotifications == null)
+                  notification.groupedNotifications = new ArrayList<>();
+               notification.groupedNotifications.add(notification.payload);
             }
          } catch (Throwable t) {
             Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for callback.", t);
          }
       }
 
-      fireNotificationOpenedHandler(firstMessage, completeAdditionalData, isActive);
+      openResult.notification = notification;
+      openResult.action = new OSNotificationAction();
+      openResult.action.actionID = actionSelected;
+      if (actionSelected != null)
+         openResult.action.actionType = fromAlert ? OSNotificationAction.ActionType.InAppAlertClosed : OSNotificationAction.ActionType.NotificationTapped;
+      else
+         openResult.action.actionType = fromAlert ? OSNotificationAction.ActionType.NotificationActionTapped : OSNotificationAction.ActionType.NotificationActionTapped;
+      fireNotificationOpenedHandler(openResult);
    }
 
-   private static void fireNotificationOpenedHandler(final String message, final JSONObject additionalDataJSON, final boolean isActive) {
+   private static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
       if (Looper.getMainLooper().getThread() == Thread.currentThread()) // isUIThread
-         notificationOpenedHandler.notificationOpened(message, additionalDataJSON, isActive);
+         notificationOpenedHandler.notificationOpened(openedResult);
       else {
          runOnUiThread(new Runnable() {
             @Override
             public void run() {
-               notificationOpenedHandler.notificationOpened(message, additionalDataJSON, isActive);
+               notificationOpenedHandler.notificationOpened(openedResult);
             }
          });
       }
    }
 
-   // Called when receiving GCM message when app is open, in focus, and is not set to display when active.
+   // Called when receiving GCM message when app is open, in focus, and
+   //    enableNotificationsWhenActive and enableInAppAlertNotification are false.
    static void handleNotificationOpened(JSONArray data) {
-      sendNotificationOpened(appContext, data);
-      runNotificationOpenedCallback(data, true);
+      notificationOpenedRESTCall(appContext, data);
+      runNotificationOpenedCallback(data, true, false);
    }
 
    // Called when opening a notification when the app is suspended in the background, from alert type notification, or when it is dead
    public static void handleNotificationOpened(Context inContext, JSONArray data, boolean fromAlert) {
-      sendNotificationOpened(inContext, data);
+      notificationOpenedRESTCall(inContext, data);
 
       boolean urlOpened = false;
       boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(inContext, "com.onesignal.NotificationOpened.DEFAULT"));
@@ -1030,48 +996,23 @@ public class OneSignal {
       if (!defaultOpenActionDisabled)
          urlOpened = openURLFromNotification(inContext, data);
 
-      runNotificationOpenedCallback(data, false);
+      runNotificationOpenedCallback(data, false, fromAlert);
 
       // Open/Resume app when opening the notification.
-      if (!fromAlert && !urlOpened)
-         fireIntentFromNotificationOpen(inContext, data, defaultOpenActionDisabled);
+      if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
+         fireIntentFromNotificationOpen(inContext);
    }
 
-   private static void fireIntentFromNotificationOpen(Context inContext, JSONArray data, boolean defaultOpenActionDisabled) {
-      PackageManager packageManager = inContext.getPackageManager();
-
-      boolean isCustom = false;
-
-      Intent intent = new Intent().setAction("com.onesignal.NotificationOpened.RECEIVE").setPackage(inContext.getPackageName());
-
-      List<ResolveInfo> resolveInfo = packageManager.queryBroadcastReceivers(intent, PackageManager.GET_INTENT_FILTERS);
-      if (resolveInfo.size() > 0) {
-         intent.putExtra("onesignal_data", data.toString());
-         inContext.sendBroadcast(intent);
-         isCustom = true;
-      }
-
-      // Calling startActivity() from outside of an Activity  context requires the FLAG_ACTIVITY_NEW_TASK flag.
-      resolveInfo = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-      if (resolveInfo.size() > 0) {
-         if (!isCustom)
-            intent.putExtra("onesignal_data", data.toString());
-         isCustom = true;
-         intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
-         inContext.startActivity(intent);
-      }
-
-      if (!isCustom && !defaultOpenActionDisabled) {
-         Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
-
-         if (launchIntent != null) {
-            launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
-            inContext.startActivity(launchIntent);
-         }
+   private static void fireIntentFromNotificationOpen(Context inContext) {
+      Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
+      // Make sure we have a launcher intent.
+      if (launchIntent != null) {
+         launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
+         inContext.startActivity(launchIntent);
       }
    }
 
-   private static void sendNotificationOpened(Context inContext, JSONArray dataArray) {
+   private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
       for (int i = 0; i < dataArray.length(); i++) {
          try {
             JSONObject data = dataArray.getJSONObject(i);
@@ -1190,32 +1131,18 @@ public class OneSignal {
       return prefs.getBoolean("GT_SOUND_ENABLED", true);
    }
 
-   public static void enableNotificationsWhenActive(boolean enable) {
-      if (appContext == null)
-         return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean("ONESIGNAL_ALWAYS_SHOW_NOTIF", enable);
-      editor.apply();
+   public static void setInFocusDisplaying(OSDefaultDisplay displayOption) {
+      mInitBuilder.mDisplayOption = displayOption;
    }
 
-   static boolean getNotificationsWhenActiveEnabled(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getBoolean("ONESIGNAL_ALWAYS_SHOW_NOTIF", false);
+   static boolean getNotificationsWhenActiveEnabled() {
+      if (mInitBuilder == null) return false;
+      return mInitBuilder.mDisplayOption == OSDefaultDisplay.Notification;
    }
 
-   public static void enableInAppAlertNotification(boolean enable) {
-      if (appContext == null)
-         return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean("ONESIGNAL_INAPP_ALERT", enable);
-      editor.apply();
-   }
-
-   static boolean getInAppAlertNotificationEnabled(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getBoolean("ONESIGNAL_INAPP_ALERT", false);
+   static boolean getInAppAlertNotificationEnabled() {
+      if (mInitBuilder == null) return false;
+      return mInitBuilder.mDisplayOption == OSDefaultDisplay.InAppAlert;
    }
 
    public static void setSubscription(boolean enable) {

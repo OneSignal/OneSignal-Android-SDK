@@ -27,39 +27,8 @@
 
 package com.onesignal;
 
-import org.json.JSONObject;
+public class OSNotificationReceivedResult {
+   public boolean restoring;
 
-import java.util.List;
-
-// Notification properties received from OneSignal.
-public class OSNotificationPayload {
-   public String notificationId;
-   public String title, body;
-   public JSONObject additionalData;
-   public String smallIcon;
-   public String largeIcon;
-   public String bigPicture;
-   public String smallIconAccentColor;
-   public String launchUrl;
-   public String sound;
-   public String ledColor;
-   public int lockScreenVisibility;
-   public String groupKey;
-   public String groupMessage;
-   public List<ActionButton> actionButtons;
-   public String fromProjectNumber;
-   public BackgroundImageLayout backgroundImageLayout;
-   public String rawPayload;
-   
-   public static class ActionButton {
-      public String id;
-      public String text;
-      public String icon;
-   }
-
-   public static class BackgroundImageLayout {
-      public String image;
-      public String titleTextColor;
-      public String bodyTextColor;
-   }
+   public OSNotificationPayload payload;
 }

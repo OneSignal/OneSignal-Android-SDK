@@ -4,6 +4,7 @@ import android.support.v4.app.NotificationCompat;
 
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.NotificationExtenderService;
+import com.onesignal.OSNotificationReceivedResult;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
@@ -11,10 +12,10 @@ import java.math.BigInteger;
 public class NotificationExtenderServiceTest extends NotificationExtenderService {
 
    @Override
-   protected boolean onNotificationProcessing(OSNotificationPayload notification) {
+   protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
       printObject(notification);
-      if (notification.actionButtons != null) {
-         for(OSNotificationPayload.ActionButton button : notification.actionButtons) {
+      if (notification.payload.actionButtons != null) {
+         for(OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
            // System.out.println("button:");
             printObject(button);
          }

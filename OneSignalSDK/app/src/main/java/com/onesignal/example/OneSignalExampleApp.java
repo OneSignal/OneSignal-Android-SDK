@@ -4,9 +4,9 @@ import android.app.Application;
 import android.os.StrictMode;
 import android.util.Log;
 
+import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
-
-import org.json.JSONObject;
 
 public class OneSignalExampleApp extends Application {
 
@@ -19,7 +19,7 @@ public class OneSignalExampleApp extends Application {
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       OneSignal.startInit(this)
-          .setAutoPromptLocation(true)
+//          .autoPromptLocation(true)
           .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
           .init();
    }
@@ -30,14 +30,12 @@ public class OneSignalExampleApp extends Application {
        * a new one comes in while the app is running.
        * This method is located in this activity as an example, you may have any class you wish implement NotificationOpenedHandler and define this method.
        *
-       * @param message        The message string the user seen/should see in the Android status bar.
-       * @param additionalData The additionalData key value pair section you entered in on onesignal.com.
-       * @param isActive       Was the app in the foreground when the notification was received.
+       * @param openedResult The message string the user seen/should see in the Android status bar.
        */
       @Override
-      public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-         Log.e("OneSignalExample", "message: " + message);
-         Log.e("OneSignalExample", "additional data: " + additionalData);
+      public void notificationOpened(OSNotificationOpenResult openedResult) {
+         Log.e("OneSignalExample", "body: " + openedResult.notification.payload.body);
+         Log.e("OneSignalExample", "additional data: " + openedResult.notification.payload.additionalData);
          //Log.e("OneSignalExample", "additionalData: " + additionalData.toString());
       }
    }

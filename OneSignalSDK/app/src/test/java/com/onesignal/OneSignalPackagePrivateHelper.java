@@ -60,7 +60,11 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
-      return GcmBroadcastReceiver.processBundle(context, bundle);
+      return NotificationBundleProcessor.processBundle(context, bundle);
+   }
+
+   public static void OneSignalStateSynchronizer_syncUserState(boolean fromSyncService) {
+      OneSignalStateSynchronizer.syncUserState(fromSyncService);
    }
 
 

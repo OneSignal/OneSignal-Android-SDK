@@ -71,6 +71,8 @@ public class NotificationOpenedProcessor {
       JSONArray dataArray = null;
       if (!dismissed) {
          try {
+            JSONObject jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
+            jsonData.put("notificationId", inIntent.getIntExtra("notificationId", 0));
             dataArray = newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
          } catch (Throwable t) {
             t.printStackTrace();

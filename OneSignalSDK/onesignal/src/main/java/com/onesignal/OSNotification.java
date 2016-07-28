@@ -27,39 +27,22 @@
 
 package com.onesignal;
 
-import org.json.JSONObject;
-
 import java.util.List;
 
-// Notification properties received from OneSignal.
-public class OSNotificationPayload {
-   public String notificationId;
-   public String title, body;
-   public JSONObject additionalData;
-   public String smallIcon;
-   public String largeIcon;
-   public String bigPicture;
-   public String smallIconAccentColor;
-   public String launchUrl;
-   public String sound;
-   public String ledColor;
-   public int lockScreenVisibility;
-   public String groupKey;
-   public String groupMessage;
-   public List<ActionButton> actionButtons;
-   public String fromProjectNumber;
-   public BackgroundImageLayout backgroundImageLayout;
-   public String rawPayload;
-   
-   public static class ActionButton {
-      public String id;
-      public String text;
-      public String icon;
-   }
+public class OSNotification {
+   // Is app Active.
+   public boolean active;
 
-   public static class BackgroundImageLayout {
-      public String image;
-      public String titleTextColor;
-      public String bodyTextColor;
-   }
+   // Was it displayed to the user.
+   public boolean shown;
+
+   // Android notification id. Can later be used to dismiss the notification programmatically.
+   public int androidNotificationId;
+
+   // Notification paylaod received from OneSignal
+   public OSNotificationPayload payload;
+
+   // Will be set if a summary notification is opened.
+   //    The payload will be the most recent notification received.
+   public List<OSNotificationPayload> groupedNotifications;
 }

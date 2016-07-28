@@ -40,6 +40,7 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -107,6 +108,15 @@ public class MainOneSignalClassRunner {
             getCallBackRegId = registrationId;
          }
       });
+   }
+
+   private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
+      return new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(OSNotificationOpenResult openedResult) {
+            notificationOpenedMessage = openedResult.notification.payload.body;
+         }
+      };
    }
 
    private static void GetTags() {
@@ -186,12 +196,7 @@ public class MainOneSignalClassRunner {
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
       OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -200,32 +205,21 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldCorrectlyRemoveOpenedHandlerAndFireMissedOnesWhenAddedBack() throws Exception {
-      OneSignal.NotificationOpenedHandler notifHandler = new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      };
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notifHandler);
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       threadAndTaskWait();
 
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notifHandler);
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
    public void shouldNotFireNotificationOpenAgainAfterAppRestart() throws Exception {
       AddLauncherIntentFilter();
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -238,12 +232,7 @@ public class MainOneSignalClassRunner {
 
       // Restart app - Should omit notification_types
       StaticResetHelper.restSetStaticFields();
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -252,12 +241,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOpenFromNotificationWhenAppIsInBackground() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertNull(notificationOpenedMessage);
 
       OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
@@ -315,12 +299,7 @@ public class MainOneSignalClassRunner {
 
       // From app launching normally
       Assert.assertNotNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertNull(notificationOpenedMessage);
 
       OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
@@ -331,13 +310,17 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       threadAndTaskWait();
+      Assert.assertNull(notificationOpenedMessage);
+
+      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+      Assert.assertEquals(null, notificationOpenedMessage);
+
+      notificationOpenedMessage = null;
+
+      OneSignal.setInFocusDisplaying(OneSignal.OSDefaultDisplay.NONE);
       Assert.assertNull(notificationOpenedMessage);
 
       OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
@@ -707,6 +690,7 @@ public class MainOneSignalClassRunner {
                   if (failedCurModTest)
                      break;
                   OneSignal.sendTags("{\"key" + id + "\": " + i + "}");
+//                  OneSignalPackagePrivateHelper.OneSignalStateSynchronizer_syncUserState(false);
                }
             } catch (Throwable t) {
                // Ignore the flaky Robolectric null error.
@@ -1086,7 +1070,7 @@ public class MainOneSignalClassRunner {
    @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class })
    public void shouldCancelAndClearNotifications() throws Exception {
       ShadowRoboNotificationManager.notifications.clear();
-      OneSignalInit();
+      OneSignalInitFromApplication();
       threadAndTaskWait();
 
       // Create 2 notifications
@@ -1133,6 +1117,11 @@ public class MainOneSignalClassRunner {
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+   }
+
+   private void OneSignalInitFromApplication() {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
    }
 
    private void OneSignalInitWithBadProjectNum() {

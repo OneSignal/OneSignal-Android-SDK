@@ -129,13 +129,8 @@ class GenerateNotification {
 
                   if (finalButtonIds.size() > 1) {
                      try {
-                        JSONObject customJson = new JSONObject(gcmJson.optString("custom"));
-                        JSONObject additionalDataJSON = customJson.optJSONObject("a");
-                        additionalDataJSON.put("actionSelected", finalButtonIds.get(index));
-
                         JSONObject newJsonData = new JSONObject(gcmJson.toString());
-                        newJsonData.put("custom", customJson.toString());
-
+                        newJsonData.put("actionSelected", finalButtonIds.get(index));
                         finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
 
                         NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
@@ -365,7 +360,7 @@ class GenerateNotification {
 
       if (cursor.moveToFirst()) {
          SpannableString spannableString;
-         summeryList = new ArrayList<SpannableString>();
+         summeryList = new ArrayList<>();
 
          do {
             if (cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_IS_SUMMARY)) == 1)
@@ -724,14 +719,12 @@ class GenerateNotification {
 
                for (int i = 0; i < buttons.length(); i++) {
                   JSONObject button = buttons.optJSONObject(i);
-                  additionalDataJSON.put("actionSelected", button.optString("id"));
-                  
                   JSONObject bundle = new JSONObject(gcmBundle.toString());
-                  bundle.put("custom", customJson.toString());
 
                   Intent buttonIntent = getNewBaseIntent(notificationId);
                   buttonIntent.setAction("" + i); // Required to keep each action button from replacing extras of each other
                   buttonIntent.putExtra("action_button", true);
+                  bundle.put("actionSelected", button.optString("id"));
                   buttonIntent.putExtra("onesignal_data", bundle.toString());
                   if (groupSummary != null)
                      buttonIntent.putExtra("summary", groupSummary);
