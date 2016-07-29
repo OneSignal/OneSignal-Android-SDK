@@ -67,6 +67,9 @@ public class OneSignalPackagePrivateHelper {
       OneSignalStateSynchronizer.syncUserState(fromSyncService);
    }
 
+   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
+      return NotificationBundleProcessor.Process(context, restoring, jsonPayload, overrideSettings);
+   }
 
    public class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public class NotificationRestorer extends com.onesignal.NotificationRestorer { }

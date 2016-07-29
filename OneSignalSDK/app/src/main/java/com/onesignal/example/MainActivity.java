@@ -73,7 +73,7 @@ public class MainActivity extends ActionBarActivity {
 //          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
 //          .init();
 
-      OneSignal.setInFocusDisplaying(OneSignal.OSDefaultDisplay.InAppAlert);
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.InAppAlert);
       OneSignal.sendTag("test3", "test7");
       //OneSignal.setSubscription(false);
 

@@ -77,8 +77,16 @@ class NotificationBundleProcessor {
          notificationId = new Random().nextInt();
 
       GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert && OneSignal.isAppActive(), overrideSettings);
-      if (!restoring)
+
+      if (!restoring) {
          saveNotification(context, jsonPayload, false, notificationId);
+         try {
+            JSONObject jsonObject = new JSONObject(jsonPayload.toString());
+            jsonObject.put("notificationId", notificationId);
+            OneSignal.handleNotificationReceivedWhenInFocus(newJsonArray(jsonObject));
+         } catch(Throwable t) {}
+      }
+
       return notificationId;
    }
 
@@ -273,18 +281,13 @@ class NotificationBundleProcessor {
       }
    }
 
+   // Return true to count the payload as processed.
    static boolean processBundle(Context context, final Bundle bundle) {
       // Not a OneSignal GCM message
       if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
          return true;
 
       prepareBundle(bundle);
-
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
-      boolean isActive = OneSignal.isAppActive();
-      boolean display = OneSignal.getNotificationsWhenActiveEnabled()
-            || showAsAlert
-            || !isActive;
 
       Intent overrideIntent = NotificationExtenderService.getIntent(context);
       if (overrideIntent != null) {
@@ -293,23 +296,34 @@ class NotificationBundleProcessor {
          return true;
       }
 
-      if (bundle.getString("alert") == null || "".equals(bundle.getString("alert")))
-         return true;
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
+      boolean isActive = OneSignal.isAppActive();
+      boolean hasBody = bundle.getString("alert") != null && !"".equals(bundle.getString("alert"));
+      boolean display = hasBody &&
+                          (OneSignal.getNotificationsWhenActiveEnabled()
+                        || showAsAlert
+                        || !isActive);
 
+      // Save as a opened notification to prevent duplicates.
       if (!display) {
+         if (OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle)))
+            return true;
+         saveNotification(context, bundle, true, -1);
          // Current thread is meant to be short lived.
          //    Make a new thread to do our OneSignal work on.
          new Thread(new Runnable() {
             public void run() {
-               OneSignal.handleNotificationOpened(bundleAsJsonArray(bundle));
+               OneSignal.handleNotificationReceivedWhenInFocus(bundleAsJsonArray(bundle));
             }
          }).start();
-
-         // Save as a opened notification to prevent duplicates.
-         saveNotification(context, bundle, true, -1);
-         return true;
       }
 
-      return false;
+      return !display;
+   }
+
+   static JSONArray newJsonArray(JSONObject jsonObject) {
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(jsonObject);
+      return jsonArray;
    }
 }

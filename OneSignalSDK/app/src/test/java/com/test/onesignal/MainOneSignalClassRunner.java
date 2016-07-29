@@ -40,6 +40,7 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
@@ -69,6 +70,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowActivity;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
@@ -82,6 +84,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
+import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
 @Config(packageName = "com.onesignal.example",
@@ -194,7 +199,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
@@ -209,7 +214,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       OneSignal.removeNotificationOpenedHandler();
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
       Assert.assertNull(notificationOpenedMessage);
 
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
@@ -244,7 +249,7 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
       Assert.assertEquals("Test Msg", notificationOpenedMessage);
       threadWait();
    }
@@ -256,7 +261,7 @@ public class MainOneSignalClassRunner {
       // From app launching normally
       Assert.assertNotNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
       Assert.assertNotNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
@@ -269,7 +274,7 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
 
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedActivity();
       Assert.assertEquals("android.intent.action.VIEW", intent.getAction());
@@ -287,7 +292,7 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
    }
 
@@ -302,30 +307,59 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationReceivedWhenInFocus(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
       Assert.assertEquals("Test Msg", notificationOpenedMessage);
    }
 
+   private static String notificationReceivedBody;
+   private static int androidNotificationId;
    @Test
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
+         @Override
+         public void notificationReceived(OSNotification notification) {
+            androidNotificationId = notification.androidNotificationId;
+            notificationReceivedBody = notification.payload.body;
+         }
+      });
       threadAndTaskWait();
+
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.Notification);
+
+      Bundle bundle = getBaseNotifBundle();
+      boolean processResult = GcmBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait(); threadAndTaskWait();
+      Assert.assertEquals(null, notificationOpenedMessage);
+      Assert.assertFalse(processResult);
+      // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
+      NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
+      Assert.assertEquals("Robo test message", notificationReceivedBody);
+      Assert.assertFalse(0 == androidNotificationId);
+
+      // Don't fire for duplicates
+      notificationOpenedMessage = null;
+      notificationReceivedBody = null;
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.None);
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
       Assert.assertEquals(null, notificationOpenedMessage);
+      Assert.assertEquals(null, notificationReceivedBody);
 
+      // Test that only NotificationReceivedHandler fires
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.None);
+      bundle = getBaseNotifBundle("UUID2");
       notificationOpenedMessage = null;
+      notificationReceivedBody = null;
 
-      OneSignal.setInFocusDisplaying(OneSignal.OSDefaultDisplay.NONE);
+      GcmBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait(); threadAndTaskWait();
+      Assert.assertEquals(null, notificationOpenedMessage);
       Assert.assertNull(notificationOpenedMessage);
-
-      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
-      threadAndTaskWait();
-      Assert.assertEquals("Robo test message", notificationOpenedMessage);
+      Assert.assertEquals("Robo test message", notificationReceivedBody);
    }
 
    @Test

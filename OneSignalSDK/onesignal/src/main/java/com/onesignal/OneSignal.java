@@ -60,6 +60,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
 import android.util.Base64;
 import android.util.Log;
 
@@ -71,8 +72,8 @@ public class OneSignal {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
 
-   public enum OSDefaultDisplay {
-      NONE, InAppAlert, Notification
+   public enum OSInFocusDisplay {
+      None, InAppAlert, Notification
    }
 
    static final long MIN_ON_FOCUS_TIME = 60;
@@ -104,7 +105,7 @@ public class OneSignal {
       NotificationReceivedHandler mNotificationReceivedHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
-      OSDefaultDisplay mDisplayOption = OSDefaultDisplay.InAppAlert;
+      OSInFocusDisplay mDisplayOption = OSInFocusDisplay.InAppAlert;
    
       private Builder() {}
 
@@ -132,7 +133,7 @@ public class OneSignal {
          return this;
       }
 
-      public Builder inFocusDisplaying(OSDefaultDisplay displayOption) {
+      public Builder inFocusDisplaying(OSInFocusDisplay displayOption) {
          mDisplayOption = displayOption;
          return this;
       }
@@ -157,8 +158,6 @@ public class OneSignal {
 
    private static String userId = null;
    static int subscribableStatus = 1;
-
-   private static NotificationOpenedHandler notificationOpenedHandler;
 
    static boolean initDone;
    private static boolean foreground;
@@ -206,19 +205,25 @@ public class OneSignal {
       try {
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
-         OneSignal.init(context, bundle.getString("onesignal_google_project_number").substring(4), bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler);
+         OneSignal.init(context, bundle.getString("onesignal_google_project_number").substring(4), bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
          t.printStackTrace();
       }
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId) {
-      init(context, googleProjectNumber, oneSignalAppId, null);
+      init(context, googleProjectNumber, oneSignalAppId, null, null);
    }
 
-   public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler inNotificationOpenedHandler) {
+   public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler) {
+      init(context, googleProjectNumber, oneSignalAppId, notificationOpenedHandler, null);
+   }
+
+   public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
       if (mInitBuilder == null)
          mInitBuilder = new OneSignal.Builder();
+      mInitBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
+      mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
 
       osUtils = new OSUtils();
 
@@ -282,10 +287,7 @@ public class OneSignal {
          if (context != null)
             appContext = context.getApplicationContext();
 
-         if (inNotificationOpenedHandler != null)
-            notificationOpenedHandler = inNotificationOpenedHandler;
-
-         if (notificationOpenedHandler != null)
+         if (mInitBuilder.mNotificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
 
          return;
@@ -304,7 +306,6 @@ public class OneSignal {
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
 
-      notificationOpenedHandler = inNotificationOpenedHandler;
       lastTrackedTime = SystemClock.elapsedRealtime();
 
       OneSignalStateSynchronizer.initUserState(appContext);
@@ -337,7 +338,7 @@ public class OneSignal {
       if (foreground || getUserId() == null)
          startRegistrationOrOnSession();
 
-      if (notificationOpenedHandler != null)
+      if (mInitBuilder.mNotificationOpenedHandler != null)
          fireCallbackForOpenedNotifications();
 
       if (TrackGooglePurchase.CanTrack(appContext))
@@ -382,7 +383,7 @@ public class OneSignal {
 
    private static void fireCallbackForOpenedNotifications() {
       for(JSONArray dataArray : unprocessedOpenedNotifis)
-         runNotificationOpenedCallback(dataArray, false, false);
+         runNotificationOpenedCallback(dataArray, true, false);
 
       unprocessedOpenedNotifis.clear();
    }
@@ -915,12 +916,17 @@ public class OneSignal {
       return urlOpened;
    }
 
-   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean isActive, boolean fromAlert) {
-      if (notificationOpenedHandler == null) {
+   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean shown, boolean fromAlert) {
+      if (mInitBuilder == null || mInitBuilder.mNotificationOpenedHandler == null) {
          unprocessedOpenedNotifis.add(dataArray);
          return;
       }
 
+      fireNotificationOpenedHandler(generateOsNotificationOpenResult(dataArray, shown, fromAlert));
+   }
+
+   @NonNull
+   private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown, boolean fromAlert) {
       int jsonArraySize = dataArray.length();
 
       boolean firstMessage = true;
@@ -928,8 +934,9 @@ public class OneSignal {
       OSNotificationOpenResult openResult = new OSNotificationOpenResult();
       OSNotification notification = new OSNotification();
       notification.active = isAppActive();
-      notification.shown = true;
-      notification.androidNotificationId =  dataArray.optJSONObject(0).optInt("notificationId");
+      notification.shown = shown;
+      System.out.println("dataArray.optJSONObject(0): " + dataArray.optJSONObject(0).toString());
+      notification.androidNotificationId = dataArray.optJSONObject(0).optInt("notificationId");
 
       String actionSelected = null;
 
@@ -963,17 +970,17 @@ public class OneSignal {
          openResult.action.actionType = fromAlert ? OSNotificationAction.ActionType.InAppAlertClosed : OSNotificationAction.ActionType.NotificationTapped;
       else
          openResult.action.actionType = fromAlert ? OSNotificationAction.ActionType.NotificationActionTapped : OSNotificationAction.ActionType.NotificationActionTapped;
-      fireNotificationOpenedHandler(openResult);
+      return openResult;
    }
 
    private static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
       if (Looper.getMainLooper().getThread() == Thread.currentThread()) // isUIThread
-         notificationOpenedHandler.notificationOpened(openedResult);
+         mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
       else {
          runOnUiThread(new Runnable() {
             @Override
             public void run() {
-               notificationOpenedHandler.notificationOpened(openedResult);
+               mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
             }
          });
       }
@@ -981,13 +988,18 @@ public class OneSignal {
 
    // Called when receiving GCM message when app is open, in focus, and
    //    enableNotificationsWhenActive and enableInAppAlertNotification are false.
-   static void handleNotificationOpened(JSONArray data) {
+   static void handleNotificationReceivedWhenInFocus(JSONArray data) {
       notificationOpenedRESTCall(appContext, data);
-      runNotificationOpenedCallback(data, true, false);
+
+      if (mInitBuilder == null || mInitBuilder.mNotificationReceivedHandler == null)
+         return;
+
+      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, false, false);
+      mInitBuilder.mNotificationReceivedHandler.notificationReceived(openResult.notification);
    }
 
    // Called when opening a notification when the app is suspended in the background, from alert type notification, or when it is dead
-   public static void handleNotificationOpened(Context inContext, JSONArray data, boolean fromAlert) {
+   public static void handleNotificationReceivedWhenInFocus(Context inContext, JSONArray data, boolean fromAlert) {
       notificationOpenedRESTCall(inContext, data);
 
       boolean urlOpened = false;
@@ -996,7 +1008,7 @@ public class OneSignal {
       if (!defaultOpenActionDisabled)
          urlOpened = openURLFromNotification(inContext, data);
 
-      runNotificationOpenedCallback(data, false, fromAlert);
+      runNotificationOpenedCallback(data, true, fromAlert);
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
@@ -1131,18 +1143,18 @@ public class OneSignal {
       return prefs.getBoolean("GT_SOUND_ENABLED", true);
    }
 
-   public static void setInFocusDisplaying(OSDefaultDisplay displayOption) {
+   public static void setInFocusDisplaying(OSInFocusDisplay displayOption) {
       mInitBuilder.mDisplayOption = displayOption;
    }
 
    static boolean getNotificationsWhenActiveEnabled() {
       if (mInitBuilder == null) return false;
-      return mInitBuilder.mDisplayOption == OSDefaultDisplay.Notification;
+      return mInitBuilder.mDisplayOption == OSInFocusDisplay.Notification;
    }
 
    static boolean getInAppAlertNotificationEnabled() {
       if (mInitBuilder == null) return false;
-      return mInitBuilder.mDisplayOption == OSDefaultDisplay.InAppAlert;
+      return mInitBuilder.mDisplayOption == OSInFocusDisplay.InAppAlert;
    }
 
    public static void setSubscription(boolean enable) {
@@ -1239,7 +1251,7 @@ public class OneSignal {
    }
 
    public static void removeNotificationOpenedHandler() {
-      notificationOpenedHandler = null;
+      mInitBuilder.mNotificationOpenedHandler = null;
    }
 
    static long GetUnsentActiveTime() {
