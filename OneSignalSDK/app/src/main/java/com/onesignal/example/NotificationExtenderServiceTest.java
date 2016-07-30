@@ -35,12 +35,12 @@ public class NotificationExtenderServiceTest extends NotificationExtenderService
       return true;
    }
 
-   private void printObject(Object obj) {
+   static void printObject(Object obj) {
       for (Field field : obj.getClass().getDeclaredFields()) {
          String name = field.getName();
          try {
             Object value = field.get(obj);
-          //  System.out.printf("Field name: %s, Field value: %s%n", name, value);
+            System.out.printf("Field name: %s, Field value: %s%n", name, value);
          } catch (Throwable t){}
       }
    }

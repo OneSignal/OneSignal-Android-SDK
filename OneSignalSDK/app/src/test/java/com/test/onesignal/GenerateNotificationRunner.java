@@ -475,7 +475,7 @@ public class GenerateNotificationRunner {
             throw new NullPointerException();
 
          this.notification = notification;
-         notificationId = displayNotification(new OverrideSettings()).notificationId;
+         notificationId = displayNotification(new OverrideSettings()).androidNotificationId;
 
          return true;
       }

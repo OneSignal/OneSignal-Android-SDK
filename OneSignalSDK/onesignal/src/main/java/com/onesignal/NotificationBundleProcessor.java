@@ -83,7 +83,7 @@ class NotificationBundleProcessor {
          try {
             JSONObject jsonObject = new JSONObject(jsonPayload.toString());
             jsonObject.put("notificationId", notificationId);
-            OneSignal.handleNotificationReceivedWhenInFocus(newJsonArray(jsonObject));
+            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, showAsAlert);
          } catch(Throwable t) {}
       }
 
@@ -299,7 +299,7 @@ class NotificationBundleProcessor {
       boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
       boolean isActive = OneSignal.isAppActive();
       boolean hasBody = bundle.getString("alert") != null && !"".equals(bundle.getString("alert"));
-      boolean display = hasBody &&
+      final boolean display = hasBody &&
                           (OneSignal.getNotificationsWhenActiveEnabled()
                         || showAsAlert
                         || !isActive);
@@ -313,7 +313,7 @@ class NotificationBundleProcessor {
          //    Make a new thread to do our OneSignal work on.
          new Thread(new Runnable() {
             public void run() {
-               OneSignal.handleNotificationReceivedWhenInFocus(bundleAsJsonArray(bundle));
+               OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false, false);
             }
          }).start();
       }

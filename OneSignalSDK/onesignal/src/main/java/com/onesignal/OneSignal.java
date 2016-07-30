@@ -986,20 +986,21 @@ public class OneSignal {
       }
    }
 
-   // Called when receiving GCM message when app is open, in focus, and
-   //    enableNotificationsWhenActive and enableInAppAlertNotification are false.
-   static void handleNotificationReceivedWhenInFocus(JSONArray data) {
+   // Called when receiving GCM/ADM message after it has been displayed.
+   // Or right when it is received if it is a silent one
+   //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
+   static void handleNotificationReceived(JSONArray data, boolean displayed, boolean fromAlert) {
       notificationOpenedRESTCall(appContext, data);
 
       if (mInitBuilder == null || mInitBuilder.mNotificationReceivedHandler == null)
          return;
 
-      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, false, false);
+      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed, fromAlert);
       mInitBuilder.mNotificationReceivedHandler.notificationReceived(openResult.notification);
    }
 
-   // Called when opening a notification when the app is suspended in the background, from alert type notification, or when it is dead
-   public static void handleNotificationReceivedWhenInFocus(Context inContext, JSONArray data, boolean fromAlert) {
+   // Called when opening a notification
+   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert) {
       notificationOpenedRESTCall(inContext, data);
 
       boolean urlOpened = false;

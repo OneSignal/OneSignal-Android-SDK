@@ -21,7 +21,16 @@ public class OneSignalExampleApp extends Application {
       OneSignal.startInit(this)
 //          .autoPromptLocation(true)
           .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
+          .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
           .init();
+   }
+
+   private class ExampleNotificationReceivedHandler implements OneSignal.NotificationReceivedHandler {
+      @Override
+      public void notificationReceived(OSNotification notification) {
+         System.out.println("notificationReceived!!!!!!");
+         NotificationExtenderServiceTest.printObject(notification);
+      }
    }
 
    private class ExampleNotificationOpenedHandler implements OneSignal.NotificationOpenedHandler {
@@ -34,8 +43,11 @@ public class OneSignalExampleApp extends Application {
        */
       @Override
       public void notificationOpened(OSNotificationOpenResult openedResult) {
-         Log.e("OneSignalExample", "body: " + openedResult.notification.payload.body);
-         Log.e("OneSignalExample", "additional data: " + openedResult.notification.payload.additionalData);
+         System.out.println("notificationOpened!!!!!!");
+         NotificationExtenderServiceTest.printObject(openedResult);
+
+//         Log.e("OneSignalExample", "body: " + openedResult.notification.payload.body);
+//         Log.e("OneSignalExample", "additional data: " + openedResult.notification.payload.additionalData);
          //Log.e("OneSignalExample", "additionalData: " + additionalData.toString());
       }
    }

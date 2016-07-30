@@ -92,7 +92,7 @@ public abstract class NotificationExtenderService extends IntentService {
 
       overrideSettings.override(currentBaseOverrideSettings);
       osNotificationDisplayedResult = new OSNotificationDisplayedResult();
-      osNotificationDisplayedResult.notificationId = NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, overrideSettings);
+      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, overrideSettings);
       return osNotificationDisplayedResult;
    }
 

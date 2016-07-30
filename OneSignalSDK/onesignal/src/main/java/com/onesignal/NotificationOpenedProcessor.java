@@ -93,7 +93,7 @@ public class NotificationOpenedProcessor {
       writableDb.close();
 
       if (!dismissed)
-         OneSignal.handleNotificationReceivedWhenInFocus(context, dataArray, inIntent.getBooleanExtra("from_alert", false));
+         OneSignal.handleNotificationOpen(context, dataArray, inIntent.getBooleanExtra("from_alert", false));
    }
 
    private static void addChildNotifications(JSONArray dataArray, String summaryGroup, SQLiteDatabase writableDb) {
