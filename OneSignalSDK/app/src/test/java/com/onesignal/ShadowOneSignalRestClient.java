@@ -113,7 +113,7 @@ public class ShadowOneSignalRestClient {
       networkCallCount++;
       lastPost = jsonBody;
 
-      System.out.println("lastPost:jsonBody: " + lastPost.toString());
+      System.out.println("putSync:lastPost:jsonBody: " + lastPost.toString());
 
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
@@ -131,7 +131,7 @@ public class ShadowOneSignalRestClient {
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
 
-      System.out.println("lastPost:jsonBody: " + lastPost.toString());
+      System.out.println("put:lastPost:jsonBody: " + lastPost.toString());
 
       responseHandler.onSuccess("{}");
 
@@ -139,6 +139,8 @@ public class ShadowOneSignalRestClient {
    }
 
    static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      System.out.println("getSync: " + url);
+
       lastUrl = url;
       networkCallCount++;
       doInterruptibleDelay();

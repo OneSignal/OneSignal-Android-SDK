@@ -29,17 +29,11 @@ package com.onesignal;
 
 public class OSNotificationAction {
    public enum ActionType {
-      // Notification from the notification shade was tapped on.
-      NotificationTapped,
+      // Notification was tapped on.
+      Opened,
 
-      // User tapped on an action from the notification shade.
-      NotificationActionTapped,
-
-      // User tapped on an action from the in-app alert.
-      InAppAlertActionTapped,
-
-      // User closed the in-app alert notification.
-      InAppAlertClosed
+      // User tapped on an action from the notification.
+      ActionTaken,
    }
 
    // The type of the notification action

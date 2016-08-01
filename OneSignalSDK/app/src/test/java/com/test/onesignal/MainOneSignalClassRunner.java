@@ -183,7 +183,7 @@ public class MainOneSignalClassRunner {
       Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
 
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
 
       // Restart app, should not send onSession automatically
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
@@ -194,6 +194,87 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   @Test
+   public void testOnSessionCalledOnlyOncePer30Sec() throws Exception {
+      // Will call create
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+
+      // Shouldn't call on_session if just resuming app with a short delay
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+
+      // Or when restarting the app quickly.
+      ShadowOneSignalRestClient.lastPost = null;
+      StaticResetHelper.restSetStaticFields();
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+      Assert.assertEquals("{\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+   }
+
+   @Test
+   public void testPutStillCalledOnChanges() throws Exception {
+      // Will call create
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+
+      // Shouldn't call on_session if just resuming app with a short delay
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOSUtils.carrierName = "test2";
+
+      // Should make PUT call with changes on app restart
+      ShadowOneSignalRestClient.lastPost = null;
+      StaticResetHelper.restSetStaticFields();
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      GetIdsAvailable();
+      Assert.assertEquals("players/" + callBackUseId, ShadowOneSignalRestClient.lastUrl);
+      Assert.assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+   }
+
+
+   @Test
+   public void testPutCallsMadeWhenUserStateChangesOnAppResume() throws Exception {
+      // Will call create
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
    }
 
    @Test
@@ -325,7 +406,7 @@ public class MainOneSignalClassRunner {
       });
       threadAndTaskWait();
 
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.Notification);
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
 
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = GcmBroadcastReceiver_processBundle(blankActivity, bundle);
@@ -340,7 +421,7 @@ public class MainOneSignalClassRunner {
       // Don't fire for duplicates
       notificationOpenedMessage = null;
       notificationReceivedBody = null;
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.None);
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
       Assert.assertNull(notificationOpenedMessage);
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
@@ -349,7 +430,7 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(null, notificationReceivedBody);
 
       // Test that only NotificationReceivedHandler fires
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplay.None);
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
       bundle = getBaseNotifBundle("UUID2");
       notificationOpenedMessage = null;
       notificationReceivedBody = null;
@@ -424,7 +505,7 @@ public class MainOneSignalClassRunner {
       Assert.assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Restart app - Should omit notification_types
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInitWithBadProjectNum();
       threadAndTaskWait();
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
@@ -437,7 +518,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
 
       OneSignalInit();
       threadAndTaskWait();
@@ -455,13 +536,13 @@ public class MainOneSignalClassRunner {
 
 
       // Restart app - Should send unsubscribe with create player call.
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Restart app again - Value synced last time so don't send again.
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
@@ -544,7 +625,7 @@ public class MainOneSignalClassRunner {
 
       // Cold restart app, should not send the same identifier again.
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
@@ -573,7 +654,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
 
       // Developer deletes user, cold boots apps should resend all fields
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.failNext = true;
       ShadowOneSignalRestClient.failResponse = "{\"errors\":[\"Device type  is not a valid device_type. Valid options are: 0 = iOS, 1 = Android, 2 = Amazon, 3 = WindowsPhone(MPNS), 4 = ChromeApp, 5 = ChromeWebsite, 6 = WindowsPhone(WNS), 7 = Safari(APNS), 8 = Firefox\"]}";
       OneSignalInit();
@@ -1044,21 +1125,26 @@ public class MainOneSignalClassRunner {
       Assert.assertFalse(toSyncValues.has(baseKey + "_a"));
       Assert.assertEquals(1, toSyncValues.getJSONArray(baseKey).length());
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
+      ShadowOneSignalRestClient.lastPost = null;
       RuntimeEnvironment.getRobolectricPackageManager().addPackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
+      ShadowOneSignalRestClient.lastPost = null;
       RuntimeEnvironment.getRobolectricPackageManager().removePackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
+      ShadowOneSignalRestClient.lastPost = null;
       OneSignalInit();
       threadAndTaskWait();
+
+      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
 
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
@@ -1173,5 +1259,11 @@ public class MainOneSignalClassRunner {
       resolveInfo.activityInfo.name = "MainActivity";
 
       RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
+   }
+
+   private static int sessionCountOffset = 1;
+   private static void restartAppAndElapseTimeToNextSession() {
+      StaticResetHelper.restSetStaticFields();
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1000 * 31 * sessionCountOffset++);
    }
 }

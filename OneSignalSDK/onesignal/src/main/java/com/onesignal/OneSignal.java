@@ -72,11 +72,12 @@ public class OneSignal {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
 
-   public enum OSInFocusDisplay {
+   public enum OSInFocusDisplayOption {
       None, InAppAlert, Notification
    }
 
-   static final long MIN_ON_FOCUS_TIME = 60;
+   static final long MIN_ON_FOCUS_TIME = 30;
+   private static final long MIN_ON_SESSION_TIME = 30;
 
    public interface NotificationOpenedHandler {
       void notificationOpened(OSNotificationOpenResult result);
@@ -105,7 +106,7 @@ public class OneSignal {
       NotificationReceivedHandler mNotificationReceivedHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
-      OSInFocusDisplay mDisplayOption = OSInFocusDisplay.InAppAlert;
+      OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
    
       private Builder() {}
 
@@ -133,7 +134,7 @@ public class OneSignal {
          return this;
       }
 
-      public Builder inFocusDisplaying(OSInFocusDisplay displayOption) {
+      public Builder inFocusDisplaying(OSInFocusDisplayOption displayOption) {
          mDisplayOption = displayOption;
          return this;
       }
@@ -150,8 +151,6 @@ public class OneSignal {
 
    static String appId, mGoogleProjectNumber;
    static Context appContext;
-
-   private static boolean startedRegistration;
    
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
@@ -164,7 +163,7 @@ public class OneSignal {
 
    private static IdsAvailableHandler idsAvailableHandler;
 
-   private static long lastTrackedTime = 1, unSentActiveTime = -1;
+   private static long lastTrackedFocusTime = 1, unSentActiveTime = -1;
 
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
@@ -178,10 +177,8 @@ public class OneSignal {
 
    private static OSUtils osUtils;
 
-   private static boolean ranSessionInitThread;
-
    private static String lastRegistrationId;
-   private static boolean registerForPushFired, locationFired;
+   private static boolean registerForPushFired, locationFired, promptedLocation;
    private static Double lastLocLat, lastLocLong;
    private static Float lastLocAcc;
    private static Integer lastLocType;
@@ -191,6 +188,9 @@ public class OneSignal {
 
    private static GetTagsHandler pendingGetTagsHandler;
    private static boolean getTagsCall;
+
+   private static boolean waitingToPostStateSync;
+   private static boolean sendAsSession;
 
    public static OneSignal.Builder startInit(Context context) {
       return new OneSignal.Builder(context);
@@ -299,6 +299,7 @@ public class OneSignal {
       foreground = contextIsActivity;
       appId = oneSignalAppId;
       appContext = context.getApplicationContext();
+
       if (contextIsActivity) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
          NotificationRestorer.asyncRestore(appContext);
@@ -306,7 +307,7 @@ public class OneSignal {
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
 
-      lastTrackedTime = SystemClock.elapsedRealtime();
+      lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
       OneSignalStateSynchronizer.initUserState(appContext);
       appContext.startService(new Intent(appContext, SyncService.class));
@@ -335,8 +336,11 @@ public class OneSignal {
          SaveAppId(appId);
       }
 
-      if (foreground || getUserId() == null)
+      if (foreground || getUserId() == null) {
+         sendAsSession = isPastOnSessionTime();
+         setLastSessionTime(System.currentTimeMillis());
          startRegistrationOrOnSession();
+      }
 
       if (mInitBuilder.mNotificationOpenedHandler != null)
          fireCallbackForOpenedNotifications();
@@ -348,16 +352,20 @@ public class OneSignal {
    }
 
    private static void startRegistrationOrOnSession() {
-      if (startedRegistration)
+      if (waitingToPostStateSync)
          return;
 
-      startedRegistration = true;
+      waitingToPostStateSync = true;
 
       PushRegistrator pushRegistrator;
       if (deviceType == 2)
          pushRegistrator = new PushRegistratorADM();
       else
          pushRegistrator = new PushRegistratorGPS();
+
+      registerForPushFired = false;
+      if (sendAsSession)
+         locationFired = false;
 
       pushRegistrator.registerForPush(appContext, mGoogleProjectNumber, new PushRegistrator.RegisteredHandler() {
          @Override
@@ -368,7 +376,7 @@ public class OneSignal {
          }
       });
 
-      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation, new LocationGMS.LocationHandler() {
+      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
          @Override
          public void complete(Double lat, Double log, Float accuracy, Integer type) {
             lastLocLat = lat;
@@ -379,6 +387,8 @@ public class OneSignal {
             registerUser();
          }
       });
+
+      promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
    }
 
    private static void fireCallbackForOpenedNotifications() {
@@ -386,14 +396,6 @@ public class OneSignal {
          runNotificationOpenedCallback(dataArray, true, false);
 
       unprocessedOpenedNotifis.clear();
-   }
-
-   private static void updateRegistrationId() {
-      String orgRegId = OneSignalStateSynchronizer.getRegistrationId();
-      if (lastRegistrationId != null && !lastRegistrationId.equals(orgRegId)) {
-         OneSignalStateSynchronizer.updateIdentifier(lastRegistrationId);
-         fireIdsAvailableCallback();
-      }
    }
 
    public static void setLogLevel(LOG_LEVEL inLogCatLevel, LOG_LEVEL inVisualLogLevel) {
@@ -492,17 +494,19 @@ public class OneSignal {
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
 
-      if (lastTrackedTime  == -1)
+      if (lastTrackedFocusTime == -1)
          return;
 
-      long time_elapsed = (long) (((SystemClock.elapsedRealtime() - lastTrackedTime) / 1000d) + 0.5d);
-      lastTrackedTime = SystemClock.elapsedRealtime();
-      if (time_elapsed < 0 || time_elapsed > 604800)
+      long time_elapsed = (long) (((SystemClock.elapsedRealtime() - lastTrackedFocusTime) / 1000d) + 0.5d);
+      lastTrackedFocusTime = SystemClock.elapsedRealtime();
+      if (time_elapsed < 0 || time_elapsed > 86400)
          return;
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
          return;
       }
+
+      setLastSessionTime(System.currentTimeMillis());
 
       long unSentActiveTime = GetUnsentActiveTime();
       long totalTimeActive = unSentActiveTime + time_elapsed;
@@ -547,7 +551,10 @@ public class OneSignal {
 
    static void onAppFocus() {
       foreground = true;
-      lastTrackedTime = SystemClock.elapsedRealtime();
+      lastTrackedFocusTime = SystemClock.elapsedRealtime();
+
+      sendAsSession = isPastOnSessionTime();
+      setLastSessionTime(System.currentTimeMillis());
 
       startRegistrationOrOnSession();
 
@@ -582,13 +589,6 @@ public class OneSignal {
 
       if (!registerForPushFired || !locationFired)
          return;
-
-      if (ranSessionInitThread) {
-         updateRegistrationId();
-         return;
-      }
-
-      ranSessionInitThread = true;
 
       new Thread(new Runnable() {
          public void run() {
@@ -631,11 +631,6 @@ public class OneSignal {
                userState.set("pkgs", pkgs);
             } catch (Throwable t) {}
 
-            final SharedPreferences prefs = getGcmPreferences(appContext);
-            String email = prefs.getString("OS_USER_EMAIL", null);
-            if (email != null)
-               userState.set("email", email);
-
             userState.set("net_type", osUtils.getNetType());
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
@@ -643,7 +638,8 @@ public class OneSignal {
             userState.set("lat", lastLocLat); userState.set("long", lastLocLong);
             userState.set("loc_acc", lastLocAcc); userState.set("loc_type", lastLocType);
 
-            OneSignalStateSynchronizer.postSession(userState);
+            OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
+            waitingToPostStateSync = false;
          }
       }).start();
    }
@@ -966,10 +962,12 @@ public class OneSignal {
       openResult.notification = notification;
       openResult.action = new OSNotificationAction();
       openResult.action.actionID = actionSelected;
-      if (actionSelected != null)
-         openResult.action.actionType = fromAlert ? OSNotificationAction.ActionType.InAppAlertClosed : OSNotificationAction.ActionType.NotificationTapped;
+      openResult.action.actionType = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
+      if (fromAlert)
+         openResult.notification.displayType = OSNotification.DisplayType.InAppAlert;
       else
-         openResult.action.actionType = fromAlert ? OSNotificationAction.ActionType.NotificationActionTapped : OSNotificationAction.ActionType.NotificationActionTapped;
+         openResult.notification.displayType = OSNotification.DisplayType.Notification;
+
       return openResult;
    }
 
@@ -1144,18 +1142,30 @@ public class OneSignal {
       return prefs.getBoolean("GT_SOUND_ENABLED", true);
    }
 
-   public static void setInFocusDisplaying(OSInFocusDisplay displayOption) {
+   static void setLastSessionTime(long time) {
+      final SharedPreferences prefs = getGcmPreferences(appContext);
+      SharedPreferences.Editor editor = prefs.edit();
+      editor.putLong("OS_LAST_SESSION_TIME", time);
+      editor.apply();
+   }
+
+   static long getLastSessionTime(Context context) {
+      final SharedPreferences prefs = getGcmPreferences(context);
+      return prefs.getLong("OS_LAST_SESSION_TIME", -31 * 1000);
+   }
+
+   public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
       mInitBuilder.mDisplayOption = displayOption;
    }
 
    static boolean getNotificationsWhenActiveEnabled() {
       if (mInitBuilder == null) return false;
-      return mInitBuilder.mDisplayOption == OSInFocusDisplay.Notification;
+      return mInitBuilder.mDisplayOption == OSInFocusDisplayOption.Notification;
    }
 
    static boolean getInAppAlertNotificationEnabled() {
-      if (mInitBuilder == null) return false;
-      return mInitBuilder.mDisplayOption == OSInFocusDisplay.InAppAlert;
+      if (mInitBuilder == null) return true;
+      return mInitBuilder.mDisplayOption == OSInFocusDisplayOption.InAppAlert;
    }
 
    public static void setSubscription(boolean enable) {
@@ -1180,6 +1190,8 @@ public class OneSignal {
                OneSignalStateSynchronizer.updateLocation(lat, log, accuracy, type);
          }
       });
+
+      promptedLocation = true;
    }
 
    public static void clearOneSignalNotifications() {
@@ -1354,5 +1366,14 @@ public class OneSignal {
 
    static boolean isAppActive() {
       return initDone && isForeground();
+   }
+
+   static void updateOnSessionDependents() {
+      sendAsSession = false;
+      setLastSessionTime(System.currentTimeMillis());
+   }
+
+   private static boolean isPastOnSessionTime() {
+      return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
    }
 }

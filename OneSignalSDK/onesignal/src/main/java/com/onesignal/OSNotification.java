@@ -30,6 +30,18 @@ package com.onesignal;
 import java.util.List;
 
 public class OSNotification {
+
+   public enum DisplayType {
+      // Notification shown in the notification shade.
+      Notification,
+
+      // Notification shown as an in app alert.
+      InAppAlert,
+
+      // Notification was silent and not displayed.
+      None
+   }
+
    // Is app Active.
    public boolean active;
 
@@ -39,8 +51,10 @@ public class OSNotification {
    // Android notification id. Can later be used to dismiss the notification programmatically.
    public int androidNotificationId;
 
-   // Notification paylaod received from OneSignal
+   // Notification payload received from OneSignal
    public OSNotificationPayload payload;
+
+   public DisplayType displayType;
 
    // Will be set if a summary notification is opened.
    //    The payload will be the most recent notification received.
