@@ -13,11 +13,11 @@ public class NotificationExtenderServiceTest extends NotificationExtenderService
 
    @Override
    protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
-      printObject(notification);
+      DebuggingHelper.printObject(notification);
       if (notification.payload.actionButtons != null) {
          for(OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
            // System.out.println("button:");
-            printObject(button);
+            DebuggingHelper.printObject(button);
          }
       }
 
@@ -33,15 +33,5 @@ public class NotificationExtenderServiceTest extends NotificationExtenderService
       displayNotification(overrideSettings);
 
       return true;
-   }
-
-   static void printObject(Object obj) {
-      for (Field field : obj.getClass().getDeclaredFields()) {
-         String name = field.getName();
-         try {
-            Object value = field.get(obj);
-            System.out.printf("Field name: %s, Field value: %s%n", name, value);
-         } catch (Throwable t){}
-      }
    }
 }

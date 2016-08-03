@@ -30,5 +30,7 @@ package com.onesignal;
 public class OSNotificationReceivedResult {
    public boolean restoring;
 
+   public boolean isAppInFocus;
+
    public OSNotificationPayload payload;
 }

@@ -168,7 +168,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "029000";
+   public static final String VERSION = "030000";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -178,7 +178,7 @@ public class OneSignal {
    private static OSUtils osUtils;
 
    private static String lastRegistrationId;
-   private static boolean registerForPushFired, locationFired, promptedLocation;
+   private static boolean registerForPushFired, locationFired, awlFired, promptedLocation;
    private static Double lastLocLat, lastLocLong;
    private static Float lastLocAcc;
    private static Integer lastLocType;
@@ -191,6 +191,8 @@ public class OneSignal {
 
    private static boolean waitingToPostStateSync;
    private static boolean sendAsSession;
+
+   private static JSONObject awl;
 
    public static OneSignal.Builder startInit(Context context) {
       return new OneSignal.Builder(context);
@@ -388,6 +390,33 @@ public class OneSignal {
          }
       });
 
+      if (!awlFired) {
+         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+               awlFired = true;
+               registerUser();
+            }
+
+            @Override
+            void onSuccess(String response) {
+               try {
+                  awl = new JSONObject(response).getJSONObject("awl_list");
+               } catch (Throwable t) {
+                  t.printStackTrace();
+               }
+               awlFired = true;
+               registerUser();
+            }
+         };
+
+         String awl_url = "apps/" + appId + "/awl";
+         String userId = getUserId();
+         if (userId != null)
+            awl_url += "?player_id=" + userId;
+         OneSignalRestClient.get(awl_url, responseHandler);
+      }
+
       promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
    }
 
@@ -523,6 +552,7 @@ public class OneSignal {
       JSONObject jsonBody = new JSONObject();
       try {
          jsonBody.put("app_id", appId);
+         jsonBody.put("type", 1);
          jsonBody.put("state", "ping");
          jsonBody.put("active_time", totalTimeActive);
          addNetType(jsonBody);
@@ -585,9 +615,9 @@ public class OneSignal {
    }
 
    private static void registerUser() {
-      Log(LOG_LEVEL.DEBUG, "registerUser: registerForPushFired:" + registerForPushFired + ", locationFired: " + locationFired);
+      Log(LOG_LEVEL.DEBUG, "registerUser: registerForPushFired:" + registerForPushFired + ", locationFired: " + locationFired + ", awlFired: " + awlFired);
 
-      if (!registerForPushFired || !locationFired)
+      if (!registerForPushFired || !locationFired || !awlFired)
          return;
 
       new Thread(new Runnable() {
@@ -623,10 +653,10 @@ public class OneSignal {
                JSONArray pkgs = new JSONArray();
                MessageDigest md = MessageDigest.getInstance("SHA-256");
                for (int i = 0; i < packList.size(); i++) {
-                  if ((packList.get(i).applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0 && !packageName.equals(packList.get(i).packageName)) {
-                     md.update(packList.get(i).packageName.getBytes());
-                     pkgs.put(Base64.encodeToString(md.digest(), Base64.NO_WRAP));
-                  }
+                  md.update(packList.get(i).packageName.getBytes());
+                  String pck = Base64.encodeToString(md.digest(), Base64.NO_WRAP);
+                  if (awl.has(pck))
+                     pkgs.put(pck);
                }
                userState.set("pkgs", pkgs);
             } catch (Throwable t) {}
@@ -929,9 +959,8 @@ public class OneSignal {
 
       OSNotificationOpenResult openResult = new OSNotificationOpenResult();
       OSNotification notification = new OSNotification();
-      notification.active = isAppActive();
+      notification.isAppInFocus = isAppActive();
       notification.shown = shown;
-      System.out.println("dataArray.optJSONObject(0): " + dataArray.optJSONObject(0).toString());
       notification.androidNotificationId = dataArray.optJSONObject(0).optInt("notificationId");
 
       String actionSelected = null;
@@ -988,8 +1017,6 @@ public class OneSignal {
    // Or right when it is received if it is a silent one
    //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
    static void handleNotificationReceived(JSONArray data, boolean displayed, boolean fromAlert) {
-      notificationOpenedRESTCall(appContext, data);
-
       if (mInitBuilder == null || mInitBuilder.mNotificationReceivedHandler == null)
          return;
 
@@ -1159,12 +1186,13 @@ public class OneSignal {
    }
 
    static boolean getNotificationsWhenActiveEnabled() {
-      if (mInitBuilder == null) return false;
+      // If OneSignal hasn't been initialized yet it is best to display a normal notification.
+      if (mInitBuilder == null) return true;
       return mInitBuilder.mDisplayOption == OSInFocusDisplayOption.Notification;
    }
 
    static boolean getInAppAlertNotificationEnabled() {
-      if (mInitBuilder == null) return true;
+      if (mInitBuilder == null) return false;
       return mInitBuilder.mDisplayOption == OSInFocusDisplayOption.InAppAlert;
    }
 

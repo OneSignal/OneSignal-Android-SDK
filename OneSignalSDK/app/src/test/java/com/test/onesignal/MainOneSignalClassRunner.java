@@ -248,7 +248,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowOSUtils.carrierName = "test2";
 
@@ -260,7 +260,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
       GetIdsAvailable();
       Assert.assertEquals("players/" + callBackUseId, ShadowOneSignalRestClient.lastUrl);
       Assert.assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
@@ -696,7 +696,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
       Assert.assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
       Assert.assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
@@ -705,13 +705,13 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Should only send changed and new tags
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1.5\", \"test2\": \"value2\", \"test3\": \"value3\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       JSONObject sentTags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
       Assert.assertEquals("value1.5", sentTags.getString("test1"));
       Assert.assertFalse(sentTags.has(("test2")));
@@ -722,7 +722,7 @@ public class MainOneSignalClassRunner {
    public void shouldSendTagsWithRequestBatching() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       OneSignal.sendTags(new JSONObject("{\"test2\": \"value2\"}"));
 
@@ -732,7 +732,7 @@ public class MainOneSignalClassRunner {
 
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
@@ -827,7 +827,8 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
       OneSignalPackagePrivateHelper.resetRunnables();
       threadAndTaskWait();
-      Assert.assertEquals(0, ShadowOneSignalRestClient.networkCallCount);
+      // Only for awl
+      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       StaticResetHelper.restSetStaticFields();
 
@@ -845,7 +846,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
       OneSignalPackagePrivateHelper.resetRunnables();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       StaticResetHelper.restSetStaticFields();
 
@@ -984,13 +985,13 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
 
       GetTags();
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
@@ -1001,7 +1002,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\"}}";
       threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.testUserId));
    }
@@ -1018,7 +1019,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       threadAndTaskWait();
       Assert.assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    }
 
    /*

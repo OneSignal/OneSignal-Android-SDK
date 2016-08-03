@@ -61,6 +61,14 @@ class OneSignalRestClient {
       }).start();
    }
 
+   static void get(final String url, final ResponseHandler responseHandler) {
+      new Thread(new Runnable() {
+         public void run() {
+            makeRequest(url, null, null, responseHandler);
+         }
+      }).start();
+   }
+
    static void getSync(final String url, final ResponseHandler responseHandler) {
       makeRequest(url, null, null, responseHandler);
    }

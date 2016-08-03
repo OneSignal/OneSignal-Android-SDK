@@ -138,6 +138,18 @@ public class ShadowOneSignalRestClient {
       safeInterrupt();
    }
 
+   static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      System.out.println("get: " + url);
+      networkCallCount++;
+      doInterruptibleDelay();
+      responseHandler.onSuccess("{\"awl_list\": {" +
+                                    "\"IlIfoQBT5jXgkgn6nBsIrGJn5t0Yd91GqKAGoApIYzk=\": 1," +
+                                    "\"Q3zjDf/4NxXU1QpN9WKp/iwVYNPQZ0js2EDDNO+eo0o=\": 1" +
+                                "}}");
+
+      safeInterrupt();
+   }
+
    static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("getSync: " + url);
 

@@ -156,9 +156,7 @@ class ActivityLifecycleHandler {
       }
 
       boolean hasBackgrounded() {
-         if (appFocusRunnable != null)
-            return appFocusRunnable.backgrounded;
-         return false;
+         return appFocusRunnable != null && appFocusRunnable.backgrounded;
       }
    }
 

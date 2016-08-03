@@ -25,38 +25,19 @@
  * THE SOFTWARE.
  */
 
-package com.onesignal;
+package com.onesignal.example;
 
-import java.util.List;
+import java.lang.reflect.Field;
 
-public class OSNotification {
+public class DebuggingHelper {
 
-   public enum DisplayType {
-      // Notification shown in the notification shade.
-      Notification,
-
-      // Notification shown as an in app alert.
-      InAppAlert,
-
-      // Notification was silent and not displayed.
-      None
+   static void printObject(Object obj) {
+      for (Field field : obj.getClass().getDeclaredFields()) {
+         String name = field.getName();
+         try {
+            Object value = field.get(obj);
+            System.out.printf("Field name: %s, Field value: %s%n", name, value);
+         } catch (Throwable t){}
+      }
    }
-
-   // Is app Active.
-   public boolean isAppInFocus;
-
-   // Was it displayed to the user.
-   public boolean shown;
-
-   // Android notification id. Can later be used to dismiss the notification programmatically.
-   public int androidNotificationId;
-
-   // Notification payload received from OneSignal
-   public OSNotificationPayload payload;
-
-   public DisplayType displayType;
-
-   // Will be set if a summary notification is opened.
-   //    The payload will be the most recent notification received.
-   public List<OSNotificationPayload> groupedNotifications;
 }

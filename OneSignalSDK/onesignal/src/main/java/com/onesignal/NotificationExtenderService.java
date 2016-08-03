@@ -97,7 +97,7 @@ public abstract class NotificationExtenderService extends IntentService {
    }
 
    // App developer must implement
-   //   - Return true to count it as processed to prevent the default OneSignal notification from displaying.
+   //   - Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
    protected abstract boolean onNotificationProcessing(OSNotificationReceivedResult notification);
 
    @Override
@@ -126,14 +126,15 @@ public abstract class NotificationExtenderService extends IntentService {
    }
 
    void processJsonObject(JSONObject currentJsonPayload, boolean restoring) {
-      OSNotificationReceivedResult notification = new OSNotificationReceivedResult();
-      notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(currentJsonPayload);
-      notification.restoring = restoring;
+      OSNotificationReceivedResult receivedResult = new OSNotificationReceivedResult();
+      receivedResult.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(currentJsonPayload);
+      receivedResult.restoring = restoring;
+      receivedResult.isAppInFocus = OneSignal.isAppActive();
 
       osNotificationDisplayedResult = null;
       boolean developerProcessed = false;
       try {
-         developerProcessed = onNotificationProcessing(notification);
+         developerProcessed = onNotificationProcessing(receivedResult);
       }
       catch (Throwable t) {
          //noinspection ConstantConditions - displayNotification might have been called by the developer
@@ -146,7 +147,11 @@ public abstract class NotificationExtenderService extends IntentService {
       // If the developer did not call displayNotification from onNotificationProcessing
       if (osNotificationDisplayedResult == null) {
          // Save as processed to prevent possible duplicate calls from canonical ids.
-         if (developerProcessed) {
+
+         boolean display = !developerProcessed &&
+                           NotificationBundleProcessor.shouldDisplay(!"".equals(currentJsonPayload.optString("alert")));
+
+         if (!display) {
             if (!restoring)
                NotificationBundleProcessor.saveNotification(this, currentJsonPayload, true, -1);
          }

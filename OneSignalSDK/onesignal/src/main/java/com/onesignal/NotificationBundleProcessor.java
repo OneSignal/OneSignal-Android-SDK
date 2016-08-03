@@ -68,7 +68,7 @@ class NotificationBundleProcessor {
    }
 
    static int Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled() &&  OneSignal.isAppActive();
 
       int notificationId;
       if (overrideSettings != null && overrideSettings.androidNotificationId != null)
@@ -76,7 +76,7 @@ class NotificationBundleProcessor {
       else
          notificationId = new Random().nextInt();
 
-      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert && OneSignal.isAppActive(), overrideSettings);
+      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert, overrideSettings);
 
       if (!restoring) {
          saveNotification(context, jsonPayload, false, notificationId);
@@ -215,6 +215,7 @@ class NotificationBundleProcessor {
       try {
          JSONObject customJson = new JSONObject(currentJsonPayload.optString("custom"));
          notification.notificationId = customJson.optString("i");
+         notification.rawPayload = currentJsonPayload.toString();
          notification.additionalData = customJson.optJSONObject("a");
          notification.launchUrl = customJson.optString("u", null);
 
@@ -296,13 +297,8 @@ class NotificationBundleProcessor {
          return true;
       }
 
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
-      boolean isActive = OneSignal.isAppActive();
-      boolean hasBody = bundle.getString("alert") != null && !"".equals(bundle.getString("alert"));
-      final boolean display = hasBody &&
-                          (OneSignal.getNotificationsWhenActiveEnabled()
-                        || showAsAlert
-                        || !isActive);
+      boolean display = shouldDisplay(bundle.getString("alert") != null
+                                   && !"".equals(bundle.getString("alert")));
 
       // Save as a opened notification to prevent duplicates.
       if (!display) {
@@ -319,6 +315,15 @@ class NotificationBundleProcessor {
       }
 
       return !display;
+   }
+
+   static boolean shouldDisplay(boolean hasBody) {
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
+      boolean isActive = OneSignal.isAppActive();
+      return hasBody &&
+                (OneSignal.getNotificationsWhenActiveEnabled()
+              || showAsAlert
+              || !isActive);
    }
 
    static JSONArray newJsonArray(JSONObject jsonObject) {

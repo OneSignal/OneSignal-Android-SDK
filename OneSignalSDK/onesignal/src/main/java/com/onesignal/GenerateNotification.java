@@ -550,8 +550,6 @@ class GenerateNotification {
       Bitmap bitmap = getBitmap(gcmBundle.optString("licon"));
       if (bitmap == null)
          bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
-      if (bitmap == null)
-         bitmap = getBitmapFromAssetsOrResourceName("ic_gamethrive_large_icon_default");
 
       if (bitmap == null)
          return null;
@@ -650,20 +648,15 @@ class GenerateNotification {
       if (notificationIcon != 0)
          return notificationIcon;
 
-      notificationIcon = getDrawableId("ic_stat_gamethrive_default");
-      if (notificationIcon != 0)
-         return notificationIcon;
-
       notificationIcon = getDrawableId("corona_statusbar_icon_default");
       if (notificationIcon != 0)
          return notificationIcon;
 
-      // Launcher icon
-      notificationIcon = currentContext.getApplicationInfo().icon;
+      notificationIcon = getDrawableId("ic_os_notification_fallback_white_24dp");
       if (notificationIcon != 0)
          return notificationIcon;
 
-      return drawable.sym_def_app_icon; // Catches case where icon isn't set in the AndroidManifest.xml
+      return drawable.ic_popup_reminder;
    }
 
    private static int getDrawableId(String name) {
@@ -681,10 +674,6 @@ class GenerateNotification {
       }
 
       soundId = contextResources.getIdentifier("onesignal_default_sound", "raw", packageName);
-      if (soundId != 0)
-         return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
-
-      soundId = contextResources.getIdentifier("gamethrive_default_sound", "raw", packageName);
       if (soundId != 0)
          return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
 
