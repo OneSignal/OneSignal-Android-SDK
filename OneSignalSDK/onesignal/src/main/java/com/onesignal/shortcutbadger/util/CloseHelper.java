@@ -4,7 +4,6 @@ package com.onesignal.shortcutbadger.util;
 import android.database.Cursor;
 
 /**
- *
  * @author leolin
  */
 public class CloseHelper {

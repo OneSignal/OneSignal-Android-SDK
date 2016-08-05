@@ -7,7 +7,7 @@ import android.content.Intent;
 
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
-import com.onesignal.shortcutbadger.ShortcutBadger;
+import com.onesignal.shortcutbadger.util.BroadcastHelper;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +29,11 @@ public class AsusHomeLauncher implements Badger {
         intent.putExtra(INTENT_EXTRA_PACKAGENAME, componentName.getPackageName());
         intent.putExtra(INTENT_EXTRA_ACTIVITY_NAME, componentName.getClassName());
         intent.putExtra("badge_vip_count", 0);
-        context.sendBroadcast(intent);
+        if(BroadcastHelper.canResolveBroadcast(context, intent)) {
+            context.sendBroadcast(intent);
+        } else {
+            throw new ShortcutBadgeException("unable to resolve intent: " + intent.toString());
+        }
     }
 
     @Override

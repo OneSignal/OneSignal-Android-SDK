@@ -69,6 +69,10 @@ class BadgeCountUpdater {
    }
 
    static void updateCount(int count, Context context) {
-      ShortcutBadger.applyCount(context, count);
+      // Can throw if badges are not support on the device.
+      //  Or app does not have a default launch Activity.
+      try {
+         ShortcutBadger.applyCountOrThrow(context, count);
+      } catch(Throwable t) {}
    }
 }
