@@ -32,7 +32,7 @@ import android.content.Context;
 public interface PushRegistrator {
 
    interface RegisteredHandler {
-      void complete(String id);
+      void complete(String id, int status);
    }
 
    void registerForPush(Context context, String googleProjectNumber, RegisteredHandler callback);

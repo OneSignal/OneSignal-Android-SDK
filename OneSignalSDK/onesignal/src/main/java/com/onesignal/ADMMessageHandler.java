@@ -28,6 +28,7 @@
 package com.onesignal;
 
 import android.content.Intent;
+import android.os.Bundle;
 
 import com.amazon.device.messaging.ADMMessageHandlerBase;
 import com.amazon.device.messaging.ADMMessageReceiver;
@@ -46,7 +47,12 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
    @Override
    protected void onMessage(Intent intent) {
-      NotificationBundleProcessor.Process(this, false, NotificationBundleProcessor.bundleAsJSONObject(intent.getExtras()), null);
+      Bundle bundle = intent.getExtras();
+
+      if (NotificationBundleProcessor.processBundle(this, bundle))
+         return;
+
+      NotificationBundleProcessor.Process(this, false, NotificationBundleProcessor.bundleAsJSONObject(bundle), null);
    }
 
    @Override

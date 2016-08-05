@@ -36,6 +36,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,7 +45,7 @@ import java.util.Map;
 import java.util.Set;
 
 class OneSignalStateSynchronizer {
-   private static boolean onSessionDone = false, postSessionCalled = false, waitingForSessionResponse = false;
+   private static boolean nextSyncIsSession = false, waitingForSessionResponse = false;
 
    // currentUserState - Current known state of the user on OneSignal's server.
    // toSyncUserState  - Pending state that will be synced to the OneSignal server.
@@ -480,7 +481,8 @@ class OneSignalStateSynchronizer {
    }
 
    static void syncUserState(boolean fromSyncService) {
-      boolean isSessionCall = !onSessionDone && postSessionCalled && !waitingForSessionResponse;
+      final String userId = OneSignal.getUserId();
+      boolean isSessionCall = userId == null || (nextSyncIsSession && !waitingForSessionResponse);
 
       final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
       final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
@@ -490,10 +492,8 @@ class OneSignalStateSynchronizer {
          return;
       }
 
-      final String userId = OneSignal.getUserId();
-
       toSyncUserState.persistState();
-      if (onSessionDone || fromSyncService) {
+      if (!isSessionCall || fromSyncService) {
          OneSignalRestClient.putSync("players/" + userId, jsonBody, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
@@ -513,7 +513,7 @@ class OneSignalStateSynchronizer {
             }
          });
       }
-      else if (postSessionCalled) {
+      else {
          String urlStr;
          if (userId == null)
             urlStr = "players";
@@ -537,8 +537,7 @@ class OneSignalStateSynchronizer {
 
             @Override
             void onSuccess(String response) {
-               onSessionDone = true;
-               waitingForSessionResponse = false;
+               nextSyncIsSession = waitingForSessionResponse = false;
                currentUserState.persistStateAfterSync(dependDiff, jsonBody);
 
                try {
@@ -552,6 +551,8 @@ class OneSignalStateSynchronizer {
                   }
                   else
                      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + OneSignal.getUserId());
+
+                  OneSignal.updateOnSessionDependents();
                } catch (Throwable t) {
                   OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
                }
@@ -592,13 +593,13 @@ class OneSignalStateSynchronizer {
       getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
    }
 
-   static void postSession(UserState postSession) {
+   static void postUpdate(UserState postSession, boolean isSession) {
       JSONObject toSync = getUserStateForModification().syncValues;
       generateJsonDiff(toSync, postSession.syncValues, toSync, null);
       JSONObject dependValues = getUserStateForModification().dependValues;
       generateJsonDiff(dependValues, postSession.dependValues, dependValues, null);
 
-      postSessionCalled = true;
+      nextSyncIsSession = nextSyncIsSession || isSession;
    }
 
    static void sendTags(JSONObject newTags) {
@@ -608,11 +609,30 @@ class OneSignalStateSynchronizer {
       } catch (JSONException e) { e.printStackTrace(); }
    }
 
-   static void setEmail(String email) {
+   static void syncHashedEmail(String email) {
       JSONObject syncValues = getUserStateForModification().syncValues;
       try {
-         generateJsonDiff(syncValues, new JSONObject().put("email", email), syncValues, null);
-      } catch (JSONException e) { e.printStackTrace(); }
+         JSONObject emailFields = new JSONObject();
+         emailFields.put("em_m", hexDigest(email, "MD5"));
+         emailFields.put("em_s", hexDigest(email, "SHA-1"));
+
+         generateJsonDiff(syncValues, emailFields, syncValues, null);
+      } catch (Throwable t) { t.printStackTrace(); }
+   }
+
+   private static String hexDigest(String str, String digestInstance) throws Throwable {
+      MessageDigest digest = java.security.MessageDigest.getInstance(digestInstance);
+      digest.update(str.getBytes("UTF-8"));
+      byte messageDigest[] = digest.digest();
+
+      StringBuilder hexString = new StringBuilder();
+      for (byte aMessageDigest : messageDigest) {
+         String h = Integer.toHexString(0xFF & aMessageDigest);
+         while (h.length() < 2)
+            h = "0" + h;
+         hexString.append(h);
+      }
+      return hexString.toString();
    }
 
    static void setSubscription(boolean enable) {
@@ -702,10 +722,10 @@ class OneSignalStateSynchronizer {
    }
 
    static void resetCurrentState() {
-      onSessionDone = false;
       OneSignal.saveUserId(null);
 
       currentUserState.syncValues = new JSONObject();
       currentUserState.persistState();
+      OneSignal.setLastSessionTime(-60 * 61);
    }
 }

@@ -7,7 +7,7 @@ import android.content.Intent;
 
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
-import com.onesignal.shortcutbadger.ShortcutBadger;
+import com.onesignal.shortcutbadger.util.BroadcastHelper;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -32,22 +32,26 @@ public class XiaomiHomeBadger implements Badger {
             field.set(miuiNotification, String.valueOf(badgeCount == 0 ? "" : badgeCount));
         } catch (Exception e) {
             Intent localIntent = new Intent(
-                    INTENT_ACTION);
+                INTENT_ACTION);
             localIntent.putExtra(EXTRA_UPDATE_APP_COMPONENT_NAME, componentName.getPackageName() + "/" + componentName.getClassName());
             localIntent.putExtra(EXTRA_UPDATE_APP_MSG_TEXT, String.valueOf(badgeCount == 0 ? "" : badgeCount));
-            context.sendBroadcast(localIntent);
+            if(BroadcastHelper.canResolveBroadcast(context, localIntent)) {
+                context.sendBroadcast(localIntent);
+            } else {
+                throw new ShortcutBadgeException("unable to resolve intent: " + localIntent.toString());
+            }
         }
     }
 
     @Override
     public List<String> getSupportLaunchers() {
         return Arrays.asList(
-                "com.miui.miuilite",
-                "com.miui.home",
-                "com.miui.miuihome",
-                "com.miui.miuihome2",
-                "com.miui.mihome",
-                "com.miui.mihome2"
+            "com.miui.miuilite",
+            "com.miui.home",
+            "com.miui.miuihome",
+            "com.miui.miuihome2",
+            "com.miui.mihome",
+            "com.miui.mihome2"
         );
     }
 }

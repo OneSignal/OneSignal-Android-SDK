@@ -40,8 +40,6 @@ import android.view.View;
 import com.onesignal.*;
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 
-import org.json.JSONObject;
-
 import com.onesignal.example.iap.IabHelper;
 import com.onesignal.example.iap.IabResult;
 
@@ -58,6 +56,12 @@ public class MainActivity extends ActionBarActivity {
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       setContentView(R.layout.activity_main);
+//
+//      WebView myWebView = (WebView) findViewById(R.id.webview);
+//      WebSettings webSettings = myWebView.getSettings();
+//      webSettings.setJavaScriptEnabled(true);
+//      WebView.setWebContentsDebuggingEnabled(true);
+//      myWebView.loadUrl("http://akhbar4all.com");
 
       Log.e("tet", Locale.getDefault().getLanguage());
 
@@ -65,15 +69,15 @@ public class MainActivity extends ActionBarActivity {
 
 //      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
 //      OneSignal.startInit(this)
-//          .setAutoPromptLocation(true)
+//          .autoPromptLocation(true)
 //          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
 //          .init();
 
-      OneSignal.enableInAppAlertNotification(true);
-      OneSignal.enableNotificationsWhenActive(false);
-      OneSignal.sendTag("test3", "test3");
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
+      OneSignal.sendTag("test3", "test7");
       //OneSignal.setSubscription(false);
 
+      OneSignal.syncHashedEmail("test@onesignal.com");
 
 //        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
 //            @Override
@@ -158,14 +162,12 @@ public class MainActivity extends ActionBarActivity {
        * a new one comes in while the app is running.
        * This method is located in this activity as an example, you may have any class you wish implement NotificationOpenedHandler and define this method.
        *
-       * @param message        The message string the user seen/should see in the Android status bar.
-       * @param additionalData The additionalData key value pair section you entered in on onesignal.com.
-       * @param isActive       Was the app in the foreground when the notification was received.
+       * @param openedResult The message string the user seen/should see in the Android status bar.
        */
       @Override
-      public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-         Log.e("OneSignalExample", "message: " + message);
-         Log.e("OneSignalExample", "additional data: " + additionalData);
+      public void notificationOpened(OSNotificationOpenResult openedResult) {
+         Log.e("OneSignalExample", "body: " + openedResult.notification.payload.body);
+         Log.e("OneSignalExample", "additional data: " + openedResult.notification.payload.additionalData);
          //Log.e("OneSignalExample", "additionalData: " + additionalData.toString());
       }
    }

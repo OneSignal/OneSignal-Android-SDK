@@ -71,7 +71,10 @@ public class NotificationOpenedProcessor {
       JSONArray dataArray = null;
       if (!dismissed) {
          try {
-            dataArray = newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
+            JSONObject jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
+            jsonData.put("notificationId", inIntent.getIntExtra("notificationId", 0));
+            intent.putExtra("onesignal_data", jsonData.toString());
+            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
          } catch (Throwable t) {
             t.printStackTrace();
          }
@@ -90,7 +93,7 @@ public class NotificationOpenedProcessor {
       writableDb.close();
 
       if (!dismissed)
-         OneSignal.handleNotificationOpened(context, dataArray, inIntent.getBooleanExtra("from_alert", false));
+         OneSignal.handleNotificationOpen(context, dataArray, inIntent.getBooleanExtra("from_alert", false));
    }
 
    private static void addChildNotifications(JSONArray dataArray, String summaryGroup, SQLiteDatabase writableDb) {
@@ -176,9 +179,4 @@ public class NotificationOpenedProcessor {
       return values;
    }
 
-   private static JSONArray newJsonArray(JSONObject jsonObject) {
-      JSONArray jsonArray = new JSONArray();
-      jsonArray.put(jsonObject);
-      return jsonArray;
-   }
 }

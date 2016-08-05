@@ -28,5 +28,5 @@
 package com.onesignal;
 
 public class OSNotificationDisplayedResult {
-   public int notificationId;
+   public int androidNotificationId;
 }

@@ -40,6 +40,8 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -81,6 +83,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
+import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
 @Config(packageName = "com.onesignal.example",
@@ -107,6 +112,15 @@ public class MainOneSignalClassRunner {
             getCallBackRegId = registrationId;
          }
       });
+   }
+
+   private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
+      return new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(OSNotificationOpenResult openedResult) {
+            notificationOpenedMessage = openedResult.notification.payload.body;
+         }
+      };
    }
 
    private static void GetTags() {
@@ -169,7 +183,7 @@ public class MainOneSignalClassRunner {
       Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
 
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
 
       // Restart app, should not send onSession automatically
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
@@ -183,15 +197,91 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testOpenFromNotificationWhenAppIsDead() throws Exception {
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+   public void testOnSessionCalledOnlyOncePer30Sec() throws Exception {
+      // Will call create
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
 
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      // Shouldn't call on_session if just resuming app with a short delay
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+
+      // Or when restarting the app quickly.
+      ShadowOneSignalRestClient.lastPost = null;
+      StaticResetHelper.restSetStaticFields();
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+      Assert.assertEquals("{\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+   }
+
+   @Test
+   public void testPutStillCalledOnChanges() throws Exception {
+      // Will call create
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+
+      // Shouldn't call on_session if just resuming app with a short delay
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOSUtils.carrierName = "test2";
+
+      // Should make PUT call with changes on app restart
+      ShadowOneSignalRestClient.lastPost = null;
+      StaticResetHelper.restSetStaticFields();
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      GetIdsAvailable();
+      Assert.assertEquals("players/" + callBackUseId, ShadowOneSignalRestClient.lastUrl);
+      Assert.assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+   }
+
+
+   @Test
+   public void testPutCallsMadeWhenUserStateChangesOnAppResume() throws Exception {
+      // Will call create
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+      blankActivityController.resume();
+      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   public void testOpenFromNotificationWhenAppIsDead() throws Exception {
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -200,32 +290,21 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldCorrectlyRemoveOpenedHandlerAndFireMissedOnesWhenAddedBack() throws Exception {
-      OneSignal.NotificationOpenedHandler notifHandler = new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      };
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notifHandler);
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       threadAndTaskWait();
 
       OneSignal.removeNotificationOpenedHandler();
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notifHandler);
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
    public void shouldNotFireNotificationOpenAgainAfterAppRestart() throws Exception {
       AddLauncherIntentFilter();
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -238,12 +317,7 @@ public class MainOneSignalClassRunner {
 
       // Restart app - Should omit notification_types
       StaticResetHelper.restSetStaticFields();
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -252,15 +326,10 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOpenFromNotificationWhenAppIsInBackground() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
       Assert.assertEquals("Test Msg", notificationOpenedMessage);
       threadWait();
    }
@@ -272,7 +341,7 @@ public class MainOneSignalClassRunner {
       // From app launching normally
       Assert.assertNotNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
       Assert.assertNotNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
@@ -285,7 +354,7 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
 
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedActivity();
       Assert.assertEquals("android.intent.action.VIEW", intent.getAction());
@@ -303,7 +372,7 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
    }
 
@@ -315,34 +384,62 @@ public class MainOneSignalClassRunner {
 
       // From app launching normally
       Assert.assertNotNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
-         @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
-         }
-      });
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignal.handleNotificationOpened(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
       Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedActivity());
       Assert.assertEquals("Test Msg", notificationOpenedMessage);
    }
 
+   private static String notificationReceivedBody;
+   private static int androidNotificationId;
    @Test
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, new OneSignal.NotificationOpenedHandler() {
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
          @Override
-         public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-            notificationOpenedMessage = message;
+         public void notificationReceived(OSNotification notification) {
+            androidNotificationId = notification.androidNotificationId;
+            notificationReceivedBody = notification.payload.body;
          }
       });
       threadAndTaskWait();
+
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+
+      Bundle bundle = getBaseNotifBundle();
+      boolean processResult = GcmBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait(); threadAndTaskWait();
+      Assert.assertEquals(null, notificationOpenedMessage);
+      Assert.assertFalse(processResult);
+      // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
+      NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
+      Assert.assertEquals("Robo test message", notificationReceivedBody);
+      Assert.assertFalse(0 == androidNotificationId);
+
+      // Don't fire for duplicates
+      notificationOpenedMessage = null;
+      notificationReceivedBody = null;
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
       Assert.assertNull(notificationOpenedMessage);
 
-      OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      Assert.assertEquals("Robo test message", notificationOpenedMessage);
+      Assert.assertEquals(null, notificationOpenedMessage);
+      Assert.assertEquals(null, notificationReceivedBody);
+
+      // Test that only NotificationReceivedHandler fires
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
+      bundle = getBaseNotifBundle("UUID2");
+      notificationOpenedMessage = null;
+      notificationReceivedBody = null;
+
+      GcmBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait(); threadAndTaskWait();
+      Assert.assertEquals(null, notificationOpenedMessage);
+      Assert.assertNull(notificationOpenedMessage);
+      Assert.assertEquals("Robo test message", notificationReceivedBody);
    }
 
    @Test
@@ -408,7 +505,7 @@ public class MainOneSignalClassRunner {
       Assert.assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Restart app - Should omit notification_types
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInitWithBadProjectNum();
       threadAndTaskWait();
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
@@ -421,7 +518,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
 
       OneSignalInit();
       threadAndTaskWait();
@@ -439,13 +536,13 @@ public class MainOneSignalClassRunner {
 
 
       // Restart app - Should send unsubscribe with create player call.
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Restart app again - Value synced last time so don't send again.
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
@@ -528,7 +625,7 @@ public class MainOneSignalClassRunner {
 
       // Cold restart app, should not send the same identifier again.
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
@@ -557,7 +654,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
 
       // Developer deletes user, cold boots apps should resend all fields
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.failNext = true;
       ShadowOneSignalRestClient.failResponse = "{\"errors\":[\"Device type  is not a valid device_type. Valid options are: 0 = iOS, 1 = Android, 2 = Amazon, 3 = WindowsPhone(MPNS), 4 = ChromeApp, 5 = ChromeWebsite, 6 = WindowsPhone(WNS), 7 = Safari(APNS), 8 = Firefox\"]}";
       OneSignalInit();
@@ -599,7 +696,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
       Assert.assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
       Assert.assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
@@ -608,13 +705,13 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Should only send changed and new tags
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1.5\", \"test2\": \"value2\", \"test3\": \"value3\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       JSONObject sentTags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
       Assert.assertEquals("value1.5", sentTags.getString("test1"));
       Assert.assertFalse(sentTags.has(("test2")));
@@ -625,7 +722,7 @@ public class MainOneSignalClassRunner {
    public void shouldSendTagsWithRequestBatching() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       OneSignal.sendTags(new JSONObject("{\"test2\": \"value2\"}"));
 
@@ -635,7 +732,7 @@ public class MainOneSignalClassRunner {
 
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
@@ -707,6 +804,7 @@ public class MainOneSignalClassRunner {
                   if (failedCurModTest)
                      break;
                   OneSignal.sendTags("{\"key" + id + "\": " + i + "}");
+//                  OneSignalPackagePrivateHelper.OneSignalStateSynchronizer_syncUserState(false);
                }
             } catch (Throwable t) {
                // Ignore the flaky Robolectric null error.
@@ -729,7 +827,8 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
       OneSignalPackagePrivateHelper.resetRunnables();
       threadAndTaskWait();
-      Assert.assertEquals(0, ShadowOneSignalRestClient.networkCallCount);
+      // Only for awl
+      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       StaticResetHelper.restSetStaticFields();
 
@@ -747,7 +846,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
       OneSignalPackagePrivateHelper.resetRunnables();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       StaticResetHelper.restSetStaticFields();
 
@@ -882,28 +981,28 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\"}}";
+      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\"}}";
       GetTags();
       threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
 
       GetTags();
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
    public void getTagsDelayedAfterRegistering() throws Exception {
+      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\"}}";
+
       OneSignalInit();
       GetTags();
-      threadAndTaskWait();
-      ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\"}}";
-      threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.testUserId));
    }
@@ -920,7 +1019,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       threadAndTaskWait();
       Assert.assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    }
 
    /*
@@ -1027,21 +1126,26 @@ public class MainOneSignalClassRunner {
       Assert.assertFalse(toSyncValues.has(baseKey + "_a"));
       Assert.assertEquals(1, toSyncValues.getJSONArray(baseKey).length());
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
+      ShadowOneSignalRestClient.lastPost = null;
       RuntimeEnvironment.getRobolectricPackageManager().addPackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
+      ShadowOneSignalRestClient.lastPost = null;
       RuntimeEnvironment.getRobolectricPackageManager().removePackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
 
-      StaticResetHelper.restSetStaticFields();
+      restartAppAndElapseTimeToNextSession();
+      ShadowOneSignalRestClient.lastPost = null;
       OneSignalInit();
       threadAndTaskWait();
+
+      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
 
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
       Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
@@ -1086,7 +1190,7 @@ public class MainOneSignalClassRunner {
    @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class })
    public void shouldCancelAndClearNotifications() throws Exception {
       ShadowRoboNotificationManager.notifications.clear();
-      OneSignalInit();
+      OneSignalInitFromApplication();
       threadAndTaskWait();
 
       // Create 2 notifications
@@ -1135,6 +1239,11 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
    }
 
+   private void OneSignalInitFromApplication() {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+   }
+
    private void OneSignalInitWithBadProjectNum() {
       OneSignal.init(blankActivity, "NOT A VALID Google project number", ONESIGNAL_APP_ID);
    }
@@ -1151,5 +1260,11 @@ public class MainOneSignalClassRunner {
       resolveInfo.activityInfo.name = "MainActivity";
 
       RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
+   }
+
+   private static int sessionCountOffset = 1;
+   private static void restartAppAndElapseTimeToNextSession() {
+      StaticResetHelper.restSetStaticFields();
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1000 * 31 * sessionCountOffset++);
    }
 }

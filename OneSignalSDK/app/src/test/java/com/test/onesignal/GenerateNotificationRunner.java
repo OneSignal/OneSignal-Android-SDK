@@ -44,6 +44,7 @@ import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.NotificationOpenedProcessor;
 import com.onesignal.OSNotificationPayload;
+import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -365,35 +366,35 @@ public class GenerateNotificationRunner {
       testIntent.putExtras(createInternalPayloadBundle(getBundleWithAllOptionsSet()));
       controller.withIntent(testIntent).startCommand(0, 0);
 
-      OSNotificationPayload notification = service.notification;
-      Assert.assertEquals("Test H", notification.title);
-      Assert.assertEquals("Test B", notification.message);
-      Assert.assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notification.notificationId);
+      OSNotificationReceivedResult notificationReceived = service.notification;
+      OSNotificationPayload notificationPayload = notificationReceived.payload;
+      Assert.assertEquals("Test H", notificationPayload.title);
+      Assert.assertEquals("Test B", notificationPayload.body);
+      Assert.assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationId);
 
-      Assert.assertEquals(true, notification.backgroundData);
-      Assert.assertEquals(0, notification.visibility);
-      Assert.assertEquals("FF0000FF", notification.backgroundColor);
-      Assert.assertEquals("703322744261", notification.fromProjectNumber);
-      Assert.assertEquals("FFFFFF00", notification.ledColor);
-      Assert.assertEquals("big_picture", notification.bigPicture);
-      Assert.assertEquals("large_icon", notification.largeIcon);
-      Assert.assertEquals("small_icon", notification.smallIcon);
-      Assert.assertEquals("test_sound", notification.sound);
-      Assert.assertEquals("You test $[notif_count] MSGs!", notification.groupMessage);
-      Assert.assertEquals("http://google.com", notification.launchUrl);
+      Assert.assertEquals(0, notificationPayload.lockScreenVisibility);
+      Assert.assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
+      Assert.assertEquals("703322744261", notificationPayload.fromProjectNumber);
+      Assert.assertEquals("FFFFFF00", notificationPayload.ledColor);
+      Assert.assertEquals("big_picture", notificationPayload.bigPicture);
+      Assert.assertEquals("large_icon", notificationPayload.largeIcon);
+      Assert.assertEquals("small_icon", notificationPayload.smallIcon);
+      Assert.assertEquals("test_sound", notificationPayload.sound);
+      Assert.assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
+      Assert.assertEquals("http://google.com", notificationPayload.launchUrl);
 
-      Assert.assertEquals("id1", notification.actionButtons.get(0).id);
-      Assert.assertEquals("button1", notification.actionButtons.get(0).text);
-      Assert.assertEquals("ic_menu_share", notification.actionButtons.get(0).icon);
-      Assert.assertEquals("id2", notification.actionButtons.get(1).id);
-      Assert.assertEquals("button2", notification.actionButtons.get(1).text);
-      Assert.assertEquals("ic_menu_send", notification.actionButtons.get(1).icon);
+      Assert.assertEquals("id1", notificationPayload.actionButtons.get(0).id);
+      Assert.assertEquals("button1", notificationPayload.actionButtons.get(0).text);
+      Assert.assertEquals("ic_menu_share", notificationPayload.actionButtons.get(0).icon);
+      Assert.assertEquals("id2", notificationPayload.actionButtons.get(1).id);
+      Assert.assertEquals("button2", notificationPayload.actionButtons.get(1).text);
+      Assert.assertEquals("ic_menu_send", notificationPayload.actionButtons.get(1).icon);
 
-      Assert.assertEquals("test_image_url", notification.backgroundImageLayout.image);
-      Assert.assertEquals("FF000000", notification.backgroundImageLayout.titleTextColor);
-      Assert.assertEquals("FFFFFFFF", notification.backgroundImageLayout.bodyTextColor);
+      Assert.assertEquals("test_image_url", notificationPayload.backgroundImageLayout.image);
+      Assert.assertEquals("FF000000", notificationPayload.backgroundImageLayout.titleTextColor);
+      Assert.assertEquals("FFFFFFFF", notificationPayload.backgroundImageLayout.bodyTextColor);
 
-      JSONObject additionalData = notification.additionalData;
+      JSONObject additionalData = notificationPayload.additionalData;
       Assert.assertEquals("myValue", additionalData.getString("myKey"));
       Assert.assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
 
@@ -457,7 +458,7 @@ public class GenerateNotificationRunner {
 
 
    public static class NotificationExtenderServiceTest extends NotificationExtenderService {
-      public OSNotificationPayload notification;
+      public OSNotificationReceivedResult notification;
       public int notificationId = -1;
       public static boolean throwInAppCode;
 
@@ -469,12 +470,12 @@ public class GenerateNotificationRunner {
       }
 
       @Override
-      protected boolean onNotificationProcessing(OSNotificationPayload notification) {
+      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
          if (throwInAppCode)
             throw new NullPointerException();
 
          this.notification = notification;
-         notificationId = displayNotification(new OverrideSettings()).notificationId;
+         notificationId = displayNotification(new OverrideSettings()).androidNotificationId;
 
          return true;
       }

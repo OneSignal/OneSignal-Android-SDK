@@ -60,9 +60,16 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
-      return GcmBroadcastReceiver.processBundle(context, bundle);
+      return NotificationBundleProcessor.processBundle(context, bundle);
    }
 
+   public static void OneSignalStateSynchronizer_syncUserState(boolean fromSyncService) {
+      OneSignalStateSynchronizer.syncUserState(fromSyncService);
+   }
+
+   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
+      return NotificationBundleProcessor.Process(context, restoring, jsonPayload, overrideSettings);
+   }
 
    public class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public class NotificationRestorer extends com.onesignal.NotificationRestorer { }

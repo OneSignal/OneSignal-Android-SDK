@@ -4,6 +4,7 @@ import android.support.v4.app.NotificationCompat;
 
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.NotificationExtenderService;
+import com.onesignal.OSNotificationReceivedResult;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
@@ -11,12 +12,12 @@ import java.math.BigInteger;
 public class NotificationExtenderServiceTest extends NotificationExtenderService {
 
    @Override
-   protected boolean onNotificationProcessing(OSNotificationPayload notification) {
-      printObject(notification);
-      if (notification.actionButtons != null) {
-         for(OSNotificationPayload.ActionButton button : notification.actionButtons) {
+   protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+      DebuggingHelper.printObject(notification);
+      if (notification.payload.actionButtons != null) {
+         for(OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
            // System.out.println("button:");
-            printObject(button);
+            DebuggingHelper.printObject(button);
          }
       }
 
@@ -32,15 +33,5 @@ public class NotificationExtenderServiceTest extends NotificationExtenderService
       displayNotification(overrideSettings);
 
       return true;
-   }
-
-   private void printObject(Object obj) {
-      for (Field field : obj.getClass().getDeclaredFields()) {
-         String name = field.getName();
-         try {
-            Object value = field.get(obj);
-          //  System.out.printf("Field name: %s, Field value: %s%n", name, value);
-         } catch (Throwable t){}
-      }
    }
 }

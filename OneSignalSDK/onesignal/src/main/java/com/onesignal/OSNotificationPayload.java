@@ -34,23 +34,22 @@ import java.util.List;
 // Notification properties received from OneSignal.
 public class OSNotificationPayload {
    public String notificationId;
-   public String title, message;
+   public String title, body;
    public JSONObject additionalData;
    public String smallIcon;
-   public String bigPicture;
    public String largeIcon;
+   public String bigPicture;
+   public String smallIconAccentColor;
    public String launchUrl;
    public String sound;
-   public String group;
-   public String backgroundColor;
    public String ledColor;
-   public int visibility;
+   public int lockScreenVisibility = 1;
+   public String groupKey;
    public String groupMessage;
    public List<ActionButton> actionButtons;
-   public boolean backgroundData;
    public String fromProjectNumber;
-   public boolean restoring;
    public BackgroundImageLayout backgroundImageLayout;
+   public String rawPayload;
    
    public static class ActionButton {
       public String id;

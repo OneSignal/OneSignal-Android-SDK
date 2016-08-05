@@ -35,10 +35,12 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v4.content.WakefulBroadcastReceiver;
 
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
 
@@ -66,7 +68,7 @@ class NotificationBundleProcessor {
    }
 
    static int Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled() &&  OneSignal.isAppActive();
 
       int notificationId;
       if (overrideSettings != null && overrideSettings.androidNotificationId != null)
@@ -74,9 +76,17 @@ class NotificationBundleProcessor {
       else
          notificationId = new Random().nextInt();
 
-      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert && OneSignal.isAppActive(), overrideSettings);
-      if (!restoring)
+      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert, overrideSettings);
+
+      if (!restoring) {
          saveNotification(context, jsonPayload, false, notificationId);
+         try {
+            JSONObject jsonObject = new JSONObject(jsonPayload.toString());
+            jsonObject.put("notificationId", notificationId);
+            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, showAsAlert);
+         } catch(Throwable t) {}
+      }
+
       return notificationId;
    }
 
@@ -94,7 +104,7 @@ class NotificationBundleProcessor {
    // Saving the notification provides the following:
    //   * Prevent duplicates.
    //   * Build summary notifications
-   //   * Future - Re-display notifications after reboot and upgrade of app.
+   //   * Redisplay notifications after reboot and upgrade of app.
    //   * Future - Developer API to get a list of notifications.
    static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
       try {
@@ -198,5 +208,127 @@ class NotificationBundleProcessor {
             e.printStackTrace();
          }
       }
+   }
+
+   static OSNotificationPayload OSNotificationPayloadFrom(JSONObject currentJsonPayload) {
+      OSNotificationPayload notification = new OSNotificationPayload();
+      try {
+         JSONObject customJson = new JSONObject(currentJsonPayload.optString("custom"));
+         notification.notificationId = customJson.optString("i");
+         notification.rawPayload = currentJsonPayload.toString();
+         notification.additionalData = customJson.optJSONObject("a");
+         notification.launchUrl = customJson.optString("u", null);
+
+         notification.body = currentJsonPayload.optString("alert", null);
+         notification.title = currentJsonPayload.optString("title", null);
+         notification.smallIcon = currentJsonPayload.optString("sicon", null);
+         notification.bigPicture = currentJsonPayload.optString("bicon", null);
+         notification.largeIcon = currentJsonPayload.optString("licon", null);
+         notification.sound = currentJsonPayload.optString("sound", null);
+         notification.groupKey = currentJsonPayload.optString("grp", null);
+         notification.groupMessage = currentJsonPayload.optString("grp_msg", null);
+         notification.smallIconAccentColor = currentJsonPayload.optString("bgac", null);
+         notification.ledColor = currentJsonPayload.optString("ledc", null);
+         String visibility = currentJsonPayload.optString("vis", null);
+         if (visibility != null)
+            notification.lockScreenVisibility = Integer.parseInt(visibility);
+         notification.fromProjectNumber = currentJsonPayload.optString("from", null);
+
+         try {
+            setActionButtons(notification);
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.actionButtons values!", t);
+         }
+
+         try {
+            setBackgroundImageLayout(notification, currentJsonPayload);
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.backgroundImageLayout values!", t);
+         }
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload values!", t);
+      }
+
+      return notification;
+   }
+
+
+   private static void setActionButtons(OSNotificationPayload notification) throws Throwable {
+      if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {
+         JSONArray jsonActionButtons = notification.additionalData.getJSONArray("actionButtons");
+         notification.actionButtons = new ArrayList<>();
+
+         for (int i = 0; i < jsonActionButtons.length(); i++) {
+            JSONObject jsonActionButton = jsonActionButtons.getJSONObject(i);
+            OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
+            actionButton.id = jsonActionButton.optString("id", null);
+            actionButton.text = jsonActionButton.optString("text", null);
+            actionButton.icon = jsonActionButton.optString("icon", null);
+            notification.actionButtons.add(actionButton);
+         }
+         notification.additionalData.remove("actionSelected");
+         notification.additionalData.remove("actionButtons");
+      }
+   }
+
+   private static void setBackgroundImageLayout(OSNotificationPayload notification, JSONObject currentJsonPayload) throws Throwable {
+      String jsonStrBgImage = currentJsonPayload.optString("bg_img", null);
+      if (jsonStrBgImage != null) {
+         JSONObject jsonBgImage = new JSONObject(jsonStrBgImage);
+         notification.backgroundImageLayout = new OSNotificationPayload.BackgroundImageLayout();
+         notification.backgroundImageLayout.image = jsonBgImage.optString("img");
+         notification.backgroundImageLayout.titleTextColor = jsonBgImage.optString("tc");
+         notification.backgroundImageLayout.bodyTextColor = jsonBgImage.optString("bc");
+      }
+   }
+
+   // Return true to count the payload as processed.
+   static boolean processBundle(Context context, final Bundle bundle) {
+      // Not a OneSignal GCM message
+      if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
+         return true;
+
+      prepareBundle(bundle);
+
+      Intent overrideIntent = NotificationExtenderService.getIntent(context);
+      if (overrideIntent != null) {
+         overrideIntent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
+         WakefulBroadcastReceiver.startWakefulService(context, overrideIntent);
+         return true;
+      }
+
+      boolean display = shouldDisplay(bundle.getString("alert") != null
+                                   && !"".equals(bundle.getString("alert")));
+
+      // Save as a opened notification to prevent duplicates.
+      if (!display) {
+         if (OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle)))
+            return true;
+         saveNotification(context, bundle, true, -1);
+         // Current thread is meant to be short lived.
+         //    Make a new thread to do our OneSignal work on.
+         new Thread(new Runnable() {
+            public void run() {
+               OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false, false);
+            }
+         }).start();
+      }
+
+      return !display;
+   }
+
+   static boolean shouldDisplay(boolean hasBody) {
+      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
+      boolean isActive = OneSignal.isAppActive();
+      return hasBody &&
+                (OneSignal.getNotificationsWhenActiveEnabled()
+              || showAsAlert
+              || !isActive);
+   }
+
+   static JSONArray newJsonArray(JSONObject jsonObject) {
+      JSONArray jsonArray = new JSONArray();
+      jsonArray.put(jsonObject);
+      return jsonArray;
    }
 }

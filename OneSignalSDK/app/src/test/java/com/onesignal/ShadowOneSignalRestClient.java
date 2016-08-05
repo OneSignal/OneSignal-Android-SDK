@@ -37,7 +37,7 @@ public class ShadowOneSignalRestClient {
    public static String lastUrl;
    public static Thread testThread;
    public static boolean failNext, failAll;
-   public static String failResponse = "{}", nextSuccessResponse;
+   public static String failResponse = "{}", nextSuccessResponse, nextSuccessfulGETResponse;
    public static int networkCallCount;
 
    public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
@@ -113,7 +113,7 @@ public class ShadowOneSignalRestClient {
       networkCallCount++;
       lastPost = jsonBody;
 
-      System.out.println("lastPost:jsonBody: " + lastPost.toString());
+      System.out.println("putSync:lastPost:jsonBody: " + lastPost.toString());
 
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
@@ -131,22 +131,36 @@ public class ShadowOneSignalRestClient {
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
 
-      System.out.println("lastPost:jsonBody: " + lastPost.toString());
+      System.out.println("put:lastPost:jsonBody: " + lastPost.toString());
 
       responseHandler.onSuccess("{}");
 
       safeInterrupt();
    }
 
+   static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      System.out.println("get: " + url);
+      networkCallCount++;
+      doInterruptibleDelay();
+      responseHandler.onSuccess("{\"awl_list\": {" +
+                                    "\"IlIfoQBT5jXgkgn6nBsIrGJn5t0Yd91GqKAGoApIYzk=\": 1," +
+                                    "\"Q3zjDf/4NxXU1QpN9WKp/iwVYNPQZ0js2EDDNO+eo0o=\": 1" +
+                                "}}");
+
+      safeInterrupt();
+   }
+
    static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      System.out.println("getSync: " + url);
+
       lastUrl = url;
       networkCallCount++;
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
 
-      if (nextSuccessResponse != null) {
-         responseHandler.onSuccess(nextSuccessResponse);
-         nextSuccessResponse = null;
+      if (nextSuccessfulGETResponse != null) {
+         responseHandler.onSuccess(nextSuccessfulGETResponse);
+         nextSuccessfulGETResponse = null;
       }
       else
          responseHandler.onSuccess("{}");

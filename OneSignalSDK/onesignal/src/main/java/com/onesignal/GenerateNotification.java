@@ -65,6 +65,8 @@ import android.widget.RemoteViews;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
+import static com.onesignal.OSUtils.getResourceString;
+
 class GenerateNotification {
    private static Context currentContext = null;
    private static String packageName = null;
@@ -110,7 +112,7 @@ class GenerateNotification {
             List<String> buttonsLabels = new ArrayList<String>();
             List<String> buttonIds = new ArrayList<String>();
 
-            addAlertButtons(gcmJson, buttonsLabels, buttonIds);
+            addAlertButtons(activity, gcmJson, buttonsLabels, buttonIds);
 
             final List<String> finalButtonIds = buttonIds;
 
@@ -129,13 +131,8 @@ class GenerateNotification {
 
                   if (finalButtonIds.size() > 1) {
                      try {
-                        JSONObject customJson = new JSONObject(gcmJson.optString("custom"));
-                        JSONObject additionalDataJSON = customJson.optJSONObject("a");
-                        additionalDataJSON.put("actionSelected", finalButtonIds.get(index));
-
                         JSONObject newJsonData = new JSONObject(gcmJson.toString());
-                        newJsonData.put("custom", customJson.toString());
-
+                        newJsonData.put("actionSelected", finalButtonIds.get(index));
                         finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
 
                         NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
@@ -365,7 +362,7 @@ class GenerateNotification {
 
       if (cursor.moveToFirst()) {
          SpannableString spannableString;
-         summeryList = new ArrayList<SpannableString>();
+         summeryList = new ArrayList<>();
 
          do {
             if (cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_IS_SUMMARY)) == 1)
@@ -438,11 +435,10 @@ class GenerateNotification {
             summeryBuilder.setTicker(summaryMessage);
 
          NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
-         String line1Title = null;
 
          // Add the latest notification to the summary
          if (!updateSummary) {
-            line1Title = gcmBundle.optString("title", null);
+            String line1Title = gcmBundle.optString("title", null);
 
             if (line1Title == null)
                line1Title = "";
@@ -555,8 +551,6 @@ class GenerateNotification {
       Bitmap bitmap = getBitmap(gcmBundle.optString("licon"));
       if (bitmap == null)
          bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
-      if (bitmap == null)
-         bitmap = getBitmapFromAssetsOrResourceName("ic_gamethrive_large_icon_default");
 
       if (bitmap == null)
          return null;
@@ -655,20 +649,15 @@ class GenerateNotification {
       if (notificationIcon != 0)
          return notificationIcon;
 
-      notificationIcon = getDrawableId("ic_stat_gamethrive_default");
-      if (notificationIcon != 0)
-         return notificationIcon;
-
       notificationIcon = getDrawableId("corona_statusbar_icon_default");
       if (notificationIcon != 0)
          return notificationIcon;
 
-      // Launcher icon
-      notificationIcon = currentContext.getApplicationInfo().icon;
+      notificationIcon = getDrawableId("ic_os_notification_fallback_white_24dp");
       if (notificationIcon != 0)
          return notificationIcon;
 
-      return drawable.sym_def_app_icon; // Catches case where icon isn't set in the AndroidManifest.xml
+      return drawable.ic_popup_reminder;
    }
 
    private static int getDrawableId(String name) {
@@ -686,10 +675,6 @@ class GenerateNotification {
       }
 
       soundId = contextResources.getIdentifier("onesignal_default_sound", "raw", packageName);
-      if (soundId != 0)
-         return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
-
-      soundId = contextResources.getIdentifier("gamethrive_default_sound", "raw", packageName);
       if (soundId != 0)
          return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
 
@@ -724,14 +709,12 @@ class GenerateNotification {
 
                for (int i = 0; i < buttons.length(); i++) {
                   JSONObject button = buttons.optJSONObject(i);
-                  additionalDataJSON.put("actionSelected", button.optString("id"));
-                  
                   JSONObject bundle = new JSONObject(gcmBundle.toString());
-                  bundle.put("custom", customJson.toString());
 
                   Intent buttonIntent = getNewBaseIntent(notificationId);
                   buttonIntent.setAction("" + i); // Required to keep each action button from replacing extras of each other
                   buttonIntent.putExtra("action_button", true);
+                  bundle.put("actionSelected", button.optString("id"));
                   buttonIntent.putExtra("onesignal_data", bundle.toString());
                   if (groupSummary != null)
                      buttonIntent.putExtra("summary", groupSummary);
@@ -753,7 +736,7 @@ class GenerateNotification {
       }
    }
 
-   private static void addAlertButtons(JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
+   private static void addAlertButtons(Context context, JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
       try {
          JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
 
@@ -773,7 +756,7 @@ class GenerateNotification {
          }
 
          if (buttonsLabels.size() < 3) {
-            buttonsLabels.add("Close");
+            buttonsLabels.add(getResourceString(context, "onesignal_in_app_alert_ok_button_text", "Ok"));
             buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
          }
       } catch (Throwable t) {

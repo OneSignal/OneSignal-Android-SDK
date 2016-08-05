@@ -46,8 +46,8 @@ public class PushRegistratorADM implements PushRegistrator {
             if (registrationId == null)
                adm.startRegister();
             else {
-               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,  "ADM Already registed with ID:" + registrationId);
-               callback.complete(registrationId);
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,  "ADM Already registered with ID:" + registrationId);
+               callback.complete(registrationId, 1);
             }
 
             try {
@@ -55,7 +55,7 @@ public class PushRegistratorADM implements PushRegistrator {
             } catch (InterruptedException e) {}
             
             if (!callbackSuccessful) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "com.onesignal.ADMMessageHandler timed out, please check that your have the reciever, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.");
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "com.onesignal.ADMMessageHandler timed out, please check that your have the receiver, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.");
                fireCallback(null);
             }
          }
@@ -64,6 +64,6 @@ public class PushRegistratorADM implements PushRegistrator {
 
    public static void fireCallback(String id) {
       callbackSuccessful = true;
-      registeredCallback.complete(id);
+      registeredCallback.complete(id, 1);
    }
 }

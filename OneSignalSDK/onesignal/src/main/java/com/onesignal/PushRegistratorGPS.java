@@ -40,9 +40,10 @@ import android.content.SharedPreferences;
 import android.content.DialogInterface.OnClickListener;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 
 import java.io.IOException;
+
+import static com.onesignal.OSUtils.getResourceString;
 
 public class PushRegistratorGPS implements PushRegistrator {
 
@@ -61,13 +62,11 @@ public class PushRegistratorGPS implements PushRegistrator {
             registerInBackground(googleProjectNumber);
          else {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No valid Google Play services APK found.");
-            OneSignal.subscribableStatus = -7;
-            registeredHandler.complete(null);
+            registeredHandler.complete(null, -7);
          }
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not register with GCM due to an error with the AndroidManifest.xml file or with 'Google Play services'.", t);
-         OneSignal.subscribableStatus = -8;
-         registeredHandler.complete(null);
+         registeredHandler.complete(null, -8);
       }
    }
 
@@ -107,13 +106,7 @@ public class PushRegistratorGPS implements PushRegistrator {
       return true;
    }
 
-   private String getResourceString(Context context, String key, String defaultStr) {
-      Resources resources = context.getResources();
-      int bodyResId = resources.getIdentifier(key, "string", context.getPackageName());
-      if (bodyResId != 0)
-         return resources.getString(bodyResId);
-      return defaultStr;
-   }
+
 
    private void ShowUpdateGPSDialog(final int resultCode) {
       OneSignal.runOnUiThread(new Runnable() {
@@ -156,21 +149,20 @@ public class PushRegistratorGPS implements PushRegistrator {
    private void registerInBackground(final String googleProjectNumber) {
       new Thread(new Runnable() {
          public void run() {
-            String registrationId = null;
             boolean firedComplete = false;
 
             for (int currentRetry = 0; currentRetry < GCM_RETRY_COUNT; currentRetry++) {
                try {
                   GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(appContext);
-                  registrationId = gcm.register(googleProjectNumber);
+                  String registrationId = gcm.register(googleProjectNumber);
                   OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, Google Registration ID = " + registrationId);
-                  registeredHandler.complete(registrationId);
+                  registeredHandler.complete(registrationId, 1);
                   break;
                } catch (IOException e) {
                   if (!"SERVICE_NOT_AVAILABLE".equals(e.getMessage())) {
                      OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error Getting Google Registration ID", e);
                      if (!firedComplete)
-                        registeredHandler.complete(null);
+                        registeredHandler.complete(null, -11);
                      break;
                   }
                   else {
@@ -180,7 +172,7 @@ public class PushRegistratorGPS implements PushRegistrator {
                         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Google Play services returned SERVICE_NOT_AVAILABLE error. Current retry count: " + currentRetry, e);
                         if (currentRetry == 2) {
                            // Retry 3 times before firing a null response and continuing a few more times.
-                           registeredHandler.complete(null);
+                           registeredHandler.complete(null, -9);
                            firedComplete = true;
                         }
                         try { Thread.sleep(10000 * (currentRetry + 1)); } catch (Throwable t) {}
@@ -188,7 +180,7 @@ public class PushRegistratorGPS implements PushRegistrator {
                   }
                } catch (Throwable t) {
                   OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error Getting Google Registration ID", t);
-                  registeredHandler.complete(null);
+                  registeredHandler.complete(null, -12);
                   break;
                }
             }

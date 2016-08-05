@@ -43,7 +43,7 @@ public class ShadowPushRegistratorGPS {
    private static PushRegistrator.RegisteredHandler lastCallback;
 
    public static void manualFireRegisterForPush() {
-      lastCallback.complete(regId);
+      lastCallback.complete(regId, 1);
    }
 
    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
@@ -52,6 +52,6 @@ public class ShadowPushRegistratorGPS {
       if (waitTimer > 0)
          SystemClock.sleep(waitTimer);
 
-      callback.complete(fail ? null : regId);
+      callback.complete(fail ? null : regId, 1);
    }
 }

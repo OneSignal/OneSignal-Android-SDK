@@ -61,12 +61,12 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       setResultCode(Activity.RESULT_OK);
    }
 
-   private static void processOrderBroadcast(final Context context, Intent intent, Bundle bundle) {
+   private static void processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
       if (!isGcmMessage(intent))
          return;
 
       // Return if the notification will NOT be handled by normal GcmIntentService display flow.
-      if (processBundle(context, bundle))
+      if (NotificationBundleProcessor.processBundle(context, bundle))
          return;
 
       Intent intentForService = new Intent();
@@ -76,45 +76,4 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       startWakefulService(context, intentForService);
    }
 
-   static boolean processBundle(Context context, final Bundle bundle) {
-      // Not a OneSignal GCM message
-      if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
-         return true;
-
-      NotificationBundleProcessor.prepareBundle(bundle);
-
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled(context);
-      boolean isActive = OneSignal.isAppActive();
-      boolean display = OneSignal.getNotificationsWhenActiveEnabled(context)
-            || showAsAlert
-            || !isActive;
-
-      BackgroundBroadcaster.Invoke(context, bundle, isActive);
-
-      Intent overrideIntent = NotificationExtenderService.getIntent(context);
-      if (overrideIntent != null) {
-         overrideIntent.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
-         startWakefulService(context, overrideIntent);
-         return true;
-      }
-
-      if (bundle.getString("alert") == null || "".equals(bundle.getString("alert")))
-         return true;
-
-      if (!display) {
-         // Current thread is meant to be short lived.
-         //    Make a new thread to do our OneSignal work on.
-         new Thread(new Runnable() {
-            public void run() {
-               OneSignal.handleNotificationOpened(NotificationBundleProcessor.bundleAsJsonArray(bundle));
-            }
-         }).start();
-
-         // Save as a opened notification to prevent duplicates.
-         NotificationBundleProcessor.saveNotification(context, bundle, true, -1);
-         return true;
-      }
-
-      return false;
-   }
 }

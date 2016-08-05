@@ -1,12 +1,39 @@
+/**
+ * Modified MIT License
+ *
+ * Copyright 2016 OneSignal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * 1. The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * 2. All copies of substantial portions of the Software may only be used in connection
+ * with services provided by OneSignal.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 package com.onesignal.example;
 
 import android.app.Application;
 import android.os.StrictMode;
 import android.util.Log;
 
+import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
-
-import org.json.JSONObject;
 
 public class OneSignalExampleApp extends Application {
 
@@ -19,26 +46,41 @@ public class OneSignalExampleApp extends Application {
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       OneSignal.startInit(this)
-          .setAutoPromptLocation(true)
+          .autoPromptLocation(true)
           .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
+          .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
           .init();
+   }
+
+   private class ExampleNotificationReceivedHandler implements OneSignal.NotificationReceivedHandler {
+      /**
+       * Callback to implement in your app to handle when a notification is received while your app running
+       *  in the foreground or background.
+       *
+       *  Use a NotificationExtenderService instead to receive an event even when your app is closed (not 'forced stopped')
+       *     or to override notification properties.
+       *
+       * @param notification Contains information about the notification received.
+       */
+      @Override
+      public void notificationReceived(OSNotification notification) {
+         Log.w("OneSignalExample", "notificationReceived!!!!!!");
+         DebuggingHelper.printObject(notification);
+         DebuggingHelper.printObject(notification.payload);
+      }
    }
 
    private class ExampleNotificationOpenedHandler implements OneSignal.NotificationOpenedHandler {
       /**
-       * Callback to implement in your app to handle when a notification is opened from the Android status bar or
-       * a new one comes in while the app is running.
-       * This method is located in this activity as an example, you may have any class you wish implement NotificationOpenedHandler and define this method.
+       * Callback to implement in your app to handle when a notification is opened from the Android status bar or in app alert
        *
-       * @param message        The message string the user seen/should see in the Android status bar.
-       * @param additionalData The additionalData key value pair section you entered in on onesignal.com.
-       * @param isActive       Was the app in the foreground when the notification was received.
+       * @param openedResult Contains information about the notification opened and the action taken on it.
        */
       @Override
-      public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-         Log.e("OneSignalExample", "message: " + message);
-         Log.e("OneSignalExample", "additional data: " + additionalData);
-         //Log.e("OneSignalExample", "additionalData: " + additionalData.toString());
+      public void notificationOpened(OSNotificationOpenResult openedResult) {
+         Log.w("OneSignalExample", "notificationOpened!!!!!!");
+         DebuggingHelper.printObject(openedResult.action);
+         DebuggingHelper.printObject(openedResult.notification);
       }
    }
 }
