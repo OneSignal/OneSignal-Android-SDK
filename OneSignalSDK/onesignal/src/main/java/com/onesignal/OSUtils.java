@@ -30,6 +30,7 @@ package com.onesignal;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -79,6 +80,14 @@ class OSUtils {
       }
 
       return null;
+   }
+
+   static String getResourceString(Context context, String key, String defaultStr) {
+      Resources resources = context.getResources();
+      int bodyResId = resources.getIdentifier(key, "string", context.getPackageName());
+      if (bodyResId != 0)
+         return resources.getString(bodyResId);
+      return defaultStr;
    }
 
    static String getCorrectedLanguage() {

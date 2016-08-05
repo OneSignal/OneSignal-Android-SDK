@@ -65,6 +65,8 @@ import android.widget.RemoteViews;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
+import static com.onesignal.OSUtils.getResourceString;
+
 class GenerateNotification {
    private static Context currentContext = null;
    private static String packageName = null;
@@ -110,7 +112,7 @@ class GenerateNotification {
             List<String> buttonsLabels = new ArrayList<String>();
             List<String> buttonIds = new ArrayList<String>();
 
-            addAlertButtons(gcmJson, buttonsLabels, buttonIds);
+            addAlertButtons(activity, gcmJson, buttonsLabels, buttonIds);
 
             final List<String> finalButtonIds = buttonIds;
 
@@ -735,7 +737,7 @@ class GenerateNotification {
       }
    }
 
-   private static void addAlertButtons(JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
+   private static void addAlertButtons(Context context, JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
       try {
          JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
 
@@ -755,7 +757,7 @@ class GenerateNotification {
          }
 
          if (buttonsLabels.size() < 3) {
-            buttonsLabels.add("Close");
+            buttonsLabels.add(getResourceString(context, "onesignal_in_app_alert_ok_button_text", "Ok"));
             buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
          }
       } catch (Throwable t) {

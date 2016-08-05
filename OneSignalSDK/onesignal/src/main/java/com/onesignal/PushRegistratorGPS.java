@@ -44,6 +44,8 @@ import android.content.res.Resources;
 
 import java.io.IOException;
 
+import static com.onesignal.OSUtils.getResourceString;
+
 public class PushRegistratorGPS implements PushRegistrator {
 
    private Context appContext;
@@ -107,13 +109,7 @@ public class PushRegistratorGPS implements PushRegistrator {
       return true;
    }
 
-   private String getResourceString(Context context, String key, String defaultStr) {
-      Resources resources = context.getResources();
-      int bodyResId = resources.getIdentifier(key, "string", context.getPackageName());
-      if (bodyResId != 0)
-         return resources.getString(bodyResId);
-      return defaultStr;
-   }
+
 
    private void ShowUpdateGPSDialog(final int resultCode) {
       OneSignal.runOnUiThread(new Runnable() {
