@@ -47,7 +47,7 @@ public class PushRegistratorADM implements PushRegistrator {
                adm.startRegister();
             else {
                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,  "ADM Already registered with ID:" + registrationId);
-               callback.complete(registrationId);
+               callback.complete(registrationId, 1);
             }
 
             try {
@@ -64,6 +64,6 @@ public class PushRegistratorADM implements PushRegistrator {
 
    public static void fireCallback(String id) {
       callbackSuccessful = true;
-      registeredCallback.complete(id);
+      registeredCallback.complete(id, 1);
    }
 }

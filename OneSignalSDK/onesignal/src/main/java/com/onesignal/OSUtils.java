@@ -37,8 +37,69 @@ import android.os.Bundle;
 import android.telephony.TelephonyManager;
 
 import java.util.Locale;
+import java.util.UUID;
 
 class OSUtils {
+
+   static final int UNINITIALIZABLE_STATUS = -999;
+
+   static int initializationChecker(int deviceType, String googleProjectNumber, String oneSignalAppId) {
+      int subscribableStatus = 1;
+
+      try {
+         //noinspection ResultOfMethodCallIgnored
+         UUID.fromString(oneSignalAppId);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "OneSignal AppId format is invalid.\nExample: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba'\n", t);
+         return UNINITIALIZABLE_STATUS;
+      }
+
+      if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) || "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
+         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
+
+      if (deviceType == 1) {
+         try {
+            //noinspection ResultOfMethodCallIgnored
+            Double.parseDouble(googleProjectNumber);
+            if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
+               throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t);
+            subscribableStatus = -6;
+         }
+
+         try {
+            Class.forName("com.google.android.gms.gcm.GoogleCloudMessaging");
+         } catch (ClassNotFoundException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The GCM Google Play services client library was not found. Please make sure to include it in your project.", e);
+            subscribableStatus = -4;
+         }
+
+         try {
+            Class.forName("com.google.android.gms.common.GooglePlayServicesUtil");
+         } catch (ClassNotFoundException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The GooglePlayServicesUtil class part of Google Play services client library was not found. Include this in your project.", e);
+            subscribableStatus = -4;
+         }
+      }
+
+      try {
+         Class.forName("android.support.v4.view.MenuCompat");
+         try {
+            Class.forName("android.support.v4.content.WakefulBroadcastReceiver");
+            Class.forName("android.support.v4.app.NotificationManagerCompat");
+         } catch (ClassNotFoundException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library v4 is to old or incomplete. Please update your project's android-support-v4.jar to the latest revision.", e);
+            subscribableStatus = -5;
+         }
+      } catch (ClassNotFoundException e) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library v4. Please make sure android-support-v4.jar has been correctly added to your project.", e);
+         subscribableStatus = -3;
+      }
+
+      return subscribableStatus;
+   }
+
    int getDeviceType() {
       try {
          // Class only available on the FireOS and only when the following is in the AndroidManifest.xml.

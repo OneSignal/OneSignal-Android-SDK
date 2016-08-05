@@ -435,11 +435,10 @@ class GenerateNotification {
             summeryBuilder.setTicker(summaryMessage);
 
          NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
-         String line1Title = null;
 
          // Add the latest notification to the summary
          if (!updateSummary) {
-            line1Title = gcmBundle.optString("title", null);
+            String line1Title = gcmBundle.optString("title", null);
 
             if (line1Title == null)
                line1Title = "";

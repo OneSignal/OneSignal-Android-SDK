@@ -43,7 +43,7 @@ public class OSNotificationPayload {
    public String launchUrl;
    public String sound;
    public String ledColor;
-   public int lockScreenVisibility;
+   public int lockScreenVisibility = 1;
    public String groupKey;
    public String groupMessage;
    public List<ActionButton> actionButtons;
