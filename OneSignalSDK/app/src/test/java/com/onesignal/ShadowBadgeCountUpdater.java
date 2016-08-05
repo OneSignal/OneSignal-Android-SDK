@@ -40,6 +40,8 @@ public class ShadowBadgeCountUpdater {
 
    static void updateCount(int count, Context context) {
       lastCount = count;
-      ShortcutBadger.applyCount(context, count);
+      try {
+         ShortcutBadger.applyCount(context, count);
+      } catch(Throwable t) {}
    }
 }
