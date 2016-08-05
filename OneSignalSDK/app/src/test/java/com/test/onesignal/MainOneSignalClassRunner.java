@@ -981,7 +981,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\"}}";
+      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\"}}";
       GetTags();
       threadAndTaskWait(); threadAndTaskWait();
 
@@ -996,11 +996,11 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void getTagsDelayedAfterRegistering() throws Exception {
+      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\"}}";
+
       OneSignalInit();
       GetTags();
-      threadAndTaskWait();
-      ShadowOneSignalRestClient.nextSuccessResponse = "{\"tags\": {\"test1\": \"value1\"}}";
-      threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
 
       Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));

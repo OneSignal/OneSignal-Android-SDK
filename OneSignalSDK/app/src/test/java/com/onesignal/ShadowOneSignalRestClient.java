@@ -37,7 +37,7 @@ public class ShadowOneSignalRestClient {
    public static String lastUrl;
    public static Thread testThread;
    public static boolean failNext, failAll;
-   public static String failResponse = "{}", nextSuccessResponse;
+   public static String failResponse = "{}", nextSuccessResponse, nextSuccessfulGETResponse;
    public static int networkCallCount;
 
    public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
@@ -158,9 +158,9 @@ public class ShadowOneSignalRestClient {
       doInterruptibleDelay();
       if (doFail(responseHandler)) return;
 
-      if (nextSuccessResponse != null) {
-         responseHandler.onSuccess(nextSuccessResponse);
-         nextSuccessResponse = null;
+      if (nextSuccessfulGETResponse != null) {
+         responseHandler.onSuccess(nextSuccessfulGETResponse);
+         nextSuccessfulGETResponse = null;
       }
       else
          responseHandler.onSuccess("{}");
