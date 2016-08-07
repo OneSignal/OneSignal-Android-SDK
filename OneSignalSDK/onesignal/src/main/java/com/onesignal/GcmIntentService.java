@@ -45,6 +45,7 @@ public class GcmIntentService extends IntentService {
 
    public GcmIntentService() {
       super("GcmIntentService");
+      setIntentRedelivery(true);
    }
 
    // Called when GCM message is received from Google or a notification is being restored.

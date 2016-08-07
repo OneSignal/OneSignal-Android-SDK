@@ -77,6 +77,7 @@ public abstract class NotificationExtenderService extends IntentService {
 
    public NotificationExtenderService() {
       super("NotificationExtenderService");
+      setIntentRedelivery(true);
    }
 
    private OSNotificationDisplayedResult osNotificationDisplayedResult;
