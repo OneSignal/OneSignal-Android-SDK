@@ -6,7 +6,7 @@
 
     <uses-sdk
         android:minSdkVersion="9"
-        android:targetSdkVersion="21" />
+        android:targetSdkVersion="23" />
     
     <!-- ##START## OneSignal Permissions -->
     
@@ -26,24 +26,31 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     
     <!-- START: ShortcutBadger -->
-	<!--for Samsung-->
+	<!-- Samsung -->
 	<uses-permission android:name="com.sec.android.provider.badge.permission.READ"/>
 	<uses-permission android:name="com.sec.android.provider.badge.permission.WRITE"/>
 	
-	<!--for htc-->
+	<!-- HTC -->
 	<uses-permission android:name="com.htc.launcher.permission.READ_SETTINGS"/>
 	<uses-permission android:name="com.htc.launcher.permission.UPDATE_SHORTCUT"/>
 	
-	<!--for sony-->
+	<!-- Sony -->
 	<uses-permission android:name="com.sonyericsson.home.permission.BROADCAST_BADGE"/>
+	<uses-permission android:name="com.sonymobile.home.permission.PROVIDER_INSERT_BADGE"/>
 	
-	<!--for apex-->
+	<!-- Apex -->
 	<uses-permission android:name="com.anddoes.launcher.permission.UPDATE_COUNT"/>
 	
-	<!--for solid-->
+	<!-- Solid -->
 	<uses-permission android:name="com.majeur.launcher.permission.UPDATE_BADGE"/>
+	
+	<!-- Huawei -->
+	<uses-permission android:name="com.huawei.android.launcher.permission.CHANGE_BADGE" />
+	<uses-permission android:name="com.huawei.android.launcher.permission.READ_SETTINGS" />
+	<uses-permission android:name="com.huawei.android.launcher.permission.WRITE_SETTINGS" />
 	<!-- End: ShortcutBadger -->
     
     <!-- ##END## OneSignal Permissions -->
@@ -51,7 +58,8 @@
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme"
+        android:name=".ExampleApplication">
         
         <!-- Standard activity that starts when opening your app normally. -->
         <activity
@@ -88,14 +96,18 @@
 		<service android:name="com.onesignal.SyncService" android:stopWithTask="false" />
 		<activity android:name="com.onesignal.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
      	
-     	<!-- Optional receiver to get OneSignal Background Data Notifications. -->
-     	<receiver
-            android:name="com.onesignal.example.BackgroundDataBroadcastReceiver"
-            android:exported="false">
-        	<intent-filter>
-            	<action android:name="com.onesignal.BackgroundBroadcast.RECEIVE" />
-         	</intent-filter>
-     	</receiver>
+     	<service android:name="com.onesignal.NotificationRestoreService" />
+		<receiver android:name="com.onesignal.BootUpReceiver">
+		  <intent-filter>
+		    <action android:name="android.intent.action.BOOT_COMPLETED" />
+		    <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+		  </intent-filter>
+		</receiver>
+		<receiver android:name="com.onesignal.UpgradeReceiver" >
+		  <intent-filter>
+		    <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+		  </intent-filter>
+		</receiver>
      	
      	<!-- ##END## OneSignal -->
      	

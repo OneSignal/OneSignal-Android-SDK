@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
         applicationId "com.onesignal.example"
@@ -31,10 +31,15 @@ dependencies {
     compile 'com.android.support:appcompat-v7:+'
 
     // OneSignal SDK
-    compile 'com.onesignal:OneSignal:2.+@aar'
+    compile 'com.onesignal:OneSignal:3.+@aar'
 
     // OneSignal requires at least version 7.0.0 of GMS but the newest version is recommend.
+    // Required for OneSignal, even if you have added FCM.
     compile 'com.google.android.gms:play-services-gcm:+'
-    compile 'com.google.android.gms:play-services-analytics:+'
+
+    // Required for geotagging
     compile 'com.google.android.gms:play-services-location:+'
+
+    // play-services-analytics is only needed when using 8.1.0 or older.
+    // compile 'com.google.android.gms:play-services-analytics:+'
 }
