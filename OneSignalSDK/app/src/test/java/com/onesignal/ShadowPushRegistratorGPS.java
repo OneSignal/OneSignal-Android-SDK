@@ -38,7 +38,7 @@ public class ShadowPushRegistratorGPS {
    public static final String regId = "aspdfoh0fhj02hr-2h";
 
    public static boolean fail = false;
-   public static int waitTimer = 0;
+   public static boolean skipComplete;
 
    private static PushRegistrator.RegisteredHandler lastCallback;
 
@@ -49,9 +49,11 @@ public class ShadowPushRegistratorGPS {
    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
       lastCallback = callback;
 
-      if (waitTimer > 0)
-         SystemClock.sleep(waitTimer);
+      if (!skipComplete)
+         callback.complete(fail ? null : regId, 1);
+   }
 
-      callback.complete(fail ? null : regId, 1);
+   public static void fireLastCallback() {
+      lastCallback.complete(fail ? null : regId, 1);
    }
 }

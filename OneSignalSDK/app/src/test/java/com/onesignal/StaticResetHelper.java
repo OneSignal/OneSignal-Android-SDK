@@ -19,7 +19,7 @@ public class StaticResetHelper {
       classes.add(new StaticResetHelper().new ClassState(OneSignal.class, new OtherFieldHandler() {
          @Override
          public boolean onOtherField(Field field) throws Exception {
-            if (field.getName() == "unprocessedOpenedNotifis") {
+            if (field.getName().equals("unprocessedOpenedNotifis")) {
                field.set(null, new ArrayList<JSONArray>());
                return true;
             }
@@ -30,7 +30,7 @@ public class StaticResetHelper {
       classes.add(new StaticResetHelper().new ClassState(OneSignalStateSynchronizer.class, new OtherFieldHandler() {
          @Override
          public boolean onOtherField(Field field) throws Exception {
-            if (field.getName() == "currentUserState" || field.getName() == "toSyncUserState") {
+            if (field.getName().equals("currentUserState") || field.getName().equals("toSyncUserState")) {
                field.set(null, null);
                return true;
             }

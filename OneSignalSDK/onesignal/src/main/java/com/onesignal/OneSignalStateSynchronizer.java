@@ -491,18 +491,20 @@ class OneSignalStateSynchronizer {
          currentUserState.persistStateAfterSync(dependDiff, null);
          return;
       }
-
       toSyncUserState.persistState();
+
+      // Prevent non-create player network calls when we don't have a player id yet.
+      if (userId == null && !nextSyncIsSession)
+         return;
+
       if (!isSessionCall || fromSyncService) {
          OneSignalRestClient.putSync("players/" + userId, jsonBody, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
 
-               if (response400WithErrorsContaining(statusCode, response, "No user with this id found")) {
-                  resetCurrentState();
-                  postNewSyncUserState();
-               }
+               if (response400WithErrorsContaining(statusCode, response, "No user with this id found"))
+                  handlePlayerDeletedFromServer();
                else
                   getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
             }
@@ -527,10 +529,8 @@ class OneSignalStateSynchronizer {
                waitingForSessionResponse = false;
                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
 
-               if (response400WithErrorsContaining(statusCode, response, "not a valid device_type")) {
-                  resetCurrentState();
-                  postNewSyncUserState();
-               }
+               if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
+                  handlePlayerDeletedFromServer();
                else
                   getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
             }
@@ -599,7 +599,7 @@ class OneSignalStateSynchronizer {
       JSONObject dependValues = getUserStateForModification().dependValues;
       generateJsonDiff(dependValues, postSession.dependValues, dependValues, null);
 
-      nextSyncIsSession = nextSyncIsSession || isSession;
+      nextSyncIsSession = nextSyncIsSession || isSession || OneSignal.getUserId() == null;
    }
 
    static void sendTags(JSONObject newTags) {
@@ -727,5 +727,11 @@ class OneSignalStateSynchronizer {
       currentUserState.syncValues = new JSONObject();
       currentUserState.persistState();
       OneSignal.setLastSessionTime(-60 * 61);
+   }
+
+   static void handlePlayerDeletedFromServer() {
+      resetCurrentState();
+      nextSyncIsSession = true;
+      postNewSyncUserState();
    }
 }

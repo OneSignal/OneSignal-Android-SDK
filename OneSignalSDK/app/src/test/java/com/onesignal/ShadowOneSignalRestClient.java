@@ -101,10 +101,12 @@ public class ShadowOneSignalRestClient {
    }
 
    static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      System.out.println("POST:URL:" + url + "  jsonBody: " + jsonBody.toString());
       mockPost(url, jsonBody, responseHandler);
    }
 
    static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      System.out.println("POST Sync:URL:" + url + "  jsonBody: " + jsonBody.toString());
       mockPost(url, jsonBody, responseHandler);
    }
 

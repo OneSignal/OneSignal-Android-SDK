@@ -143,7 +143,9 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.networkCallCount = 0;
       ShadowOneSignalRestClient.testThread = Thread.currentThread();
 
+      ShadowPushRegistratorGPS.skipComplete = false;
       ShadowPushRegistratorGPS.fail = false;
+
       notificationOpenedMessage = null;
       lastGetTags = null;
    }
@@ -733,6 +735,26 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
       Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+   }
+
+   @Test
+   public void shouldNotAttemptToSendTagsBeforeGettingPlayerId() throws Exception {
+      ShadowPushRegistratorGPS.skipComplete = true;
+      OneSignalInit();
+      GetIdsAvailable();
+
+      threadAndTaskWait();
+      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+
+      // Should not attempt to make a network call yet as we don't have a player_id
+      OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
+      threadAndTaskWait();
+      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowPushRegistratorGPS.fireLastCallback();
+      threadAndTaskWait();
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertNotNull(callBackUseId);
    }
 
    @Test

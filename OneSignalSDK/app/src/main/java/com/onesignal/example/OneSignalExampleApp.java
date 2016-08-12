@@ -50,6 +50,8 @@ public class OneSignalExampleApp extends Application {
           .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
           .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
           .init();
+
+      OneSignal.sendTag("test1", "test1");
    }
 
    private class ExampleNotificationReceivedHandler implements OneSignal.NotificationReceivedHandler {
