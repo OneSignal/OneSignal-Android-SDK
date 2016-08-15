@@ -27,7 +27,6 @@
 
 package com.onesignal;
 
-import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 
@@ -58,10 +57,10 @@ public class PushRegistratorGPS implements PushRegistrator {
       registeredHandler = callback;
 
       try {
-         if (checkPlayServices())
+         if (isGMSInstalledAndEnabled())
             registerInBackground(googleProjectNumber);
          else {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No valid Google Play services APK found.");
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "'Google Play services' app not installed or disabled on the device.");
             registeredHandler.complete(null, -7);
          }
       } catch (Throwable t) {
@@ -81,34 +80,28 @@ public class PushRegistratorGPS implements PushRegistrator {
       return false;
    }
 
-   private boolean checkPlayServices() {
-      // GoogleApiAvailability is the replacement for GooglePlayServicesUtil added in 7.3.
+   private boolean isGMSInstalledAndEnabled() {
+      try {
+         PackageManager pm = appContext.getPackageManager();
+         PackageInfo info = pm.getPackageInfo("com.google.android.gms", PackageManager.GET_ACTIVITIES);
 
-      int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(appContext);
-      if (resultCode != ConnectionResult.SUCCESS) {
-         if (GooglePlayServicesUtil.isUserRecoverableError(resultCode) && isGooglePlayStoreInstalled()) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Google Play services Recoverable Error: " + resultCode);
-
+         if (!info.applicationInfo.enabled && isGooglePlayStoreInstalled()) {
             final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
             if (prefs.getBoolean("GT_DO_NOT_SHOW_MISSING_GPS", false))
                return false;
 
             try {
-               ShowUpdateGPSDialog(resultCode);
+               ShowUpdateGPSDialog();
             } catch (Throwable t) {}
          }
-         else
-            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Google Play services error: This device is not supported. Code:" + resultCode);
-         
-         return false;
-      }
 
-      return true;
+         return info.applicationInfo.enabled;
+      } catch (PackageManager.NameNotFoundException e) {}
+
+      return false;
    }
 
-
-
-   private void ShowUpdateGPSDialog(final int resultCode) {
+   private void ShowUpdateGPSDialog() {
       OneSignal.runOnUiThread(new Runnable() {
          @Override
          public void run() {
@@ -126,6 +119,7 @@ public class PushRegistratorGPS implements PushRegistrator {
                @Override
                public void onClick(DialogInterface dialog, int which) {
                   try {
+                     int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(appContext);
                      GooglePlayServicesUtil.getErrorPendingIntent(resultCode, activity, 0).send();
                   } catch (CanceledException e) {
                   } catch (Throwable e) {
