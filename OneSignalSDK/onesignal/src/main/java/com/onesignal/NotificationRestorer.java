@@ -53,10 +53,18 @@ class NotificationRestorer {
          return;
       restored = true;
 
-      OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
 
-      NotificationBundleProcessor.deleteOldNotifications(writableDb);
+      writableDb.beginTransaction();
+      try {
+         NotificationBundleProcessor.deleteOldNotifications(writableDb);
+         writableDb.setTransactionSuccessful();
+      } catch (Exception e) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old notification records! ", e);
+      } finally {
+         writableDb.endTransaction();
+      }
 
       String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
                              NotificationTable.COLUMN_NAME_FULL_DATA };
@@ -97,6 +105,5 @@ class NotificationRestorer {
       }
 
       cursor.close();
-      writableDb.close();
    }
 }

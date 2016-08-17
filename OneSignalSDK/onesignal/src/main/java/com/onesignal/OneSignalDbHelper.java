@@ -62,9 +62,21 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
            NotificationTable.INDEX_CREATE_GROUP_ID +
            NotificationTable.INDEX_CREATE_CREATED_TIME;
 
-   public OneSignalDbHelper(Context context) {
+
+   private static OneSignalDbHelper sInstance;
+
+   private OneSignalDbHelper(Context context) {
       super(context, DATABASE_NAME, null, DATABASE_VERSION);
    }
+
+   public static synchronized OneSignalDbHelper getInstance(Context context) {
+      if (sInstance == null)
+         sInstance = new OneSignalDbHelper(context.getApplicationContext());
+      return sInstance;
+   }
+
+
+   @Override
    public void onCreate(SQLiteDatabase db) {
       db.execSQL(SQL_CREATE_ENTRIES);
       db.execSQL(SQL_INDEX_ENTRIES);
