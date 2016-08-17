@@ -389,7 +389,7 @@ class GenerateNotification {
                }
             } while (cursor.moveToNext());
 
-            if (updateSummary) {
+            if (updateSummary && firstFullData != null) {
                try {
                   gcmBundle = new JSONObject(firstFullData);
                } catch (JSONException e) {

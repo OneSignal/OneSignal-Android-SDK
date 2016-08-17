@@ -75,7 +75,7 @@ public class OneSignal {
       None, InAppAlert, Notification
    }
 
-   static final long MIN_ON_FOCUS_TIME = 30;
+   static final long MIN_ON_FOCUS_TIME = 60;
    private static final long MIN_ON_SESSION_TIME = 30;
 
    public interface NotificationOpenedHandler {
@@ -167,7 +167,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "030002";
+   public static final String VERSION = "030003";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
