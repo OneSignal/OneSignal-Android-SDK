@@ -721,6 +721,30 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldNotSendTagOnRepeats() throws Exception {
+      OneSignalInit();
+      OneSignal.sendTag("test1", "value1");
+      threadAndTaskWait();
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
+      Assert.assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
+
+      // Should only send new tag
+      ShadowOneSignalRestClient.lastPost = null;
+      OneSignal.sendTag("test2", "value2");
+      threadAndTaskWait();
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
+
+      // Should not resend first tags
+      ShadowOneSignalRestClient.lastPost = null;
+      OneSignal.sendTag("test1", "value1");
+      threadAndTaskWait();
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   @Test
    public void shouldSendTagsWithRequestBatching() throws Exception {
       OneSignalInit();
       threadAndTaskWait();

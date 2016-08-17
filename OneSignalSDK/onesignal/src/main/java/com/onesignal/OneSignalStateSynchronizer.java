@@ -252,9 +252,9 @@ class OneSignalStateSynchronizer {
       private Set<String> getGroupChangeField(JSONObject cur, JSONObject changedTo) {
          try {
             if (cur.getDouble("lat") != changedTo.getDouble("lat")
-             || cur.getDouble("long") != changedTo.getDouble("long")
-             || cur.getDouble("loc_acc") != changedTo.getDouble("loc_acc")
-             || cur.getDouble("loc_type") != changedTo.getDouble("loc_type"))
+                || cur.getDouble("long") != changedTo.getDouble("long")
+                || cur.getDouble("loc_acc") != changedTo.getDouble("loc_acc")
+                || cur.getDouble("loc_type") != changedTo.getDouble("loc_type"))
                return LOCATION_FIELDS_SET;
          } catch (Throwable t) {
             return LOCATION_FIELDS_SET;
@@ -392,7 +392,17 @@ class OneSignalStateSynchronizer {
 
             synchronized (syncLock) {
                if (inSyncValues.has("tags")) {
-                  JSONObject newTags = new JSONObject();
+                  JSONObject newTags;
+                  if (syncValues.has("tags")) {
+                     try {
+                        newTags = new JSONObject(syncValues.optString("tags"));
+                     } catch (JSONException e) {
+                        newTags = new JSONObject();
+                     }
+                  }
+                  else
+                     newTags = new JSONObject();
+
                   JSONObject curTags = inSyncValues.optJSONObject("tags");
                   Iterator<String> keys = curTags.keys();
                   String key;
@@ -402,6 +412,8 @@ class OneSignalStateSynchronizer {
                         key = keys.next();
                         if (!"".equals(curTags.optString(key)))
                            newTags.put(key, curTags.optString(key));
+                        else
+                           newTags.remove(key);
                      }
 
                      if (newTags.toString().equals("{}"))
