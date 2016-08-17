@@ -132,7 +132,7 @@ public class MainOneSignalClassRunner {
       });
    }
 
-   private static void cleanUp() {
+   static void cleanUp() {
       callBackUseId = getCallBackRegId = null;
       StaticResetHelper.restSetStaticFields();
 
@@ -1259,7 +1259,7 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
 
       // Make sure they are marked dismissed.
-      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, new String[] { "created_time" },
           OneSignalPackagePrivateHelper.NotificationTable.COLUMN_NAME_DISMISSED + " = 1", null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());

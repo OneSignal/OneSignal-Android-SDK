@@ -65,9 +65,6 @@ public class NotificationOpenedProcessor {
 
       boolean dismissed = intent.getBooleanExtra("dismissed", false);
 
-      OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
-      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
-
       JSONArray dataArray = null;
       if (!dismissed) {
          try {
@@ -80,17 +77,25 @@ public class NotificationOpenedProcessor {
          }
       }
 
-      // We just opened a summary notification.
-      if (!dismissed && summaryGroup != null)
-         addChildNotifications(dataArray, summaryGroup, writableDb);
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
+      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+      writableDb.beginTransaction();
+      try {
+         // We just opened a summary notification.
+         if (!dismissed && summaryGroup != null)
+            addChildNotifications(dataArray, summaryGroup, writableDb);
 
-      markNotificationsConsumed(writableDb);
+         markNotificationsConsumed(writableDb);
 
-      // Notification is not a summary type but a single notification part of a group.
-      if (summaryGroup == null && intent.getStringExtra("grp") != null)
-         updateSummaryNotification(writableDb);
-
-      writableDb.close();
+         // Notification is not a summary type but a single notification part of a group.
+         if (summaryGroup == null && intent.getStringExtra("grp") != null)
+            updateSummaryNotification(writableDb);
+         writableDb.setTransactionSuccessful();
+      } catch (Exception e) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error processing notification open or dismiss record! ", e);
+      } finally {
+         writableDb.endTransaction();
+      }
 
       if (!dismissed)
          OneSignal.handleNotificationOpen(context, dataArray, inIntent.getBooleanExtra("from_alert", false));

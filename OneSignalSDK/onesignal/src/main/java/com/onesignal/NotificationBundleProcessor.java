@@ -110,32 +110,38 @@ class NotificationBundleProcessor {
       try {
          JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
 
-         OneSignalDbHelper dbHelper = new OneSignalDbHelper(context);
+         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
          SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
 
-         deleteOldNotifications(writableDb);
+         writableDb.beginTransaction();
+         try {
+            deleteOldNotifications(writableDb);
 
-         ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
-         if (jsonPayload.has("grp"))
-            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
+            ContentValues values = new ContentValues();
+            values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
+            if (jsonPayload.has("grp"))
+               values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
 
-         values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
-         if (!opened)
-            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationId);
+            values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
+            if (!opened)
+               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationId);
 
-         if (jsonPayload.has("title"))
-            values.put(NotificationTable.COLUMN_NAME_TITLE, jsonPayload.optString("title"));
-         values.put(NotificationTable.COLUMN_NAME_MESSAGE, jsonPayload.optString("alert"));
+            if (jsonPayload.has("title"))
+               values.put(NotificationTable.COLUMN_NAME_TITLE, jsonPayload.optString("title"));
+            values.put(NotificationTable.COLUMN_NAME_MESSAGE, jsonPayload.optString("alert"));
 
-         values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
+            values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 
-         writableDb.insert(NotificationTable.TABLE_NAME, null, values);
+            writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
 
-         if (!opened)
-            BadgeCountUpdater.update(writableDb, context);
-
-         writableDb.close();
+            if (!opened)
+               BadgeCountUpdater.update(writableDb, context);
+            writableDb.setTransactionSuccessful();
+         } catch (Exception e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
+         } finally {
+            writableDb.endTransaction();
+         }
       } catch (JSONException e) {
          e.printStackTrace();
       }

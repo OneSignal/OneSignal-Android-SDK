@@ -37,6 +37,13 @@ public class StaticResetHelper {
             return false;
          }
       }));
+
+      classes.add(new StaticResetHelper().new ClassState(OneSignalDbHelper.class, new OtherFieldHandler() {
+         @Override
+         public boolean onOtherField(Field field) {
+            return false;
+         }
+      }));
    }
 
    private interface OtherFieldHandler {

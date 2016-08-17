@@ -52,6 +52,7 @@ import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
+import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
@@ -59,6 +60,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 import junit.framework.Assert;
 
 import org.json.JSONObject;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -92,6 +94,7 @@ public class GenerateNotificationRunner {
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
+      StaticResetHelper.saveStaticValues();
    }
 
    @Before // Before each test
@@ -105,6 +108,12 @@ public class GenerateNotificationRunner {
       ShadowBadgeCountUpdater.lastCount = 0;
       NotificationManager notificationManager = (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancelAll();
+      StaticResetHelper.restSetStaticFields();
+   }
+
+   @AfterClass
+   public static void afterEverything() {
+      StaticResetHelper.restSetStaticFields();
    }
 
 
@@ -165,7 +174,7 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should have 1 DB record with the correct time stamp
-      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
       // Time stamp should be set and within a small range.
@@ -185,6 +194,7 @@ public class GenerateNotificationRunner {
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(1, cursor.getCount());
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
@@ -203,6 +213,7 @@ public class GenerateNotificationRunner {
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id", "created_time" }, null, null, null, null, null);
 
       Assert.assertEquals(1, cursor.getCount());
@@ -256,9 +267,10 @@ public class GenerateNotificationRunner {
 
 
       // Should be 2 DB entries (summary and individual)
-      SQLiteDatabase readableDb = new OneSignalDbHelper(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(2, cursor.getCount());
+      cursor.close();
 
 
       // Add another notification to the group.
@@ -285,6 +297,7 @@ public class GenerateNotificationRunner {
 
 
       // Should be 3 DB entries (summary and 2 individual)
+      readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       Assert.assertEquals(3, cursor.getCount());
 

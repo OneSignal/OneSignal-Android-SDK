@@ -331,8 +331,8 @@ class GenerateNotification {
       Random random = new Random();
       PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
 
-      OneSignalDbHelper dbHelper = new OneSignalDbHelper(currentContext);
-      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
+      SQLiteDatabase readableDb = dbHelper.getReadableDatabase();
 
       String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
                              NotificationTable.COLUMN_NAME_FULL_DATA,
@@ -342,7 +342,7 @@ class GenerateNotification {
 
       String[] whereArgs = { group };
 
-      Cursor cursor = writableDb.query(
+      Cursor cursor = readableDb.query(
                      NotificationTable.TABLE_NAME,
                      retColumn,
                      NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
@@ -360,42 +360,49 @@ class GenerateNotification {
       String firstFullData = null;
       Collection<SpannableString> summeryList = null;
 
-      if (cursor.moveToFirst()) {
-         SpannableString spannableString;
-         summeryList = new ArrayList<>();
+      try {
+         if (cursor.moveToFirst()) {
+            SpannableString spannableString;
+            summeryList = new ArrayList<>();
 
-         do {
-            if (cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_IS_SUMMARY)) == 1)
-               summaryNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            else {
-               String title = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_TITLE));
-               if (title == null)
-                  title = "";
-               else
-                  title += " ";
+            do {
+               if (cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_IS_SUMMARY)) == 1)
+                  summaryNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+               else {
+                  String title = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_TITLE));
+                  if (title == null)
+                     title = "";
+                  else
+                     title += " ";
 
-               // Html.fromHtml("<strong>" + line1Title + "</strong> " + gcmBundle.getString("alert"));
+                  // Html.fromHtml("<strong>" + line1Title + "</strong> " + gcmBundle.getString("alert"));
 
-               String msg = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_MESSAGE));
+                  String msg = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_MESSAGE));
 
-               spannableString = new SpannableString(title + msg);
-               if (title.length() > 0)
-                  spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, title.length(), 0);
-               summeryList.add(spannableString);
+                  spannableString = new SpannableString(title + msg);
+                  if (title.length() > 0)
+                     spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, title.length(), 0);
+                  summeryList.add(spannableString);
 
-               if (firstFullData == null)
-                  firstFullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
-            }
-         } while (cursor.moveToNext());
+                  if (firstFullData == null)
+                     firstFullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
+               }
+            } while (cursor.moveToNext());
 
-         if (updateSummary) {
-            try {
-               gcmBundle = new JSONObject(firstFullData);
-            } catch (JSONException e) {
-               e.printStackTrace();
+            if (updateSummary) {
+               try {
+                  gcmBundle = new JSONObject(firstFullData);
+               } catch (JSONException e) {
+                  e.printStackTrace();
+               }
             }
          }
       }
+      finally {
+         if (cursor != null && !cursor.isClosed())
+            cursor.close();
+      }
+
 
       if (summeryList != null && (!updateSummary || summeryList.size() > 1)) {
          int notificationCount = summeryList.size() + (updateSummary ? 0 : 1);
@@ -461,12 +468,21 @@ class GenerateNotification {
       }
       else {
          // There currently isn't a visible notification from this group, save the group summary notification id and post it so it looks like a normal notification.
-         ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, summaryNotificationId);
-         values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
-         values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
+         SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+         writableDb.beginTransaction();
 
-         writableDb.insert(NotificationTable.TABLE_NAME, null, values);
+         try {
+            ContentValues values = new ContentValues();
+            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, summaryNotificationId);
+            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
+            values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
+            writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
+            writableDb.setTransactionSuccessful();
+         } catch (Exception e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", e);
+         } finally {
+            writableDb.endTransaction();
+         }
 
          NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle);
          if (updateSummary)
@@ -485,9 +501,6 @@ class GenerateNotification {
       }
 
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
-
-      cursor.close();
-      writableDb.close();
    }
 
    // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available if the app project isn't setup correctly.
