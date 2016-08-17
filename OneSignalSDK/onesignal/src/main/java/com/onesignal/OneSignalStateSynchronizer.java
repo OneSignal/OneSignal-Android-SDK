@@ -470,10 +470,13 @@ class OneSignalStateSynchronizer {
    static void initUserState(Context context) {
       appContext = context;
 
-      if (currentUserState != null) return;
+      synchronized (syncLock) {
+         if (currentUserState == null)
+            currentUserState = new OneSignalStateSynchronizer().new UserState("CURRENT_STATE", true);
 
-      currentUserState = new OneSignalStateSynchronizer().new UserState("CURRENT_STATE", true);
-      toSyncUserState = new OneSignalStateSynchronizer().new UserState("TOSYNC_STATE", true);
+         if (toSyncUserState == null)
+            toSyncUserState = new OneSignalStateSynchronizer().new UserState("TOSYNC_STATE", true);
+      }
    }
 
    static UserState getNewUserState() {
@@ -638,15 +641,6 @@ class OneSignalStateSynchronizer {
    static void setSubscription(boolean enable) {
       try {
          getUserStateForModification().dependValues.put("userSubscribePref", enable);
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
-   }
-
-   static void updateIdentifier(String identifier) {
-      UserState userState = getUserStateForModification();
-      try {
-         userState.syncValues.put("identifier", identifier);
       } catch (JSONException e) {
          e.printStackTrace();
       }
