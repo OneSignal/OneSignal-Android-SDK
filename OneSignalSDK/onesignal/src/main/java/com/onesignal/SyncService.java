@@ -44,33 +44,32 @@ public class SyncService extends Service {
 
    @Override
    public void onCreate() {
-      // If service was started from outside the app.
-      if (OneSignal.appContext == null) {
-         OneSignal.appContext = this.getApplicationContext();
+      if (OneSignal.startedSyncService)
+         return;
 
-         new Thread(new Runnable() {
-            @Override
-            public void run() {
-               if (OneSignal.getUserId() == null) {
-                  stopSelf();
-                  return;
-               }
-
-               OneSignal.appId = OneSignal.getSavedAppId();
-
-               OneSignalStateSynchronizer.initUserState(OneSignal.appContext);
-               OneSignalStateSynchronizer.syncUserState(true);
-               checkOnFocusSync();
-
+      OneSignal.appContext = this.getApplicationContext();
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            if (OneSignal.getUserId() == null) {
                stopSelf();
+               return;
             }
-         }).start();
-      }
+
+            OneSignal.appId = OneSignal.getSavedAppId();
+
+            OneSignalStateSynchronizer.initUserState(OneSignal.appContext);
+            OneSignalStateSynchronizer.syncUserState(true);
+            checkOnFocusSync();
+
+            stopSelf();
+         }
+      }).start();
    }
 
    @Override
    public int onStartCommand(Intent intent, int flags, int startId) {
-      return START_STICKY;
+      return OneSignal.startedSyncService ? START_STICKY : START_NOT_STICKY;
    }
 
    // This Service does not support bindings.

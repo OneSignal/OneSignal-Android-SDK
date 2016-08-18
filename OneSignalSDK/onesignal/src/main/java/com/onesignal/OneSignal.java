@@ -167,7 +167,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "030003";
+   public static final String VERSION = "030004";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -252,6 +252,7 @@ public class OneSignal {
       if (contextIsActivity) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
          NotificationRestorer.asyncRestore(appContext);
+         startSyncService();
       }
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
@@ -259,7 +260,6 @@ public class OneSignal {
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
       OneSignalStateSynchronizer.initUserState(appContext);
-      appContext.startService(new Intent(appContext, SyncService.class));
 
       if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB_MR2)
          ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
@@ -535,6 +535,7 @@ public class OneSignal {
    }
 
    static void onAppFocus() {
+      startSyncService();
       foreground = true;
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
@@ -1309,7 +1310,6 @@ public class OneSignal {
 
       boolean exists = cursor.moveToFirst();
       cursor.close();
-      readableDb.close();
 
       if (exists) {
          Log(LOG_LEVEL.DEBUG, "Duplicate GCM message received, skip processing of " + id);
@@ -1370,5 +1370,13 @@ public class OneSignal {
 
    private static boolean isPastOnSessionTime() {
       return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
+   }
+
+   static boolean startedSyncService;
+   private static void startSyncService() {
+      if (startedSyncService)
+         return;
+      startedSyncService = true;
+      appContext.startService(new Intent(appContext, SyncService.class));
    }
 }

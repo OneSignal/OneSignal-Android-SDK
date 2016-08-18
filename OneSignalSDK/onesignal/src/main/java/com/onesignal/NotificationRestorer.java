@@ -60,8 +60,8 @@ class NotificationRestorer {
       try {
          NotificationBundleProcessor.deleteOldNotifications(writableDb);
          writableDb.setTransactionSuccessful();
-      } catch (Exception e) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old notification records! ", e);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old notification records! ", t);
       } finally {
          writableDb.endTransaction();
       }
@@ -69,7 +69,8 @@ class NotificationRestorer {
       String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
                              NotificationTable.COLUMN_NAME_FULL_DATA };
 
-      Cursor cursor = writableDb.query(
+      SQLiteDatabase readableDb = dbHelper.getReadableDatabase();
+      Cursor cursor = readableDb.query(
           NotificationTable.TABLE_NAME,
           retColumn,
           // 1 Week back.
@@ -83,27 +84,32 @@ class NotificationRestorer {
           NotificationTable._ID + " ASC"   // sort order, old to new
       );
 
-      if (cursor.moveToFirst()) {
-         boolean useExtender = (NotificationExtenderService.getIntent(context) != null);
+      try {
+         if (cursor.moveToFirst()) {
+            boolean useExtender = (NotificationExtenderService.getIntent(context) != null);
 
-         do {
-            int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
+            do {
+               int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+               String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
 
-            Intent serviceIntent;
+               Intent serviceIntent;
 
-            if (useExtender)
-               serviceIntent = NotificationExtenderService.getIntent(context);
-            else
-               serviceIntent = new Intent().setComponent(new ComponentName(context.getPackageName(), GcmIntentService.class.getName()));
+               if (useExtender)
+                  serviceIntent = NotificationExtenderService.getIntent(context);
+               else
+                  serviceIntent = new Intent().setComponent(new ComponentName(context.getPackageName(), GcmIntentService.class.getName()));
 
-            serviceIntent.putExtra("json_payload", fullData);
-            serviceIntent.putExtra("android_notif_id", existingId);
-            serviceIntent.putExtra("restoring", true);
-            context.startService(serviceIntent);
-         } while (cursor.moveToNext());
+               serviceIntent.putExtra("json_payload", fullData);
+               serviceIntent.putExtra("android_notif_id", existingId);
+               serviceIntent.putExtra("restoring", true);
+               context.startService(serviceIntent);
+            } while (cursor.moveToNext());
+         }
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
+      } finally {
+         if (cursor != null && !cursor.isClosed())
+            cursor.close();
       }
-
-      cursor.close();
    }
 }
