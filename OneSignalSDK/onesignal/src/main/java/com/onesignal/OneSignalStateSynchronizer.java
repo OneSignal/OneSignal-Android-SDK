@@ -38,11 +38,11 @@ import org.json.JSONObject;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 class OneSignalStateSynchronizer {
    private static boolean nextSyncIsSession = false, waitingForSessionResponse = false;
@@ -52,7 +52,7 @@ class OneSignalStateSynchronizer {
    //                    diff will be generated between currentUserState when a sync call is made to the server.
    private static UserState currentUserState, toSyncUserState;
 
-   static HashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new HashMap<>();
+   static ConcurrentHashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new ConcurrentHashMap<>();
 
    private static Context appContext;
 
