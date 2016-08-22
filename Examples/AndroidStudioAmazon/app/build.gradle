@@ -1,0 +1,45 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
+
+    defaultConfig {
+        applicationId "com.onesignal.example"
+
+        // TODO: Please update the Google Project number and OneSignal Id below to yours.
+        manifestPlaceholders = [manifestApplicationId: "${applicationId}",
+                                onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
+                                onesignal_google_project_number: "703322744261"]
+
+        minSdkVersion 10
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+
+    compile 'com.android.support:appcompat-v7:+'
+
+    // OneSignal SDK
+    compile 'com.onesignal:OneSignal:3.+@aar'
+
+    // OneSignal requires at least version 7.0.0 of GMS but the newest version is recommend.
+    // Required for OneSignal, even if you have added FCM.
+    compile 'com.google.android.gms:play-services-gcm:+'
+
+    // Required for geotagging
+    compile 'com.google.android.gms:play-services-location:+'
+
+    // play-services-analytics is only needed when using 8.1.0 or older.
+    // compile 'com.google.android.gms:play-services-analytics:+'
+}
