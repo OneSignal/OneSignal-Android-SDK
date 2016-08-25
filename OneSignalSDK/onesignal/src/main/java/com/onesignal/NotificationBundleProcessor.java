@@ -220,10 +220,10 @@ class NotificationBundleProcessor {
       OSNotificationPayload notification = new OSNotificationPayload();
       try {
          JSONObject customJson = new JSONObject(currentJsonPayload.optString("custom"));
-         notification.notificationId = customJson.optString("i");
+         notification.notificationID = customJson.optString("i");
          notification.rawPayload = currentJsonPayload.toString();
          notification.additionalData = customJson.optJSONObject("a");
-         notification.launchUrl = customJson.optString("u", null);
+         notification.launchURL = customJson.optString("u", null);
 
          notification.body = currentJsonPayload.optString("alert", null);
          notification.title = currentJsonPayload.optString("title", null);

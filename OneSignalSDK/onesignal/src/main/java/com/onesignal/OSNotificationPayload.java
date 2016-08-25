@@ -33,14 +33,14 @@ import java.util.List;
 
 // Notification properties received from OneSignal.
 public class OSNotificationPayload {
-   public String notificationId;
+   public String notificationID;
    public String title, body;
    public JSONObject additionalData;
    public String smallIcon;
    public String largeIcon;
    public String bigPicture;
    public String smallIconAccentColor;
-   public String launchUrl;
+   public String launchURL;
    public String sound;
    public String ledColor;
    public int lockScreenVisibility = 1;

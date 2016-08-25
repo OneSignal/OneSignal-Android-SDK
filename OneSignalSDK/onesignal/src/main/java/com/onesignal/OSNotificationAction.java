@@ -37,7 +37,7 @@ public class OSNotificationAction {
    }
 
    // The type of the notification action
-   public ActionType actionType;
+   public ActionType type;
 
    // The ID associated with the button tapped. null when the actionType is NotificationTapped or InAppAlertClosed
    public String actionID;

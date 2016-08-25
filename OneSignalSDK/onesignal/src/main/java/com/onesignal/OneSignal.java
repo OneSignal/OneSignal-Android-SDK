@@ -948,7 +948,7 @@ public class OneSignal {
       openResult.notification = notification;
       openResult.action = new OSNotificationAction();
       openResult.action.actionID = actionSelected;
-      openResult.action.actionType = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
+      openResult.action.type = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
       if (fromAlert)
          openResult.notification.displayType = OSNotification.DisplayType.InAppAlert;
       else
