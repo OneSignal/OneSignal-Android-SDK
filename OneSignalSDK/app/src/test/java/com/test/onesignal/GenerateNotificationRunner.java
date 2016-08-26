@@ -383,7 +383,7 @@ public class GenerateNotificationRunner {
       OSNotificationPayload notificationPayload = notificationReceived.payload;
       Assert.assertEquals("Test H", notificationPayload.title);
       Assert.assertEquals("Test B", notificationPayload.body);
-      Assert.assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationId);
+      Assert.assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationID);
 
       Assert.assertEquals(0, notificationPayload.lockScreenVisibility);
       Assert.assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
@@ -394,7 +394,7 @@ public class GenerateNotificationRunner {
       Assert.assertEquals("small_icon", notificationPayload.smallIcon);
       Assert.assertEquals("test_sound", notificationPayload.sound);
       Assert.assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
-      Assert.assertEquals("http://google.com", notificationPayload.launchUrl);
+      Assert.assertEquals("http://google.com", notificationPayload.launchURL);
 
       Assert.assertEquals("id1", notificationPayload.actionButtons.get(0).id);
       Assert.assertEquals("button1", notificationPayload.actionButtons.get(0).text);

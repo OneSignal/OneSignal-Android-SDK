@@ -27,7 +27,28 @@
 
 package com.onesignal;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class OSNotificationOpenResult {
    public OSNotification notification;
    public OSNotificationAction action;
+
+   public String stringify() {
+
+      JSONObject mainObj = new JSONObject();
+
+      try {
+        JSONObject ac = new JSONObject();
+		ac.put("actionID", action.actionID);
+		ac.put("type", action.type);
+		mainObj.put("action", ac);
+
+        JSONObject notifObject = new JSONObject(notification.stringify());
+        mainObj.put("notification", notifObject);
+      }
+      catch(JSONException e) {e.printStackTrace();}
+
+      return mainObj.toString();
+   }
 }

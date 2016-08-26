@@ -29,6 +29,9 @@ package com.onesignal;
 
 import java.util.List;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class OSNotification {
 
    public enum DisplayType {
@@ -59,4 +62,38 @@ public class OSNotification {
    // Will be set if a summary notification is opened.
    //    The payload will be the most recent notification received.
    public List<OSNotificationPayload> groupedNotifications;
+
+   public String stringify() {
+
+      JSONObject mainObj = new JSONObject();
+
+      try {
+         mainObj.put("isAppInFocus", isAppInFocus);
+         mainObj.put("shown", shown);
+         mainObj.put("androidNotificationId", androidNotificationId);
+         mainObj.put("displayType", displayType);
+         JSONObject pay = new JSONObject();
+         pay.put("notificationID", payload.notificationID);
+         pay.put("title", payload.title);
+         pay.put("body", payload.body);
+         pay.put("additionalData", payload.additionalData.toString());
+         pay.put("smallIcon", payload.smallIcon);
+         pay.put("largeIcon", payload.largeIcon);
+         pay.put("bigPicture", payload.bigPicture);
+         pay.put("smallIconAccentColor", payload.smallIconAccentColor);
+         pay.put("launchURL", payload.launchURL);
+         pay.put("sound", payload.sound);
+         pay.put("ledColor", payload.ledColor);
+         pay.put("lockScreenVisibility", payload.lockScreenVisibility);
+         pay.put("groupKey", payload.groupKey);
+         pay.put("groupMessage", payload.groupMessage);
+         pay.put("actionButtons", payload.actionButtons);
+         pay.put("fromProjectNumber", payload.fromProjectNumber);
+         pay.put("rawPayload", payload.rawPayload);
+         mainObj.put("payload", pay);
+      }
+      catch(JSONException e) {e.printStackTrace();}
+
+      return mainObj.toString();
+   }
 }
