@@ -38,11 +38,11 @@ import org.json.JSONObject;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 class OneSignalStateSynchronizer {
    private static boolean nextSyncIsSession = false, waitingForSessionResponse = false;
@@ -52,7 +52,8 @@ class OneSignalStateSynchronizer {
    //                    diff will be generated between currentUserState when a sync call is made to the server.
    private static UserState currentUserState, toSyncUserState;
 
-   static ConcurrentHashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new ConcurrentHashMap<>();
+   static HashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new HashMap<>();
+   private static final Object networkHandlerSyncLock = new Object() {};
 
    private static Context appContext;
 
@@ -590,9 +591,11 @@ class OneSignalStateSynchronizer {
    }
 
    private static NetworkHandlerThread getNetworkHandlerThread(Integer type) {
-      if (!networkHandlerThreads.containsKey(type))
-         networkHandlerThreads.put(type, new NetworkHandlerThread(type));
-      return networkHandlerThreads.get(type);
+      synchronized (networkHandlerSyncLock) {
+         if (!networkHandlerThreads.containsKey(type))
+            networkHandlerThreads.put(type, new NetworkHandlerThread(type));
+         return networkHandlerThreads.get(type);
+      }
    }
 
    private static UserState getUserStateForModification() {
