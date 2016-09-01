@@ -105,6 +105,10 @@ class LocationGMS {
    }
 
    static void startGetLocation() {
+      // Prevents overlapping requests
+      if (fallbackFailThread != null)
+         return;
+
       try {
          startFallBackThread();
 
@@ -128,7 +132,7 @@ class LocationGMS {
          public void run() {
             try {
                Thread.sleep(30000);
-               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but GoogleApiClient timedout. Maybe related to mismatch google-play aar versions.");
+               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but GoogleApiClient timed out. Maybe related to mismatch google-play aar versions.");
                fireFailedComplete();
             } catch (Throwable t) {}
          }
@@ -148,6 +152,7 @@ class LocationGMS {
       locationHandler.complete(lat, log, accuracy, type);
       if (fallbackFailThread != null && !Thread.currentThread().equals(fallbackFailThread))
          fallbackFailThread.interrupt();
+      fallbackFailThread = null;
    }
 
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
