@@ -32,11 +32,12 @@ import android.app.Activity;
 import org.json.JSONObject;
 
 import com.onesignal.OneSignal.NotificationOpenedHandler;
+import com.onesignal.OneSignal.NotificationReceivedHandler;
 import com.onesignal.OneSignal.GetTagsHandler;
 import com.onesignal.OneSignal.IdsAvailableHandler;
 import com.onesignal.OneSignal.PostNotificationResponseHandler;
 
-public class OneSignalUnityProxy implements NotificationOpenedHandler {
+public class OneSignalUnityProxy implements NotificationOpenedHandler, NotificationReceivedHandler {
 
    private String unityListenerName;
    private static java.lang.reflect.Method unitySendMessage;
@@ -53,20 +54,26 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
 
          OneSignal.sdkType = "unity";
          OneSignal.setLogLevel(logLevel, visualLogLevel);
-         OneSignal.init((Activity) unityPlayerClass.getField("currentActivity").get(null), googleProjectNumber, oneSignalAppId, this);
+         OneSignal.init((Activity) unityPlayerClass.getField("currentActivity").get(null), googleProjectNumber, oneSignalAppId, this, this);
       } catch (Throwable t) {
          t.printStackTrace();
       }
    }
 
    @Override
-   public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-      JSONObject outerObject = new JSONObject();
+   public void notificationOpened(OSNotificationOpenResult result) {
+
       try {
-         outerObject.put("isActive", isActive);
-         outerObject.put("alert", message);
-         outerObject.put("custom", additionalData);
-         unitySendMessage.invoke(null, unityListenerName, "onPushNotificationReceived", outerObject.toString());
+         unitySendMessage.invoke(null, unityListenerName, "onPushNotificationOpened", result.stringify());
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
+   }
+
+   @Override
+   public void notificationReceived(OSNotification notification) {
+      try {
+         unitySendMessage.invoke(null, unityListenerName, "onPushNotificationReceived", notification.stringify());
       } catch (Throwable t) {
          t.printStackTrace();
       }
@@ -125,9 +132,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
 
    public void enableVibrate(boolean enable) { OneSignal.enableVibrate(enable); }
 
-   public void enableNotificationsWhenActive(boolean enable) { OneSignal.enableNotificationsWhenActive(enable); }
-
-   public void enableInAppAlertNotification(boolean enable) { OneSignal.enableInAppAlertNotification(enable); }
+   void setInFocusDisplaying(OneSignal.OSInFocusDisplayOption displayOption) { OneSignal.setInFocusDisplaying(displayOption); }
 
    public void setSubscription(boolean enable) { OneSignal.setSubscription(enable); }
 
@@ -156,10 +161,10 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
    public void promptLocation() {
       OneSignal.promptLocation();
    }
-   public void setEmail(String email) {
-      OneSignal.setEmail(email);
+   public void syncHashedEmail(String email) {
+      OneSignal.syncHashedEmail(email);
    }
-   public void clearOneSignalNotifications () {
+   public void clearOneSignalNotifications() {
       OneSignal.clearOneSignalNotifications();
    }
 }
