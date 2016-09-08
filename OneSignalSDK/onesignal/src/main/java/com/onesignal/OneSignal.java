@@ -181,6 +181,7 @@ public class OneSignal {
    private static Double lastLocLat, lastLocLong;
    private static Float lastLocAcc;
    private static Integer lastLocType;
+   private static boolean shareLocation = true;
    static OneSignal.Builder mInitBuilder;
 
    static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
@@ -333,17 +334,23 @@ public class OneSignal {
          }
       });
 
-      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
-         @Override
-         public void complete(Double lat, Double log, Float accuracy, Integer type) {
-            lastLocLat = lat;
-            lastLocLong = log;
-            lastLocAcc = accuracy;
-            lastLocType = type;
-            locationFired = true;
-            registerUser();
-         }
-      });
+      if (shareLocation) {
+         LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
+            @Override
+            public void complete(Double lat, Double log, Float accuracy, Integer type) {
+               lastLocLat = lat;
+               lastLocLong = log;
+               lastLocAcc = accuracy;
+               lastLocType = type;
+               locationFired = true;
+               registerUser();
+               }
+         });
+      } else {
+         // Don't request or send location information
+         locationFired = true;
+         registerUser();
+      }
 
       if (!awlFired) {
          OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
@@ -1162,7 +1169,18 @@ public class OneSignal {
       OneSignalStateSynchronizer.setSubscription(enable);
    }
 
+   public static void setLocationShared(boolean enable) {
+      shareLocation = enable;
+      Log(LOG_LEVEL.DEBUG, "shareLocation:" + shareLocation);
+   }
+
    public static void promptLocation() {
+
+      if (!shareLocation) {
+         // Share location disabled
+         return;
+      }
+
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not prompt for location.");
          return;
