@@ -162,6 +162,10 @@ class OSUtils {
       if (lang.equals("ji"))
          return "yi";
 
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/98
+      if (lang.equals("zh"))
+         return lang + "-" + Locale.getDefault().getCountry();
+
       return lang;
    }
 }

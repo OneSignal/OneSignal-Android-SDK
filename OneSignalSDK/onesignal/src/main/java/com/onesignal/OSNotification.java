@@ -64,7 +64,6 @@ public class OSNotification {
    public List<OSNotificationPayload> groupedNotifications;
 
    public String stringify() {
-
       JSONObject mainObj = new JSONObject();
 
       try {
@@ -72,11 +71,13 @@ public class OSNotification {
          mainObj.put("shown", shown);
          mainObj.put("androidNotificationId", androidNotificationId);
          mainObj.put("displayType", displayType);
+
          JSONObject pay = new JSONObject();
          pay.put("notificationID", payload.notificationID);
          pay.put("title", payload.title);
          pay.put("body", payload.body);
-         pay.put("additionalData", payload.additionalData.toString());
+         if (payload.additionalData != null)
+            pay.put("additionalData", payload.additionalData.toString());
          pay.put("smallIcon", payload.smallIcon);
          pay.put("largeIcon", payload.largeIcon);
          pay.put("bigPicture", payload.bigPicture);
