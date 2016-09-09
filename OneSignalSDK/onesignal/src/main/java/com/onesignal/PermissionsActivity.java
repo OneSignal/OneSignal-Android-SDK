@@ -30,6 +30,7 @@ package com.onesignal;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
@@ -45,16 +46,33 @@ public class PermissionsActivity extends Activity {
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
-      requestPermission();
+
+      // Android sets android:hasCurrentPermissionsRequest if the Activity was recreated while
+      //  the permission prompt is showing to the user.
+      // This can happen if the task is cold resumed from the Recent Apps list.
+      if (savedInstanceState != null &&
+          savedInstanceState.getBoolean("android:hasCurrentPermissionsRequest", false))
+         waiting = true;
+      else
+         requestPermission();
    }
 
    @Override
    protected void onNewIntent(Intent intent) {
       super.onNewIntent(intent);
-      requestPermission();
+
+      if (OneSignal.initDone)
+         requestPermission();
    }
 
    private void requestPermission() {
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/30
+      // Activity maybe invoked directly through automated testing, omit prompting on old Android versions.
+      if (Build.VERSION.SDK_INT < 23) {
+         finish();
+         return;
+      }
+
       if (!waiting) {
          waiting = true;
          ActivityCompat.requestPermissions(this, new String[]{LocationGMS.requestPermission}, REQUEST_LOCATION);
