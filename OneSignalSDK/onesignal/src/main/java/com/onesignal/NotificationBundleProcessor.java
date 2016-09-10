@@ -51,7 +51,14 @@ class NotificationBundleProcessor {
    static void ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       try {
          boolean restoring = bundle.getBoolean("restoring", false);
-         JSONObject jsonPayload = new JSONObject(bundle.getString("json_payload"));
+         String jsonStrPayload = bundle.getString("json_payload");
+
+         if (jsonStrPayload == null) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to ProcessFromGCMIntentService: " + bundle);
+            return;
+         }
+
+         JSONObject jsonPayload = new JSONObject(jsonStrPayload);
          if (!restoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
             return;
 

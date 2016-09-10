@@ -468,7 +468,47 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testInvalidGoogleProjectNumber() throws Exception {
+   public void testUnsubscribeStatusShouldBeSetIfGCMErrored() throws Exception {
+      ShadowPushRegistratorGPS.fail = true;
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+   }
+
+   @Test
+   public void testInvalidGoogleProjectNumberWithSuccessfulRegisterResponse() throws Exception {
+      GetIdsAvailable();
+      // A more real test would be "missing support library" but bad project number is an easier setup
+      //   and is testing the same logic.
+      OneSignalInitWithBadProjectNum();
+
+      threadAndTaskWait();
+      Robolectric.getForegroundThreadScheduler().runOneTask();
+      Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+
+      // Test that idsAvailable still fires
+      Assert.assertEquals(ShadowOneSignalRestClient.testUserId, callBackUseId);
+   }
+
+   @Test
+   public void testGMSErrorsAfterSuccessfulSubscribeDoNotUnsubscribeTheDevice() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+
+      ShadowOneSignalRestClient.lastPost = null;
+      restartAppAndElapseTimeToNextSession();
+
+      ShadowPushRegistratorGPS.fail = true;
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+   }
+
+   @Test
+   public void testInvalidGoogleProjectNumberWithFailedRegisterResponse() throws Exception {
+      // Ensures lower number notification_types do not over right higher numbered ones.
+      ShadowPushRegistratorGPS.fail = true;
       GetIdsAvailable();
       OneSignalInitWithBadProjectNum();
 
