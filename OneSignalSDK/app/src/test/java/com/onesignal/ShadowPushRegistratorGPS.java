@@ -50,10 +50,10 @@ public class ShadowPushRegistratorGPS {
       lastCallback = callback;
 
       if (!skipComplete)
-         callback.complete(fail ? null : regId, 1);
+         callback.complete(fail ? null : regId, fail ? -7 : 1);
    }
 
    public static void fireLastCallback() {
-      lastCallback.complete(fail ? null : regId, 1);
+      lastCallback.complete(fail ? null : regId, fail ? -7 : 1);
    }
 }

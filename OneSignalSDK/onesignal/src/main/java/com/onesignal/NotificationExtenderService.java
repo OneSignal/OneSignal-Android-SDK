@@ -53,8 +53,6 @@ import java.util.List;
 </service>
 */
 
-// NOTE: Currently does not support Amazon ADM messages.
-
 public abstract class NotificationExtenderService extends IntentService {
 
    public static class OverrideSettings {
@@ -86,7 +84,7 @@ public abstract class NotificationExtenderService extends IntentService {
    private OverrideSettings currentBaseOverrideSettings = null;
 
    // Developer may call to override some notification settings.
-   //   - If called the normal SDK notification will not be displayed.
+   //   - If called the normal SDK notification will not be displayed regardless of what is returned from onNotificationProcessing.
    protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
@@ -109,8 +107,22 @@ public abstract class NotificationExtenderService extends IntentService {
 
    private void processIntent(Intent intent) {
       Bundle bundle = intent.getExtras();
+
+      // Service maybe triggered without extras on some Android devices on boot.
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/99
+      if (bundle == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No extras sent to NotificationExtenderService in its Intent!\n" + intent);
+         return;
+      }
+
+      String jsonStrPayload = bundle.getString("json_payload");
+      if (jsonStrPayload == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to NotificationExtenderService: " + bundle);
+         return;
+      }
+
       try {
-         currentJsonPayload = new JSONObject(bundle.getString("json_payload"));
+         currentJsonPayload = new JSONObject(jsonStrPayload);
          currentlyRestoring = bundle.getBoolean("restoring", false);
          if (bundle.containsKey("android_notif_id")) {
             currentBaseOverrideSettings = new OverrideSettings();

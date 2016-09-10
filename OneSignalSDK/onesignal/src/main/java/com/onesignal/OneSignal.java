@@ -321,10 +321,14 @@ public class OneSignal {
          @Override
          public void complete(String id, int status) {
             if (status < 1) {
-               if (OneSignalStateSynchronizer.getRegistrationId() == null || subscribableStatus < -6)
+               // Only allow errored subscribableStatuses if we have never gotten a token.
+               //   This ensures the device will not later be marked unsubscribed due to a
+               //   any inconsistencies returned by Google Play services.
+               // Also do not override other types of errors status ( > -6).
+               if (OneSignalStateSynchronizer.getRegistrationId() == null &&
+                   (subscribableStatus == 1 || subscribableStatus < -6))
                   subscribableStatus = status;
             }
-            // Allow the pushRegistrator to replace it's invalid status.
             else if (subscribableStatus < -6)
                subscribableStatus = status;
 

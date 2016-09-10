@@ -32,6 +32,10 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 
+// This Service ensure tags, session data, etc are not lost by saving it to local storage before closing.
+//  It then starts again if there is un-synced data that needs to be posted to OneSignal.
+// The service is stopped with stopSelf() once completed.
+
 public class SyncService extends Service {
 
    private void checkOnFocusSync() {
@@ -69,6 +73,7 @@ public class SyncService extends Service {
 
    @Override
    public int onStartCommand(Intent intent, int flags, int startId) {
+      // Starts sticky only if the app has shown an Activity.
       return OneSignal.startedSyncService ? START_STICKY : START_NOT_STICKY;
    }
 
@@ -88,13 +93,16 @@ public class SyncService extends Service {
       onTaskRemoved();
    }
 
-
-   /* Always make sure we are shutting down as quickly as possible here! We are on the main thread and have 20 sec before the process is forcefully killed.
-      Also if the user reopens the app or there is another task still open on the same process it will hang the startup/UI there.
-    */
+   // NOTE: Currently onTaskRemoved takes about 100ms to run.
+   // Please maintain this efficiency as it runs on the main thread!
+   //   This is important as while this method is running the app will not be response if
+   //   the user reopens or focuses another tasks part of the same process.
+   // Also the process will be killed forcefully if this does not finish in 20 seconds.
    static void onTaskRemoved() {
+      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Starting SyncService:onTaskRemoved.");
       ActivityLifecycleHandler.focusHandlerThread.stopScheduledRunnable();
       OneSignalStateSynchronizer.stopAndPersist();
       OneSignal.onAppLostFocus(true); // Save only
+      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Completed SyncService:onTaskRemoved.");
    }
 }

@@ -35,6 +35,7 @@ public class NotificationRestoreService extends IntentService {
 
    public NotificationRestoreService() {
       super("NotificationRestoreService");
+      setIntentRedelivery(true);
    }
 
    @Override
