@@ -63,6 +63,8 @@ public class PushRegistratorADM implements PushRegistrator {
    }
 
    public static void fireCallback(String id) {
+      if (registeredCallback == null)
+         return;
       callbackSuccessful = true;
       registeredCallback.complete(id, 1);
    }

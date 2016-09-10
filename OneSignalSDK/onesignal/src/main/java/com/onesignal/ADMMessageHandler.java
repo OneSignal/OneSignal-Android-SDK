@@ -57,7 +57,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
    @Override
    protected void onRegistered(String newRegistrationId) {
-      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "ADM registartion ID: " + newRegistrationId);
+      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "ADM registration ID: " + newRegistrationId);
       PushRegistratorADM.fireCallback(newRegistrationId);
    }
 
