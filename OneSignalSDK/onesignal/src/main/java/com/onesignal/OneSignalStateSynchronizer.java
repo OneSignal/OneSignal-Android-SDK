@@ -58,9 +58,9 @@ class OneSignalStateSynchronizer {
    private static Context appContext;
 
    private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type"};
-   private static final Set<String> LOCATION_FIELDS_SET = new HashSet<String>(Arrays.asList(LOCATION_FIELDS));
+   private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
 
-   // Object to synchronize to prevent concurrent modifications on syncValues and dependValues
+   // Object to synchronize on to prevent concurrent modifications on syncValues and dependValues
    private static final Object syncLock = new Object() {};
 
    static private JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
@@ -70,6 +70,11 @@ class OneSignalStateSynchronizer {
    }
 
    static private JSONObject synchronizedGenerateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
+      if (cur == null)
+         return null;
+      if (changedTo == null)
+         return baseOutput;
+
       Iterator<String> keys = changedTo.keys();
       String key;
       Object value;
@@ -388,46 +393,50 @@ class OneSignalStateSynchronizer {
       private void persistStateAfterSync(JSONObject inDependValues, JSONObject inSyncValues) {
          if (inDependValues != null)
             OneSignalStateSynchronizer.generateJsonDiff(dependValues, inDependValues, dependValues, null);
+
          if (inSyncValues != null) {
             OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues, null);
-
-            synchronized (syncLock) {
-               if (inSyncValues.has("tags")) {
-                  JSONObject newTags;
-                  if (syncValues.has("tags")) {
-                     try {
-                        newTags = new JSONObject(syncValues.optString("tags"));
-                     } catch (JSONException e) {
-                        newTags = new JSONObject();
-                     }
-                  }
-                  else
-                     newTags = new JSONObject();
-
-                  JSONObject curTags = inSyncValues.optJSONObject("tags");
-                  Iterator<String> keys = curTags.keys();
-                  String key;
-
-                  try {
-                     while (keys.hasNext()) {
-                        key = keys.next();
-                        if (!"".equals(curTags.optString(key)))
-                           newTags.put(key, curTags.optString(key));
-                        else
-                           newTags.remove(key);
-                     }
-
-                     if (newTags.toString().equals("{}"))
-                        syncValues.remove("tags");
-                     else
-                        syncValues.put("tags", newTags);
-                  } catch (Throwable t) {}
-               }
-            }
+            mergeTags(inSyncValues, null);
          }
 
          if (inDependValues != null || inSyncValues != null)
             persistState();
+      }
+
+      void mergeTags(JSONObject inSyncValues, JSONObject omitKeys) {
+         synchronized (syncLock) {
+            if (inSyncValues.has("tags")) {
+               JSONObject newTags;
+               if (syncValues.has("tags")) {
+                  try {
+                     newTags = new JSONObject(syncValues.optString("tags"));
+                  } catch (JSONException e) {
+                     newTags = new JSONObject();
+                  }
+               }
+               else
+                  newTags = new JSONObject();
+
+               JSONObject curTags = inSyncValues.optJSONObject("tags");
+               Iterator<String> keys = curTags.keys();
+               String key;
+
+               try {
+                  while (keys.hasNext()) {
+                     key = keys.next();
+                     if ("".equals(curTags.optString(key)))
+                        newTags.remove(key);
+                     else if (omitKeys == null || !omitKeys.has(key))
+                        newTags.put(key, curTags.optString(key));
+                  }
+
+                  if (newTags.toString().equals("{}"))
+                     syncValues.remove("tags");
+                  else
+                     syncValues.put("tags", newTags);
+               } catch (Throwable t) {}
+            }
+         }
       }
    }
 
@@ -691,33 +700,29 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   private static JSONObject lastGetTagsResponse;
+   static boolean serverSuccess;
    static GetTagsResult getTags(boolean fromServer) {
-      lastGetTagsResponse = null;
-
       if (fromServer) {
          String userId = OneSignal.getUserId();
          OneSignalRestClient.getSync("players/" + userId, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onSuccess(String responseStr) {
+               serverSuccess = true;
                try {
-                  lastGetTagsResponse = new JSONObject(responseStr);
+                  JSONObject lastGetTagsResponse = new JSONObject(responseStr);
                   if (lastGetTagsResponse.has("tags")) {
-                     lastGetTagsResponse = lastGetTagsResponse.optJSONObject("tags");
-                     currentUserState.syncValues.put("tags", lastGetTagsResponse);
+                     JSONObject dependDiff = generateJsonDiff(currentUserState.syncValues.optJSONObject("tags"),
+                                                              toSyncUserState.syncValues.optJSONObject("tags"),
+                                                              null, null);
+
+                     currentUserState.syncValues.put("tags", lastGetTagsResponse.optJSONObject("tags"));
                      currentUserState.persistState();
 
-                     JSONObject tagsToSync = getTagsWithoutDeletedKeys(toSyncUserState.syncValues);
-                     if (tagsToSync != null) {
-                        Iterator<String> keys = tagsToSync.keys();
-                        while (keys.hasNext()) {
-                           String key = keys.next();
-                           lastGetTagsResponse.put(key, tagsToSync.optString(key));
-                        }
-                     }
+                     // Allow server side tags to overwrite local tags expect for any pending changes
+                     //  that haven't been successfully posted.
+                     toSyncUserState.mergeTags(lastGetTagsResponse, dependDiff);
+                     toSyncUserState.persistState();
                   }
-                  else
-                     lastGetTagsResponse = null;
                } catch (JSONException e) {
                   e.printStackTrace();
                }
@@ -725,9 +730,7 @@ class OneSignalStateSynchronizer {
          });
       }
 
-      if (lastGetTagsResponse == null)
-         return new GetTagsResult(false, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
-      return new GetTagsResult(true, lastGetTagsResponse);
+      return new GetTagsResult(serverSuccess, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
    }
 
    static void resetCurrentState() {
