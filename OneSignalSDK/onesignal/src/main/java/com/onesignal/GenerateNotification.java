@@ -251,7 +251,7 @@ class GenerateNotification {
       if (bigPictureIcon != null)
          notifBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
 
-      if (OneSignal.getSoundEnabled(currentContext)) {
+      if (isSoundEnabled(gcmBundle)) {
          Uri soundUri = getCustomSound(gcmBundle);
          if (soundUri != null)
             notifBuilder.setSound(soundUri);
@@ -677,10 +677,17 @@ class GenerateNotification {
       return contextResources.getIdentifier(name, "drawable", packageName);
    }
 
+   private static boolean isSoundEnabled(JSONObject gcmBundle) {
+      String sound = gcmBundle.optString("sound", null);
+      if ("null".equals(sound) || "nil".equals(sound))
+         return false;
+      return OneSignal.getSoundEnabled(currentContext);
+   }
+
    private static Uri getCustomSound(JSONObject gcmBundle) {
       int soundId;
       String sound = gcmBundle.optString("sound", null);
-
+      
       if (isValidResourceName(sound)) {
          soundId = contextResources.getIdentifier(sound, "raw", packageName);
          if (soundId != 0)
