@@ -1063,7 +1063,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void shouldGetTagsFromServerOnFirstCall() throws Exception {
+   public void shouldGetTagsFromServerOnFirstCallAndMergeLocalAndRemote() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
 
@@ -1075,9 +1075,35 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
       Assert.assertEquals("value2", lastGetTags.getString("test2"));
 
+      // Makes sure a 2nd call to GetTags correctly uses existing tags and merges new local changes.
+      lastGetTags = null;
+      OneSignal.sendTag("test3", "value3");
       GetTags();
+      threadWait();
+      Assert.assertEquals("value1", lastGetTags.getString("test1"));
+      Assert.assertEquals("value2", lastGetTags.getString("test2"));
+      Assert.assertEquals("value3", lastGetTags.getString("test3"));
+      threadAndTaskWait(); threadAndTaskWait();
+      // Also ensure only 1 network call is made to just send the new tags only.
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+
+      StaticResetHelper.restSetStaticFields();
+      OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      // Test that local pending changes are still applied but new changes made server side a respected.
+      lastGetTags = null;
+      OneSignal.deleteTag("test2");
+      OneSignal.sendTag("test4", "value4");
+      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\",\"test3\": \"ShouldOverride\",\"test4\": \"RemoteShouldNotOverwriteLocalPending\"}}";
+      GetTags();
+      threadAndTaskWait(); threadAndTaskWait();
+      Assert.assertEquals("value1", lastGetTags.getString("test1"));
+      Assert.assertFalse(lastGetTags.has("test2"));
+      Assert.assertEquals("ShouldOverride", lastGetTags.getString("test3"));
+      Assert.assertEquals("value4", lastGetTags.getString("test4"));
+      Assert.assertEquals(7, ShadowOneSignalRestClient.networkCallCount);
+      Assert.assertEquals("{\"test2\":\"\",\"test4\":\"value4\"}", ShadowOneSignalRestClient.lastPost.optJSONObject("tags").toString());
    }
 
    @Test
