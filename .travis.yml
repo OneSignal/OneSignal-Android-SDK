@@ -1,14 +1,17 @@
 language: android
 sudo: false
-jdk: openjdk7
+jdk: oraclejdk8
 android:
   components:
-    - platform-tools
     - tools
-    - build-tools-23.0.3
+    - tools # Include again to work around travis not using the latest.
+            # https://github.com/travis-ci/travis-ci/issues/6193
+            # Required to get the newest platform-tools.
+    - platform-tools
+    - build-tools-24.0.2
     - extra-android-m2repository
     - extra-google-m2repository
-    - android-23
+    - android-24
   licenses:
     - '.+'
 before_install:
@@ -18,3 +21,5 @@ before_install:
     - export PATH=$GRADLE_HOME/bin:$PATH
     - cd OneSignalSDK/app
 script: gradle build
+after_failure:
+    - cat /home/travis/build/OneSignal/OneSignal-Android-SDK/OneSignalSDK/app/build/outputs/lint-results-debug.xml
