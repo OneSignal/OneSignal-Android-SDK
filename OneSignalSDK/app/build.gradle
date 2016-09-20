@@ -6,9 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.onesignal.example"
-        manifestPlaceholders = [manifestApplicationId: "${applicationId}",
-//                              onesignal_app_id: "5eb5a37e-b458-11e3-ac11-000c2940e62c",
-                                onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
+        manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
                                 onesignal_google_project_number: "703322744261"]
         minSdkVersion 9
         targetSdkVersion 24
