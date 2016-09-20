@@ -33,7 +33,7 @@ public class OSNotificationAction {
       Opened,
 
       // User tapped on an action from the notification.
-      ActionTaken,
+      ActionTaken
    }
 
    // The type of the notification action

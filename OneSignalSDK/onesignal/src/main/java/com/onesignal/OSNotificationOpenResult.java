@@ -39,7 +39,7 @@ public class OSNotificationOpenResult {
       try {
          JSONObject ac = new JSONObject();
          ac.put("actionID", action.actionID);
-         ac.put("type", action.type);
+         ac.put("type", action.type.ordinal());
 
          mainObj.put("action", ac);
 

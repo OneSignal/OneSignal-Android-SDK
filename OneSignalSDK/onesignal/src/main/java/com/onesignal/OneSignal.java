@@ -1152,6 +1152,24 @@ public class OneSignal {
    public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
       mInitBuilder.mDisplayOption = displayOption;
    }
+   public static void setInFocusDisplaying(int displayOption) {
+      mInitBuilder.mDisplayOption = getInFocusDisplaying(displayOption);
+   }
+
+   private static OSInFocusDisplayOption getInFocusDisplaying(int displayOption) {
+      switch(displayOption) {
+         case 0:
+            return OSInFocusDisplayOption.None;
+         case 1:
+            return OSInFocusDisplayOption.InAppAlert;
+         case 2:
+            return OSInFocusDisplayOption.Notification;
+      }
+
+      if (displayOption < 0)
+         return OSInFocusDisplayOption.None;
+      return OSInFocusDisplayOption.Notification;
+   }
 
    static boolean getNotificationsWhenActiveEnabled() {
       // If OneSignal hasn't been initialized yet it is best to display a normal notification.

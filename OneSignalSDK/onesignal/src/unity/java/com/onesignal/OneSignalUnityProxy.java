@@ -47,7 +47,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
       unityListenerName = listenerName;
       
       try {
-         // We use reflection here so the default proguard config does not get an error for native apps.
+         // We use reflection here so we don't have to include a Unity jar to build this project.
          Class unityPlayerClass;
          unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
          unitySendMessage = unityPlayerClass.getMethod("UnitySendMessage", String.class, String.class, String.class);
@@ -62,21 +62,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
 
    @Override
    public void notificationOpened(OSNotificationOpenResult result) {
-
-      try {
-         unitySendMessage.invoke(null, unityListenerName, "onPushNotificationOpened", result.stringify());
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
+      unitySafeInvoke("onPushNotificationOpened", result.stringify());
    }
 
    @Override
    public void notificationReceived(OSNotification notification) {
-      try {
-         unitySendMessage.invoke(null, unityListenerName, "onPushNotificationReceived", notification.stringify());
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
+      unitySafeInvoke("onPushNotificationReceived", notification.stringify());
    }
 
    public void sendTag(String key, String value) {
@@ -91,11 +82,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
       OneSignal.getTags(new GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            try {
-               unitySendMessage.invoke(null, unityListenerName, "onTagsReceived", tags.toString());
-            } catch (Throwable t) {
-               t.printStackTrace();
-            }
+            unitySafeInvoke("onTagsReceived", tags.toString());
          }
       });
    }
@@ -120,7 +107,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
                else
                   jsonIds.put("pushToken", "");
 
-               unitySendMessage.invoke(null, unityListenerName, "onIdsAvailable", jsonIds.toString());
+               unitySafeInvoke("onIdsAvailable", jsonIds.toString());
             } catch (Throwable t) {
                t.printStackTrace();
             }
@@ -132,7 +119,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
 
    public void enableVibrate(boolean enable) { OneSignal.enableVibrate(enable); }
 
-   void setInFocusDisplaying(OneSignal.OSInFocusDisplayOption displayOption) { OneSignal.setInFocusDisplaying(displayOption); }
+   void setInFocusDisplaying(int displayOption) { OneSignal.setInFocusDisplaying(displayOption); }
 
    public void setSubscription(boolean enable) { OneSignal.setSubscription(enable); }
 
@@ -140,20 +127,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
       OneSignal.postNotification(json, new PostNotificationResponseHandler() {
          @Override
          public void onSuccess(JSONObject response) {
-            try {
-               unitySendMessage.invoke(null, unityListenerName, "onPostNotificationSuccess", response.toString());
-            } catch (Throwable t) {
-               t.printStackTrace();
-            }
+            unitySafeInvoke("onPostNotificationSuccess", response.toString());
          }
 
          @Override
          public void onFailure(JSONObject response) {
-            try {
-               unitySendMessage.invoke(null, unityListenerName, "onPostNotificationFailed", response.toString());
-            } catch (Throwable t) {
-               t.printStackTrace();
-            }
+            unitySafeInvoke("onPostNotificationFailed", response.toString());
          }
       });
    }
@@ -166,5 +145,13 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    }
    public void clearOneSignalNotifications() {
       OneSignal.clearOneSignalNotifications();
+   }
+
+   private void unitySafeInvoke(String method, String params) {
+      try {
+         unitySendMessage.invoke(null, unityListenerName, method, params);
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
    }
 }

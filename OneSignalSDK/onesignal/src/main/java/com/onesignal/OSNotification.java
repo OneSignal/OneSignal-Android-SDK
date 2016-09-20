@@ -70,7 +70,7 @@ public class OSNotification {
          mainObj.put("isAppInFocus", isAppInFocus);
          mainObj.put("shown", shown);
          mainObj.put("androidNotificationId", androidNotificationId);
-         mainObj.put("displayType", displayType);
+         mainObj.put("displayType", displayType.ordinal());
 
          JSONObject pay = new JSONObject();
          pay.put("notificationID", payload.notificationID);
