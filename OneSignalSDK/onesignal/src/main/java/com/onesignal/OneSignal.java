@@ -598,9 +598,8 @@ public class OneSignal {
             userState.set("identifier", lastRegistrationId);
 
             String adId = mainAdIdProvider.getIdentifier(appContext);
-            if (adId == null)
-               adId = new AdvertisingIdProviderFallback().getIdentifier(appContext);
-            userState.set("ad_id", adId);
+            if (adId != null)
+               userState.set("ad_id", adId);
             userState.set("device_os", Build.VERSION.RELEASE);
             userState.set("timezone", getTimeZoneOffset());
             userState.set("language", OSUtils.getCorrectedLanguage());
@@ -736,15 +735,18 @@ public class OneSignal {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                logHttpError("create notification failed", statusCode, throwable, response);
-
-               if (statusCode == 0)
-                  response = "{'error': 'HTTP no response error'}";
-
                if (handler != null) {
                   try {
+                     if (statusCode == 0)
+                        response = "{\"error\": \"HTTP no response error\"}";
+
                      handler.onFailure(new JSONObject(response));
                   } catch (Throwable t) {
-                     handler.onFailure(null);
+                     try {
+                        handler.onFailure(new JSONObject("{\"error\": \"Unknown response!\"}"));
+                     } catch (JSONException e) {
+                        e.printStackTrace();
+                     }
                   }
                }
             }
