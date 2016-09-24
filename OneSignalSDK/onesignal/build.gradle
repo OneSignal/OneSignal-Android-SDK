@@ -22,11 +22,10 @@ android {
         xamarin {
             minifyEnabled false
             if (project.hasProperty('enableXamarin') && enableXamarin == 'true') {
-                if (project.hasProperty('manifestApplicationId') && project.hasProperty('onesignal_app_id') && project.hasProperty('onesignal_google_project_number')) {
-                    manifestPlaceholders = [manifestApplicationId:manifestApplicationId, onesignal_app_id:onesignal_app_id, onesignal_google_project_number:onesignal_google_project_number]
-                } else {
-                    throw new GradleException('Please ensure you have provided manifestApplicationId, onesignal_app_id, and onesignal_google_project_number! aborting xamarin build!')
-                }
+                if (project.hasProperty('onesignal_app_id') && project.hasProperty('onesignal_google_project_number'))
+                    manifestPlaceholders = [onesignal_app_id:onesignal_app_id, onesignal_google_project_number:onesignal_google_project_number]
+                else
+                    throw new GradleException('Please ensure you have provided onesignal_app_id and onesignal_google_project_number! Aborting xamarin build!')
             }
         }
     }
@@ -37,6 +36,19 @@ dependencies {
 
     compile 'com.google.android.gms:play-services-gcm:9.4.0'
     compile 'com.google.android.gms:play-services-location:9.4.0'
+}
+
+// Remove OnActivityPausedListener class.
+//     Only required to compile but doesn't need to be in the release jar / aar
+project.afterEvaluate {
+    android.libraryVariants.all { variant ->
+        String variantName = variant.name.capitalize()
+        Task cleanTask = task("removeUnneeded${variantName}Classes") << {
+            delete "build/intermediates/classes/${variant.name}/android/app/OnActivityPausedListener.class"
+        }
+        tasks.findByName("bundle${variantName}").dependsOn cleanTask
+        cleanTask.mustRunAfter tasks.findByName("compile${variantName}Sources")
+    }
 }
 
 // apply from: 'maven-push.gradle'
