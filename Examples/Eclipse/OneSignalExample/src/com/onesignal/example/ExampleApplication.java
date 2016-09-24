@@ -48,8 +48,13 @@ public class ExampleApplication extends Application {
          // intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
          // startActivity(intent);
 
-         // Follow the instructions in the link below to prevent the launcher Activity from starting.
-         // https://documentation.onesignal.com/docs/android-notification-customizations#changing-the-open-action-of-a-notification
+         // Add the following to your AndroidManifest.xml to prevent the launching of your main Activity
+         //  if you are calling startActivity above.
+         /* 
+            <application ...>
+              <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
+            </application>
+         /*
       }
    }
 }
