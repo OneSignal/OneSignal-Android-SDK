@@ -45,7 +45,7 @@
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
         <service android:name="com.onesignal.GcmIntentService" />
 
-        <service android:name="com.onesignal.SyncService" android:stopWithTask="false" />
+        <service android:name="com.onesignal.SyncService" />
         <activity android:name="com.onesignal.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service android:name="com.onesignal.NotificationRestoreService" />
