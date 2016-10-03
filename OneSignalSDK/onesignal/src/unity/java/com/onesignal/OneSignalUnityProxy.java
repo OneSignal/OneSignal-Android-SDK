@@ -82,7 +82,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
       OneSignal.getTags(new GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            unitySafeInvoke("onTagsReceived", tags.toString());
+            String tagsStr;
+            if (tags != null)
+               tagsStr = tags.toString();
+            else
+               tagsStr = "{}";
+            unitySafeInvoke("onTagsReceived", tagsStr);
          }
       });
    }
