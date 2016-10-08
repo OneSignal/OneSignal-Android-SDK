@@ -38,6 +38,7 @@ import android.telephony.TelephonyManager;
 
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 class OSUtils {
 
@@ -167,5 +168,14 @@ class OSUtils {
          return lang + "-" + Locale.getDefault().getCountry();
 
       return lang;
+   }
+
+   static boolean isValidEmail(String email) {
+      if (email == null)
+         return false;
+
+      String emRegex = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
+      Pattern pattern = Pattern.compile(emRegex);
+      return pattern.matcher(email).matches();
    }
 }

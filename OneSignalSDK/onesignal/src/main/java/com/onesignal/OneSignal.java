@@ -646,8 +646,10 @@ public class OneSignal {
          return;
       }
 
-      if (email != null && !"".equals(email))
+      if (OSUtils.isValidEmail(email)) {
+         email = email.trim();
          OneSignalStateSynchronizer.syncHashedEmail(email.toLowerCase());
+      }
    }
 
    public static void sendTag(String key, String value) {
