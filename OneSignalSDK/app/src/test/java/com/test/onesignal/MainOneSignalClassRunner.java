@@ -1119,6 +1119,40 @@ public class MainOneSignalClassRunner {
       Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.testUserId));
    }
 
+
+   @Test
+   public void syncHashedEmailTest() throws Exception {
+      OneSignalInit();
+      // Casing should be forced to lower.
+      OneSignal.syncHashedEmail("Test@tEst.CoM");
+      threadAndTaskWait();
+      Assert.assertEquals("b642b4217b34b1e8d3bd915fc65c4452" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      Assert.assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
+
+      // Test email update
+      ShadowOneSignalRestClient.lastPost = null;
+      OneSignal.syncHashedEmail("test@test2.com");
+      threadAndTaskWait();
+      Assert.assertEquals("3e1163777d25d2b935057c3ae393efee" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      Assert.assertEquals("69e9ca5af84bc88bc185136cd6f782ee889be5c8" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
+
+      // Test trim on email
+      ShadowOneSignalRestClient.lastPost = null;
+      OneSignal.syncHashedEmail(" test@test2.com ");
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+
+      // Test invalid email.
+      OneSignal.syncHashedEmail("aaaaaa");
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+
+      // Test invalid email.
+      OneSignal.syncHashedEmail(null);
+      threadAndTaskWait();
+      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+   }
+
    // ####### on_focus Tests ########
 
    @Test
