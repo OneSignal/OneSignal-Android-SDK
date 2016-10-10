@@ -22,7 +22,6 @@
     <ImageView
         android:id="@+id/os_bgimage_notif_bgimage"
         android:layout_width="wrap_content"
-        android:src="@drawable/onesignal_bgimage_default_image"
         android:scaleType="matrix"
         android:layout_height="64dp"/>
 
