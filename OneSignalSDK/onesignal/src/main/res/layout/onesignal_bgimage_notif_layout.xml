@@ -13,25 +13,25 @@
     <!-- Note: Can add to darken image -->
     <!-- android:tint="#44000000" -->
 
-    <ImageView
-        android:id="@+id/os_bgimage_notif_bgimage"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:scaleType="centerCrop"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
-
     <!-- android:src="@drawable/test_image" -->
 
     <!--android:textAppearance="@android:style/TextAppearance.Material.Notification.Title"-->
     <!-- API21 -->
     <!--android:textAppearance="@android:style/TextAppearance.StatusBar.EventContent.Title"-->
 
+    <ImageView
+        android:id="@+id/os_bgimage_notif_bgimage"
+        android:layout_width="wrap_content"
+        android:src="@drawable/onesignal_bgimage_default_image"
+        android:scaleType="matrix"
+        android:layout_height="64dp"/>
+
     <LinearLayout
         android:orientation="vertical"
         android:layout_marginStart="@android:dimen/notification_large_icon_width"
         android:layout_width="fill_parent"
         android:layout_height="64dp">
+
         <TextView
             android:id="@+id/os_bgimage_notif_title"
             android:layout_width="match_parent"
@@ -54,4 +54,5 @@
             android:fadingEdge="horizontal"
             android:paddingLeft="4dp"/>
     </LinearLayout>
+
 </RelativeLayout>
