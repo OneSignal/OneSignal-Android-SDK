@@ -52,7 +52,7 @@ class AndroidSupportV4Compat {
          }
       }
 
-      public static int getColor(Context context, int id) {
+      static int getColor(Context context, int id) {
          if (Build.VERSION.SDK_INT > 22)
             return context.getColor(id);
          return context.getResources().getColor(id);

@@ -503,8 +503,13 @@ class GenerateNotification {
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
 
-   // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available if the app project isn't setup correctly.
+   // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available
+   //    This maybe the case if a jar is used instead of an aar.
    private static void addBackgroundImage(JSONObject gcmBundle, NotificationCompat.Builder notifBuilder) throws Throwable {
+      // Required to right align image
+      if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
+         return;
+
       Bitmap bg_image = null;
       JSONObject jsonBgImage = null;
       String jsonStrBgImage = gcmBundle.optString("bg_img", null);
@@ -524,11 +529,31 @@ class GenerateNotification {
          setTextColor(customView, jsonBgImage, R.id.os_bgimage_notif_title, "tc", "onesignal_bgimage_notif_title_color");
          setTextColor(customView, jsonBgImage, R.id.os_bgimage_notif_body, "bc", "onesignal_bgimage_notif_body_color");
 
-         customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bg_image);
+         String alignSetting = null;
+         if (jsonBgImage != null && jsonBgImage.has("img_align"))
+            alignSetting = jsonBgImage.getString("img_align");
+         else {
+            int iAlignSetting = contextResources.getIdentifier("onesignal_bgimage_notif_image_align", "string", packageName);
+            if (iAlignSetting != 0)
+               alignSetting = contextResources.getString(iAlignSetting);
+         }
+
+         if ("right".equals(alignSetting)) {
+            // Use os_bgimage_notif_bgimage_right_aligned instead of os_bgimage_notif_bgimage
+            //    which has scaleType="fitEnd" set.
+            // This is required as setScaleType can not be called through RemoteViews as it is an enum.
+            customView.setViewPadding(R.id.os_bgimage_notif_bgimage_align_layout, -5000, 0, 0, 0);
+            customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage_right_aligned, bg_image);
+            customView.setViewVisibility(R.id.os_bgimage_notif_bgimage_right_aligned, 0); // visible
+            customView.setViewVisibility(R.id.os_bgimage_notif_bgimage, 2); // gone
+         }
+         else
+            customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bg_image);
+
          notifBuilder.setContent(customView);
 
          // Remove style to prevent expanding by the user.
-         // Will need to create an extended image option and consider the layout.
+         // Future: Create an extended image option, will need its own layout.
          notifBuilder.setStyle(null);
       }
    }
