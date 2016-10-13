@@ -7,9 +7,10 @@ android {
     defaultConfig {
         applicationId "com.onesignal.example"
 
-        // TODO: Please update the Google Project number and OneSignal Id below to yours.
+        // TODO: Please update the OneSignal ID below to yours!
         manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
-                                onesignal_google_project_number: "703322744261"]
+                                // Project number pulled from dashboard, local value is ignored.
+                                onesignal_google_project_number: "REMOTE"]
 
         minSdkVersion 10
         targetSdkVersion 23
