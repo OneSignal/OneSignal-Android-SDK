@@ -44,7 +44,7 @@ class OSUtils {
 
    static final int UNINITIALIZABLE_STATUS = -999;
 
-   static int initializationChecker(int deviceType, String googleProjectNumber, String oneSignalAppId) {
+   int initializationChecker(int deviceType, String oneSignalAppId) {
       int subscribableStatus = 1;
 
       try {
@@ -55,20 +55,11 @@ class OSUtils {
          return UNINITIALIZABLE_STATUS;
       }
 
-      if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) || "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
+      if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) ||
+          "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
          OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
 
       if (deviceType == 1) {
-         try {
-            //noinspection ResultOfMethodCallIgnored
-            Double.parseDouble(googleProjectNumber);
-            if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
-               throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
-         } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t);
-            subscribableStatus = -6;
-         }
-
          try {
             Class.forName("com.google.android.gms.gcm.GoogleCloudMessaging");
          } catch (ClassNotFoundException e) {

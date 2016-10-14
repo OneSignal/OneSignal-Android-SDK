@@ -132,7 +132,7 @@ public class MainOneSignalClassRunner {
       });
    }
 
-   static void cleanUp() {
+   private static void cleanUp() {
       callBackUseId = getCallBackRegId = null;
       StaticResetHelper.restSetStaticFields();
 
@@ -145,6 +145,9 @@ public class MainOneSignalClassRunner {
 
       ShadowPushRegistratorGPS.skipComplete = false;
       ShadowPushRegistratorGPS.fail = false;
+      ShadowPushRegistratorGPS.lastProjectNumber = null;
+
+      ShadowOSUtils.subscribableStatus = 1;
 
       notificationOpenedMessage = null;
       lastGetTags = null;
@@ -288,6 +291,15 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Assert.assertEquals("Robo test message", notificationOpenedMessage);
+   }
+
+   @Test
+   public void testAndroidParamsProjectNumberOverridesLocal() {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      System.out.println("ShadowPushRegistratorGPS.lastProjectNumber: " + ShadowPushRegistratorGPS.lastProjectNumber);
+      Assert.assertNotSame("123456789", ShadowPushRegistratorGPS.lastProjectNumber);
    }
 
    @Test
@@ -1372,7 +1384,7 @@ public class MainOneSignalClassRunner {
       try {Thread.sleep(1000);} catch (Throwable t) {}
    }
 
-   static void threadAndTaskWait() {
+   private static void threadAndTaskWait() {
       try {Thread.sleep(testSleepTime);} catch (Throwable t) {}
       OneSignalPackagePrivateHelper.runAllNetworkRunnables();
       OneSignalPackagePrivateHelper.runFocusRunnables();
@@ -1382,6 +1394,7 @@ public class MainOneSignalClassRunner {
 
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      ShadowOSUtils.subscribableStatus = 1;
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
    }
 
@@ -1391,6 +1404,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void OneSignalInitWithBadProjectNum() {
+      ShadowOSUtils.subscribableStatus = -6;
       OneSignal.init(blankActivity, "NOT A VALID Google project number", ONESIGNAL_APP_ID);
    }
 

@@ -98,7 +98,7 @@ public class SyncService extends Service {
    //   This is important as while this method is running the app will not be response if
    //   the user reopens or focuses another tasks part of the same process.
    // Also the process will be killed forcefully if this does not finish in 20 seconds.
-   // Method behavior seems unaffected by the android:stopWithTask manifest entry.
+   // Triggering seems unaffected by the presents or absence of android:stopWithTask="false".
    //   false is not required, tested on Android 4.4.2 and 6.0.1
    static void onTaskRemoved() {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Starting SyncService:onTaskRemoved.");

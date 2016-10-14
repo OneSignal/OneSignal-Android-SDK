@@ -147,7 +147,7 @@ public class ShadowOneSignalRestClient {
       responseHandler.onSuccess("{\"awl_list\": {" +
                                     "\"IlIfoQBT5jXgkgn6nBsIrGJn5t0Yd91GqKAGoApIYzk=\": 1," +
                                     "\"Q3zjDf/4NxXU1QpN9WKp/iwVYNPQZ0js2EDDNO+eo0o=\": 1" +
-                                "}}");
+                                "}, \"android_sender_id\": \"87654321\"}");
 
       safeInterrupt();
    }

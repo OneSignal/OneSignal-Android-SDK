@@ -77,10 +77,9 @@
         <meta-data android:name="com.google.android.gms.version"
            android:value="@integer/google_play_services_version" />
         
+         <!-- TODO: Please update the OneSignal ID below to yours! -->
         <meta-data android:name="onesignal_app_id"
            android:value="b2f7f966-d8cc-11e4-bed1-df8f05be55ba" />
-        <meta-data android:name="onesignal_google_project_number"
-           android:value="str:703322744261" />
         
         <receiver
             android:name="com.onesignal.GcmBroadcastReceiver"

@@ -207,7 +207,12 @@ public class OneSignal {
       try {
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
-         OneSignal.init(context, bundle.getString("onesignal_google_project_number").substring(4), bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
+
+         String sender_id = bundle.getString("onesignal_google_project_number");
+         if (sender_id != null && sender_id.length() > 4)
+            sender_id = sender_id.substring(4);
+
+         OneSignal.init(context, sender_id, bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
          t.printStackTrace();
       }
@@ -230,7 +235,7 @@ public class OneSignal {
 
       osUtils = new OSUtils();
       deviceType = osUtils.getDeviceType();
-      subscribableStatus = OSUtils.initializationChecker(deviceType, googleProjectNumber, oneSignalAppId);
+      subscribableStatus = osUtils.initializationChecker(deviceType, oneSignalAppId);
       if (subscribableStatus == OSUtils.UNINITIALIZABLE_STATUS)
          return;
 
@@ -307,15 +312,42 @@ public class OneSignal {
 
       waitingToPostStateSync = true;
 
+      registerForPushFired = false;
+      if (sendAsSession)
+         locationFired = false;
+
+      startLocationUpdate();
+      makeAndroidParamsRequest();
+
+      promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
+   }
+
+   private static void startLocationUpdate() {
+      if (shareLocation) {
+         LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
+            @Override
+            public void complete(Double lat, Double log, Float accuracy, Integer type) {
+               lastLocLat = lat;
+               lastLocLong = log;
+               lastLocAcc = accuracy;
+               lastLocType = type;
+               locationFired = true;
+               registerUser();
+            }
+         });
+      }
+      else {
+         locationFired = true;
+         registerUser();
+      }
+   }
+
+   private static void registerForPushToken() {
       PushRegistrator pushRegistrator;
       if (deviceType == 2)
          pushRegistrator = new PushRegistratorADM();
       else
          pushRegistrator = new PushRegistratorGPS();
-
-      registerForPushFired = false;
-      if (sendAsSession)
-         locationFired = false;
 
       pushRegistrator.registerForPush(appContext, mGoogleProjectNumber, new PushRegistrator.RegisteredHandler() {
          @Override
@@ -337,53 +369,52 @@ public class OneSignal {
             registerUser();
          }
       });
+   }
 
-      if (shareLocation) {
-         LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
-            @Override
-            public void complete(Double lat, Double log, Float accuracy, Integer type) {
-               lastLocLat = lat;
-               lastLocLong = log;
-               lastLocAcc = accuracy;
-               lastLocType = type;
-               locationFired = true;
-               registerUser();
-               }
-         });
-      } else {
-         // Don't request or send location information
-         locationFired = true;
-         registerUser();
+   private static int androidParamsReties = 0;
+
+   private static void makeAndroidParamsRequest() {
+      if (awlFired) {
+         // Only ever call android_params endpoint once per cold start.
+         //   Re-register for push token to be safe.
+         registerForPushToken();
+         return;
       }
 
-      if (!awlFired) {
-         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
-            @Override
-            void onFailure(int statusCode, String response, Throwable throwable) {
-               awlFired = true;
-               registerUser();
-            }
-
-            @Override
-            void onSuccess(String response) {
-               try {
-                  awl = new JSONObject(response).getJSONObject("awl_list");
-               } catch (Throwable t) {
-                  t.printStackTrace();
+      OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
+         @Override
+         void onFailure(int statusCode, String response, Throwable throwable) {
+            new Thread(new Runnable() {
+               public void run() {
+                  try {
+                     Thread.sleep(30000 + androidParamsReties * 10000);
+                  } catch (Throwable t) {}
+                  androidParamsReties++;
+                  makeAndroidParamsRequest();
                }
-               awlFired = true;
-               registerUser();
+            });
+         }
+
+         @Override
+         void onSuccess(String response) {
+            try {
+               JSONObject responseJson = new JSONObject(response);
+               if (responseJson.has("android_sender_id"))
+                  mGoogleProjectNumber = responseJson.getString("android_sender_id");
+               awl = responseJson.getJSONObject("awl_list");
+            } catch (Throwable t) {
+               t.printStackTrace();
             }
-         };
+            awlFired = true;
+            registerForPushToken();
+         }
+      };
 
-         String awl_url = "apps/" + appId + "/awl";
-         String userId = getUserId();
-         if (userId != null)
-            awl_url += "?player_id=" + userId;
-         OneSignalRestClient.get(awl_url, responseHandler);
-      }
-
-      promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
+      String awl_url = "apps/" + appId + "/android_params.js";
+      String userId = getUserId();
+      if (userId != null)
+         awl_url += "?player_id=" + userId;
+      OneSignalRestClient.get(awl_url, responseHandler);
    }
 
    private static void fireCallbackForOpenedNotifications() {

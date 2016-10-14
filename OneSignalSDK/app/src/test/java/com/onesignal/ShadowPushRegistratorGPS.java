@@ -39,6 +39,7 @@ public class ShadowPushRegistratorGPS {
 
    public static boolean fail = false;
    public static boolean skipComplete;
+   public static String lastProjectNumber;
 
    private static PushRegistrator.RegisteredHandler lastCallback;
 
@@ -47,6 +48,7 @@ public class ShadowPushRegistratorGPS {
    }
 
    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
+      lastProjectNumber = googleProjectNumber;
       lastCallback = callback;
 
       if (!skipComplete)
