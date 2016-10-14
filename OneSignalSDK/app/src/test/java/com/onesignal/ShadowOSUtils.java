@@ -17,7 +17,7 @@ public class ShadowOSUtils {
       return carrierName;
    }
 
-   int initializationChecker(int deviceType, String oneSignalAppId) {
+   public int initializationChecker(int deviceType, String oneSignalAppId) {
       return subscribableStatus;
    }
 }

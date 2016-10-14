@@ -38,7 +38,7 @@ public class ShadowLocationGMS {
    public static Float accuracy = 3.0f;
    public static Integer type = 0;
 
-   static void getLocation(Context context, boolean promptLocation, LocationGMS.LocationHandler handler) {
+   public static void getLocation(Context context, boolean promptLocation, LocationGMS.LocationHandler handler) {
       handler.complete(lat, log, accuracy, type);
    }
 }

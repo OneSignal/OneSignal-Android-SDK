@@ -66,6 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
@@ -82,9 +83,10 @@ import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadB
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
+      instrumentedPackages = {"com.onesignal"},
       shadows = { ShadowRoboNotificationManager.class, ShadowOneSignalRestClient.class, ShadowBadgeCountUpdater.class },
       sdk = 21)
-@RunWith(CustomRobolectricTestRunner.class)
+@RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
 
    private Activity blankActivity;
@@ -144,14 +146,14 @@ public class GenerateNotificationRunner {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals("title123", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+      Assert.assertEquals("title123", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
       Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
    }
 
@@ -162,7 +164,7 @@ public class GenerateNotificationRunner {
       bundle.putBoolean("restoring", true);
 
       NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
-      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.lastNotif.getContentTitle());
+      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
    }
 
    @Test
@@ -170,7 +172,7 @@ public class GenerateNotificationRunner {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.lastNotif.getContentText());
+      Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should have 1 DB record with the correct time stamp
@@ -255,13 +257,13 @@ public class GenerateNotificationRunner {
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
 
-      Assert.assertEquals(notifMessage, postedNotification.notif.getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY,postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals(notifMessage, postedNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Test Android Wear notification
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals(notifMessage, postedNotification.notif.getContentText());
-      Assert.assertEquals(0, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals(notifMessage, postedNotification.getShadow().getContentText());
+      Assert.assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
       // Badge count should only be one as only one notification is visible in the notification area.
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
@@ -287,13 +289,13 @@ public class GenerateNotificationRunner {
 
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("2 new messages",postedNotification.notif.getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals("2 new messages",postedNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Test Android Wear notification
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("Notif test 2", postedNotification.notif.getContentText());
-      Assert.assertEquals(0, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals("Notif test 2", postedNotification.getShadow().getContentText());
+      Assert.assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
 
       // Should be 3 DB entries (summary and 2 individual)
@@ -319,8 +321,8 @@ public class GenerateNotificationRunner {
 
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("Notif test 3", postedNotification.notif.getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.getRealNotification().flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals("Notif test 3", postedNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
    }

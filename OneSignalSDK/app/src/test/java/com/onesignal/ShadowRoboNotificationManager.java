@@ -43,15 +43,23 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
 
    public class PostedNotification {
 
-      PostedNotification(int id, ShadowNotification notif) {
+      PostedNotification(int id, Notification notif) {
          this.id = id; this.notif = notif;
       }
 
       public int id;
-      public ShadowNotification notif;
+      public Notification notif;
+
+      public ShadowNotification getShadow() {
+         return shadowOf(notif);
+      }
    }
 
-   public static ShadowNotification lastNotif;
+   private static Notification lastNotif;
+   public static ShadowNotification getLastShadowNotif() {
+      return shadowOf(lastNotif);
+   }
+
    public static int lastNotifId;
 
    public static LinkedHashMap<Integer, PostedNotification> notifications = new LinkedHashMap<>();
@@ -66,7 +74,7 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
 
    @Override
    public void notify(String tag, int id, Notification notification) {
-      lastNotif = shadowOf(notification);
+      lastNotif = notification;
       lastNotifId = id;
       notifications.put(id, new PostedNotification(id, lastNotif));
       super.notify(tag, id, notification);
