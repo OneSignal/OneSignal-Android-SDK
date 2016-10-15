@@ -42,14 +42,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
+      instrumentedPackages = {"com.onesignal"},
       shadows = { ShadowGooglePlayServicesUtil.class, ShadowGoogleCloudMessaging.class },
       sdk = 21)
-@RunWith(CustomRobolectricTestRunner.class)
+@RunWith(RobolectricTestRunner.class)
 public class PushRegistratorRunner {
 
    private Activity blankActivity;

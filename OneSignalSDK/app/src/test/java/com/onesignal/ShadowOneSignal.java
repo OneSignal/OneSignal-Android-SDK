@@ -12,7 +12,7 @@ public class ShadowOneSignal {
 
    public static String messages = "";
 
-   static void Log(final OneSignal.LOG_LEVEL level, String message, Throwable throwable) {
+   public static void Log(final OneSignal.LOG_LEVEL level, String message, Throwable throwable) {
       messages += message;
       Log.e("", message, throwable);
    }

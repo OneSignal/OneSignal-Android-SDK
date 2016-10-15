@@ -28,7 +28,6 @@
 package com.test.onesignal;
 
 import android.app.Activity;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -67,6 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
@@ -77,6 +77,7 @@ import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -89,11 +90,11 @@ import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
 @Config(packageName = "com.onesignal.example",
-      constants = BuildConfig.class,
-      shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowPushRegistratorADM.class, ShadowOSUtils.class},
-      sdk = 21)
-
-@RunWith(CustomRobolectricTestRunner.class)
+        shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowPushRegistratorADM.class, ShadowOSUtils.class},
+        instrumentedPackages = {"com.onesignal"},
+        constants = BuildConfig.class,
+        sdk = 21)
+@RunWith(RobolectricTestRunner.class)
 public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
@@ -379,7 +380,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testOpeningLaunchUrlWithDisableDefault() throws Exception {
       ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().put("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
-      RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest(), ShadowApplication.getInstance().getResourceLoader());
+      RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest());
 
       // Removes app launch
       Shadows.shadowOf(blankActivity).getNextStartedActivity();
@@ -393,7 +394,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testDisableOpeningLauncherActivityOnNotifiOpen() throws Exception {
       ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().put("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
-      RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest(), ShadowApplication.getInstance().getResourceLoader());
+      RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest());
       AddLauncherIntentFilter();
 
       // From app launching normally
@@ -483,7 +484,7 @@ public class MainOneSignalClassRunner {
    public void testUnsubscribeStatusShouldBeSetIfGCMErrored() throws Exception {
       ShadowPushRegistratorGPS.fail = true;
       OneSignalInit();
-      threadAndTaskWait();
+      threadAndTaskWait(); threadAndTaskWait();
       Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
 
@@ -948,8 +949,7 @@ public class MainOneSignalClassRunner {
 
       StaticResetHelper.restSetStaticFields();
 
-      Service service = new SyncService();
-      service.onCreate();
+      Robolectric.buildService(SyncService.class).create().get();
       threadAndTaskWait();
       Assert.assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
    }
@@ -1261,8 +1261,12 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Class klass = Class.forName("com.onesignal.LocationGMS");
-      klass.getDeclaredMethod("startFallBackThread").invoke(null);
-      klass.getDeclaredMethod("fireFailedComplete").invoke(null);
+      Method method = klass.getDeclaredMethod("startFallBackThread");
+      method.setAccessible(true);
+      method.invoke(null);
+      method = klass.getDeclaredMethod("fireFailedComplete");
+      method.setAccessible(true);
+      method.invoke(null);
       threadAndTaskWait();
 
       Assert.assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
@@ -1270,6 +1274,9 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAppl() throws Exception {
+      AddLauncherIntentFilter();
+      RuntimeEnvironment.getRobolectricPackageManager().addPackage("org.robolectric.default");
+
       OneSignalInit();
       threadAndTaskWait();
       String baseKey = "pkgs";
@@ -1420,6 +1427,7 @@ public class MainOneSignalClassRunner {
       resolveInfo.activityInfo.name = "MainActivity";
 
       RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
+      RuntimeEnvironment.getRobolectricPackageManager().addManifest(ShadowApplication.getInstance().getAppManifest());
    }
 
    private static int sessionCountOffset = 1;

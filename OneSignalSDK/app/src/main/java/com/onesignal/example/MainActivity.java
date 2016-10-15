@@ -27,7 +27,6 @@
 
 package com.onesignal.example;
 
-import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.support.v7.app.ActionBarActivity;
@@ -48,30 +47,14 @@ import java.util.Locale;
 
 public class MainActivity extends ActionBarActivity {
 
-   private static Activity currentActivity;
-
    IabHelper mHelper;
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       setContentView(R.layout.activity_main);
-//
-//      WebView myWebView = (WebView) findViewById(R.id.webview);
-//      WebSettings webSettings = myWebView.getSettings();
-//      webSettings.setJavaScriptEnabled(true);
-//      WebView.setWebContentsDebuggingEnabled(true);
-//      myWebView.loadUrl("http://akhbar4all.com");
 
       Log.e("tet", Locale.getDefault().getLanguage());
-
-      currentActivity = this;
-
-//      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-//      OneSignal.startInit(this)
-//          .autoPromptLocation(true)
-//          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
-//          .init();
 
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
       OneSignal.sendTag("test3", "test7");
@@ -120,19 +103,19 @@ public class MainActivity extends ActionBarActivity {
       OneSignal.setSubscription(false);
    }
 
-   @Override
-   protected void onPause() {
-      super.onPause();
-      if (mHelper != null)
-         mHelper.dispose();
-   }
-
-   @Override
-   public void onDestroy() {
-      super.onDestroy();
-      if (mHelper != null) mHelper.dispose();
-      mHelper = null;
-   }
+//   @Override
+//   protected void onPause() {
+//      super.onPause();
+//      if (mHelper != null)
+//         mHelper.dispose();
+//   }
+//
+//   @Override
+//   public void onDestroy() {
+//      super.onDestroy();
+//      if (mHelper != null) mHelper.dispose();
+//      mHelper = null;
+//   }
 
    @Override
    public boolean onCreateOptionsMenu(Menu menu) {

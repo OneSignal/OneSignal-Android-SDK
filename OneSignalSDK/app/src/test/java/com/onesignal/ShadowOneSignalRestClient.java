@@ -76,7 +76,7 @@ public class ShadowOneSignalRestClient {
       return false;
    }
 
-   private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
@@ -100,17 +100,17 @@ public class ShadowOneSignalRestClient {
       safeInterrupt();
    }
 
-   static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("POST:URL:" + url + "  jsonBody: " + jsonBody.toString());
       mockPost(url, jsonBody, responseHandler);
    }
 
-   static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("POST Sync:URL:" + url + "  jsonBody: " + jsonBody.toString());
       mockPost(url, jsonBody, responseHandler);
    }
 
-   static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
@@ -125,7 +125,7 @@ public class ShadowOneSignalRestClient {
       safeInterrupt();
    }
 
-   static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
@@ -140,7 +140,7 @@ public class ShadowOneSignalRestClient {
       safeInterrupt();
    }
 
-   static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("get: " + url);
       networkCallCount++;
       doInterruptibleDelay();
@@ -152,7 +152,7 @@ public class ShadowOneSignalRestClient {
       safeInterrupt();
    }
 
-   static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("getSync: " + url);
 
       lastUrl = url;

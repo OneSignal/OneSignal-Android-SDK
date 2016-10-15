@@ -8,11 +8,12 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <!--<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>-->
 
+    <!--android:theme="@style/AppTheme"-->
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:theme="@style/AppTheme"
+        android:label="OneSignal Example"
         android:name=".OneSignalExampleApp">
 
         <!--
@@ -59,12 +60,12 @@
 
         <activity
             android:name=".MainActivity"
-            android:label="@string/app_name">
+            android:label="OneSignal Example">
         </activity>
 
         <activity
             android:name=".BlankActivity"
-            android:label="@string/app_name"
+            android:label="OneSignal Example"
             >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
