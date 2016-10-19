@@ -246,6 +246,10 @@ class NotificationBundleProcessor {
          if (visibility != null)
             notification.lockScreenVisibility = Integer.parseInt(visibility);
          notification.fromProjectNumber = currentJsonPayload.optString("from", null);
+         notification.priority = currentJsonPayload.optInt("pri", 0);
+         String collapseKey = currentJsonPayload.optString("collapse_key", null);
+         if (!"do_not_collapse".equals(collapseKey))
+            notification.collapseId = collapseKey;
 
          try {
             setActionButtons(notification);

@@ -1233,10 +1233,8 @@ public class OneSignal {
 
    public static void promptLocation() {
 
-      if (!shareLocation) {
-         // Share location disabled
+      if (!shareLocation)
          return;
-      }
 
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not prompt for location.");

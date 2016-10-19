@@ -261,6 +261,9 @@ class GenerateNotification {
 
       notifBuilder.setDefaults(notificationDefaults);
 
+      if (gcmBundle.optInt("pri", 0) > 9)
+         notifBuilder.setPriority(NotificationCompat.PRIORITY_MAX);
+
       return notifBuilder;
    }
 

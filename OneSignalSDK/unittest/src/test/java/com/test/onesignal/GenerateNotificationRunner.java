@@ -397,6 +397,8 @@ public class GenerateNotificationRunner {
       Assert.assertEquals("test_sound", notificationPayload.sound);
       Assert.assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
       Assert.assertEquals("http://google.com", notificationPayload.launchURL);
+      Assert.assertEquals(10, notificationPayload.priority);
+      Assert.assertEquals("a_key", notificationPayload.collapseId);
 
       Assert.assertEquals("id1", notificationPayload.actionButtons.get(0).id);
       Assert.assertEquals("button1", notificationPayload.actionButtons.get(0).text);
@@ -449,12 +451,12 @@ public class GenerateNotificationRunner {
       bundle.putString("sicon", "small_icon");
       bundle.putString("sound", "test_sound");
       bundle.putString("grp_msg", "You test $[notif_count] MSGs!");
-      bundle.putString("collapse_key", "do_not_collapse");
+      bundle.putString("collapse_key", "a_key"); // GCM sets this to 'do_not_collapse' when not set.
       bundle.putString("bg_img", "{\"img\": \"test_image_url\"," +
                                   "\"tc\": \"FF000000\"," +
                                   "\"bc\": \"FFFFFFFF\"}");
 
-
+      bundle.putInt("pri", 10);
       bundle.putString("custom",
                      "{\"a\": {" +
                      "        \"myKey\": \"myValue\"," +
