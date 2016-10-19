@@ -54,7 +54,7 @@ public class ExampleApplication extends Application {
             <application ...>
               <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
             </application>
-         /*
+         */
       }
    }
 }
