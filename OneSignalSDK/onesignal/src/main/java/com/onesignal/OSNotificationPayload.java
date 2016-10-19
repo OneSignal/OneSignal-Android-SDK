@@ -49,6 +49,8 @@ public class OSNotificationPayload {
    public List<ActionButton> actionButtons;
    public String fromProjectNumber;
    public BackgroundImageLayout backgroundImageLayout;
+   public String collapseId;
+   public int priority;
    public String rawPayload;
    
    public static class ActionButton {

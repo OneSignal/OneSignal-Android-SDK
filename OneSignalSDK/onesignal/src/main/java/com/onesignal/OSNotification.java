@@ -90,7 +90,11 @@ public class OSNotification {
          pay.put("groupMessage", payload.groupMessage);
          pay.put("actionButtons", payload.actionButtons);
          pay.put("fromProjectNumber", payload.fromProjectNumber);
+         pay.put("collapseId", payload.collapseId);
+         pay.put("priority", payload.priority);
+
          pay.put("rawPayload", payload.rawPayload);
+
          mainObj.put("payload", pay);
       }
       catch(JSONException e) {e.printStackTrace();}
