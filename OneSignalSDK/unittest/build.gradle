@@ -67,8 +67,4 @@ dependencies {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
-
-//    testCompile("org.robolectric:robolectric:3.1-SNAPSHOT") {
-//        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
-//    }
 }

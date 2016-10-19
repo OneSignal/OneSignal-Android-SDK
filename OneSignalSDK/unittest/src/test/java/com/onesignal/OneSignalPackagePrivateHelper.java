@@ -15,7 +15,7 @@ public class OneSignalPackagePrivateHelper {
    public static void runAllNetworkRunnables() {
       for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet()) {
          Scheduler scheduler = shadowOf(handlerThread.getValue().getLooper()).getScheduler();
-         while (scheduler.advanceToNextPostedRunnable()) {}
+         while (scheduler.advanceToNextPostedRunnable());
       }
    }
 
@@ -24,7 +24,7 @@ public class OneSignalPackagePrivateHelper {
       if (looper == null) return;
       
       Scheduler scheduler = shadowOf(looper).getScheduler();
-      while (scheduler.advanceToNextPostedRunnable()) {}
+      while (scheduler.advanceToNextPostedRunnable());
    }
 
    public static void resetRunnables() {
@@ -61,10 +61,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
       return NotificationBundleProcessor.processBundle(context, bundle);
-   }
-
-   public static void OneSignalStateSynchronizer_syncUserState(boolean fromSyncService) {
-      OneSignalStateSynchronizer.syncUserState(fromSyncService);
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {

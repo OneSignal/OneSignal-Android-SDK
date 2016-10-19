@@ -28,7 +28,6 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.os.SystemClock;
 
 import org.robolectric.annotation.Implements;
 

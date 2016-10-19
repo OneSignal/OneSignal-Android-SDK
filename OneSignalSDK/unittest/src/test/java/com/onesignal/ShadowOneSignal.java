@@ -4,9 +4,6 @@ import android.util.Log;
 
 import org.robolectric.annotation.Implements;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @Implements(OneSignal.class)
 public class ShadowOneSignal {
 

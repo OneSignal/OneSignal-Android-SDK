@@ -33,10 +33,6 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
-import org.robolectric.annotation.RealObject;
-import org.robolectric.internal.ShadowExtractor;
-
-import static org.robolectric.Shadows.shadowOf;
 
 @Implements(GoogleCloudMessaging.class)
 public class ShadowGoogleCloudMessaging {

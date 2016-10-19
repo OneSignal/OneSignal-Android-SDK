@@ -49,7 +49,6 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorGPS;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
@@ -90,7 +89,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
 @Config(packageName = "com.onesignal.example",
-        shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowPushRegistratorADM.class, ShadowOSUtils.class},
+        shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowOSUtils.class},
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
         sdk = 21)
