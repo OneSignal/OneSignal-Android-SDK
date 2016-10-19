@@ -22,11 +22,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    testOptions {
+        unitTests.all {
+            maxParallelForks 1
+            maxHeapSize "2048m"
+        }
+    }
+}
+
+repositories {
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:24.2.1'
 
     // Use for SDK Development
     compile(project(':onesignal')) {
@@ -52,4 +61,14 @@ dependencies {
     compile "com.google.android.gms:play-services-location:7.0.0"
 
     compile 'com.google.android.gms:play-services-analytics:7.0.0'
+
+    testCompile 'junit:junit:4.12'
+    testCompile('org.robolectric:robolectric:3.1.2') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+    }
+
+//    testCompile("org.robolectric:robolectric:3.1-SNAPSHOT") {
+//        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+//    }
 }
