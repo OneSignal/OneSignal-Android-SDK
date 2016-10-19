@@ -38,37 +38,50 @@ import com.onesignal.shortcutbadger.ShortcutBadger;
 
 class BadgeCountUpdater {
 
-   static void update(SQLiteDatabase readableDb, Context context) {
-      boolean isEnabled = true;
+   // Cache for manifest setting.
+   private static int badgesEnabled = -1;
+
+   private static boolean isBadgesEnabled(Context context) {
+      if (badgesEnabled != -1)
+         return (badgesEnabled == 1);
 
       try {
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
          String defaultStr = bundle.getString("com.onesignal.BadgeCount");
-         isEnabled = !"DISABLE".equals(defaultStr);
+         badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
       } catch (Throwable t) {
+         badgesEnabled = 1;
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "", t);
       }
 
-      if (isEnabled) {
-         Cursor cursor = readableDb.query(
-             OneSignalDbContract.NotificationTable.TABLE_NAME,
-             null,
-             OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +               // Where String
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 ",
-             null,                                                    // Where args
-             null,                                                    // group by
-             null,                                                    // filter by row groups
-             null                                                     // sort order, new to old
-         );
+      return (badgesEnabled == 1);
+   }
 
-         updateCount(cursor.getCount(), context);
-         cursor.close();
-      }
+   static void update(SQLiteDatabase readableDb, Context context) {
+      if (!isBadgesEnabled(context))
+         return;
+
+      Cursor cursor = readableDb.query(
+          OneSignalDbContract.NotificationTable.TABLE_NAME,
+          null,
+          OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +  // Where String
+             OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+             OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 ",
+          null,                                                    // Where args
+          null,                                                    // group by
+          null,                                                    // filter by row groups
+          null                                                     // sort order, new to old
+      );
+
+      updateCount(cursor.getCount(), context);
+      cursor.close();
    }
 
    static void updateCount(int count, Context context) {
+      if (!isBadgesEnabled(context))
+         return;
+
       // Can throw if badges are not support on the device.
       //  Or app does not have a default launch Activity.
       try {
