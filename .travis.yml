@@ -19,7 +19,7 @@ before_install:
     - unzip gradle-2.14.1-bin.zip
     - export GRADLE_HOME=$PWD/gradle-2.14.1
     - export PATH=$GRADLE_HOME/bin:$PATH
-    - cd OneSignalSDK/app
+    - cd OneSignalSDK/unittest
 script: gradle build
 after_failure:
-    - cat /home/travis/build/OneSignal/OneSignal-Android-SDK/OneSignalSDK/app/build/outputs/lint-results-debug.xml
+    - cat /home/travis/build/OneSignal/OneSignal-Android-SDK/OneSignalSDK/unittest/build/outputs/lint-results-debug.xml

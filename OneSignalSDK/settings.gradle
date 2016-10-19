@@ -1,1 +1,1 @@
-include ':app', ':onesignal'
+include ':app', ':onesignal', ':unittest'

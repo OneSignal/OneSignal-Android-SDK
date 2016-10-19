@@ -18,16 +18,6 @@ android {
         unity {
             minifyEnabled false
         }
-
-        xamarin {
-            minifyEnabled false
-            if (project.hasProperty('enableXamarin') && enableXamarin == 'true') {
-                if (project.hasProperty('onesignal_app_id') && project.hasProperty('onesignal_google_project_number'))
-                    manifestPlaceholders = [onesignal_app_id:onesignal_app_id, onesignal_google_project_number:onesignal_google_project_number]
-                else
-                    throw new GradleException('Please ensure you have provided onesignal_app_id and onesignal_google_project_number! Aborting xamarin build!')
-            }
-        }
     }
 }
 
