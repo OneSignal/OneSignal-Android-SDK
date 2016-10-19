@@ -2,18 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="com.onesignal.example">
 
-    <application
-        android:label="OneSignal Example"
-        android:name=".OneSignalExampleApp">
+    <application>
+        <activity android:name=".MainActivity" />
 
-        <activity
-            android:name=".MainActivity"
-            android:label="OneSignal Example">
-        </activity>
-
-        <activity
-            android:name=".BlankActivity"
-            android:label="OneSignal Example">
+        <activity android:name=".BlankActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
