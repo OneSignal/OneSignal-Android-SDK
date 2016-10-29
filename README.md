@@ -8,5 +8,4 @@ OneSignal is a free push notification service for mobile apps. This plugin makes
 
 - See https://documentation.onesignal.com/docs/android-sdk-setup for Android setup documentation.
 - See https://documentation.onesignal.com/docs/amazon-sdk-setup for Amazon setup documentation.
-
-- See https://documentation.onesignal.com/docs/android-native-sdk for OneSignal API documentation.
+- See https://documentation.onesignal.com/reference for OneSignal API documentation.
