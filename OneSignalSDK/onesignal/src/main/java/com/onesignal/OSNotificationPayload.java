@@ -64,4 +64,38 @@ public class OSNotificationPayload {
       public String titleTextColor;
       public String bodyTextColor;
    }
+
+
+   public JSONObject toJSONObject() {
+      JSONObject json = new JSONObject();
+
+      try {
+         json.put("notificationID", notificationID);
+         json.put("title", title);
+         json.put("body", body);
+         if (additionalData != null)
+            json.put("additionalData", additionalData);
+         json.put("smallIcon", smallIcon);
+         json.put("largeIcon", largeIcon);
+         json.put("bigPicture", bigPicture);
+         json.put("smallIconAccentColor", smallIconAccentColor);
+         json.put("launchURL", launchURL);
+         json.put("sound", sound);
+         json.put("ledColor", ledColor);
+         json.put("lockScreenVisibility", lockScreenVisibility);
+         json.put("groupKey", groupKey);
+         json.put("groupMessage", groupMessage);
+         json.put("actionButtons", actionButtons);
+         json.put("fromProjectNumber", fromProjectNumber);
+         json.put("collapseId", collapseId);
+         json.put("priority", priority);
+
+         json.put("rawPayload", rawPayload);
+      }
+      catch (Throwable t) {
+         t.printStackTrace();
+      }
+
+      return json;
+   }
 }

@@ -29,6 +29,7 @@ package com.onesignal;
 
 import java.util.List;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -63,7 +64,25 @@ public class OSNotification {
    //    The payload will be the most recent notification received.
    public List<OSNotificationPayload> groupedNotifications;
 
+   /**
+    * @deprecated  As of release 3.4.1, replaced by {@link #toJSONObject()}
+    */
+   @Deprecated
    public String stringify() {
+      JSONObject mainObj = toJSONObject();
+
+      try {
+         if (mainObj.has("additionalData"))
+            mainObj.put("additionalData", mainObj.optJSONObject("additionalData").toString());
+      }
+      catch(JSONException e) {
+         e.printStackTrace();
+      }
+
+      return mainObj.toString();
+   }
+
+   public JSONObject toJSONObject() {
       JSONObject mainObj = new JSONObject();
 
       try {
@@ -72,33 +91,20 @@ public class OSNotification {
          mainObj.put("androidNotificationId", androidNotificationId);
          mainObj.put("displayType", displayType.ordinal());
 
-         JSONObject pay = new JSONObject();
-         pay.put("notificationID", payload.notificationID);
-         pay.put("title", payload.title);
-         pay.put("body", payload.body);
-         if (payload.additionalData != null)
-            pay.put("additionalData", payload.additionalData.toString());
-         pay.put("smallIcon", payload.smallIcon);
-         pay.put("largeIcon", payload.largeIcon);
-         pay.put("bigPicture", payload.bigPicture);
-         pay.put("smallIconAccentColor", payload.smallIconAccentColor);
-         pay.put("launchURL", payload.launchURL);
-         pay.put("sound", payload.sound);
-         pay.put("ledColor", payload.ledColor);
-         pay.put("lockScreenVisibility", payload.lockScreenVisibility);
-         pay.put("groupKey", payload.groupKey);
-         pay.put("groupMessage", payload.groupMessage);
-         pay.put("actionButtons", payload.actionButtons);
-         pay.put("fromProjectNumber", payload.fromProjectNumber);
-         pay.put("collapseId", payload.collapseId);
-         pay.put("priority", payload.priority);
+         if (groupedNotifications != null) {
+            JSONArray payloadJsonArray = new JSONArray();
+            for(OSNotificationPayload payload : groupedNotifications)
+               payloadJsonArray.put(payload.toJSONObject());
+            mainObj.put("groupedNotifications", payloadJsonArray);
+         }
 
-         pay.put("rawPayload", payload.rawPayload);
-
-         mainObj.put("payload", pay);
+         mainObj.put("payload", payload.toJSONObject());
       }
-      catch(JSONException e) {e.printStackTrace();}
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
 
-      return mainObj.toString();
+      return mainObj;
    }
+
 }

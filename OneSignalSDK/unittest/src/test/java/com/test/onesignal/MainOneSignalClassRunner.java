@@ -40,7 +40,9 @@ import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationPayload;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -1384,7 +1386,55 @@ public class MainOneSignalClassRunner {
       cursor.close();
    }
 
+
+   // ####### Unit test toJSONObject methods
+   @Test
+   public void testOSNotificationToJSONObject() throws Exception {
+      OSNotification osNotification = createTestOSNotification();
+
+      JSONObject testJsonObj = osNotification.toJSONObject();
+
+      Assert.assertEquals("msg_body", testJsonObj.optJSONObject("payload").optString("body"));
+
+      JSONObject additionalData = testJsonObj.optJSONObject("payload").optJSONObject("additionalData");
+      Assert.assertEquals("bar", additionalData.optString("foo"));
+   }
+
+   @Test
+   public void testOSNotificationOpenResultToJSONObject() throws Exception {
+      OSNotificationOpenResult osNotificationOpenResult = new OSNotificationOpenResult();
+      osNotificationOpenResult.notification = createTestOSNotification();
+      osNotificationOpenResult.action = new OSNotificationAction();
+      osNotificationOpenResult.action.type = OSNotificationAction.ActionType.Opened;
+
+      JSONObject testJsonObj = osNotificationOpenResult.toJSONObject();
+
+      JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("payload").optJSONObject("additionalData");
+      Assert.assertEquals("bar", additionalData.optString("foo"));
+
+      System.out.println(testJsonObj.optJSONObject("notification"));
+      JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
+      Assert.assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
+   }
+
    // ####### Unit test helper methods ########
+
+   private static OSNotification createTestOSNotification() throws Exception {
+      OSNotification osNotification = new OSNotification();
+
+      osNotification.payload = new OSNotificationPayload();
+      osNotification.payload.body = "msg_body";
+      osNotification.payload.additionalData = new JSONObject("{\"foo\": \"bar\"}");
+
+      osNotification.displayType = OSNotification.DisplayType.None;
+
+      osNotification.groupedNotifications = new ArrayList<>();
+      OSNotificationPayload groupedPayload = new OSNotificationPayload();
+      groupedPayload.collapseId = "collapseId1";
+      osNotification.groupedNotifications.add(groupedPayload);
+
+      return osNotification;
+   }
 
    private static void threadWait() {
       try {Thread.sleep(1000);} catch (Throwable t) {}
