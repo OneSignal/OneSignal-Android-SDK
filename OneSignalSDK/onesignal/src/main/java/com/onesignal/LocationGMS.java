@@ -35,6 +35,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -136,7 +137,7 @@ class LocationGMS {
                fireFailedComplete();
             } catch (Throwable t) {}
          }
-      });
+      }, "OS_GMS_LOCATION_FALLBACK");
       fallbackFailThread.start();
    }
 
@@ -181,7 +182,7 @@ class LocationGMS {
       }
 
       @Override
-      public void onConnectionFailed(ConnectionResult connectionResult) {
+      public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
          fireFailedComplete();
       }
    }
