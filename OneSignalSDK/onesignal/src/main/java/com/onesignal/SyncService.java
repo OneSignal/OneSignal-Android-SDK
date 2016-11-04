@@ -27,7 +27,10 @@
 
 package com.onesignal;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
@@ -91,13 +94,17 @@ public class SyncService extends Service {
    public void onTaskRemoved(Intent rootIntent) {
       super.onTaskRemoved(rootIntent);
       onTaskRemoved();
+      // stopSelf is important  otherwise Android will show "Scheduling restart of crashed service"
+      //   in the logcat.
+      stopSelf();
+      scheduleServiceRestart();
    }
 
    // NOTE: Currently onTaskRemoved takes about 100ms to run.
    // Please maintain this efficiency as it runs on the main thread!
-   //   This is important as while this method is running the app will not be response if
+   //   This is important as while this method is running the app will not response if
    //   the user reopens or focuses another tasks part of the same process.
-   // Also the process will be killed forcefully if this does not finish in 20 seconds.
+   // The Process will be killed forcefully if this does not finish in 20 seconds.
    // Triggering seems unaffected by the presents or absence of android:stopWithTask="false".
    //   false is not required, tested on Android 4.4.2 and 6.0.1
    static void onTaskRemoved() {
@@ -106,5 +113,14 @@ public class SyncService extends Service {
       OneSignalStateSynchronizer.stopAndPersist();
       OneSignal.onAppLostFocus(true); // Save only
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Completed SyncService:onTaskRemoved.");
+   }
+
+   void scheduleServiceRestart() {
+      Intent intent = new Intent(this, SyncService.class);
+      PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
+      AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+      // 10 seconds
+      long timeInMillis = System.currentTimeMillis() + 10000;
+      alarm.set(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent);
    }
 }
