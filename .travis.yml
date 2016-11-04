@@ -5,8 +5,13 @@ jdk: oraclejdk8
 cache:
   directories:
     - ${TRAVIS_BUILD_DIR}/gradle/caches/
+    - ${TRAVIS_BUILD_DIR}/gradle/wrapper/
     - ${TRAVIS_BUILD_DIR}/gradle/wrapper/dists/
     - ${TRAVIS_BUILD_DIR}/android-sdk/extras/
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+    - $HOME/android-sdk/extras/
+    - $HOME/android-sdk/
 android:
   components:
     - tools
@@ -21,6 +26,8 @@ android:
   licenses:
     - '.+'
 before_install:
+    - pwd
+    - ls -la
     - wget http://services.gradle.org/distributions/gradle-2.14.1-bin.zip
     - unzip gradle-2.14.1-bin.zip
     - export GRADLE_HOME=$PWD/gradle-2.14.1
@@ -29,3 +36,10 @@ before_install:
 script: gradle build
 after_failure:
     - cat /home/travis/build/OneSignal/OneSignal-Android-SDK/OneSignalSDK/unittest/build/outputs/lint-results-debug.xml
+    - cd ../..
+    - pwd
+    - ls -la
+after_success:
+    - cd ../..
+    - pwd
+    - ls -la
