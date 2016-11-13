@@ -4,14 +4,14 @@ jdk: oraclejdk8
 
 cache:
   directories:
-    - ${TRAVIS_BUILD_DIR}/gradle/caches/
-    - ${TRAVIS_BUILD_DIR}/gradle/wrapper/
-    - ${TRAVIS_BUILD_DIR}/gradle/wrapper/dists/
-    - ${TRAVIS_BUILD_DIR}/android-sdk/extras/
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
     - $HOME/android-sdk/extras/
     - $HOME/android-sdk/
+    - $HOME/android-sdk/platform-tools
+    - $HOME/android-sdk/platforms
+    - $HOME/android-sdk/build-tools
+    - $HOME/android-sdk/tools
 android:
   components:
     - tools
@@ -39,7 +39,9 @@ after_failure:
     - cd ../..
     - pwd
     - ls -la
+    - ls -la android-sdk
 after_success:
     - cd ../..
     - pwd
     - ls -la
+    - ls -la android-sdk
