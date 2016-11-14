@@ -38,10 +38,10 @@ after_failure:
     - cat /home/travis/build/OneSignal/OneSignal-Android-SDK/OneSignalSDK/unittest/build/outputs/lint-results-debug.xml
     - cd ../..
     - pwd
-    - ls -la
-    - ls -la android-sdk
+    - ls -la $HOME
+    - ls -la $HOME/android-sdk
 after_success:
     - cd ../..
     - pwd
-    - ls -la
-    - ls -la android-sdk
+    - ls -la $HOME
+    - ls -la $HOME/android-sdk
