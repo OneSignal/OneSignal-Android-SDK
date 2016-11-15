@@ -62,12 +62,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
 
    @Override
    public void notificationOpened(OSNotificationOpenResult result) {
-      unitySafeInvoke("onPushNotificationOpened", result.stringify());
+      unitySafeInvoke("onPushNotificationOpened", result.toJSONObject().toString());
    }
 
    @Override
    public void notificationReceived(OSNotification notification) {
-      unitySafeInvoke("onPushNotificationReceived", notification.stringify());
+      unitySafeInvoke("onPushNotificationReceived", notification.toJSONObject().toString());
    }
 
    public void sendTag(String key, String value) {
