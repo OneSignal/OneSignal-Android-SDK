@@ -19,7 +19,7 @@ android:
             # https://github.com/travis-ci/travis-ci/issues/6193
             # Required to get the newest platform-tools.
     - platform-tools
-    - build-tools-24.0.2
+    - build-tools-24.0.3
     - extra-android-m2repository
     - extra-google-m2repository
     - android-24

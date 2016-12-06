@@ -36,6 +36,7 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
@@ -64,6 +65,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.internal.runners.statements.ExpectException;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
@@ -131,7 +133,7 @@ public class GenerateNotificationRunner {
       return bundle;
    }
 
-   static Intent createOpenIntent(int notifId, Bundle bundle) {
+   private static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
             .putExtra("notificationId", notifId)
             .putExtra("onesignal_data", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
@@ -191,7 +193,6 @@ public class GenerateNotificationRunner {
       cursor.moveToFirst();
       Assert.assertEquals(1, cursor.getInt(0));
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
-      int firstNotifId = cursor.getInt(1);
       cursor.close();
 
       // Should not display a duplicate notification, count should still be 1

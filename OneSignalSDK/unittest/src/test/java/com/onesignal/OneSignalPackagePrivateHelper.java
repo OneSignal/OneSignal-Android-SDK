@@ -12,19 +12,26 @@ import java.util.Map;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
-   public static void runAllNetworkRunnables() {
+   public static boolean runAllNetworkRunnables() {
+      boolean startedRunnable = false;
       for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet()) {
          Scheduler scheduler = shadowOf(handlerThread.getValue().getLooper()).getScheduler();
-         while (scheduler.advanceToNextPostedRunnable());
+         if (scheduler.advanceToLastPostedRunnable())
+            startedRunnable = true;
       }
+
+      return startedRunnable;
    }
 
-   public static void runFocusRunnables() {
+   public static boolean runFocusRunnables() {
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
-      if (looper == null) return;
+      if (looper == null)
+         return false;
       
       Scheduler scheduler = shadowOf(looper).getScheduler();
-      while (scheduler.advanceToNextPostedRunnable());
+      if (scheduler == null)
+         return false;
+      return scheduler.advanceToLastPostedRunnable();
    }
 
    public static void resetRunnables() {

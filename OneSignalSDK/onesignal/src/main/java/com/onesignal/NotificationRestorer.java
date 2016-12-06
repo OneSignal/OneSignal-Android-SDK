@@ -45,7 +45,7 @@ class NotificationRestorer {
          public void run() {
             restore(context);
          }
-      }).start();
+      }, "OS_RESTORE_NOTIFS").start();
    }
 
    public static void restore(Context context) {

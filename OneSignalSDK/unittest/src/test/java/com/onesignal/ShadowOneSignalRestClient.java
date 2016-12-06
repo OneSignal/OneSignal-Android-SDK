@@ -35,53 +35,31 @@ public class ShadowOneSignalRestClient {
 
    public static JSONObject lastPost;
    public static String lastUrl;
-   public static Thread testThread;
-   public static boolean failNext, failAll;
+   public static boolean failNext, failNextPut, failAll;
    public static String failResponse = "{}", nextSuccessResponse, nextSuccessfulGETResponse;
    public static int networkCallCount;
 
    public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
 
-   public static boolean interruptibleDelayNext;
-   private static Thread lastInteruptiableDelayThread;
-
-   public static void interruptHTTPDelay() {
-      if (lastInteruptiableDelayThread != null) { //&& lastInteruptiableDelayThread.getState() == Thread.State.TIMED_WAITING) {
-         lastInteruptiableDelayThread.interrupt();
-         lastInteruptiableDelayThread = null;
-      }
-   }
-
-   static void safeInterrupt() {
-      if (testThread != null && testThread.getState() == Thread.State.TIMED_WAITING)
-         testThread.interrupt();
-   }
-
-   private static void doInterruptibleDelay() {
-      if (interruptibleDelayNext) {
-         lastInteruptiableDelayThread = Thread.currentThread();
-         interruptibleDelayNext = false;
-         try { Thread.sleep(20000); } catch (InterruptedException e) {}
-      }
-   }
-
-   private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler) {
-      if (failNext || failAll) {
+   private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler, boolean doFail) {
+      if (failNext || failAll || doFail) {
          responseHandler.onFailure(400, failResponse, new Exception());
-         safeInterrupt();
-         failNext = false;
+         failNext = failNextPut = false;
          return true;
       }
 
       return false;
    }
 
-   public static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler) {
+      return doFail(responseHandler, false);
+   }
+
+   private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
       lastPost = jsonBody;
 
-      doInterruptibleDelay();
       if (doFail(responseHandler)) return;
 
       String retJson = null;
@@ -96,8 +74,6 @@ public class ShadowOneSignalRestClient {
       }
       else
          responseHandler.onSuccess(retJson);
-
-      safeInterrupt();
    }
 
    public static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
@@ -117,12 +93,9 @@ public class ShadowOneSignalRestClient {
 
       System.out.println("putSync:lastPost:jsonBody: " + lastPost.toString());
 
-      doInterruptibleDelay();
-      if (doFail(responseHandler)) return;
+      if (doFail(responseHandler, failNextPut)) return;
 
       responseHandler.onSuccess("{\"id\": \"" + testUserId + "\"}");
-
-      safeInterrupt();
    }
 
    public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
@@ -130,26 +103,21 @@ public class ShadowOneSignalRestClient {
       networkCallCount++;
       lastPost = jsonBody;
 
-      doInterruptibleDelay();
-      if (doFail(responseHandler)) return;
+      if (doFail(responseHandler, failNextPut)) return;
 
       System.out.println("put:lastPost:jsonBody: " + lastPost.toString());
 
       responseHandler.onSuccess("{}");
-
-      safeInterrupt();
    }
 
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("get: " + url);
       networkCallCount++;
-      doInterruptibleDelay();
+
       responseHandler.onSuccess("{\"awl_list\": {" +
                                     "\"IlIfoQBT5jXgkgn6nBsIrGJn5t0Yd91GqKAGoApIYzk=\": 1," +
                                     "\"Q3zjDf/4NxXU1QpN9WKp/iwVYNPQZ0js2EDDNO+eo0o=\": 1" +
                                 "}, \"android_sender_id\": \"87654321\"}");
-
-      safeInterrupt();
    }
 
    public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
@@ -157,7 +125,6 @@ public class ShadowOneSignalRestClient {
 
       lastUrl = url;
       networkCallCount++;
-      doInterruptibleDelay();
       if (doFail(responseHandler)) return;
 
       if (nextSuccessfulGETResponse != null) {
@@ -166,7 +133,5 @@ public class ShadowOneSignalRestClient {
       }
       else
          responseHandler.onSuccess("{}");
-
-      safeInterrupt();
    }
 }

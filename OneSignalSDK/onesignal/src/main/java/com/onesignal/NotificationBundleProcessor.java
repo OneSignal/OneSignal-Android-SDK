@@ -328,7 +328,7 @@ class NotificationBundleProcessor {
             public void run() {
                OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false, false);
             }
-         }).start();
+         }, "OS_PROC_BUNDLE").start();
       }
 
       return !display;

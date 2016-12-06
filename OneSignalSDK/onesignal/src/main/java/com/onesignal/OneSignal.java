@@ -392,7 +392,7 @@ public class OneSignal {
                   androidParamsReties++;
                   makeAndroidParamsRequest();
                }
-            });
+            }, "OS_PARAMS_REQUEST");
          }
 
          @Override
@@ -668,7 +668,7 @@ public class OneSignal {
             OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
             waitingToPostStateSync = false;
          }
-      }).start();
+      }, "OS_REG_USER").start();
    }
 
    public static void syncHashedEmail(String email) {
@@ -826,7 +826,7 @@ public class OneSignal {
             else
                getTagsHandler.tagsAvailable(tags.result);
          }
-      }).start();
+      }, "OS_GETTAGS_CALLBACK").start();
    }
 
    public static void deleteTag(String key) {
@@ -954,6 +954,7 @@ public class OneSignal {
       fireNotificationOpenedHandler(generateOsNotificationOpenResult(dataArray, shown, fromAlert));
    }
 
+   // Also called for received but OSNotification is extracted from it.
    @NonNull
    private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown, boolean fromAlert) {
       int jsonArraySize = dataArray.length();

@@ -80,6 +80,6 @@ class ActivityLifecycleListenerCompat {
                t.printStackTrace();
             }
          }
-      }).start();
+      }, "OS_LIFECYCLE_COMPAT").start();
    }
 }

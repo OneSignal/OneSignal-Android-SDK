@@ -451,7 +451,7 @@ class OneSignalStateSynchronizer {
       int currentRetry;
 
       NetworkHandlerThread(int type) {
-         super("NetworkHandlerThread");
+         super("OSH_NetworkHandlerThread");
          mType = type;
          start();
          mHandler = new Handler(getLooper());

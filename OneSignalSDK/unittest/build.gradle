@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 24
-    buildToolsVersion "24.0.2"
+    buildToolsVersion '24.0.3'
 
     defaultConfig {
         applicationId "com.onesignal.example"
@@ -63,7 +63,7 @@ dependencies {
     compile 'com.google.android.gms:play-services-analytics:7.0.0'
 
     testCompile 'junit:junit:4.12'
-    testCompile('org.robolectric:robolectric:3.1.2') {
+    testCompile('org.robolectric:robolectric:3.1.4') {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }

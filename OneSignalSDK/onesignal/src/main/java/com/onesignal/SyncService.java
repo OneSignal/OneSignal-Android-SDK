@@ -68,7 +68,7 @@ public class SyncService extends Service {
 
             stopSelf();
          }
-      }).start();
+      }, "OS_SYNCSRV_ONCREATE").start();
    }
 
    @Override
