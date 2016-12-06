@@ -5,12 +5,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.shortcutbadger.util.BroadcastHelper;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * @author Gernot Pansy
@@ -29,7 +29,7 @@ public class ApexHomeBadger implements Badger {
         intent.putExtra(PACKAGENAME, componentName.getPackageName());
         intent.putExtra(COUNT, badgeCount);
         intent.putExtra(CLASS, componentName.getClassName());
-        if(BroadcastHelper.canResolveBroadcast(context, intent)) {
+        if (BroadcastHelper.canResolveBroadcast(context, intent)) {
             context.sendBroadcast(intent);
         } else {
             throw new ShortcutBadgeException("unable to resolve intent: " + intent.toString());
