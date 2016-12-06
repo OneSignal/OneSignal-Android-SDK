@@ -9,11 +9,12 @@ import android.content.Intent;
 import android.content.pm.ProviderInfo;
 import android.net.Uri;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 
-import java.util.Arrays;
-import java.util.List;
 
 
 /**
@@ -44,7 +45,6 @@ public class SonyHomeBadger implements Badger {
         } else {
             executeBadgeByBroadcast(context, componentName, badgeCount);
         }
-
     }
 
     @Override
@@ -77,7 +77,7 @@ public class SonyHomeBadger implements Badger {
 
         if (mQueryHandler == null) {
             mQueryHandler = new AsyncQueryHandler(
-                context.getApplicationContext().getContentResolver()) {
+                    context.getApplicationContext().getContentResolver()) {
             };
         }
         insertBadgeAsync(badgeCount, componentName.getPackageName(), componentName.getClassName());
@@ -118,8 +118,7 @@ public class SonyHomeBadger implements Badger {
      */
     private static boolean sonyBadgeContentProviderExists(Context context) {
         boolean exists = false;
-        ProviderInfo info = context.getPackageManager()
-            .resolveContentProvider(SONY_HOME_PROVIDER_NAME, 0);
+        ProviderInfo info = context.getPackageManager().resolveContentProvider(SONY_HOME_PROVIDER_NAME, 0);
         if (info != null) {
             exists = true;
         }

@@ -6,11 +6,12 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Shortcut Badger support for Nova Launcher.
@@ -31,7 +32,6 @@ public class NovaHomeBadger implements Badger {
         contentValues.put(TAG, componentName.getPackageName() + "/" + componentName.getClassName());
         contentValues.put(COUNT, badgeCount);
         context.getContentResolver().insert(Uri.parse(CONTENT_URI), contentValues);
-
     }
 
     @Override
