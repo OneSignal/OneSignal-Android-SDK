@@ -6,6 +6,7 @@
 }
 
 -keep public interface android.app.OnActivityPausedListener {*;}
+-keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 
 
 -keep class com.onesignal.shortcutbadger.impl.AdwHomeBadger { <init>(...); }
