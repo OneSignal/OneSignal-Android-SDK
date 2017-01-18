@@ -277,11 +277,32 @@ class TrackGooglePurchase {
    private static Method getGetSkuDetailsMethod(Class clazz) {
       for(Method method : clazz.getMethods()) {
          Class<?>[] args = method.getParameterTypes();
+         Class<?> returnType = method.getReturnType();
+
          if (args.length == 4
-             && args[0] == int.class && args[1] == String.class && args[2] == String.class && args[3] == Bundle.class)
+             && args[0] == int.class && args[1] == String.class && args[2] == String.class && args[3] == Bundle.class
+             && returnType == Bundle.class)
             return method;
       }
 
       return  null;
    }
 }
+
+
+/*
+  // IInAppBillingService
+
+  public abstract int isBillingSupported(int paramInt, String paramString1, String paramString2)
+  public abstract Bundle getSkuDetails(int paramInt, String paramString1, String paramString2, Bundle paramBundle)
+  public abstract Bundle getBuyIntent(int paramInt, String paramString1, String paramString2, String paramString3, String paramString4)
+  public abstract Bundle getPurchases(int paramInt, String paramString1, String paramString2, String paramString3)
+  public abstract int consumePurchase(int paramInt, String paramString1, String paramString2)
+  public abstract int isPromoEligible(int paramInt, String paramString1, String paramString2)
+  public abstract Bundle getBuyIntentToReplaceSkus(int paramInt, String paramString1, List<String> paramList, String paramString2, String paramString3, String paramString4)
+  public abstract Bundle getBuyIntentExtraParams(int paramInt, String paramString1, String paramString2, String paramString3, String paramString4, Bundle paramBundle)
+  public abstract Bundle getPurchaseHistory(int paramInt, String paramString1, String paramString2, String paramString3, Bundle paramBundle)
+  public abstract int isBillingSupportedExtraParams(int paramInt, String paramString1, String paramString2, Bundle paramBundle)
+  public abstract Bundle getPurchasesExtraParams(int paramInt, String paramString1, String paramString2, String paramString3, Bundle paramBundle)
+  public abstract int consumePurchaseExtraParams(int paramInt, String paramString1, String paramString2, Bundle paramBundle)
+ */
