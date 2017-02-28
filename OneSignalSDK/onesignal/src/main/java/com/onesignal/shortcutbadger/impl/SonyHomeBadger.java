@@ -16,7 +16,6 @@ import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 
 
-
 /**
  * @author Leo Lin
  */
@@ -49,7 +48,7 @@ public class SonyHomeBadger implements Badger {
 
     @Override
     public List<String> getSupportLaunchers() {
-        return Arrays.asList("com.sonyericsson.home");
+        return Arrays.asList("com.sonyericsson.home", "com.sonymobile.home");
     }
 
     private static void executeBadgeByBroadcast(Context context, ComponentName componentName,

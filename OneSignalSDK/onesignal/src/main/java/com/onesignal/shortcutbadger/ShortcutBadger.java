@@ -1,5 +1,5 @@
 // Subpackaged to prevent conflicts with other plugins
-// version 1.1.11 code base
+// version 1.1.13 code base
 package com.onesignal.shortcutbadger;
 
 import android.content.ComponentName;
@@ -15,7 +15,7 @@ import java.util.List;
 
 import com.onesignal.shortcutbadger.impl.AdwHomeBadger;
 import com.onesignal.shortcutbadger.impl.ApexHomeBadger;
-import com.onesignal.shortcutbadger.impl.AsusHomeLauncher;
+import com.onesignal.shortcutbadger.impl.AsusHomeBadger;
 import com.onesignal.shortcutbadger.impl.DefaultBadger;
 import com.onesignal.shortcutbadger.impl.HuaweiHomeBadger;
 import com.onesignal.shortcutbadger.impl.NewHtcHomeBadger;
@@ -23,6 +23,7 @@ import com.onesignal.shortcutbadger.impl.NovaHomeBadger;
 import com.onesignal.shortcutbadger.impl.OPPOHomeBader;
 import com.onesignal.shortcutbadger.impl.SamsungHomeBadger;
 import com.onesignal.shortcutbadger.impl.SonyHomeBadger;
+import com.onesignal.shortcutbadger.impl.VivoHomeBadger;
 import com.onesignal.shortcutbadger.impl.XiaomiHomeBadger;
 import com.onesignal.shortcutbadger.impl.ZukHomeBadger;
 
@@ -43,12 +44,12 @@ public final class ShortcutBadger {
         BADGERS.add(NovaHomeBadger.class);
         BADGERS.add(SonyHomeBadger.class);
         BADGERS.add(XiaomiHomeBadger.class);
-        BADGERS.add(AsusHomeLauncher.class);
+        BADGERS.add(AsusHomeBadger.class);
         BADGERS.add(HuaweiHomeBadger.class);
-//        BADGERS.add(LGHomeBadger.class);
         BADGERS.add(OPPOHomeBader.class);
         BADGERS.add(SamsungHomeBadger.class);
         BADGERS.add(ZukHomeBadger.class);
+        BADGERS.add(VivoHomeBadger.class);
     }
 
     private static Badger sShortcutBadger;
@@ -152,6 +153,8 @@ public final class ShortcutBadger {
                 sShortcutBadger = new ZukHomeBadger();
             else if (Build.MANUFACTURER.equalsIgnoreCase("OPPO"))
                 sShortcutBadger = new OPPOHomeBader();
+            else if (Build.MANUFACTURER.equalsIgnoreCase("VIVO"))
+                sShortcutBadger = new VivoHomeBadger();
             else
                 sShortcutBadger = new DefaultBadger();
         }
