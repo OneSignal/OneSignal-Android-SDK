@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.List;
@@ -57,6 +58,20 @@ public class OSNotificationPayload {
       public String id;
       public String text;
       public String icon;
+
+      public JSONObject toJSONObject() {
+         JSONObject json = new JSONObject();
+         try {
+            json.put("id", id);
+            json.put("text", text);
+            json.put("icon", icon);
+         }
+         catch (Throwable t) {
+            t.printStackTrace();
+         }
+
+         return json;
+      }
    }
 
    public static class BackgroundImageLayout {
@@ -85,7 +100,14 @@ public class OSNotificationPayload {
          json.put("lockScreenVisibility", lockScreenVisibility);
          json.put("groupKey", groupKey);
          json.put("groupMessage", groupMessage);
-         json.put("actionButtons", actionButtons);
+
+         if (actionButtons != null) {
+            JSONArray actionButtonJsonArray = new JSONArray();
+            for (ActionButton actionButton : actionButtons) {
+               actionButtonJsonArray.put(actionButton.toJSONObject());
+            }
+            json.put("actionButtons", actionButtonJsonArray);
+         }
          json.put("fromProjectNumber", fromProjectNumber);
          json.put("collapseId", collapseId);
          json.put("priority", priority);

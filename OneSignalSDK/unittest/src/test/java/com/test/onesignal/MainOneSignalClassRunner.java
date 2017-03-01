@@ -1406,6 +1406,8 @@ public class MainOneSignalClassRunner {
       JSONObject testJsonObj = osNotification.toJSONObject();
 
       Assert.assertEquals("msg_body", testJsonObj.optJSONObject("payload").optString("body"));
+      JSONObject firstActionButton = (JSONObject)testJsonObj.optJSONObject("payload").optJSONArray("actionButtons").get(0);
+      Assert.assertEquals("text", firstActionButton.optString("text"));
 
       JSONObject additionalData = testJsonObj.optJSONObject("payload").optJSONObject("additionalData");
       Assert.assertEquals("bar", additionalData.optString("foo"));
@@ -1436,6 +1438,11 @@ public class MainOneSignalClassRunner {
       osNotification.payload = new OSNotificationPayload();
       osNotification.payload.body = "msg_body";
       osNotification.payload.additionalData = new JSONObject("{\"foo\": \"bar\"}");
+      osNotification.payload.actionButtons = new ArrayList<>();
+      OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
+      actionButton.text = "text";
+      actionButton.id = "id";
+      osNotification.payload.actionButtons.add(actionButton);
 
       osNotification.displayType = OSNotification.DisplayType.None;
 
