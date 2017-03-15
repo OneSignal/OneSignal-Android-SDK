@@ -75,6 +75,11 @@ class GenerateNotification {
    private static Class<?> notificationOpenedClass;
    private static boolean openerIsBroadcast;
 
+   private static class OneSignalNotificationBuilder {
+      NotificationCompat.Builder compatBuilder;
+      boolean hasLargeIcon;
+   }
+
    static void setStatics(Context inContext) {
       currentContext = inContext;
       packageName = currentContext.getPackageName();
@@ -201,7 +206,10 @@ class GenerateNotification {
       return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
    }
 
-   private static NotificationCompat.Builder getBaseNotificationCompatBuilder(JSONObject gcmBundle) {
+
+   private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(JSONObject gcmBundle) {
+      OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
+
       int notificationIcon = getSmallIconId(gcmBundle);
 
       int notificationDefaults = 0;
@@ -245,8 +253,10 @@ class GenerateNotification {
       } catch (Throwable t) {} // Can throw if an old android support lib is used or parse error
 
       Bitmap largeIcon = getLargeIcon(gcmBundle);
-      if (largeIcon != null)
+      if (largeIcon != null) {
+         oneSignalNotificationBuilder.hasLargeIcon = true;
          notifBuilder.setLargeIcon(largeIcon);
+      }
 
       Bitmap bigPictureIcon = getBitmap(gcmBundle.optString("bicon", null));
       if (bigPictureIcon != null)
@@ -265,7 +275,13 @@ class GenerateNotification {
       if (gcmBundle.optInt("pri", 0) > 9)
          notifBuilder.setPriority(NotificationCompat.PRIORITY_MAX);
 
-      return notifBuilder;
+      
+      oneSignalNotificationBuilder.compatBuilder = notifBuilder;
+      return oneSignalNotificationBuilder;
+   }
+
+   private static NotificationCompat.Builder getBaseNotificationCompatBuilder(JSONObject gcmBundle) {
+      return getBaseOneSignalNotificationBuilder(gcmBundle).compatBuilder;
    }
 
    private static void removeNotifyOptions(NotificationCompat.Builder builder) {
@@ -281,7 +297,8 @@ class GenerateNotification {
 
       String group = gcmBundle.optString("grp", null);
 
-      NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle);
+      OneSignalNotificationBuilder oneSignalNotificationBuilder = getBaseOneSignalNotificationBuilder(gcmBundle);
+      NotificationCompat.Builder notifBuilder = oneSignalNotificationBuilder.compatBuilder;
 
       addNotificationActionButtons(gcmBundle, notifBuilder, notificationId, null);
       try {
@@ -319,7 +336,7 @@ class GenerateNotification {
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          Notification notification = notifBuilder.build();
-         addXiaomiSettings(notification);
+         addXiaomiSettings(oneSignalNotificationBuilder, notification);
          NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
    }
@@ -327,13 +344,13 @@ class GenerateNotification {
    // Xiaomi requires the following to show a custom notification icons.
    // Without this MIUI 8 will only show the app icon on the left.
    //  When a large icon is set the small icon will no longer show.
-   private static void addXiaomiSettings(Notification notification) {
+   private static void addXiaomiSettings(OneSignalNotificationBuilder oneSignalNotificationBuilder, Notification notification) {
       if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
          return;
 
       // Don't use unless a large icon is set.
       // The small white notification icon is hard to see with MIUI default light theme.
-      if (notification.getLargeIcon() == null)
+      if (!oneSignalNotificationBuilder.hasLargeIcon)
          return;
 
       try {
