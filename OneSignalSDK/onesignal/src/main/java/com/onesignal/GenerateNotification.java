@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.net.URL;
 import java.util.ArrayList;
@@ -317,8 +318,34 @@ class GenerateNotification {
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
-         NotificationManagerCompat.from(currentContext).notify(notificationId, notifBuilder.build());
+         Notification notification = notifBuilder.build();
+         addXiaomiSettings(notification);
+         NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
+   }
+
+   // Xiaomi requires the following to show a custom notification icons.
+   // Without this MIUI 8 will only show the app icon on the left.
+   //  When a large icon is set the small icon will no longer show.
+   private static void addXiaomiSettings(Notification notification) {
+      if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+         return;
+
+      // Don't use unless a large icon is set.
+      // The small white notification icon is hard to see with MIUI default light theme.
+      if (notification.getLargeIcon() == null)
+         return;
+
+      try {
+         Object miuiNotification = Class.forName("android.app.MiuiNotification").newInstance();
+         Field customizedIconField = miuiNotification.getClass().getDeclaredField("customizedIcon");
+         customizedIconField.setAccessible(true);
+         customizedIconField.set(miuiNotification, true);
+
+         Field extraNotificationField = notification.getClass().getField("extraNotification");
+         extraNotificationField.setAccessible(true);
+         extraNotificationField.set(notification, miuiNotification);
+      } catch (Throwable t) {} // Ignore if not a Xiaomi device
    }
 
    private static void createSummaryNotification(boolean restoring, JSONObject gcmBundle) {
@@ -651,7 +678,9 @@ class GenerateNotification {
    private static Bitmap getBitmapFromURL(String location) {
       try {
          return BitmapFactory.decodeStream(new URL(location).openConnection().getInputStream());
-      } catch (Throwable t) {}
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Could not download image!", t);
+      }
 
       return null;
    }
