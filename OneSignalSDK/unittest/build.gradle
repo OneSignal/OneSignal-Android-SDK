@@ -49,7 +49,7 @@ dependencies {
     // compile(name: 'OneSignal-release', ext: 'aar')
 
     // Use for released SDK
-    // compile 'com.onesignal:OneSignal:2.+@aar'
+    // compile 'com.onesignal:OneSignal:3.+@aar'
 
     // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
     // This insure that the SDK will work if an app developer is using an older version of GMS.
@@ -63,7 +63,7 @@ dependencies {
     compile 'com.google.android.gms:play-services-analytics:7.0.0'
 
     testCompile 'junit:junit:4.12'
-    testCompile('org.robolectric:robolectric:3.1.4') {
+    testCompile('org.robolectric:robolectric:3.3.1') {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
