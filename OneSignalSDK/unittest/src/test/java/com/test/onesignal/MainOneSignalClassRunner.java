@@ -245,6 +245,28 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testAlwaysUseRemoteProjectNumberOverLocal() throws Exception {
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
+
+      // A 2nd init call
+      OneSignalInit();
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // Make sure when we try to register again before our on_session call it is with the remote
+      // project number instead of the local one.
+      Assert.assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
+   }
+
+   @Test
    public void testPutStillCalledOnChanges() throws Exception {
       // Will call create
       ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);

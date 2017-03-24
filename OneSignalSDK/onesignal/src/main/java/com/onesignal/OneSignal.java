@@ -158,7 +158,9 @@ public class OneSignal {
     */
    static final String TAG = "OneSignal";
 
-   static String appId, mGoogleProjectNumber;
+   static String appId;
+   static String mGoogleProjectNumber;
+   static boolean mGoogleProjectNumberIsRemote;
    static Context appContext;
    
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
@@ -249,7 +251,8 @@ public class OneSignal {
       mInitBuilder.mDisplayOptionCarryOver = false;
       mInitBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
       mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
-      mGoogleProjectNumber = googleProjectNumber;
+      if (!mGoogleProjectNumberIsRemote)
+         mGoogleProjectNumber = googleProjectNumber;
 
       osUtils = new OSUtils();
       deviceType = osUtils.getDeviceType();
@@ -417,8 +420,10 @@ public class OneSignal {
          void onSuccess(String response) {
             try {
                JSONObject responseJson = new JSONObject(response);
-               if (responseJson.has("android_sender_id"))
+               if (responseJson.has("android_sender_id")) {
+                  mGoogleProjectNumberIsRemote = true;
                   mGoogleProjectNumber = responseJson.getString("android_sender_id");
+               }
                awl = responseJson.getJSONObject("awl_list");
             } catch (Throwable t) {
                t.printStackTrace();
