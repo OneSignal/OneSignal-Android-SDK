@@ -105,12 +105,21 @@ public class OneSignal {
       NotificationReceivedHandler mNotificationReceivedHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
+
+      // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
+      //  calling startInit().init()
+      // mDisplayOptionCarryOver is used if setInFocusDisplaying is called but inFocusDisplaying wasn't
+      boolean mDisplayOptionCarryOver;
       OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
    
       private Builder() {}
 
       private Builder(Context context) {
          mContext = context;
+      }
+
+      private void setDisplayOptionCarryOver(boolean carryOver) {
+         mDisplayOptionCarryOver = carryOver;
       }
 
       public Builder setNotificationOpenedHandler(NotificationOpenedHandler handler) {
@@ -134,6 +143,7 @@ public class OneSignal {
       }
 
       public Builder inFocusDisplaying(OSInFocusDisplayOption displayOption) {
+         getCurrentOrNewInitBuilder().mDisplayOptionCarryOver = false;
          mDisplayOption = displayOption;
          return this;
       }
@@ -194,11 +204,19 @@ public class OneSignal {
 
    private static JSONObject awl;
 
+   private static OneSignal.Builder getCurrentOrNewInitBuilder() {
+      if (mInitBuilder == null)
+         mInitBuilder = new OneSignal.Builder();
+      return mInitBuilder;
+   }
+
    public static OneSignal.Builder startInit(Context context) {
       return new OneSignal.Builder(context);
    }
 
    private static void init(OneSignal.Builder inBuilder) {
+      if (getCurrentOrNewInitBuilder().mDisplayOptionCarryOver)
+         inBuilder.mDisplayOption = getCurrentOrNewInitBuilder().mDisplayOption;
       mInitBuilder = inBuilder;
 
       Context context = mInitBuilder.mContext;
@@ -227,8 +245,8 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
-      if (mInitBuilder == null)
-         mInitBuilder = new OneSignal.Builder();
+      mInitBuilder = getCurrentOrNewInitBuilder();
+      mInitBuilder.mDisplayOptionCarryOver = false;
       mInitBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
       mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
       mGoogleProjectNumber = googleProjectNumber;
@@ -1186,10 +1204,11 @@ public class OneSignal {
    }
 
    public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
-      mInitBuilder.mDisplayOption = displayOption;
+      getCurrentOrNewInitBuilder().mDisplayOptionCarryOver = true;
+      getCurrentOrNewInitBuilder().mDisplayOption = displayOption;
    }
    public static void setInFocusDisplaying(int displayOption) {
-      mInitBuilder.mDisplayOption = getInFocusDisplaying(displayOption);
+      setInFocusDisplaying(getInFocusDisplaying(displayOption));
    }
 
    private static OSInFocusDisplayOption getInFocusDisplaying(int displayOption) {
@@ -1334,11 +1353,11 @@ public class OneSignal {
    }
 
    public static void removeNotificationOpenedHandler() {
-      mInitBuilder.mNotificationOpenedHandler = null;
+      getCurrentOrNewInitBuilder().mNotificationOpenedHandler = null;
    }
 
    public static void removeNotificationReceivedHandler() {
-      mInitBuilder.mNotificationReceivedHandler = null;
+      getCurrentOrNewInitBuilder().mNotificationReceivedHandler = null;
    }
 
    static long GetUnsentActiveTime() {

@@ -978,14 +978,26 @@ public class MainOneSignalClassRunner {
       OneSignal.promptLocation();
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
-         public void onSuccess(JSONObject response) {
-         }
-
+         public void onSuccess(JSONObject response) {}
          @Override
-         public void onFailure(JSONObject response) {
-         }
+         public void onFailure(JSONObject response) {}
       });
-      OneSignalInit();
+
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.removeNotificationReceivedHandler();
+
+      OneSignal.startInit(blankActivity).init();
+
+      // Checks that Notification setting worked.
+      Field OneSignal_mInitBuilder = OneSignal.class.getDeclaredField("mInitBuilder");
+      OneSignal_mInitBuilder.setAccessible(true);
+      OneSignal.Builder builder = (OneSignal.Builder)OneSignal_mInitBuilder.get(null);
+      Field OneSignal_Builder_mDisplayOption = builder.getClass().getDeclaredField("mDisplayOption");
+      OneSignal_Builder_mDisplayOption.setAccessible(true);
+      OneSignal.OSInFocusDisplayOption inFocusDisplayOption = (OneSignal.OSInFocusDisplayOption)OneSignal_Builder_mDisplayOption.get(builder);
+      Assert.assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
+
       threadAndTaskWait();
    }
 
