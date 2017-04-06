@@ -29,6 +29,9 @@
     </RelativeLayout>
 
     <LinearLayout
+        xmlns:tools="http://schemas.android.com/tools"
+        tools:ignore="RtlCompat"
+
         android:orientation="vertical"
         android:layout_marginStart="@android:dimen/notification_large_icon_width"
         android:layout_width="fill_parent"
