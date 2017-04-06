@@ -2,14 +2,14 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 24
-    buildToolsVersion '24.0.3'
+    buildToolsVersion '25.0.0'
 
     defaultConfig {
         applicationId "com.onesignal.example"
         manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
                                 // Project number pulled from dashboard, local value is ignored.
                                 onesignal_google_project_number: "REMOTE"]
-        minSdkVersion 9
+        minSdkVersion 15
         targetSdkVersion 24
         versionCode 1
         versionName "1.0"
@@ -51,5 +51,5 @@ dependencies {
     //compile "com.google.android.gms:play-services-analytics:7.0.0"
     compile "com.google.android.gms:play-services-location:7.0.0"
 
-    compile 'com.google.android.gms:play-services-analytics:7.0.0'
+    compile 'com.google.android.gms:play-services-analytics:7.0.0' 
 }

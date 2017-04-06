@@ -29,6 +29,7 @@ package com.onesignal;
 
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -155,7 +156,8 @@ class LocationGMS {
          fallbackFailThread.interrupt();
       fallbackFailThread = null;
    }
-
+   
+   @SuppressWarnings("MissingPermission")
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
       @Override
       public void onConnected(Bundle bundle) {

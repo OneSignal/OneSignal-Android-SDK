@@ -1,6 +1,7 @@
 // Subpackaged to prevent conflicts with other plugins
 package com.onesignal.shortcutbadger.impl;
 
+import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.net.Uri;
@@ -18,6 +19,8 @@ import com.onesignal.shortcutbadger.ShortcutBadgeException;
 public class HuaweiHomeBadger implements Badger {
 
     @Override
+    @SuppressWarnings("NewApi")
+    @SuppressLint("NewApi")
     public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
         Bundle localBundle = new Bundle();
         localBundle.putString("package", context.getPackageName());
