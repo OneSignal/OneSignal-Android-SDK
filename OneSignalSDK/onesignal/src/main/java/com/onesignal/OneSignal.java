@@ -408,12 +408,18 @@ public class OneSignal {
             new Thread(new Runnable() {
                public void run() {
                   try {
-                     Thread.sleep(30000 + androidParamsReties * 10000);
+                     int sleepTime = 30000 + androidParamsReties * 10000;
+                     
+                     if (sleepTime > 90000)
+                        sleepTime = 90000;
+                     
+                     OneSignal.Log(LOG_LEVEL.INFO, "Failed to get Android parameters, trying again in " + (sleepTime / 1000) +  " seconds.");
+                     Thread.sleep(sleepTime);
                   } catch (Throwable t) {}
                   androidParamsReties++;
                   makeAndroidParamsRequest();
                }
-            }, "OS_PARAMS_REQUEST");
+            }, "OS_PARAMS_REQUEST").start();
          }
 
          @Override
@@ -437,6 +443,8 @@ public class OneSignal {
       String userId = getUserId();
       if (userId != null)
          awl_url += "?player_id=" + userId;
+   
+      OneSignal.Log(LOG_LEVEL.DEBUG, "Starting request to get Android parameters.");
       OneSignalRestClient.get(awl_url, responseHandler);
    }
 
