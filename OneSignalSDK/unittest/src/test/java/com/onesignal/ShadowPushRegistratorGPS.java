@@ -29,11 +29,17 @@ package com.onesignal;
 
 import android.content.Context;
 
+import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
+import org.robolectric.annotation.RealObject;
+
+import static org.robolectric.shadow.api.Shadow.directlyOn;
 
 @Implements(PushRegistratorGPS.class)
 public class ShadowPushRegistratorGPS {
-
+   
+   @RealObject private PushRegistratorGPS realPushRegistratorGPS;
+   
    public static final String regId = "aspdfoh0fhj02hr-2h";
 
    public static boolean fail = false;
@@ -45,14 +51,20 @@ public class ShadowPushRegistratorGPS {
    public static void manualFireRegisterForPush() {
       lastCallback.complete(regId, 1);
    }
-
+   
+   @Implementation
    public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
+      directlyOn(realPushRegistratorGPS, PushRegistratorGPS.class).registerForPush(context, googleProjectNumber, callback);
+      
       lastProjectNumber = googleProjectNumber;
       lastCallback = callback;
 
       if (!skipComplete)
          callback.complete(fail ? null : regId, fail ? -7 : 1);
    }
+   
+   public void internalRegisterForPush(String googleProjectNumber) {}
+   
 
    public static void fireLastCallback() {
       lastCallback.complete(fail ? null : regId, fail ? -7 : 1);

@@ -55,7 +55,17 @@ public class PushRegistratorGPS implements PushRegistrator {
    public void registerForPush(Context context, String googleProjectNumber, RegisteredHandler callback) {
       appContext = context;
       registeredHandler = callback;
-
+      
+      if (googleProjectNumber == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.");
+         registeredHandler.complete(null, -6);
+         return;
+      }
+      
+      internalRegisterForPush(googleProjectNumber);
+   }
+   
+   private void internalRegisterForPush(String googleProjectNumber) {
       try {
          if (isGMSInstalledAndEnabled())
             registerInBackground(googleProjectNumber);
