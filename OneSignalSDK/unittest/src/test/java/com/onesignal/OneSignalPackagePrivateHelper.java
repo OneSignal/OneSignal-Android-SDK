@@ -76,4 +76,9 @@ public class OneSignalPackagePrivateHelper {
 
    public class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public class NotificationRestorer extends com.onesignal.NotificationRestorer { }
+   
+   
+   public static void OneSignalRestClientPublic_getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      OneSignalRestClient.getSync(url, responseHandler);
+   }
 }

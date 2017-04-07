@@ -86,7 +86,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
@@ -1489,45 +1488,7 @@ public class MainOneSignalClassRunner {
    }
 
    private static void threadAndTaskWait() throws Exception {
-      boolean createdNewThread;
-      do {
-         createdNewThread = false;
-         boolean joinedAThread;
-         do {
-            joinedAThread = false;
-//            try {Thread.sleep(testSleepTime);} catch (Throwable t) {}
-
-            Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-
-            for (Thread thread : threadSet) {
-//               if (thread.equals(Thread.currentThread()))
-//                  continue;
-
-               if (thread.getName().startsWith("OS_")) {
-                  //          && (thread.getState().equals(Thread.State.RUNNABLE) || thread.getState().equals(Thread.State.WAITING)))
-                 // System.out.println("thread: " + thread);
-                 // System.out.println("   state: " + thread.getState());
-                  thread.join();
-                  joinedAThread = createdNewThread = true;
-               }
-//               else if (thread.getName().startsWith("OSH_") && !thread.getState().equals(Thread.State.WAITING))
-//                  noRunningThreads = noNewThreads = false;
-
-//               System.out.println("thread: " + thread);
-//               System.out.println("   state: " + thread.getState());
-            }
-         } while (joinedAThread);
-
-         boolean advancedRunnables = OneSignalPackagePrivateHelper.runAllNetworkRunnables();
-         advancedRunnables = OneSignalPackagePrivateHelper.runFocusRunnables() || advancedRunnables;
-
-//         Scheduler scheduler = Robolectric.getForegroundThreadScheduler();
-//         if (scheduler != null)
-//            advancedRunnables = scheduler.advanceToLastPostedRunnable() || advancedRunnables;
-
-         if (advancedRunnables)
-            createdNewThread = true;
-      } while (createdNewThread);
+      TestHelpers.threadAndTaskWait();
    }
 
    private void OneSignalInit() {
