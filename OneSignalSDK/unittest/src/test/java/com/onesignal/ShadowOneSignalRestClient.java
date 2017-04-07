@@ -113,8 +113,13 @@ public class ShadowOneSignalRestClient {
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("get: " + url);
       networkCallCount++;
-
-      responseHandler.onSuccess("{\"awl_list\": {" +
+   
+      if (nextSuccessResponse != null) {
+         responseHandler.onSuccess(nextSuccessResponse);
+         nextSuccessResponse = null;
+      }
+      else
+         responseHandler.onSuccess("{\"awl_list\": {" +
                                     "\"IlIfoQBT5jXgkgn6nBsIrGJn5t0Yd91GqKAGoApIYzk=\": 1," +
                                     "\"Q3zjDf/4NxXU1QpN9WKp/iwVYNPQZ0js2EDDNO+eo0o=\": 1" +
                                 "}, \"android_sender_id\": \"87654321\"}");

@@ -57,7 +57,7 @@ class OSUtils {
 
       if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) ||
           "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
-         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
 
       if (deviceType == 1) {
          try {

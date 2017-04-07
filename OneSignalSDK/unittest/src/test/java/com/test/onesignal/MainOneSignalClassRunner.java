@@ -325,9 +325,21 @@ public class MainOneSignalClassRunner {
    public void testAndroidParamsProjectNumberOverridesLocal() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-
-      System.out.println("ShadowPushRegistratorGPS.lastProjectNumber: " + ShadowPushRegistratorGPS.lastProjectNumber);
+      
       Assert.assertNotSame("123456789", ShadowPushRegistratorGPS.lastProjectNumber);
+   }
+   
+   @Test
+   public void testNullProjectNumberSetsErrorType() throws Exception {
+      // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
+      ShadowOneSignalRestClient.nextSuccessResponse = "{\"awl_list\": {}}";
+      // Don't fire the mock callback, it will be done from the real class.
+      ShadowPushRegistratorGPS.skipComplete = true;
+      
+      OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+      
+      Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
 
    @Test
