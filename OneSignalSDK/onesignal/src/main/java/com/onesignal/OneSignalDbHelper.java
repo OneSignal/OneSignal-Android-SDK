@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,16 +30,20 @@ package com.onesignal;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.SystemClock;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class OneSignalDbHelper extends SQLiteOpenHelper {
-   public static final int DATABASE_VERSION = 1;
-   public static final String DATABASE_NAME = "OneSignal.db";
+   private static final int DATABASE_VERSION = 1;
+   private static final String DATABASE_NAME = "OneSignal.db";
 
    private static final String TEXT_TYPE = " TEXT";
    private static final String INT_TYPE = " INTEGER";
    private static final String COMMA_SEP = ",";
+   
+   private static final int DB_OPEN_RETRY_MAX = 5;
+   private static final int DB_OPEN_RETRY_BACKOFF = 400;
 
    private static final String SQL_CREATE_ENTRIES =
        "CREATE TABLE " + NotificationTable.TABLE_NAME + " (" +
@@ -74,6 +78,35 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
          sInstance = new OneSignalDbHelper(context.getApplicationContext());
       return sInstance;
    }
+   
+   
+   // Retry in-case of rare device issues with opening database.
+   // https://github.com/OneSignal/OneSignal-Android-SDK/issues/136
+   synchronized SQLiteDatabase getWritableDbWithRetries() {
+      int count = 0;
+      while(true) {
+         try {
+            return getWritableDatabase();
+         } catch (Throwable t) {
+            if (++count >= DB_OPEN_RETRY_MAX)
+               throw t;
+            SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
+         }
+      }
+   }
+   
+   synchronized SQLiteDatabase getReadableDbWithRetries() {
+      int count = 0;
+      while(true) {
+         try {
+            return getReadableDatabase();
+         } catch (Throwable t) {
+            if (++count >= DB_OPEN_RETRY_MAX)
+               throw t;
+            SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
+         }
+      }
+   }
 
 
    @Override
@@ -86,4 +119,13 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
       // Only 1 db version so far.
    }
+   
+   // Could enable WAL in the future but requires Android API 11
+   /*
+   @Override
+   public void onConfigure(SQLiteDatabase db) {
+      super.onConfigure(db);
+      db.enableWriteAheadLogging();
+   }
+   */
 }

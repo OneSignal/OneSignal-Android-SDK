@@ -116,12 +116,15 @@ class NotificationBundleProcessor {
    static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
       try {
          JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
-
+   
          OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-         SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
+         SQLiteDatabase writableDb = null;
 
-         writableDb.beginTransaction();
          try {
+            writableDb = dbHelper.getWritableDbWithRetries();
+   
+            writableDb.beginTransaction();
+            
             deleteOldNotifications(writableDb);
 
             ContentValues values = new ContentValues();
@@ -147,7 +150,8 @@ class NotificationBundleProcessor {
          } catch (Exception e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
          } finally {
-            writableDb.endTransaction();
+            if (writableDb != null)
+               writableDb.endTransaction();
          }
       } catch (JSONException e) {
          e.printStackTrace();

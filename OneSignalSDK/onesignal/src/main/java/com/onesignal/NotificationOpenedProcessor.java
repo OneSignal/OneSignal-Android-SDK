@@ -76,11 +76,14 @@ public class NotificationOpenedProcessor {
             t.printStackTrace();
          }
       }
-
+   
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
-      writableDb.beginTransaction();
+      SQLiteDatabase writableDb = null;
+      
       try {
+         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb.beginTransaction();
+         
          // We just opened a summary notification.
          if (!dismissed && summaryGroup != null)
             addChildNotifications(dataArray, summaryGroup, writableDb);
@@ -94,7 +97,8 @@ public class NotificationOpenedProcessor {
       } catch (Exception e) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error processing notification open or dismiss record! ", e);
       } finally {
-         writableDb.endTransaction();
+         if (writableDb != null)
+            writableDb.endTransaction();
       }
 
       if (!dismissed)

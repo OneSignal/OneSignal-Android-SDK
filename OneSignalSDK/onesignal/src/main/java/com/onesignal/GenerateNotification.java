@@ -377,37 +377,39 @@ class GenerateNotification {
 
       Random random = new Random();
       PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
-
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
-      SQLiteDatabase readableDb = dbHelper.getReadableDatabase();
-
-      String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                             NotificationTable.COLUMN_NAME_FULL_DATA,
-                             NotificationTable.COLUMN_NAME_IS_SUMMARY,
-                             NotificationTable.COLUMN_NAME_TITLE,
-                             NotificationTable.COLUMN_NAME_MESSAGE };
-
-      String[] whereArgs = { group };
-
-      Cursor cursor = readableDb.query(
-                     NotificationTable.TABLE_NAME,
-                     retColumn,
-                     NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
-                     NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                     NotificationTable.COLUMN_NAME_OPENED + " = 0",
-                     whereArgs,
-                     null,                                                    // group by
-                     null,                                                    // filter by row groups
-                     NotificationTable._ID + " DESC"                          // sort order, new to old
-      );
-
+      
       Notification summaryNotification;
       int summaryNotificationId = random.nextInt();
-
+   
       String firstFullData = null;
       Collection<SpannableString> summeryList = null;
-
+      
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
+      Cursor cursor = null;
+      
       try {
+         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+   
+         String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
+             NotificationTable.COLUMN_NAME_FULL_DATA,
+             NotificationTable.COLUMN_NAME_IS_SUMMARY,
+             NotificationTable.COLUMN_NAME_TITLE,
+             NotificationTable.COLUMN_NAME_MESSAGE };
+   
+         String[] whereArgs = { group };
+   
+         cursor = readableDb.query(
+             NotificationTable.TABLE_NAME,
+             retColumn,
+             NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
+                 NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                 NotificationTable.COLUMN_NAME_OPENED + " = 0",
+             whereArgs,
+             null,                                                    // group by
+             null,                                                    // filter by row groups
+             NotificationTable._ID + " DESC"                          // sort order, new to old
+         );
+         
          if (cursor.moveToFirst()) {
             SpannableString spannableString;
             summeryList = new ArrayList<>();
@@ -449,7 +451,6 @@ class GenerateNotification {
          if (cursor != null && !cursor.isClosed())
             cursor.close();
       }
-
 
       if (summeryList != null && (!updateSummary || summeryList.size() > 1)) {
          int notificationCount = summeryList.size() + (updateSummary ? 0 : 1);
@@ -515,20 +516,22 @@ class GenerateNotification {
       }
       else {
          // There currently isn't a visible notification from this group, save the group summary notification id and post it so it looks like a normal notification.
-         SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
-         writableDb.beginTransaction();
-
+         SQLiteDatabase writableDb = null;
          try {
+            writableDb = dbHelper.getWritableDbWithRetries();
+            writableDb.beginTransaction();
+            
             ContentValues values = new ContentValues();
             values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, summaryNotificationId);
             values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
             values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
             writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
             writableDb.setTransactionSuccessful();
-         } catch (Exception e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", e);
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", t);
          } finally {
-            writableDb.endTransaction();
+            if (writableDb != null)
+               writableDb.endTransaction();
          }
 
          NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle);
