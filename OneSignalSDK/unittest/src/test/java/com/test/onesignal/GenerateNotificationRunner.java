@@ -36,7 +36,6 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Build;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
@@ -44,8 +43,10 @@ import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.NotificationOpenedProcessor;
+import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -65,7 +66,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.internal.runners.statements.ExpectException;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
@@ -90,59 +90,59 @@ import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadB
       sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
-
+   
    private Activity blankActivity;
-
+   
    private static final String notifMessage = "Robo test message";
-
+   
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
       StaticResetHelper.saveStaticValues();
    }
-
+   
    @Before // Before each test
    public void beforeEachTest() throws Exception {
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
-
+      
       blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
-
+      
       ShadowBadgeCountUpdater.lastCount = 0;
-      NotificationManager notificationManager = (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+      NotificationManager notificationManager = (NotificationManager) blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancelAll();
       StaticResetHelper.restSetStaticFields();
    }
-
+   
    @AfterClass
    public static void afterEverything() {
       StaticResetHelper.restSetStaticFields();
    }
-
-
+   
+   
    public static Bundle getBaseNotifBundle() {
       return getBaseNotifBundle("UUID");
    }
-
+   
    public static Bundle getBaseNotifBundle(String id) {
       Bundle bundle = new Bundle();
       bundle.putString("alert", notifMessage);
       bundle.putString("custom", "{\"i\": \"" + id + "\"}");
-
+      
       return bundle;
    }
-
+   
    private static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
-            .putExtra("notificationId", notifId)
-            .putExtra("onesignal_data", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
+          .putExtra("notificationId", notifId)
+          .putExtra("onesignal_data", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
    }
-
+   
    private Intent createOpenIntent(Bundle bundle) {
       return createOpenIntent(ShadowRoboNotificationManager.lastNotifId, bundle);
    }
-
+   
    @Test
    public void shouldSetTitleCorrectly() throws Exception {
       // Should use app's Title by default
@@ -150,7 +150,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
-
+      
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
@@ -158,16 +158,60 @@ public class GenerateNotificationRunner {
       Assert.assertEquals("title123", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
       Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
    }
-
+   
    @Test
    public void shouldProcessRestore() throws Exception {
       Bundle bundle = createInternalPayloadBundle(getBaseNotifBundle());
       bundle.putInt("android_notif_id", 0);
       bundle.putBoolean("restoring", true);
-
+      
       NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
       Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
    }
+   
+   
+   private static OSNotificationOpenResult lastOpenResult;
+   
+   @Test
+   public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new OneSignal.NotificationOpenedHandler() {
+         @Override
+         public void notificationOpened(OSNotificationOpenResult result) {
+            lastOpenResult = result;
+         }
+      });
+      
+      // Display 2 notifications that will be grouped together.
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      // Go forward 4 weeks
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 2419202L * 1000L);
+      
+      // Display a 3 normal notification.
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
+   
+   
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      
+      // Open the summary notification
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      PostedNotification postedNotification = postedNotifsIterator.next().getValue();
+      Intent intent = Shadows.shadowOf(postedNotification.notif.contentIntent).getSavedIntent();
+      NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
+      
+      // Make sure we get a payload when it is opened.
+      Assert.assertNotNull(lastOpenResult.notification.payload);
+   }
+   
+   
+   
 
    @Test
    public void shouldHandleBasicNotifications() throws Exception {
@@ -311,6 +355,8 @@ public class GenerateNotificationRunner {
       Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      // 2 open calls should fire.
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification

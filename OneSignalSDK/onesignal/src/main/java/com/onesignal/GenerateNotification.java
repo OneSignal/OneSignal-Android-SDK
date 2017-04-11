@@ -382,7 +382,7 @@ class GenerateNotification {
       int summaryNotificationId = random.nextInt();
    
       String firstFullData = null;
-      Collection<SpannableString> summeryList = null;
+      Collection<SpannableString> summaryList = null;
       
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
       Cursor cursor = null;
@@ -412,7 +412,7 @@ class GenerateNotification {
          
          if (cursor.moveToFirst()) {
             SpannableString spannableString;
-            summeryList = new ArrayList<>();
+            summaryList = new ArrayList<>();
 
             do {
                if (cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_IS_SUMMARY)) == 1)
@@ -431,7 +431,7 @@ class GenerateNotification {
                   spannableString = new SpannableString(title + msg);
                   if (title.length() > 0)
                      spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, title.length(), 0);
-                  summeryList.add(spannableString);
+                  summaryList.add(spannableString);
 
                   if (firstFullData == null)
                      firstFullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
@@ -451,9 +451,12 @@ class GenerateNotification {
          if (cursor != null && !cursor.isClosed())
             cursor.close();
       }
-
-      if (summeryList != null && (!updateSummary || summeryList.size() > 1)) {
-         int notificationCount = summeryList.size() + (updateSummary ? 0 : 1);
+      
+      PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(),createBaseSummaryIntent(summaryNotificationId, gcmBundle, group));
+      
+      // 2 or more notifications with a group received, group them together as a single notification.
+      if (summaryList != null && (!updateSummary || summaryList.size() > 1)) {
+         int notificationCount = summaryList.size() + (updateSummary ? 0 : 1);
 
          String summaryMessage = gcmBundle.optString("grp_msg", null);
          if (summaryMessage == null)
@@ -461,23 +464,11 @@ class GenerateNotification {
          else
             summaryMessage = summaryMessage.replace("$[notif_count]", "" + notificationCount);
 
-         JSONObject summaryDataBundle = new JSONObject();
-         try {
-            summaryDataBundle.put("alert", summaryMessage);
-         } catch (JSONException e) {
-            e.printStackTrace();
-         }
-         Intent summaryIntent = getNewBaseIntent(summaryNotificationId)
-                              .putExtra("summary", group)
-                              .putExtra("onesignal_data", summaryDataBundle.toString());
-
-         PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), summaryIntent);
-
-         NotificationCompat.Builder summeryBuilder = getBaseNotificationCompatBuilder(gcmBundle);
+         NotificationCompat.Builder summaryBuilder = getBaseNotificationCompatBuilder(gcmBundle);
          if (updateSummary)
-            removeNotifyOptions(summeryBuilder);
+            removeNotifyOptions(summaryBuilder);
 
-         summeryBuilder.setContentIntent(summaryContentIntent)
+         summaryBuilder.setContentIntent(summaryContentIntent)
               .setDeleteIntent(summaryDeleteIntent)
               .setContentTitle(currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo()))
               .setContentText(summaryMessage)
@@ -487,7 +478,7 @@ class GenerateNotification {
               .setGroupSummary(true);
 
          if (!updateSummary)
-            summeryBuilder.setTicker(summaryMessage);
+            summaryBuilder.setTicker(summaryMessage);
 
          NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
 
@@ -507,12 +498,12 @@ class GenerateNotification {
             inboxStyle.addLine(spannableString);
          }
 
-         for(SpannableString line : summeryList)
+         for(SpannableString line : summaryList)
             inboxStyle.addLine(line);
          inboxStyle.setBigContentTitle(summaryMessage);
-         summeryBuilder.setStyle(inboxStyle);
+         summaryBuilder.setStyle(inboxStyle);
 
-         summaryNotification = summeryBuilder.build();
+         summaryNotification = summaryBuilder.build();
       }
       else {
          // There currently isn't a visible notification from this group, save the group summary notification id and post it so it looks like a normal notification.
@@ -538,8 +529,6 @@ class GenerateNotification {
          if (updateSummary)
             removeNotifyOptions(notifBuilder);
 
-         PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(summaryNotificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("summary", group));
-
          addNotificationActionButtons(gcmBundle, notifBuilder, summaryNotificationId, group);
          notifBuilder.setContentIntent(summaryContentIntent)
                      .setDeleteIntent(summaryDeleteIntent)
@@ -551,6 +540,10 @@ class GenerateNotification {
       }
 
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
+   }
+   
+   private static Intent createBaseSummaryIntent(int summaryNotificationId, JSONObject gcmBundle, String group) {
+     return getNewBaseIntent(summaryNotificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("summary", group);
    }
 
    // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available

@@ -1469,8 +1469,7 @@ public class MainOneSignalClassRunner {
 
       JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("payload").optJSONObject("additionalData");
       Assert.assertEquals("bar", additionalData.optString("foo"));
-
-      System.out.println(testJsonObj.optJSONObject("notification"));
+      
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
       Assert.assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
    }

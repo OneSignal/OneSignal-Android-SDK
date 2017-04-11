@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
@@ -197,6 +198,7 @@ public class OneSignal {
    static OneSignal.Builder mInitBuilder;
 
    static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
+   static HashSet<String> postedOpenedNotifIds = new HashSet<>();
 
    private static GetTagsHandler pendingGetTagsHandler;
    private static boolean getTagsCall;
@@ -1003,14 +1005,11 @@ public class OneSignal {
       for (int i = 0; i < jsonArraySize; i++) {
          try {
             JSONObject data = dataArray.getJSONObject(i);
-
-            // Summary notifications will not have custom set
-            if (data.has("custom")) {
-               notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
-               if (actionSelected == null && data.has("actionSelected"))
-                  actionSelected = data.optString("actionSelected", null);
-            }
-
+            
+            notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
+            if (actionSelected == null && data.has("actionSelected"))
+               actionSelected = data.optString("actionSelected", null);
+            
             if (firstMessage)
                firstMessage = false;
             else {
@@ -1089,18 +1088,14 @@ public class OneSignal {
       for (int i = 0; i < dataArray.length(); i++) {
          try {
             JSONObject data = dataArray.getJSONObject(i);
-
-            // Summary notifications do not always have a custom field.
-            if (!data.has("custom"))
-               continue;
-
             JSONObject customJson = new JSONObject(data.optString("custom", null));
 
-            // ... they also never have a OneSignal notification id.
-            if (!customJson.has("i"))
-               continue;
-
             String notificationId = customJson.optString("i", null);
+            // Prevent duplicate calls from summary notifications.
+            //  Also needed if developer overrides setAutoCancel.
+            if (postedOpenedNotifIds.contains(notificationId))
+               continue;
+            postedOpenedNotifIds.add(notificationId);
 
             JSONObject jsonBody = new JSONObject();
             jsonBody.put("app_id", getSavedAppId(inContext));
