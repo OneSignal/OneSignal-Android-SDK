@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -94,31 +94,38 @@ public class SyncService extends Service {
    public void onTaskRemoved(Intent rootIntent) {
       super.onTaskRemoved(rootIntent);
       onTaskRemoved();
-      // stopSelf is important  otherwise Android will show "Scheduling restart of crashed service"
-      //   in the logcat.
+      // stopSelf is important otherwise Android will show "Scheduling restart of crashed service"
+      //   in the logcat which may have other side-affects.
+      
       stopSelf();
       scheduleServiceRestart();
    }
 
    // NOTE: Currently onTaskRemoved takes about 100ms to run.
    // Please maintain this efficiency as it runs on the main thread!
-   //   This is important as while this method is running the app will not response if
+   //   This is important as the app will not response if
    //   the user reopens or focuses another tasks part of the same process.
    // The Process will be killed forcefully if this does not finish in 20 seconds.
    // Triggering seems unaffected by the presents or absence of android:stopWithTask="false".
    //   false is not required, tested on Android 4.4.2 and 6.0.1
    static void onTaskRemoved() {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Starting SyncService:onTaskRemoved.");
+      
       ActivityLifecycleHandler.focusHandlerThread.stopScheduledRunnable();
       OneSignalStateSynchronizer.stopAndPersist();
       OneSignal.onAppLostFocus(true); // Save only
+      
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Completed SyncService:onTaskRemoved.");
    }
 
    void scheduleServiceRestart() {
       Intent intent = new Intent(this, SyncService.class);
-      PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, 0);
-      AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+      // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
+      //    Some Samsung devices will throw the below exception otherwise.
+      //    "java.lang.SecurityException: !@Too many alarms (500) registered"
+      PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+      
       // 10 seconds
       long timeInMillis = System.currentTimeMillis() + 10000;
       alarm.set(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent);
