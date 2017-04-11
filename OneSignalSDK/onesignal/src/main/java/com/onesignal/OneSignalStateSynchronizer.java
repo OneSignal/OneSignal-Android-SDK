@@ -204,12 +204,16 @@ class OneSignalStateSynchronizer {
       return null;
    }
    
-   public static void stopAndPersist() {
+   static boolean stopAndPersist() {
       for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet())
          handlerThread.getValue().stopScheduledRunnable();
-
-      if (toSyncUserState != null)
+      
+      if (toSyncUserState != null) {
+         boolean unSynced = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall()) != null;
          toSyncUserState.persistState();
+         return unSynced;
+      }
+      return false;
    }
    
    class UserState {
@@ -280,7 +284,7 @@ class OneSignalStateSynchronizer {
          try {
             // This makes sure app_id is in all our REST calls.
             if (!sendJson.has("app_id"))
-               sendJson.put("app_id", (String) syncValues.opt("app_id"));
+               sendJson.put("app_id", syncValues.optString("app_id"));
          } catch (JSONException e) {
             e.printStackTrace();
          }
@@ -504,10 +508,15 @@ class OneSignalStateSynchronizer {
    static UserState getNewUserState() {
       return new OneSignalStateSynchronizer().new UserState("nonPersist", false);
    }
+   
+   private static boolean isSessionCall() {
+      final String userId = OneSignal.getUserId();
+      return userId == null || (nextSyncIsSession && !waitingForSessionResponse);
+   }
 
    static void syncUserState(boolean fromSyncService) {
       final String userId = OneSignal.getUserId();
-      boolean isSessionCall = userId == null || (nextSyncIsSession && !waitingForSessionResponse);
+      boolean isSessionCall =  isSessionCall();
 
       final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
       final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);

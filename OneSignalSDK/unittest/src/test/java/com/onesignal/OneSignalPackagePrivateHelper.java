@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -45,8 +46,8 @@ public class OneSignalPackagePrivateHelper {
       shadowOf(looper).reset();
    }
 
-   public static void SyncService_onTaskRemoved() {
-      SyncService.onTaskRemoved();
+   public static void SyncService_onTaskRemoved(Service service) {
+      SyncService.onTaskRemoved(service);
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {

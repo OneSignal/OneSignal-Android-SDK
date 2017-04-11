@@ -545,24 +545,25 @@ public class OneSignal {
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
    }
 
-   static void onAppLostFocus(boolean onlySave) {
+   // Returns true if there is active time that is unsynced.
+   static boolean onAppLostFocus(boolean onlySave) {
       foreground = false;
 
-      if (!initDone) return;
+      if (!initDone) return false;
 
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
 
       if (lastTrackedFocusTime == -1)
-         return;
+         return false;
 
       long time_elapsed = (long) (((SystemClock.elapsedRealtime() - lastTrackedFocusTime) / 1000d) + 0.5d);
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
       if (time_elapsed < 0 || time_elapsed > 86400)
-         return;
+         return false;
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
-         return;
+         return false;
       }
 
       setLastSessionTime(System.currentTimeMillis());
@@ -572,10 +573,12 @@ public class OneSignal {
 
       if (onlySave || totalTimeActive < MIN_ON_FOCUS_TIME || getUserId() == null) {
          SaveUnsentActiveTime(totalTimeActive);
-         return;
+         return totalTimeActive >= MIN_ON_FOCUS_TIME;
       }
 
       sendOnFocus(totalTimeActive, true);
+      
+      return false;
    }
 
    static void sendOnFocus(long totalTimeActive, boolean synchronous) {
