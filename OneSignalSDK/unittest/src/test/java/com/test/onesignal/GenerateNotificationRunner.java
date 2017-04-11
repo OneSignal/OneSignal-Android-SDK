@@ -42,7 +42,6 @@ import com.onesignal.BuildConfig;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
-import com.onesignal.NotificationOpenedProcessor;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
@@ -81,6 +80,7 @@ import java.util.Map;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 
 @Config(packageName = "com.onesignal.example",
@@ -204,7 +204,7 @@ public class GenerateNotificationRunner {
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = Shadows.shadowOf(postedNotification.notif.contentIntent).getSavedIntent();
-      NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
+      NotificationOpenedProcessor_processFromContext(blankActivity, intent);
       
       // Make sure we get a payload when it is opened.
       Assert.assertNotNull(lastOpenResult.notification.payload);
@@ -232,7 +232,7 @@ public class GenerateNotificationRunner {
       cursor.close();
 
       // Should get marked as opened.
-      NotificationOpenedProcessor.processFromActivity(blankActivity, createOpenIntent(bundle));
+      NotificationOpenedProcessor_processFromContext(blankActivity, createOpenIntent(bundle));
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "opened", "android_notification_id" }, null, null, null, null, null);
       cursor.moveToFirst();
       Assert.assertEquals(1, cursor.getInt(0));
@@ -353,7 +353,7 @@ public class GenerateNotificationRunner {
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
-      NotificationOpenedProcessor.processFromActivity(blankActivity, intent);
+      NotificationOpenedProcessor_processFromContext(blankActivity, intent);
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       // 2 open calls should fire.
       Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);

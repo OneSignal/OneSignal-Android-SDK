@@ -89,6 +89,7 @@ import java.util.Map;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static org.robolectric.Shadows.shadowOf;
@@ -1472,6 +1473,11 @@ public class MainOneSignalClassRunner {
       
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
       Assert.assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
+   }
+   
+   @Test
+   public void testNotificationOpenedProcessorHandlesEmptyIntent() {
+      NotificationOpenedProcessor_processFromContext(blankActivity, new Intent());
    }
 
    // ####### Unit test helper methods ########

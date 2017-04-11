@@ -1,6 +1,7 @@
 package com.onesignal;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Looper;
 
@@ -80,5 +81,10 @@ public class OneSignalPackagePrivateHelper {
    
    public static void OneSignalRestClientPublic_getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignalRestClient.getSync(url, responseHandler);
+   }
+   
+   
+   public static void NotificationOpenedProcessor_processFromContext(Context context, Intent intent) {
+      NotificationOpenedProcessor.processFromContext(context, intent);
    }
 }
