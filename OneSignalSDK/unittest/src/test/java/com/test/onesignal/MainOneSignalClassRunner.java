@@ -29,6 +29,8 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -958,10 +960,12 @@ public class MainOneSignalClassRunner {
    public void shouldSaveToSyncIfKilledBeforeDelayedCompare() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
+      Service service = Robolectric.buildService(SyncService.class).create().get();
+      
       OneSignal.sendTag("key", "value");
 
       // Swipe app away from Recent Apps list, should save unsynced data.
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
+      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
       OneSignalPackagePrivateHelper.resetRunnables();
 
       // Network call for android params and player create should have been made.
@@ -980,23 +984,44 @@ public class MainOneSignalClassRunner {
    public void shouldSyncPendingChangesFromSyncService() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-
+      
       OneSignal.sendTag("key", "value");
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
+   
+      // App is swiped away
+      Service service = Robolectric.buildService(SyncService.class).create().get();
+      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
+      
       OneSignalPackagePrivateHelper.resetRunnables();
+      
       threadAndTaskWait();
       Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-
+      
       StaticResetHelper.restSetStaticFields();
-
-      Robolectric.buildService(SyncService.class).create().get();
+   
+      // There were unsynced changes so service should have been scheduled for a restart.
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      Assert.assertEquals(SyncService.class, shadowOf(shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
+      shadowOf(alarmManager).getScheduledAlarms().clear();
+   
+      // Service is restarted
+      service = Robolectric.buildService(SyncService.class).create().get();
       threadAndTaskWait();
       Assert.assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
+      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+   
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      // No new changes, don't schedule another restart.
+      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
+      Assert.assertEquals(0, shadowOf(alarmManager).getScheduledAlarms().size());
    }
 
    @Test
    public void shouldNotCrashIfOnTaskRemovedIsCalledBeforeInitIsDone() {
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved();
+      Service service = Robolectric.buildService(SyncService.class).create().get();
+      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
    }
 
    @Test
