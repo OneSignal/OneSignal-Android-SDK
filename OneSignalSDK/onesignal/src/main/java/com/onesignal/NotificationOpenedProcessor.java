@@ -40,7 +40,7 @@ import org.json.JSONObject;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
-// Used to process opens and dismisses of notifications.
+// Process both notifications opens and dismisses.
 class NotificationOpenedProcessor {
 
    static void processFromContext(Context context, Intent intent) {
@@ -53,7 +53,7 @@ class NotificationOpenedProcessor {
    }
    
    private static boolean isOneSignalIntent(Intent intent) {
-      return intent.hasExtra("onesignal_data");
+      return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra("notificationId");
    }
    
    private static void handleDismissFromActionButtonPress(Context context, Intent intent) {

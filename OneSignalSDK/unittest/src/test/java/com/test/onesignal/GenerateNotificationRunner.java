@@ -210,6 +210,21 @@ public class GenerateNotificationRunner {
       Assert.assertNotNull(lastOpenResult.notification.payload);
    }
    
+   @Test
+   public void shouldUpdateBadgesWhenDismissingNotification() {
+      Bundle bundle = getBaseNotifBundle();
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+   
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      PostedNotification postedNotification = postedNotifsIterator.next().getValue();
+      Intent intent = Shadows.shadowOf(postedNotification.notif.deleteIntent).getSavedIntent();
+      NotificationOpenedProcessor_processFromContext(blankActivity, intent);
+   
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+   }
    
    
 
