@@ -1062,6 +1062,12 @@ public class MainOneSignalClassRunner {
 
    // ####### DeleteTags Tests ######
    @Test
+   public void testDeleteTagWithNonexistingKey() throws Exception {
+      OneSignalInit();
+      OneSignal.deleteTag("int");
+   }
+   
+   @Test
    public void testDeleteTags() throws Exception {
       OneSignalInit();
       OneSignal.sendTags("{\"str\": \"str1\", \"int\": 122, \"bool\": true}");

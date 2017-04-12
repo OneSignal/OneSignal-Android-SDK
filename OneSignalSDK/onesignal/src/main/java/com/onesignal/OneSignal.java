@@ -754,11 +754,11 @@ public class OneSignal {
       while (keys.hasNext()) {
          key = keys.next();
          try {
-            value = keyValues.get(key);
+            value = keyValues.opt(key);
             if (value instanceof JSONArray || value instanceof JSONObject)
                Log(LOG_LEVEL.ERROR, "Omitting key '" + key  + "'! sendTags DO NOT supported nested values!");
             else if (keyValues.isNull(key) || "".equals(value)) {
-               if (existingKeys.has(key))
+               if (existingKeys != null && existingKeys.has(key))
                   toSend.put(key, "");
             }
             else
