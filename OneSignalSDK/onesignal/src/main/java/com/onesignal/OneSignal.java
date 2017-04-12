@@ -915,7 +915,7 @@ public class OneSignal {
       }
    }
 
-   private static void internalFireIdsAvailableCallback() {
+   private synchronized static void internalFireIdsAvailableCallback() {
       if (idsAvailableHandler == null)
          return;
 
