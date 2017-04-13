@@ -67,7 +67,7 @@ import android.util.Log;
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 public class OneSignal {
-
+   
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
@@ -157,11 +157,11 @@ public class OneSignal {
    /**
     * Tag used on logcat messages.
     */
-   static final String TAG = "OneSignal";
+   private static final String TAG = "OneSignal";
 
    static String appId;
-   static String mGoogleProjectNumber;
-   static boolean mGoogleProjectNumberIsRemote;
+   private static String mGoogleProjectNumber;
+   private static boolean mGoogleProjectNumberIsRemote;
    static Context appContext;
    
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
@@ -197,8 +197,8 @@ public class OneSignal {
    private static boolean shareLocation = true;
    static OneSignal.Builder mInitBuilder;
 
-   static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
-   static HashSet<String> postedOpenedNotifIds = new HashSet<>();
+   private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
+   private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
 
    private static GetTagsHandler pendingGetTagsHandler;
    private static boolean getTagsCall;
@@ -207,7 +207,18 @@ public class OneSignal {
    private static boolean sendAsSession;
 
    private static JSONObject awl;
-
+   
+   private static class IAPUpdateJob {
+      JSONArray toReport;
+      boolean newAsExisting;
+      OneSignalRestClient.ResponseHandler restResponseHandler;
+   
+      IAPUpdateJob(JSONArray toReport) {
+         this.toReport = toReport;
+      }
+   }
+   private static IAPUpdateJob iapUpdateJob;
+   
    private static OneSignal.Builder getCurrentOrNewInitBuilder() {
       if (mInitBuilder == null)
          mInitBuilder = new OneSignal.Builder();
@@ -904,7 +915,7 @@ public class OneSignal {
          internalFireIdsAvailableCallback();
    }
 
-   static void fireIdsAvailableCallback() {
+   private static void fireIdsAvailableCallback() {
       if (idsAvailableHandler != null) {
          runOnUiThread(new Runnable() {
             @Override
@@ -934,8 +945,13 @@ public class OneSignal {
    }
 
    static void sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
-      if (getUserId() == null)
+      if (getUserId() == null) {
+         iapUpdateJob = new IAPUpdateJob(purchases);
+         iapUpdateJob.newAsExisting = newAsExisting;
+         iapUpdateJob.restResponseHandler = responseHandler;
+         
          return;
+      }
 
       try {
          JSONObject jsonBody = new JSONObject();
@@ -1168,6 +1184,11 @@ public class OneSignal {
       saveUserId(userId);
       fireIdsAvailableCallback();
       internalFireGetTagsCallback(pendingGetTagsHandler);
+      
+      if (iapUpdateJob != null) {
+         sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
+         iapUpdateJob = null;
+      }
    }
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
@@ -1209,7 +1230,7 @@ public class OneSignal {
       editor.apply();
    }
 
-   static long getLastSessionTime(Context context) {
+   private static long getLastSessionTime(Context context) {
       final SharedPreferences prefs = getGcmPreferences(context);
       return prefs.getLong("OS_LAST_SESSION_TIME", -31 * 1000);
    }
@@ -1415,7 +1436,7 @@ public class OneSignal {
       return context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
    }
 
-   static boolean isDuplicateNotification(String id, Context context) {
+   private static boolean isDuplicateNotification(String id, Context context) {
       if (id == null || "".equals(id))
          return false;
    
@@ -1487,7 +1508,7 @@ public class OneSignal {
       return null;
    }
 
-   static String getNotificationIdFromGCMJsonPayload(JSONObject jsonPayload) {
+   private static String getNotificationIdFromGCMJsonPayload(JSONObject jsonPayload) {
       try {
          JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
          return customJSON.optString("i", null);
