@@ -67,10 +67,8 @@ import org.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
@@ -144,23 +142,11 @@ public class MainOneSignalClassRunner {
 
    private static void cleanUp() {
       callBackUseId = getCallBackRegId = null;
-      StaticResetHelper.restSetStaticFields();
-
-      ShadowOneSignalRestClient.lastPost = null;
-      ShadowOneSignalRestClient.nextSuccessResponse = null;
-      ShadowOneSignalRestClient.failNext = false;
-      ShadowOneSignalRestClient.failNextPut = false;
-      ShadowOneSignalRestClient.failAll = false;
-      ShadowOneSignalRestClient.networkCallCount = 0;
-
-      ShadowPushRegistratorGPS.skipComplete = false;
-      ShadowPushRegistratorGPS.fail = false;
-      ShadowPushRegistratorGPS.lastProjectNumber = null;
-
-      ShadowOSUtils.subscribableStatus = 1;
 
       notificationOpenedMessage = null;
       lastGetTags = null;
+
+      TestHelpers.betweenTestsCleanup();
    }
 
    @BeforeClass // Runs only once, before any tests

@@ -1,10 +1,38 @@
 package com.test.onesignal;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowPushRegistratorGPS;
+import com.onesignal.StaticResetHelper;
 
 import java.util.Set;
 
 class TestHelpers {
+
+   static void betweenTestsCleanup() {
+      StaticResetHelper.restSetStaticFields();
+
+      ShadowOneSignalRestClient.lastPost = null;
+      ShadowOneSignalRestClient.nextSuccessResponse = null;
+      ShadowOneSignalRestClient.failNext = false;
+      ShadowOneSignalRestClient.failNextPut = false;
+      ShadowOneSignalRestClient.failAll = false;
+      ShadowOneSignalRestClient.networkCallCount = 0;
+
+      ShadowPushRegistratorGPS.skipComplete = false;
+      ShadowPushRegistratorGPS.fail = false;
+      ShadowPushRegistratorGPS.lastProjectNumber = null;
+
+      ShadowOSUtils.subscribableStatus = 1;
+
+      // DB seems to be cleaned up on it's own.
+      /*
+      SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDb.delete(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, null, null);
+      writableDb.close();
+      */
+   }
    
    static void threadAndTaskWait() throws Exception {
       boolean createdNewThread;

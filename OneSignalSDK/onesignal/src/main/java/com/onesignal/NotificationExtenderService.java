@@ -169,8 +169,10 @@ public abstract class NotificationExtenderService extends IntentService {
                            NotificationBundleProcessor.shouldDisplay(!"".equals(currentJsonPayload.optString("alert")));
 
          if (!display) {
-            if (!restoring)
+            if (!restoring) {
                NotificationBundleProcessor.saveNotification(this, currentJsonPayload, true, -1);
+               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
+            }
          }
          else
             NotificationBundleProcessor.Process(createNotifJobFromCurrent());

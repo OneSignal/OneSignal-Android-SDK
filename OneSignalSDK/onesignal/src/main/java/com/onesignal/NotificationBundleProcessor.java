@@ -106,10 +106,10 @@ class NotificationBundleProcessor {
    }
 
    // Saving the notification provides the following:
-   //   * Prevent duplicates.
+   //   * Prevent duplicates
    //   * Build summary notifications
-   //   * Redisplay notifications after reboot and upgrade of app.
-   //   * Future - Developer API to get a list of notifications.
+   //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
+   //   * Future - Developer API to get a list of notifications
    static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
       try {
          JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));

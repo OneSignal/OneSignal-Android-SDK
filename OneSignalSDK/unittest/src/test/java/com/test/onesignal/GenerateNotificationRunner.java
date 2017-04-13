@@ -42,6 +42,7 @@ import com.onesignal.BuildConfig;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
+import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
@@ -82,6 +83,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
@@ -108,11 +110,11 @@ public class GenerateNotificationRunner {
       
       blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
-      
-      ShadowBadgeCountUpdater.lastCount = 0;
+
+      TestHelpers.betweenTestsCleanup();
+
       NotificationManager notificationManager = (NotificationManager) blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancelAll();
-      StaticResetHelper.restSetStaticFields();
    }
    
    @AfterClass
@@ -417,10 +419,38 @@ public class GenerateNotificationRunner {
       Assert.assertEquals("id1", additionalData.getJSONArray("actionButtons").getJSONObject(0).getString("id"));
    }
 
+   private OSNotification lastNotificationReceived;
+   @Test
+   public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", null, new OneSignal.NotificationReceivedHandler() {
+         @Override
+         public void notificationReceived(OSNotification notification) {
+            lastNotificationReceived = notification;
+         }
+      });
+      threadAndTaskWait();
+
+      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()),
+                                NotificationExtenderServiceTestReturnFalse.class);
+
+      Assert.assertNotNull(lastNotificationReceived);
+   }
+
+   private NotificationExtenderServiceTest startNotificationExtender(Bundle bundlePayload, Class serviceClass) {
+      ServiceController<NotificationExtenderServiceTest> controller = Robolectric.buildService(serviceClass);
+      NotificationExtenderServiceTest service = controller.attach().create().get();
+      Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTestReturnFalse.class);
+      testIntent.putExtras(bundlePayload);
+      controller.withIntent(testIntent).startCommand(0, 0);
+
+      return service;
+   }
 
    @Test
    @Config(shadows = {ShadowOneSignal.class})
    public void shouldFireNotificationExtenderService() throws Exception {
+      // Test that GCM receiver starts the NotificationExtenderServiceTest when it is in the AndroidManifest.xml
       Bundle bundle = getBaseNotifBundle();
 
       Intent serviceIntent = new Intent();
@@ -437,11 +467,10 @@ public class GenerateNotificationRunner {
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
       Assert.assertEquals("com.onesignal.NotificationExtender", intent.getAction());
 
-      ServiceController<NotificationExtenderServiceTest> controller = Robolectric.buildService(NotificationExtenderServiceTest.class);
-      NotificationExtenderServiceTest service = controller.attach().create().get();
-      Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(createInternalPayloadBundle(getBundleWithAllOptionsSet()));
-      controller.withIntent(testIntent).startCommand(0, 0);
+
+      // Test that all options are set.
+      NotificationExtenderServiceTest service = startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
+                                                                          NotificationExtenderServiceTest.class);
 
       OSNotificationReceivedResult notificationReceived = service.notification;
       OSNotificationPayload notificationPayload = notificationReceived.payload;
@@ -481,17 +510,12 @@ public class GenerateNotificationRunner {
 
 
       // Test a basic notification without anything special.
-      testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(createInternalPayloadBundle(getBaseNotifBundle()));
-      controller.withIntent(testIntent).startCommand(0, 0);
+      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()), NotificationExtenderServiceTest.class);
       Assert.assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
-
 
       // Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception.
       NotificationExtenderServiceTest.throwInAppCode = true;
-      testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTest.class);
-      testIntent.putExtras(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")));
-      controller.withIntent(testIntent).startCommand(0, 0);
+      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")), NotificationExtenderServiceTest.class);
 
       Assert.assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -557,6 +581,12 @@ public class GenerateNotificationRunner {
          notificationId = displayNotification(new OverrideSettings()).androidNotificationId;
 
          return true;
+      }
+   }
+   public static class NotificationExtenderServiceTestReturnFalse extends NotificationExtenderServiceTest {
+      @Override
+      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+         return false;
       }
    }
 }
