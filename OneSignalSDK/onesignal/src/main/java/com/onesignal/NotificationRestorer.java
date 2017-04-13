@@ -71,7 +71,8 @@ class NotificationRestorer {
       }
 
       String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                             NotificationTable.COLUMN_NAME_FULL_DATA };
+                             NotificationTable.COLUMN_NAME_FULL_DATA,
+                             NotificationTable.COLUMN_NAME_CREATED_TIME};
    
    
       Cursor cursor = null;
@@ -98,6 +99,7 @@ class NotificationRestorer {
             do {
                int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
                String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
+               Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
 
                Intent serviceIntent;
 
@@ -109,6 +111,8 @@ class NotificationRestorer {
                serviceIntent.putExtra("json_payload", fullData);
                serviceIntent.putExtra("android_notif_id", existingId);
                serviceIntent.putExtra("restoring", true);
+               serviceIntent.putExtra("timestamp", datetime);
+               
                context.startService(serviceIntent);
             } while (cursor.moveToNext());
          }

@@ -73,11 +73,19 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
-      return NotificationBundleProcessor.Process(context, restoring, jsonPayload, overrideSettings);
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+      notifJob.jsonPayload = jsonPayload;
+      notifJob.overrideSettings = overrideSettings;
+      return NotificationBundleProcessor.Process(notifJob);
    }
 
-   public class NotificationTable extends OneSignalDbContract.NotificationTable { }
-   public class NotificationRestorer extends com.onesignal.NotificationRestorer { }
+   public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
+   public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
+   public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
+      NotificationGenerationJob(Context context) {
+         super(context);
+      }
+   }
    
    
    public static void OneSignalRestClientPublic_getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {

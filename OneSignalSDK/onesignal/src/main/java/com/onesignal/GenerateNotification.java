@@ -96,15 +96,15 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   static void fromJsonPayload(Context inContext, boolean restoring, int notificationId, JSONObject jsonPayload, boolean showAsAlert, NotificationExtenderService.OverrideSettings overrideSettings) {
-      setStatics(inContext);
+   static void fromJsonPayload(NotificationGenerationJob notifJob) {
+      setStatics(notifJob.context);
 
-      if (!restoring && showAsAlert && ActivityLifecycleHandler.curActivity != null) {
-         showNotificationAsAlert(jsonPayload, ActivityLifecycleHandler.curActivity, notificationId);
+      if (!notifJob.restoring && notifJob.showAsAlert && ActivityLifecycleHandler.curActivity != null) {
+         showNotificationAsAlert(notifJob.jsonPayload, ActivityLifecycleHandler.curActivity, notifJob.getAndroidId());
          return;
       }
 
-      showNotification(notificationId, restoring, jsonPayload, overrideSettings);
+      showNotification(notifJob);
    }
 
    private static void showNotificationAsAlert(final JSONObject gcmJson, final Activity activity, final int notificationId) {
@@ -115,8 +115,8 @@ class GenerateNotification {
             builder.setTitle(getTitle(gcmJson));
             builder.setMessage(gcmJson.optString("alert"));
 
-            List<String> buttonsLabels = new ArrayList<String>();
-            List<String> buttonIds = new ArrayList<String>();
+            List<String> buttonsLabels = new ArrayList<>();
+            List<String> buttonIds = new ArrayList<>();
 
             addAlertButtons(activity, gcmJson, buttonsLabels, buttonIds);
 
@@ -207,7 +207,8 @@ class GenerateNotification {
    }
 
 
-   private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(JSONObject gcmBundle) {
+   private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(NotificationGenerationJob notifJob) {
+      JSONObject gcmBundle = notifJob.jsonPayload;
       OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
 
       int notificationIcon = getSmallIconId(gcmBundle);
@@ -226,6 +227,12 @@ class GenerateNotification {
             .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
             .setContentText(message)
             .setTicker(message);
+      
+      if (notifJob.shownTimeStamp != null) {
+         try {
+            notifBuilder.setWhen(notifJob.shownTimeStamp * 1000L);
+         } catch (Throwable t) {} // Can throw if an old android support lib is used.
+      }
 
       try {
          BigInteger accentColor = getAccentColor(gcmBundle);
@@ -280,10 +287,6 @@ class GenerateNotification {
       return oneSignalNotificationBuilder;
    }
 
-   private static NotificationCompat.Builder getBaseNotificationCompatBuilder(JSONObject gcmBundle) {
-      return getBaseOneSignalNotificationBuilder(gcmBundle).compatBuilder;
-   }
-
    private static void removeNotifyOptions(NotificationCompat.Builder builder) {
       builder.setDefaults(0)
              .setSound(null)
@@ -292,12 +295,14 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   static void showNotification(int notificationId, boolean restoring, JSONObject gcmBundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   private static void showNotification(NotificationGenerationJob notifJob) {
       Random random = new Random();
 
+      int notificationId = notifJob.getAndroidId();
+      JSONObject gcmBundle = notifJob.jsonPayload;
       String group = gcmBundle.optString("grp", null);
 
-      OneSignalNotificationBuilder oneSignalNotificationBuilder = getBaseOneSignalNotificationBuilder(gcmBundle);
+      OneSignalNotificationBuilder oneSignalNotificationBuilder = getBaseOneSignalNotificationBuilder(notifJob);
       NotificationCompat.Builder notifBuilder = oneSignalNotificationBuilder.compatBuilder;
 
       addNotificationActionButtons(gcmBundle, notifBuilder, notificationId, null);
@@ -307,8 +312,8 @@ class GenerateNotification {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not set background notification image!", t);
       }
 
-      if (overrideSettings != null && overrideSettings.extender != null)
-         notifBuilder.extend(overrideSettings.extender);
+      if (notifJob.overrideSettings != null && notifJob.overrideSettings.extender != null)
+         notifBuilder.extend(notifJob.overrideSettings.extender);
 
       if (group != null) {
          PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group));
@@ -317,7 +322,7 @@ class GenerateNotification {
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
 
-         createSummaryNotification(restoring, gcmBundle);
+         createSummaryNotification(notifJob);
       }
       else {
          PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()));
@@ -327,7 +332,7 @@ class GenerateNotification {
       }
 
       // Keeps notification from playing sound + vibrating again
-      if (restoring)
+      if (notifJob.restoring)
          removeNotifyOptions(notifBuilder);
 
       // NotificationManagerCompat does not auto omit the individual notification on the device when using
@@ -365,13 +370,12 @@ class GenerateNotification {
       } catch (Throwable t) {} // Ignore if not a Xiaomi device
    }
 
-   private static void createSummaryNotification(boolean restoring, JSONObject gcmBundle) {
-      createSummaryNotification(null, restoring, gcmBundle);
-   }
-
-   static void createSummaryNotification(Context inContext,  boolean updateSummary, JSONObject gcmBundle) {
-      if (updateSummary && inContext != null)
-         setStatics(inContext);
+   static void createSummaryNotification(NotificationGenerationJob notifJob) {
+      boolean updateSummary = notifJob.restoring;
+      JSONObject gcmBundle = notifJob.jsonPayload;
+      
+      if (updateSummary && notifJob.context != null)
+         setStatics(notifJob.context);
 
       String group = gcmBundle.optString("grp", null);
 
@@ -464,7 +468,7 @@ class GenerateNotification {
          else
             summaryMessage = summaryMessage.replace("$[notif_count]", "" + notificationCount);
 
-         NotificationCompat.Builder summaryBuilder = getBaseNotificationCompatBuilder(gcmBundle);
+         NotificationCompat.Builder summaryBuilder = getBaseOneSignalNotificationBuilder(notifJob).compatBuilder;
          if (updateSummary)
             removeNotifyOptions(summaryBuilder);
 
@@ -525,7 +529,7 @@ class GenerateNotification {
                writableDb.endTransaction();
          }
 
-         NotificationCompat.Builder notifBuilder = getBaseNotificationCompatBuilder(gcmBundle);
+         NotificationCompat.Builder notifBuilder = getBaseOneSignalNotificationBuilder(notifJob).compatBuilder;
          if (updateSummary)
             removeNotifyOptions(notifBuilder);
 
