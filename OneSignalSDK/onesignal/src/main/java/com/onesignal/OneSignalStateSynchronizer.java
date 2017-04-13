@@ -216,6 +216,17 @@ class OneSignalStateSynchronizer {
       return false;
    }
    
+   static void clearLocation() {
+      if (toSyncUserState == null)
+         return;
+      
+      toSyncUserState.set("lat", null);
+      toSyncUserState.set("long", null);
+      toSyncUserState.set("loc_acc", null);
+      toSyncUserState.set("loc_type", null);
+      toSyncUserState.persistState();
+   }
+   
    class UserState {
 
       private final int UNSUBSCRIBE_VALUE = -2;

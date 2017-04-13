@@ -1280,6 +1280,8 @@ public class OneSignal {
 
    public static void setLocationShared(boolean enable) {
       shareLocation = enable;
+      if (!enable)
+         OneSignalStateSynchronizer.clearLocation();
       Log(LOG_LEVEL.DEBUG, "shareLocation:" + shareLocation);
    }
 
