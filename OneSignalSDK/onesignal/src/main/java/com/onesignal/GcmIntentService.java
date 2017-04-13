@@ -54,6 +54,8 @@ public class GcmIntentService extends IntentService {
    @Override
    protected void onHandleIntent(Intent intent) {
       Bundle extras = intent.getExtras();
+      if (extras == null)
+         return;
 
       NotificationBundleProcessor.ProcessFromGCMIntentService(this, extras, null);
 
