@@ -51,8 +51,11 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
       if (NotificationBundleProcessor.processBundle(this, bundle))
          return;
-
-      NotificationBundleProcessor.Process(this, false, NotificationBundleProcessor.bundleAsJSONObject(bundle), null);
+   
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+      notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
+   
+      NotificationBundleProcessor.Process(notifJob);
    }
 
    @Override

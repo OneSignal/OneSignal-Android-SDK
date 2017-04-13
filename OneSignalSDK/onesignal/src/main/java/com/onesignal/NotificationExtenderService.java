@@ -91,7 +91,11 @@ public abstract class NotificationExtenderService extends IntentService {
 
       overrideSettings.override(currentBaseOverrideSettings);
       osNotificationDisplayedResult = new OSNotificationDisplayedResult();
-      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, overrideSettings);
+      
+      NotificationGenerationJob notifJob = createNotifJobFromCurrent();
+      notifJob.overrideSettings = overrideSettings;
+      
+      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.Process(notifJob);
       return osNotificationDisplayedResult;
    }
 
@@ -169,7 +173,7 @@ public abstract class NotificationExtenderService extends IntentService {
                NotificationBundleProcessor.saveNotification(this, currentJsonPayload, true, -1);
          }
          else
-            NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, currentBaseOverrideSettings);
+            NotificationBundleProcessor.Process(createNotifJobFromCurrent());
       }
    }
 
@@ -181,5 +185,14 @@ public abstract class NotificationExtenderService extends IntentService {
          return null;
 
       return intent;
+   }
+   
+   private NotificationGenerationJob createNotifJobFromCurrent() {
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+      notifJob.restoring = currentlyRestoring;
+      notifJob.jsonPayload = currentJsonPayload;
+      notifJob.overrideSettings = currentBaseOverrideSettings;
+      
+      return notifJob;
    }
 }

@@ -172,7 +172,10 @@ class NotificationOpenedProcessor {
          writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(intent), NotificationTable.COLUMN_NAME_GROUP_ID + " = ?", new String[] {grpId });
       else {
          try {
-            GenerateNotification.createSummaryNotification(context, true, new JSONObject("{\"grp\": \"" + grpId + "\"}"));
+            NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+            notifJob.restoring = true;
+            notifJob.jsonPayload = new JSONObject("{\"grp\": \"" + grpId + "\"}");
+            GenerateNotification.createSummaryNotification(notifJob);
          } catch (JSONException e) {}
       }
 

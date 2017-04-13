@@ -50,16 +50,18 @@ class NotificationBundleProcessor {
 
    static void ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       try {
-         boolean restoring = bundle.getBoolean("restoring", false);
          String jsonStrPayload = bundle.getString("json_payload");
-
          if (jsonStrPayload == null) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to ProcessFromGCMIntentService: " + bundle);
             return;
          }
-
-         JSONObject jsonPayload = new JSONObject(jsonStrPayload);
-         if (!restoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
+   
+         NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+         notifJob.restoring = bundle.getBoolean("restoring", false);
+         notifJob.shownTimeStamp = bundle.getLong("timestamp");
+         notifJob.jsonPayload = new JSONObject(jsonStrPayload);
+         
+         if (!notifJob.restoring && OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
             return;
 
          if (bundle.containsKey("android_notif_id")) {
@@ -67,34 +69,29 @@ class NotificationBundleProcessor {
                overrideSettings = new NotificationExtenderService.OverrideSettings();
             overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
-
-         Process(context, restoring, jsonPayload, overrideSettings);
+         
+         notifJob.overrideSettings = overrideSettings;
+         Process(notifJob);
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
-   static int Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled() &&  OneSignal.isAppActive();
+   static int Process(NotificationGenerationJob notifJob) {
+      notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
+      
+      GenerateNotification.fromJsonPayload(notifJob);
 
-      int notificationId;
-      if (overrideSettings != null && overrideSettings.androidNotificationId != null)
-         notificationId = overrideSettings.androidNotificationId;
-      else
-         notificationId = new Random().nextInt();
-
-      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert, overrideSettings);
-
-      if (!restoring) {
-         saveNotification(context, jsonPayload, false, notificationId);
+      if (!notifJob.restoring) {
+         saveNotification(notifJob.context, notifJob.jsonPayload, false, notifJob.getAndroidId());
          try {
-            JSONObject jsonObject = new JSONObject(jsonPayload.toString());
-            jsonObject.put("notificationId", notificationId);
-            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, showAsAlert);
+            JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
+            jsonObject.put("notificationId", notifJob.getAndroidId());
+            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
          } catch(Throwable t) {}
       }
 
-      return notificationId;
+      return notifJob.getAndroidId();
    }
 
    static JSONArray bundleAsJsonArray(Bundle bundle) {
