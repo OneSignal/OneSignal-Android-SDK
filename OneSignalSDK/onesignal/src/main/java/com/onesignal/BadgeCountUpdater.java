@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,8 +51,8 @@ class BadgeCountUpdater {
          String defaultStr = bundle.getString("com.onesignal.BadgeCount");
          badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
       } catch (Throwable t) {
-         badgesEnabled = 1;
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "", t);
+         badgesEnabled = 0;
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error reading meta-data tag 'com.onesignal.BadgeCount'. Disabling badge setting.", t);
       }
 
       return (badgesEnabled == 1);
