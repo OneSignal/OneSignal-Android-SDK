@@ -12,7 +12,6 @@ import java.util.List;
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 
-
 /**
  * Shortcut Badger support for Nova Launcher.
  * TeslaUnread must be installed.
