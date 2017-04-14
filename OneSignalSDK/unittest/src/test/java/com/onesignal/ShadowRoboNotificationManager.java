@@ -63,12 +63,22 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    public static int lastNotifId;
 
    public static LinkedHashMap<Integer, PostedNotification> notifications = new LinkedHashMap<>();
-
+   
+   @Override
    public void cancelAll() {
+      super.cancelAll();
       notifications.clear();
    }
-
+   
+   @Override
+   public void cancel(int id) {
+      super.cancel(id);
+      notifications.remove(id);
+   }
+   
+   @Override
    public void cancel(String tag, int id) {
+      super.cancel(tag, id);
       notifications.remove(id);
    }
 

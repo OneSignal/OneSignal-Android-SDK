@@ -35,7 +35,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.NotificationManagerCompat;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -95,8 +94,11 @@ class NotificationOpenedProcessor {
          markNotificationsConsumed(context, intent, writableDb);
 
          // Notification is not a summary type but a single notification part of a group.
-         if (summaryGroup == null && intent.getStringExtra("grp") != null)
-            updateSummaryNotification(context, intent, writableDb);
+         if (summaryGroup == null) {
+            String group = intent.getStringExtra("grp");
+            if (group != null)
+               NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
+         }
          writableDb.setTransactionSuccessful();
       } catch (Exception e) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error processing notification open or dismiss record! ", e);
@@ -152,34 +154,6 @@ class NotificationOpenedProcessor {
 
       writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(intent), whereStr, whereArgs);
       BadgeCountUpdater.update(writableDb, context);
-   }
-
-   private static void updateSummaryNotification(Context context, Intent intent, SQLiteDatabase writableDb) {
-      String grpId = intent.getStringExtra("grp");
-
-      Cursor cursor = writableDb.query(
-            NotificationTable.TABLE_NAME,
-            new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID }, // retColumn
-            NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
-                  NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                  NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                  NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0" ,
-            new String[] { grpId }, // whereArgs
-            null, null, null);
-
-      // All individual notifications consumed, make summary notification as consumed as well.
-      if (cursor.getCount() == 0)
-         writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(intent), NotificationTable.COLUMN_NAME_GROUP_ID + " = ?", new String[] {grpId });
-      else {
-         try {
-            NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
-            notifJob.restoring = true;
-            notifJob.jsonPayload = new JSONObject("{\"grp\": \"" + grpId + "\"}");
-            GenerateNotification.createSummaryNotification(notifJob);
-         } catch (JSONException e) {}
-      }
-
-      cursor.close();
    }
 
    private static ContentValues newContentValuesWithConsumed(Intent intent) {

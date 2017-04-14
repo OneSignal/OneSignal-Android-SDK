@@ -50,6 +50,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowNotificationRestorer;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
@@ -84,11 +85,14 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
+import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
       instrumentedPackages = {"com.onesignal"},
-      shadows = { ShadowRoboNotificationManager.class, ShadowOneSignalRestClient.class, ShadowBadgeCountUpdater.class },
+      shadows = { ShadowRoboNotificationManager.class,
+                  ShadowOneSignalRestClient.class,
+                  ShadowBadgeCountUpdater.class },
       sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
@@ -212,6 +216,76 @@ public class GenerateNotificationRunner {
       
       // Make sure we get a payload when it is opened.
       Assert.assertNotNull(lastOpenResult.notification.payload);
+   }
+   
+   @Test
+   @Config(shadows = {ShadowNotificationRestorer.class})
+   public void shouldCancelNotificationAndUpdateSummary() throws Exception {
+      // Setup - Init
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+      
+      // Setup - Display 3 notifications that will be grouped together.
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      bundle = getBaseNotifBundle("UUID3");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      
+      // Test - 3 notifis + 1 summary
+      Assert.assertEquals(4, postedNotifs.size());
+      
+      
+      // Test - First notification should be the summary
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals("3 new messages", postedSummaryNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+   
+      // Setup - Let's cancel a child notification.
+      PostedNotification postedNotification = postedNotifsIterator.next().getValue();
+      OneSignal.cancelNotification(postedNotification.id);
+   
+      // Test - It should update summary text to say 2 notifications
+      postedNotifs = ShadowRoboNotificationManager.notifications;
+      Assert.assertEquals(3, postedNotifs.size());       // 2 notifis + 1 summary
+      postedNotifsIterator = postedNotifs.entrySet().iterator();
+      postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+   
+      // Setup - Let's cancel a 2nd child notification.
+      postedNotification = postedNotifsIterator.next().getValue();
+      OneSignal.cancelNotification(postedNotification.id);
+   
+      // Test - It should update summary notification to be the text of the last remaining one.
+      postedNotifs = ShadowRoboNotificationManager.notifications;
+      Assert.assertEquals(2, postedNotifs.size()); // 1 notifis + 1 summary
+      postedNotifsIterator = postedNotifs.entrySet().iterator();
+      postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      
+      // Test - Let's make sure we will have our last notification too
+      postedNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals(notifMessage, postedNotification.getShadow().getContentText());
+      
+      // Setup - Let's cancel our 3rd and last child notification.
+      OneSignal.cancelNotification(postedNotification.id);
+   
+      // Test - No more notifications! :)
+      postedNotifs = ShadowRoboNotificationManager.notifications;
+      Assert.assertEquals(0, postedNotifs.size());
    }
    
    @Test

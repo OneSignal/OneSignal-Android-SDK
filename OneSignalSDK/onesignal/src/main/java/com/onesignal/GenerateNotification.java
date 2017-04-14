@@ -74,7 +74,7 @@ class GenerateNotification {
    private static Resources contextResources = null;
    private static Class<?> notificationOpenedClass;
    private static boolean openerIsBroadcast;
-
+   
    private static class OneSignalNotificationBuilder {
       NotificationCompat.Builder compatBuilder;
       boolean hasLargeIcon;
@@ -306,6 +306,7 @@ class GenerateNotification {
       NotificationCompat.Builder notifBuilder = oneSignalNotificationBuilder.compatBuilder;
 
       addNotificationActionButtons(gcmBundle, notifBuilder, notificationId, null);
+      
       try {
          addBackgroundImage(gcmBundle, notifBuilder);
       } catch (Throwable t) {
@@ -314,6 +315,12 @@ class GenerateNotification {
 
       if (notifJob.overrideSettings != null && notifJob.overrideSettings.extender != null)
          notifBuilder.extend(notifJob.overrideSettings.extender);
+      
+      // Keeps notification from playing sound + vibrating again
+      if (notifJob.restoring)
+         removeNotifyOptions(notifBuilder);
+   
+      Notification notification;
 
       if (group != null) {
          PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group));
@@ -321,26 +328,25 @@ class GenerateNotification {
          PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
-
-         createSummaryNotification(notifJob);
+   
+         notification = notifBuilder.build();
+         createSummaryNotification(notifJob, oneSignalNotificationBuilder);
       }
       else {
          PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()));
          notifBuilder.setContentIntent(contentIntent);
          PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId));
          notifBuilder.setDeleteIntent(deleteIntent);
+         notification = notifBuilder.build();
       }
-
-      // Keeps notification from playing sound + vibrating again
-      if (notifJob.restoring)
-         removeNotifyOptions(notifBuilder);
 
       // NotificationManagerCompat does not auto omit the individual notification on the device when using
       //   stacked notifications on Android 4.2 and older
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
+      //   Note that on Android 7.0 this is the opposite. Only individual notifications will show and bundle / group is
+      //     created by Android itself.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
-         Notification notification = notifBuilder.build();
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
          NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
@@ -369,13 +375,16 @@ class GenerateNotification {
          extraNotificationField.set(notification, miuiNotification);
       } catch (Throwable t) {} // Ignore if not a Xiaomi device
    }
-
-   static void createSummaryNotification(NotificationGenerationJob notifJob) {
+   
+   static void updateSummaryNotification(NotificationGenerationJob notifJob) {
+      setStatics(notifJob.context);
+      createSummaryNotification(notifJob, null);
+   }
+   
+   // This summary notification will be used visible instead of the normal one on pre-Android 7.0 devices.
+   static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notifJob.restoring;
       JSONObject gcmBundle = notifJob.jsonPayload;
-      
-      if (updateSummary && notifJob.context != null)
-         setStatics(notifJob.context);
 
       String group = gcmBundle.optString("grp", null);
 
@@ -515,7 +524,8 @@ class GenerateNotification {
          summaryNotification = summaryBuilder.build();
       }
       else {
-         // There currently isn't a visible notification from this group, save the group summary notification id and post it so it looks like a normal notification.
+         // There currently isn't a visible notification from for this groupid.
+         //   save the group summary notification id and post it so it looks like a normal notification.
          SQLiteDatabase writableDb = null;
          try {
             writableDb = dbHelper.getWritableDbWithRetries();
@@ -533,19 +543,22 @@ class GenerateNotification {
             if (writableDb != null)
                writableDb.endTransaction();
          }
+   
+         NotificationCompat.Builder summaryBuilder = notifBuilder.compatBuilder;
+            
+         // We are re-using the notifBuilder from the normal notification so if a developer as an
+         //    extender setup all the settings will carry over.
+         // Note: However their buttons will not carry over as we need to be setup with this new summaryNotificationId.
+         addNotificationActionButtons(gcmBundle, summaryBuilder, summaryNotificationId, group);
+   
+         summaryBuilder.setContentIntent(summaryContentIntent)
+                       .setDeleteIntent(summaryDeleteIntent)
+                       .setOnlyAlertOnce(updateSummary)
+                       .setGroup(group)
+                       .setGroupSummary(true);
 
-         NotificationCompat.Builder notifBuilder = getBaseOneSignalNotificationBuilder(notifJob).compatBuilder;
-         if (updateSummary)
-            removeNotifyOptions(notifBuilder);
-
-         addNotificationActionButtons(gcmBundle, notifBuilder, summaryNotificationId, group);
-         notifBuilder.setContentIntent(summaryContentIntent)
-                     .setDeleteIntent(summaryDeleteIntent)
-                     .setOnlyAlertOnce(updateSummary)
-                     .setGroup(group)
-                     .setGroupSummary(true);
-
-         summaryNotification = notifBuilder.build();
+         summaryNotification = summaryBuilder.build();
+         addXiaomiSettings(notifBuilder, summaryNotification);
       }
 
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
