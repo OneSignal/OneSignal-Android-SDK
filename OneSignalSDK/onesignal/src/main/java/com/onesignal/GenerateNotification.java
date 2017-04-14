@@ -400,14 +400,19 @@ class GenerateNotification {
              NotificationTable.COLUMN_NAME_TITLE,
              NotificationTable.COLUMN_NAME_MESSAGE };
    
+         String whereStr =  NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
+             NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+             NotificationTable.COLUMN_NAME_OPENED + " = 0";
          String[] whereArgs = { group };
-   
+         
+         // Make sure to omit any old existing matching android ids in-case we are replacing it.
+         if (!updateSummary && notifJob.getAndroidId() != -1)
+            whereStr += " AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " <> " + notifJob.getAndroidId();
+         
          cursor = readableDb.query(
              NotificationTable.TABLE_NAME,
              retColumn,
-             NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
-                 NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_OPENED + " = 0",
+             whereStr,
              whereArgs,
              null,                                                    // group by
              null,                                                    // filter by row groups

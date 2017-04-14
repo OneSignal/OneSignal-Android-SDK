@@ -110,7 +110,9 @@ public class GenerateNotificationRunner {
       
       blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
-
+   
+      overrideNotificationId = -1;
+      
       TestHelpers.betweenTestsCleanup();
 
       NotificationManager notificationManager = (NotificationManager) blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -436,6 +438,18 @@ public class GenerateNotificationRunner {
 
       Assert.assertNotNull(lastNotificationReceived);
    }
+   
+   @Test
+   public void notificationExtenderServiceOverrideShouldOverrideAndroidNotificationId() throws Exception {
+      overrideNotificationId = 1;
+      
+      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")),
+          NotificationExtenderServiceTest.class);
+      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID2")),
+          NotificationExtenderServiceTest.class);
+      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+   }
+   
 
    private NotificationExtenderServiceTest startNotificationExtender(Bundle bundlePayload, Class serviceClass) {
       ServiceController<NotificationExtenderServiceTest> controller = Robolectric.buildService(serviceClass);
@@ -558,8 +572,10 @@ public class GenerateNotificationRunner {
 
       return bundle;
    }
-
-
+   
+   
+   static int overrideNotificationId;
+   
    public static class NotificationExtenderServiceTest extends NotificationExtenderService {
       public OSNotificationReceivedResult notification;
       public int notificationId = -1;
@@ -578,7 +594,12 @@ public class GenerateNotificationRunner {
             throw new NullPointerException();
 
          this.notification = notification;
-         notificationId = displayNotification(new OverrideSettings()).androidNotificationId;
+   
+         OverrideSettings overrideSettings = new OverrideSettings();
+         if (overrideNotificationId != -1)
+            overrideSettings.androidNotificationId = overrideNotificationId;
+         
+         notificationId = displayNotification(overrideSettings).androidNotificationId;
 
          return true;
       }

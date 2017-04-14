@@ -123,7 +123,20 @@ class NotificationBundleProcessor {
             writableDb.beginTransaction();
             
             deleteOldNotifications(writableDb);
+            
+            // Count any notifications with duplicated android notification ids as dismissed.
+            // -1 is used to note never displayed
+            if (notificationId != -1) {
+               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationId;
+   
+               ContentValues values = new ContentValues();
+               values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+   
+               writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+               BadgeCountUpdater.update(writableDb, context);
+            }
 
+            // Save just received notification to DB
             ContentValues values = new ContentValues();
             values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
             if (jsonPayload.has("grp"))
