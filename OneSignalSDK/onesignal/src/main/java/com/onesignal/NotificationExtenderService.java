@@ -85,8 +85,9 @@ public abstract class NotificationExtenderService extends IntentService {
    private OverrideSettings currentBaseOverrideSettings = null;
 
    // Developer may call to override some notification settings.
-   //   - If called the normal SDK notification will not be displayed regardless of what is returned from onNotificationProcessing.
+   // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
    protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
+      // Check if this method has been called already or if no override was set.
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
 

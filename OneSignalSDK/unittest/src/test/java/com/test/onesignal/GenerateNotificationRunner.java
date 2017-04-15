@@ -304,6 +304,52 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
    
+   @Test
+   public void shouldUpdateNormalNotificationDisplayWhenReplacingANotification() throws Exception {
+      // Setup - init
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+   
+      // Setup - Display 2 notifications with the same group and collapse_id
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      bundle.putString("collapse_key", "1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      bundle.putString("collapse_key", "1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      
+      // Test - Summary created and sub notification. Summary will look the same as the normal notification.
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      Assert.assertEquals(2, postedNotifs.size());
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+   
+      int lastNotifId = postedNotifsIterator.next().getValue().id;
+      ShadowRoboNotificationManager.notifications.clear();
+      
+      // Setup - Restore
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      bundle = createInternalPayloadBundle(bundle);
+      bundle.putInt("android_notif_id", lastNotifId);
+      bundle.putBoolean("restoring", true);
+      NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
+      
+      // Test - Restored notifications display exactly the same as they did when recevied.
+      postedNotifs = ShadowRoboNotificationManager.notifications;
+      postedNotifsIterator = postedNotifs.entrySet().iterator();
+      // Test - 1 notifi + 1 summary
+      Assert.assertEquals(2, postedNotifs.size());
+      Assert.assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+   }
    
 
    @Test

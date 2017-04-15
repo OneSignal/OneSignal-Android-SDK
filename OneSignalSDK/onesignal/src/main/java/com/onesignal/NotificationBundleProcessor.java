@@ -36,6 +36,7 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
@@ -79,6 +80,7 @@ class NotificationBundleProcessor {
 
    static int Process(NotificationGenerationJob notifJob) {
       notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
+      processCollapseKey(notifJob);
       
       GenerateNotification.fromJsonPayload(notifJob);
 
@@ -108,8 +110,9 @@ class NotificationBundleProcessor {
    // Saving the notification provides the following:
    //   * Prevent duplicates
    //   * Build summary notifications
+   //   * Collapse key / id support - Used to lookup the android notification id later
    //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
-   //   * Future - Developer API to get a list of notifications
+   //   * Future - Public API to get a list of notifications
    static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
       try {
          JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
@@ -141,6 +144,8 @@ class NotificationBundleProcessor {
             values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
             if (jsonPayload.has("grp"))
                values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
+            if (jsonPayload.has("collapse_key") && !"do_not_collapse".equals(jsonPayload.optString("collapse_key")))
+               values.put(NotificationTable.COLUMN_NAME_COLLAPSE_ID, jsonPayload.optString("collapse_key"));
 
             values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
             if (!opened)
@@ -310,6 +315,41 @@ class NotificationBundleProcessor {
          notification.backgroundImageLayout.image = jsonBgImage.optString("img");
          notification.backgroundImageLayout.titleTextColor = jsonBgImage.optString("tc");
          notification.backgroundImageLayout.bodyTextColor = jsonBgImage.optString("bc");
+      }
+   }
+
+   private static void processCollapseKey(NotificationGenerationJob notifJob) {
+      if (notifJob.restoring)
+         return;
+      if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
+         return;
+      String collapse_id = notifJob.jsonPayload.optString("collapse_key");
+
+
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
+      Cursor cursor = null;
+
+      try {
+         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         cursor = readableDb.query(
+               NotificationTable.TABLE_NAME,
+               new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
+               NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
+                     NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                     NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
+               new String[] {collapse_id},
+               null, null, null);
+
+         if (cursor.moveToFirst()) {
+            int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+            notifJob.setAndroidIdWithOutOverriding(androidNotificationId);
+         }
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not read DB to find existing collapse_key!", t);
+      }
+      finally {
+         if (cursor != null && !cursor.isClosed())
+            cursor.close();
       }
    }
 
