@@ -1382,14 +1382,19 @@ public class OneSignal {
          writableDb = dbHelper.getWritableDbWithRetries();
          writableDb.beginTransaction();
          
-         String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                              NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id;
+         String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
+                           NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                           NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
 
          ContentValues values = new ContentValues();
          values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
 
-         writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+         int records = writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+         
+         if (records > 0)
+            NotificationSummaryManager.updatePossibleDependentSummaryOnDismiss(appContext, writableDb, id);
          BadgeCountUpdater.update(writableDb, appContext);
+         
          writableDb.setTransactionSuccessful();
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notification id " + id + " as dismissed! ", t);
