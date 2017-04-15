@@ -81,6 +81,7 @@ public abstract class NotificationExtenderService extends IntentService {
    private OSNotificationDisplayedResult osNotificationDisplayedResult;
    private JSONObject currentJsonPayload;
    private boolean currentlyRestoring;
+   private Long restoreTimestamp;
    private OverrideSettings currentBaseOverrideSettings = null;
 
    // Developer may call to override some notification settings.
@@ -136,6 +137,7 @@ public abstract class NotificationExtenderService extends IntentService {
          if (!currentlyRestoring && OneSignal.notValidOrDuplicated(this, currentJsonPayload))
             return;
 
+         restoreTimestamp = bundle.getLong("timestamp");
          processJsonObject(currentJsonPayload, currentlyRestoring);
       } catch (JSONException e) {
          e.printStackTrace();
@@ -193,6 +195,7 @@ public abstract class NotificationExtenderService extends IntentService {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
       notifJob.restoring = currentlyRestoring;
       notifJob.jsonPayload = currentJsonPayload;
+      notifJob.shownTimeStamp = restoreTimestamp;
       notifJob.overrideSettings = currentBaseOverrideSettings;
       
       return notifJob;
