@@ -489,11 +489,15 @@ class GenerateNotification {
          if (updateSummary)
             removeNotifyOptions(summaryBuilder);
 
+         // The summary is designed to fit all notifications.
+         //   Default small and large icons are used instead of the payload options to enforce this.
          summaryBuilder.setContentIntent(summaryContentIntent)
               .setDeleteIntent(summaryDeleteIntent)
               .setContentTitle(currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo()))
               .setContentText(summaryMessage)
               .setNumber(notificationCount)
+              .setSmallIcon(getDefaultSmallIconId())
+              .setLargeIcon(getDefaultLargeIcon())
               .setOnlyAlertOnce(updateSummary)
               .setGroup(group)
               .setGroupSummary(true);
@@ -657,17 +661,32 @@ class GenerateNotification {
       Bitmap bitmap = getBitmap(gcmBundle.optString("licon"));
       if (bitmap == null)
          bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
-
+      
       if (bitmap == null)
          return null;
-
-      // Resize to prevent extra cropping and boarders.
+   
+      return resizeBitmapForLargeIconArea(bitmap);
+   }
+   
+   private static Bitmap getDefaultLargeIcon() {
+      if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+         return null;
+      
+      Bitmap bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
+      return resizeBitmapForLargeIconArea(bitmap);
+   }
+   
+   // Resize to prevent extra cropping and boarders.
+   private static Bitmap resizeBitmapForLargeIconArea(Bitmap bitmap) {
+      if (bitmap == null)
+         return null;
+      
       try {
          int systemLargeIconHeight = (int) contextResources.getDimension(android.R.dimen.notification_large_icon_height);
          int systemLargeIconWidth = (int) contextResources.getDimension(android.R.dimen.notification_large_icon_width);
          int bitmapHeight = bitmap.getHeight();
          int bitmapWidth = bitmap.getWidth();
-
+      
          if (bitmapWidth > systemLargeIconWidth || bitmapHeight > systemLargeIconHeight) {
             int newWidth = systemLargeIconWidth, newHeight = systemLargeIconHeight;
             if (bitmapHeight > bitmapWidth) {
@@ -677,11 +696,11 @@ class GenerateNotification {
                float ratio = (float) bitmapHeight / (float) bitmapWidth;
                newHeight = (int) (newWidth * ratio);
             }
-
+         
             return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true);
          }
       } catch (Throwable t) {}
-
+   
       return bitmap;
    }
 
@@ -753,18 +772,22 @@ class GenerateNotification {
       if (notificationIcon != 0)
          return notificationIcon;
 
-      notificationIcon = getDrawableId("ic_stat_onesignal_default");
+     return getDefaultSmallIconId();
+   }
+   
+   private static int getDefaultSmallIconId() {
+      int notificationIcon = getDrawableId("ic_stat_onesignal_default");
       if (notificationIcon != 0)
          return notificationIcon;
-
+   
       notificationIcon = getDrawableId("corona_statusbar_icon_default");
       if (notificationIcon != 0)
          return notificationIcon;
-
+   
       notificationIcon = getDrawableId("ic_os_notification_fallback_white_24dp");
       if (notificationIcon != 0)
          return notificationIcon;
-
+   
       return drawable.ic_popup_reminder;
    }
 
