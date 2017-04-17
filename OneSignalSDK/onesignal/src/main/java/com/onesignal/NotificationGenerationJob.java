@@ -57,4 +57,16 @@ class NotificationGenerationJob {
       
       return overrideSettings.androidNotificationId;
    }
+
+   void setAndroidIdWithOutOverriding(Integer id) {
+      if (id == null)
+         return;
+
+      if (overrideSettings != null && overrideSettings.androidNotificationId != null)
+         return;
+
+      if (overrideSettings == null)
+         overrideSettings = new NotificationExtenderService.OverrideSettings();
+      overrideSettings.androidNotificationId = id;
+   }
 }

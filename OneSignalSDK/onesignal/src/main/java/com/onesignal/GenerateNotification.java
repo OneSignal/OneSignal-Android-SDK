@@ -381,7 +381,7 @@ class GenerateNotification {
       createSummaryNotification(notifJob, null);
    }
    
-   // This summary notification will be used visible instead of the normal one on pre-Android 7.0 devices.
+   // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
    static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notifJob.restoring;
       JSONObject gcmBundle = notifJob.jsonPayload;
@@ -472,8 +472,11 @@ class GenerateNotification {
       
       PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(),createBaseSummaryIntent(summaryNotificationId, gcmBundle, group));
       
+      
       // 2 or more notifications with a group received, group them together as a single notification.
-      if (summaryList != null && (!updateSummary || summaryList.size() > 1)) {
+      if (summaryList != null &&
+          ((updateSummary && summaryList.size() > 1) ||
+           (!updateSummary && summaryList.size() > 0))) {
          int notificationCount = summaryList.size() + (updateSummary ? 0 : 1);
 
          String summaryMessage = gcmBundle.optString("grp_msg", null);
