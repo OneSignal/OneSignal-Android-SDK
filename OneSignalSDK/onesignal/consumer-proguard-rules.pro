@@ -13,6 +13,7 @@
 -keep class com.onesignal.shortcutbadger.impl.ApexHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.AsusHomeLauncher { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.DefaultBadger { <init>(...); }
+-keep class com.onesignal.shortcutbadger.impl.EverythingMeHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.HuaweiHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.LGHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.NewHtcHomeBadger { <init>(...); }
@@ -20,5 +21,9 @@
 -keep class com.onesignal.shortcutbadger.impl.OPPOHomeBader { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.SamsungHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.SonyHomeBadger { <init>(...); }
+-keep class com.onesignal.shortcutbadger.impl.VivoHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.XiaomiHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.ZukHomeBadger { <init>(...); }
+
+-dontwarn com.amazon.**
+-keep public class com.onesignal.ADMMessageHandler {*;}
