@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,7 +57,7 @@ class OneSignalStateSynchronizer {
 
    private static Context appContext;
 
-   private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type"};
+   private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "ad_id"};
    private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
 
    // Object to synchronize on to prevent concurrent modifications on syncValues and dependValues
@@ -220,10 +220,7 @@ class OneSignalStateSynchronizer {
       if (toSyncUserState == null)
          return;
       
-      toSyncUserState.set("lat", null);
-      toSyncUserState.set("long", null);
-      toSyncUserState.set("loc_acc", null);
-      toSyncUserState.set("loc_type", null);
+      toSyncUserState.clearLocation();
       toSyncUserState.persistState();
    }
    
@@ -270,23 +267,52 @@ class OneSignalStateSynchronizer {
          return subscribableStatus < UNSUBSCRIBE_VALUE ? subscribableStatus : (userSubscribePref ? 1 : UNSUBSCRIBE_VALUE);
       }
 
-      private Set<String> getGroupChangeField(JSONObject cur, JSONObject changedTo) {
+      private Set<String> getGroupChangeFields(UserState changedTo) {
          try {
-            if (cur.getDouble("lat") != changedTo.getDouble("lat")
-                || cur.getDouble("long") != changedTo.getDouble("long")
-                || cur.getDouble("loc_acc") != changedTo.getDouble("loc_acc")
-                || cur.getDouble("loc_type") != changedTo.getDouble("loc_type"))
+            if (dependValues.optLong("loc_time_stamp") != changedTo.dependValues.getLong("loc_time_stamp")
+                || syncValues.optDouble("lat") != changedTo.syncValues.getDouble("lat")
+                || syncValues.optDouble("long") != changedTo.syncValues.getDouble("long")
+                || syncValues.optDouble("loc_acc") != changedTo.syncValues.getDouble("loc_acc")
+                || syncValues.optDouble("loc_type") != changedTo.syncValues.getDouble("loc_type")) {
+               if (changedTo.dependValues.optBoolean("loc_bg"))
+                  changedTo.syncValues.put("loc_bg", changedTo.dependValues.optBoolean("loc_bg"));
                return LOCATION_FIELDS_SET;
-         } catch (Throwable t) {
-            return LOCATION_FIELDS_SET;
-         }
+            }
+         } catch (Throwable t) {}
 
          return null;
+      }
+      
+      void setLocation(LocationGMS.LocationPoint point) {
+         try {
+            syncValues.put("lat", point.lat);
+            syncValues.put("long",point.log);
+            syncValues.put("loc_acc", point.accuracy);
+            syncValues.put("loc_type", point.type);
+            dependValues.put("loc_bg", point.bg);
+            dependValues.put("loc_time_stamp", point.timeStamp);
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+      }
+      
+      void clearLocation() {
+         try {
+            syncValues.put("lat", null);
+            syncValues.put("long", null);
+            syncValues.put("loc_acc", null);
+            syncValues.put("loc_type", null);
+            syncValues.put("loc_bg", null);
+            dependValues.put("loc_bg", null);
+            dependValues.put("loc_time_stamp", null);
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
       }
 
       private JSONObject generateJsonDiff(UserState newState, boolean isSessionCall) {
          addDependFields(); newState.addDependFields();
-         Set<String> includeFields = getGroupChangeField(syncValues, newState.syncValues);
+         Set<String> includeFields = getGroupChangeFields(newState);
          JSONObject sendJson = OneSignalStateSynchronizer.generateJsonDiff(syncValues, newState.syncValues, null, includeFields);
 
          if (!isSessionCall && sendJson.toString().equals("{}"))
@@ -472,7 +498,7 @@ class OneSignalStateSynchronizer {
          mHandler = new Handler(getLooper());
       }
    
-      public void runNewJob() {
+      void runNewJob() {
          currentRetry = 0;
          mHandler.removeCallbacksAndMessages(null);
          mHandler.postDelayed(getNewRunnable(), 5000);
@@ -690,16 +716,9 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   static void updateLocation(Double lat, Double log, Float accuracy, Integer type) {
+   static void updateLocation(LocationGMS.LocationPoint point) {
       UserState userState = getUserStateForModification();
-      try {
-         userState.syncValues.put("lat", lat);
-         userState.syncValues.put("long", log);
-         userState.syncValues.put("loc_acc", accuracy);
-         userState.syncValues.put("loc_type", type);
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
+      userState.setLocation(point);
    }
 
    static boolean getSubscribed() {
@@ -720,7 +739,7 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   static boolean serverSuccess;
+   private static boolean serverSuccess;
    static GetTagsResult getTags(boolean fromServer) {
       if (fromServer) {
          String userId = OneSignal.getUserId();
@@ -761,7 +780,7 @@ class OneSignalStateSynchronizer {
       OneSignal.setLastSessionTime(-60 * 61);
    }
 
-   static void handlePlayerDeletedFromServer() {
+   private static void handlePlayerDeletedFromServer() {
       resetCurrentState();
       nextSyncIsSession = true;
       postNewSyncUserState();

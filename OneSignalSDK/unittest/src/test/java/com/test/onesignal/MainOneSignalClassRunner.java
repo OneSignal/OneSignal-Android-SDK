@@ -48,8 +48,12 @@ import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowGoogleApiClientBuilder;
+import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowLocationGMS;
+import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -95,7 +99,10 @@ import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
-        shadows = {ShadowOneSignalRestClient.class, ShadowPushRegistratorGPS.class, ShadowOSUtils.class},
+        shadows = {ShadowOneSignalRestClient.class,
+                   ShadowPushRegistratorGPS.class,
+                   ShadowOSUtils.class,
+                   ShadowAdvertisingIdProviderGPS.class},
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
         sdk = 21)
@@ -991,7 +998,10 @@ public class MainOneSignalClassRunner {
       shadowOf(alarmManager).getScheduledAlarms().clear();
    
       // Service is restarted
-      service = Robolectric.buildService(SyncService.class).create().get();
+      Intent intent = new Intent();
+      intent.putExtra("task", 1); // TASK_SYNC
+      service = Robolectric.buildService(SyncService.class, intent).startCommand(0, 0).get();
+
       threadAndTaskWait();
       Assert.assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
       Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
@@ -1304,8 +1314,9 @@ public class MainOneSignalClassRunner {
    // ####### Unit Test Location       ########
 
    @Test
-   @Config(shadows = {ShadowLocationGMS.class})
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void shouldUpdateAllLocationFieldsWhenAnyFieldsChange() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
@@ -1315,8 +1326,8 @@ public class MainOneSignalClassRunner {
 
       ShadowOneSignalRestClient.lastPost = null;
       StaticResetHelper.restSetStaticFields();
-      ShadowLocationGMS.lat = 30.0;
-      ShadowLocationGMS.accuracy = 5.0f;
+      ShadowFusedLocationApiWrapper.lat = 30.0;
+      ShadowFusedLocationApiWrapper.accuracy = 5.0f;
 
       OneSignalInit();
       threadAndTaskWait();
@@ -1345,6 +1356,89 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Assert.assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
+   }
+   
+   @Test
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   public void testLocationSchedule() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.0f;
+      ShadowFusedLocationApiWrapper.time = 12345L;
+      
+      
+      // location if we have permission
+      OneSignalInit();
+      threadAndTaskWait();
+      Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      Assert.assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+   
+      // Checking make sure an update is scheduled.
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
+      Assert.assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
+   
+      // Setting up a new point and testing it is sent
+      ShadowFusedLocationApiWrapper.lat = 1.1d; ShadowFusedLocationApiWrapper.log = 2.2d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.3f;
+      ShadowFusedLocationApiWrapper.time = 12346L;
+      Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
+      Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      Assert.assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      Assert.assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("loc_bg"));
+      Assert.assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
+   
+      // Testing loc_bg
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowFusedLocationApiWrapper.time = 12347L;
+      Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
+      Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      Assert.assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      Assert.assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
+      Assert.assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      Assert.assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
+   }
+   
+   @Test
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   public void testLocationFromSyncAlarm() throws Exception {
+      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.0f;
+      ShadowFusedLocationApiWrapper.time = 12345L;
+      
+      OneSignalInit();
+      threadAndTaskWait();
+      StaticResetHelper.restSetStaticFields();
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      shadowOf(alarmManager).getScheduledAlarms().clear();
+      ShadowOneSignalRestClient.lastPost = null;
+      
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+   
+      Intent intent = new Intent();
+      intent.putExtra("task", 1); // Sync
+      Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
+      Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      Assert.assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
+      Assert.assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      Assert.assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+   
+      // Checking make sure an update is scheduled.
+      alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
+      Assert.assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
+      shadowOf(alarmManager).getScheduledAlarms().clear();
    }
 
    @Test

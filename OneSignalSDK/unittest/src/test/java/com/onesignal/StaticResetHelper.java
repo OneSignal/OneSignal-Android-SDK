@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class StaticResetHelper {
 
-   static Collection<ClassState> classes = new ArrayList<>();
+   private static Collection<ClassState> classes = new ArrayList<>();
 
    static {
       classes.add(new StaticResetHelper().new ClassState(OneSignal.class, new OtherFieldHandler() {

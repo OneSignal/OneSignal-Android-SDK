@@ -40,21 +40,37 @@ import android.support.annotation.Nullable;
 // The service is stopped with stopSelf() once completed.
 
 public class SyncService extends Service {
-
-   private void checkOnFocusSync() {
+   
+   static final int TASK_APP_STARTUP = 0;
+   static final int TASK_SYNC = 1;
+   private static boolean startedFromActivity;
+   
+   private static void checkOnFocusSync() {
       long unsentTime = OneSignal.GetUnsentActiveTime();
       if (unsentTime < OneSignal.MIN_ON_FOCUS_TIME)
          return;
 
       OneSignal.sendOnFocus(unsentTime, true);
    }
-
-   @Override
-   public void onCreate() {
-      if (OneSignal.startedSyncService)
-         return;
-
-      OneSignal.appContext = this.getApplicationContext();
+   
+   private void doSync() {
+      if (startedFromActivity)
+         doForegroundSync();
+      else
+         doBackgroundSync();
+   }
+   
+   private void doForegroundSync() {
+      LocationGMS.getLocation(this, false,  new LocationGMS.LocationHandler() {
+         public void complete(LocationGMS.LocationPoint point) {
+            if (point != null)
+               OneSignalStateSynchronizer.updateLocation(point);
+         }
+      });
+   }
+   
+   private void doBackgroundSync() {
+      OneSignal.appContext = getApplicationContext();
       new Thread(new Runnable() {
          @Override
          public void run() {
@@ -62,22 +78,42 @@ public class SyncService extends Service {
                stopSelf();
                return;
             }
-
+   
             OneSignal.appId = OneSignal.getSavedAppId();
-
             OneSignalStateSynchronizer.initUserState(OneSignal.appContext);
-            OneSignalStateSynchronizer.syncUserState(true);
-            checkOnFocusSync();
-
-            stopSelf();
+            
+            LocationGMS.getLocation(OneSignal.appContext, false, new LocationGMS.LocationHandler() {
+               @Override
+               public void complete(LocationGMS.LocationPoint point) {
+                  if (point != null)
+                     OneSignalStateSynchronizer.updateLocation(point);
+                  
+                  OneSignalStateSynchronizer.syncUserState(true);
+                  checkOnFocusSync();
+   
+                  stopSelf();
+               }
+            });
          }
-      }, "OS_SYNCSRV_ONCREATE").start();
+      }, "OS_SYNCSRV_BG_SYNC").start();
+   }
+
+   @Override
+   public void onCreate() {
+      
    }
 
    @Override
    public int onStartCommand(Intent intent, int flags, int startId) {
+      int task = intent.getIntExtra("task", 0);
+      
+      if (task == TASK_APP_STARTUP)
+         startedFromActivity = true;
+      else if (task == TASK_SYNC)
+         doSync();
+      
       // Starts sticky only if the app has shown an Activity.
-      return OneSignal.startedSyncService ? START_STICKY : START_NOT_STICKY;
+      return startedFromActivity ? START_STICKY : START_NOT_STICKY;
    }
 
    // This Service does not support bindings.
@@ -88,7 +124,8 @@ public class SyncService extends Service {
    }
 
 
-   // Called by Android when a user swipes a way a task. On Android 4.1+ the process will be killed shortly after.
+   // Called by Android when a user swipes a way a task.
+   // On Android 4.1+ the process will be killed shortly after.
    // However there is a rare case where if the process has 2 tasks that a both swiped away this will be called right after onCreate.
    @Override
    public void onTaskRemoved(Intent rootIntent) {
@@ -118,22 +155,25 @@ public class SyncService extends Service {
       // stopSelf is important otherwise Android will show "Scheduling restart of crashed service"
       //   in the logcat which may have other side-affects.
       service.stopSelf();
-   
+      
       if (scheduleServerRestart)
-         scheduleServiceRestart(service);
+         scheduleServiceSyncTask(service, System.currentTimeMillis() + 10000);
+      else
+         LocationGMS.scheduleUpdate(service);
    }
 
-   static void scheduleServiceRestart(Service service) {
-      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleServiceRestart");
-      Intent intent = new Intent(service, SyncService.class);
+   static void scheduleServiceSyncTask(Context context, long atTime) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleServiceSyncTask:atTime: " + atTime);
+      
+      Intent intent = new Intent(context, SyncService.class);
+      intent.putExtra("task", TASK_SYNC);
+      
       // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
       //    Some Samsung devices will throw the below exception otherwise.
       //    "java.lang.SecurityException: !@Too many alarms (500) registered"
-      PendingIntent pendingIntent = PendingIntent.getService(service, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-      AlarmManager alarm = (AlarmManager)service.getSystemService(Context.ALARM_SERVICE);
       
-      // 10 seconds
-      long timeInMillis = System.currentTimeMillis() + 10000;
-      alarm.set(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent);
+      PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+      alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);
    }
 }

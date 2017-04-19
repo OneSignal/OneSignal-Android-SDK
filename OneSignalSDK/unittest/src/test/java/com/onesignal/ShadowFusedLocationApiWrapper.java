@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,22 +27,39 @@
 
 package com.onesignal;
 
-import android.content.Context;
+import android.location.Location;
+
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.common.primitives.Floats;
 
 import org.robolectric.annotation.Implements;
 
-@Implements(LocationGMS.class)
-public class ShadowLocationGMS {
-
+@Implements(LocationGMS.FusedLocationApiWrapper.class)
+public class ShadowFusedLocationApiWrapper {
+   
    public static Double lat = 1.0, log = 2.0;
    public static Float accuracy = 3.0f;
    public static Integer type = 0;
-
-   public static void getLocation(Context context, boolean promptLocation, LocationGMS.LocationHandler handler) {
-      LocationGMS.LocationPoint point = new LocationGMS.LocationPoint();
-      point.lat = lat; point.log = log;
-      point.accuracy = accuracy;
-      point.type = 0;
-      handler.complete(point);
+   public static Long time = 12345L;
+   
+   public static PendingResult<Status> requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
+      return null;
+   }
+   
+   public static PendingResult<Status> removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
+      return null;
+   }
+   
+   public static Location getLastLocation(GoogleApiClient googleApiClient) {
+      Location location = new Location("");
+      location.setLatitude(lat); location.setLongitude(log);
+      location.setAccuracy(accuracy);
+      location.setTime(time);
+      
+      return location;
    }
 }

@@ -191,10 +191,10 @@ public class OneSignal {
 
    private static String lastRegistrationId;
    private static boolean registerForPushFired, locationFired, awlFired, promptedLocation;
-   private static Double lastLocLat, lastLocLong;
-   private static Float lastLocAcc;
-   private static Integer lastLocType;
-   private static boolean shareLocation = true;
+   
+   private static LocationGMS.LocationPoint lastLocationPoint;
+   
+   static boolean shareLocation = true;
    static OneSignal.Builder mInitBuilder;
 
    private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
@@ -357,23 +357,14 @@ public class OneSignal {
    }
 
    private static void startLocationUpdate() {
-      if (shareLocation) {
-         LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
-            @Override
-            public void complete(Double lat, Double log, Float accuracy, Integer type) {
-               lastLocLat = lat;
-               lastLocLong = log;
-               lastLocAcc = accuracy;
-               lastLocType = type;
-               locationFired = true;
-               registerUser();
-            }
-         });
-      }
-      else {
-         locationFired = true;
-         registerUser();
-      }
+      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
+         @Override
+         public void complete(LocationGMS.LocationPoint point) {
+            lastLocationPoint = point;
+            locationFired = true;
+            registerUser();
+         }
+      });
    }
 
    private static void registerForPushToken() {
@@ -709,8 +700,8 @@ public class OneSignal {
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
 
-            userState.set("lat", lastLocLat); userState.set("long", lastLocLong);
-            userState.set("loc_acc", lastLocAcc); userState.set("loc_type", lastLocType);
+            if (lastLocationPoint != null)
+               userState.setLocation(lastLocationPoint);
 
             OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
             waitingToPostStateSync = false;
@@ -1286,10 +1277,6 @@ public class OneSignal {
    }
 
    public static void promptLocation() {
-
-      if (!shareLocation)
-         return;
-
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not prompt for location.");
          return;
@@ -1297,12 +1284,12 @@ public class OneSignal {
 
       LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
          @Override
-         public void complete(Double lat, Double log, Float accuracy, Integer type) {
-            if (lat != null && log != null)
-               OneSignalStateSynchronizer.updateLocation(lat, log, accuracy, type);
+         public void complete(LocationGMS.LocationPoint point) {
+            if (point != null)
+               OneSignalStateSynchronizer.updateLocation(point);
          }
       });
-
+  
       promptedLocation = true;
    }
 
@@ -1365,9 +1352,6 @@ public class OneSignal {
          if (cursor != null)
             cursor.close();
       }
-         
-      
-      
    }
 
    public static void cancelNotification(int id) {
@@ -1535,12 +1519,10 @@ public class OneSignal {
    private static boolean isPastOnSessionTime() {
       return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
    }
-
-   static boolean startedSyncService;
+   
    private static void startSyncService() {
-      if (startedSyncService)
-         return;
-      startedSyncService = true;
-      appContext.startService(new Intent(appContext, SyncService.class));
+      Intent intent = new Intent(appContext, SyncService.class);
+      intent.putExtra("task", SyncService.TASK_APP_STARTUP);
+      appContext.startService(intent);
    }
 }

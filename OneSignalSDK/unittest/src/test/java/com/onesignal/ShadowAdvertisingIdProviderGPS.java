@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,18 +31,9 @@ import android.content.Context;
 
 import org.robolectric.annotation.Implements;
 
-@Implements(LocationGMS.class)
-public class ShadowLocationGMS {
-
-   public static Double lat = 1.0, log = 2.0;
-   public static Float accuracy = 3.0f;
-   public static Integer type = 0;
-
-   public static void getLocation(Context context, boolean promptLocation, LocationGMS.LocationHandler handler) {
-      LocationGMS.LocationPoint point = new LocationGMS.LocationPoint();
-      point.lat = lat; point.log = log;
-      point.accuracy = accuracy;
-      point.type = 0;
-      handler.complete(point);
+@Implements(AdvertisingIdProviderGPS.class)
+public class ShadowAdvertisingIdProviderGPS {
+   public String getIdentifier(Context appContext) {
+      return "11111111-2222-3333-4444-555555555555";
    }
 }
