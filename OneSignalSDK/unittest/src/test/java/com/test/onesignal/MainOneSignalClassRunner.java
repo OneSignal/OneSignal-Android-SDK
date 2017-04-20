@@ -50,9 +50,10 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
-import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
@@ -102,7 +103,8 @@ import static org.robolectric.Shadows.shadowOf;
         shadows = {ShadowOneSignalRestClient.class,
                    ShadowPushRegistratorGPS.class,
                    ShadowOSUtils.class,
-                   ShadowAdvertisingIdProviderGPS.class},
+                   ShadowAdvertisingIdProviderGPS.class,
+                   ShadowCustomTabsClient.class, ShadowCustomTabsSession.class},
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
         sdk = 21)
@@ -1589,6 +1591,15 @@ public class MainOneSignalClassRunner {
    @Test
    public void testNotificationOpenedProcessorHandlesEmptyIntent() {
       NotificationOpenedProcessor_processFromContext(blankActivity, new Intent());
+   }
+   
+   @Test
+   public void shouldOpenChromeTab() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      Assert.assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
+      Assert.assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
    }
 
    // ####### Unit test helper methods ########

@@ -27,20 +27,22 @@
 
 package com.onesignal;
 
-import android.content.Context;
+import android.net.Uri;
+import android.os.Bundle;
+import android.support.customtabs.CustomTabsClient;
+import android.support.customtabs.CustomTabsSession;
 
 import org.robolectric.annotation.Implements;
 
-@Implements(AdvertisingIdProviderGPS.class)
-public class ShadowAdvertisingIdProviderGPS {
+import java.util.List;
+
+@Implements(CustomTabsSession.class)
+public class ShadowCustomTabsSession {
    
-   private static final String MOCK_ID = "11111111-2222-3333-4444-555555555555";
+   public static Uri lastURL;
    
-   public static String getLastValue() {
-      return MOCK_ID;
-   }
-   
-   public String getIdentifier(Context appContext) {
-      return MOCK_ID;
+   public boolean mayLaunchUrl(Uri url, Bundle extras, List<Bundle> otherLikelyBundles) {
+      lastURL = url;
+      return true;
    }
 }

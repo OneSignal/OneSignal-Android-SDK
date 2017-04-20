@@ -83,7 +83,7 @@ class LocationGMS {
       if (!hasLocationPermission(context) && OneSignal.shareLocation)
          return;
       
-      long lastTime = getLastLocationTime();
+      long lastTime = getLastLocationTime(context);
       long minTime = 1000 * (OneSignal.isForeground() ? TIME_FOREGROUND : TIME_BACKGROUND);
       long scheduleTime = lastTime + minTime;
       
@@ -97,8 +97,8 @@ class LocationGMS {
       editor.apply();
    }
    
-   private static long getLastLocationTime() {
-      final SharedPreferences prefs = OneSignal.getGcmPreferences(classContext);
+   private static long getLastLocationTime(Context context) {
+      final SharedPreferences prefs = OneSignal.getGcmPreferences(context);
       return prefs.getLong("OS_LAST_LOCATION_TIME", -TIME_BACKGROUND * 1000);
    }
    

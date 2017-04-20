@@ -1,4 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.onesignal">
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.onesignal">
+
+    <!-- OneSignal SDK has runtime checks Android version. -->
+    <uses-sdk tools:overrideLibrary="android.support.customtabs"/>
 
     <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages through Google's GCM. -->
     <uses-permission android:name="android.permission.INTERNET" />
