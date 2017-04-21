@@ -207,6 +207,7 @@ public class OneSignal {
    private static boolean sendAsSession;
 
    private static JSONObject awl;
+   static boolean mEnterp;
    
    private static class IAPUpdateJob {
       JSONArray toReport;
@@ -434,6 +435,9 @@ public class OneSignal {
                   mGoogleProjectNumberIsRemote = true;
                   mGoogleProjectNumber = responseJson.getString("android_sender_id");
                }
+               
+               mEnterp = responseJson.optBoolean("enterp", false);
+               
                awl = responseJson.getJSONObject("awl_list");
             } catch (Throwable t) {
                t.printStackTrace();
@@ -705,6 +709,8 @@ public class OneSignal {
 
             OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
             waitingToPostStateSync = false;
+            
+            OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
          }
       }, "OS_REG_USER").start();
    }
@@ -1180,6 +1186,8 @@ public class OneSignal {
          sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
          iapUpdateJob = null;
       }
+      
+      OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
    }
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
