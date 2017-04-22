@@ -46,6 +46,8 @@ import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
+import com.onesignal.OSPermissionObserver;
+import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -81,6 +83,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
+import org.robolectric.shadows.ShadowNotificationManager;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 
@@ -91,6 +94,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Observer;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
@@ -104,7 +108,8 @@ import static org.robolectric.Shadows.shadowOf;
                    ShadowPushRegistratorGPS.class,
                    ShadowOSUtils.class,
                    ShadowAdvertisingIdProviderGPS.class,
-                   ShadowCustomTabsClient.class, ShadowCustomTabsSession.class},
+                   ShadowCustomTabsClient.class, ShadowCustomTabsSession.class,
+                   ShadowNotificationManagerCompat.class},
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
         sdk = 21)
@@ -1600,6 +1605,58 @@ public class MainOneSignalClassRunner {
       
       Assert.assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
       Assert.assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
+   }
+   
+   private OSPermissionStateChanges lastStateChanges;
+   private boolean currentPermission;
+   // Firing right away to match iOS behavior for wrapper SDKs.
+   @Test
+   public void shouldFirePermissionObserverOnFirstAdd() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      OSPermissionObserver permissionObserver = new OSPermissionObserver() {
+         @Override
+         public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+            lastStateChanges = stateChanges;
+            currentPermission = stateChanges.to.getEnabled();
+         }
+      };
+      OneSignal.addPermissionObserver(permissionObserver);
+      
+      Assert.assertFalse(lastStateChanges.from.getEnabled());
+      Assert.assertTrue(lastStateChanges.to.getEnabled());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertTrue(currentPermission);
+   }
+   
+   @Test
+   public void shouldFirePermissionObserverWhenUserDisablesNotifications() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      OSPermissionObserver permissionObserver = new OSPermissionObserver() {
+         @Override
+         public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+            lastStateChanges = stateChanges;
+            currentPermission = stateChanges.to.getEnabled();
+         }
+      };
+      OneSignal.addPermissionObserver(permissionObserver);
+      lastStateChanges = null;
+      // Make sure garbage collection doesn't nuke any observers.
+      Runtime.getRuntime().gc();
+      
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = false;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      
+      Assert.assertTrue(lastStateChanges.from.getEnabled());
+      Assert.assertFalse(lastStateChanges.to.getEnabled());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertFalse(currentPermission);
    }
 
    // ####### Unit test helper methods ########

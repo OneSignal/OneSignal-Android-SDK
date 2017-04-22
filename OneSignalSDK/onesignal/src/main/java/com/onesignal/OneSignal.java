@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -154,11 +154,6 @@ public class OneSignal {
       }
    }
 
-   /**
-    * Tag used on logcat messages.
-    */
-   private static final String TAG = "OneSignal";
-
    static String appId;
    private static String mGoogleProjectNumber;
    private static boolean mGoogleProjectNumberIsRemote;
@@ -208,6 +203,43 @@ public class OneSignal {
 
    private static JSONObject awl;
    static boolean mEnterp;
+   
+   
+   static OSPermissionChangedInternalObserver permissionChangedInternalObserver;
+   
+   static OSPermissionState currentPermissionState;
+   static OSPermissionState getCurrentPermissionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (currentPermissionState == null) {
+         currentPermissionState = new OSPermissionState(false);
+         permissionChangedInternalObserver = new OSPermissionChangedInternalObserver();
+         currentPermissionState.observable.addObserver(permissionChangedInternalObserver);
+      }
+      
+      return currentPermissionState;
+   }
+   
+   static OSPermissionState lastPermissionState;
+   static OSPermissionState getLastPermissionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (lastPermissionState == null)
+         lastPermissionState = new OSPermissionState(true);
+      
+      return lastPermissionState;
+   }
+   
+   
+   static OSObservable<OSPermissionObserver, OSPermissionStateChanges> permissionStateChangesObserver;
+   static OSObservable<OSPermissionObserver, OSPermissionStateChanges> getPermissionStateChangesObserver() {
+      if (permissionStateChangesObserver == null)
+         permissionStateChangesObserver = new OSObservable<>("onOSPermissionChanged");
+      return permissionStateChangesObserver;
+   }
+   
    
    private static class IAPUpdateJob {
       JSONArray toReport;
@@ -503,6 +535,8 @@ public class OneSignal {
    }
 
    static void Log(final LOG_LEVEL level, String message, Throwable throwable) {
+      final String TAG = "OneSignal";
+      
       if (level.compareTo(logCatLevel) < 1) {
          if (level == LOG_LEVEL.VERBOSE)
             Log.v(TAG, message, throwable);
@@ -632,6 +666,8 @@ public class OneSignal {
          trackGooglePurchase.trackIAP();
 
       NotificationRestorer.asyncRestore(appContext);
+      
+      getCurrentPermissionState(appContext).refreshAsTo();
    }
 
    static boolean isForeground() {
@@ -1405,6 +1441,18 @@ public class OneSignal {
 
    public static void removeNotificationReceivedHandler() {
       getCurrentOrNewInitBuilder().mNotificationReceivedHandler = null;
+   }
+   
+   public static void addPermissionObserver(OSPermissionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add permission observer");
+         return;
+      }
+   
+      getPermissionStateChangesObserver().addObserver(observer);
+   
+      if (getCurrentPermissionState(appContext).compare(getLastPermissionState(appContext)))
+         OSPermissionChangedInternalObserver.fireChangesObserver(getCurrentPermissionState(appContext));
    }
 
    static long GetUnsentActiveTime() {
