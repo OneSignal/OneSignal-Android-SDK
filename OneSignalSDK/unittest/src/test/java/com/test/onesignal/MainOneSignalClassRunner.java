@@ -57,6 +57,7 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -83,7 +84,6 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowNotificationManager;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 
@@ -94,7 +94,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Observer;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
@@ -1667,15 +1666,31 @@ public class MainOneSignalClassRunner {
       OneSignal.startInit(blankActivity).unsubscribeWhenNotificationsAreDisabled(true).init();
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
-   
+      
       Assert.assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
-   
+      
       blankActivityController.pause();
       threadAndTaskWait();
       ShadowNotificationManagerCompat.enabled = true;
       blankActivityController.resume();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+   }
+   
+   @Test
+   @Config(shadows = {ShadowBadgeCountUpdater.class})
+   public void shouldClearBadgesWhenPermissionIsDisabled() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      ShadowBadgeCountUpdater.updateCount(1, blankActivity);
+   
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = false;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    // ####### Unit test helper methods ########

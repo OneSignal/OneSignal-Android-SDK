@@ -25,7 +25,7 @@
  * THE SOFTWARE.
  */
 
-package com.test.onesignal;
+package com.onesignal;
 
 import android.support.v4.app.NotificationManagerCompat;
 
@@ -33,7 +33,7 @@ import org.robolectric.annotation.Implements;
 
 @Implements(NotificationManagerCompat.class)
 public class ShadowNotificationManagerCompat {
-   static boolean enabled = true;
+   public static boolean enabled = true;
    
    public boolean areNotificationsEnabled() {
       return enabled;

@@ -373,7 +373,9 @@ public class OneSignal {
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
-
+   
+      OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
+      
       initDone = true;
    }
 

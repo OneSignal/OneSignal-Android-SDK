@@ -29,12 +29,15 @@ package com.onesignal;
 
 class OSPermissionChangedInternalObserver {
    
+   // TODO: Make sure this method doesn't get prograuded out.
    public void changed(OSPermissionState state) {
-      handleInternalChanges();
+      handleInternalChanges(state);
       fireChangesToPublicObserver(state);
    }
    
-   private void handleInternalChanges() {
+   static void handleInternalChanges(OSPermissionState state) {
+      if (!state.getEnabled())
+         BadgeCountUpdater.updateCount(0, OneSignal.appContext);
       OneSignalStateSynchronizer.setPermission(OneSignal.areNotificationsEnabledForSubscribedState());
    }
    
