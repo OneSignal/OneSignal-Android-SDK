@@ -34,7 +34,7 @@ import java.util.List;
 
 class OSObservable<ObserverType, StateType> {
    private String methodName;
-   private List<WeakReference<ObserverType>> observers;
+   private List<Object> observers;
    
    OSObservable(String methodName) {
       this.methodName = methodName;
@@ -45,11 +45,20 @@ class OSObservable<ObserverType, StateType> {
       observers.add(new WeakReference<>(observer));
    }
    
+   void addObserverStrong(ObserverType observer){
+      observers.add(observer);
+   }
+   
    boolean notifyChange(StateType state) {
       boolean notified = false;
       
-      for(WeakReference<ObserverType> observer : observers) {
-         ObserverType strongRefObserver = observer.get();
+      for(Object observer : observers) {
+         Object strongRefObserver;
+         if (observer instanceof WeakReference)
+            strongRefObserver = ((WeakReference)observer).get();
+         else
+            strongRefObserver = observer;
+         
          if (strongRefObserver != null) {
             try {
                Class<?> clazz = strongRefObserver.getClass();

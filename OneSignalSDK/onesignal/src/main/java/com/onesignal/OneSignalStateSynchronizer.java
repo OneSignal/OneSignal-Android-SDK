@@ -225,8 +225,10 @@ class OneSignalStateSynchronizer {
    }
    
    class UserState {
-
-      private final int UNSUBSCRIBE_VALUE = -2;
+      
+      private final int NOTIFICATION_TYPES_SUBSCRIBED = 1;
+      private final int NOTIFICATION_TYPES_NO_PERMISSION = 0;
+      private final int NOTIFICATION_TYPES_UNSUBSCRIBE = -2;
 
       private String persistKey;
 
@@ -263,8 +265,18 @@ class OneSignalStateSynchronizer {
 
       private int getNotificationTypes() {
          int subscribableStatus = dependValues.optInt("subscribableStatus", 1);
+         if (subscribableStatus < NOTIFICATION_TYPES_UNSUBSCRIBE)
+            return subscribableStatus;
+   
+         boolean androidPermission = dependValues.optBoolean("androidPermission", true);
+         if (!androidPermission)
+            return NOTIFICATION_TYPES_NO_PERMISSION;
+   
          boolean userSubscribePref = dependValues.optBoolean("userSubscribePref", true);
-         return subscribableStatus < UNSUBSCRIBE_VALUE ? subscribableStatus : (userSubscribePref ? 1 : UNSUBSCRIBE_VALUE);
+         if (!userSubscribePref)
+            return NOTIFICATION_TYPES_UNSUBSCRIBE;
+         
+         return NOTIFICATION_TYPES_SUBSCRIBED;
       }
 
       private Set<String> getGroupChangeFields(UserState changedTo) {
@@ -349,17 +361,19 @@ class OneSignalStateSynchronizer {
          final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
 
          String dependValuesStr = prefs.getString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, null);
+         // null if first run of a 2.0+ version.
          if (dependValuesStr == null) {
             dependValues = new JSONObject();
             try {
                int subscribableStatus;
                boolean userSubscribePref = true;
+               // Convert 1.X SDK settings to 2.0+.
                if (persistKey.equals("CURRENT_STATE"))
                   subscribableStatus = prefs.getInt("ONESIGNAL_SUBSCRIPTION", 1);
                else
                   subscribableStatus = prefs.getInt("ONESIGNAL_SYNCED_SUBSCRIPTION", 1);
 
-               if (subscribableStatus == UNSUBSCRIBE_VALUE) {
+               if (subscribableStatus == NOTIFICATION_TYPES_UNSUBSCRIBE) {
                   subscribableStatus = 1;
                   userSubscribePref = false;
                }
@@ -711,6 +725,14 @@ class OneSignalStateSynchronizer {
    static void setSubscription(boolean enable) {
       try {
          getUserStateForModification().dependValues.put("userSubscribePref", enable);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+   }
+   
+   static void setPermission(boolean enable) {
+      try {
+         getUserStateForModification().dependValues.put("androidPermission", enable);
       } catch (JSONException e) {
          e.printStackTrace();
       }

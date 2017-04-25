@@ -28,7 +28,6 @@
 package com.onesignal;
 
 import android.content.SharedPreferences;
-import android.support.v4.app.NotificationManagerCompat;
 
 import static com.onesignal.OneSignal.appContext;
 import static com.onesignal.OneSignal.getGcmPreferences;
@@ -50,11 +49,8 @@ public class OSPermissionState implements Cloneable {
    
    private boolean enabled;
    
-   // Works on Android 4.4+, requires Android Support v4 Library 24.0.0+
    void refreshAsTo() {
-      try {
-         setEnabled(NotificationManagerCompat.from(appContext).areNotificationsEnabled());
-      } catch (Throwable t) {}
+      setEnabled(OSUtils.areNotificationsEnabled(appContext));
    }
    
    public boolean getEnabled() {

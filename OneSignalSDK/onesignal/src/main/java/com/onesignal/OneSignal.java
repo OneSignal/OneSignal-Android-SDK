@@ -106,11 +106,14 @@ public class OneSignal {
       NotificationReceivedHandler mNotificationReceivedHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
+      // Default true in 4.0.0 release.
+      boolean mUnsubscribeWhenNotificationsAreDisabled;
 
       // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
       //  calling startInit().init()
       // mDisplayOptionCarryOver is used if setInFocusDisplaying is called but inFocusDisplaying wasn't
       boolean mDisplayOptionCarryOver;
+      // Default Notification in 4.0.0 release.
       OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
    
       private Builder() {}
@@ -146,6 +149,11 @@ public class OneSignal {
       public Builder inFocusDisplaying(OSInFocusDisplayOption displayOption) {
          getCurrentOrNewInitBuilder().mDisplayOptionCarryOver = false;
          mDisplayOption = displayOption;
+         return this;
+      }
+      
+      public Builder unsubscribeWhenNotificationsAreDisabled(boolean set) {
+         mUnsubscribeWhenNotificationsAreDisabled = set;
          return this;
       }
 
@@ -204,25 +212,21 @@ public class OneSignal {
    private static JSONObject awl;
    static boolean mEnterp;
    
-   
-   static OSPermissionChangedInternalObserver permissionChangedInternalObserver;
-   
-   static OSPermissionState currentPermissionState;
-   static OSPermissionState getCurrentPermissionState(Context context) {
+   private static OSPermissionState currentPermissionState;
+   private static OSPermissionState getCurrentPermissionState(Context context) {
       if (context == null)
          return null;
       
       if (currentPermissionState == null) {
          currentPermissionState = new OSPermissionState(false);
-         permissionChangedInternalObserver = new OSPermissionChangedInternalObserver();
-         currentPermissionState.observable.addObserver(permissionChangedInternalObserver);
+         currentPermissionState.observable.addObserverStrong(new OSPermissionChangedInternalObserver());
       }
       
       return currentPermissionState;
    }
    
    static OSPermissionState lastPermissionState;
-   static OSPermissionState getLastPermissionState(Context context) {
+   private static OSPermissionState getLastPermissionState(Context context) {
       if (context == null)
          return null;
       
@@ -233,7 +237,7 @@ public class OneSignal {
    }
    
    
-   static OSObservable<OSPermissionObserver, OSPermissionStateChanges> permissionStateChangesObserver;
+   private static OSObservable<OSPermissionObserver, OSPermissionStateChanges> permissionStateChangesObserver;
    static OSObservable<OSPermissionObserver, OSPermissionStateChanges> getPermissionStateChangesObserver() {
       if (permissionStateChangesObserver == null)
          permissionStateChangesObserver = new OSObservable<>("onOSPermissionChanged");
@@ -718,6 +722,7 @@ public class OneSignal {
             userState.set("device_model", Build.MODEL);
             userState.set("device_type", deviceType);
             userState.setState("subscribableStatus", subscribableStatus);
+            userState.setState("androidPermission", areNotificationsEnabledForSubscribedState());
 
             try {
                userState.set("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
@@ -1452,7 +1457,7 @@ public class OneSignal {
       getPermissionStateChangesObserver().addObserver(observer);
    
       if (getCurrentPermissionState(appContext).compare(getLastPermissionState(appContext)))
-         OSPermissionChangedInternalObserver.fireChangesObserver(getCurrentPermissionState(appContext));
+         OSPermissionChangedInternalObserver.fireChangesToPublicObserver(getCurrentPermissionState(appContext));
    }
 
    static long GetUnsentActiveTime() {
@@ -1580,5 +1585,12 @@ public class OneSignal {
       Intent intent = new Intent(appContext, SyncService.class);
       intent.putExtra("task", SyncService.TASK_APP_STARTUP);
       appContext.startService(intent);
+   }
+   
+   // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
+   static boolean areNotificationsEnabledForSubscribedState() {
+      if (mInitBuilder.mUnsubscribeWhenNotificationsAreDisabled)
+         return OSUtils.areNotificationsEnabled(appContext);
+      return true;
    }
 }

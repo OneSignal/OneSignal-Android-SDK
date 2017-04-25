@@ -30,10 +30,20 @@ package com.onesignal;
 class OSPermissionChangedInternalObserver {
    
    public void changed(OSPermissionState state) {
-      fireChangesObserver(state);
+      handleInternalChanges();
+      fireChangesToPublicObserver(state);
    }
    
-   static void fireChangesObserver(OSPermissionState state) {
+   private void handleInternalChanges() {
+      OneSignalStateSynchronizer.setPermission(OneSignal.areNotificationsEnabledForSubscribedState());
+   }
+   
+   // Handles firing a public facing PermissionStateChangesObserver
+   //    1. Generates a OSPermissionStateChanges object and sets to and from states
+   //    2. Persists acknowledgement
+   //      - Prevents duplicated events
+   //      - Notifies if changes were made outside of the app
+   static void fireChangesToPublicObserver(OSPermissionState state) {
       OSPermissionStateChanges stateChanges = new OSPermissionStateChanges();
       stateChanges.from = OneSignal.lastPermissionState;
       stateChanges.to = state;

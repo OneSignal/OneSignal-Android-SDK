@@ -1657,6 +1657,25 @@ public class MainOneSignalClassRunner {
       Assert.assertFalse(lastStateChanges.to.getEnabled());
       // Test to make sure object was correct at the time of firing.
       Assert.assertFalse(currentPermission);
+      // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+   }
+   
+   @Test
+   public void shouldSetNotificationTypesToZeroWhenUnsubscribeWhenNotificationsAreDisabledIsEnabled() throws Exception {
+      ShadowNotificationManagerCompat.enabled = false;
+      OneSignal.startInit(blankActivity).unsubscribeWhenNotificationsAreDisabled(true).init();
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+   
+      Assert.assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+   
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = true;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
 
    // ####### Unit test helper methods ########
