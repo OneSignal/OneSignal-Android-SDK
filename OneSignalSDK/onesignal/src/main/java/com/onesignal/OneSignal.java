@@ -212,6 +212,8 @@ public class OneSignal {
    private static JSONObject awl;
    static boolean mEnterp;
    
+   
+   // Start PermissionState
    private static OSPermissionState currentPermissionState;
    private static OSPermissionState getCurrentPermissionState(Context context) {
       if (context == null)
@@ -236,13 +238,47 @@ public class OneSignal {
       return lastPermissionState;
    }
    
-   
    private static OSObservable<OSPermissionObserver, OSPermissionStateChanges> permissionStateChangesObserver;
    static OSObservable<OSPermissionObserver, OSPermissionStateChanges> getPermissionStateChangesObserver() {
       if (permissionStateChangesObserver == null)
-         permissionStateChangesObserver = new OSObservable<>("onOSPermissionChanged");
+         permissionStateChangesObserver = new OSObservable<>("onOSPermissionChanged", true);
       return permissionStateChangesObserver;
    }
+   // End PermissionState
+   
+   // Start SubscriptionState
+   private static OSSubscriptionState currentSubscriptionState;
+   private static OSSubscriptionState getCurrentSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (currentSubscriptionState == null) {
+         currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).getEnabled());
+         getCurrentPermissionState(context).observable.addObserver(currentSubscriptionState);
+         currentSubscriptionState.observable.addObserverStrong(new OSSubscriptionChangedInternalObserver());
+      }
+      
+      return currentSubscriptionState;
+   }
+   
+   static OSSubscriptionState lastSubscriptionState;
+   private static OSSubscriptionState getLastSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (lastSubscriptionState == null)
+         lastSubscriptionState = new OSSubscriptionState(true, false);
+      
+      return lastSubscriptionState;
+   }
+   
+   private static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> subscriptionStateChangesObserver;
+   static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> getSubscriptionStateChangesObserver() {
+      if (subscriptionStateChangesObserver == null)
+         subscriptionStateChangesObserver = new OSObservable<>("onOSSubscriptionChanged", true);
+      return subscriptionStateChangesObserver;
+   }
+   // End SubscriptionState
    
    
    private static class IAPUpdateJob {
@@ -361,6 +397,8 @@ public class OneSignal {
          BadgeCountUpdater.updateCount(0, appContext);
          SaveAppId(appId);
       }
+   
+      OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
       if (foreground || getUserId() == null) {
          sendAsSession = isPastOnSessionTime();
@@ -373,8 +411,6 @@ public class OneSignal {
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
-   
-      OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
       
       initDone = true;
    }
@@ -430,6 +466,7 @@ public class OneSignal {
 
             lastRegistrationId = id;
             registerForPushFired = true;
+            getCurrentSubscriptionState(appContext).setPushToken(id);
             registerUser();
          }
       });
@@ -568,7 +605,7 @@ public class OneSignal {
             }
             
             final String finalFullMessage = fullMessage;
-            runOnUiThread(new Runnable() {
+            OSUtils.runOnMainUIThread(new Runnable() {
                @Override
                public void run() {
                   if (ActivityLifecycleHandler.curActivity != null)
@@ -957,7 +994,7 @@ public class OneSignal {
 
    private static void fireIdsAvailableCallback() {
       if (idsAvailableHandler != null) {
-         runOnUiThread(new Runnable() {
+         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
                internalFireIdsAvailableCallback();
@@ -1094,16 +1131,12 @@ public class OneSignal {
    }
 
    private static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
-      if (Looper.getMainLooper().getThread() == Thread.currentThread()) // isUIThread
-         mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
-      else {
-         runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-               mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
-            }
-         });
-      }
+      OSUtils.runOnMainUIThread(new Runnable() {
+         @Override
+         public void run() {
+            mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
+         }
+      });
    }
 
    // Called when receiving GCM/ADM message after it has been displayed.
@@ -1224,6 +1257,8 @@ public class OneSignal {
       saveUserId(userId);
       fireIdsAvailableCallback();
       internalFireGetTagsCallback(pendingGetTagsHandler);
+   
+      getCurrentSubscriptionState(appContext).setUserId(userId);
       
       if (iapUpdateJob != null) {
          sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
@@ -1316,7 +1351,8 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not set subscription.");
          return;
       }
-
+      
+      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
       OneSignalStateSynchronizer.setSubscription(enable);
    }
 
@@ -1461,6 +1497,18 @@ public class OneSignal {
       if (getCurrentPermissionState(appContext).compare(getLastPermissionState(appContext)))
          OSPermissionChangedInternalObserver.fireChangesToPublicObserver(getCurrentPermissionState(appContext));
    }
+   
+   public static void addSubscriptionObserver(OSSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
+         return;
+      }
+      
+      getSubscriptionStateChangesObserver().addObserver(observer);
+      
+      if (getCurrentSubscriptionState(appContext).compare(getLastSubscriptionState(appContext)))
+         OSSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentSubscriptionState(appContext));
+   }
 
    static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
@@ -1528,11 +1576,6 @@ public class OneSignal {
       }
 
       return false;
-   }
-
-   static void runOnUiThread(Runnable action) {
-      Handler handler = new Handler(Looper.getMainLooper());
-      handler.post(action);
    }
    
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {

@@ -112,7 +112,7 @@ public class PushRegistratorGPS implements PushRegistrator {
    }
 
    private void ShowUpdateGPSDialog() {
-      OneSignal.runOnUiThread(new Runnable() {
+      OSUtils.runOnMainUIThread(new Runnable() {
          @Override
          public void run() {
             final Activity activity = ActivityLifecycleHandler.curActivity;

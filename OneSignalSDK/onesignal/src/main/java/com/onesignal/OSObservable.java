@@ -35,9 +35,11 @@ import java.util.List;
 class OSObservable<ObserverType, StateType> {
    private String methodName;
    private List<Object> observers;
+   private boolean fireOnMainThread;
    
-   OSObservable(String methodName) {
+   OSObservable(String methodName, boolean fireOnMainThread) {
       this.methodName = methodName;
+      this.fireOnMainThread = fireOnMainThread;
       observers = new ArrayList<>();
    }
    
@@ -49,11 +51,11 @@ class OSObservable<ObserverType, StateType> {
       observers.add(observer);
    }
    
-   boolean notifyChange(StateType state) {
+   boolean notifyChange(final StateType state) {
       boolean notified = false;
       
       for(Object observer : observers) {
-         Object strongRefObserver;
+         final Object strongRefObserver;
          if (observer instanceof WeakReference)
             strongRefObserver = ((WeakReference)observer).get();
          else
@@ -62,9 +64,25 @@ class OSObservable<ObserverType, StateType> {
          if (strongRefObserver != null) {
             try {
                Class<?> clazz = strongRefObserver.getClass();
-               Method method = clazz.getMethod(methodName, state.getClass());
+               final Method method = clazz.getMethod(methodName, state.getClass());
                method.setAccessible(true);
-               method.invoke(strongRefObserver, state);
+               if (fireOnMainThread) {
+                  OSUtils.runOnMainUIThread(
+                     new Runnable() {
+                        @Override
+                        public void run() {
+                           try {
+                              method.invoke(strongRefObserver, state);
+                           }
+                           catch (Throwable t) {
+                              t.printStackTrace();
+                           }
+                        }
+                     });
+                  
+               }
+               else
+                  method.invoke(strongRefObserver, state);
                notified = true;
             } catch (Throwable t) {
                t.printStackTrace();

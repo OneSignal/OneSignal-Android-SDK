@@ -37,7 +37,7 @@ public class OSPermissionState implements Cloneable {
    OSObservable<Object, OSPermissionState> observable;
    
    OSPermissionState(boolean asFrom) {
-      observable = new OSObservable<>("changed");
+      observable = new OSObservable<>("changed", false);
       
       if (asFrom) {
          final SharedPreferences prefs = getGcmPreferences(appContext);

@@ -730,6 +730,10 @@ class OneSignalStateSynchronizer {
       }
    }
    
+   static boolean getUserSubscribePreference() {
+      return toSyncUserState.dependValues.optBoolean("userSubscribePref", true);
+   }
+   
    static void setPermission(boolean enable) {
       try {
          getUserStateForModification().dependValues.put("androidPermission", enable);

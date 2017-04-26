@@ -34,6 +34,8 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
@@ -180,5 +182,14 @@ class OSUtils {
       } catch (Throwable t) {}
       
       return true;
+   }
+   
+   static void runOnMainUIThread(Runnable runnable) {
+      if (Looper.getMainLooper().getThread() == Thread.currentThread())
+         runnable.run();
+      else {
+         Handler handler = new Handler(Looper.getMainLooper());
+         handler.post(runnable);
+      }
    }
 }
