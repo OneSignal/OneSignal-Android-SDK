@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -106,11 +106,14 @@ public class OneSignal {
       NotificationReceivedHandler mNotificationReceivedHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
+      // Default true in 4.0.0 release.
+      boolean mUnsubscribeWhenNotificationsAreDisabled;
 
       // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
       //  calling startInit().init()
       // mDisplayOptionCarryOver is used if setInFocusDisplaying is called but inFocusDisplaying wasn't
       boolean mDisplayOptionCarryOver;
+      // Default Notification in 4.0.0 release.
       OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
    
       private Builder() {}
@@ -148,16 +151,16 @@ public class OneSignal {
          mDisplayOption = displayOption;
          return this;
       }
+      
+      public Builder unsubscribeWhenNotificationsAreDisabled(boolean set) {
+         mUnsubscribeWhenNotificationsAreDisabled = set;
+         return this;
+      }
 
       public void init() {
          OneSignal.init(this);
       }
    }
-
-   /**
-    * Tag used on logcat messages.
-    */
-   private static final String TAG = "OneSignal";
 
    static String appId;
    private static String mGoogleProjectNumber;
@@ -208,6 +211,75 @@ public class OneSignal {
 
    private static JSONObject awl;
    static boolean mEnterp;
+   
+   
+   // Start PermissionState
+   private static OSPermissionState currentPermissionState;
+   private static OSPermissionState getCurrentPermissionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (currentPermissionState == null) {
+         currentPermissionState = new OSPermissionState(false);
+         currentPermissionState.observable.addObserverStrong(new OSPermissionChangedInternalObserver());
+      }
+      
+      return currentPermissionState;
+   }
+   
+   static OSPermissionState lastPermissionState;
+   private static OSPermissionState getLastPermissionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (lastPermissionState == null)
+         lastPermissionState = new OSPermissionState(true);
+      
+      return lastPermissionState;
+   }
+   
+   private static OSObservable<OSPermissionObserver, OSPermissionStateChanges> permissionStateChangesObserver;
+   static OSObservable<OSPermissionObserver, OSPermissionStateChanges> getPermissionStateChangesObserver() {
+      if (permissionStateChangesObserver == null)
+         permissionStateChangesObserver = new OSObservable<>("onOSPermissionChanged", true);
+      return permissionStateChangesObserver;
+   }
+   // End PermissionState
+   
+   // Start SubscriptionState
+   private static OSSubscriptionState currentSubscriptionState;
+   private static OSSubscriptionState getCurrentSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (currentSubscriptionState == null) {
+         currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).getEnabled());
+         getCurrentPermissionState(context).observable.addObserver(currentSubscriptionState);
+         currentSubscriptionState.observable.addObserverStrong(new OSSubscriptionChangedInternalObserver());
+      }
+      
+      return currentSubscriptionState;
+   }
+   
+   static OSSubscriptionState lastSubscriptionState;
+   private static OSSubscriptionState getLastSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+      
+      if (lastSubscriptionState == null)
+         lastSubscriptionState = new OSSubscriptionState(true, false);
+      
+      return lastSubscriptionState;
+   }
+   
+   private static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> subscriptionStateChangesObserver;
+   static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> getSubscriptionStateChangesObserver() {
+      if (subscriptionStateChangesObserver == null)
+         subscriptionStateChangesObserver = new OSObservable<>("onOSSubscriptionChanged", true);
+      return subscriptionStateChangesObserver;
+   }
+   // End SubscriptionState
+   
    
    private static class IAPUpdateJob {
       JSONArray toReport;
@@ -325,6 +397,8 @@ public class OneSignal {
          BadgeCountUpdater.updateCount(0, appContext);
          SaveAppId(appId);
       }
+   
+      OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
       if (foreground || getUserId() == null) {
          sendAsSession = isPastOnSessionTime();
@@ -337,7 +411,7 @@ public class OneSignal {
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
-
+      
       initDone = true;
    }
 
@@ -392,6 +466,7 @@ public class OneSignal {
 
             lastRegistrationId = id;
             registerForPushFired = true;
+            getCurrentSubscriptionState(appContext).setPushToken(id);
             registerUser();
          }
       });
@@ -503,6 +578,8 @@ public class OneSignal {
    }
 
    static void Log(final LOG_LEVEL level, String message, Throwable throwable) {
+      final String TAG = "OneSignal";
+      
       if (level.compareTo(logCatLevel) < 1) {
          if (level == LOG_LEVEL.VERBOSE)
             Log.v(TAG, message, throwable);
@@ -528,7 +605,7 @@ public class OneSignal {
             }
             
             final String finalFullMessage = fullMessage;
-            runOnUiThread(new Runnable() {
+            OSUtils.runOnMainUIThread(new Runnable() {
                @Override
                public void run() {
                   if (ActivityLifecycleHandler.curActivity != null)
@@ -632,6 +709,8 @@ public class OneSignal {
          trackGooglePurchase.trackIAP();
 
       NotificationRestorer.asyncRestore(appContext);
+      
+      getCurrentPermissionState(appContext).refreshAsTo();
    }
 
    static boolean isForeground() {
@@ -682,6 +761,7 @@ public class OneSignal {
             userState.set("device_model", Build.MODEL);
             userState.set("device_type", deviceType);
             userState.setState("subscribableStatus", subscribableStatus);
+            userState.setState("androidPermission", areNotificationsEnabledForSubscribedState());
 
             try {
                userState.set("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
@@ -914,7 +994,7 @@ public class OneSignal {
 
    private static void fireIdsAvailableCallback() {
       if (idsAvailableHandler != null) {
-         runOnUiThread(new Runnable() {
+         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
                internalFireIdsAvailableCallback();
@@ -1051,16 +1131,12 @@ public class OneSignal {
    }
 
    private static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
-      if (Looper.getMainLooper().getThread() == Thread.currentThread()) // isUIThread
-         mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
-      else {
-         runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-               mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
-            }
-         });
-      }
+      OSUtils.runOnMainUIThread(new Runnable() {
+         @Override
+         public void run() {
+            mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
+         }
+      });
    }
 
    // Called when receiving GCM/ADM message after it has been displayed.
@@ -1181,6 +1257,8 @@ public class OneSignal {
       saveUserId(userId);
       fireIdsAvailableCallback();
       internalFireGetTagsCallback(pendingGetTagsHandler);
+   
+      getCurrentSubscriptionState(appContext).setUserId(userId);
       
       if (iapUpdateJob != null) {
          sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
@@ -1273,7 +1351,8 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not set subscription.");
          return;
       }
-
+      
+      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
       OneSignalStateSynchronizer.setSubscription(enable);
    }
 
@@ -1406,6 +1485,61 @@ public class OneSignal {
    public static void removeNotificationReceivedHandler() {
       getCurrentOrNewInitBuilder().mNotificationReceivedHandler = null;
    }
+   
+   public static void addPermissionObserver(OSPermissionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add permission observer");
+         return;
+      }
+   
+      getPermissionStateChangesObserver().addObserver(observer);
+   
+      if (getCurrentPermissionState(appContext).compare(getLastPermissionState(appContext)))
+         OSPermissionChangedInternalObserver.fireChangesToPublicObserver(getCurrentPermissionState(appContext));
+   }
+   
+   public static void removePermissionObserver(OSPermissionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify permission observer");
+         return;
+      }
+   
+      getPermissionStateChangesObserver().removeObserver(observer);
+   }
+   
+   public static void addSubscriptionObserver(OSSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
+         return;
+      }
+      
+      getSubscriptionStateChangesObserver().addObserver(observer);
+      
+      if (getCurrentSubscriptionState(appContext).compare(getLastSubscriptionState(appContext)))
+         OSSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentSubscriptionState(appContext));
+   }
+   
+   public static void removeSubscriptionObserver(OSSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify subscription observer");
+         return;
+      }
+      
+      getSubscriptionStateChangesObserver().removeObserver(observer);
+   }
+   
+   public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSPermissionSubscriptionState");
+         return null;
+      }
+      
+      OSPermissionSubscriptionState status = new OSPermissionSubscriptionState();
+      status.subscriptionStatus = getCurrentSubscriptionState(appContext);
+      status.permissionStatus = getCurrentPermissionState(appContext);
+   
+      return status;
+   }
 
    static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
@@ -1474,11 +1608,6 @@ public class OneSignal {
 
       return false;
    }
-
-   static void runOnUiThread(Runnable action) {
-      Handler handler = new Handler(Looper.getMainLooper());
-      handler.post(action);
-   }
    
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
       String id = getNotificationIdFromGCMJsonPayload(jsonPayload);
@@ -1532,5 +1661,12 @@ public class OneSignal {
       Intent intent = new Intent(appContext, SyncService.class);
       intent.putExtra("task", SyncService.TASK_APP_STARTUP);
       appContext.startService(intent);
+   }
+   
+   // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
+   static boolean areNotificationsEnabledForSubscribedState() {
+      if (mInitBuilder.mUnsubscribeWhenNotificationsAreDisabled)
+         return OSUtils.areNotificationsEnabled(appContext);
+      return true;
    }
 }

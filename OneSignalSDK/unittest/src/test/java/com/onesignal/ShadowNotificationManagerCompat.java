@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2016 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,18 +27,15 @@
 
 package com.onesignal;
 
-import android.content.Context;
-
-import com.onesignal.shortcutbadger.ShortcutBadger;
+import android.support.v4.app.NotificationManagerCompat;
 
 import org.robolectric.annotation.Implements;
 
-@Implements(BadgeCountUpdater.class)
-public class ShadowBadgeCountUpdater {
-
-   public static int lastCount = 0;
-
-   public static void updateCount(int count, Context context) {
-      lastCount = count;
+@Implements(NotificationManagerCompat.class)
+public class ShadowNotificationManagerCompat {
+   public static boolean enabled = true;
+   
+   public boolean areNotificationsEnabled() {
+      return enabled;
    }
 }

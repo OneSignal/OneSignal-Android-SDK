@@ -27,18 +27,14 @@
 
 package com.onesignal;
 
-import android.content.Context;
-
-import com.onesignal.shortcutbadger.ShortcutBadger;
-
-import org.robolectric.annotation.Implements;
-
-@Implements(BadgeCountUpdater.class)
-public class ShadowBadgeCountUpdater {
-
-   public static int lastCount = 0;
-
-   public static void updateCount(int count, Context context) {
-      lastCount = count;
+public class OSPermissionStateChanges {
+   OSPermissionState to, from;
+   
+   public OSPermissionState getTo() {
+      return to;
+   }
+   
+   public OSPermissionState getFrom() {
+      return from;
    }
 }

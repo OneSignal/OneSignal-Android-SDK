@@ -50,6 +50,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowNotificationRestorer;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -92,7 +93,8 @@ import static org.robolectric.Shadows.shadowOf;
       instrumentedPackages = {"com.onesignal"},
       shadows = { ShadowRoboNotificationManager.class,
                   ShadowOneSignalRestClient.class,
-                  ShadowBadgeCountUpdater.class },
+                  ShadowBadgeCountUpdater.class,
+                  ShadowNotificationManagerCompat.class},
       sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
@@ -301,6 +303,17 @@ public class GenerateNotificationRunner {
       Intent intent = Shadows.shadowOf(postedNotification.notif.deleteIntent).getSavedIntent();
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
    
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+   }
+   
+   @Test
+   public void shouldNotSetBadgesWhenNotificationPermissionIsDisabled() throws Exception {
+      ShadowNotificationManagerCompat.enabled = false;
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+      
+      Bundle bundle = getBaseNotifBundle();
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
    

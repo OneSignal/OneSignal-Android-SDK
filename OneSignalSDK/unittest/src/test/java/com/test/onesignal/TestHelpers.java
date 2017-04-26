@@ -1,6 +1,7 @@
 package com.test.onesignal;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGPS;
@@ -23,6 +24,8 @@ class TestHelpers {
       ShadowPushRegistratorGPS.skipComplete = false;
       ShadowPushRegistratorGPS.fail = false;
       ShadowPushRegistratorGPS.lastProjectNumber = null;
+   
+      ShadowNotificationManagerCompat.enabled = true;
 
       ShadowOSUtils.subscribableStatus = 1;
 

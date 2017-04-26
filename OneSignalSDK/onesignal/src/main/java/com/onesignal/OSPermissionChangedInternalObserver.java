@@ -27,18 +27,32 @@
 
 package com.onesignal;
 
-import android.content.Context;
-
-import com.onesignal.shortcutbadger.ShortcutBadger;
-
-import org.robolectric.annotation.Implements;
-
-@Implements(BadgeCountUpdater.class)
-public class ShadowBadgeCountUpdater {
-
-   public static int lastCount = 0;
-
-   public static void updateCount(int count, Context context) {
-      lastCount = count;
+class OSPermissionChangedInternalObserver {
+   void changed(OSPermissionState state) {
+      handleInternalChanges(state);
+      fireChangesToPublicObserver(state);
+   }
+   
+   static void handleInternalChanges(OSPermissionState state) {
+      if (!state.getEnabled())
+         BadgeCountUpdater.updateCount(0, OneSignal.appContext);
+      OneSignalStateSynchronizer.setPermission(OneSignal.areNotificationsEnabledForSubscribedState());
+   }
+   
+   // Handles firing a public facing PermissionStateChangesObserver
+   //    1. Generates a OSPermissionStateChanges object and sets to and from states
+   //    2. Persists acknowledgement
+   //      - Prevents duplicated events
+   //      - Notifies if changes were made outside of the app
+   static void fireChangesToPublicObserver(OSPermissionState state) {
+      OSPermissionStateChanges stateChanges = new OSPermissionStateChanges();
+      stateChanges.from = OneSignal.lastPermissionState;
+      stateChanges.to = (OSPermissionState)state.clone();
+      
+      boolean hasReceiver = OneSignal.getPermissionStateChangesObserver().notifyChange(stateChanges);
+      if (hasReceiver) {
+         OneSignal.lastPermissionState = (OSPermissionState)state.clone();
+         OneSignal.lastPermissionState.persistAsFrom();
+      }
    }
 }

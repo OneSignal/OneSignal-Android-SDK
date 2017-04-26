@@ -46,6 +46,11 @@ import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
+import com.onesignal.OSPermissionObserver;
+import com.onesignal.OSPermissionStateChanges;
+import com.onesignal.OSPermissionSubscriptionState;
+import com.onesignal.OSSubscriptionObserver;
+import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -55,6 +60,7 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -104,7 +110,8 @@ import static org.robolectric.Shadows.shadowOf;
                    ShadowPushRegistratorGPS.class,
                    ShadowOSUtils.class,
                    ShadowAdvertisingIdProviderGPS.class,
-                   ShadowCustomTabsClient.class, ShadowCustomTabsSession.class},
+                   ShadowCustomTabsClient.class, ShadowCustomTabsSession.class,
+                   ShadowNotificationManagerCompat.class},
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
         sdk = 21)
@@ -1600,6 +1607,197 @@ public class MainOneSignalClassRunner {
       
       Assert.assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
       Assert.assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
+   }
+   
+   private OSPermissionStateChanges lastPermissionStateChanges;
+   private boolean currentPermission;
+   // Firing right away to match iOS behavior for wrapper SDKs.
+   @Test
+   public void shouldFirePermissionObserverOnFirstAdd() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      OSPermissionObserver permissionObserver = new OSPermissionObserver() {
+         @Override
+         public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+            lastPermissionStateChanges = stateChanges;
+            currentPermission = stateChanges.getTo().getEnabled();
+         }
+      };
+      OneSignal.addPermissionObserver(permissionObserver);
+      
+      Assert.assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
+      Assert.assertTrue(lastPermissionStateChanges.getTo().getEnabled());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertTrue(currentPermission);
+   }
+   
+   @Test
+   public void shouldFirePermissionObserverWhenUserDisablesNotifications() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      OSPermissionObserver permissionObserver = new OSPermissionObserver() {
+         @Override
+         public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+            lastPermissionStateChanges = stateChanges;
+            currentPermission = stateChanges.getTo().getEnabled();
+         }
+      };
+      OneSignal.addPermissionObserver(permissionObserver);
+      lastPermissionStateChanges = null;
+      // Make sure garbage collection doesn't nuke any observers.
+      Runtime.getRuntime().gc();
+      
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = false;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      
+      Assert.assertTrue(lastPermissionStateChanges.getFrom().getEnabled());
+      Assert.assertFalse(lastPermissionStateChanges.getTo().getEnabled());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertFalse(currentPermission);
+      // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+   }
+   
+   @Test
+   public void shouldSetNotificationTypesToZeroWhenUnsubscribeWhenNotificationsAreDisabledIsEnabled() throws Exception {
+      ShadowNotificationManagerCompat.enabled = false;
+      OneSignal.startInit(blankActivity).unsubscribeWhenNotificationsAreDisabled(true).init();
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+      
+      Assert.assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = true;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+   }
+   
+   @Test
+   @Config(shadows = {ShadowBadgeCountUpdater.class})
+   public void shouldClearBadgesWhenPermissionIsDisabled() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      ShadowBadgeCountUpdater.updateCount(1, blankActivity);
+   
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = false;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      
+      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+   }
+   
+   
+   private OSSubscriptionStateChanges lastSubscriptionStateChanges;
+   private boolean currentSubscription;
+   @Test
+   public void shouldFireSubscriptionObserverOnFirstAdd() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      
+      OSSubscriptionObserver permissionObserver = new OSSubscriptionObserver() {
+         @Override
+         public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+            lastSubscriptionStateChanges = stateChanges;
+            currentSubscription = stateChanges.getTo().getSubscribed();
+         }
+      };
+      OneSignal.addSubscriptionObserver(permissionObserver);
+      
+      Assert.assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      Assert.assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertTrue(currentSubscription);
+   }
+   
+   @Test
+   public void shouldFireSubscriptionObserverWhenUserDisablesNotifications() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+   
+      OSSubscriptionObserver subscriptionObserver = new OSSubscriptionObserver() {
+         @Override
+         public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+            lastSubscriptionStateChanges = stateChanges;
+            currentSubscription = stateChanges.getTo().getSubscribed();
+         }
+      };
+      OneSignal.addSubscriptionObserver(subscriptionObserver);
+      lastSubscriptionStateChanges = null;
+      // Make sure garbage collection doesn't nuke any observers.
+      Runtime.getRuntime().gc();
+      
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowNotificationManagerCompat.enabled = false;
+      blankActivityController.resume();
+      threadAndTaskWait();
+      
+      Assert.assertTrue(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      Assert.assertFalse(lastSubscriptionStateChanges.getTo().getSubscribed());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertFalse(currentSubscription);
+      // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
+      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+   }
+   
+   @Test
+   public void shouldFireSubscriptionObserverWhenChangesHappen() throws Exception {
+      OneSignalInit();
+      OSSubscriptionObserver permissionObserver = new OSSubscriptionObserver() {
+         @Override
+         public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+            lastSubscriptionStateChanges = stateChanges;
+            currentSubscription = stateChanges.getTo().getSubscribed();
+         }
+      };
+      OneSignal.addSubscriptionObserver(permissionObserver);
+      threadAndTaskWait();
+      
+      Assert.assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      Assert.assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      // Test to make sure object was correct at the time of firing.
+      Assert.assertTrue(currentSubscription);
+      Assert.assertTrue(lastSubscriptionStateChanges.getTo().getUserSubscriptionSetting());
+      Assert.assertEquals(ShadowPushRegistratorGPS.regId, lastSubscriptionStateChanges.getTo().getPushToken());
+      Assert.assertEquals(ShadowOneSignalRestClient.testUserId, lastSubscriptionStateChanges.getTo().getUserId());
+   }
+   
+   @Test
+   public void shouldNotFireSubscriptionObserverWhenChangesHappenIfRemoved() throws Exception {
+      OneSignalInit();
+      OSSubscriptionObserver permissionObserver = new OSSubscriptionObserver() {
+         @Override
+         public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+            lastSubscriptionStateChanges = stateChanges;
+            currentSubscription = stateChanges.getTo().getSubscribed();
+         }
+      };
+      OneSignal.addSubscriptionObserver(permissionObserver);
+      lastSubscriptionStateChanges = null;
+      OneSignal.removeSubscriptionObserver(permissionObserver);
+      threadAndTaskWait();
+      
+      Assert.assertFalse(currentSubscription);
+      Assert.assertNull(lastSubscriptionStateChanges);
+   }
+   
+   @Test
+   public void shouldReturnCorrectGetPermissionSubscriptionState() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      OSPermissionSubscriptionState permissionSubscriptionState = OneSignal.getPermissionSubscriptionState();
+      Assert.assertTrue(permissionSubscriptionState.getPermissionStatus().getEnabled());
+      Assert.assertTrue(permissionSubscriptionState.getSubscriptionStatus().getSubscribed());
    }
 
    // ####### Unit test helper methods ########

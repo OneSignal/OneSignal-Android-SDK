@@ -34,6 +34,9 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
 import java.util.Locale;
@@ -168,5 +171,25 @@ class OSUtils {
       String emRegex = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
       Pattern pattern = Pattern.compile(emRegex);
       return pattern.matcher(email).matches();
+   }
+   
+   // Get the app's permission which will be false if the user disabled notifications for the app
+   //   from Settings > Apps or by long pressing the notifications and selecting block.
+   //   - Detection works on Android 4.4+, requires Android Support v4 Library 24.0.0+
+   static boolean areNotificationsEnabled(Context  context) {
+      try {
+         return NotificationManagerCompat.from(OneSignal.appContext).areNotificationsEnabled();
+      } catch (Throwable t) {}
+      
+      return true;
+   }
+   
+   static void runOnMainUIThread(Runnable runnable) {
+      if (Looper.getMainLooper().getThread() == Thread.currentThread())
+         runnable.run();
+      else {
+         Handler handler = new Handler(Looper.getMainLooper());
+         handler.post(runnable);
+      }
    }
 }

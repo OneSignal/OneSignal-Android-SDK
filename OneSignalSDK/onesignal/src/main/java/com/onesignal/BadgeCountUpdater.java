@@ -41,7 +41,7 @@ class BadgeCountUpdater {
    // Cache for manifest setting.
    private static int badgesEnabled = -1;
 
-   private static boolean isBadgesEnabled(Context context) {
+   private static boolean areBadgeSettingsEnabled(Context context) {
       if (badgesEnabled != -1)
          return (badgesEnabled == 1);
 
@@ -57,9 +57,13 @@ class BadgeCountUpdater {
 
       return (badgesEnabled == 1);
    }
+   
+   private static boolean areBadgesEnabled(Context context) {
+      return areBadgeSettingsEnabled(context) && OSUtils.areNotificationsEnabled(context);
+   }
 
    static void update(SQLiteDatabase readableDb, Context context) {
-      if (!isBadgesEnabled(context))
+      if (!areBadgesEnabled(context))
          return;
 
       Cursor cursor = readableDb.query(
@@ -79,7 +83,7 @@ class BadgeCountUpdater {
    }
 
    static void updateCount(int count, Context context) {
-      if (!isBadgesEnabled(context))
+      if (!areBadgeSettingsEnabled(context))
          return;
 
       // Can throw if badges are not support on the device.
