@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.json.JSONArray;
@@ -44,6 +45,26 @@ public class OSNotification {
 
       // Notification was silent and not displayed.
       None
+   }
+   
+   public OSNotification() {
+   }
+   
+   public OSNotification(JSONObject jsonObject) {
+      isAppInFocus = jsonObject.optBoolean("isAppInFocus");
+      shown = jsonObject.optBoolean("shown", shown);
+      androidNotificationId = jsonObject.optInt("androidNotificationId");
+      displayType = DisplayType.values()[jsonObject.optInt("displayType")];
+
+      if (jsonObject.has("groupedNotifications")) {
+         JSONArray jsonArray = jsonObject.optJSONArray("groupedNotifications");
+         groupedNotifications = new ArrayList<>();
+         for (int i = 0; i < jsonArray.length(); i++)
+            groupedNotifications.add(new OSNotificationPayload(jsonArray.optJSONObject(i)));
+      }
+   
+      if (jsonObject.has("payload"))
+         payload = new OSNotificationPayload(jsonObject.optJSONObject("payload"));
    }
 
    // Is app Active.

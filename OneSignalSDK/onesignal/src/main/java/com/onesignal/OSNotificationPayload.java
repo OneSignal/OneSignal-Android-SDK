@@ -30,6 +30,7 @@ package com.onesignal;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 
 // Notification properties received from OneSignal.
@@ -54,11 +55,52 @@ public class OSNotificationPayload {
    public int priority;
    public String rawPayload;
    
+   public OSNotificationPayload() {
+   }
+   
+   public OSNotificationPayload(JSONObject jsonObject) {
+      notificationID = jsonObject.optString("notificationID");
+      title = jsonObject.optString("title");
+      
+      body = jsonObject.optString("body");
+      additionalData = jsonObject.optJSONObject("additionalData");
+      smallIcon = jsonObject.optString("smallIcon");
+      largeIcon = jsonObject.optString("largeIcon");
+      bigPicture = jsonObject.optString("bigPicture");
+      smallIconAccentColor = jsonObject.optString("smallIconAccentColor");
+      launchURL = jsonObject.optString("launchURL");
+      sound = jsonObject.optString("sound");
+      ledColor = jsonObject.optString("ledColor");
+      lockScreenVisibility = jsonObject.optInt("lockScreenVisibility");
+      groupKey = jsonObject.optString("groupKey");
+      groupMessage = jsonObject.optString("groupMessage");
+      
+      if (jsonObject.has("actionButtons")) {
+         actionButtons = new ArrayList<>();
+         JSONArray jsonArray = jsonObject.optJSONArray("actionButtons");
+         for (int i = 0; i < jsonArray.length(); i++)
+            actionButtons.add(new ActionButton(jsonArray.optJSONObject(i)));
+      }
+   
+      fromProjectNumber = jsonObject.optString("fromProjectNumber");
+      collapseId = jsonObject.optString("collapseId");
+      priority = jsonObject.optInt("priority");
+      rawPayload = jsonObject.optString("rawPayload");
+   }
+   
    public static class ActionButton {
       public String id;
       public String text;
       public String icon;
-
+   
+      public ActionButton() {}
+      
+      public ActionButton(JSONObject jsonObject) {
+         id = jsonObject.optString("id");
+         text = jsonObject.optString("text");
+         icon = jsonObject.optString("icon");
+      }
+   
       public JSONObject toJSONObject() {
          JSONObject json = new JSONObject();
          try {
