@@ -1498,6 +1498,15 @@ public class OneSignal {
          OSPermissionChangedInternalObserver.fireChangesToPublicObserver(getCurrentPermissionState(appContext));
    }
    
+   public static void removePermissionObserver(OSPermissionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify permission observer");
+         return;
+      }
+   
+      getPermissionStateChangesObserver().removeObserver(observer);
+   }
+   
    public static void addSubscriptionObserver(OSSubscriptionObserver observer) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
@@ -1508,6 +1517,28 @@ public class OneSignal {
       
       if (getCurrentSubscriptionState(appContext).compare(getLastSubscriptionState(appContext)))
          OSSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentSubscriptionState(appContext));
+   }
+   
+   public static void removeSubscriptionObserver(OSSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify subscription observer");
+         return;
+      }
+      
+      getSubscriptionStateChangesObserver().removeObserver(observer);
+   }
+   
+   public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSPermissionSubscriptionState");
+         return null;
+      }
+      
+      OSPermissionSubscriptionState status = new OSPermissionSubscriptionState();
+      status.subscriptionStatus = getCurrentSubscriptionState(appContext);
+      status.permissionStatus = getCurrentPermissionState(appContext);
+   
+      return status;
    }
 
    static long GetUnsentActiveTime() {

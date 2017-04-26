@@ -28,5 +28,13 @@
 package com.onesignal;
 
 public class OSPermissionStateChanges {
-   public OSPermissionState to, from;
+   OSPermissionState to, from;
+   
+   public OSPermissionState getTo() {
+      return to;
+   }
+   
+   public OSPermissionState getFrom() {
+      return from;
+   }
 }

@@ -28,5 +28,13 @@
 package com.onesignal;
 
 public class OSSubscriptionStateChanges {
-   public OSSubscriptionState to, from;
+   OSSubscriptionState to, from;
+   
+   public OSSubscriptionState getTo() {
+      return to;
+   }
+   
+   public OSSubscriptionState getFrom() {
+      return from;
+   }
 }
