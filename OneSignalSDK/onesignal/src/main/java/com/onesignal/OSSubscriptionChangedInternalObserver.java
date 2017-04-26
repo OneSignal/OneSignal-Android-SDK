@@ -28,7 +28,7 @@
 package com.onesignal;
 
 class OSSubscriptionChangedInternalObserver {
-   // TODO: Make sure this method doesn't get prograuded out.
+   
    public void changed(OSSubscriptionState state) {
       fireChangesToPublicObserver(state);
    }

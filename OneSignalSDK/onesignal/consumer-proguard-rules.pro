@@ -8,6 +8,25 @@
 -keep public interface android.app.OnActivityPausedListener {*;}
 -keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 
+-keep class com.onesignal.OSSubscriptionState {
+    void changed(com.onesignal.OSPermissionState);
+}
+
+-keep class com.onesignal.OSPermissionChangedInternalObserver {
+    void changed(com.onesignal.OSPermissionState);
+}
+
+-keep class com.onesignal.OSSubscriptionChangedInternalObserver {
+    void changed(com.onesignal.OSSubscriptionState);
+}
+
+-keep class ** implements com.onesignal.OSPermissionObserver {
+    void onOSPermissionChanged(com.onesignal.OSPermissionStateChanges);
+}
+
+-keep class ** implements com.onesignal.OSSubscriptionObserver {
+    void onOSSubscriptionChanged(com.onesignal.OSSubscriptionStateChanges);
+}
 
 -keep class com.onesignal.shortcutbadger.impl.AdwHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.ApexHomeBadger { <init>(...); }

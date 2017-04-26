@@ -28,9 +28,7 @@
 package com.onesignal;
 
 class OSPermissionChangedInternalObserver {
-   
-   // TODO: Make sure this method doesn't get prograuded out.
-   public void changed(OSPermissionState state) {
+   void changed(OSPermissionState state) {
       handleInternalChanges(state);
       fireChangesToPublicObserver(state);
    }

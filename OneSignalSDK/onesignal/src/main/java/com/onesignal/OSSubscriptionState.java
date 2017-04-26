@@ -60,7 +60,7 @@ public class OSSubscriptionState implements Cloneable {
    private String userId;
    private String pushToken;
    
-   public void changed(OSPermissionState state) {
+   void changed(OSPermissionState state) {
       setAccepted(state.getEnabled());
    }
    

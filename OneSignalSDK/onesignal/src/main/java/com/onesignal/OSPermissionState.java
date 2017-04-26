@@ -37,6 +37,8 @@ public class OSPermissionState implements Cloneable {
    OSObservable<Object, OSPermissionState> observable;
    
    OSPermissionState(boolean asFrom) {
+      // Java 8 method reference can be used in the future with Android Studio 2.4.0
+      //   OSPermissionChangedInternalObserver::changed
       observable = new OSObservable<>("changed", false);
       
       if (asFrom) {

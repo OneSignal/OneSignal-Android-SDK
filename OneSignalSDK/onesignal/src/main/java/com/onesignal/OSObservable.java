@@ -74,7 +74,7 @@ class OSObservable<ObserverType, StateType> {
          if (strongRefObserver != null) {
             try {
                Class<?> clazz = strongRefObserver.getClass();
-               final Method method = clazz.getMethod(methodName, state.getClass());
+               final Method method = clazz.getDeclaredMethod(methodName, state.getClass());
                method.setAccessible(true);
                if (fireOnMainThread) {
                   OSUtils.runOnMainUIThread(
