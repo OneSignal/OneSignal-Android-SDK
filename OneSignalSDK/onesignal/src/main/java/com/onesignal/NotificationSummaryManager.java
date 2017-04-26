@@ -65,7 +65,9 @@ class NotificationSummaryManager {
              new String[] { group }, // whereArgs
              null, null, null);
          
-         cursor.moveToFirst();
+         boolean hasRecord = cursor.moveToFirst();
+         if (!hasRecord)
+            return;
          int androidNotifId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
          cursor.close();
          

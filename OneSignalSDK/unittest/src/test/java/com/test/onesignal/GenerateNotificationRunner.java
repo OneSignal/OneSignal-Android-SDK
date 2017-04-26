@@ -84,6 +84,7 @@ import java.util.Map;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.robolectric.Shadows.shadowOf;
@@ -525,8 +526,12 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
    }
-
-
+   
+   @Test
+   public void shouldHandleOpeningInAppAlertWithGroupKeySet() throws Exception {
+      SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "some_group", false);
+   }
 
    @Test
    public void shouldSetButtonsCorrectly() throws Exception {
