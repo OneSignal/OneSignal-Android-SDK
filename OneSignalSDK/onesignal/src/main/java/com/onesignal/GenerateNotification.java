@@ -745,17 +745,23 @@ class GenerateNotification {
    private static Bitmap getBitmap(String name) {
       if (name == null)
          return null;
-      if (name.startsWith("http://") || name.startsWith("https://"))
-         return getBitmapFromURL(name);
+      String trimmedName = name.trim();
+      
+      if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://"))
+         return getBitmapFromURL(trimmedName);
 
       return getBitmapFromAssetsOrResourceName(name);
    }
 
    private static int getResourceIcon(String iconName) {
-      if (!isValidResourceName(iconName))
+      if (iconName == null)
+         return 0;
+      
+      String trimmedIconName = iconName.trim();
+      if (!isValidResourceName(trimmedIconName))
          return 0;
 
-      int notificationIcon = getDrawableId(iconName);
+      int notificationIcon = getDrawableId(trimmedIconName);
       if (notificationIcon != 0)
          return notificationIcon;
 
