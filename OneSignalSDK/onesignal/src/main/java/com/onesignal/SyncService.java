@@ -100,12 +100,15 @@ public class SyncService extends Service {
 
    @Override
    public void onCreate() {
-      
    }
 
    @Override
    public int onStartCommand(Intent intent, int flags, int startId) {
-      int task = intent.getIntExtra("task", 0);
+      int task;
+      if (intent != null)
+         task = intent.getIntExtra("task", 0);
+      else
+         task = TASK_SYNC;
       
       if (task == TASK_APP_STARTUP)
          startedFromActivity = true;
