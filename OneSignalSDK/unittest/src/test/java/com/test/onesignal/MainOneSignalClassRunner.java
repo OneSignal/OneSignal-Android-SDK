@@ -102,7 +102,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
-import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.TestHelpers.getBaseNotifBundle;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
