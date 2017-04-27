@@ -76,6 +76,7 @@ import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
+import org.robolectric.util.ActivityController;
 import org.robolectric.util.ServiceController;
 
 import java.util.Iterator;
@@ -101,6 +102,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class GenerateNotificationRunner {
    
    private Activity blankActivity;
+   private static ActivityController<BlankActivity> blankActivityController;
    
    private static final String notifMessage = "Robo test message";
    
@@ -114,8 +116,9 @@ public class GenerateNotificationRunner {
    public void beforeEachTest() throws Exception {
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
-      
-      blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
+   
+      blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
+      blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
    
       overrideNotificationId = -1;
@@ -532,6 +535,69 @@ public class GenerateNotificationRunner {
       SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "some_group", false);
    }
+   
+   @Test
+   public void shouldNotDisplaySummaryWhenDismissingAnInAppAlertIfOneDidntAlreadyExist() throws Exception {
+      // Setup - init
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+   
+      // Setup1 - Display a notification with a group set
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      // Test1 - Manually trigger a refresh on grouped notification.
+      SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
+      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+   
+   
+      // Setup2 - Display a 2nd notification with the same group key
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      // Test2 - Manually trigger a refresh on grouped notification.
+      writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
+      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+   }
+   
+   
+   @Test
+   public void shouldCorrectlyDisplaySummaryWithMixedInAppAlertsAndNotifications() throws Exception {
+      // Setup - init
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+   
+      // Setup - Display a notification with a group set
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      
+      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+   
+      // Setup - Background app
+      blankActivityController.pause();
+      threadAndTaskWait();
+   
+      // Setup - Send 2 more notifications with the same group
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      bundle = getBaseNotifBundle("UUID3");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      // Test - equals 3 - Should be 2 notifications + 1 summary.
+      //         Alert should stay as an in-app alert.
+      Assert.assertEquals(3, ShadowRoboNotificationManager.notifications.size());
+   }
+   
+   
 
    @Test
    public void shouldSetButtonsCorrectly() throws Exception {

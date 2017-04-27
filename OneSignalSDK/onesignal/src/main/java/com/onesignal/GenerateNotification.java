@@ -392,7 +392,7 @@ class GenerateNotification {
       PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
       
       Notification summaryNotification;
-      int summaryNotificationId = random.nextInt();
+      Integer summaryNotificationId = null;
    
       String firstFullData = null;
       Collection<SpannableString> summaryList = null;
@@ -470,7 +470,12 @@ class GenerateNotification {
             cursor.close();
       }
       
-      PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(),createBaseSummaryIntent(summaryNotificationId, gcmBundle, group));
+      if (summaryNotificationId == null) {
+         summaryNotificationId = random.nextInt();
+         createSummaryIdDatabaseEntry(dbHelper, group, summaryNotificationId);
+      }
+      
+      PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, gcmBundle, group));
       
       
       // 2 or more notifications with a group received, group them together as a single notification.
@@ -531,33 +536,14 @@ class GenerateNotification {
          summaryNotification = summaryBuilder.build();
       }
       else {
-         // There currently isn't a visible notification from for this groupid.
-         //   save the group summary notification id and post it so it looks like a normal notification.
-         SQLiteDatabase writableDb = null;
-         try {
-            writableDb = dbHelper.getWritableDbWithRetries();
-            writableDb.beginTransaction();
-            
-            ContentValues values = new ContentValues();
-            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, summaryNotificationId);
-            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
-            values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
-            writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
-            writableDb.setTransactionSuccessful();
-         } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", t);
-         } finally {
-            if (writableDb != null)
-               writableDb.endTransaction();
-         }
-   
+         // First notification with this group key, post like a normal notification.
          NotificationCompat.Builder summaryBuilder = notifBuilder.compatBuilder;
             
          // We are re-using the notifBuilder from the normal notification so if a developer as an
          //    extender setup all the settings will carry over.
          // Note: However their buttons will not carry over as we need to be setup with this new summaryNotificationId.
          addNotificationActionButtons(gcmBundle, summaryBuilder, summaryNotificationId, group);
-   
+         
          summaryBuilder.setContentIntent(summaryContentIntent)
                        .setDeleteIntent(summaryDeleteIntent)
                        .setOnlyAlertOnce(updateSummary)
@@ -573,6 +559,28 @@ class GenerateNotification {
    
    private static Intent createBaseSummaryIntent(int summaryNotificationId, JSONObject gcmBundle, String group) {
      return getNewBaseIntent(summaryNotificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("summary", group);
+   }
+   
+   private static void createSummaryIdDatabaseEntry(OneSignalDbHelper dbHelper, String group, int id) {
+      // There currently isn't a visible notification from for this groupid.
+      // Save the group summary notification id so it can be updated later.
+      SQLiteDatabase writableDb = null;
+      try {
+         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb.beginTransaction();
+      
+         ContentValues values = new ContentValues();
+         values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, id);
+         values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
+         values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
+         writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
+         writableDb.setTransactionSuccessful();
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", t);
+      } finally {
+         if (writableDb != null)
+            writableDb.endTransaction();
+      }
    }
 
    // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available
