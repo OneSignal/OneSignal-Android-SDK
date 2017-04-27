@@ -30,6 +30,8 @@ package com.onesignal;
 
 import android.content.SharedPreferences;
 
+import org.json.JSONObject;
+
 import static com.onesignal.OneSignal.appContext;
 import static com.onesignal.OneSignal.getGcmPreferences;
 
@@ -135,5 +137,26 @@ public class OSSubscriptionState implements Cloneable {
          return super.clone();
       } catch (Throwable t) {}
       return null;
+   }
+   
+   public JSONObject toJSONObject() {
+      JSONObject mainObj = new JSONObject();
+      
+      try {
+         mainObj.put("userId", userId);
+         mainObj.put("pushToken", pushToken);
+         mainObj.put("userSubscriptionSetting", userSubscriptionSetting);
+         mainObj.put("subscribed", getSubscribed());
+      }
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
+      
+      return mainObj;
+   }
+   
+   @Override
+   public String toString() {
+      return toJSONObject().toString();
    }
 }

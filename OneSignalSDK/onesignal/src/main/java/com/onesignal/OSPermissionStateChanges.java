@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import org.json.JSONObject;
+
 public class OSPermissionStateChanges {
    OSPermissionState to, from;
    
@@ -36,5 +38,24 @@ public class OSPermissionStateChanges {
    
    public OSPermissionState getFrom() {
       return from;
+   }
+   
+   public JSONObject toJSONObject() {
+      JSONObject mainObj = new JSONObject();
+      
+      try {
+         mainObj.put("from", from.toJSONObject());
+         mainObj.put("to", to.toJSONObject());
+      }
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
+      
+      return mainObj;
+   }
+   
+   @Override
+   public String toString() {
+      return toJSONObject().toString();
    }
 }
