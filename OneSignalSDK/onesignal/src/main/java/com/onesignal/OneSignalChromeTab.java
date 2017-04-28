@@ -58,14 +58,15 @@ class OneSignalChromeTab {
       if (userId == null || adId == null || appId.equals("OptedOut"))
          return;
       
-      String params = "?app_id=" + appId + "&user_id=" + userId + "&ad_id=" + adId + "&cbs_id=" + new Random().nextInt(Integer.MAX_VALUE);
-      
       try {
-         CustomTabsServiceConnection connection = new OneSignalCustomTabsServiceConnection(context, params);
-         opened = CustomTabsClient.bindCustomTabsService(context, "com.android.chrome", connection);
-      } catch (NoClassDefFoundError e) {
-         // May not be included in app.
+         Class.forName("android.support.customtabs.CustomTabsServiceConnection");
+      } catch (ClassNotFoundException e) {
+         return;
       }
+   
+      String params = "?app_id=" + appId + "&user_id=" + userId + "&ad_id=" + adId + "&cbs_id=" + new Random().nextInt(Integer.MAX_VALUE);
+      CustomTabsServiceConnection connection = new OneSignalCustomTabsServiceConnection(context, params);
+      opened = CustomTabsClient.bindCustomTabsService(context, "com.android.chrome", connection);
    }
    
    private static class OneSignalCustomTabsServiceConnection extends CustomTabsServiceConnection {
@@ -82,22 +83,25 @@ class OneSignalChromeTab {
       public void onCustomTabsServiceConnected(ComponentName componentName, CustomTabsClient customTabsClient) {
          if (customTabsClient == null)
             return;
-      
+
          customTabsClient.warmup(0);
-   
+
          CustomTabsSession session = customTabsClient.newSession(new CustomTabsCallback()  {
             public void onNavigationEvent(int navigationEvent, Bundle extras) {
                super.onNavigationEvent(navigationEvent, extras);
             }
-         
+
             public void extraCallback(String callbackName, Bundle args) {
                super.extraCallback(callbackName, args);
             }
          });
-         
+
+         if (session == null)
+            return;
+
          Uri uri = Uri.parse("https://onesignal.com/android_frame.html" + mParams);
          session.mayLaunchUrl(uri, null, null);
-      
+
          // Shows tab as it's own Activity
          /*
          CustomTabsIntent.Builder mBuilder = new CustomTabsIntent.Builder(session);

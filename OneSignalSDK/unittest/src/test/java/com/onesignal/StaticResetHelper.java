@@ -37,13 +37,9 @@ public class StaticResetHelper {
             return false;
          }
       }));
-
-      classes.add(new StaticResetHelper().new ClassState(OneSignalDbHelper.class, new OtherFieldHandler() {
-         @Override
-         public boolean onOtherField(Field field) {
-            return false;
-         }
-      }));
+      
+      classes.add(new StaticResetHelper().new ClassState(OneSignalChromeTab.class, null));
+      classes.add(new StaticResetHelper().new ClassState(OneSignalDbHelper.class, null));
    }
 
    private interface OtherFieldHandler {
@@ -91,7 +87,7 @@ public class StaticResetHelper {
             field.getName();
             field.setAccessible(true);
 
-            if (!otherFieldHandler.onOtherField(field))
+            if (otherFieldHandler == null || !otherFieldHandler.onOtherField(field))
                field.set(null, tryClone(value));
          }
       }

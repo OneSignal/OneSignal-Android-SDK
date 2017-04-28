@@ -1,6 +1,7 @@
 package com.test.onesignal;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -28,6 +29,8 @@ class TestHelpers {
       ShadowNotificationManagerCompat.enabled = true;
 
       ShadowOSUtils.subscribableStatus = 1;
+   
+      ShadowCustomTabsClient.resetStatics();
 
       // DB seems to be cleaned up on it's own.
       /*

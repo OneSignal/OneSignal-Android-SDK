@@ -39,30 +39,53 @@ import android.support.customtabs.ICustomTabsService;
 import org.robolectric.annotation.Implements;
 
 import java.lang.reflect.Constructor;
+import java.util.Set;
 
 @Implements(CustomTabsClient.class)
 public class ShadowCustomTabsClient {
    
    public static boolean bindCustomTabsServiceCalled;
+   public static boolean nullNewSession;
+   
+   public static void resetStatics() {
+      bindCustomTabsServiceCalled = false;
+      nullNewSession = false;
+   }
    
    public boolean warmup(long flags) {
       return true;
    }
    
-   public static boolean bindCustomTabsService(Context context, String packageName, CustomTabsServiceConnection connection) {
-      try {
-         Constructor<CustomTabsClient> constructor = CustomTabsClient.class.getDeclaredConstructor(ICustomTabsService.class, ComponentName.class);
-         constructor.setAccessible(true);
-         CustomTabsClient inst = constructor.newInstance(null, null);
-   
-         bindCustomTabsServiceCalled = true;
-         connection.onCustomTabsServiceConnected(null, inst);
-      } catch(Throwable t) {
-      }
+   public static boolean bindCustomTabsService(Context context, String packageName, final CustomTabsServiceConnection connection) {
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            try {
+               Constructor<CustomTabsClient> constructor = CustomTabsClient.class.getDeclaredConstructor(ICustomTabsService.class, ComponentName.class);
+               constructor.setAccessible(true);
+               CustomTabsClient inst = constructor.newInstance(null, null);
+
+               bindCustomTabsServiceCalled = true;
+               connection.onCustomTabsServiceConnected(null, inst);
+            }
+            catch (Throwable t) {
+               // Catch any errors and make it interrupt all other threads to force the unit test to fail.
+               t.printStackTrace();
+               Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+               for (Thread thread : threadSet) {
+                  if (thread.getId() != Thread.currentThread().getId())
+                     thread.interrupt();
+               }
+            }
+         }
+      }, "OS_SHADOW_BIND_CUSTOM_TABS").start();
       return true;
    }
    
    public CustomTabsSession newSession(final CustomTabsCallback callback) {
+      if (nullNewSession)
+         return null;
+      
       try {
          Constructor<CustomTabsSession> constructor = CustomTabsSession.class.getDeclaredConstructor(ICustomTabsService.class,
              ICustomTabsCallback.class,

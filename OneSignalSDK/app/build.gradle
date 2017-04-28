@@ -9,7 +9,7 @@ android {
         manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
                                 // Project number pulled from dashboard, local value is ignored.
                                 onesignal_google_project_number: "REMOTE"]
-        minSdkVersion 15
+        minSdkVersion 9
         targetSdkVersion 24
         versionCode 1
         versionName "1.0"
@@ -18,19 +18,21 @@ android {
         debug {
             // Test with proguard enabled to make sure our consumer rules are correct in the SDK.
             // minify does not work with GMS 7.0.0 with the current settings. Use 8.4.0 to test.
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            proguardFiles 'proguard-rules.pro'
+            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:24.2.1'
+    // compile 'com.android.support:appcompat-v7:25.3.0'
 
     // Use for SDK Development
     compile(project(':onesignal')) {
         exclude group: 'com.android.support', module: 'support-v4'
+        exclude group: 'com.android.support', module: 'customtabs'
         exclude group: 'com.google.android.gms', module: 'play-services-gcm'
         exclude group: 'com.google.android.gms', module: 'play-services-analytics'
         exclude group: 'com.google.android.gms', module: 'play-services-location'
@@ -43,13 +45,28 @@ dependencies {
     // compile 'com.onesignal:OneSignal:3.+@aar'
 
     // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
-    // This insure that the SDK will work if an app developer is using an older version of GMS.
-    compile "com.google.android.gms:play-services-gcm:7.0.0"
+    //   This insures that the SDK will work if an app developer is using an older version of GMS.
+    compile "com.google.android.gms:play-services-gcm:10.0.1"
 
     // play-services-analytics is required for AdvertisingIdClient when using GMS 8.1.0 or lower.
-    // 8.3.0 it is included in 'basement' which is required by 'base'.
-    //compile "com.google.android.gms:play-services-analytics:7.0.0"
-    compile "com.google.android.gms:play-services-location:7.0.0"
+    //  In 8.3.0 it is included in 'basement' which is required by 'base'.
+    //   compile 'com.google.android.gms:play-services-analytics:7.0.0'
 
-    compile 'com.google.android.gms:play-services-analytics:7.0.0' 
+    compile "com.google.android.gms:play-services-location:10.0.1"
+
+
+    // NOTES: Android Support Library v4 breakout. VERSION - 24.2.0
+    // com.android.support-v4 24.2.0 breaks out the library to 5 or so pieces.
+    //   However com.google.android.gms:play-services-gcm:10.2.1 still depends on 24.0.0
+    //   exclude group: 'com.android.support', module:'support-v4' can be used and your own defined one can be used instead if you choose.
+    // com.android.support:support-core-utils 24.2.0+ contains WakefulBroadcastReceiver
+    //    compile 'com.android.support:support-core-utils:24.2.1'
+
+    // For Chrome tabs
+     compile 'com.android.support:customtabs:24.0.0'
+
+
+    debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5'
+    releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5'
+    testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5'
 }

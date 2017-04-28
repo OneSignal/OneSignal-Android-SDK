@@ -29,7 +29,6 @@ package com.onesignal;
 
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.customtabs.CustomTabsClient;
 import android.support.customtabs.CustomTabsSession;
 
 import org.robolectric.annotation.Implements;

@@ -1609,6 +1609,13 @@ public class MainOneSignalClassRunner {
       Assert.assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
    }
    
+   @Test
+   public void shouldHandleChromeNullNewSession() throws Exception {
+      ShadowCustomTabsClient.nullNewSession = true;
+      OneSignalInit();
+      threadAndTaskWait();
+   }
+   
    private OSPermissionStateChanges lastPermissionStateChanges;
    private boolean currentPermission;
    // Firing right away to match iOS behavior for wrapper SDKs.
