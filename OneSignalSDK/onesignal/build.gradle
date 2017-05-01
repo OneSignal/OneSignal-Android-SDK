@@ -45,4 +45,4 @@ project.afterEvaluate {
     }
 }
 
-// apply from: 'maven-push.gradle'
+apply from: 'maven-push.gradle'
