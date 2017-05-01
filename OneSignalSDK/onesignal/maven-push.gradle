@@ -24,13 +24,13 @@ class Global {
     static def POM_NAME = 'OneSignal'
     static def POM_ARTIFACT_ID = 'OneSignal'
     static def POM_PACKAGING = 'aar'
-    static def VERSION_NAME = "3.5.1"
+    static def VERSION_NAME = "3.5.2"
 
     // Limit upper number (exclusive) to prevent untested versions
     static def versionGroupOverrides = [
         // Omitting 10.2.0 for now since it increases minimum SDK to 14
         'com.google.android.gms': '[8.3.0,10.2.0)',
-        // Android Support library 26.0.0 increases minimum SDK to 14
+        // Android Support library v4 revision 26.0.0 increases minimum SDK to 14
         'com.android.support': '[23.0.0,25.4.0)'
     ]
 
