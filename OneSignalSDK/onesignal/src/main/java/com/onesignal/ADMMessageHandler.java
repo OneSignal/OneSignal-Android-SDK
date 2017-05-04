@@ -27,12 +27,15 @@
 
 package com.onesignal;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
 import com.amazon.device.messaging.ADMMessageHandlerBase;
 import com.amazon.device.messaging.ADMMessageReceiver;
 
+// WARNING: Do not pass 'this' to any methods as it will cause proguard build errors
+//             when "proguard-android-optimize.txt" is used.
 public class ADMMessageHandler extends ADMMessageHandlerBase {
 
    public static class Receiver extends ADMMessageReceiver {
@@ -47,16 +50,17 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
    @Override
    protected void onMessage(Intent intent) {
+      Context context = getApplicationContext();
       Bundle bundle = intent.getExtras();
-   
-      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(this, bundle);
-   
+      
+      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(context, bundle);
+
       if (processedResult.processed())
          return;
-   
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+      
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
-   
+      
       NotificationBundleProcessor.Process(notifJob);
    }
 
