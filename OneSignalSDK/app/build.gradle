@@ -20,8 +20,8 @@ android {
             // minify does not work with GMS 7.0.0 with the current settings. Use 8.4.0 to test.
             minifyEnabled true
 
-            // Normally `getDefaultProguardFile('proguard-android.txt')` is included in Andorid projects.
-            //   however testing without for compatibility with projects that may not have this.
+            // Normally `getDefaultProguardFile('proguard-android.txt')` is included in Android projects.
+            //   however testing without a modified proguard-android-optimize.txt for compatibility.
             proguardFiles 'proguard-rules.pro'
             // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -70,7 +70,7 @@ dependencies {
     //    compile 'com.android.support:support-core-utils:24.2.1'
 
     // For Chrome tabs
-     compile 'com.android.support:customtabs:24.0.0'
+    compile 'com.android.support:customtabs:24.0.0'
 
 
     debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5'

@@ -1,13 +1,17 @@
 -dontwarn com.onesignal.**
 
+# These 2 methods are called with reflection.
 -keep class com.google.android.gms.common.api.GoogleApiClient {
     void connect();
     void disconnect();
 }
 
+
 -keep public interface android.app.OnActivityPausedListener {*;}
 -keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 
+
+# Observer backcall methods are called with reflection
 -keep class com.onesignal.OSSubscriptionState {
     void changed(com.onesignal.OSPermissionState);
 }
@@ -44,5 +48,8 @@
 -keep class com.onesignal.shortcutbadger.impl.XiaomiHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.ZukHomeBadger { <init>(...); }
 
+
 -dontwarn com.amazon.**
+
+# Proguard ends up removing this class even if it is used in AndroidManifest.xml so force keeping it.
 -keep public class com.onesignal.ADMMessageHandler {*;}

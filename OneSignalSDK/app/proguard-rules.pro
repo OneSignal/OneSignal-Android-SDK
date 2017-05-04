@@ -21,27 +21,33 @@
 
 
 
-# File contents below from "android-sdk\tools\proguard\proguard-android.txt"
+####### File contents below from "android-sdk\tools\proguard\proguard-android-optimize.txt"
 # This is a configuration file for ProGuard.
 # http://proguard.sourceforge.net/index.html#manual/usage.html
+
+# Optimizations: If you don't want to optimize, use the
+# proguard-android.txt configuration file instead of this one, which
+# turns off the optimization flags.  Adding optimization introduces
+# certain risks, since for example not all optimizations performed by
+# ProGuard works on all versions of Dalvik.  The following flags turn
+# off various optimizations known to have issues, but the list may not
+# be complete or up to date. (The "arithmetic" optimization can be
+# used if you are only targeting Android 2.0 or later.)  Make sure you
+# test thoroughly if you go this route.
+-optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
+-optimizationpasses 5
+-allowaccessmodification
+
+#### Omitting flag as it is not hard to keep compiblity and have done some in the past
+#-dontpreverify
+
+# The remainder of this file is identical to the non-optimized version
+# of the Proguard configuration file (except that the other file has
+# flags to turn off optimization).
 
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
 -verbose
-
-# Optimization is turned off by default. Dex does not like code run
-# through the ProGuard optimize and preverify steps (and performs some
-# of these optimizations on its own).
--dontoptimize
-
-## Normally enabled but testing without as compibility isn't hard to meet
-#-dontpreverify
-
-# Note that if you want to enable optimization, you cannot just
-# include optimization flags in your own project configuration file;
-# instead you will need to point to the
-# "proguard-android-optimize.txt" file instead of this one from your
-# project.properties file.
 
 -keepattributes *Annotation*
 -keep public class com.google.vending.licensing.ILicensingService
