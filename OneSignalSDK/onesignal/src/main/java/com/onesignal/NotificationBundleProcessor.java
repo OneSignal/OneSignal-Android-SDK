@@ -354,27 +354,35 @@ class NotificationBundleProcessor {
    }
 
    // Return true to count the payload as processed.
-   static boolean processBundle(Context context, final Bundle bundle) {
+   static ProcessedBundleResult processBundle(Context context, final Bundle bundle) {
+      ProcessedBundleResult result = new ProcessedBundleResult();
+      
       // Not a OneSignal GCM message
       if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
-         return true;
+         return result;
+      result.isOneSignalPayload = true;
 
       prepareBundle(bundle);
-
+      
+      // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
       Intent overrideIntent = NotificationExtenderService.getIntent(context);
       if (overrideIntent != null) {
          overrideIntent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
          WakefulBroadcastReceiver.startWakefulService(context, overrideIntent);
-         return true;
+         result.hasExtenderService = true;
+         return result;
       }
+   
+      // We already ran a getNotificationIdFromGCMBundle == null check above so this will only be true for dups
+      result.isDup = OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle));
+      if (result.isDup)
+         return result;
 
-      boolean display = shouldDisplay(bundle.getString("alert") != null
-                                   && !"".equals(bundle.getString("alert")));
+      String alert = bundle.getString("alert");
+      boolean display = shouldDisplay(alert != null && !"".equals(alert));
 
       // Save as a opened notification to prevent duplicates.
       if (!display) {
-         if (OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle)))
-            return true;
          saveNotification(context, bundle, true, -1);
          // Current thread is meant to be short lived.
          //    Make a new thread to do our OneSignal work on.
@@ -384,8 +392,8 @@ class NotificationBundleProcessor {
             }
          }, "OS_PROC_BUNDLE").start();
       }
-
-      return !display;
+      
+      return result;
    }
 
    static boolean shouldDisplay(boolean hasBody) {
@@ -401,5 +409,16 @@ class NotificationBundleProcessor {
       JSONArray jsonArray = new JSONArray();
       jsonArray.put(jsonObject);
       return jsonArray;
+   }
+   
+   
+   static class ProcessedBundleResult {
+      boolean isOneSignalPayload;
+      boolean hasExtenderService;
+      boolean isDup;
+      
+      boolean processed() {
+         return !isOneSignalPayload || hasExtenderService || isDup;
+      }
    }
 }

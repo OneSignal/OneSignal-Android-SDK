@@ -50,6 +50,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowNotificationRestorer;
 import com.onesignal.ShadowOneSignal;
@@ -600,6 +601,7 @@ public class GenerateNotificationRunner {
    
 
    @Test
+   @Config(shadows = {ShadowGcmBroadcastReceiver.class})
    public void shouldSetButtonsCorrectly() throws Exception {
       Intent intentGcm = new Intent();
       intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
@@ -609,10 +611,7 @@ public class GenerateNotificationRunner {
       intentGcm.putExtras(bundle);
 
       GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
-      try {
-         gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
-      } // setResultCode throws this error due to onReceive not designed to be called manually.
-      catch (java.lang.IllegalStateException e) {}
+      gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
 
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
       Assert.assertEquals("com.onesignal.GcmIntentService", intent.getComponent().getClassName());
@@ -624,7 +623,29 @@ public class GenerateNotificationRunner {
       JSONObject additionalData = new JSONObject((customJson.getString("a")));
       Assert.assertEquals("id1", additionalData.getJSONArray("actionButtons").getJSONObject(0).getString("id"));
    }
-
+   
+   @Test
+   @Config(shadows = {ShadowGcmBroadcastReceiver.class})
+   public void shouldPreventOtherGCMReceiversWhenSettingEnabled() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
+      OneSignal.startInit(blankActivity).filterOtherGCMReceivers(true).init();
+      threadAndTaskWait();
+      
+      
+      Intent intentGcm = new Intent();
+      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intentGcm.putExtra("message_type", "gcm");
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
+      intentGcm.putExtras(bundle);
+      
+      GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
+      gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
+      
+      Assert.assertNull(ShadowGcmBroadcastReceiver.lastResultCode);
+      Assert.assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
+   }
+   
    private OSNotification lastNotificationReceived;
    @Test
    public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {
@@ -680,7 +701,7 @@ public class GenerateNotificationRunner {
       RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(serviceIntent, resolveInfo);
 
       boolean ret = OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, bundle);
-      Assert.assertEquals(true, ret);
+      Assert.assertTrue(ret);
 
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
       Assert.assertEquals("com.onesignal.NotificationExtender", intent.getAction());
