@@ -28,11 +28,16 @@
 package com.onesignal;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.SystemClock;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class OneSignalDbHelper extends SQLiteOpenHelper {
    private static final int DATABASE_VERSION = 2;
@@ -116,12 +121,45 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
    @Override
    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+      try {
+         internalOnUpgrade(db, oldVersion, newVersion);
+      } catch (SQLiteException e) {
+         // This could throw if rolling back then forward again.
+         //   However this shouldn't happen as we clearing the database on onDowngrade
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error in upgrade, migration may have already run! Skipping!" , e);
+      }
+   }
+   
+   private static void internalOnUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
       // Upgrading from v1
       if (oldVersion < 2) {
          db.execSQL("ALTER TABLE " + NotificationTable.TABLE_NAME + " " +
-                    "ADD COLUMN " + NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + ";");
+             "ADD COLUMN " + NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + ";");
          db.execSQL(NotificationTable.INDEX_CREATE_GROUP_ID);
       }
+   }
+   
+   @Override
+   public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "SDK version rolled back! Clearing " + DATABASE_NAME + " as it could be in an unexpected state.");
+      
+      Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null);
+      try {
+         List<String> tables = new ArrayList<>(cursor.getCount());
+      
+         while (cursor.moveToNext())
+            tables.add(cursor.getString(0));
+      
+         for (String table : tables) {
+            if (table.startsWith("sqlite_"))
+               continue;
+            db.execSQL("DROP TABLE IF EXISTS " + table);
+         }
+      } finally {
+         cursor.close();
+      }
+      
+      onCreate(db);
    }
    
    // Could enable WAL in the future but requires Android API 11
