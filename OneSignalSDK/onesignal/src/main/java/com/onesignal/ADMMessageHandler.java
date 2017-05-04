@@ -48,8 +48,10 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
    @Override
    protected void onMessage(Intent intent) {
       Bundle bundle = intent.getExtras();
-
-      if (NotificationBundleProcessor.processBundle(this, bundle))
+   
+      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(this, bundle);
+   
+      if (processedResult.processed())
          return;
    
       NotificationGenerationJob notifJob = new NotificationGenerationJob(this);

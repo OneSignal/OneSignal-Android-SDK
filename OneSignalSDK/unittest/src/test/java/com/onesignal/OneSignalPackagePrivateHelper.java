@@ -70,7 +70,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
-      return NotificationBundleProcessor.processBundle(context, bundle);
+      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(context, bundle);
+      return processedResult.processed();
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {

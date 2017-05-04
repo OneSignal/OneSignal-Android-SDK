@@ -106,6 +106,7 @@ public class OneSignal {
       boolean mDisableGmsMissingPrompt;
       // Default true in 4.0.0 release.
       boolean mUnsubscribeWhenNotificationsAreDisabled;
+      boolean mFilterOtherGCMReceivers;
 
       // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
       //  calling startInit().init()
@@ -152,6 +153,11 @@ public class OneSignal {
       
       public Builder unsubscribeWhenNotificationsAreDisabled(boolean set) {
          mUnsubscribeWhenNotificationsAreDisabled = set;
+         return this;
+      }
+      
+      public Builder filterOtherGCMReceivers(boolean set) {
+         mFilterOtherGCMReceivers = set;
          return this;
       }
 
@@ -359,6 +365,8 @@ public class OneSignal {
       foreground = contextIsActivity;
       appId = oneSignalAppId;
       appContext = context.getApplicationContext();
+   
+      saveFilterOtherGCMReceivers(mInitBuilder.mFilterOtherGCMReceivers);
 
       if (contextIsActivity) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
@@ -372,7 +380,7 @@ public class OneSignal {
 
       OneSignalStateSynchronizer.initUserState(appContext);
 
-      if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB_MR2)
+      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB_MR2)
          ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
       else
          ActivityLifecycleListenerCompat.startListener();
@@ -1250,7 +1258,21 @@ public class OneSignal {
       editor.putString("GT_PLAYER_ID", userId);
       editor.commit();
    }
-
+   
+   static boolean getFilterOtherGCMReceivers(Context context) {
+      SharedPreferences prefs = getGcmPreferences(context);
+      return prefs.getBoolean("OS_FILTER_OTHER_GCM_RECEIVERS", false);
+   }
+   
+   static void saveFilterOtherGCMReceivers(boolean set) {
+      if (appContext == null)
+         return;
+      final SharedPreferences prefs = getGcmPreferences(appContext);
+      SharedPreferences.Editor editor = prefs.edit();
+      editor.putBoolean("OS_FILTER_OTHER_GCM_RECEIVERS", set);
+      editor.commit();
+   }
+   
    static void updateUserIdDependents(String userId) {
       saveUserId(userId);
       fireIdsAvailableCallback();
