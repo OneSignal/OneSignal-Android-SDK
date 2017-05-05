@@ -76,6 +76,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
+import org.robolectric.shadows.ShadowNotification;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 import org.robolectric.util.ServiceController;
@@ -223,6 +224,28 @@ public class GenerateNotificationRunner {
       
       // Make sure we get a payload when it is opened.
       Assert.assertNotNull(lastOpenResult.notification.payload);
+   }
+   
+   @Test
+   public void shouldSetCorrectNumberOfButtonsOnSummaryNotification() throws Exception {
+      // Setup - Init
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+   
+      // Setup - Display 3 notifications that will be grouped together.
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      bundle.putString("custom", "{\"i\": \"some_UUID\", \"a\": {\"actionButtons\": [{\"text\": \"test\"} ]}}");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+   
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+   
+      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      Assert.assertEquals(1, postedSummaryNotification.notif.actions.length);
    }
    
    @Test

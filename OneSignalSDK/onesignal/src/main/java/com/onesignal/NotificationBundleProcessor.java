@@ -196,7 +196,7 @@ class NotificationBundleProcessor {
    }
 
    // Format our short keys into more readable ones.
-   static void prepareBundle(Bundle gcmBundle) {
+   private static void prepareBundle(Bundle gcmBundle) {
       if (gcmBundle.containsKey("o")) {
          try {
             JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
