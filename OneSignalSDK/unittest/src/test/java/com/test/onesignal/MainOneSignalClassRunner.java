@@ -1139,9 +1139,14 @@ public class MainOneSignalClassRunner {
    @Test
    public void testGetTagsWithNoTagsShouldBeNull() throws Exception {
       OneSignalInit();
+      threadAndTaskWait();
+      
       GetTags();
-
+      threadAndTaskWait();
+      
       Assert.assertNull(lastGetTags);
+      String lastUrl = ShadowOneSignalRestClient.lastUrl;
+      Assert.assertEquals("?app_id=" + ONESIGNAL_APP_ID, lastUrl.substring(lastUrl.lastIndexOf("?")));
    }
 
    @Test

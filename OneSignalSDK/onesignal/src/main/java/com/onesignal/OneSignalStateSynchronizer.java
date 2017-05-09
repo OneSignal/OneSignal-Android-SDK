@@ -769,24 +769,28 @@ class OneSignalStateSynchronizer {
    static GetTagsResult getTags(boolean fromServer) {
       if (fromServer) {
          String userId = OneSignal.getUserId();
-         OneSignalRestClient.getSync("players/" + userId, new OneSignalRestClient.ResponseHandler() {
+         String appId = OneSignal.getSavedAppId();
+         
+         OneSignalRestClient.getSync("players/" + userId + "?app_id=" + appId, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onSuccess(String responseStr) {
                serverSuccess = true;
                try {
                   JSONObject lastGetTagsResponse = new JSONObject(responseStr);
                   if (lastGetTagsResponse.has("tags")) {
-                     JSONObject dependDiff = generateJsonDiff(currentUserState.syncValues.optJSONObject("tags"),
-                                                              toSyncUserState.syncValues.optJSONObject("tags"),
-                                                              null, null);
-
-                     currentUserState.syncValues.put("tags", lastGetTagsResponse.optJSONObject("tags"));
-                     currentUserState.persistState();
-
-                     // Allow server side tags to overwrite local tags expect for any pending changes
-                     //  that haven't been successfully posted.
-                     toSyncUserState.mergeTags(lastGetTagsResponse, dependDiff);
-                     toSyncUserState.persistState();
+                     synchronized(syncLock) {
+                        JSONObject dependDiff = generateJsonDiff(currentUserState.syncValues.optJSONObject("tags"),
+                            toSyncUserState.syncValues.optJSONObject("tags"),
+                            null, null);
+   
+                        currentUserState.syncValues.put("tags", lastGetTagsResponse.optJSONObject("tags"));
+                        currentUserState.persistState();
+   
+                        // Allow server side tags to overwrite local tags expect for any pending changes
+                        //  that haven't been successfully posted.
+                        toSyncUserState.mergeTags(lastGetTagsResponse, dependDiff);
+                        toSyncUserState.persistState();
+                     }
                   }
                } catch (JSONException e) {
                   e.printStackTrace();
@@ -794,8 +798,10 @@ class OneSignalStateSynchronizer {
             }
          });
       }
-
-      return new GetTagsResult(serverSuccess, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
+   
+      synchronized(syncLock) {
+         return new GetTagsResult(serverSuccess, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
+      }
    }
 
    static void resetCurrentState() {

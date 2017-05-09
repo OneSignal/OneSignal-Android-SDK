@@ -87,9 +87,11 @@ class OneSignalRestClient {
    }
    
    private static void makeRequest(final String url, final String method, final JSONObject jsonBody, final ResponseHandler responseHandler, final int timeout) {
+   
+      final Thread[] callbackThread = new Thread[1];
       Thread connectionThread = new Thread(new Runnable() {
          public void run() {
-            startHTTPConnection(url, method, jsonBody, responseHandler, timeout);
+            callbackThread[0] = startHTTPConnection(url, method, jsonBody, responseHandler, timeout);
          }
       }, "OS_HTTPConnection");
       
@@ -100,15 +102,18 @@ class OneSignalRestClient {
          connectionThread.join(getThreadTimeout(timeout));
          if (connectionThread.getState() != Thread.State.TERMINATED)
             connectionThread.interrupt();
+         if (callbackThread[0] != null)
+            callbackThread[0].join();
       } catch (InterruptedException e) {
          e.printStackTrace();
       }
    }
    
-   private static void startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout) {
+   private static Thread startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout) {
       HttpURLConnection con = null;
       int httpResponse = -1;
       String json = null;
+      Thread callbackThread = null;
    
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
@@ -151,8 +156,8 @@ class OneSignalRestClient {
             json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
             scanner.close();
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, method + " RECEIVED JSON: " + json);
-            
-            callResponseHandlerOnSuccess(responseHandler, json);
+   
+            callbackThread = callResponseHandlerOnSuccess(responseHandler, json);
          }
          else {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Failed request to: " + BASE_URL + url);
@@ -168,8 +173,8 @@ class OneSignalRestClient {
             }
             else
                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " HTTP Code: " + httpResponse + " No response body!");
-            
-            callResponseHandlerOnFailure(responseHandler, httpResponse, json, null);
+   
+            callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, json, null);
          }
       } catch (Throwable t) {
          if (t instanceof java.net.ConnectException || t instanceof java.net.UnknownHostException)
@@ -177,36 +182,44 @@ class OneSignalRestClient {
          else
             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " Error thrown from network stack. ", t);
    
-         callResponseHandlerOnFailure(responseHandler, httpResponse, null, t);
+         callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, null, t);
       }
       finally {
          if (con != null)
             con.disconnect();
       }
+      
+      return callbackThread;
    }
    
    
    // These helper methods run the callback a new thread so they don't count towards the fallback thread join timer.
    
-   private static void callResponseHandlerOnSuccess(final ResponseHandler handler, final String response) {
+   private static Thread callResponseHandlerOnSuccess(final ResponseHandler handler, final String response) {
       if (handler == null)
-         return;
+         return null;
       
-      new Thread(new Runnable() {
+      Thread thread = new Thread(new Runnable() {
          public void run() {
             handler.onSuccess(response);
          }
-      }).start();
+      });
+      thread.start();
+      
+      return thread;
    }
    
-   private static void callResponseHandlerOnFailure(final ResponseHandler handler, final int statusCode, final String response, final Throwable throwable) {
+   private static Thread callResponseHandlerOnFailure(final ResponseHandler handler, final int statusCode, final String response, final Throwable throwable) {
       if (handler == null)
-         return;
-      
-      new Thread(new Runnable() {
+         return null;
+   
+      Thread thread = new Thread(new Runnable() {
          public void run() {
             handler.onFailure(statusCode, response, throwable);
          }
-      }).start();
+      });
+      thread.start();
+      
+      return thread;
    }
 }

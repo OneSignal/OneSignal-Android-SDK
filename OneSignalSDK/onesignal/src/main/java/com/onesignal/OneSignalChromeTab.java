@@ -55,7 +55,7 @@ class OneSignalChromeTab {
       if (OneSignal.mEnterp)
          return;
       
-      if (userId == null || adId == null || appId.equals("OptedOut"))
+      if (userId == null || adId == null || adId.equals("OptedOut"))
          return;
       
       try {
