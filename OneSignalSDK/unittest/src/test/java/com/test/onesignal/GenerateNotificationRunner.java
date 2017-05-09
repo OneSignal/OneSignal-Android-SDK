@@ -233,7 +233,7 @@ public class GenerateNotificationRunner {
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       threadAndTaskWait();
    
-      // Setup - Display 3 notifications that will be grouped together.
+      // Setup - Display a single notification with a grouped.
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
       bundle.putString("custom", "{\"i\": \"some_UUID\", \"a\": {\"actionButtons\": [{\"text\": \"test\"} ]}}");
@@ -247,6 +247,34 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
       Assert.assertEquals(1, postedSummaryNotification.notif.actions.length);
    }
+   
+   
+   
+   @Test
+   public void shouldCancelAllNotificationsPartOfAGroup() throws Exception {
+      // Setup - Init
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+      
+      // Setup - Display 3 notifications, 2 of which that will be grouped together.
+      Bundle bundle = getBaseNotifBundle("UUID0");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      
+      bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      
+      Assert.assertEquals(4, ShadowRoboNotificationManager.notifications.size());
+      
+      OneSignal.cancelGroupedNotifications("test1");
+      Assert.assertEquals(1, ShadowRoboNotificationManager.notifications.size());
+   }
+   
+   
    
    @Test
    @Config(shadows = {ShadowNotificationRestorer.class})

@@ -55,7 +55,7 @@ class OneSignalChromeTab {
       if (OneSignal.mEnterp)
          return;
       
-      if (userId == null || adId == null || adId.equals("OptedOut"))
+      if (userId == null)
          return;
       
       try {
@@ -64,7 +64,11 @@ class OneSignalChromeTab {
          return;
       }
    
-      String params = "?app_id=" + appId + "&user_id=" + userId + "&ad_id=" + adId + "&cbs_id=" + new Random().nextInt(Integer.MAX_VALUE);
+      String params = "?app_id=" + appId + "&user_id=" + userId;
+      if (adId != null)
+         params += "&ad_id=" + adId;
+      params += "&cbs_id=" + new Random().nextInt(Integer.MAX_VALUE);
+      
       CustomTabsServiceConnection connection = new OneSignalCustomTabsServiceConnection(context, params);
       opened = CustomTabsClient.bindCustomTabsService(context, "com.android.chrome", connection);
    }

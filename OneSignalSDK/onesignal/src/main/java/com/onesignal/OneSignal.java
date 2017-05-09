@@ -1497,6 +1497,74 @@ public class OneSignal {
       NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancel(id);
    }
+   
+   
+   public static void cancelGroupedNotifications(String group) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notifications part of group " + group);
+         return;
+      }
+   
+      NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+      
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+      Cursor cursor = null;
+   
+      try {
+         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+      
+         String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID };
+      
+         String whereStr =  NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+             NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+             NotificationTable.COLUMN_NAME_OPENED + " = 0";
+         String[] whereArgs = { group };
+      
+         cursor = readableDb.query(
+             NotificationTable.TABLE_NAME,
+             retColumn,
+             whereStr,
+             whereArgs,
+             null, null, null);
+         
+         while (cursor.moveToNext()) {
+            int notifId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+            if (notifId != -1)
+               notificationManager.cancel(notifId);
+         }
+      }
+      catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error getting android notifications part of group: " + group, t);
+      }
+      finally {
+         if (cursor != null && !cursor.isClosed())
+            cursor.close();
+      }
+      
+      SQLiteDatabase writableDb = null;
+      try {
+         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb.beginTransaction();
+      
+         String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+             NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+             NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
+         String[] whereArgs = { group };
+      
+         ContentValues values = new ContentValues();
+         values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+      
+         writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, whereArgs);
+         BadgeCountUpdater.update(writableDb, appContext);
+      
+         writableDb.setTransactionSuccessful();
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notifications with group " + group + " as dismissed! ", t);
+      } finally {
+         if (writableDb != null)
+            writableDb.endTransaction();
+      }
+   }
 
    public static void removeNotificationOpenedHandler() {
       getCurrentOrNewInitBuilder().mNotificationOpenedHandler = null;
