@@ -235,6 +235,7 @@ class LocationGMS {
       scheduleUpdate(classContext);
    }
    
+   // Hold on to reference incase gms uses weak referencing.
    private static LocationUpdateListener locationUpdateListener;
    
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -297,7 +298,9 @@ class LocationGMS {
       }
    
       static PendingResult<Status> removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
-         return LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener);
+         if (googleApiClient.isConnected())
+            return LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener);
+         return null;
       }
    
       @SuppressWarnings("MissingPermission")

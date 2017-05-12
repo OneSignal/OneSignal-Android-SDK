@@ -41,9 +41,6 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
 
    private static String unityListenerName;
    private static java.lang.reflect.Method unitySendMessage;
-   
-   private static OSPermissionObserver permissionObserver;
-   private static OSSubscriptionObserver subscriptionObserver;
 
    @SuppressWarnings({ "unchecked", "rawtypes" })
    public OneSignalUnityProxy(String listenerName, String googleProjectNumber, String oneSignalAppId, int logLevel, int visualLogLevel) {
