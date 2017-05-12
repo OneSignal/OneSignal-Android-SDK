@@ -187,7 +187,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "030505";
+   public static final String VERSION = "030506";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -296,7 +296,7 @@ public class OneSignal {
    }
    private static IAPUpdateJob iapUpdateJob;
    
-   private static OneSignal.Builder getCurrentOrNewInitBuilder() {
+   public static OneSignal.Builder getCurrentOrNewInitBuilder() {
       if (mInitBuilder == null)
          mInitBuilder = new OneSignal.Builder();
       return mInitBuilder;
