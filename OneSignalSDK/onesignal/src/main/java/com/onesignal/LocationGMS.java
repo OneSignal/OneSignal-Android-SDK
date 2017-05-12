@@ -204,7 +204,7 @@ class LocationGMS {
          mGoogleApiClient.disconnect();
    }
    
-   private static void fireComplete(LocationPoint point) {
+   private synchronized static void fireComplete(LocationPoint point) {
       locationHandler.complete(point);
       if (fallbackFailThread != null && !Thread.currentThread().equals(fallbackFailThread))
          fallbackFailThread.interrupt();
