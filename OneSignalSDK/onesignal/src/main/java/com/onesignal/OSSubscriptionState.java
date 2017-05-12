@@ -143,8 +143,16 @@ public class OSSubscriptionState implements Cloneable {
       JSONObject mainObj = new JSONObject();
       
       try {
-         mainObj.put("userId", userId);
-         mainObj.put("pushToken", pushToken);
+         if (userId != null)
+            mainObj.put("userId", userId);
+         else
+            mainObj.put("userId", JSONObject.NULL);
+   
+         if (pushToken != null)
+            mainObj.put("pushToken", pushToken);
+         else
+            mainObj.put("pushToken", JSONObject.NULL);
+         
          mainObj.put("userSubscriptionSetting", userSubscriptionSetting);
          mainObj.put("subscribed", getSubscribed());
       }
