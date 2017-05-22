@@ -8,7 +8,7 @@ android {
         applicationId "com.onesignal.example"
 
         // TODO: Please update the OneSignal ID below to yours!
-        manifestPlaceholders = [onesignal_app_id               : "3beb3078-e0f1-4629-af17-fde833b9f716",
+        manifestPlaceholders = [onesignal_app_id: "3beb3078-e0f1-4629-af17-fde833b9f716",
                                 // Project number pulled from dashboard, local value is ignored.
                                 onesignal_google_project_number: "REMOTE"]
 

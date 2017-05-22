@@ -75,12 +75,7 @@ public class MainActivity extends AppCompatActivity {
                }
             });
 
-            // NOT WORKING
-            StringBuilder builder = new StringBuilder();
-            for (String details : receivedTags) {
-               builder.append(details + "\n ");
-            }
-            textView.setText("Tags Received: " + builder.toString());
+            textView.setText("Tags Received!");
          }
       });
 
