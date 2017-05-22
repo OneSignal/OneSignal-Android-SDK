@@ -93,9 +93,10 @@ public class ExampleApplication extends Application {
          if (actionType == OSNotificationAction.ActionType.ActionTaken) {
             Log.i("OneSignalExample", "Button pressed with id: " + result.action.actionID);
             if (result.action.actionID.equals("id1")) {
-               Log.i("OneSignalExample", "id1 called");
+               Log.i("OneSignalExample", "button id called: " + result.action.actionID);
                activityToLaunch = GreenActivity.class;
-
+            } else {
+               Log.i("OneSignalExample", "button id called: " + result.action.actionID);
             }
 
          }

@@ -5,6 +5,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -31,7 +32,9 @@ public class GreenActivity extends AppCompatActivity {
         });
 
         WebView webView = (WebView)(findViewById(R.id.webview));
-        if (openURL.isEmpty() == true) {
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.setWebViewClient(new WebViewClient());
+        if (openURL == null) {
             webView.loadUrl("https://google.com");
         } else {
             webView.loadUrl(openURL);

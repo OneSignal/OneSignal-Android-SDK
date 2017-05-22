@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.onesignal.example">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- All OneSignal manifest entries are added for you automatically from the OneSignal aar gradle entry. -->
 
 
