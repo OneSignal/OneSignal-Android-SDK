@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 24
-    buildToolsVersion '25.0.0'
+    buildToolsVersion '25.0.2'
 
     defaultConfig {
         applicationId "com.onesignal.example"
@@ -41,6 +41,7 @@ dependencies {
 
     // play-services-analytics is only needed when using 8.1.0 or older.
     // compile 'com.google.android.gms:play-services-analytics:+'
-    compile 'com.android.support:appcompat-v7:25.3.1'
+    //noinspection GradleCompatible
+    compile 'com.android.support:appcompat-v7:24.0.0'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
 }

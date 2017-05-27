@@ -1,6 +1,8 @@
 package com.onesignal.example;
 
 import android.app.Activity;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -69,13 +71,17 @@ public class MainActivity extends AppCompatActivity {
             final Collection<String> receivedTags = new ArrayList<String>();
             OneSignal.getTags(new OneSignal.GetTagsHandler() {
                @Override
-               public void tagsAvailable(JSONObject tags) {
+               public void tagsAvailable(final JSONObject tags) {
                   Log.d("debug", tags.toString());
-                  receivedTags.add(tags.toString());
+                  new Handler(Looper.getMainLooper()).post(new Runnable() {
+                     @Override
+                     public void run() {
+                        receivedTags.add(tags.toString());
+                        textView.setText("Tags Received: " + receivedTags);
+                     }
+                  });
                }
             });
-
-            textView.setText("Tags Received!");
          }
       });
 
@@ -85,10 +91,16 @@ public class MainActivity extends AppCompatActivity {
          public void onClick(View view) {
             OneSignal.getTags(new OneSignal.GetTagsHandler() {
                @Override
-               public void tagsAvailable(JSONObject tags) {
+               public void tagsAvailable(final JSONObject tags) {
                   Log.d("debug", "Current Tags on User: " + tags.toString());
                   OneSignal.deleteTag("key1");
                   OneSignal.sendTag("updated_key", "updated_value");
+                  new Handler(Looper.getMainLooper()).post(new Runnable() {
+                     @Override
+                     public void run() {
+                        textView.setText("Updated Tags: " + tags.toString());
+                     }
+                  });
                }
             });
          }
@@ -130,8 +142,10 @@ public class MainActivity extends AppCompatActivity {
             OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
             String userId = status.getSubscriptionStatus().getUserId();
             String pushToken = status.getSubscriptionStatus().getPushToken();
+            boolean isSubscribed = status.getSubscriptionStatus().getSubscribed();
 
-            if (pushToken != null) {
+            if (isSubscribed) {
+               textView.setText("Subscription Status, is subscribed:" + isSubscribed);
                try {
                   JSONObject notificationContent = new JSONObject("{'contents': {'en': 'The notification message or body'}," +
                           "'include_player_ids': ['" + userId + "'], " +
@@ -152,8 +166,10 @@ public class MainActivity extends AppCompatActivity {
             OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
             String userID = status.getSubscriptionStatus().getUserId();
             String pushToken = status.getSubscriptionStatus().getPushToken();
+            boolean isSubscribed = status.getSubscriptionStatus().getSubscribed();
 
-            if (pushToken != null) {
+            if (isSubscribed) {
+               textView.setText("Subscription Status, is subscribed:" + isSubscribed);
                try {
                   OneSignal.postNotification(new JSONObject("{'contents': {'en':'Tag substitution value for key1 = {{key1}}'}, " +
                                   "'include_player_ids': ['" + userID + "'], " +
