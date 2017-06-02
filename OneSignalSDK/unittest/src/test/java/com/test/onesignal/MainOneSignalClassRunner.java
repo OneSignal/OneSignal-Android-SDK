@@ -1404,7 +1404,8 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
       Assert.assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
       Assert.assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("loc_bg"));
+      
+      Assert.assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
       Assert.assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
    
       // Testing loc_bg

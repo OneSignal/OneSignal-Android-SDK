@@ -40,6 +40,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -68,6 +70,8 @@ class LocationGMS {
    private static GoogleApiClientCompatProxy mGoogleApiClient;
    static String requestPermission;
    private static Context classContext;
+   
+   private static LocationHandlerThread locationHandlerThread;
 
    interface LocationHandler {
       void complete(LocationPoint point);
@@ -167,12 +171,16 @@ class LocationGMS {
 
       try {
          startFallBackThread();
+         
+         if (locationHandlerThread == null)
+            locationHandlerThread = new LocationHandlerThread();
 
          GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
          GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
              .addApi(LocationServices.API)
              .addConnectionCallbacks(googleApiClientListener)
              .addOnConnectionFailedListener(googleApiClientListener)
+             .setHandler(locationHandlerThread.mHandler)
              .build();
          mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
 
@@ -306,6 +314,16 @@ class LocationGMS {
       @SuppressWarnings("MissingPermission")
       static Location getLastLocation(GoogleApiClient googleApiClient) {
          return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+      }
+   }
+   
+   static class LocationHandlerThread extends HandlerThread {
+      Handler mHandler = null;
+      
+      LocationHandlerThread() {
+         super("OSH_LocationHandlerThread");
+         start();
+         mHandler = new Handler(getLooper());
       }
    }
 }

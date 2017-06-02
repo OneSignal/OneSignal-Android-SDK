@@ -285,9 +285,8 @@ class OneSignalStateSynchronizer {
                 || syncValues.optDouble("lat") != changedTo.syncValues.getDouble("lat")
                 || syncValues.optDouble("long") != changedTo.syncValues.getDouble("long")
                 || syncValues.optDouble("loc_acc") != changedTo.syncValues.getDouble("loc_acc")
-                || syncValues.optInt("loc_type") != changedTo.syncValues.optInt("loc_type")) {
-               if (changedTo.dependValues.optBoolean("loc_bg"))
-                  changedTo.syncValues.put("loc_bg", changedTo.dependValues.optBoolean("loc_bg"));
+                || syncValues.optInt("loc_type ") != changedTo.syncValues.optInt("loc_type")) {
+                  changedTo.syncValues.put("loc_bg", changedTo.dependValues.opt("loc_bg"));
                return LOCATION_FIELDS_SET;
             }
          } catch (Throwable t) {}
