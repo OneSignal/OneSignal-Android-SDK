@@ -368,6 +368,7 @@ class NotificationBundleProcessor {
       Intent overrideIntent = NotificationExtenderService.getIntent(context);
       if (overrideIntent != null) {
          overrideIntent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
+         overrideIntent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
          WakefulBroadcastReceiver.startWakefulService(context, overrideIntent);
          result.hasExtenderService = true;
          return result;

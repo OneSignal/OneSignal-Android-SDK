@@ -100,6 +100,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
       Intent intentForService = new Intent();
       intentForService.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
+      intentForService.putExtra("timestamp", System.currentTimeMillis() / 1000L);
       intentForService.setComponent(new ComponentName(context.getPackageName(),
                                                       GcmIntentService.class.getName()));
       startWakefulService(context, intentForService);
