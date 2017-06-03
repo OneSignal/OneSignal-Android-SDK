@@ -51,6 +51,15 @@ class OneSignalStateSynchronizer {
    // toSyncUserState  - Pending state that will be synced to the OneSignal server.
    //                    diff will be generated between currentUserState when a sync call is made to the server.
    private static UserState currentUserState, toSyncUserState;
+   
+   private static UserState getToSyncUserState() {
+      synchronized (syncLock) {
+         if (toSyncUserState == null)
+            toSyncUserState = new OneSignalStateSynchronizer().new UserState("TOSYNC_STATE", true);
+      }
+      
+      return toSyncUserState;
+   }
 
    static HashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new HashMap<>();
    private static final Object networkHandlerSyncLock = new Object() {};
@@ -217,11 +226,8 @@ class OneSignalStateSynchronizer {
    }
    
    static void clearLocation() {
-      if (toSyncUserState == null)
-         return;
-      
-      toSyncUserState.clearLocation();
-      toSyncUserState.persistState();
+      getToSyncUserState().clearLocation();
+      getToSyncUserState().persistState();
    }
    
    class UserState {
@@ -730,7 +736,7 @@ class OneSignalStateSynchronizer {
    }
    
    static boolean getUserSubscribePreference() {
-      return toSyncUserState.dependValues.optBoolean("userSubscribePref", true);
+      return getToSyncUserState().dependValues.optBoolean("userSubscribePref", true);
    }
    
    static void setPermission(boolean enable) {
@@ -747,12 +753,12 @@ class OneSignalStateSynchronizer {
    }
 
    static boolean getSubscribed() {
-      return toSyncUserState.getNotificationTypes() > 0;
+      return getToSyncUserState().getNotificationTypes() > 0;
    }
 
 
    static String getRegistrationId() {
-      return toSyncUserState.syncValues.optString("identifier", null);
+      return getToSyncUserState().syncValues.optString("identifier", null);
    }
 
    static class GetTagsResult {
@@ -799,7 +805,7 @@ class OneSignalStateSynchronizer {
       }
    
       synchronized(syncLock) {
-         return new GetTagsResult(serverSuccess, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
+         return new GetTagsResult(serverSuccess, getTagsWithoutDeletedKeys(getToSyncUserState().syncValues));
       }
    }
 
