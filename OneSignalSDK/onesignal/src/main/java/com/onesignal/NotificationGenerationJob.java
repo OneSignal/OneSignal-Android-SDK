@@ -43,11 +43,26 @@ class NotificationGenerationJob {
    
    Long shownTimeStamp;
    
+   CharSequence overriddenBodyFromExtender;
+   CharSequence overriddenTitleFromExtender;
+   
    NotificationGenerationJob(Context context) {
       this.context = context;
    }
    
    NotificationExtenderService.OverrideSettings overrideSettings;
+   
+   CharSequence getTitle() {
+      if (overriddenTitleFromExtender != null)
+         return overriddenTitleFromExtender;
+      return jsonPayload.optString("title", null);
+   }
+   
+   CharSequence getBody() {
+      if (overriddenBodyFromExtender != null)
+         return overriddenBodyFromExtender;
+      return jsonPayload.optString("alert", null);
+   }
    
    Integer getAndroidId() {
       if (overrideSettings == null)

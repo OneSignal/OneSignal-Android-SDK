@@ -80,7 +80,7 @@ class GenerateNotification {
       boolean hasLargeIcon;
    }
 
-   static void setStatics(Context inContext) {
+   private static void setStatics(Context inContext) {
       currentContext = inContext;
       packageName = currentContext.getPackageName();
       contextResources = currentContext.getResources();
@@ -313,8 +313,12 @@ class GenerateNotification {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not set background notification image!", t);
       }
 
-      if (notifJob.overrideSettings != null && notifJob.overrideSettings.extender != null)
+      if (notifJob.overrideSettings != null && notifJob.overrideSettings.extender != null) {
          notifBuilder.extend(notifJob.overrideSettings.extender);
+   
+         notifJob.overriddenBodyFromExtender = notifBuilder.mContentText;
+         notifJob.overriddenTitleFromExtender = notifBuilder.mContentTitle;
+      }
       
       // Keeps notification from playing sound + vibrating again
       if (notifJob.restoring)
@@ -381,8 +385,11 @@ class GenerateNotification {
       createSummaryNotification(notifJob, null);
    }
    
+   // TODO: Use overridden sound on creating the summary to fix 2nd+ grouped notification to allow custom sounds.
+   //         This is an issue on Android 4.2. Should test on 4.3+ < 7.0 as well.
+   
    // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
-   static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
+   private static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notifJob.restoring;
       JSONObject gcmBundle = notifJob.jsonPayload;
 
@@ -514,14 +521,18 @@ class GenerateNotification {
 
          // Add the latest notification to the summary
          if (!updateSummary) {
-            String line1Title = gcmBundle.optString("title", null);
+            String line1Title = null;
+            
+            if (notifJob.getTitle() != null)
+               line1Title = notifJob.getTitle().toString();
 
             if (line1Title == null)
                line1Title = "";
             else
                line1Title += " ";
-
-            String message = gcmBundle.optString("alert");
+            
+            String message = notifJob.getBody().toString();
+            
             SpannableString spannableString = new SpannableString(line1Title + message);
             if (line1Title.length() > 0)
                spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, line1Title.length(), 0);
