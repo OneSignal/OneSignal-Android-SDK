@@ -111,9 +111,6 @@ class NotificationBundleProcessor {
       
       saveNotification(notifJob, opened);
    }
-
-   
-   // TODO: Accept Notification job Object, save alert and body changes
    
    // Saving the notification provides the following:
    //   * Prevent duplicates
