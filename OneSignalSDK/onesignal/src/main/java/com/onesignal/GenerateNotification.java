@@ -314,10 +314,16 @@ class GenerateNotification {
       }
 
       if (notifJob.overrideSettings != null && notifJob.overrideSettings.extender != null) {
+         notifJob.orgFlags = notifBuilder.mNotification.flags;
+         notifJob.orgSound = notifBuilder.mNotification.sound;
          notifBuilder.extend(notifJob.overrideSettings.extender);
-   
+    
          notifJob.overriddenBodyFromExtender = notifBuilder.mContentText;
          notifJob.overriddenTitleFromExtender = notifBuilder.mContentTitle;
+         if (!notifJob.restoring) {
+            notifJob.overriddenFlags = notifBuilder.mNotification.flags;
+            notifJob.overriddenSound = notifBuilder.mNotification.sound;
+         }
       }
       
       // Keeps notification from playing sound + vibrating again
@@ -333,7 +339,8 @@ class GenerateNotification {
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
    
-         notification = notifBuilder.build();
+         notification = createSingleNotificationBeforeSummaryBuilder(notifJob, notifBuilder);
+         
          createSummaryNotification(notifJob, oneSignalNotificationBuilder);
       }
       else {
@@ -354,6 +361,28 @@ class GenerateNotification {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
          NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
+   }
+   
+   // Removes custom sound set from the extender from non-summary notification before building it.
+   //   This prevents the sound from playing twice or both the default sound + a custom one.
+   private static Notification createSingleNotificationBeforeSummaryBuilder(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
+      // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
+      // Android 4.2 and older just post the summary only.
+      boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT <Build.VERSION_CODES.N  && !notifJob.restoring;
+      
+      if (singleNotifWorkArounds) {
+         if (notifJob.overriddenSound != null && !notifJob.overriddenSound.equals(notifJob.orgSound))
+            notifBuilder.setSound(null);
+      }
+   
+      Notification notification = notifBuilder.build();
+      
+   
+      if (singleNotifWorkArounds) {
+         notifBuilder.setSound(notifJob.overriddenSound);
+      }
+      
+      return notification;
    }
 
    // Xiaomi requires the following to show a custom notification icons.
@@ -384,9 +413,6 @@ class GenerateNotification {
       setStatics(notifJob.context);
       createSummaryNotification(notifJob, null);
    }
-   
-   // TODO: Use overridden sound on creating the summary to fix 2nd+ grouped notification to allow custom sounds.
-   //         This is an issue on Android 4.2. Should test on 4.3+ < 7.0 as well.
    
    // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
    private static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
@@ -500,6 +526,13 @@ class GenerateNotification {
          NotificationCompat.Builder summaryBuilder = getBaseOneSignalNotificationBuilder(notifJob).compatBuilder;
          if (updateSummary)
             removeNotifyOptions(summaryBuilder);
+         else {
+            if (notifJob.overriddenSound != null)
+               summaryBuilder.setSound(notifJob.overriddenSound);
+   
+            if (notifJob.overriddenFlags != null)
+               summaryBuilder.setDefaults(notifJob.overriddenFlags);
+         }
 
          // The summary is designed to fit all notifications.
          //   Default small and large icons are used instead of the payload options to enforce this.
