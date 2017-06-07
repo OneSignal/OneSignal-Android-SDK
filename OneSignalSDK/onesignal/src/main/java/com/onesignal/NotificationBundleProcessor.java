@@ -85,7 +85,7 @@ class NotificationBundleProcessor {
       GenerateNotification.fromJsonPayload(notifJob);
 
       if (!notifJob.restoring) {
-         saveNotification(notifJob.context, notifJob.jsonPayload, false, notifJob.getAndroidId());
+         saveNotification(notifJob, false);
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
             jsonObject.put("notificationId", notifJob.getAndroidId());
@@ -104,20 +104,28 @@ class NotificationBundleProcessor {
 
 
    static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
-      saveNotification(context, bundleAsJSONObject(bundle), opened, notificationId);
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+      notifJob.jsonPayload = bundleAsJSONObject(bundle);
+      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+      notifJob.overrideSettings.androidNotificationId = notificationId;
+      
+      saveNotification(notifJob, opened);
    }
-
+   
    // Saving the notification provides the following:
    //   * Prevent duplicates
    //   * Build summary notifications
    //   * Collapse key / id support - Used to lookup the android notification id later
    //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
    //   * Future - Public API to get a list of notifications
-   static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
+   static void saveNotification(NotificationGenerationJob notifiJob, boolean opened) {
+      Context context = notifiJob.context;
+      JSONObject jsonPayload = notifiJob.jsonPayload;
+      
       try {
-         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
+         JSONObject customJSON = new JSONObject(notifiJob.jsonPayload.optString("custom"));
    
-         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
+         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
          SQLiteDatabase writableDb = null;
 
          try {
@@ -129,8 +137,8 @@ class NotificationBundleProcessor {
             
             // Count any notifications with duplicated android notification ids as dismissed.
             // -1 is used to note never displayed
-            if (notificationId != -1) {
-               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationId;
+            if (notifiJob.overrideSettings.androidNotificationId != -1) {
+               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.overrideSettings.androidNotificationId;
    
                ContentValues values = new ContentValues();
                values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
@@ -149,11 +157,11 @@ class NotificationBundleProcessor {
 
             values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
             if (!opened)
-               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationId);
-
-            if (jsonPayload.has("title"))
-               values.put(NotificationTable.COLUMN_NAME_TITLE, jsonPayload.optString("title"));
-            values.put(NotificationTable.COLUMN_NAME_MESSAGE, jsonPayload.optString("alert"));
+               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.overrideSettings.androidNotificationId);
+            
+            if (notifiJob.getTitle() != null)
+               values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
+            values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
 
             values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 

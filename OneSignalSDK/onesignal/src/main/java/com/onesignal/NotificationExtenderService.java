@@ -173,7 +173,12 @@ public abstract class NotificationExtenderService extends IntentService {
 
          if (!display) {
             if (!restoring) {
-               NotificationBundleProcessor.saveNotification(this, currentJsonPayload, true, -1);
+               NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+               notifJob.jsonPayload = currentJsonPayload;
+               notifJob.overrideSettings = new OverrideSettings();
+               notifJob.overrideSettings.androidNotificationId = -1;
+               
+               NotificationBundleProcessor.saveNotification(notifJob, true);
                OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
             }
          }

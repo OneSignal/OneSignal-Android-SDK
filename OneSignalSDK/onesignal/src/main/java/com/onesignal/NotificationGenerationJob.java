@@ -29,6 +29,7 @@ package com.onesignal;
 
 
 import android.content.Context;
+import android.net.Uri;
 
 import org.json.JSONObject;
 
@@ -43,11 +44,30 @@ class NotificationGenerationJob {
    
    Long shownTimeStamp;
    
+   CharSequence overriddenBodyFromExtender;
+   CharSequence overriddenTitleFromExtender;
+   Uri overriddenSound;
+   Integer overriddenFlags;
+   Integer orgFlags;
+   Uri orgSound;
+   
    NotificationGenerationJob(Context context) {
       this.context = context;
    }
    
    NotificationExtenderService.OverrideSettings overrideSettings;
+   
+   CharSequence getTitle() {
+      if (overriddenTitleFromExtender != null)
+         return overriddenTitleFromExtender;
+      return jsonPayload.optString("title", null);
+   }
+   
+   CharSequence getBody() {
+      if (overriddenBodyFromExtender != null)
+         return overriddenBodyFromExtender;
+      return jsonPayload.optString("alert", null);
+   }
    
    Integer getAndroidId() {
       if (overrideSettings == null)

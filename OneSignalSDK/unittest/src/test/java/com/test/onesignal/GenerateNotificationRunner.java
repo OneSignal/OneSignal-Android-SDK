@@ -36,7 +36,10 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.NotificationCompat;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.GcmBroadcastReceiver;
@@ -76,11 +79,11 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowNotification;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.ActivityController;
 import org.robolectric.util.ServiceController;
 
+import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -726,10 +729,83 @@ public class GenerateNotificationRunner {
       Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    }
    
+   
+   @Test
+   @Config(sdk = 17)
+   public void notificationExtenderServiceOverridePropertiesWithSummaryApi17() throws Exception {
+      testNotificationExtenderServiceOverridePropertiesWithSummary();
+      
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      
+      // Test - First notification should be the summary with the custom sound set.
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertNotSame(Notification.DEFAULT_SOUND, postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND);
+      Assert.assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
+   
+      Assert.assertEquals(1, postedNotifs.size());
+   }
+   
+   @Test
+   @Config(sdk = 21)
+   public void notificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
+      testNotificationExtenderServiceOverridePropertiesWithSummary();
+      
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+   
+      // Test - First notification should be the summary with the custom sound set.
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertNotSame(Notification.DEFAULT_SOUND, postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND);
+      Assert.assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
+      
+      // Test - individual notification 1 should not play a sound
+      PostedNotification notification = postedNotifsIterator.next().getValue();
+      Assert.assertNotSame(Notification.DEFAULT_SOUND, notification.notif.flags & Notification.DEFAULT_SOUND);
+      Assert.assertNull(notification.notif.sound);
+   
+      // Test - individual notification 2 should not play a sound
+      notification = postedNotifsIterator.next().getValue();
+      Assert.assertNotSame(Notification.DEFAULT_SOUND, notification.notif.flags & Notification.DEFAULT_SOUND);
+      Assert.assertNull(notification.notif.sound);
+   }
+   
+   // Test to make sure changed bodies and titles are used for the summary notification.
+   private void testNotificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+   
+      startNotificationExtender(createInternalPayloadBundle(bundle),
+          NotificationExtenderServiceOverrideProperties.class);
+   
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+   
+      startNotificationExtender(createInternalPayloadBundle(bundle),
+          NotificationExtenderServiceOverrideProperties.class);
+   
+   
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+   
+      // Test - First notification should be the summary
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      Assert.assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
+      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT)
+         Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+   
+      // Test - Make sure summary build saved and used the developer's extender settings for the body and title
+      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2) {
+         CharSequence[] lines = postedSummaryNotification.notif.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+         for (CharSequence line : lines)
+            Assert.assertEquals("[Modified Tile] [Modified Body(ContentText)]", line.toString());
+      }
+   }
+   
 
-   private NotificationExtenderServiceTest startNotificationExtender(Bundle bundlePayload, Class serviceClass) {
-      ServiceController<NotificationExtenderServiceTest> controller = Robolectric.buildService(serviceClass);
-      NotificationExtenderServiceTest service = controller.attach().create().get();
+   private NotificationExtenderServiceTestBase startNotificationExtender(Bundle bundlePayload, Class serviceClass) {
+      ServiceController<NotificationExtenderServiceTestBase> controller = Robolectric.buildService(serviceClass);
+      NotificationExtenderServiceTestBase service = controller.attach().create().get();
       Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTestReturnFalse.class);
       testIntent.putExtras(bundlePayload);
       controller.withIntent(testIntent).startCommand(0, 0);
@@ -759,7 +835,7 @@ public class GenerateNotificationRunner {
 
 
       // Test that all options are set.
-      NotificationExtenderServiceTest service = startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
+      NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
                                                                           NotificationExtenderServiceTest.class);
 
       OSNotificationReceivedResult notificationReceived = service.notification;
@@ -850,19 +926,22 @@ public class GenerateNotificationRunner {
    }
    
    
-   static int overrideNotificationId;
-   
-   public static class NotificationExtenderServiceTest extends NotificationExtenderService {
-      public OSNotificationReceivedResult notification;
-      public int notificationId = -1;
-      public static boolean throwInAppCode;
-
+   static abstract class NotificationExtenderServiceTestBase extends NotificationExtenderService {
       // Override onStart to manually call onHandleIntent on the main thread.
       @Override
       public void onStart(Intent intent, int startId) {
          onHandleIntent(intent);
          stopSelf(startId);
       }
+   }
+   
+   
+   static int overrideNotificationId;
+   public static class NotificationExtenderServiceTest extends NotificationExtenderServiceTestBase {
+      public OSNotificationReceivedResult notification;
+      public int notificationId = -1;
+      public static boolean throwInAppCode;
+    
 
       @Override
       protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
@@ -880,6 +959,34 @@ public class GenerateNotificationRunner {
          return true;
       }
    }
+   
+   public static class NotificationExtenderServiceOverrideProperties extends NotificationExtenderServiceTestBase {
+      
+      @Override
+      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+         
+         OverrideSettings overrideSettings = new OverrideSettings();
+         overrideSettings.extender = new NotificationCompat.Extender() {
+            @Override
+            public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
+               // Must disable the default sound when setting a custom one
+               builder.mNotification.flags &= ~Notification.DEFAULT_SOUND;
+               builder.setDefaults(builder.mNotification.flags);
+               
+               return builder.setSound(Uri.parse("content://media/internal/audio/media/32"))
+                   .setColor(new BigInteger("FF00FF00", 16).intValue())
+                   .setContentTitle("[Modified Tile]")
+                   .setStyle(new NotificationCompat.BigTextStyle().bigText("[Modified Body(bigText)]"))
+                   .setContentText("[Modified Body(ContentText)]");
+            }
+         };
+         displayNotification(overrideSettings);
+         
+         return true;
+      }
+   }
+   
+   
    public static class NotificationExtenderServiceTestReturnFalse extends NotificationExtenderServiceTest {
       @Override
       protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
