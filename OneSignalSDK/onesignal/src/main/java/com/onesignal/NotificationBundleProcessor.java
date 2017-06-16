@@ -173,18 +173,23 @@ class NotificationBundleProcessor {
          } catch (Exception e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
          } finally {
-            if (writableDb != null)
-               writableDb.endTransaction();
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (Throwable t) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               }
+            }
          }
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
-   // Clean up old records after 4 weeks.
+   // Clean up old records after 1 week.
    static void deleteOldNotifications(SQLiteDatabase writableDb) {
       writableDb.delete(NotificationTable.TABLE_NAME,
-          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000L) - 2419200L),
+          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000L) - 604800L),
           null);
    }
 

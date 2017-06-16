@@ -1448,8 +1448,13 @@ public class OneSignal {
          } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking all notifications as dismissed! ", t);
          } finally {
-            if (writableDb != null)
-               writableDb.endTransaction();
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (Throwable t) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               }
+            }
          }
    
          BadgeCountUpdater.updateCount(0, appContext);
@@ -1490,8 +1495,13 @@ public class OneSignal {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notification id " + id + " as dismissed! ", t);
       } finally {
-         if (writableDb != null)
-            writableDb.endTransaction();
+         if (writableDb != null) {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            }
+         }
       }
 
       NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -1561,8 +1571,13 @@ public class OneSignal {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notifications with group " + group + " as dismissed! ", t);
       } finally {
-         if (writableDb != null)
-            writableDb.endTransaction();
+         if (writableDb != null) {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            }
+         }
       }
    }
 

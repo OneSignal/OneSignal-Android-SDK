@@ -623,8 +623,13 @@ class GenerateNotification {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", t);
       } finally {
-         if (writableDb != null)
-            writableDb.endTransaction();
+         if (writableDb != null) {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            }
+         }
       }
    }
 
