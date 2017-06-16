@@ -72,8 +72,13 @@ class NotificationRestorer {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old notification records! ", t);
       } finally {
-         if (writableDb != null)
-            writableDb.endTransaction();
+         if (writableDb != null) {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            }
+         }
       }
       
       Cursor cursor = null;
