@@ -302,7 +302,9 @@ class LocationGMS {
    static class FusedLocationApiWrapper {
       @SuppressWarnings("MissingPermission")
       static PendingResult<Status> requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
-         return LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
+         if (googleApiClient.isConnected())
+            return LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
+         return null;
       }
    
       static PendingResult<Status> removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
@@ -313,11 +315,13 @@ class LocationGMS {
    
       @SuppressWarnings("MissingPermission")
       static Location getLastLocation(GoogleApiClient googleApiClient) {
-         return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+         if (googleApiClient.isConnected())
+            return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+         return null;
       }
    }
    
-   static class LocationHandlerThread extends HandlerThread {
+   private static class LocationHandlerThread extends HandlerThread {
       Handler mHandler = null;
       
       LocationHandlerThread() {
