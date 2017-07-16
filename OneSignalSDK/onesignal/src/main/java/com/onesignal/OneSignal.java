@@ -25,6 +25,20 @@
  * THE SOFTWARE.
  */
 
+
+
+// TODO: Android O branch todo
+// 1. Add Android O channel methods
+//   a. Set default channel id.
+//   b. Set all available options with a single object.
+//      - Create in a generic way that can be used by wrapper SDK such as Unity
+//  2. GCM broadcast receiver can no longer start the GcmIntentService when app is swiped away.
+//    - Service may need to be started differently or all work must be done from the receiver directly then.
+//  3. filterOtherGCMReceivers no long works.
+//   - Google Play services is no longer starting the broadcast receiver as an order broadcast
+//  4. Fix bug where restored notifications are vibrating and playing the sound again.
+//   - This is due to the channel now being in control of these settings.
+
 package com.onesignal;
 
 import java.io.PrintWriter;

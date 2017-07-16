@@ -1,0 +1,23 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.onesignal">
+
+    <!-- Create a unique permission for your app and use it so only your app can receive your OneSignal messages. -->
+    <permission android:name="${applicationId}.permission.C2D_MESSAGE" android:protectionLevel="signature" />
+    <uses-permission android:name="${applicationId}.permission.C2D_MESSAGE" />
+
+    <application>
+        <meta-data android:name="onesignal_app_id" android:value="${onesignal_app_id}" />
+        <!-- Deprecated - Pulled from OneSignal dashboard. -->
+        <meta-data android:name="onesignal_google_project_number" android:value="str:${onesignal_google_project_number}" />
+
+        <receiver
+            android:name="com.onesignal.GcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <!-- High priority so OneSignal payloads can be filtered from other GCM receivers if filterOtherGCMReceivers is enabled. -->
+            <intent-filter android:priority="999" >
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <category android:name="${applicationId}" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>
