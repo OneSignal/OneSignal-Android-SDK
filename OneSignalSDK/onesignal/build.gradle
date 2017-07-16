@@ -1,11 +1,11 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion '25.0.0'
+    compileSdkVersion 26
+    buildToolsVersion '26.0.0'
 
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion 14
         consumerProguardFiles 'consumer-proguard-rules.pro'
     }
 
@@ -13,6 +13,10 @@ android {
         main {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        release {
+            minifyEnabled false
         }
 
         unity {
@@ -29,7 +33,7 @@ dependencies {
     compile 'com.google.android.gms:play-services-location:10.0.1'
 
     // NOTE: customtabs sets minSdkVersion to 15.
-    compile 'com.android.support:customtabs:24.0.0'
+    compile 'com.android.support:customtabs:26.+'
 }
 
 // Remove OnActivityPausedListener class.

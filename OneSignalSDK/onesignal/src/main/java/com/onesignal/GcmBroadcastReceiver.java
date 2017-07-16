@@ -33,6 +33,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
+
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
 public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
@@ -62,7 +63,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       
       // Null means this isn't a GCM / FCM message.
       if (processedResult == null) {
-         setResultCode(Activity.RESULT_OK);
+         setResult(Activity.RESULT_OK);
          return;
       }
       
@@ -85,7 +86,12 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
          return;
       }
 
-      setResultCode(Activity.RESULT_OK);
+      setResult(Activity.RESULT_OK);
+   }
+
+   private void setResult(int code) {
+      if (isOrderedBroadcast())
+         setResultCode(code);
    }
    
    private static ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {

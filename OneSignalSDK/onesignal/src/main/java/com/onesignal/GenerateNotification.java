@@ -44,6 +44,8 @@ import android.R.drawable;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -74,7 +76,9 @@ class GenerateNotification {
    private static Resources contextResources = null;
    private static Class<?> notificationOpenedClass;
    private static boolean openerIsBroadcast;
-   
+
+   private static final String DEFAULT_CHANNEL_ID = "default";
+
    private static class OneSignalNotificationBuilder {
       NotificationCompat.Builder compatBuilder;
       boolean hasLargeIcon;
@@ -172,6 +176,26 @@ class GenerateNotification {
       });
    }
 
+   private static void createNotificationChannel() {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+         return;
+
+      NotificationManager mNotificationManager =
+            (NotificationManager)currentContext.getSystemService(Context.NOTIFICATION_SERVICE);
+      CharSequence name = "Default"; // The user-visible name of the channel.
+
+      // The user-visible description of the channel.
+      String description = "Default notification channel.";
+
+      int importance = NotificationManager.IMPORTANCE_DEFAULT;
+
+      NotificationChannel mChannel = new NotificationChannel(DEFAULT_CHANNEL_ID, name, importance);
+      mChannel.setDescription(description);
+      mChannel.enableLights(true);
+      mChannel.enableVibration(true);
+      mNotificationManager.createNotificationChannel(mChannel);
+   }
+
    private static CharSequence getTitle(JSONObject gcmBundle) {
       CharSequence title = gcmBundle.optString("title", null);
 
@@ -220,7 +244,9 @@ class GenerateNotification {
 
       String message = gcmBundle.optString("alert", null);
 
-      NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(currentContext)
+      createNotificationChannel();
+
+      NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(currentContext, DEFAULT_CHANNEL_ID)
             .setAutoCancel(true)
             .setSmallIcon(notificationIcon) // Small Icon required or notification doesn't display
             .setContentTitle(getTitle(gcmBundle))
