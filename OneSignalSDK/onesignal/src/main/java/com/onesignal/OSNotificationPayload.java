@@ -27,8 +27,10 @@
 
 package com.onesignal;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 
 // Notification properties received from OneSignal.
@@ -49,17 +51,115 @@ public class OSNotificationPayload {
    public List<ActionButton> actionButtons;
    public String fromProjectNumber;
    public BackgroundImageLayout backgroundImageLayout;
+   public String collapseId;
+   public int priority;
    public String rawPayload;
+   
+   public OSNotificationPayload() {
+   }
+   
+   public OSNotificationPayload(JSONObject jsonObject) {
+      notificationID = jsonObject.optString("notificationID");
+      title = jsonObject.optString("title");
+      
+      body = jsonObject.optString("body");
+      additionalData = jsonObject.optJSONObject("additionalData");
+      smallIcon = jsonObject.optString("smallIcon");
+      largeIcon = jsonObject.optString("largeIcon");
+      bigPicture = jsonObject.optString("bigPicture");
+      smallIconAccentColor = jsonObject.optString("smallIconAccentColor");
+      launchURL = jsonObject.optString("launchURL");
+      sound = jsonObject.optString("sound");
+      ledColor = jsonObject.optString("ledColor");
+      lockScreenVisibility = jsonObject.optInt("lockScreenVisibility");
+      groupKey = jsonObject.optString("groupKey");
+      groupMessage = jsonObject.optString("groupMessage");
+      
+      if (jsonObject.has("actionButtons")) {
+         actionButtons = new ArrayList<>();
+         JSONArray jsonArray = jsonObject.optJSONArray("actionButtons");
+         for (int i = 0; i < jsonArray.length(); i++)
+            actionButtons.add(new ActionButton(jsonArray.optJSONObject(i)));
+      }
+   
+      fromProjectNumber = jsonObject.optString("fromProjectNumber");
+      collapseId = jsonObject.optString("collapseId");
+      priority = jsonObject.optInt("priority");
+      rawPayload = jsonObject.optString("rawPayload");
+   }
    
    public static class ActionButton {
       public String id;
       public String text;
       public String icon;
+   
+      public ActionButton() {}
+      
+      public ActionButton(JSONObject jsonObject) {
+         id = jsonObject.optString("id");
+         text = jsonObject.optString("text");
+         icon = jsonObject.optString("icon");
+      }
+   
+      public JSONObject toJSONObject() {
+         JSONObject json = new JSONObject();
+         try {
+            json.put("id", id);
+            json.put("text", text);
+            json.put("icon", icon);
+         }
+         catch (Throwable t) {
+            t.printStackTrace();
+         }
+
+         return json;
+      }
    }
 
    public static class BackgroundImageLayout {
       public String image;
       public String titleTextColor;
       public String bodyTextColor;
+   }
+
+
+   public JSONObject toJSONObject() {
+      JSONObject json = new JSONObject();
+
+      try {
+         json.put("notificationID", notificationID);
+         json.put("title", title);
+         json.put("body", body);
+         if (additionalData != null)
+            json.put("additionalData", additionalData);
+         json.put("smallIcon", smallIcon);
+         json.put("largeIcon", largeIcon);
+         json.put("bigPicture", bigPicture);
+         json.put("smallIconAccentColor", smallIconAccentColor);
+         json.put("launchURL", launchURL);
+         json.put("sound", sound);
+         json.put("ledColor", ledColor);
+         json.put("lockScreenVisibility", lockScreenVisibility);
+         json.put("groupKey", groupKey);
+         json.put("groupMessage", groupMessage);
+
+         if (actionButtons != null) {
+            JSONArray actionButtonJsonArray = new JSONArray();
+            for (ActionButton actionButton : actionButtons) {
+               actionButtonJsonArray.put(actionButton.toJSONObject());
+            }
+            json.put("actionButtons", actionButtonJsonArray);
+         }
+         json.put("fromProjectNumber", fromProjectNumber);
+         json.put("collapseId", collapseId);
+         json.put("priority", priority);
+
+         json.put("rawPayload", rawPayload);
+      }
+      catch (Throwable t) {
+         t.printStackTrace();
+      }
+
+      return json;
    }
 }

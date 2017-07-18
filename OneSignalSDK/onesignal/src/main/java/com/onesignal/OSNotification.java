@@ -27,8 +27,10 @@
 
 package com.onesignal;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -43,6 +45,26 @@ public class OSNotification {
 
       // Notification was silent and not displayed.
       None
+   }
+   
+   public OSNotification() {
+   }
+   
+   public OSNotification(JSONObject jsonObject) {
+      isAppInFocus = jsonObject.optBoolean("isAppInFocus");
+      shown = jsonObject.optBoolean("shown", shown);
+      androidNotificationId = jsonObject.optInt("androidNotificationId");
+      displayType = DisplayType.values()[jsonObject.optInt("displayType")];
+
+      if (jsonObject.has("groupedNotifications")) {
+         JSONArray jsonArray = jsonObject.optJSONArray("groupedNotifications");
+         groupedNotifications = new ArrayList<>();
+         for (int i = 0; i < jsonArray.length(); i++)
+            groupedNotifications.add(new OSNotificationPayload(jsonArray.optJSONObject(i)));
+      }
+   
+      if (jsonObject.has("payload"))
+         payload = new OSNotificationPayload(jsonObject.optJSONObject("payload"));
    }
 
    // Is app Active.
@@ -63,37 +85,47 @@ public class OSNotification {
    //    The payload will be the most recent notification received.
    public List<OSNotificationPayload> groupedNotifications;
 
+   /**
+    * @deprecated  As of release 3.4.1, replaced by {@link #toJSONObject()}
+    */
+   @Deprecated
    public String stringify() {
+      JSONObject mainObj = toJSONObject();
 
+      try {
+         if (mainObj.has("additionalData"))
+            mainObj.put("additionalData", mainObj.optJSONObject("additionalData").toString());
+      }
+      catch(JSONException e) {
+         e.printStackTrace();
+      }
+
+      return mainObj.toString();
+   }
+
+   public JSONObject toJSONObject() {
       JSONObject mainObj = new JSONObject();
 
       try {
          mainObj.put("isAppInFocus", isAppInFocus);
          mainObj.put("shown", shown);
          mainObj.put("androidNotificationId", androidNotificationId);
-         mainObj.put("displayType", displayType);
-         JSONObject pay = new JSONObject();
-         pay.put("notificationID", payload.notificationID);
-         pay.put("title", payload.title);
-         pay.put("body", payload.body);
-         pay.put("additionalData", payload.additionalData.toString());
-         pay.put("smallIcon", payload.smallIcon);
-         pay.put("largeIcon", payload.largeIcon);
-         pay.put("bigPicture", payload.bigPicture);
-         pay.put("smallIconAccentColor", payload.smallIconAccentColor);
-         pay.put("launchURL", payload.launchURL);
-         pay.put("sound", payload.sound);
-         pay.put("ledColor", payload.ledColor);
-         pay.put("lockScreenVisibility", payload.lockScreenVisibility);
-         pay.put("groupKey", payload.groupKey);
-         pay.put("groupMessage", payload.groupMessage);
-         pay.put("actionButtons", payload.actionButtons);
-         pay.put("fromProjectNumber", payload.fromProjectNumber);
-         pay.put("rawPayload", payload.rawPayload);
-         mainObj.put("payload", pay);
-      }
-      catch(JSONException e) {e.printStackTrace();}
+         mainObj.put("displayType", displayType.ordinal());
 
-      return mainObj.toString();
+         if (groupedNotifications != null) {
+            JSONArray payloadJsonArray = new JSONArray();
+            for(OSNotificationPayload payload : groupedNotifications)
+               payloadJsonArray.put(payload.toJSONObject());
+            mainObj.put("groupedNotifications", payloadJsonArray);
+         }
+
+         mainObj.put("payload", payload.toJSONObject());
+      }
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
+
+      return mainObj;
    }
+
 }

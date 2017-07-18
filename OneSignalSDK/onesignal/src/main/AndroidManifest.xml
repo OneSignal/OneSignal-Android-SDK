@@ -1,4 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.onesignal">
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.onesignal">
+
+    <!-- OneSignal SDK has runtime checks Android version. -->
+    <uses-sdk tools:overrideLibrary="android.support.customtabs"/>
 
     <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages through Google's GCM. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,6 +19,9 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Use to restore notifications the user hasn't interacted with.
+         They could be missed notifications if the user reboots their device if this isn't in place.
+    -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- START: ShortcutBadger -->
@@ -39,13 +48,24 @@
     <uses-permission android:name="com.huawei.android.launcher.permission.READ_SETTINGS" />
     <uses-permission android:name="com.huawei.android.launcher.permission.WRITE_SETTINGS" />
 
+    <!-- ZUK -->
+    <uses-permission android:name="android.permission.READ_APP_BADGE"/>
+
+    <!-- OPPO -->
+    <uses-permission android:name="com.oppo.launcher.permission.READ_SETTINGS"/>
+    <uses-permission android:name="com.oppo.launcher.permission.WRITE_SETTINGS"/>
+
+    <!-- EvMe -->
+    <uses-permission android:name="me.everything.badger.permission.BADGE_COUNT_READ"/>
+    <uses-permission android:name="me.everything.badger.permission.BADGE_COUNT_WRITE"/>
+
     <!-- End: ShortcutBadger -->
 
     <application>
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
         <service android:name="com.onesignal.GcmIntentService" />
 
-        <service android:name="com.onesignal.SyncService" android:stopWithTask="false" />
+        <service android:name="com.onesignal.SyncService" />
         <activity android:name="com.onesignal.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service android:name="com.onesignal.NotificationRestoreService" />

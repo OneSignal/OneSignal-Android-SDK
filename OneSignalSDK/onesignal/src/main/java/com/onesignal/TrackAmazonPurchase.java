@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.amazon.device.iap.PurchasingListener;
 import com.amazon.device.iap.PurchasingService;
@@ -46,7 +45,6 @@ import com.amazon.device.iap.model.PurchaseResponse;
 import com.amazon.device.iap.model.PurchaseUpdatesResponse;
 import com.amazon.device.iap.model.RequestId;
 import com.amazon.device.iap.model.UserDataResponse;
-import com.onesignal.OneSignal;
 
 class TrackAmazonPurchase {
 
@@ -54,52 +52,50 @@ class TrackAmazonPurchase {
 
    private boolean canTrack = false;
 
-   private OSPurchasingListener gtPurchasingListener;
-
-   private Class<?> listnerHandlerClass;
-   private Object listnerHandlerObject;
-   private Field listnerHandlerField;
+   private OSPurchasingListener osPurchasingListener;
+   
+   private Object listenerHandlerObject;
+   private Field listenerHandlerField;
 
    TrackAmazonPurchase(Context context) {
       this.context = context;
 
       try {
          // 2.0.1
-         listnerHandlerClass = Class.forName("com.amazon.device.iap.internal.d");
-         listnerHandlerObject = listnerHandlerClass.getMethod("d").invoke(null);
-         listnerHandlerField = listnerHandlerClass.getDeclaredField("f");
-         listnerHandlerField.setAccessible(true);
+         Class<?> listenerHandlerClass = Class.forName("com.amazon.device.iap.internal.d");
+         listenerHandlerObject = listenerHandlerClass.getMethod("d").invoke(null);
+         listenerHandlerField = listenerHandlerClass.getDeclaredField("f");
+         listenerHandlerField.setAccessible(true);
 
-         gtPurchasingListener = new OSPurchasingListener();
-         gtPurchasingListener.orgPurchasingListener = (PurchasingListener) listnerHandlerField.get(listnerHandlerObject);
+         osPurchasingListener = new OSPurchasingListener();
+         osPurchasingListener.orgPurchasingListener = (PurchasingListener)listenerHandlerField.get(listenerHandlerObject);
 
          canTrack = true;
          setListener();
       } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding Amazon IAP listener.", t);
       }
    }
 
    private void setListener() {
-      PurchasingService.registerListener(context, gtPurchasingListener);
+      PurchasingService.registerListener(context, osPurchasingListener);
    }
 
-   public void checkListener() {
-      if (canTrack) {
-         try {
-            PurchasingListener curPurchasingListener = (PurchasingListener) listnerHandlerField.get(listnerHandlerObject);
-            if (curPurchasingListener != gtPurchasingListener) {
-               gtPurchasingListener.orgPurchasingListener = curPurchasingListener;
-               setListener();
-            }
-         } catch (Throwable t) {
+   void checkListener() {
+      if (!canTrack)
+         return;
+      try {
+         PurchasingListener curPurchasingListener = (PurchasingListener)listenerHandlerField.get(listenerHandlerObject);
+         if (curPurchasingListener != osPurchasingListener) {
+            osPurchasingListener.orgPurchasingListener = curPurchasingListener;
+            setListener();
          }
+      } catch (Throwable t) {
       }
    }
 
    private class OSPurchasingListener implements PurchasingListener {
-      private static final String TAG = "OneSignalSDK-AmazonIAP";
-
-      public PurchasingListener orgPurchasingListener;
+      PurchasingListener orgPurchasingListener;
 
       private RequestId lastRequestId;
       private String currentMarket;

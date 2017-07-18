@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,16 +32,16 @@ import com.google.android.gms.common.api.GoogleApiClient;
 // Allows compatibility with pre-8.1.0 of GMS via reflection.
 // This allows the methods below to be used even if the app developer is using an old version Google Play services.
 
-public class GoogleApiClientCompatProxy {
+class GoogleApiClientCompatProxy {
    private final GoogleApiClient googleApiClient;
    private final Class googleApiClientListenerClass;
 
-   public GoogleApiClientCompatProxy(GoogleApiClient googleApiClient) {
+   GoogleApiClientCompatProxy(GoogleApiClient googleApiClient) {
       this.googleApiClient = googleApiClient;
       googleApiClientListenerClass = googleApiClient.getClass();
    }
 
-   public void connect() {
+   void connect() {
       try {
          googleApiClientListenerClass.getMethod("connect").invoke(googleApiClient);
       } catch (Throwable t) {
@@ -49,7 +49,7 @@ public class GoogleApiClientCompatProxy {
       }
    }
    
-   public void disconnect() {
+   void disconnect() {
       try {
          googleApiClientListenerClass.getMethod("disconnect").invoke(googleApiClient);
       } catch (Throwable t) {
@@ -57,7 +57,7 @@ public class GoogleApiClientCompatProxy {
       }
    }
 
-   public GoogleApiClient realInstance() {
+   GoogleApiClient realInstance() {
       return googleApiClient;
    }
 }

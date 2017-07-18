@@ -1,33 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent" >
-    <!--android:background="#00FF00"-->
-
-    <!--- Messes with image ratio -->
-    <!--android:scaleType="fitXY"-->
-
-    <!--- Doesn't seem to do a thing -->
-    <!--android:adjustViewBounds="true"-->
-
-    <!-- Note: Can add to darken image -->
-    <!-- android:tint="#44000000" -->
-
-    <ImageView
-        android:id="@+id/os_bgimage_notif_bgimage"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:scaleType="centerCrop"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
-
-    <!-- android:src="@drawable/test_image" -->
-
+                android:layout_height="64dp">
     <!--android:textAppearance="@android:style/TextAppearance.Material.Notification.Title"-->
     <!-- API21 -->
     <!--android:textAppearance="@android:style/TextAppearance.StatusBar.EventContent.Title"-->
 
+    <RelativeLayout android:id="@+id/os_bgimage_notif_bgimage_align_layout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:paddingLeft="0dp"
+                    android:paddingRight="-2000dp">
+        <ImageView
+            android:id="@+id/os_bgimage_notif_bgimage"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:scaleType="fitStart"
+            android:cropToPadding="false"
+            android:adjustViewBounds="false"/>
+        <ImageView
+            android:id="@+id/os_bgimage_notif_bgimage_right_aligned"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:scaleType="fitEnd"
+            android:cropToPadding="false"
+            android:adjustViewBounds="false"
+            android:visibility="gone"/>
+    </RelativeLayout>
+
     <LinearLayout
+        xmlns:tools="http://schemas.android.com/tools"
+        tools:ignore="RtlCompat"
+
         android:orientation="vertical"
         android:layout_marginStart="@android:dimen/notification_large_icon_width"
         android:layout_width="fill_parent"

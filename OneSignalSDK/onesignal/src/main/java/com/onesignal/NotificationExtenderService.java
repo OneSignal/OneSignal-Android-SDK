@@ -53,8 +53,6 @@ import java.util.List;
 </service>
 */
 
-// NOTE: Currently does not support Amazon ADM messages.
-
 public abstract class NotificationExtenderService extends IntentService {
 
    public static class OverrideSettings {
@@ -83,17 +81,23 @@ public abstract class NotificationExtenderService extends IntentService {
    private OSNotificationDisplayedResult osNotificationDisplayedResult;
    private JSONObject currentJsonPayload;
    private boolean currentlyRestoring;
+   private Long restoreTimestamp;
    private OverrideSettings currentBaseOverrideSettings = null;
 
    // Developer may call to override some notification settings.
-   //   - If called the normal SDK notification will not be displayed.
+   // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
    protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
+      // Check if this method has been called already or if no override was set.
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
 
       overrideSettings.override(currentBaseOverrideSettings);
       osNotificationDisplayedResult = new OSNotificationDisplayedResult();
-      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, overrideSettings);
+      
+      NotificationGenerationJob notifJob = createNotifJobFromCurrent();
+      notifJob.overrideSettings = overrideSettings;
+      
+      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.Process(notifJob);
       return osNotificationDisplayedResult;
    }
 
@@ -109,8 +113,22 @@ public abstract class NotificationExtenderService extends IntentService {
 
    private void processIntent(Intent intent) {
       Bundle bundle = intent.getExtras();
+
+      // Service maybe triggered without extras on some Android devices on boot.
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/99
+      if (bundle == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No extras sent to NotificationExtenderService in its Intent!\n" + intent);
+         return;
+      }
+
+      String jsonStrPayload = bundle.getString("json_payload");
+      if (jsonStrPayload == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to NotificationExtenderService: " + bundle);
+         return;
+      }
+
       try {
-         currentJsonPayload = new JSONObject(bundle.getString("json_payload"));
+         currentJsonPayload = new JSONObject(jsonStrPayload);
          currentlyRestoring = bundle.getBoolean("restoring", false);
          if (bundle.containsKey("android_notif_id")) {
             currentBaseOverrideSettings = new OverrideSettings();
@@ -120,6 +138,7 @@ public abstract class NotificationExtenderService extends IntentService {
          if (!currentlyRestoring && OneSignal.notValidOrDuplicated(this, currentJsonPayload))
             return;
 
+         restoreTimestamp = bundle.getLong("timestamp");
          processJsonObject(currentJsonPayload, currentlyRestoring);
       } catch (JSONException e) {
          e.printStackTrace();
@@ -153,11 +172,18 @@ public abstract class NotificationExtenderService extends IntentService {
                            NotificationBundleProcessor.shouldDisplay(!"".equals(currentJsonPayload.optString("alert")));
 
          if (!display) {
-            if (!restoring)
-               NotificationBundleProcessor.saveNotification(this, currentJsonPayload, true, -1);
+            if (!restoring) {
+               NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+               notifJob.jsonPayload = currentJsonPayload;
+               notifJob.overrideSettings = new OverrideSettings();
+               notifJob.overrideSettings.androidNotificationId = -1;
+               
+               NotificationBundleProcessor.saveNotification(notifJob, true);
+               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
+            }
          }
          else
-            NotificationBundleProcessor.Process(this, currentlyRestoring, currentJsonPayload, currentBaseOverrideSettings);
+            NotificationBundleProcessor.Process(createNotifJobFromCurrent());
       }
    }
 
@@ -169,5 +195,15 @@ public abstract class NotificationExtenderService extends IntentService {
          return null;
 
       return intent;
+   }
+   
+   private NotificationGenerationJob createNotifJobFromCurrent() {
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+      notifJob.restoring = currentlyRestoring;
+      notifJob.jsonPayload = currentJsonPayload;
+      notifJob.shownTimeStamp = restoreTimestamp;
+      notifJob.overrideSettings = currentBaseOverrideSettings;
+      
+      return notifJob;
    }
 }

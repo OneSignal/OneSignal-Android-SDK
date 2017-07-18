@@ -40,7 +40,6 @@ import org.json.JSONObject;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.IdsAvailableHandler;
 
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -73,7 +72,7 @@ class TrackGooglePurchase {
       SharedPreferences prefs = appContext.getSharedPreferences("GTPlayerPurchases", Context.MODE_PRIVATE);
       prefsEditor = prefs.edit();
 
-      purchaseTokens = new ArrayList<String>();
+      purchaseTokens = new ArrayList<>();
       try {
          JSONArray jsonPurchaseTokens = new JSONArray(prefs.getString("purchaseTokens", "[]"));
          for (int i = 0; i < jsonPurchaseTokens.length(); i++)
@@ -195,12 +194,12 @@ class TrackGooglePurchase {
 
          Bundle querySkus = new Bundle();
          querySkus.putStringArrayList("ITEM_ID_LIST", skusToAdd);
-         Bundle skuDetails = (Bundle) getSkuDetailsMethod.invoke(mIInAppBillingService, 3, appContext.getPackageName(), "inapp", querySkus);
+         Bundle skuDetails = (Bundle)getSkuDetailsMethod.invoke(mIInAppBillingService, 3, appContext.getPackageName(), "inapp", querySkus);
 
          int response = skuDetails.getInt("RESPONSE_CODE");
          if (response == 0) {
             ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
-            Map<String, JSONObject> currentSkus = new HashMap<String, JSONObject>();
+            Map<String, JSONObject> currentSkus = new HashMap<>();
             JSONObject jsonItem;
             for (String thisResponse : responseList) {
                JSONObject object = new JSONObject(thisResponse);
@@ -222,30 +221,25 @@ class TrackGooglePurchase {
                purchasesToReport.put(currentSkus.get(sku));
             }
 
-            // New purchases to report.
-            // Wait until we have a userID then send purchases to server. If successful then mark them as tracked.
+            // New purchases to report. If successful then mark them as tracked.
             if (purchasesToReport.length() > 0) {
-               final JSONArray finalPurchasesToReport = purchasesToReport;
-               OneSignal.idsAvailable(new IdsAvailableHandler() {
-                  public void idsAvailable(String userId, String registrationId) {
-                     OneSignal.sendPurchases(finalPurchasesToReport, newAsExisting, new OneSignalRestClient.ResponseHandler() {
-                        public void onFailure(int statusCode, JSONObject response, Throwable throwable) {
-                           OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "HTTP sendPurchases failed to send.", throwable);
-                           isWaitingForPurchasesRequest = false;
-                        }
-
-                        public void onSuccess(String response) {
-                           purchaseTokens.addAll(newPurchaseTokens);
-                           prefsEditor.putString("purchaseTokens", purchaseTokens.toString());
-                           prefsEditor.remove("ExistingPurchases");
-                           prefsEditor.commit();
-                           newAsExisting = false;
-                           isWaitingForPurchasesRequest = false;
-                        }
-                     });
+               OneSignalRestClient.ResponseHandler restResponseHandler = new OneSignalRestClient.ResponseHandler() {
+                  public void onFailure(int statusCode, JSONObject response, Throwable throwable) {
+                     OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "HTTP sendPurchases failed to send.", throwable);
+                     isWaitingForPurchasesRequest = false;
                   }
-               });
-
+   
+                  public void onSuccess(String response) {
+                     purchaseTokens.addAll(newPurchaseTokens);
+                     prefsEditor.putString("purchaseTokens", purchaseTokens.toString());
+                     prefsEditor.remove("ExistingPurchases");
+                     prefsEditor.commit();
+                     newAsExisting = false;
+                     isWaitingForPurchasesRequest = false;
+                  }
+               };
+               
+               OneSignal.sendPurchases(purchasesToReport, newAsExisting, restResponseHandler);
             }
          }
       } catch (Throwable t) {
@@ -277,11 +271,32 @@ class TrackGooglePurchase {
    private static Method getGetSkuDetailsMethod(Class clazz) {
       for(Method method : clazz.getMethods()) {
          Class<?>[] args = method.getParameterTypes();
+         Class<?> returnType = method.getReturnType();
+
          if (args.length == 4
-             && args[0] == int.class && args[1] == String.class && args[2] == String.class && args[3] == Bundle.class)
+             && args[0] == int.class && args[1] == String.class && args[2] == String.class && args[3] == Bundle.class
+             && returnType == Bundle.class)
             return method;
       }
 
       return  null;
    }
 }
+
+
+/*
+  // IInAppBillingService
+
+  public abstract int isBillingSupported(int paramInt, String paramString1, String paramString2)
+  public abstract Bundle getSkuDetails(int paramInt, String paramString1, String paramString2, Bundle paramBundle)
+  public abstract Bundle getBuyIntent(int paramInt, String paramString1, String paramString2, String paramString3, String paramString4)
+  public abstract Bundle getPurchases(int paramInt, String paramString1, String paramString2, String paramString3)
+  public abstract int consumePurchase(int paramInt, String paramString1, String paramString2)
+  public abstract int isPromoEligible(int paramInt, String paramString1, String paramString2)
+  public abstract Bundle getBuyIntentToReplaceSkus(int paramInt, String paramString1, List<String> paramList, String paramString2, String paramString3, String paramString4)
+  public abstract Bundle getBuyIntentExtraParams(int paramInt, String paramString1, String paramString2, String paramString3, String paramString4, Bundle paramBundle)
+  public abstract Bundle getPurchaseHistory(int paramInt, String paramString1, String paramString2, String paramString3, Bundle paramBundle)
+  public abstract int isBillingSupportedExtraParams(int paramInt, String paramString1, String paramString2, Bundle paramBundle)
+  public abstract Bundle getPurchasesExtraParams(int paramInt, String paramString1, String paramString2, String paramString3, Bundle paramBundle)
+  public abstract int consumePurchaseExtraParams(int paramInt, String paramString1, String paramString2, Bundle paramBundle)
+ */

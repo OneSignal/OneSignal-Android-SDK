@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,37 +38,54 @@ import com.onesignal.shortcutbadger.ShortcutBadger;
 
 class BadgeCountUpdater {
 
-   static void update(SQLiteDatabase readableDb, Context context) {
-      boolean isEnabled = true;
+   // Cache for manifest setting.
+   private static int badgesEnabled = -1;
+
+   private static boolean areBadgeSettingsEnabled(Context context) {
+      if (badgesEnabled != -1)
+         return (badgesEnabled == 1);
 
       try {
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
          String defaultStr = bundle.getString("com.onesignal.BadgeCount");
-         isEnabled = !"DISABLE".equals(defaultStr);
+         badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
       } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "", t);
+         badgesEnabled = 0;
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error reading meta-data tag 'com.onesignal.BadgeCount'. Disabling badge setting.", t);
       }
 
-      if (isEnabled) {
-         Cursor cursor = readableDb.query(
-             OneSignalDbContract.NotificationTable.TABLE_NAME,
-             null,
-             OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +               // Where String
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 ",
-             null,                                                    // Where args
-             null,                                                    // group by
-             null,                                                    // filter by row groups
-             null                                                     // sort order, new to old
-         );
+      return (badgesEnabled == 1);
+   }
+   
+   private static boolean areBadgesEnabled(Context context) {
+      return areBadgeSettingsEnabled(context) && OSUtils.areNotificationsEnabled(context);
+   }
 
-         updateCount(cursor.getCount(), context);
-         cursor.close();
-      }
+   static void update(SQLiteDatabase readableDb, Context context) {
+      if (!areBadgesEnabled(context))
+         return;
+
+      Cursor cursor = readableDb.query(
+          OneSignalDbContract.NotificationTable.TABLE_NAME,
+          null,
+          OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +  // Where String
+             OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+             OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 ",
+          null,                                                    // Where args
+          null,                                                    // group by
+          null,                                                    // filter by row groups
+          null                                                     // sort order, new to old
+      );
+
+      updateCount(cursor.getCount(), context);
+      cursor.close();
    }
 
    static void updateCount(int count, Context context) {
+      if (!areBadgeSettingsEnabled(context))
+         return;
+
       // Can throw if badges are not support on the device.
       //  Or app does not have a default launch Activity.
       try {

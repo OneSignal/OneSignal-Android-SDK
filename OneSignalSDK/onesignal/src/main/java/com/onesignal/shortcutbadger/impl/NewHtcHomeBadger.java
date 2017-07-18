@@ -7,6 +7,7 @@ import android.content.Intent;
 
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
+import com.onesignal.shortcutbadger.ShortcutBadger;
 import com.onesignal.shortcutbadger.util.BroadcastHelper;
 
 import java.util.Arrays;

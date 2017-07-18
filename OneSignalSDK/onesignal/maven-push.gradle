@@ -1,0 +1,151 @@
+/*
+ * Copyright 2013 Chris Banes
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Code modified by OneSignal
+ *
+ */
+
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+class Global {
+    static def POM_NAME = 'OneSignal'
+    static def POM_ARTIFACT_ID = 'OneSignal'
+    static def POM_PACKAGING = 'aar'
+    static def VERSION_NAME = "3.5.8"
+
+    // Limit upper number (exclusive) to prevent untested versions
+    static def versionGroupOverrides = [
+        // Omitting 10.2.0 for now since it increases minimum SDK to 14
+        'com.google.android.gms': '[9.0.0,10.2.0)',
+        // Android Support library v4 revision 26.0.0 increases minimum SDK to 14
+
+        // customtabs was not introduced until 23.0.0 so this is the min
+        // Capping at 24.0.0 as GMS [9.6.0,10.2.6] locks to this
+        // gms:play-services-basement 11.0.0 bumped support-v4 dependency to 25.2.0 (full package)
+        // Also note support v4 splits into parts in 24.2.0.
+        //   Compile errors will happen if versions are mix at and below this revision.
+        'com.android.support': '[23.0.0,24.1.0)'
+    ]
+
+    static def GROUP_ID = 'com.onesignal'
+    static def POM_DESCRIPTION = 'OneSignal Android SDK'
+    static def POM_URL = 'https://github.com/one-signal/OneSignal-Android-SDK'
+    static def POM_SCM_URL = 'https://github.com/one-signal/OneSignal-Android-SDK'
+    static def POM_SCM_CONNECTION = 'scm:git:https://github.com/one-signal/OneSignal-Android-SDK'
+    static def POM_SCM_DEV_CONNECTION = 'scm:git:https://github.com/one-signal/OneSignal-Android-SDK'
+    static def POM_LICENCE_NAME = 'MIT License'
+    static def POM_LICENCE_URL = 'https://raw.githubusercontent.com/one-signal/OneSignal-Android-SDK/master/LICENSE'
+    static def POM_LICENCE_DIST = 'repo'
+    static def POM_DEVELOPER_ID = 'OneSignal'
+    static def POM_DEVELOPER_NAME = 'Josh Kasten'
+    static def SNAPSHOT_REPOSITORY_URL = 'https://oss.sonatype.org/content/repositories/snapshots'
+    static def RELEASE_REPOSITORY_URL = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+}
+
+def isReleaseBuild() {
+    return !Global.VERSION_NAME.contains("SNAPSHOT")
+}
+
+def getRepositoryUsername() {
+    return hasProperty('NEXUS_USERNAME') ? NEXUS_USERNAME : ""
+}
+
+def getRepositoryPassword() {
+    return hasProperty('NEXUS_PASSWORD') ? NEXUS_PASSWORD : ""
+}
+
+afterEvaluate { project ->
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                pom.groupId = Global.GROUP_ID
+                pom.artifactId = Global.POM_ARTIFACT_ID
+                pom.version = Global.VERSION_NAME
+
+                pom.withXml {
+                    asNode().dependencies.'*'.findAll() {
+                        def versionOverride = Global.versionGroupOverrides[it.groupId.text()]
+                        if (versionOverride) {
+                            it.version.replaceNode { node ->
+                                new Node(it, "version", versionOverride)
+                            }
+                        }
+                    }
+                }
+
+                repository(url: Global.RELEASE_REPOSITORY_URL) {
+                    authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+                }
+                snapshotRepository(url: Global.SNAPSHOT_REPOSITORY_URL) {
+                    authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+                }
+
+                pom.project {
+                    name Global.POM_NAME
+                    packaging Global.POM_PACKAGING
+                    description Global.POM_DESCRIPTION
+                    url Global.POM_URL
+
+                    scm {
+                        url Global.POM_SCM_URL
+                        connection Global.POM_SCM_CONNECTION
+                        developerConnection Global.POM_SCM_DEV_CONNECTION
+                    }
+
+                    licenses {
+                        license {
+                            name Global.POM_LICENCE_NAME
+                            url Global.POM_LICENCE_URL
+                            distribution Global.POM_LICENCE_DIST
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id Global.POM_DEVELOPER_ID
+                            name Global.POM_DEVELOPER_NAME
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    signing {
+        required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
+        sign configurations.archives
+    }
+
+    //task androidJavadocs(type: Javadoc) {
+    //source = android.sourceSets.main.allJava
+    //}
+
+    //task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    //classifier = 'javadoc'
+    //from androidJavadocs.destinationDir
+    //}
+
+    task androidSourcesJar(type: Jar) {
+        classifier = 'sources'
+        from android.sourceSets.main.java.sourceFiles
+    }
+
+    artifacts {
+        archives androidSourcesJar
+    }
+}

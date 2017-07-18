@@ -1,20 +1,48 @@
 language: android
 sudo: false
-jdk: openjdk7
+jdk: oraclejdk8
+
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+    - $HOME/android-sdk/extras/
+    - $HOME/android-sdk/
+    - $HOME/android-sdk/platform-tools
+    - $HOME/android-sdk/platforms
+    - $HOME/android-sdk/build-tools
+    - $HOME/android-sdk/tools
 android:
   components:
-    - platform-tools
     - tools
-    - build-tools-23.0.3
+    - tools # Include again to work around travis not using the latest.
+            # https://github.com/travis-ci/travis-ci/issues/6193
+            # Required to get the newest platform-tools.
+    - platform-tools
+    - build-tools-25.0.0
     - extra-android-m2repository
     - extra-google-m2repository
-    - android-23
+    - android-24
   licenses:
     - '.+'
 before_install:
-    - wget http://services.gradle.org/distributions/gradle-2.14.1-bin.zip
-    - unzip gradle-2.14.1-bin.zip
-    - export GRADLE_HOME=$PWD/gradle-2.14.1
+    - pwd
+    - ls -la
+    - wget http://services.gradle.org/distributions/gradle-3.3-bin.zip
+    - unzip gradle-3.3-bin.zip
+    - export GRADLE_HOME=$PWD/gradle-3.3
     - export PATH=$GRADLE_HOME/bin:$PATH
-    - cd OneSignalSDK/app
+    - cd OneSignalSDK/unittest
 script: gradle build
+after_failure:
+    - cat build/reports/lint-results.xml
+    - cat build/outputs/lint-results-debug.xml
+    - cd ../..
+    - pwd
+    - ls -la $HOME
+    - ls -la $HOME/android-sdk
+after_success:
+    - cd ../..
+    - pwd
+    - ls -la $HOME
+    - ls -la $HOME/android-sdk

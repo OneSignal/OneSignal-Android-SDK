@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,32 +35,35 @@ import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.NotificationManagerCompat;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
-// Used to process opens and dismisses of notifications.
+// Process both notifications opens and dismisses.
+class NotificationOpenedProcessor {
 
-public class NotificationOpenedProcessor {
+   static void processFromContext(Context context, Intent intent) {
+      if (!isOneSignalIntent(intent))
+         return;
+      
+      handleDismissFromActionButtonPress(context, intent);
 
-   private static Context context;
-   private static Intent intent;
-
-   public static void processFromActivity(Context inContext, Intent inIntent) {
-      // Pressed an action button, need to clear the notification and close the notification area manually.
-      if (inIntent.getBooleanExtra("action_button", false)) {
-         NotificationManagerCompat.from(inContext).cancel(inIntent.getIntExtra("notificationId", 0));
-         inContext.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
-      }
-
-      processIntent(inContext, inIntent);
+      processIntent(context, intent);
    }
-
-   static void processIntent(Context incContext, Intent inIntent) {
-      context = incContext;
-      intent = inIntent;
-
+   
+   private static boolean isOneSignalIntent(Intent intent) {
+      return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra("notificationId");
+   }
+   
+   private static void handleDismissFromActionButtonPress(Context context, Intent intent) {
+      // Pressed an action button, need to clear the notification and close the notification area manually.
+      if (intent.getBooleanExtra("action_button", false)) {
+         NotificationManagerCompat.from(context).cancel(intent.getIntExtra("notificationId", 0));
+         context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+      }
+   }
+   
+   static void processIntent(Context context, Intent intent) {
       String summaryGroup = intent.getStringExtra("summary");
 
       boolean dismissed = intent.getBooleanExtra("dismissed", false);
@@ -69,36 +72,48 @@ public class NotificationOpenedProcessor {
       if (!dismissed) {
          try {
             JSONObject jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
-            jsonData.put("notificationId", inIntent.getIntExtra("notificationId", 0));
+            jsonData.put("notificationId", intent.getIntExtra("notificationId", 0));
             intent.putExtra("onesignal_data", jsonData.toString());
             dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
          } catch (Throwable t) {
             t.printStackTrace();
          }
       }
-
+   
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-      SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
-      writableDb.beginTransaction();
+      SQLiteDatabase writableDb = null;
+      
       try {
+         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb.beginTransaction();
+         
          // We just opened a summary notification.
          if (!dismissed && summaryGroup != null)
             addChildNotifications(dataArray, summaryGroup, writableDb);
 
-         markNotificationsConsumed(writableDb);
+         markNotificationsConsumed(context, intent, writableDb);
 
          // Notification is not a summary type but a single notification part of a group.
-         if (summaryGroup == null && intent.getStringExtra("grp") != null)
-            updateSummaryNotification(writableDb);
+         if (summaryGroup == null) {
+            String group = intent.getStringExtra("grp");
+            if (group != null)
+               NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
+         }
          writableDb.setTransactionSuccessful();
       } catch (Exception e) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error processing notification open or dismiss record! ", e);
       } finally {
-         writableDb.endTransaction();
+         if (writableDb != null) {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            }
+         }
       }
 
       if (!dismissed)
-         OneSignal.handleNotificationOpen(context, dataArray, inIntent.getBooleanExtra("from_alert", false));
+         OneSignal.handleNotificationOpen(context, dataArray, intent.getBooleanExtra("from_alert", false));
    }
 
    private static void addChildNotifications(JSONArray dataArray, String summaryGroup, SQLiteDatabase writableDb) {
@@ -130,7 +145,7 @@ public class NotificationOpenedProcessor {
       cursor.close();
    }
 
-   private static void markNotificationsConsumed(SQLiteDatabase writableDb) {
+   private static void markNotificationsConsumed(Context context, Intent intent, SQLiteDatabase writableDb) {
       String group = intent.getStringExtra("summary");
       String whereStr;
       String[] whereArgs = null;
@@ -142,36 +157,11 @@ public class NotificationOpenedProcessor {
       else
          whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra("notificationId", 0);
 
-      writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(), whereStr, whereArgs);
+      writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(intent), whereStr, whereArgs);
       BadgeCountUpdater.update(writableDb, context);
    }
 
-   private static void updateSummaryNotification(SQLiteDatabase writableDb) {
-      String grpId = intent.getStringExtra("grp");
-
-      Cursor cursor = writableDb.query(
-            NotificationTable.TABLE_NAME,
-            new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID }, // retColumn
-            NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
-                  NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                  NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                  NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0" ,
-            new String[] { grpId }, // whereArgs
-            null, null, null);
-
-      // All individual notifications consumed, make summary notification as consumed as well.
-      if (cursor.getCount() == 0)
-         writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(), NotificationTable.COLUMN_NAME_GROUP_ID + " = ?", new String[] {grpId });
-      else {
-         try {
-            GenerateNotification.createSummaryNotification(context, true, new JSONObject("{\"grp\": \"" + grpId + "\"}"));
-         } catch (JSONException e) {}
-      }
-
-      cursor.close();
-   }
-
-   private static ContentValues newContentValuesWithConsumed() {
+   private static ContentValues newContentValuesWithConsumed(Intent intent) {
       ContentValues values = new ContentValues();
 
       boolean dismissed = intent.getBooleanExtra("dismissed", false);

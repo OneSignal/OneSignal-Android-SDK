@@ -1,0 +1,73 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion '25.0.0'
+
+    defaultConfig {
+        applicationId "com.onesignal.example"
+        manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
+                                // Project number pulled from dashboard, local value is ignored.
+                                onesignal_google_project_number: "REMOTE"]
+        minSdkVersion 9
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        debug {
+            // Test with proguard enabled to make sure our consumer rules are correct in the SDK.
+            // minify does not work with GMS 7.0.0 with the current settings. Use 8.4.0 to test.
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    testOptions {
+        unitTests.all {
+            maxParallelForks 1
+            maxHeapSize "2048m"
+        }
+    }
+}
+
+repositories {
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Use for SDK Development
+    compile(project(':onesignal')) {
+        exclude group: 'com.android.support', module: 'support-v4'
+        exclude group: 'com.android.support', module: 'customtabs'
+        exclude group: 'com.google.android.gms', module: 'play-services-gcm'
+        exclude group: 'com.google.android.gms', module: 'play-services-analytics'
+        exclude group: 'com.google.android.gms', module: 'play-services-location'
+    }
+
+    // Use to run local .aar file
+    // compile(name: 'OneSignal-release', ext: 'aar')
+
+    // Use for released SDK
+    // compile 'com.onesignal:OneSignal:3.+@aar'
+
+    // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
+    // This insure that the SDK will work if an app developer is using an older version of GMS.
+    compile "com.google.android.gms:play-services-gcm:10.0.1"
+
+    // play-services-analytics is required for AdvertisingIdClient when using GMS 8.1.0 or lower.
+    // 8.3.0 it is included in 'basement' which is required by 'base'.
+    //compile "com.google.android.gms:play-services-analytics:7.0.0"
+    compile "com.google.android.gms:play-services-location:10.0.1"
+
+    // compile 'com.google.android.gms:play-services-analytics:7.0.0'
+
+    compile 'com.android.support:customtabs:24.0.0'
+
+    testCompile 'junit:junit:4.12'
+    testCompile('org.robolectric:robolectric:3.3.2') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+    }
+}

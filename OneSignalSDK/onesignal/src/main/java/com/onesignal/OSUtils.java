@@ -34,16 +34,20 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 class OSUtils {
 
    static final int UNINITIALIZABLE_STATUS = -999;
 
-   static int initializationChecker(int deviceType, String googleProjectNumber, String oneSignalAppId) {
+   int initializationChecker(int deviceType, String oneSignalAppId) {
       int subscribableStatus = 1;
 
       try {
@@ -54,20 +58,11 @@ class OSUtils {
          return UNINITIALIZABLE_STATUS;
       }
 
-      if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) || "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
-         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
+      if ("b2f7f966-d8cc-11e4-bed1-df8f05be55ba".equals(oneSignalAppId) ||
+          "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
 
       if (deviceType == 1) {
-         try {
-            //noinspection ResultOfMethodCallIgnored
-            Double.parseDouble(googleProjectNumber);
-            if (googleProjectNumber.length() < 8 || googleProjectNumber.length() > 16)
-               throw new IllegalArgumentException("Google Project number (Sender_ID) should be a 10 to 14 digit number in length.");
-         } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Google Project number (Sender_ID) format is invalid. Please use the 10 to 14 digit number found in the Google Developer Console for your project.\nExample: '703322744261'\n", t);
-            subscribableStatus = -6;
-         }
-
          try {
             Class.forName("com.google.android.gms.gcm.GoogleCloudMessaging");
          } catch (ClassNotFoundException e) {
@@ -162,6 +157,39 @@ class OSUtils {
       if (lang.equals("ji"))
          return "yi";
 
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/98
+      if (lang.equals("zh"))
+         return lang + "-" + Locale.getDefault().getCountry();
+
       return lang;
+   }
+
+   static boolean isValidEmail(String email) {
+      if (email == null)
+         return false;
+
+      String emRegex = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
+      Pattern pattern = Pattern.compile(emRegex);
+      return pattern.matcher(email).matches();
+   }
+   
+   // Get the app's permission which will be false if the user disabled notifications for the app
+   //   from Settings > Apps or by long pressing the notifications and selecting block.
+   //   - Detection works on Android 4.4+, requires Android Support v4 Library 24.0.0+
+   static boolean areNotificationsEnabled(Context  context) {
+      try {
+         return NotificationManagerCompat.from(OneSignal.appContext).areNotificationsEnabled();
+      } catch (Throwable t) {}
+      
+      return true;
+   }
+   
+   static void runOnMainUIThread(Runnable runnable) {
+      if (Looper.getMainLooper().getThread() == Thread.currentThread())
+         runnable.run();
+      else {
+         Handler handler = new Handler(Looper.getMainLooper());
+         handler.post(runnable);
+      }
    }
 }

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,16 +51,25 @@ class OneSignalStateSynchronizer {
    // toSyncUserState  - Pending state that will be synced to the OneSignal server.
    //                    diff will be generated between currentUserState when a sync call is made to the server.
    private static UserState currentUserState, toSyncUserState;
+   
+   private static UserState getToSyncUserState() {
+      synchronized (syncLock) {
+         if (toSyncUserState == null)
+            toSyncUserState = new OneSignalStateSynchronizer().new UserState("TOSYNC_STATE", true);
+      }
+      
+      return toSyncUserState;
+   }
 
    static HashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new HashMap<>();
    private static final Object networkHandlerSyncLock = new Object() {};
 
    private static Context appContext;
 
-   private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type"};
-   private static final Set<String> LOCATION_FIELDS_SET = new HashSet<String>(Arrays.asList(LOCATION_FIELDS));
+   private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "ad_id"};
+   private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
 
-   // Object to synchronize to prevent concurrent modifications on syncValues and dependValues
+   // Object to synchronize on to prevent concurrent modifications on syncValues and dependValues
    private static final Object syncLock = new Object() {};
 
    static private JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
@@ -70,6 +79,11 @@ class OneSignalStateSynchronizer {
    }
 
    static private JSONObject synchronizedGenerateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
+      if (cur == null)
+         return null;
+      if (changedTo == null)
+         return baseOutput;
+
       Iterator<String> keys = changedTo.keys();
       String key;
       Object value;
@@ -199,17 +213,28 @@ class OneSignalStateSynchronizer {
       return null;
    }
    
-   public static void stopAndPersist() {
+   static boolean stopAndPersist() {
       for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet())
          handlerThread.getValue().stopScheduledRunnable();
-
-      if (toSyncUserState != null)
+      
+      if (toSyncUserState != null) {
+         boolean unSynced = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall()) != null;
          toSyncUserState.persistState();
+         return unSynced;
+      }
+      return false;
+   }
+   
+   static void clearLocation() {
+      getToSyncUserState().clearLocation();
+      getToSyncUserState().persistState();
    }
    
    class UserState {
-
-      private final int UNSUBSCRIBE_VALUE = -2;
+      
+      private final int NOTIFICATION_TYPES_SUBSCRIBED = 1;
+      private final int NOTIFICATION_TYPES_NO_PERMISSION = 0;
+      private final int NOTIFICATION_TYPES_UNSUBSCRIBE = -2;
 
       private String persistKey;
 
@@ -246,27 +271,65 @@ class OneSignalStateSynchronizer {
 
       private int getNotificationTypes() {
          int subscribableStatus = dependValues.optInt("subscribableStatus", 1);
+         if (subscribableStatus < NOTIFICATION_TYPES_UNSUBSCRIBE)
+            return subscribableStatus;
+   
+         boolean androidPermission = dependValues.optBoolean("androidPermission", true);
+         if (!androidPermission)
+            return NOTIFICATION_TYPES_NO_PERMISSION;
+   
          boolean userSubscribePref = dependValues.optBoolean("userSubscribePref", true);
-         return subscribableStatus < UNSUBSCRIBE_VALUE ? subscribableStatus : (userSubscribePref ? 1 : UNSUBSCRIBE_VALUE);
+         if (!userSubscribePref)
+            return NOTIFICATION_TYPES_UNSUBSCRIBE;
+         
+         return NOTIFICATION_TYPES_SUBSCRIBED;
       }
 
-      private Set<String> getGroupChangeField(JSONObject cur, JSONObject changedTo) {
+      private Set<String> getGroupChangeFields(UserState changedTo) {
          try {
-            if (cur.getDouble("lat") != changedTo.getDouble("lat")
-                || cur.getDouble("long") != changedTo.getDouble("long")
-                || cur.getDouble("loc_acc") != changedTo.getDouble("loc_acc")
-                || cur.getDouble("loc_type") != changedTo.getDouble("loc_type"))
+            if (dependValues.optLong("loc_time_stamp") != changedTo.dependValues.getLong("loc_time_stamp")
+                || syncValues.optDouble("lat") != changedTo.syncValues.getDouble("lat")
+                || syncValues.optDouble("long") != changedTo.syncValues.getDouble("long")
+                || syncValues.optDouble("loc_acc") != changedTo.syncValues.getDouble("loc_acc")
+                || syncValues.optInt("loc_type ") != changedTo.syncValues.optInt("loc_type")) {
+                  changedTo.syncValues.put("loc_bg", changedTo.dependValues.opt("loc_bg"));
                return LOCATION_FIELDS_SET;
-         } catch (Throwable t) {
-            return LOCATION_FIELDS_SET;
-         }
+            }
+         } catch (Throwable t) {}
 
          return null;
+      }
+      
+      void setLocation(LocationGMS.LocationPoint point) {
+         try {
+            syncValues.put("lat", point.lat);
+            syncValues.put("long",point.log);
+            syncValues.put("loc_acc", point.accuracy);
+            syncValues.put("loc_type", point.type);
+            dependValues.put("loc_bg", point.bg);
+            dependValues.put("loc_time_stamp", point.timeStamp);
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+      }
+      
+      void clearLocation() {
+         try {
+            syncValues.put("lat", null);
+            syncValues.put("long", null);
+            syncValues.put("loc_acc", null);
+            syncValues.put("loc_type", null);
+            syncValues.put("loc_bg", null);
+            dependValues.put("loc_bg", null);
+            dependValues.put("loc_time_stamp", null);
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
       }
 
       private JSONObject generateJsonDiff(UserState newState, boolean isSessionCall) {
          addDependFields(); newState.addDependFields();
-         Set<String> includeFields = getGroupChangeField(syncValues, newState.syncValues);
+         Set<String> includeFields = getGroupChangeFields(newState);
          JSONObject sendJson = OneSignalStateSynchronizer.generateJsonDiff(syncValues, newState.syncValues, null, includeFields);
 
          if (!isSessionCall && sendJson.toString().equals("{}"))
@@ -275,7 +338,7 @@ class OneSignalStateSynchronizer {
          try {
             // This makes sure app_id is in all our REST calls.
             if (!sendJson.has("app_id"))
-               sendJson.put("app_id", (String) syncValues.opt("app_id"));
+               sendJson.put("app_id", syncValues.optString("app_id"));
          } catch (JSONException e) {
             e.printStackTrace();
          }
@@ -303,17 +366,19 @@ class OneSignalStateSynchronizer {
          final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
 
          String dependValuesStr = prefs.getString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, null);
+         // null if first run of a 2.0+ version.
          if (dependValuesStr == null) {
             dependValues = new JSONObject();
             try {
                int subscribableStatus;
                boolean userSubscribePref = true;
+               // Convert 1.X SDK settings to 2.0+.
                if (persistKey.equals("CURRENT_STATE"))
                   subscribableStatus = prefs.getInt("ONESIGNAL_SUBSCRIPTION", 1);
                else
                   subscribableStatus = prefs.getInt("ONESIGNAL_SYNCED_SUBSCRIPTION", 1);
 
-               if (subscribableStatus == UNSUBSCRIBE_VALUE) {
+               if (subscribableStatus == NOTIFICATION_TYPES_UNSUBSCRIBE) {
                   subscribableStatus = 1;
                   userSubscribePref = false;
                }
@@ -388,46 +453,50 @@ class OneSignalStateSynchronizer {
       private void persistStateAfterSync(JSONObject inDependValues, JSONObject inSyncValues) {
          if (inDependValues != null)
             OneSignalStateSynchronizer.generateJsonDiff(dependValues, inDependValues, dependValues, null);
+
          if (inSyncValues != null) {
             OneSignalStateSynchronizer.generateJsonDiff(syncValues, inSyncValues, syncValues, null);
-
-            synchronized (syncLock) {
-               if (inSyncValues.has("tags")) {
-                  JSONObject newTags;
-                  if (syncValues.has("tags")) {
-                     try {
-                        newTags = new JSONObject(syncValues.optString("tags"));
-                     } catch (JSONException e) {
-                        newTags = new JSONObject();
-                     }
-                  }
-                  else
-                     newTags = new JSONObject();
-
-                  JSONObject curTags = inSyncValues.optJSONObject("tags");
-                  Iterator<String> keys = curTags.keys();
-                  String key;
-
-                  try {
-                     while (keys.hasNext()) {
-                        key = keys.next();
-                        if (!"".equals(curTags.optString(key)))
-                           newTags.put(key, curTags.optString(key));
-                        else
-                           newTags.remove(key);
-                     }
-
-                     if (newTags.toString().equals("{}"))
-                        syncValues.remove("tags");
-                     else
-                        syncValues.put("tags", newTags);
-                  } catch (Throwable t) {}
-               }
-            }
+            mergeTags(inSyncValues, null);
          }
 
          if (inDependValues != null || inSyncValues != null)
             persistState();
+      }
+
+      void mergeTags(JSONObject inSyncValues, JSONObject omitKeys) {
+         synchronized (syncLock) {
+            if (inSyncValues.has("tags")) {
+               JSONObject newTags;
+               if (syncValues.has("tags")) {
+                  try {
+                     newTags = new JSONObject(syncValues.optString("tags"));
+                  } catch (JSONException e) {
+                     newTags = new JSONObject();
+                  }
+               }
+               else
+                  newTags = new JSONObject();
+
+               JSONObject curTags = inSyncValues.optJSONObject("tags");
+               Iterator<String> keys = curTags.keys();
+               String key;
+
+               try {
+                  while (keys.hasNext()) {
+                     key = keys.next();
+                     if ("".equals(curTags.optString(key)))
+                        newTags.remove(key);
+                     else if (omitKeys == null || !omitKeys.has(key))
+                        newTags.put(key, curTags.optString(key));
+                  }
+
+                  if (newTags.toString().equals("{}"))
+                     syncValues.remove("tags");
+                  else
+                     syncValues.put("tags", newTags);
+               } catch (Throwable t) {}
+            }
+         }
       }
    }
 
@@ -442,13 +511,13 @@ class OneSignalStateSynchronizer {
       int currentRetry;
 
       NetworkHandlerThread(int type) {
-         super("NetworkHandlerThread");
+         super("OSH_NetworkHandlerThread");
          mType = type;
          start();
          mHandler = new Handler(getLooper());
       }
    
-      public void runNewJob() {
+      void runNewJob() {
          currentRetry = 0;
          mHandler.removeCallbacksAndMessages(null);
          mHandler.postDelayed(getNewRunnable(), 5000);
@@ -495,10 +564,15 @@ class OneSignalStateSynchronizer {
    static UserState getNewUserState() {
       return new OneSignalStateSynchronizer().new UserState("nonPersist", false);
    }
+   
+   private static boolean isSessionCall() {
+      final String userId = OneSignal.getUserId();
+      return userId == null || (nextSyncIsSession && !waitingForSessionResponse);
+   }
 
    static void syncUserState(boolean fromSyncService) {
       final String userId = OneSignal.getUserId();
-      boolean isSessionCall = userId == null || (nextSyncIsSession && !waitingForSessionResponse);
+      boolean isSessionCall =  isSessionCall();
 
       final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
       final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
@@ -660,26 +734,31 @@ class OneSignalStateSynchronizer {
          e.printStackTrace();
       }
    }
-
-   static void updateLocation(Double lat, Double log, Float accuracy, Integer type) {
-      UserState userState = getUserStateForModification();
+   
+   static boolean getUserSubscribePreference() {
+      return getToSyncUserState().dependValues.optBoolean("userSubscribePref", true);
+   }
+   
+   static void setPermission(boolean enable) {
       try {
-         userState.syncValues.put("lat", lat);
-         userState.syncValues.put("long", log);
-         userState.syncValues.put("loc_acc", accuracy);
-         userState.syncValues.put("loc_type", type);
+         getUserStateForModification().dependValues.put("androidPermission", enable);
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
+   static void updateLocation(LocationGMS.LocationPoint point) {
+      UserState userState = getUserStateForModification();
+      userState.setLocation(point);
+   }
+
    static boolean getSubscribed() {
-      return toSyncUserState.getNotificationTypes() > 0;
+      return getToSyncUserState().getNotificationTypes() > 0;
    }
 
 
    static String getRegistrationId() {
-      return toSyncUserState.syncValues.optString("identifier", null);
+      return getToSyncUserState().syncValues.optString("identifier", null);
    }
 
    static class GetTagsResult {
@@ -691,43 +770,43 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   private static JSONObject lastGetTagsResponse;
+   private static boolean serverSuccess;
    static GetTagsResult getTags(boolean fromServer) {
-      lastGetTagsResponse = null;
-
       if (fromServer) {
          String userId = OneSignal.getUserId();
-         OneSignalRestClient.getSync("players/" + userId, new OneSignalRestClient.ResponseHandler() {
+         String appId = OneSignal.getSavedAppId();
+         
+         OneSignalRestClient.getSync("players/" + userId + "?app_id=" + appId, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onSuccess(String responseStr) {
+               serverSuccess = true;
                try {
-                  lastGetTagsResponse = new JSONObject(responseStr);
+                  JSONObject lastGetTagsResponse = new JSONObject(responseStr);
                   if (lastGetTagsResponse.has("tags")) {
-                     lastGetTagsResponse = lastGetTagsResponse.optJSONObject("tags");
-                     currentUserState.syncValues.put("tags", lastGetTagsResponse);
-                     currentUserState.persistState();
-
-                     JSONObject tagsToSync = getTagsWithoutDeletedKeys(toSyncUserState.syncValues);
-                     if (tagsToSync != null) {
-                        Iterator<String> keys = tagsToSync.keys();
-                        while (keys.hasNext()) {
-                           String key = keys.next();
-                           lastGetTagsResponse.put(key, tagsToSync.optString(key));
-                        }
+                     synchronized(syncLock) {
+                        JSONObject dependDiff = generateJsonDiff(currentUserState.syncValues.optJSONObject("tags"),
+                            toSyncUserState.syncValues.optJSONObject("tags"),
+                            null, null);
+   
+                        currentUserState.syncValues.put("tags", lastGetTagsResponse.optJSONObject("tags"));
+                        currentUserState.persistState();
+   
+                        // Allow server side tags to overwrite local tags expect for any pending changes
+                        //  that haven't been successfully posted.
+                        toSyncUserState.mergeTags(lastGetTagsResponse, dependDiff);
+                        toSyncUserState.persistState();
                      }
                   }
-                  else
-                     lastGetTagsResponse = null;
                } catch (JSONException e) {
                   e.printStackTrace();
                }
             }
          });
       }
-
-      if (lastGetTagsResponse == null)
-         return new GetTagsResult(false, getTagsWithoutDeletedKeys(toSyncUserState.syncValues));
-      return new GetTagsResult(true, lastGetTagsResponse);
+   
+      synchronized(syncLock) {
+         return new GetTagsResult(serverSuccess, getTagsWithoutDeletedKeys(getToSyncUserState().syncValues));
+      }
    }
 
    static void resetCurrentState() {
@@ -738,7 +817,7 @@ class OneSignalStateSynchronizer {
       OneSignal.setLastSessionTime(-60 * 61);
    }
 
-   static void handlePlayerDeletedFromServer() {
+   private static void handlePlayerDeletedFromServer() {
       resetCurrentState();
       nextSyncIsSession = true;
       postNewSyncUserState();

@@ -32,13 +32,14 @@ import android.app.Activity;
 import org.json.JSONObject;
 
 import com.onesignal.OneSignal.NotificationOpenedHandler;
+import com.onesignal.OneSignal.NotificationReceivedHandler;
 import com.onesignal.OneSignal.GetTagsHandler;
 import com.onesignal.OneSignal.IdsAvailableHandler;
 import com.onesignal.OneSignal.PostNotificationResponseHandler;
 
-public class OneSignalUnityProxy implements NotificationOpenedHandler {
+public class OneSignalUnityProxy implements NotificationOpenedHandler, NotificationReceivedHandler, OSPermissionObserver, OSSubscriptionObserver {
 
-   private String unityListenerName;
+   private static String unityListenerName;
    private static java.lang.reflect.Method unitySendMessage;
 
    @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -46,30 +47,31 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
       unityListenerName = listenerName;
       
       try {
-         // We use reflection here so the default proguard config does not get an error for native apps.
+         // We use reflection here so we don't have to include a Unity jar to build this project.
          Class unityPlayerClass;
          unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
          unitySendMessage = unityPlayerClass.getMethod("UnitySendMessage", String.class, String.class, String.class);
 
          OneSignal.sdkType = "unity";
          OneSignal.setLogLevel(logLevel, visualLogLevel);
-         OneSignal.init((Activity) unityPlayerClass.getField("currentActivity").get(null), googleProjectNumber, oneSignalAppId, this);
+   
+         OneSignal.Builder builder = OneSignal.getCurrentOrNewInitBuilder();
+         builder.unsubscribeWhenNotificationsAreDisabled(true);
+         builder.filterOtherGCMReceivers(true);
+         OneSignal.init((Activity) unityPlayerClass.getField("currentActivity").get(null), googleProjectNumber, oneSignalAppId, this, this);
       } catch (Throwable t) {
          t.printStackTrace();
       }
    }
 
    @Override
-   public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {
-      JSONObject outerObject = new JSONObject();
-      try {
-         outerObject.put("isActive", isActive);
-         outerObject.put("alert", message);
-         outerObject.put("custom", additionalData);
-         unitySendMessage.invoke(null, unityListenerName, "onPushNotificationReceived", outerObject.toString());
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
+   public void notificationOpened(OSNotificationOpenResult result) {
+      unitySafeInvoke("onPushNotificationOpened", result.toJSONObject().toString());
+   }
+
+   @Override
+   public void notificationReceived(OSNotification notification) {
+      unitySafeInvoke("onPushNotificationReceived", notification.toJSONObject().toString());
    }
 
    public void sendTag(String key, String value) {
@@ -84,11 +86,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
       OneSignal.getTags(new GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            try {
-               unitySendMessage.invoke(null, unityListenerName, "onTagsReceived", tags.toString());
-            } catch (Throwable t) {
-               t.printStackTrace();
-            }
+            String tagsStr;
+            if (tags != null)
+               tagsStr = tags.toString();
+            else
+               tagsStr = "{}";
+            unitySafeInvoke("onTagsReceived", tagsStr);
          }
       });
    }
@@ -113,7 +116,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
                else
                   jsonIds.put("pushToken", "");
 
-               unitySendMessage.invoke(null, unityListenerName, "onIdsAvailable", jsonIds.toString());
+               unitySafeInvoke("onIdsAvailable", jsonIds.toString());
             } catch (Throwable t) {
                t.printStackTrace();
             }
@@ -125,9 +128,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
 
    public void enableVibrate(boolean enable) { OneSignal.enableVibrate(enable); }
 
-   public void enableNotificationsWhenActive(boolean enable) { OneSignal.enableNotificationsWhenActive(enable); }
-
-   public void enableInAppAlertNotification(boolean enable) { OneSignal.enableInAppAlertNotification(enable); }
+   void setInFocusDisplaying(int displayOption) { OneSignal.setInFocusDisplaying(displayOption); }
 
    public void setSubscription(boolean enable) { OneSignal.setSubscription(enable); }
 
@@ -135,20 +136,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
       OneSignal.postNotification(json, new PostNotificationResponseHandler() {
          @Override
          public void onSuccess(JSONObject response) {
-            try {
-               unitySendMessage.invoke(null, unityListenerName, "onPostNotificationSuccess", response.toString());
-            } catch (Throwable t) {
-               t.printStackTrace();
-            }
+            unitySafeInvoke("onPostNotificationSuccess", response.toString());
          }
 
          @Override
          public void onFailure(JSONObject response) {
-            try {
-               unitySendMessage.invoke(null, unityListenerName, "onPostNotificationFailed", response.toString());
-            } catch (Throwable t) {
-               t.printStackTrace();
-            }
+            unitySafeInvoke("onPostNotificationFailed", response.toString());
          }
       });
    }
@@ -156,10 +149,54 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler {
    public void promptLocation() {
       OneSignal.promptLocation();
    }
-   public void setEmail(String email) {
-      OneSignal.setEmail(email);
+   public void syncHashedEmail(String email) {
+      OneSignal.syncHashedEmail(email);
    }
-   public void clearOneSignalNotifications () {
+   public void clearOneSignalNotifications() {
       OneSignal.clearOneSignalNotifications();
+   }
+   public void cancelNotification(int id) {
+      OneSignal.cancelNotification(id);
+   }
+   public void cancelGroupedNotifications(String group) {
+      OneSignal.cancelGroupedNotifications(group);
+   }
+   
+   public void addPermissionObserver() {
+      OneSignal.addPermissionObserver(this);
+   }
+   
+   public void removePermissionObserver() {
+      OneSignal.removePermissionObserver(this);
+   }
+   
+   public void addSubscriptionObserver() {
+      OneSignal.addSubscriptionObserver(this);
+   }
+   
+   public void removeSubscriptionObserver() {
+      OneSignal.removeSubscriptionObserver(this);
+   }
+   
+   public String getPermissionSubscriptionState() {
+      return OneSignal.getPermissionSubscriptionState().toJSONObject().toString();
+   }
+   
+   @Override
+   public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+      unitySafeInvoke("onOSPermissionChanged", stateChanges.toJSONObject().toString());
+   }
+   
+   @Override
+   public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+      unitySafeInvoke("onOSSubscriptionChanged", stateChanges.toJSONObject().toString());
+   }
+   
+   private static void unitySafeInvoke(String method, String params) {
+      try {
+         unitySendMessage.invoke(null, unityListenerName, method, params);
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
    }
 }

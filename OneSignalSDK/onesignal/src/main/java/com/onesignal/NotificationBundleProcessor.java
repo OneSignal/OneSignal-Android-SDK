@@ -36,6 +36,7 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
@@ -50,9 +51,18 @@ class NotificationBundleProcessor {
 
    static void ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       try {
-         boolean restoring = bundle.getBoolean("restoring", false);
-         JSONObject jsonPayload = new JSONObject(bundle.getString("json_payload"));
-         if (!restoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
+         String jsonStrPayload = bundle.getString("json_payload");
+         if (jsonStrPayload == null) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to ProcessFromGCMIntentService: " + bundle);
+            return;
+         }
+   
+         NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+         notifJob.restoring = bundle.getBoolean("restoring", false);
+         notifJob.shownTimeStamp = bundle.getLong("timestamp");
+         notifJob.jsonPayload = new JSONObject(jsonStrPayload);
+         
+         if (!notifJob.restoring && OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
             return;
 
          if (bundle.containsKey("android_notif_id")) {
@@ -60,34 +70,30 @@ class NotificationBundleProcessor {
                overrideSettings = new NotificationExtenderService.OverrideSettings();
             overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
-
-         Process(context, restoring, jsonPayload, overrideSettings);
+         
+         notifJob.overrideSettings = overrideSettings;
+         Process(notifJob);
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
-   static int Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled() &&  OneSignal.isAppActive();
+   static int Process(NotificationGenerationJob notifJob) {
+      notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
+      processCollapseKey(notifJob);
+      
+      GenerateNotification.fromJsonPayload(notifJob);
 
-      int notificationId;
-      if (overrideSettings != null && overrideSettings.androidNotificationId != null)
-         notificationId = overrideSettings.androidNotificationId;
-      else
-         notificationId = new Random().nextInt();
-
-      GenerateNotification.fromJsonPayload(context, restoring, notificationId, jsonPayload, showAsAlert, overrideSettings);
-
-      if (!restoring) {
-         saveNotification(context, jsonPayload, false, notificationId);
+      if (!notifJob.restoring) {
+         saveNotification(notifJob, false);
          try {
-            JSONObject jsonObject = new JSONObject(jsonPayload.toString());
-            jsonObject.put("notificationId", notificationId);
-            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, showAsAlert);
+            JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
+            jsonObject.put("notificationId", notifJob.getAndroidId());
+            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
          } catch(Throwable t) {}
       }
 
-      return notificationId;
+      return notifJob.getAndroidId();
    }
 
    static JSONArray bundleAsJsonArray(Bundle bundle) {
@@ -98,37 +104,64 @@ class NotificationBundleProcessor {
 
 
    static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
-      saveNotification(context, bundleAsJSONObject(bundle), opened, notificationId);
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+      notifJob.jsonPayload = bundleAsJSONObject(bundle);
+      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+      notifJob.overrideSettings.androidNotificationId = notificationId;
+      
+      saveNotification(notifJob, opened);
    }
-
+   
    // Saving the notification provides the following:
-   //   * Prevent duplicates.
+   //   * Prevent duplicates
    //   * Build summary notifications
-   //   * Redisplay notifications after reboot and upgrade of app.
-   //   * Future - Developer API to get a list of notifications.
-   static void saveNotification(Context context, JSONObject jsonPayload, boolean opened, int notificationId) {
+   //   * Collapse key / id support - Used to lookup the android notification id later
+   //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
+   //   * Future - Public API to get a list of notifications
+   static void saveNotification(NotificationGenerationJob notifiJob, boolean opened) {
+      Context context = notifiJob.context;
+      JSONObject jsonPayload = notifiJob.jsonPayload;
+      
       try {
-         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
+         JSONObject customJSON = new JSONObject(notifiJob.jsonPayload.optString("custom"));
+   
+         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
+         SQLiteDatabase writableDb = null;
 
-         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-         SQLiteDatabase writableDb = dbHelper.getWritableDatabase();
-
-         writableDb.beginTransaction();
          try {
+            writableDb = dbHelper.getWritableDbWithRetries();
+   
+            writableDb.beginTransaction();
+            
             deleteOldNotifications(writableDb);
+            
+            // Count any notifications with duplicated android notification ids as dismissed.
+            // -1 is used to note never displayed
+            if (notifiJob.overrideSettings.androidNotificationId != -1) {
+               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.overrideSettings.androidNotificationId;
+   
+               ContentValues values = new ContentValues();
+               values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+   
+               writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+               BadgeCountUpdater.update(writableDb, context);
+            }
 
+            // Save just received notification to DB
             ContentValues values = new ContentValues();
             values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
             if (jsonPayload.has("grp"))
                values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
+            if (jsonPayload.has("collapse_key") && !"do_not_collapse".equals(jsonPayload.optString("collapse_key")))
+               values.put(NotificationTable.COLUMN_NAME_COLLAPSE_ID, jsonPayload.optString("collapse_key"));
 
             values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
             if (!opened)
-               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationId);
-
-            if (jsonPayload.has("title"))
-               values.put(NotificationTable.COLUMN_NAME_TITLE, jsonPayload.optString("title"));
-            values.put(NotificationTable.COLUMN_NAME_MESSAGE, jsonPayload.optString("alert"));
+               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.overrideSettings.androidNotificationId);
+            
+            if (notifiJob.getTitle() != null)
+               values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
+            values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
 
             values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 
@@ -140,17 +173,23 @@ class NotificationBundleProcessor {
          } catch (Exception e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
          } finally {
-            writableDb.endTransaction();
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (Throwable t) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               }
+            }
          }
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
-   // Clean up old records after 4 weeks.
+   // Clean up old records after 1 week.
    static void deleteOldNotifications(SQLiteDatabase writableDb) {
       writableDb.delete(NotificationTable.TABLE_NAME,
-          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000L) - 2419200L),
+          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000L) - 604800L),
           null);
    }
 
@@ -170,7 +209,7 @@ class NotificationBundleProcessor {
    }
 
    // Format our short keys into more readable ones.
-   static void prepareBundle(Bundle gcmBundle) {
+   private static void prepareBundle(Bundle gcmBundle) {
       if (gcmBundle.containsKey("o")) {
          try {
             JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
@@ -239,6 +278,10 @@ class NotificationBundleProcessor {
          if (visibility != null)
             notification.lockScreenVisibility = Integer.parseInt(visibility);
          notification.fromProjectNumber = currentJsonPayload.optString("from", null);
+         notification.priority = currentJsonPayload.optInt("pri", 0);
+         String collapseKey = currentJsonPayload.optString("collapse_key", null);
+         if (!"do_not_collapse".equals(collapseKey))
+            notification.collapseId = collapseKey;
 
          try {
             setActionButtons(notification);
@@ -288,28 +331,72 @@ class NotificationBundleProcessor {
       }
    }
 
+   private static void processCollapseKey(NotificationGenerationJob notifJob) {
+      if (notifJob.restoring)
+         return;
+      if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
+         return;
+      String collapse_id = notifJob.jsonPayload.optString("collapse_key");
+
+
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
+      Cursor cursor = null;
+
+      try {
+         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         cursor = readableDb.query(
+               NotificationTable.TABLE_NAME,
+               new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
+               NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
+                     NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                     NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
+               new String[] {collapse_id},
+               null, null, null);
+
+         if (cursor.moveToFirst()) {
+            int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+            notifJob.setAndroidIdWithOutOverriding(androidNotificationId);
+         }
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not read DB to find existing collapse_key!", t);
+      }
+      finally {
+         if (cursor != null && !cursor.isClosed())
+            cursor.close();
+      }
+   }
+
    // Return true to count the payload as processed.
-   static boolean processBundle(Context context, final Bundle bundle) {
+   static ProcessedBundleResult processBundle(Context context, final Bundle bundle) {
+      ProcessedBundleResult result = new ProcessedBundleResult();
+      
       // Not a OneSignal GCM message
       if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
-         return true;
+         return result;
+      result.isOneSignalPayload = true;
 
       prepareBundle(bundle);
-
+      
+      // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
       Intent overrideIntent = NotificationExtenderService.getIntent(context);
       if (overrideIntent != null) {
          overrideIntent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
+         overrideIntent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
          WakefulBroadcastReceiver.startWakefulService(context, overrideIntent);
-         return true;
+         result.hasExtenderService = true;
+         return result;
       }
+   
+      // We already ran a getNotificationIdFromGCMBundle == null check above so this will only be true for dups
+      result.isDup = OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle));
+      if (result.isDup)
+         return result;
 
-      boolean display = shouldDisplay(bundle.getString("alert") != null
-                                   && !"".equals(bundle.getString("alert")));
+      String alert = bundle.getString("alert");
+      boolean display = shouldDisplay(alert != null && !"".equals(alert));
 
       // Save as a opened notification to prevent duplicates.
       if (!display) {
-         if (OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle)))
-            return true;
          saveNotification(context, bundle, true, -1);
          // Current thread is meant to be short lived.
          //    Make a new thread to do our OneSignal work on.
@@ -317,10 +404,10 @@ class NotificationBundleProcessor {
             public void run() {
                OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false, false);
             }
-         }).start();
+         }, "OS_PROC_BUNDLE").start();
       }
-
-      return !display;
+      
+      return result;
    }
 
    static boolean shouldDisplay(boolean hasBody) {
@@ -336,5 +423,16 @@ class NotificationBundleProcessor {
       JSONArray jsonArray = new JSONArray();
       jsonArray.put(jsonObject);
       return jsonArray;
+   }
+   
+   
+   static class ProcessedBundleResult {
+      boolean isOneSignalPayload;
+      boolean hasExtenderService;
+      boolean isDup;
+      
+      boolean processed() {
+         return !isOneSignalPayload || hasExtenderService || isDup;
+      }
    }
 }
