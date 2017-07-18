@@ -790,7 +790,7 @@ public class OneSignal {
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
 
-            if (lastLocationPoint != null)
+            if (shareLocation && lastLocationPoint != null)
                userState.setLocation(lastLocationPoint);
 
             OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
@@ -1389,14 +1389,15 @@ public class OneSignal {
          return;
       }
 
-      LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
-         @Override
-         public void complete(LocationGMS.LocationPoint point) {
-            if (point != null)
-               OneSignalStateSynchronizer.updateLocation(point);
-         }
-      });
-  
+      if (shareLocation) {
+         LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
+            @Override
+            public void complete(LocationGMS.LocationPoint point) {
+               if (point != null)
+                  OneSignalStateSynchronizer.updateLocation(point);
+            }
+         });
+      }
       promptedLocation = true;
    }
 
