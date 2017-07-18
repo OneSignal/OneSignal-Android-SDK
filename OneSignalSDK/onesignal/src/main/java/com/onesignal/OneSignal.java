@@ -107,6 +107,7 @@ public class OneSignal {
       // Default true in 4.0.0 release.
       boolean mUnsubscribeWhenNotificationsAreDisabled;
       boolean mFilterOtherGCMReceivers;
+      boolean mShareLocation = true;
 
       // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
       //  calling startInit().init()
@@ -158,6 +159,11 @@ public class OneSignal {
       
       public Builder filterOtherGCMReceivers(boolean set) {
          mFilterOtherGCMReceivers = set;
+         return this;
+      }
+
+      public Builder disableLocationSharing() {
+         mShareLocation = false;
          return this;
       }
 
@@ -343,6 +349,10 @@ public class OneSignal {
       mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
       if (!mGoogleProjectNumberIsRemote)
          mGoogleProjectNumber = googleProjectNumber;
+
+      if (!mInitBuilder.mShareLocation) {
+         shareLocation = false;
+      }
 
       osUtils = new OSUtils();
       deviceType = osUtils.getDeviceType();
