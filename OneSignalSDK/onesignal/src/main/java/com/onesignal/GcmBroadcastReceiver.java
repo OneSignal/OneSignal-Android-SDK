@@ -28,13 +28,19 @@
 package com.onesignal;
 
 import android.app.Activity;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
+
+import java.util.Random;
 
 public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
@@ -103,14 +109,43 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       // Return if the notification will NOT be handled by normal GcmIntentService display flow.
       if (processedResult.processed())
          return processedResult;
-
-      Intent intentForService = new Intent();
-      intentForService.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
-      intentForService.putExtra("timestamp", System.currentTimeMillis() / 1000L);
-      intentForService.setComponent(new ComponentName(context.getPackageName(),
-                                                      GcmIntentService.class.getName()));
-      startWakefulService(context, intentForService);
+   
+      startGCMService(context, bundle);
       
       return processedResult;
+   }
+   
+   private static void startGCMService(Context context, Bundle bundle) {
+      // TODO: Display notification directly if from BroadcastReceiver IF
+      //  1. No remote resource needs to be loaded. Starts with "http"
+      //    - Check large icon, big picture, and background image
+      
+      // TODO: Only JobScheduler implementation to only IF
+      //    1. If GCM payload priority is not high.
+      //       - startWakefulService will work in this case on O.
+      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+         ComponentName componentName = new ComponentName(context.getPackageName(), GcmIntentJobService.class.getName());
+      
+         PersistableBundle extras = new PersistableBundle();
+         extras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
+         extras.putLong("timestamp", System.currentTimeMillis() / 1000L);
+   
+         Random random = new Random();
+         JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
+             .setOverrideDeadline(100)
+             .setExtras(extras)
+             .build();
+         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+         jobScheduler.schedule(jobInfo);
+      }
+      else {
+         ComponentName componentName = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
+      
+         Intent intentForService = new Intent();
+         intentForService.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
+         intentForService.putExtra("timestamp", System.currentTimeMillis() / 1000L);
+         intentForService.setComponent(componentName);
+         startWakefulService(context, intentForService);
+      }
    }
 }
