@@ -4,7 +4,7 @@
     package="com.onesignal">
 
     <!-- OneSignal SDK has runtime checks Android version. -->
-    <uses-sdk tools:overrideLibrary="android.support.customtabs"/>
+    <!--<uses-sdk tools:overrideLibrary="android.support.customtabs"/>-->
 
     <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages through Google's GCM. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -64,6 +64,10 @@
     <application>
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
         <service android:name="com.onesignal.GcmIntentService" />
+
+        <!-- For Android O -->
+        <service android:name="com.onesignal.GcmIntentJobService"
+                 android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <service android:name="com.onesignal.SyncService" />
         <activity android:name="com.onesignal.PermissionsActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
