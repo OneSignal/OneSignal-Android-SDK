@@ -49,11 +49,11 @@ class NotificationBundleProcessor {
 
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
-   static void ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   static void ProcessFromGCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       try {
          String jsonStrPayload = bundle.getString("json_payload");
          if (jsonStrPayload == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to ProcessFromGCMIntentService: " + bundle);
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from mBundle passed to ProcessFromGCMIntentService: " + bundle);
             return;
          }
    

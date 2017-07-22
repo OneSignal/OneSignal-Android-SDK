@@ -27,13 +27,20 @@
 
 package com.onesignal;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
+import android.os.PersistableBundle;
+import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import java.util.Random;
 
 class NotificationRestorer {
 
@@ -43,7 +50,8 @@ class NotificationRestorer {
        NotificationTable.COLUMN_NAME_CREATED_TIME
    };
    
-   public static boolean restored;
+   // Notifications will never be force removed when the app's process is running.
+   private static boolean restored;
 
    static void asyncRestore(final Context context) {
       new Thread(new Runnable() {
@@ -108,6 +116,9 @@ class NotificationRestorer {
       }
    }
    
+   // NOTE: This can be running from a Application, Service, or JobService context.
+   // TODO: Android O - NotificationExtenderService compatibility
+   //        1.  Query services that match action and instance a class.
    static void showNotifications(Context context, Cursor cursor) {
       if (cursor.moveToFirst()) {
          boolean useExtender = (NotificationExtenderService.getIntent(context) != null);
@@ -134,7 +145,28 @@ class NotificationRestorer {
       }
    }
    
+   // TODO: Update method to support both Services and JobServices
    private static void startService(Context context, Intent intent) {
       context.startService(intent);
+   }
+   
+   static void startRestoreTaskFromReceiver(WakefulBroadcastReceiver receiver, Context context) {
+      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+         ComponentName componentName = new ComponentName(context.getPackageName(),
+             NotificationRestoreJobService.class.getName());
+         
+         Random random = new Random();
+         JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
+             .setOverrideDeadline(100)
+             .build();
+         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+         jobScheduler.schedule(jobInfo);
+      }
+      else {
+         Intent intentForService = new Intent();
+         intentForService.setComponent(new ComponentName(context.getPackageName(),
+             NotificationRestoreService.class.getName()));
+         receiver.startWakefulService(context, intentForService);
+      }
    }
 }

@@ -5,7 +5,7 @@ android {
     buildToolsVersion '26.0.0'
 
     defaultConfig {
-        minSdkVersion 14
+        minSdkVersion 15
         consumerProguardFiles 'consumer-proguard-rules.pro'
     }
 
@@ -29,11 +29,11 @@ dependencies {
     provided fileTree(dir: 'libs', include: ['*.jar'])
 
     // NOTE: Starting with play-services 10.2.0, minSdkVersion is now 14
-    compile 'com.google.android.gms:play-services-gcm:10.0.1'
-    compile 'com.google.android.gms:play-services-location:10.0.1'
+    compile 'com.google.android.gms:play-services-gcm:11.0.2'
+    compile 'com.google.android.gms:play-services-location:11.0.2'
 
     // NOTE: customtabs sets minSdkVersion to 15.
-    compile 'com.android.support:customtabs:26.+'
+    compile 'com.android.support:customtabs:26.0.0-beta2'
 }
 
 // Remove OnActivityPausedListener class.
