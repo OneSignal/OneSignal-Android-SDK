@@ -58,7 +58,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
    @Override
    public void onReceive(Context context, Intent intent) {
-      // Google Play services started sending an extra non-ordered broadcast with the bundle:
+      // Google Play services started sending an extra non-ordered broadcast with the mBundle:
       //    { "COM": "RST_FULL", "from": "google.com/iid" }
       // Result codes are not valid with non-ordered broadcasts so omit it to prevent errors to the logcat.
       Bundle bundle = intent.getExtras();
@@ -120,31 +120,32 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       //  1. No remote resource needs to be loaded. Starts with "http"
       //    - Check large icon, big picture, and background image
       
-      // TODO: Only JobScheduler implementation to only IF
+      BundleCompat taskExtras = BundleCompatFactory.getInstance();
+      taskExtras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
+      taskExtras.putLong("timestamp", System.currentTimeMillis() / 1000L);
+      
+      // TODO: Only use JobScheduler implementation if:
       //    1. If GCM payload priority is not high.
       //       - startWakefulService will work in this case on O.
       if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-         ComponentName componentName = new ComponentName(context.getPackageName(), GcmIntentJobService.class.getName());
-      
-         PersistableBundle extras = new PersistableBundle();
-         extras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
-         extras.putLong("timestamp", System.currentTimeMillis() / 1000L);
-   
+         ComponentName componentName = new ComponentName(context.getPackageName(),
+                                                         GcmIntentJobService.class.getName());
+         
          Random random = new Random();
          JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
              .setOverrideDeadline(100)
-             .setExtras(extras)
+             .setExtras((PersistableBundle)taskExtras.getBundle())
              .build();
          JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
          jobScheduler.schedule(jobInfo);
       }
       else {
-         ComponentName componentName = new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
+         ComponentName componentName = new ComponentName(context.getPackageName(),
+                                                         GcmIntentService.class.getName());
       
-         Intent intentForService = new Intent();
-         intentForService.putExtra("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
-         intentForService.putExtra("timestamp", System.currentTimeMillis() / 1000L);
-         intentForService.setComponent(componentName);
+         Intent intentForService = new Intent()
+                                    .replaceExtras((Bundle)taskExtras.getBundle())
+                                    .setComponent(componentName);
          startWakefulService(context, intentForService);
       }
    }

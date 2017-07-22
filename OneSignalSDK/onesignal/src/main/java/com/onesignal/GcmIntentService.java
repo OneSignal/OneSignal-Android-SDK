@@ -57,7 +57,9 @@ public class GcmIntentService extends IntentService {
       if (extras == null)
          return;
 
-      NotificationBundleProcessor.ProcessFromGCMIntentService(this, extras, null);
+      NotificationBundleProcessor.ProcessFromGCMIntentService(this,
+          new BundleCompatBundle(extras),
+          null);
 
       // Release the wake lock provided by the WakefulBroadcastReceiver.
       GcmBroadcastReceiver.completeWakefulIntent(intent);

@@ -314,7 +314,8 @@ class GenerateNotification {
    }
 
    private static void removeNotifyOptions(NotificationCompat.Builder builder) {
-      builder.setDefaults(0)
+      builder.setOnlyAlertOnce(true)
+             .setDefaults(0)
              .setSound(null)
              .setVibrate(null)
              .setTicker(null);
@@ -381,7 +382,7 @@ class GenerateNotification {
       //   stacked notifications on Android 4.2 and older
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
       //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
-      //   Note that on Android 7.0 this is the opposite. Only individual notifications will show and bundle / group is
+      //   Note that on Android 7.0 this is the opposite. Only individual notifications will show and mBundle / group is
       //     created by Android itself.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);

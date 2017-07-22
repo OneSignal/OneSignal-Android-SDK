@@ -53,7 +53,9 @@ import java.util.List;
 </service>
 */
 
-public abstract class NotificationExtenderService extends IntentService {
+// TODO: This class can no longer extend IntentService. Nor can we change it to JobService.
+//       It will be called from the respective server / job instead.
+public abstract class NotificationExtenderService {
 
    public static class OverrideSettings {
       public NotificationCompat.Extender extender;
@@ -71,11 +73,6 @@ public abstract class NotificationExtenderService extends IntentService {
          if (overrideSettings.androidNotificationId != null)
             androidNotificationId = overrideSettings.androidNotificationId;
       }
-   }
-
-   public NotificationExtenderService() {
-      super("NotificationExtenderService");
-      setIntentRedelivery(true);
    }
 
    private OSNotificationDisplayedResult osNotificationDisplayedResult;
@@ -104,9 +101,8 @@ public abstract class NotificationExtenderService extends IntentService {
    // App developer must implement
    //   - Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
    protected abstract boolean onNotificationProcessing(OSNotificationReceivedResult notification);
-
-   @Override
-   protected final void onHandleIntent(Intent intent) {
+   
+   final void onHandleIntent(Intent intent) {
       processIntent(intent);
       GcmBroadcastReceiver.completeWakefulIntent(intent);
    }
@@ -123,7 +119,7 @@ public abstract class NotificationExtenderService extends IntentService {
 
       String jsonStrPayload = bundle.getString("json_payload");
       if (jsonStrPayload == null) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to NotificationExtenderService: " + bundle);
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from mBundle passed to NotificationExtenderService: " + bundle);
          return;
       }
 
@@ -186,15 +182,22 @@ public abstract class NotificationExtenderService extends IntentService {
             NotificationBundleProcessor.Process(createNotifJobFromCurrent());
       }
    }
+   
+   private static Intent getIntentBase(Context context) {
+      return new Intent().setAction("com.onesignal.NotificationExtender").setPackage(context.getPackageName());
+   }
+   
+   static List<ResolveInfo> getIntentResolveInfoList(Context context) {
+      PackageManager packageManager = context.getPackageManager();
+      return packageManager.queryIntentServices(getIntentBase(context), PackageManager.GET_META_DATA);
+   }
 
    static Intent getIntent(Context context) {
-      PackageManager packageManager = context.getPackageManager();
-      Intent intent = new Intent().setAction("com.onesignal.NotificationExtender").setPackage(context.getPackageName());
-      List<ResolveInfo> resolveInfo = packageManager.queryIntentServices(intent, PackageManager.GET_META_DATA);
+      List<ResolveInfo> resolveInfo = getIntentResolveInfoList(context);
       if (resolveInfo.size() < 1)
          return null;
 
-      return intent;
+      return getIntentBase(context);
    }
    
    private NotificationGenerationJob createNotifJobFromCurrent() {
