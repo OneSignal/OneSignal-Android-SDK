@@ -33,6 +33,8 @@ import org.json.JSONObject;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -376,17 +378,9 @@ class NotificationBundleProcessor {
       result.isOneSignalPayload = true;
 
       prepareBundle(bundle);
-      
-      // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
-      Intent overrideIntent = NotificationExtenderService.getIntent(context);
-      if (overrideIntent != null) {
-         overrideIntent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
-         overrideIntent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
-         WakefulBroadcastReceiver.startWakefulService(context, overrideIntent);
-         result.hasExtenderService = true;
-         return result;
-      }
-   
+
+      if (startExtenderService(context, bundle, result)) return result;
+
       // We already ran a getNotificationIdFromGCMBundle == null check above so this will only be true for dups
       result.isDup = OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle));
       if (result.isDup)
@@ -408,6 +402,24 @@ class NotificationBundleProcessor {
       }
       
       return result;
+   }
+
+   // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
+   private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
+      Intent intent = NotificationExtenderService.getIntent(context);
+      if (intent == null) return false;
+
+      intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
+      intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
+
+      // Using Alarm with a short delay for Android O compatibility
+      long atTime = System.currentTimeMillis() + 100;
+      PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+      alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);
+
+      result.hasExtenderService = true;
+      return true;
    }
 
    static boolean shouldDisplay(boolean hasBody) {

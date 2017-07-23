@@ -78,7 +78,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       //   OR app developer setup a extender service to handle the notification.
       if (processedResult.isDup || processedResult.hasExtenderService) {
          // Abort to prevent other GCM receivers from process this Intent.
-         abortBroadcast();
+         setAbort();
          return;
       }
    
@@ -87,8 +87,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       //   AND the setting is enabled to allow filtering in this case.
       if (processedResult.isOneSignalPayload &&
           OneSignal.getFilterOtherGCMReceivers(context)) {
-         
-         abortBroadcast();
+         setAbort();
          return;
       }
 
@@ -98,6 +97,11 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    private void setResult(int code) {
       if (isOrderedBroadcast())
          setResultCode(code);
+   }
+
+   private void setAbort() {
+      if (isOrderedBroadcast())
+         abortBroadcast();
    }
    
    private static ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
