@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +42,7 @@ import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.BundleCompat;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
@@ -80,8 +81,8 @@ import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
-import org.robolectric.util.ActivityController;
-import org.robolectric.util.ServiceController;
+import org.robolectric.android.controller.ActivityController;
+import org.robolectric.android.controller.ServiceController;
 
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -180,7 +181,7 @@ public class GenerateNotificationRunner {
    
    @Test
    public void shouldProcessRestore() throws Exception {
-      Bundle bundle = createInternalPayloadBundle(getBaseNotifBundle());
+      BundleCompat bundle = createInternalPayloadBundle(getBaseNotifBundle());
       bundle.putInt("android_notif_id", 0);
       bundle.putBoolean("restoring", true);
       
@@ -407,12 +408,10 @@ public class GenerateNotificationRunner {
       ShadowRoboNotificationManager.notifications.clear();
       
       // Setup - Restore
-      bundle = getBaseNotifBundle("UUID2");
-      bundle.putString("grp", "test1");
-      bundle = createInternalPayloadBundle(bundle);
+      BundleCompat bundle2 = createInternalPayloadBundle(bundle);
       bundle.putInt("android_notif_id", lastNotifId);
       bundle.putBoolean("restoring", true);
-      NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle2, null);
       
       // Test - Restored notifications display exactly the same as they did when recevied.
       postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -803,11 +802,11 @@ public class GenerateNotificationRunner {
    }
    
 
-   private NotificationExtenderServiceTestBase startNotificationExtender(Bundle bundlePayload, Class serviceClass) {
+   private NotificationExtenderServiceTestBase startNotificationExtender(BundleCompat bundlePayload, Class serviceClass) {
       ServiceController<NotificationExtenderServiceTestBase> controller = Robolectric.buildService(serviceClass);
-      NotificationExtenderServiceTestBase service = controller.attach().create().get();
+      NotificationExtenderServiceTestBase service = controller.create().get();
       Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTestReturnFalse.class);
-      testIntent.putExtras(bundlePayload);
+      testIntent.putExtras((Bundle)bundlePayload.getBundle());
       controller.withIntent(testIntent).startCommand(0, 0);
 
       return service;
@@ -825,7 +824,7 @@ public class GenerateNotificationRunner {
       ResolveInfo resolveInfo = new ResolveInfo();
       resolveInfo.serviceInfo = new ServiceInfo();
       resolveInfo.serviceInfo.name = "com.onesignal.example.NotificationExtenderServiceTest";
-      RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(serviceIntent, resolveInfo);
+      shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(serviceIntent, resolveInfo);
 
       boolean ret = OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       Assert.assertTrue(ret);

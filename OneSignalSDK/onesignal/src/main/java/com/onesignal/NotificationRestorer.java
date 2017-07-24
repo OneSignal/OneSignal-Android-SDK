@@ -51,7 +51,7 @@ class NotificationRestorer {
    };
    
    // Notifications will never be force removed when the app's process is running.
-   private static boolean restored;
+   public static boolean restored;
 
    static void asyncRestore(final Context context) {
       new Thread(new Runnable() {
