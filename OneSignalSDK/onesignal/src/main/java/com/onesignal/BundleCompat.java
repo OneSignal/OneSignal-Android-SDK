@@ -6,8 +6,9 @@ import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.annotation.RequiresApi;
 
-interface BundleCompat<T> {
+public interface BundleCompat<T> {
    void putString(String key, String value);
+   void putInt(String key, Integer value);
    void putLong(String key, Long value);
    void putBoolean(String key, Boolean value);
    
@@ -39,6 +40,11 @@ class BundleCompatPersistableBundle implements BundleCompat<PersistableBundle> {
       mBundle.putString(key, value);
    }
    
+   @Override
+   public void putInt(String key, Integer value) {
+      mBundle.putInt(key, value);
+   }
+
    @Override
    public void putLong(String key, Long value) {
       mBundle.putLong(key, value);
@@ -103,6 +109,11 @@ class BundleCompatBundle implements BundleCompat<Bundle> {
    @Override
    public void putString(String key, String value) {
       mBundle.putString(key, value);
+   }
+
+   @Override
+   public void putInt(String key, Integer value) {
+      mBundle.putInt(key, value);
    }
    
    @Override

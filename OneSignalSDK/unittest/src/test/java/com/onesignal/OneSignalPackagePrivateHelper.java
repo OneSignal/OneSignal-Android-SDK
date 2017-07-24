@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.v4.app.*;
 
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
@@ -55,8 +56,8 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
-   public static Bundle createInternalPayloadBundle(Bundle bundle) {
-      Bundle retBundle = new Bundle();
+   public static BundleCompat createInternalPayloadBundle(Bundle bundle) {
+      BundleCompat retBundle = BundleCompatFactory.getInstance();
       retBundle.putString("json_payload", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
       return retBundle;
    }
@@ -65,7 +66,7 @@ public class OneSignalPackagePrivateHelper {
       NotificationBundleProcessor.ProcessFromGCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
    }
 
-   public static void NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   public static void NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       NotificationBundleProcessor.ProcessFromGCMIntentService(context, bundle, overrideSettings);
    }
 
@@ -88,6 +89,8 @@ public class OneSignalPackagePrivateHelper {
          super(context);
       }
    }
+
+   // public interface BundleCompat<T> extends com.onesignal.BundleCompat {}
    
    
    public static void OneSignalRestClientPublic_getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {

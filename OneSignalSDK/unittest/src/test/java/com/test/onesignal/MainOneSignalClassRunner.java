@@ -88,7 +88,7 @@ import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
-import org.robolectric.util.ActivityController;
+import org.robolectric.android.controller.ActivityController;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -1459,7 +1459,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testAppl() throws Exception {
       AddLauncherIntentFilter();
-      RuntimeEnvironment.getRobolectricPackageManager().addPackage("org.robolectric.default");
+      shadowOf(blankActivity.getPackageManager()).addPackage("org.robolectric.default");
 
       OneSignalInit();
       threadAndTaskWait();
@@ -1477,14 +1477,14 @@ public class MainOneSignalClassRunner {
 
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.lastPost = null;
-      RuntimeEnvironment.getRobolectricPackageManager().addPackage("org.test.app2");
+      shadowOf(blankActivity.getPackageManager()).addPackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
 
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.lastPost = null;
-      RuntimeEnvironment.getRobolectricPackageManager().removePackage("org.test.app2");
+      shadowOf(blankActivity.getPackageManager()).removePackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
@@ -1868,18 +1868,18 @@ public class MainOneSignalClassRunner {
       resolveInfo.activityInfo.packageName = "com.onesignal.example";
       resolveInfo.activityInfo.name = "MainActivity";
 
-      RuntimeEnvironment.getRobolectricPackageManager().addResolveInfoForIntent(launchIntent, resolveInfo);
-      RuntimeEnvironment.getRobolectricPackageManager().addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest(), 0);
+      shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(launchIntent, resolveInfo);
+      shadowOf(blankActivity.getPackageManager()).addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest());
    }
 
    private static void AddDisableNotificationOpenedToManifest() {
       ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().put("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
-      RuntimeEnvironment.getRobolectricPackageManager().addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest(), 0);
+      shadowOf(blankActivity.getPackageManager()).addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest());
    }
 
    private static void RemoveDisableNotificationOpenedToManifest() {
       ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().remove("com.onesignal.NotificationOpened.DEFAULT");
-      RuntimeEnvironment.getRobolectricPackageManager().addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest(), 0);
+      shadowOf(blankActivity.getPackageManager()).addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest());
    }
 
    private static int sessionCountOffset = 1;
