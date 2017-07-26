@@ -134,13 +134,17 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
          ComponentName componentName = new ComponentName(context.getPackageName(),
                                                          GcmIntentJobService.class.getName());
-         
          Random random = new Random();
          JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
-             .setOverrideDeadline(100)
+             .setOverrideDeadline(0)
              .setExtras((PersistableBundle)taskExtras.getBundle())
              .build();
          JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+         
+         // TODO: Might want to use enqueue in the future. This will process one notification
+         //         sequentially like an IntentService
+         //       JobIntentService can be used instead, however app developer would have to use
+         //         Android support library 26+
          jobScheduler.schedule(jobInfo);
       }
       else {

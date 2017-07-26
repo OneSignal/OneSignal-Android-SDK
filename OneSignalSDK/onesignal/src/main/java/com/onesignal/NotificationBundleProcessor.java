@@ -412,8 +412,8 @@ class NotificationBundleProcessor {
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
-      // Using Alarm with a short delay for Android O compatibility
-      long atTime = System.currentTimeMillis() + 100;
+      // Using Alarm for Android O compatibility
+      long atTime = System.currentTimeMillis();
       PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
       AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
       alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);

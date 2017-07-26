@@ -48,8 +48,12 @@ class BadgeCountUpdater {
       try {
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
-         String defaultStr = bundle.getString("com.onesignal.BadgeCount");
-         badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
+         if (bundle != null) {
+            String defaultStr = bundle.getString("com.onesignal.BadgeCount");
+            badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
+         }
+         else
+            badgesEnabled = 1;
       } catch (Throwable t) {
          badgesEnabled = 0;
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error reading meta-data tag 'com.onesignal.BadgeCount'. Disabling badge setting.", t);

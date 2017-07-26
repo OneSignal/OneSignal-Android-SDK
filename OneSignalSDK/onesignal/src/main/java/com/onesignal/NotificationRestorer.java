@@ -157,7 +157,7 @@ class NotificationRestorer {
          
          Random random = new Random();
          JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
-             .setOverrideDeadline(100)
+             .setOverrideDeadline(0)
              .build();
          JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
          jobScheduler.schedule(jobInfo);

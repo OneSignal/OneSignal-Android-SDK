@@ -42,6 +42,10 @@ public class ShadowGcmBroadcastReceiver {
       lastResultCode = null;
    }
    
+   public boolean isOrderedBroadcast() {
+      return true;
+   }
+   
    public void abortBroadcast() {
       calledAbortBroadcast = true;
    }
