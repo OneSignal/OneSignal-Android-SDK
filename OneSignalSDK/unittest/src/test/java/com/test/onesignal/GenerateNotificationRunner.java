@@ -28,8 +28,10 @@
 package com.test.onesignal;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
@@ -57,6 +59,7 @@ import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowNotificationRestorer;
+import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
@@ -99,10 +102,13 @@ import static org.robolectric.Shadows.shadowOf;
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
       instrumentedPackages = {"com.onesignal"},
-      shadows = { ShadowRoboNotificationManager.class,
-                  ShadowOneSignalRestClient.class,
-                  ShadowBadgeCountUpdater.class,
-                  ShadowNotificationManagerCompat.class},
+      shadows = {
+         ShadowRoboNotificationManager.class,
+         ShadowOneSignalRestClient.class,
+         ShadowBadgeCountUpdater.class,
+         ShadowNotificationManagerCompat.class,
+         ShadowOSUtils.class,
+      },
       sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
@@ -409,11 +415,11 @@ public class GenerateNotificationRunner {
       
       // Setup - Restore
       BundleCompat bundle2 = createInternalPayloadBundle(bundle);
-      bundle.putInt("android_notif_id", lastNotifId);
-      bundle.putBoolean("restoring", true);
+      bundle2.putInt("android_notif_id", lastNotifId);
+      bundle2.putBoolean("restoring", true);
       NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle2, null);
       
-      // Test - Restored notifications display exactly the same as they did when recevied.
+      // Test - Restored notifications display exactly the same as they did when received.
       postedNotifs = ShadowRoboNotificationManager.notifications;
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       // Test - 1 notifi + 1 summary
@@ -828,11 +834,15 @@ public class GenerateNotificationRunner {
 
       boolean ret = OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       Assert.assertTrue(ret);
-
-      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      Assert.assertEquals("com.onesignal.NotificationExtender", intent.getAction());
-
-
+      
+      // Ensure the Extension service was schedule to start
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      PendingIntent intent = shadowOf(alarmManager).getNextScheduledAlarm().operation;
+      Intent savedIntent = shadowOf(intent).getSavedIntent();
+      Assert.assertEquals("com.onesignal.NotificationExtender", savedIntent.getAction());
+      
+      
       // Test that all options are set.
       NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
                                                                           NotificationExtenderServiceTest.class);

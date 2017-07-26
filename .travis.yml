@@ -19,18 +19,18 @@ android:
             # https://github.com/travis-ci/travis-ci/issues/6193
             # Required to get the newest platform-tools.
     - platform-tools
-    - build-tools-25.0.0
+    - build-tools-26.0.1
     - extra-android-m2repository
     - extra-google-m2repository
-    - android-24
+    - android-26
   licenses:
     - '.+'
 before_install:
     - pwd
     - ls -la
-    - wget http://services.gradle.org/distributions/gradle-3.3-bin.zip
-    - unzip gradle-3.3-bin.zip
-    - export GRADLE_HOME=$PWD/gradle-3.3
+    - wget http://services.gradle.org/distributions/gradle-4.1-rc-1-bin.zip
+    - unzip gradle-4.1-rc-1-bin.zip
+    - export GRADLE_HOME=$PWD/gradle-4.1-rc-1
     - export PATH=$GRADLE_HOME/bin:$PATH
     - cd OneSignalSDK/unittest
 script: gradle build

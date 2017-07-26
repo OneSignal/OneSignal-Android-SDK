@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion '26.0.0'
+    buildToolsVersion '26.0.1'
 
     defaultConfig {
         applicationId "com.onesignal.example"
@@ -37,6 +37,15 @@ repositories {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
 
+    compile 'com.android.support:support-v4:26.0.0'
+
+//    compile 'com.android.support:support-compat:26.0.0'
+//    compile 'com.android.support:support-media-compat:26.0.0'
+//    compile 'com.android.support:support-fragment:26.0.0'
+//    compile 'com.android.support:support-core-ui:26.0.0'
+//    compile 'com.android.support:support-core-utils:26.0.0'
+
+
     // Use for SDK Development
     compile(project(':onesignal')) {
         exclude group: 'com.android.support', module: 'support-v4'
@@ -63,7 +72,7 @@ dependencies {
 
     // compile 'com.google.android.gms:play-services-analytics:7.0.0'
 
-    compile 'com.android.support:customtabs:26.0.0-beta2'
+    compile 'com.android.support:customtabs:26.0.0'
 
     testCompile 'junit:junit:4.12'
     testCompile('org.robolectric:robolectric:3.4-rc5') {
