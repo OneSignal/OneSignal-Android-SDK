@@ -212,48 +212,49 @@ class NotificationBundleProcessor {
 
    // Format our short keys into more readable ones.
    private static void prepareBundle(Bundle gcmBundle) {
-      if (gcmBundle.containsKey("o")) {
-         try {
-            JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
-            JSONObject additionalDataJSON;
+      if (!gcmBundle.containsKey("o"))
+         return;
+      
+      try {
+         JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
+         JSONObject additionalDataJSON;
 
-            if (customJSON.has("a"))
-               additionalDataJSON = customJSON.getJSONObject("a");
-            else
-               additionalDataJSON = new JSONObject();
+         if (customJSON.has("a"))
+            additionalDataJSON = customJSON.getJSONObject("a");
+         else
+            additionalDataJSON = new JSONObject();
 
-            JSONArray buttons = new JSONArray(gcmBundle.getString("o"));
-            gcmBundle.remove("o");
-            for (int i = 0; i < buttons.length(); i++) {
-               JSONObject button = buttons.getJSONObject(i);
+         JSONArray buttons = new JSONArray(gcmBundle.getString("o"));
+         gcmBundle.remove("o");
+         for (int i = 0; i < buttons.length(); i++) {
+            JSONObject button = buttons.getJSONObject(i);
 
-               String buttonText = button.getString("n");
-               button.remove("n");
-               String buttonId;
-               if (button.has("i")) {
-                  buttonId = button.getString("i");
-                  button.remove("i");
-               } else
-                  buttonId = buttonText;
+            String buttonText = button.getString("n");
+            button.remove("n");
+            String buttonId;
+            if (button.has("i")) {
+               buttonId = button.getString("i");
+               button.remove("i");
+            } else
+               buttonId = buttonText;
 
-               button.put("id", buttonId);
-               button.put("text", buttonText);
+            button.put("id", buttonId);
+            button.put("text", buttonText);
 
-               if (button.has("p")) {
-                  button.put("icon", button.getString("p"));
-                  button.remove("p");
-               }
+            if (button.has("p")) {
+               button.put("icon", button.getString("p"));
+               button.remove("p");
             }
-
-            additionalDataJSON.put("actionButtons", buttons);
-            additionalDataJSON.put("actionSelected", DEFAULT_ACTION);
-            if (!customJSON.has("a"))
-               customJSON.put("a", additionalDataJSON);
-
-            gcmBundle.putString("custom", customJSON.toString());
-         } catch (JSONException e) {
-            e.printStackTrace();
          }
+
+         additionalDataJSON.put("actionButtons", buttons);
+         additionalDataJSON.put("actionSelected", DEFAULT_ACTION);
+         if (!customJSON.has("a"))
+            customJSON.put("a", additionalDataJSON);
+
+         gcmBundle.putString("custom", customJSON.toString());
+      } catch (JSONException e) {
+         e.printStackTrace();
       }
    }
 

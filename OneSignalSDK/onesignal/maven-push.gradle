@@ -24,12 +24,12 @@ class Global {
     static def POM_NAME = 'OneSignal'
     static def POM_ARTIFACT_ID = 'OneSignal'
     static def POM_PACKAGING = 'aar'
-    static def VERSION_NAME = "3.5.8"
+    static def VERSION_NAME = '4.0.0-SNAPSHOT'
 
     // Limit upper number (exclusive) to prevent untested versions
     static def versionGroupOverrides = [
-        // Omitting 10.2.0 for now since it increases minimum SDK to 14
-        'com.google.android.gms': '[9.0.0,10.2.0)',
+        // gms 10.2.0 increases minimum SDK to 14
+        'com.google.android.gms': '[9.0.0,11.3.0)',
         // Android Support library v4 revision 26.0.0 increases minimum SDK to 14
 
         // customtabs was not introduced until 23.0.0 so this is the min
@@ -37,7 +37,7 @@ class Global {
         // gms:play-services-basement 11.0.0 bumped support-v4 dependency to 25.2.0 (full package)
         // Also note support v4 splits into parts in 24.2.0.
         //   Compile errors will happen if versions are mix at and below this revision.
-        'com.android.support': '[23.0.0,24.1.0)'
+        'com.android.support': '[23.0.0,26.1.0)'
     ]
 
     static def GROUP_ID = 'com.onesignal'

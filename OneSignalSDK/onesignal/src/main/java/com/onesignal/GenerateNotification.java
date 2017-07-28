@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +45,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
+import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
@@ -60,6 +61,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.text.SpannableString;
@@ -76,8 +78,12 @@ class GenerateNotification {
    private static Resources contextResources = null;
    private static Class<?> notificationOpenedClass;
    private static boolean openerIsBroadcast;
-
-   private static final String DEFAULT_CHANNEL_ID = "default";
+   
+   // Can't create a channel with the id 'miscellaneous' as an exception is thrown.
+   // Using it results in the notification not being displayed.
+   // private static final String DEFAULT_CHANNEL_ID = "miscellaneous"; // NotificationChannel.DEFAULT_CHANNEL_ID;
+   
+   private static final String DEFAULT_CHANNEL_ID = "fcm_fallback_notification_channel";
 
    private static class OneSignalNotificationBuilder {
       NotificationCompat.Builder compatBuilder;
@@ -175,27 +181,106 @@ class GenerateNotification {
          }
       });
    }
-
-   private static void createNotificationChannel() {
+   
+   // TODO: Need to handle delete, do so on cold start up.
+   private static String createNotificationChannel(NotificationGenerationJob notifJob) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
-         return;
-
-      NotificationManager mNotificationManager =
-            (NotificationManager)currentContext.getSystemService(Context.NOTIFICATION_SERVICE);
-      CharSequence name = "Default"; // The user-visible name of the channel.
-
-      // The user-visible description of the channel.
-      String description = "Default notification channel.";
-
-      int importance = NotificationManager.IMPORTANCE_DEFAULT;
-
-      NotificationChannel mChannel = new NotificationChannel(DEFAULT_CHANNEL_ID, name, importance);
-      mChannel.setDescription(description);
-      mChannel.enableLights(true);
-      mChannel.enableVibration(true);
-      mNotificationManager.createNotificationChannel(mChannel);
+         return DEFAULT_CHANNEL_ID;
+      
+      // TODO: Can new api be used if not targeting O but device is and have a new enough library?
+      //       If not then check for this and return.
+      
+      JSONObject payload = notifJob.jsonPayload;
+      
+// Testing with additional data
+//      JSONObject customJson = null;
+//      try {
+//         customJson = new JSONObject(notifJob.jsonPayload.optString("custom"));
+//      } catch (JSONException e) {
+//         e.printStackTrace();
+//      }
+//      JSONObject payload = customJson.optJSONObject("a");
+      
+      if (!payload.has("chnl"))
+         return createDefaultChannel();
+   
+      try {
+         JSONObject channelPayload = payload.getJSONObject("chnl");
+   
+         NotificationManager notificationManager =
+             (NotificationManager) currentContext.getSystemService(Context.NOTIFICATION_SERVICE);
+         
+         String channel_id = channelPayload.optString("id", DEFAULT_CHANNEL_ID);
+         // Ensure we don't try to use the system reserved id
+         if (channel_id.equals(NotificationChannel.DEFAULT_CHANNEL_ID))
+            channel_id = DEFAULT_CHANNEL_ID;
+   
+         int importance = channelPayload.optInt("imp", NotificationManager.IMPORTANCE_DEFAULT);
+         String channel_name = channelPayload.optString("nm", "Miscellaneous");
+         
+         NotificationChannel channel = new NotificationChannel(channel_id, channel_name, importance);
+         
+         if (channelPayload.has("grp")) {
+            String group_id = channelPayload.optString("grp");
+            CharSequence group_name = channelPayload.optString("grp_nm");
+            notificationManager.createNotificationChannelGroup(new NotificationChannelGroup(group_id, group_name));
+            channel.setGroup(group_id);
+         }
+         
+         channel.enableLights(channelPayload.optBoolean("lght", true));
+         if (channelPayload.has("ledc")) {
+            BigInteger ledColor = new BigInteger(channelPayload.optString("ledc"), 16);
+            channel.setLightColor(ledColor.intValue());
+         }
+         
+         channel.enableVibration(channelPayload.optBoolean("vib", true));
+         if (channelPayload.has("vib_pt")) {
+            JSONArray json_vib_array = channelPayload.optJSONArray("vib_pt");
+            long[] long_array = new long[json_vib_array.length()];
+            for (int i = 0; i < json_vib_array.length(); i++)
+               long_array[i] = json_vib_array.optLong(i);
+            channel.setVibrationPattern(long_array);
+         }
+         
+         if (channelPayload.has("snd_nm")) {
+            // Sound will only play if Importance is set to High or Urgent
+            Uri uri = getCustomSound(channelPayload.optString("snd_nm", null));
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "##################### channel.seSound():"  + uri);
+            channel.setSound(uri, null);
+         }
+         else if (!channelPayload.optBoolean("snd", true))
+            channel.setSound(null, null);
+         // Setting sound to null makes it 'None' in the Settings.
+         // Otherwise not calling setSound makes it the default notification sound.
+         
+         channel.setLockscreenVisibility(channelPayload.optInt("lck", Notification.VISIBILITY_PUBLIC));
+         channel.enableVibration(channelPayload.optBoolean("lght", true));
+         channel.setShowBadge(channelPayload.optBoolean("bdg", true));
+         channel.setBypassDnd(channelPayload.optBoolean("bdnd", false));
+         
+         notificationManager.createNotificationChannel(channel);
+         return channel_id;
+      } catch (JSONException e) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Count not create notification channel due to JSON payload error!", e);
+      }
+      
+      return DEFAULT_CHANNEL_ID;
    }
-
+   
+   @RequiresApi(api = Build.VERSION_CODES.O)
+   private static String createDefaultChannel() {
+      NotificationManager notificationManager =
+          (NotificationManager) currentContext.getSystemService(Context.NOTIFICATION_SERVICE);
+   
+      NotificationChannel channel = new NotificationChannel(DEFAULT_CHANNEL_ID,
+          "Miscellaneous",
+          NotificationManager.IMPORTANCE_DEFAULT);
+      channel.enableLights(true);
+      channel.enableVibration(true);
+      notificationManager.createNotificationChannel(channel);
+      return DEFAULT_CHANNEL_ID;
+   }
+   
    private static CharSequence getTitle(JSONObject gcmBundle) {
       CharSequence title = gcmBundle.optString("title", null);
 
@@ -224,35 +309,34 @@ class GenerateNotification {
       Intent intent = new Intent(currentContext, notificationOpenedClass)
           .putExtra("notificationId", notificationId)
           .putExtra("dismissed", true);
-
+      
       if (openerIsBroadcast)
          return intent;
       return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
    }
-
-
+   
    private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(NotificationGenerationJob notifJob) {
       JSONObject gcmBundle = notifJob.jsonPayload;
       OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
-
-      int notificationIcon = getSmallIconId(gcmBundle);
-
-      int notificationDefaults = 0;
-
-      if (OneSignal.getVibrate(currentContext))
-         notificationDefaults = Notification.DEFAULT_VIBRATE;
-
+      
+      NotificationCompat.Builder notifBuilder;
+      try {
+         String channelId = createNotificationChannel(notifJob);
+         // Will throw if app is using 26.0.0-beta1 or older of the support library.
+         notifBuilder = new NotificationCompat.Builder(currentContext, channelId);
+      } catch(Throwable t) {
+         notifBuilder = new NotificationCompat.Builder(currentContext);
+      }
+      
       String message = gcmBundle.optString("alert", null);
-
-      createNotificationChannel();
-
-      NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(currentContext, DEFAULT_CHANNEL_ID)
-            .setAutoCancel(true)
-            .setSmallIcon(notificationIcon) // Small Icon required or notification doesn't display
-            .setContentTitle(getTitle(gcmBundle))
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-            .setContentText(message)
-            .setTicker(message);
+      
+      notifBuilder
+         .setAutoCancel(true)
+         .setSmallIcon(getSmallIconId(gcmBundle))
+         .setContentTitle(getTitle(gcmBundle))
+         .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+         .setContentText(message)
+         .setTicker(message);
       
       if (notifJob.shownTimeStamp != null) {
          try {
@@ -265,12 +349,14 @@ class GenerateNotification {
          if (accentColor != null)
             notifBuilder.setColor(accentColor.intValue());
       } catch (Throwable t) {} // Can throw if an old android support lib is used.
-
-      BigInteger ledColor = null;
+      
+      int notificationDefaults = 0;
+      if (OneSignal.getVibrate(currentContext))
+         notificationDefaults = Notification.DEFAULT_VIBRATE;
 
       if (gcmBundle.has("ledc")) {
          try {
-            ledColor = new BigInteger(gcmBundle.optString("ledc"), 16);
+            BigInteger ledColor = new BigInteger(gcmBundle.optString("ledc"), 16);
             notifBuilder.setLights(ledColor.intValue(), 2000, 5000);
          } catch (Throwable t) {
             notificationDefaults |= Notification.DEFAULT_LIGHTS;
@@ -296,7 +382,7 @@ class GenerateNotification {
          notifBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
 
       if (isSoundEnabled(gcmBundle)) {
-         Uri soundUri = getCustomSound(gcmBundle);
+         Uri soundUri = getCustomSound(gcmBundle.optString("sound", null));
          if (soundUri != null)
             notifBuilder.setSound(soundUri);
          else
@@ -307,7 +393,6 @@ class GenerateNotification {
 
       if (gcmBundle.optInt("pri", 0) > 9)
          notifBuilder.setPriority(NotificationCompat.PRIORITY_MAX);
-
       
       oneSignalNotificationBuilder.compatBuilder = notifBuilder;
       return oneSignalNotificationBuilder;
@@ -395,7 +480,8 @@ class GenerateNotification {
    private static Notification createSingleNotificationBeforeSummaryBuilder(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
       // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
       // Android 4.2 and older just post the summary only.
-      boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT <Build.VERSION_CODES.N  && !notifJob.restoring;
+      boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT <Build.VERSION_CODES.N
+                                       && !notifJob.restoring;
       
       if (singleNotifWorkArounds) {
          if (notifJob.overriddenSound != null && !notifJob.overriddenSound.equals(notifJob.orgSound))
@@ -404,10 +490,8 @@ class GenerateNotification {
    
       Notification notification = notifBuilder.build();
       
-   
-      if (singleNotifWorkArounds) {
+      if (singleNotifWorkArounds)
          notifBuilder.setSound(notifJob.overriddenSound);
-      }
       
       return notification;
    }
@@ -893,9 +977,8 @@ class GenerateNotification {
       return OneSignal.getSoundEnabled(currentContext);
    }
 
-   private static Uri getCustomSound(JSONObject gcmBundle) {
+   private static Uri getCustomSound(String sound) {
       int soundId;
-      String sound = gcmBundle.optString("sound", null);
       
       if (isValidResourceName(sound)) {
          soundId = contextResources.getIdentifier(sound, "raw", packageName);
@@ -929,36 +1012,37 @@ class GenerateNotification {
    private static void addNotificationActionButtons(JSONObject gcmBundle, NotificationCompat.Builder mBuilder, int notificationId, String groupSummary) {
       try {
          JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
+         
+         if (!customJson.has("a"))
+            return;
+         
+         JSONObject additionalDataJSON = customJson.getJSONObject("a");
+         if (!additionalDataJSON.has("actionButtons"))
+            return;
 
-         if (customJson.has("a")) {
-            JSONObject additionalDataJSON = customJson.getJSONObject("a");
-            if (additionalDataJSON.has("actionButtons")) {
+         JSONArray buttons = additionalDataJSON.getJSONArray("actionButtons");
 
-               JSONArray buttons = additionalDataJSON.getJSONArray("actionButtons");
+         for (int i = 0; i < buttons.length(); i++) {
+            JSONObject button = buttons.optJSONObject(i);
+            JSONObject bundle = new JSONObject(gcmBundle.toString());
 
-               for (int i = 0; i < buttons.length(); i++) {
-                  JSONObject button = buttons.optJSONObject(i);
-                  JSONObject bundle = new JSONObject(gcmBundle.toString());
+            Intent buttonIntent = getNewBaseIntent(notificationId);
+            buttonIntent.setAction("" + i); // Required to keep each action button from replacing extras of each other
+            buttonIntent.putExtra("action_button", true);
+            bundle.put("actionSelected", button.optString("id"));
+            buttonIntent.putExtra("onesignal_data", bundle.toString());
+            if (groupSummary != null)
+               buttonIntent.putExtra("summary", groupSummary);
+            else if (gcmBundle.has("grp"))
+               buttonIntent.putExtra("grp", gcmBundle.optString("grp"));
 
-                  Intent buttonIntent = getNewBaseIntent(notificationId);
-                  buttonIntent.setAction("" + i); // Required to keep each action button from replacing extras of each other
-                  buttonIntent.putExtra("action_button", true);
-                  bundle.put("actionSelected", button.optString("id"));
-                  buttonIntent.putExtra("onesignal_data", bundle.toString());
-                  if (groupSummary != null)
-                     buttonIntent.putExtra("summary", groupSummary);
-                  else if (gcmBundle.has("grp"))
-                     buttonIntent.putExtra("grp", gcmBundle.optString("grp"));
+            PendingIntent buttonPIntent = getNewActionPendingIntent(notificationId, buttonIntent);
 
-                  PendingIntent buttonPIntent = getNewActionPendingIntent(notificationId, buttonIntent);
-
-                  int buttonIcon = 0;
-                  if (button.has("icon"))
-                     buttonIcon = getResourceIcon(button.optString("icon"));
-                  
-                  mBuilder.addAction(buttonIcon, button.optString("text"), buttonPIntent);
-               }
-            }
+            int buttonIcon = 0;
+            if (button.has("icon"))
+               buttonIcon = getResourceIcon(button.optString("icon"));
+            
+            mBuilder.addAction(buttonIcon, button.optString("text"), buttonPIntent);
          }
       } catch (Throwable t) {
          t.printStackTrace();
@@ -969,19 +1053,20 @@ class GenerateNotification {
       try {
          JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
 
-         if (customJson.has("a")) {
-            JSONObject additionalDataJSON = customJson.getJSONObject("a");
-            if (additionalDataJSON.has("actionButtons")) {
+         if (!customJson.has("a"))
+            return;
+            
+         JSONObject additionalDataJSON = customJson.getJSONObject("a");
+         if (!additionalDataJSON.has("actionButtons"))
+            return;
 
-               JSONArray buttons = additionalDataJSON.optJSONArray("actionButtons");
+         JSONArray buttons = additionalDataJSON.optJSONArray("actionButtons");
 
-               for (int i = 0; i < buttons.length(); i++) {
-                  JSONObject button = buttons.getJSONObject(i);
+         for (int i = 0; i < buttons.length(); i++) {
+            JSONObject button = buttons.getJSONObject(i);
 
-                  buttonsLabels.add(button.optString("text"));
-                  buttonsIds.add(button.optString("id"));
-               }
-            }
+            buttonsLabels.add(button.optString("text"));
+            buttonsIds.add(button.optString("id"));
          }
 
          if (buttonsLabels.size() < 3) {
