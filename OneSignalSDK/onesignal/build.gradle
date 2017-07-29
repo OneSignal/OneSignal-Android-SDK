@@ -31,8 +31,8 @@ dependencies {
     compile 'com.android.support:support-v4:26.0.0'
 
     // NOTE: Starting with play-services 10.2.0, minSdkVersion is now 14
-    compile 'com.google.android.gms:play-services-gcm:11.0.2'
-    compile 'com.google.android.gms:play-services-location:11.0.2'
+    compile 'com.google.android.gms:play-services-gcm:11.0.4'
+    compile 'com.google.android.gms:play-services-location:11.0.4'
 
     // NOTE: customtabs sets minSdkVersion to 15.
     compile 'com.android.support:customtabs:26.0.0'

@@ -12,7 +12,7 @@ android {
         minSdkVersion 15
         targetSdkVersion 26
         versionCode 1
-        versionName "1.0"
+        versionName '1.0'
     }
     buildTypes {
         debug {
@@ -26,6 +26,9 @@ android {
         unitTests.all {
             maxParallelForks 1
             maxHeapSize "2048m"
+        }
+        unitTests {
+            includeAndroidResources = true
         }
     }
 }
@@ -63,20 +66,17 @@ dependencies {
 
     // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
     // This insure that the SDK will work if an app developer is using an older version of GMS.
-    compile "com.google.android.gms:play-services-gcm:11.0.2"
+    compile "com.google.android.gms:play-services-gcm:11.0.4"
 
     // play-services-analytics is required for AdvertisingIdClient when using GMS 8.1.0 or lower.
     // 8.3.0 it is included in 'basement' which is required by 'base'.
     //compile "com.google.android.gms:play-services-analytics:7.0.0"
-    compile "com.google.android.gms:play-services-location:11.0.2"
+    compile "com.google.android.gms:play-services-location:11.0.4"
 
     // compile 'com.google.android.gms:play-services-analytics:7.0.0'
 
     compile 'com.android.support:customtabs:26.0.0'
 
     testCompile 'junit:junit:4.12'
-    testCompile('org.robolectric:robolectric:3.4-rc5') {
-        exclude group: 'commons-logging', module: 'commons-logging'
-        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
-    }
+    testCompile 'org.robolectric:robolectric:3.4'
 }
