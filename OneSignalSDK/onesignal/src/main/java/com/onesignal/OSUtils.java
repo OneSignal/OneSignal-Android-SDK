@@ -27,12 +27,14 @@
 
 package com.onesignal;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -191,5 +193,28 @@ class OSUtils {
          Handler handler = new Handler(Looper.getMainLooper());
          handler.post(runnable);
       }
+   }
+   
+   
+   static boolean isValidResourceName(String name) {
+      return (name != null && !name.matches("^[0-9]"));
+   }
+   
+   static Uri getSoundUri(Context context, String sound) {
+      Resources resources = context.getResources();
+      String packageName = context.getPackageName();
+      int soundId;
+      
+      if (isValidResourceName(sound)) {
+         soundId = resources.getIdentifier(sound, "raw", packageName);
+         if (soundId != 0)
+            return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
+      }
+      
+      soundId = resources.getIdentifier("onesignal_default_sound", "raw", packageName);
+      if (soundId != 0)
+         return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
+      
+      return null;
    }
 }
