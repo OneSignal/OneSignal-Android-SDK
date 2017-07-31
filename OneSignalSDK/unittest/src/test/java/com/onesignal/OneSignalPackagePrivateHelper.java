@@ -90,6 +90,10 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
+   public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
+      return NotificationChannelManager.createNotificationChannel(context, payload);
+   }
+
    // public interface BundleCompat<T> extends com.onesignal.BundleCompat {}
    
    
