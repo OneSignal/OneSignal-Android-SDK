@@ -27,7 +27,9 @@
 
 package com.onesignal;
 
+import android.app.NotificationChannel;
 import android.app.Notification;
+import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 
 import org.robolectric.annotation.Implements;
@@ -88,6 +90,16 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
       lastNotifId = id;
       notifications.put(id, new PostedNotification(id, lastNotif));
       super.notify(tag, id, notification);
+   }
+
+   public static NotificationChannel lastChannel;
+   public void createNotificationChannel(NotificationChannel channel) {
+      lastChannel = channel;
+   }
+
+   public static NotificationChannelGroup lastChannelGroup;
+   public void createNotificationChannelGroup(NotificationChannelGroup group) {
+      lastChannelGroup = group;
    }
 
 }
