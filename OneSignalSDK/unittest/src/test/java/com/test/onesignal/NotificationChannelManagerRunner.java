@@ -11,6 +11,7 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.example.BlankActivity;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -40,8 +41,14 @@ import static org.junit.Assert.assertNull;
 @RunWith(RobolectricTestRunner.class)
 public class NotificationChannelManagerRunner {
 
+   private Context mContext;
    private BlankActivity blankActivity;
-
+   
+   NotificationChannelManagerRunner setContext(Context context) {
+      mContext = context;
+      return this;
+   }
+   
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
@@ -51,6 +58,7 @@ public class NotificationChannelManagerRunner {
    public void beforeEachTest() throws Exception {
       ActivityController<BlankActivity> blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
+      mContext = blankActivity;
    }
 
    @Test
@@ -177,23 +185,28 @@ public class NotificationChannelManagerRunner {
       assertNotNull(getChannel("OS_id1"));
    }
    
-   
    @Test
    public void processPayloadDeletingOldChannel() throws Exception {
+      NotificationChannelManager_processChannelList(blankActivity, createBasicChannelListPayload());
+      assertChannelsForBasicChannelList();
+   }
+   
+   JSONObject createBasicChannelListPayload() throws JSONException {
       createChannel("local_existing_id");
       createChannel("OS_existing_id");
       
       JSONArray channelList = new JSONArray();
       JSONObject channelItem = new JSONObject();
-      
+   
       channelItem.put("id", "OS_id1");
-      
+   
       channelList.put(channelItem);
       JSONObject payload = new JSONObject();
       payload.put("chnl_lst", channelList);
-      
-      NotificationChannelManager_processChannelList(blankActivity, payload);
-      
+      return payload;
+   }
+   
+   void assertChannelsForBasicChannelList() {
       assertNotNull(getChannel("local_existing_id"));
       assertNull(getChannel("OS_existing_id"));
       assertNotNull(getChannel("OS_id1"));
@@ -201,13 +214,13 @@ public class NotificationChannelManagerRunner {
    
    private NotificationChannel getChannel(String id) {
       NotificationManager notificationManager =
-          (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+          (NotificationManager)mContext.getSystemService(Context.NOTIFICATION_SERVICE);
       return notificationManager.getNotificationChannel(id);
    }
    
    private void createChannel(String id) {
       NotificationManager notificationManager =
-          (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+          (NotificationManager)mContext.getSystemService(Context.NOTIFICATION_SERVICE);
       NotificationChannel channel = new NotificationChannel(id,"name", NotificationManager.IMPORTANCE_DEFAULT);
       notificationManager.createNotificationChannel(channel);
    }

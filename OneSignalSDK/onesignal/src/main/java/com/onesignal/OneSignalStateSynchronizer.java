@@ -417,7 +417,7 @@ class OneSignalStateSynchronizer {
 
             editor.putString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, syncValues.toString());
             editor.putString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, dependValues.toString());
-            editor.commit();
+            editor.apply();
          }
       }
 
