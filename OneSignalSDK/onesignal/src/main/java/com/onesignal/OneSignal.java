@@ -38,6 +38,8 @@
 //   - Google Play services is no longer starting the broadcast receiver as an order broadcast
 //  4. Fix bug where restored notifications are vibrating and playing the sound again.
 //   - This is due to the channel now being in control of these settings.
+//   - Fixed cold restarts of the app. App updates and reboots still notify again.
+
 
 package com.onesignal;
 
@@ -201,11 +203,12 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "030508";
+   public static final String VERSION = "030600";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
    private static int deviceType;
+   @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
 
    private static OSUtils osUtils;
@@ -534,6 +537,8 @@ public class OneSignal {
                mEnterp = responseJson.optBoolean("enterp", false);
                
                awl = responseJson.getJSONObject("awl_list");
+   
+               NotificationChannelManager.processChannelList(appContext, responseJson);
             } catch (Throwable t) {
                t.printStackTrace();
             }

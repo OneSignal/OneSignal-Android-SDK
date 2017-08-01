@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.support.v4.app.*;
 
+import com.onesignal.example.BlankActivity;
+
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
@@ -93,9 +95,10 @@ public class OneSignalPackagePrivateHelper {
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
       return NotificationChannelManager.createNotificationChannel(context, payload);
    }
-
-   // public interface BundleCompat<T> extends com.onesignal.BundleCompat {}
    
+   public static void NotificationChannelManager_processChannelList(Context context, JSONObject jsonObject) {
+      NotificationChannelManager.processChannelList(context, jsonObject);
+   }
    
    public static void OneSignalRestClientPublic_getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignalRestClient.getSync(url, responseHandler);

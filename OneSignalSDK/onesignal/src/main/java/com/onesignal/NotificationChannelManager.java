@@ -57,26 +57,30 @@ class NotificationChannelManager {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
          return DEFAULT_CHANNEL_ID;
 
-// To test with additional data
-      JSONObject customJson = null;
-      try {
-         customJson = new JSONObject(jsonPayload.optString("custom"));
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
-      jsonPayload = customJson.optJSONObject("a");
+//// To test with additional data
+//      JSONObject customJson = null;
+//      try {
+//         customJson = new JSONObject(jsonPayload.optString("custom"));
+//      } catch (JSONException e) {
+//         e.printStackTrace();
+//      }
+//      jsonPayload = customJson.optJSONObject("a");
    
       NotificationManager notificationManager =
          (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
       
-      // TODO: Check for oth_chnl key, if this existing and chanel is already registered use this id
-      //         to allow any channels created outside of the SDK.
+      // Allow channels created outside the SDK
+      if (jsonPayload.has("oth_chnl")) {
+         String otherChannel = jsonPayload.optString("oth_chnl");
+         if (notificationManager.getNotificationChannel(otherChannel) != null)
+            return otherChannel;
+      }
       
       if (!jsonPayload.has("chnl"))
          return createDefaultChannel(notificationManager);
-
+      
       try {
-         return createChannel(context, notificationManager, jsonPayload);
+         return createChannel(context, notificationManager, jsonPayload.optJSONObject("chnl"));
       } catch (JSONException e) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not create notification channel due to JSON payload error!", e);
       }
@@ -85,9 +89,7 @@ class NotificationChannelManager {
    }
 
    @RequiresApi(api = Build.VERSION_CODES.O)
-   private static String createChannel(Context context, NotificationManager notificationManager, JSONObject payload) throws JSONException {
-      JSONObject channelPayload = payload.getJSONObject("chnl");
-
+   private static String createChannel(Context context, NotificationManager notificationManager, JSONObject channelPayload) throws JSONException {
       String channel_id = channelPayload.optString("id", DEFAULT_CHANNEL_ID);
       // Ensure we don't try to use the system reserved id
       if (channel_id.equals(NotificationChannel.DEFAULT_CHANNEL_ID))
@@ -152,9 +154,6 @@ class NotificationChannelManager {
       return DEFAULT_CHANNEL_ID;
    }
    
-   // TODO: 1. Check JSONObject for a chnl_lst key.
-   //       2. Create a set of new channels.
-   //       3. Remove any other 'OS_' not defined in this payload
    static void processChannelList(Context context, JSONObject payload) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
          return;
@@ -170,12 +169,14 @@ class NotificationChannelManager {
       int jsonArraySize = chnlList.length();
       for (int i = 0; i < jsonArraySize; i++) {
          try {
-            sycnedChannelSet.add(createChannel(context, notificationManager, payload));
+            sycnedChannelSet.add(createChannel(context, notificationManager, chnlList.getJSONObject(i)));
          } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not create notification channel due to JSON payload error!", e);
          }
       }
-
+      
+      // Delete old channels - Payload will include all changes for the app. Any extra OS_ ones must
+      //                         have been deleted from the dashboard and should be removed.
       List<NotificationChannel> existingChannels = notificationManager.getNotificationChannels();
       for(NotificationChannel existingChannel : existingChannels) {
          String id = existingChannel.getId();

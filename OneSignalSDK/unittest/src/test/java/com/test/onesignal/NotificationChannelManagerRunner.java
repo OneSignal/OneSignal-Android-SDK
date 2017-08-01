@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
+import android.content.Context;
 
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowRoboNotificationManager;
@@ -22,11 +23,13 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_createNotificationChannel;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_processChannelList;
 import static org.junit.Assert.assertFalse;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
       shadows = {
@@ -122,5 +125,90 @@ public class NotificationChannelManagerRunner {
       assertEquals(Notification.VISIBILITY_SECRET, channel.getLockscreenVisibility());
       assertTrue(channel.canShowBadge());
       assertTrue(channel.canBypassDnd());
+   }
+   
+   @Test
+   public void useOtherChannelWhenItIsAvailable() throws Exception {
+      JSONObject payload = new JSONObject();
+      payload.put("oth_chnl", "existing_id");
+      
+      JSONObject chnl = new JSONObject();
+      chnl.put("id", "test_id");
+      payload.put("chnl", chnl);
+      
+      String ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
+      
+      // Should create and use the payload type as the "existing_id" didn't exist.
+      assertEquals("test_id", ret);
+    
+      // Create the missing channel and using the same payload we should use this existing_id now.
+      createChannel("existing_id");
+      ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
+      assertEquals("existing_id", ret);
+   }
+   
+   @Test
+   public void processPayloadWithOutChannelList() throws Exception {
+      createChannel("local_existing_id");
+      createChannel("OS_existing_id");
+   
+      NotificationChannelManager_processChannelList(blankActivity, new JSONObject());
+      
+      assertNotNull(getChannel("local_existing_id"));
+      assertNotNull(getChannel("OS_existing_id"));
+   }
+   
+   @Test
+   public void processPayloadCreatingNewChannel() throws Exception {
+      createChannel("local_existing_id");
+      
+      JSONArray channelList = new JSONArray();
+      JSONObject channelItem = new JSONObject();
+      
+      channelItem.put("id", "OS_id1");
+   
+      channelList.put(channelItem);
+      JSONObject payload = new JSONObject();
+      payload.put("chnl_lst", channelList);
+      
+      NotificationChannelManager_processChannelList(blankActivity, payload);
+      
+      assertNotNull(getChannel("local_existing_id"));
+      assertNotNull(getChannel("OS_id1"));
+   }
+   
+   
+   @Test
+   public void processPayloadDeletingOldChannel() throws Exception {
+      createChannel("local_existing_id");
+      createChannel("OS_existing_id");
+      
+      JSONArray channelList = new JSONArray();
+      JSONObject channelItem = new JSONObject();
+      
+      channelItem.put("id", "OS_id1");
+      
+      channelList.put(channelItem);
+      JSONObject payload = new JSONObject();
+      payload.put("chnl_lst", channelList);
+      
+      NotificationChannelManager_processChannelList(blankActivity, payload);
+      
+      assertNotNull(getChannel("local_existing_id"));
+      assertNull(getChannel("OS_existing_id"));
+      assertNotNull(getChannel("OS_id1"));
+   }
+   
+   private NotificationChannel getChannel(String id) {
+      NotificationManager notificationManager =
+          (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+      return notificationManager.getNotificationChannel(id);
+   }
+   
+   private void createChannel(String id) {
+      NotificationManager notificationManager =
+          (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+      NotificationChannel channel = new NotificationChannel(id,"name", NotificationManager.IMPORTANCE_DEFAULT);
+      notificationManager.createNotificationChannel(channel);
    }
 }
