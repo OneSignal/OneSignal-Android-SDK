@@ -72,7 +72,7 @@ public class OSPermissionState implements Cloneable {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean("ONESIGNAL_ACCEPTED_NOTIFICATION_LAST", enabled);
-      editor.commit();
+      editor.apply();
    }
    
    boolean compare(OSPermissionState from) {
