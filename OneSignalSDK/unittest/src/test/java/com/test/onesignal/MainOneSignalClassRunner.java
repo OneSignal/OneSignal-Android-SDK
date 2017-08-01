@@ -347,6 +347,26 @@ public class MainOneSignalClassRunner {
       
       Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
+   
+   @Test
+   @Config(shadows = {ShadowRoboNotificationManager.class}, sdk = 10000)
+   public void testNotificationChannelListPayload() throws Exception {
+      NotificationChannelManagerRunner testHelper = new NotificationChannelManagerRunner().setContext(blankActivity);
+      JSONObject payloadList = testHelper.createBasicChannelListPayload();
+   
+      JSONObject androidParams = testHelper.createBasicChannelListPayload();
+      androidParams.put("awl_list", new JSONObject());
+      // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
+      ShadowOneSignalRestClient.nextSuccessResponse = androidParams.toString();
+      
+      // Don't fire the mock callback, it will be done from the real class.
+//      ShadowPushRegistratorGPS.skipComplete = true;
+      
+      OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+   
+      testHelper.assertChannelsForBasicChannelList();
+   }
 
    @Test
    public void shouldCorrectlyRemoveOpenedHandlerAndFireMissedOnesWhenAddedBack() throws Exception {

@@ -1275,7 +1275,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putString("GT_PLAYER_ID", userId);
-      editor.commit();
+      editor.apply();
    }
    
    static boolean getFilterOtherGCMReceivers(Context context) {
