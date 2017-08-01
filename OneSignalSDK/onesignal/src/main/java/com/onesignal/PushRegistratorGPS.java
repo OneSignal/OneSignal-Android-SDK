@@ -143,7 +143,7 @@ public class PushRegistratorGPS implements PushRegistrator {
                   final SharedPreferences prefs = OneSignal.getGcmPreferences(activity);
                   SharedPreferences.Editor editor = prefs.edit();
                   editor.putBoolean("GT_DO_NOT_SHOW_MISSING_GPS", true);
-                  editor.commit();
+                  editor.apply();
                }
             }).setNeutralButton(alertButtonClose, null).create().show();
          }

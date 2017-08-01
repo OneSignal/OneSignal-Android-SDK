@@ -172,7 +172,7 @@ class TrackGooglePurchase {
                   else if (purchaseDataList.size() == 0) {
                      newAsExisting = false;
                      prefsEditor.putBoolean("ExistingPurchases", false);
-                     prefsEditor.commit();
+                     prefsEditor.apply();
                   }
 
                   // TODO: Handle very large list. Test for continuationToken != null then call getPurchases again
@@ -233,7 +233,7 @@ class TrackGooglePurchase {
                      purchaseTokens.addAll(newPurchaseTokens);
                      prefsEditor.putString("purchaseTokens", purchaseTokens.toString());
                      prefsEditor.remove("ExistingPurchases");
-                     prefsEditor.commit();
+                     prefsEditor.apply();
                      newAsExisting = false;
                      isWaitingForPurchasesRequest = false;
                   }

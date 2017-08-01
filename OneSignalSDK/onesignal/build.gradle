@@ -28,27 +28,11 @@ android {
 dependencies {
     provided fileTree(dir: 'libs', include: ['*.jar'])
 
-    compile 'com.android.support:support-v4:26.0.0'
-
-    // NOTE: Starting with play-services 10.2.0, minSdkVersion is now 14
     compile 'com.google.android.gms:play-services-gcm:11.0.4'
     compile 'com.google.android.gms:play-services-location:11.0.4'
 
-    // NOTE: customtabs sets minSdkVersion to 15.
+    compile 'com.android.support:support-v4:26.0.0'
     compile 'com.android.support:customtabs:26.0.0'
-}
-
-// Remove OnActivityPausedListener class.
-//     Only required to compile but doesn't need to be in the release jar / aar
-project.afterEvaluate {
-    android.libraryVariants.all { variant ->
-        String variantName = variant.name.capitalize()
-        Task cleanTask = task("removeUnneeded${variantName}Classes") << {
-            delete "build/intermediates/classes/${variant.name}/android/app/OnActivityPausedListener.class"
-        }
-        tasks.findByName("bundle${variantName}").dependsOn cleanTask
-        cleanTask.mustRunAfter tasks.findByName("compile${variantName}Sources")
-    }
 }
 
 apply from: 'maven-push.gradle'

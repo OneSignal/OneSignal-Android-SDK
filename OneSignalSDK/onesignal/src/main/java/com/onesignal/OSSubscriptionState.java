@@ -122,7 +122,7 @@ public class OSSubscriptionState implements Cloneable {
       editor.putString("ONESIGNAL_PUSH_TOKEN_LAST", pushToken);
       editor.putBoolean("ONESIGNAL_PERMISSION_ACCEPTED_LAST", accepted);
       
-      editor.commit();
+      editor.apply();
    }
    
    boolean compare(OSSubscriptionState from) {

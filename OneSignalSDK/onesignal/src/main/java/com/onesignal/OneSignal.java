@@ -396,11 +396,8 @@ public class OneSignal {
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
       OneSignalStateSynchronizer.initUserState(appContext);
-
-      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB_MR2)
-         ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
-      else
-         ActivityLifecycleListenerCompat.startListener();
+      
+      ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
 
       try {
          Class.forName("com.amazon.device.iap.PurchasingListener");
@@ -1238,7 +1235,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putString("GT_APP_ID", appId);
-      editor.commit();
+      editor.apply();
    }
 
    static String getSavedAppId() {
@@ -1289,7 +1286,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean("OS_FILTER_OTHER_GCM_RECEIVERS", set);
-      editor.commit();
+      editor.apply();
    }
    
    static void updateUserIdDependents(String userId) {
@@ -1684,7 +1681,7 @@ public class OneSignal {
       final SharedPreferences prefs = getGcmPreferences(appContext);
       SharedPreferences.Editor editor = prefs.edit();
       editor.putLong("GT_UNSENT_ACTIVE_TIME", time);
-      editor.commit();
+      editor.apply();
    }
 
    static SharedPreferences getGcmPreferences(Context context) {
