@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ import java.util.LinkedHashMap;
 
 import static org.robolectric.Shadows.shadowOf;
 
-@Implements(NotificationManager.class)
+@Implements(value = NotificationManager.class, looseSignatures = true)
 public class ShadowRoboNotificationManager extends ShadowNotificationManager {
 
    public class PostedNotification {
@@ -95,11 +95,12 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    public static NotificationChannel lastChannel;
    public void createNotificationChannel(NotificationChannel channel) {
       lastChannel = channel;
+      super.createNotificationChannel((Object)channel);
    }
 
    public static NotificationChannelGroup lastChannelGroup;
    public void createNotificationChannelGroup(NotificationChannelGroup group) {
       lastChannelGroup = group;
+      super.createNotificationChannelGroup((Object)group);
    }
-
 }
