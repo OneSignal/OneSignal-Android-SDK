@@ -391,9 +391,6 @@ class GenerateNotification {
    // Without this MIUI 8 will only show the app icon on the left.
    //  When a large icon is set the small icon will no longer show.
    private static void addXiaomiSettings(OneSignalNotificationBuilder oneSignalNotificationBuilder, Notification notification) {
-      if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-         return;
-
       // Don't use unless a large icon is set.
       // The small white notification icon is hard to see with MIUI default light theme.
       if (!oneSignalNotificationBuilder.hasLargeIcon)
@@ -711,9 +708,6 @@ class GenerateNotification {
    }
 
    private static Bitmap getLargeIcon(JSONObject gcmBundle) {
-      if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-         return null;
-
       Bitmap bitmap = getBitmap(gcmBundle.optString("licon"));
       if (bitmap == null)
          bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
@@ -725,9 +719,6 @@ class GenerateNotification {
    }
    
    private static Bitmap getDefaultLargeIcon() {
-      if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-         return null;
-      
       Bitmap bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
       return resizeBitmapForLargeIconArea(bitmap);
    }

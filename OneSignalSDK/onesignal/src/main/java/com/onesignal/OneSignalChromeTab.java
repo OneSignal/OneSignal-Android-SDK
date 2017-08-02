@@ -30,7 +30,6 @@ package com.onesignal;
 import android.content.ComponentName;
 import android.content.Context;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.customtabs.CustomTabsCallback;
 import android.support.customtabs.CustomTabsClient;
@@ -44,11 +43,6 @@ class OneSignalChromeTab {
    private static boolean opened;
    
    static void setup(Context context, String appId, String userId, String adId) {
-      // Min Android API Level is set to 9 in the aar's AndroidManifest.xml for capability.
-      //    We need to check for compatibility at runtime for Chrome tabs then.
-      if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH)
-         return;
-      
       if (opened)
          return;
       

@@ -438,6 +438,16 @@ class NotificationBundleProcessor {
       return jsonArray;
    }
    
+   static boolean hasRemoteResource(Bundle bundle) {
+      return isBuildKeyRemote(bundle, "licon")
+          || isBuildKeyRemote(bundle, "bicon")
+          || bundle.getString("bg_img", null) != null;
+   }
+   
+   private static boolean isBuildKeyRemote(Bundle bundle, String key) {
+      String value = bundle.getString(key, "").trim();
+      return value.startsWith("http://") || value.startsWith("https://");
+   }
    
    static class ProcessedBundleResult {
       boolean isOneSignalPayload;
