@@ -64,7 +64,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       Bundle bundle = intent.getExtras();
       if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
          return;
-   
+      
       ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
       
       // Null means this isn't a GCM / FCM message.
@@ -120,18 +120,18 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    }
    
    private static void startGCMService(Context context, Bundle bundle) {
-      // TODO: Display notification directly if from BroadcastReceiver IF
-      //  1. No remote resource needs to be loaded. Starts with "http"
-      //    - Check large icon, big picture, and background image
-      
       BundleCompat taskExtras = BundleCompatFactory.getInstance();
       taskExtras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
       taskExtras.putLong("timestamp", System.currentTimeMillis() / 1000L);
       
-      // TODO: Only use JobScheduler implementation if:
-      //    1. If GCM payload priority is not high.
-      //       - startWakefulService will work in this case on O.
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      // If no remote resources have to be downloaded don't create a job which could add some delay.
+      if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
+         NotificationBundleProcessor.ProcessFromGCMIntentService(context, taskExtras, null);
+         return;
+      }
+      
+      boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
+      if (!isHighPriority && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
          ComponentName componentName = new ComponentName(context.getPackageName(),
                                                          GcmIntentJobService.class.getName());
          Random random = new Random();
@@ -150,7 +150,6 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       else {
          ComponentName componentName = new ComponentName(context.getPackageName(),
                                                          GcmIntentService.class.getName());
-      
          Intent intentForService = new Intent()
                                     .replaceExtras((Bundle)taskExtras.getBundle())
                                     .setComponent(componentName);
