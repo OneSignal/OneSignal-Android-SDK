@@ -556,11 +556,12 @@ public class MainOneSignalClassRunner {
       GetIdsAvailable();
       // A more real test would be "missing support library" but bad project number is an easier setup
       //   and is testing the same logic.
+      ShadowPushRegistratorGPS.fail = true;
       OneSignalInitWithBadProjectNum();
 
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
       Assert.assertEquals(ShadowOneSignalRestClient.testUserId, callBackUseId);
@@ -590,7 +591,7 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
       Assert.assertEquals(ShadowOneSignalRestClient.testUserId, callBackUseId);
@@ -668,12 +669,14 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldUpdateNotificationTypesCorrectlyEvenWhenSetSubscriptionIsCalledInAnErrorState() throws Exception {
-      OneSignalInitWithBadProjectNum();
+      ShadowPushRegistratorGPS.fail = true;
+      OneSignalInit();
       threadAndTaskWait();
       OneSignal.setSubscription(true);
 
       // Restart app - Should send subscribe with on_session call.
       StaticResetHelper.restSetStaticFields();
+      ShadowPushRegistratorGPS.fail = false;
       OneSignalInit();
       threadAndTaskWait();
       Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));

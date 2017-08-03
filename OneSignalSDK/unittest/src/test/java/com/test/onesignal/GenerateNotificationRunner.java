@@ -671,16 +671,18 @@ public class GenerateNotificationRunner {
 
       GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
       gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
-
-      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      Assert.assertEquals("com.onesignal.GcmIntentService", intent.getComponent().getClassName());
-
-      JSONObject jsonPayload = new JSONObject(intent.getStringExtra("json_payload"));
-
-      Assert.assertEquals(null, jsonPayload.optString("o", null));
-      JSONObject customJson = new JSONObject(jsonPayload.optString("custom"));
-      JSONObject additionalData = new JSONObject((customJson.getString("a")));
-      Assert.assertEquals("id1", additionalData.getJSONArray("actionButtons").getJSONObject(0).getString("id"));
+      
+      // Normal notifications should be generated right from the BroadcastReceiver
+      //   without creating a service.
+      Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+      
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      PostedNotification lastNotification = postedNotifsIterator.next().getValue();
+      
+      Assert.assertEquals(1, lastNotification.notif.actions.length);
+      String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra("onesignal_data");
+      Assert.assertEquals("id1", new JSONObject(json_data).optString("actionSelected"));
    }
    
    @Test
