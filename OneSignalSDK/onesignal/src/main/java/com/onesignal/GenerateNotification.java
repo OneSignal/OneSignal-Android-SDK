@@ -45,7 +45,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -212,7 +211,7 @@ class GenerateNotification {
       
       NotificationCompat.Builder notifBuilder;
       try {
-         String channelId = NotificationChannelManager.createNotificationChannel(currentContext, notifJob.jsonPayload);
+         String channelId = NotificationChannelManager.createNotificationChannel(currentContext, gcmBundle);
          // Will throw if app is using 26.0.0-beta1 or older of the support library.
          notifBuilder = new NotificationCompat.Builder(currentContext, channelId);
       } catch(Throwable t) {
@@ -242,8 +241,20 @@ class GenerateNotification {
       } catch (Throwable t) {} // Can throw if an old android support lib is used.
       
       int notificationDefaults = 0;
-      if (OneSignal.getVibrate(currentContext))
-         notificationDefaults = Notification.DEFAULT_VIBRATE;
+      
+      if (OneSignal.getVibrate(currentContext)) {
+         if (gcmBundle.optBoolean("vib", true))
+            notificationDefaults = Notification.DEFAULT_VIBRATE;
+         if (gcmBundle.has("vib_pt")) {
+            JSONArray json_vib_array = gcmBundle.optJSONArray("vib_pt");
+            long[] long_array = new long[json_vib_array.length()];
+            for (int i = 0; i < json_vib_array.length(); i++)
+               long_array[i] = json_vib_array.optLong(i);
+   
+            notificationDefaults = Notification.DEFAULT_VIBRATE;
+            notifBuilder.setVibrate(long_array);
+         }
+      }
 
       if (gcmBundle.has("ledc")) {
          try {
@@ -252,11 +263,12 @@ class GenerateNotification {
          } catch (Throwable t) {
             notificationDefaults |= Notification.DEFAULT_LIGHTS;
          } // Can throw if an old android support lib is used or parse error.
-      } else
+      }
+      else
          notificationDefaults |= Notification.DEFAULT_LIGHTS;
 
       try {
-         int visibility = Notification.VISIBILITY_PUBLIC;
+         int visibility = NotificationCompat.VISIBILITY_PUBLIC;
          if (gcmBundle.has("vis"))
             visibility = Integer.parseInt(gcmBundle.optString("vis"));
          notifBuilder.setVisibility(visibility);
@@ -281,9 +293,9 @@ class GenerateNotification {
       }
 
       notifBuilder.setDefaults(notificationDefaults);
-
-      if (gcmBundle.optInt("pri", 0) > 9)
-         notifBuilder.setPriority(NotificationCompat.PRIORITY_MAX);
+   
+      int payload_priority = gcmBundle.optInt("pri", 6);
+      notifBuilder.setPriority(osPriorityToAndroidPriority(payload_priority));
       
       oneSignalNotificationBuilder.compatBuilder = notifBuilder;
       return oneSignalNotificationBuilder;
@@ -938,5 +950,18 @@ class GenerateNotification {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse buttons for alert dialog.", t);
       }
+   }
+   
+   private static int osPriorityToAndroidPriority(int priority) {
+      if (priority > 9)
+         return NotificationCompat.PRIORITY_MAX;
+      if (priority > 7)
+         return NotificationCompat.PRIORITY_HIGH;
+      if (priority > 5)
+         return NotificationCompat.PRIORITY_DEFAULT;
+      if (priority > 3)
+         return NotificationCompat.PRIORITY_LOW;
+      
+      return NotificationCompat.PRIORITY_MIN;
    }
 }

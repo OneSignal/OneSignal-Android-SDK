@@ -35,6 +35,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.NotificationManagerCompat;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -80,7 +81,7 @@ class NotificationChannelManager {
          return createDefaultChannel(notificationManager);
       
       try {
-         return createChannel(context, notificationManager, jsonPayload.optJSONObject("chnl"));
+         return createChannel(context, notificationManager, jsonPayload);
       } catch (JSONException e) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not create notification channel due to JSON payload error!", e);
       }
@@ -88,54 +89,59 @@ class NotificationChannelManager {
       return DEFAULT_CHANNEL_ID;
    }
 
+   // Language dependent fields will be passed localized
    @RequiresApi(api = Build.VERSION_CODES.O)
-   private static String createChannel(Context context, NotificationManager notificationManager, JSONObject channelPayload) throws JSONException {
+   private static String createChannel(Context context, NotificationManager notificationManager, JSONObject payload) throws JSONException {
+      JSONObject channelPayload = payload.optJSONObject("chnl");
+      
       String channel_id = channelPayload.optString("id", DEFAULT_CHANNEL_ID);
       // Ensure we don't try to use the system reserved id
       if (channel_id.equals(NotificationChannel.DEFAULT_CHANNEL_ID))
          channel_id = DEFAULT_CHANNEL_ID;
-
-      int importance = channelPayload.optInt("imp", NotificationManager.IMPORTANCE_DEFAULT);
+      
       String channel_name = channelPayload.optString("nm", "Miscellaneous");
-
+   
+      int importance = priorityToImportance(payload.optInt("pri", 6));
       NotificationChannel channel = new NotificationChannel(channel_id, channel_name, importance);
 
-      if (channelPayload.has("grp")) {
-         String group_id = channelPayload.optString("grp");
+      if (channelPayload.has("grp_id")) {
+         String group_id = channelPayload.optString("grp_id");
          CharSequence group_name = channelPayload.optString("grp_nm");
          notificationManager.createNotificationChannelGroup(new NotificationChannelGroup(group_id, group_name));
          channel.setGroup(group_id);
       }
 
-      channel.enableLights(channelPayload.optBoolean("lght", true));
-      if (channelPayload.has("ledc")) {
-         BigInteger ledColor = new BigInteger(channelPayload.optString("ledc"), 16);
+      channel.enableLights(payload.optBoolean("led", true));
+      if (payload.has("ledc")) {
+         BigInteger ledColor = new BigInteger(payload.optString("ledc"), 16);
          channel.setLightColor(ledColor.intValue());
       }
 
-      channel.enableVibration(channelPayload.optBoolean("vib", true));
-      if (channelPayload.has("vib_pt")) {
-         JSONArray json_vib_array = channelPayload.optJSONArray("vib_pt");
+      channel.enableVibration(payload.optBoolean("vib", true));
+      if (payload.has("vib_pt")) {
+         JSONArray json_vib_array = payload.optJSONArray("vib_pt");
          long[] long_array = new long[json_vib_array.length()];
          for (int i = 0; i < json_vib_array.length(); i++)
             long_array[i] = json_vib_array.optLong(i);
          channel.setVibrationPattern(long_array);
       }
 
-      if (channelPayload.has("snd_nm")) {
+      if (payload.has("sound")) {
          // Sound will only play if Importance is set to High or Urgent
-         Uri uri = OSUtils.getSoundUri(context, channelPayload.optString("snd_nm", null));
-         if (uri!= null)
+         String sound = payload.optString("sound", null);
+         Uri uri = OSUtils.getSoundUri(context, sound);
+         if (uri != null)
             channel.setSound(uri, null);
+         else if ("null".equals(sound) || "nil".equals(sound))
+            channel.setSound(null, null);
+         // null = None for a sound.
       }
-      else if (!channelPayload.optBoolean("snd", true))
-         channel.setSound(null, null);
       // Setting sound to null makes it 'None' in the Settings.
       // Otherwise not calling setSound makes it the default notification sound.
 
-      channel.setLockscreenVisibility(channelPayload.optInt("lck", Notification.VISIBILITY_PUBLIC));
-      channel.setShowBadge(channelPayload.optBoolean("bdg", true));
-      channel.setBypassDnd(channelPayload.optBoolean("bdnd", false));
+      channel.setLockscreenVisibility(payload.optInt("vis", Notification.VISIBILITY_PUBLIC));
+      channel.setShowBadge(payload.optBoolean("bdg", true));
+      channel.setBypassDnd(payload.optBoolean("bdnd", false));
 
       notificationManager.createNotificationChannel(channel);
       return channel_id;
@@ -183,5 +189,20 @@ class NotificationChannelManager {
          if (id.startsWith("OS_") && !sycnedChannelSet.contains(id))
             notificationManager.deleteNotificationChannel(id);
       }
+   }
+   
+   private static int priorityToImportance(int priority) {
+      if (priority > 9)
+         return NotificationManagerCompat.IMPORTANCE_MAX;
+      if (priority > 7)
+         return NotificationManagerCompat.IMPORTANCE_HIGH;
+      if (priority > 5)
+         return NotificationManagerCompat.IMPORTANCE_DEFAULT;
+      if (priority > 3)
+         return NotificationManagerCompat.IMPORTANCE_LOW;
+      if (priority > 1)
+         return NotificationManagerCompat.IMPORTANCE_MIN;
+      
+      return NotificationManagerCompat.IMPORTANCE_NONE;
    }
 }

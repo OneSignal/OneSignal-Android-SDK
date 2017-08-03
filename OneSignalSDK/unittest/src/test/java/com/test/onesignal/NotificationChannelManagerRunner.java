@@ -99,17 +99,18 @@ public class NotificationChannelManagerRunner {
 
       chnl.put("id", "test_id");
       chnl.put("nm", "Test Name");
-      chnl.put("grp", "grp_id");
+      chnl.put("grp_id", "grp_id");
       chnl.put("grp_nm", "Group Name");
-      chnl.put("imp", NotificationManager.IMPORTANCE_MAX);
-      chnl.put("lght", false);
-      chnl.put("ledc", "FFFF0000");
-      chnl.put("vib", false);
-      chnl.put("vib_pt", new JSONArray("[1,2,3,4]"));
-      chnl.put("snd_nm", "notification");
-      chnl.put("lck", Notification.VISIBILITY_SECRET);
-      chnl.put("bdg", true);
-      chnl.put("bdnd", true);
+   
+      payload.put("pri", 10);
+      payload.put("led", false);
+      payload.put("ledc", "FFFF0000");
+      payload.put("vib", false);
+      payload.put("vib_pt", new JSONArray("[1,2,3,4]"));
+      payload.put("sound", "notification");
+      payload.put("vis", Notification.VISIBILITY_SECRET);
+      payload.put("bdg", true);
+      payload.put("bdnd", true);
 
       payload.put("chnl", chnl);
 
@@ -172,8 +173,10 @@ public class NotificationChannelManagerRunner {
       
       JSONArray channelList = new JSONArray();
       JSONObject channelItem = new JSONObject();
-      
-      channelItem.put("id", "OS_id1");
+      JSONObject channelItemChnl = new JSONObject();
+   
+      channelItemChnl.put("id", "OS_id1");
+      channelItem.put("chnl", channelItemChnl);
    
       channelList.put(channelItem);
       JSONObject payload = new JSONObject();
@@ -197,8 +200,10 @@ public class NotificationChannelManagerRunner {
       
       JSONArray channelList = new JSONArray();
       JSONObject channelItem = new JSONObject();
+      JSONObject channelItemChnl = new JSONObject();
    
-      channelItem.put("id", "OS_id1");
+      channelItemChnl.put("id", "OS_id1");
+      channelItem.put("chnl", channelItemChnl);
    
       channelList.put(channelItem);
       JSONObject payload = new JSONObject();
