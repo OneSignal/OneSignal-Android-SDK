@@ -902,7 +902,6 @@ public class GenerateNotificationRunner {
 
       bundle.putString("title", "Test H");
       bundle.putString("alert", "Test B");
-      bundle.putString("bgn", "1");
       bundle.putString("vis", "0");
       bundle.putString("bgac", "FF0000FF");
       bundle.putString("from", "703322744261");

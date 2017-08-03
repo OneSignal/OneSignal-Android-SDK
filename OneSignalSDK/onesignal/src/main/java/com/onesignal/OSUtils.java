@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -49,7 +50,7 @@ class OSUtils {
 
    static final int UNINITIALIZABLE_STATUS = -999;
 
-   int initializationChecker(int deviceType, String oneSignalAppId) {
+   int initializationChecker(Context context, int deviceType, String oneSignalAppId) {
       int subscribableStatus = 1;
 
       try {
@@ -85,12 +86,20 @@ class OSUtils {
          try {
             Class.forName("android.support.v4.content.WakefulBroadcastReceiver");
             Class.forName("android.support.v4.app.NotificationManagerCompat");
+            
+            // If running on Android O and targeting O we need version 26.0.0 for
+            //   the new compat NotificationCompat.Builder constructor.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && getTargetSdkVersion(context) >= Build.VERSION_CODES.O) {
+               // Class was added in 26.0.0-beta2
+               Class.forName("android.support.v4.app.JobIntentService");
+            }
          } catch (ClassNotFoundException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library v4 is to old or incomplete. Please update your project's android-support-v4.jar to the latest revision.", e);
+            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library is to old or incomplete. Please update to the 26.0.0 revision or newer.", e);
             subscribableStatus = -5;
          }
       } catch (ClassNotFoundException e) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library v4. Please make sure android-support-v4.jar has been correctly added to your project.", e);
+         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library. Please make sure it has been correctly added to your project.", e);
          subscribableStatus = -3;
       }
 
@@ -195,6 +204,18 @@ class OSUtils {
       }
    }
    
+   static int getTargetSdkVersion(Context context) {
+      String packageName = context.getPackageName();
+      PackageManager packageManager = context.getPackageManager();
+      try {
+         ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
+         return applicationInfo.targetSdkVersion;
+      } catch (PackageManager.NameNotFoundException e) {
+         e.printStackTrace();
+      }
+      
+      return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
+   }
    
    static boolean isValidResourceName(String name) {
       return (name != null && !name.matches("^[0-9]"));
