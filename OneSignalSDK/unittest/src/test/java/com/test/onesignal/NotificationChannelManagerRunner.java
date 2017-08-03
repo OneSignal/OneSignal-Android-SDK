@@ -22,6 +22,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
+import org.robolectric.shadows.ShadowNotificationManager;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_createNotificationChannel;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_processChannelList;
@@ -93,12 +94,13 @@ public class NotificationChannelManagerRunner {
    }
 
    @Test
-   public void createNotificationChannelWithALlOptionsl() throws Exception {
+   public void createNotificationChannelWithALlOptions() throws Exception {
       JSONObject payload = new JSONObject();
       JSONObject chnl = new JSONObject();
 
       chnl.put("id", "test_id");
       chnl.put("nm", "Test Name");
+      chnl.put("dscr", "Some description");
       chnl.put("grp_id", "grp_id");
       chnl.put("grp_nm", "Group Name");
    
@@ -120,6 +122,7 @@ public class NotificationChannelManagerRunner {
       assertEquals("test_id", ret);
       assertEquals("test_id", ShadowRoboNotificationManager.lastChannel.getId());
       assertEquals("Test Name", channel.getName());
+      assertEquals("Some description", channel.getDescription());
       assertEquals("grp_id", channel.getGroup());
       NotificationChannelGroup group = ShadowRoboNotificationManager.lastChannelGroup;
       assertEquals("grp_id", group.getId());
@@ -192,6 +195,35 @@ public class NotificationChannelManagerRunner {
    public void processPayloadDeletingOldChannel() throws Exception {
       NotificationChannelManager_processChannelList(blankActivity, createBasicChannelListPayload());
       assertChannelsForBasicChannelList();
+   }
+   
+   // Test that specific "en" defined keys name and descriptions are used when
+   //    the device language is English.
+   // Top level keys under no language key are considered the default language.
+   @Test
+   public void processChannelListWithMultiLanguage() throws Exception {
+      JSONObject payload = createBasicChannelListPayload();
+   
+      JSONObject channelItem = (JSONObject)payload.optJSONArray("chnl_lst").get(0);
+      JSONObject channelProperties = channelItem.optJSONObject("chnl");
+      
+      // Add "langs" key with a "en" sub key.
+      JSONObject langs = new JSONObject();
+      JSONObject en = new JSONObject();
+      en.put("nm", "en_nm");
+      en.put("dscr", "en_dscr");
+      en.put("grp_nm", "en_grp_nm");
+      langs.put("en", en);
+      channelProperties.put("langs", langs);
+      
+      channelProperties.put("grp_id", "grp_id1");
+   
+      NotificationChannelManager_processChannelList(blankActivity, payload);
+      
+      NotificationChannel channel = getChannel("OS_id1");
+      assertEquals("en_nm", channel.getName());
+      assertEquals("en_dscr", channel.getDescription());
+      assertEquals("en_grp_nm", ShadowRoboNotificationManager.lastChannelGroup.getName());
    }
    
    JSONObject createBasicChannelListPayload() throws JSONException {
