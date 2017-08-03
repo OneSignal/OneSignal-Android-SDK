@@ -89,6 +89,8 @@ class NotificationChannelManager {
       return DEFAULT_CHANNEL_ID;
    }
 
+   // Creates NotificationChannel and NotificationChannelGroup based on a json payload.
+   // Returns channel id after it is created.
    // Language dependent fields will be passed localized
    @RequiresApi(api = Build.VERSION_CODES.O)
    private static String createChannel(Context context, NotificationManager notificationManager, JSONObject payload) throws JSONException {
@@ -99,14 +101,23 @@ class NotificationChannelManager {
       if (channel_id.equals(NotificationChannel.DEFAULT_CHANNEL_ID))
          channel_id = DEFAULT_CHANNEL_ID;
       
-      String channel_name = channelPayload.optString("nm", "Miscellaneous");
+      JSONObject payloadWithText = channelPayload;
+      if (channelPayload.has("langs")) {
+         JSONObject langList = channelPayload.getJSONObject("langs");
+         String deviceLanguage = OSUtils.getCorrectedLanguage();
+         if (langList.has(deviceLanguage))
+            payloadWithText = langList.optJSONObject(deviceLanguage);
+      }
+      
+      String channel_name = payloadWithText.optString("nm", "Miscellaneous");
    
       int importance = priorityToImportance(payload.optInt("pri", 6));
       NotificationChannel channel = new NotificationChannel(channel_id, channel_name, importance);
+      channel.setDescription(payloadWithText.optString("dscr", null));
 
       if (channelPayload.has("grp_id")) {
          String group_id = channelPayload.optString("grp_id");
-         CharSequence group_name = channelPayload.optString("grp_nm");
+         CharSequence group_name = payloadWithText.optString("grp_nm");
          notificationManager.createNotificationChannelGroup(new NotificationChannelGroup(group_id, group_name));
          channel.setGroup(group_id);
       }
@@ -169,7 +180,7 @@ class NotificationChannelManager {
 
       NotificationManager notificationManager =
          (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-
+      
       Set<String> sycnedChannelSet = new HashSet<>();
       JSONArray chnlList = payload.optJSONArray("chnl_lst");
       int jsonArraySize = chnlList.length();
