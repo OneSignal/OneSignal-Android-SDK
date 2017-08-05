@@ -78,5 +78,5 @@ dependencies {
     compile 'com.android.support:customtabs:26.0.0'
 
     testCompile 'junit:junit:4.12'
-    testCompile 'org.robolectric:robolectric:3.4'
+    testCompile 'org.robolectric:robolectric:3.4.2'
 }

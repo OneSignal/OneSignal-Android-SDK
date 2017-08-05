@@ -122,13 +122,13 @@ class NotificationChannelManager {
          channel.setGroup(group_id);
       }
 
-      channel.enableLights(payload.optBoolean("led", true));
+      channel.enableLights(payload.optInt("led", 1) == 1);
       if (payload.has("ledc")) {
          BigInteger ledColor = new BigInteger(payload.optString("ledc"), 16);
          channel.setLightColor(ledColor.intValue());
       }
 
-      channel.enableVibration(payload.optBoolean("vib", true));
+      channel.enableVibration(payload.optInt("vib", 1) == 1);
       if (payload.has("vib_pt")) {
          JSONArray json_vib_array = payload.optJSONArray("vib_pt");
          long[] long_array = new long[json_vib_array.length()];
@@ -151,8 +151,8 @@ class NotificationChannelManager {
       // Otherwise not calling setSound makes it the default notification sound.
 
       channel.setLockscreenVisibility(payload.optInt("vis", Notification.VISIBILITY_PUBLIC));
-      channel.setShowBadge(payload.optBoolean("bdg", true));
-      channel.setBypassDnd(payload.optBoolean("bdnd", false));
+      channel.setShowBadge(payload.optInt("bdg", 1) == 1);
+      channel.setBypassDnd(payload.optInt("bdnd", 0) == 1);
 
       notificationManager.createNotificationChannel(channel);
       return channel_id;
