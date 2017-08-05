@@ -105,14 +105,14 @@ public class NotificationChannelManagerRunner {
       chnl.put("grp_nm", "Group Name");
    
       payload.put("pri", 10);
-      payload.put("led", false);
+      payload.put("led", 0);
       payload.put("ledc", "FFFF0000");
-      payload.put("vib", false);
+      payload.put("vib", 0);
       payload.put("vib_pt", new JSONArray("[1,2,3,4]"));
       payload.put("sound", "notification");
       payload.put("vis", Notification.VISIBILITY_SECRET);
-      payload.put("bdg", true);
-      payload.put("bdnd", true);
+      payload.put("bdg", 1);
+      payload.put("bdnd", 1);
 
       payload.put("chnl", chnl);
 
