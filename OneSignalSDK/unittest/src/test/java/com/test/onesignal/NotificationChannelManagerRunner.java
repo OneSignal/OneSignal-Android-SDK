@@ -22,7 +22,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowNotificationManager;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_createNotificationChannel;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_processChannelList;
@@ -38,7 +37,7 @@ import static org.junit.Assert.assertNull;
          ShadowOSUtils.class,
          ShadowRoboNotificationManager.class},
       instrumentedPackages = {"com.onesignal"},
-      sdk = 10000)
+      sdk = 26)
 @RunWith(RobolectricTestRunner.class)
 public class NotificationChannelManagerRunner {
 
@@ -81,7 +80,7 @@ public class NotificationChannelManagerRunner {
       JSONObject payload = new JSONObject();
       JSONObject chnl = new JSONObject();
       chnl.put("id", "test_id");
-      payload.put("chnl", chnl);
+      payload.put("chnl", chnl.toString());
 
       String ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
 
@@ -114,7 +113,7 @@ public class NotificationChannelManagerRunner {
       payload.put("bdg", 1);
       payload.put("bdnd", 1);
 
-      payload.put("chnl", chnl);
+      payload.put("chnl", chnl.toString());
 
       String ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
 
@@ -146,7 +145,7 @@ public class NotificationChannelManagerRunner {
       
       JSONObject chnl = new JSONObject();
       chnl.put("id", "test_id");
-      payload.put("chnl", chnl);
+      payload.put("chnl", chnl.toString());
       
       String ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
       
@@ -158,6 +157,9 @@ public class NotificationChannelManagerRunner {
       ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
       assertEquals("existing_id", ret);
    }
+   
+   
+   // Starting cold start sync tests
    
    @Test
    public void processPayloadWithOutChannelList() throws Exception {
@@ -225,6 +227,8 @@ public class NotificationChannelManagerRunner {
       assertEquals("en_dscr", channel.getDescription());
       assertEquals("en_grp_nm", ShadowRoboNotificationManager.lastChannelGroup.getName());
    }
+   
+   // Starting helper methods
    
    JSONObject createBasicChannelListPayload() throws JSONException {
       createChannel("local_existing_id");

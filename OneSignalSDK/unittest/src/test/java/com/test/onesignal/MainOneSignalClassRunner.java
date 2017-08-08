@@ -349,7 +349,7 @@ public class MainOneSignalClassRunner {
    }
    
    @Test
-   @Config(shadows = {ShadowRoboNotificationManager.class}, sdk = 10000)
+   @Config(shadows = {ShadowRoboNotificationManager.class}, sdk = 26)
    public void testNotificationChannelListPayload() throws Exception {
       NotificationChannelManagerRunner testHelper = new NotificationChannelManagerRunner().setContext(blankActivity);
       JSONObject payloadList = testHelper.createBasicChannelListPayload();
