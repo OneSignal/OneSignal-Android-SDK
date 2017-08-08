@@ -94,7 +94,14 @@ class NotificationChannelManager {
    // Language dependent fields will be passed localized
    @RequiresApi(api = Build.VERSION_CODES.O)
    private static String createChannel(Context context, NotificationManager notificationManager, JSONObject payload) throws JSONException {
-      JSONObject channelPayload = payload.optJSONObject("chnl");
+      // 'chnl' will be a string if coming from FCM and it will be a JSONObject when coming from
+      //   a cold start sync.
+      Object objChannelPayload = payload.opt("chnl");
+      JSONObject channelPayload = null;
+      if (objChannelPayload instanceof String)
+         channelPayload = new JSONObject((String)objChannelPayload);
+      else if (objChannelPayload instanceof JSONObject)
+         channelPayload = (JSONObject)objChannelPayload;
       
       String channel_id = channelPayload.optString("id", DEFAULT_CHANNEL_ID);
       // Ensure we don't try to use the system reserved id
@@ -121,7 +128,7 @@ class NotificationChannelManager {
          notificationManager.createNotificationChannelGroup(new NotificationChannelGroup(group_id, group_name));
          channel.setGroup(group_id);
       }
-
+      
       channel.enableLights(payload.optInt("led", 1) == 1);
       if (payload.has("ledc")) {
          BigInteger ledColor = new BigInteger(payload.optString("ledc"), 16);
