@@ -211,7 +211,7 @@ class GenerateNotification {
       
       NotificationCompat.Builder notifBuilder;
       try {
-         String channelId = NotificationChannelManager.createNotificationChannel(currentContext, gcmBundle);
+         String channelId = NotificationChannelManager.createNotificationChannel(notifJob);
          // Will throw if app is using 26.0.0-beta1 or older of the support library.
          notifBuilder = new NotificationCompat.Builder(currentContext, channelId);
       } catch(Throwable t) {

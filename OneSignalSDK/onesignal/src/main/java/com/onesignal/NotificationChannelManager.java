@@ -51,24 +51,22 @@ class NotificationChannelManager {
    // Can't create a channel with the id 'miscellaneous' as an exception is thrown.
    // Using it results in the notification not being displayed.
    // private static final String DEFAULT_CHANNEL_ID = "miscellaneous"; // NotificationChannel.DEFAULT_CHANNEL_ID;
-   
+
    private static final String DEFAULT_CHANNEL_ID = "fcm_fallback_notification_channel";
+   private static final String RESTORE_CHANNEL_ID = "restored_OS_notifications";
    
-   static String createNotificationChannel(Context context, JSONObject jsonPayload) {
+   static String createNotificationChannel(NotificationGenerationJob notifJob) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
          return DEFAULT_CHANNEL_ID;
 
-//// To test with additional data
-//      JSONObject customJson = null;
-//      try {
-//         customJson = new JSONObject(jsonPayload.optString("custom"));
-//      } catch (JSONException e) {
-//         e.printStackTrace();
-//      }
-//      jsonPayload = customJson.optJSONObject("a");
-   
+      Context context = notifJob.context;
+      JSONObject jsonPayload = notifJob.jsonPayload;
+
       NotificationManager notificationManager =
-         (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+            (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+      if (notifJob.restoring)
+         return createRestoreChannel(notificationManager);
       
       // Allow channels created outside the SDK
       if (jsonPayload.has("oth_chnl")) {
@@ -100,7 +98,7 @@ class NotificationChannelManager {
       JSONObject channelPayload = null;
       if (objChannelPayload instanceof String)
          channelPayload = new JSONObject((String)objChannelPayload);
-      else if (objChannelPayload instanceof JSONObject)
+      else
          channelPayload = (JSONObject)objChannelPayload;
       
       String channel_id = channelPayload.optString("id", DEFAULT_CHANNEL_ID);
@@ -128,14 +126,13 @@ class NotificationChannelManager {
          notificationManager.createNotificationChannelGroup(new NotificationChannelGroup(group_id, group_name));
          channel.setGroup(group_id);
       }
-      
-      channel.enableLights(payload.optInt("led", 1) == 1);
+
       if (payload.has("ledc")) {
          BigInteger ledColor = new BigInteger(payload.optString("ledc"), 16);
          channel.setLightColor(ledColor.intValue());
       }
+      channel.enableLights(payload.optInt("led", 1) == 1);
 
-      channel.enableVibration(payload.optInt("vib", 1) == 1);
       if (payload.has("vib_pt")) {
          JSONArray json_vib_array = payload.optJSONArray("vib_pt");
          long[] long_array = new long[json_vib_array.length()];
@@ -143,6 +140,7 @@ class NotificationChannelManager {
             long_array[i] = json_vib_array.optLong(i);
          channel.setVibrationPattern(long_array);
       }
+      channel.enableVibration(payload.optInt("vib", 1) == 1);
 
       if (payload.has("sound")) {
          // Sound will only play if Importance is set to High or Urgent
@@ -157,7 +155,7 @@ class NotificationChannelManager {
       // Setting sound to null makes it 'None' in the Settings.
       // Otherwise not calling setSound makes it the default notification sound.
 
-      channel.setLockscreenVisibility(payload.optInt("vis", Notification.VISIBILITY_PUBLIC));
+      channel.setLockscreenVisibility(payload.optInt("vis", Notification.VISIBILITY_PRIVATE));
       channel.setShowBadge(payload.optInt("bdg", 1) == 1);
       channel.setBypassDnd(payload.optInt("bdnd", 0) == 1);
 
@@ -176,6 +174,17 @@ class NotificationChannelManager {
       notificationManager.createNotificationChannel(channel);
       
       return DEFAULT_CHANNEL_ID;
+   }
+
+   @RequiresApi(api = Build.VERSION_CODES.O)
+   private static String createRestoreChannel(NotificationManager notificationManager) {
+      NotificationChannel channel = new NotificationChannel(RESTORE_CHANNEL_ID,
+            "Restored",
+            NotificationManager.IMPORTANCE_LOW);
+
+      notificationManager.createNotificationChannel(channel);
+
+      return RESTORE_CHANNEL_ID;
    }
    
    static void processChannelList(Context context, JSONObject payload) {

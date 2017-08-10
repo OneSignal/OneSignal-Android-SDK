@@ -93,7 +93,9 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
-      return NotificationChannelManager.createNotificationChannel(context, payload);
+      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+      notifJob.jsonPayload = payload;
+      return NotificationChannelManager.createNotificationChannel(notifJob);
    }
    
    public static void NotificationChannelManager_processChannelList(Context context, JSONObject jsonObject) {
