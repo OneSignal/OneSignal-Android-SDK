@@ -127,9 +127,9 @@ public class NotificationChannelManagerRunner {
       assertEquals("grp_id", group.getId());
       assertEquals("Group Name", group.getName());
       assertNotNull(channel.getSound());
-      assertFalse(channel.shouldShowLights());
+      assertFalse(channel.shouldShowLights()); // Setting a led color should NOT override enableLights
       assertEquals(-65536, channel.getLightColor());
-      assertTrue(channel.shouldVibrate()); // Setting a pattern enables vibration
+      assertFalse(channel.shouldVibrate()); // Setting a pattern should NOT override enableVibration
       assertArrayEquals(new long[]{1,2,3,4}, channel.getVibrationPattern());
       assertEquals(NotificationManager.IMPORTANCE_MAX, channel.getImportance());
       assertEquals("content://settings/system/notification_sound", channel.getSound().toString());
@@ -159,7 +159,7 @@ public class NotificationChannelManagerRunner {
    }
    
    
-   // Starting cold start sync tests
+   // Start - Cold start sync tests
    
    @Test
    public void processPayloadWithOutChannelList() throws Exception {
