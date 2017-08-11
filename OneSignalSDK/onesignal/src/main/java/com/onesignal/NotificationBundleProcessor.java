@@ -414,8 +414,9 @@ class NotificationBundleProcessor {
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
       // Using Alarm for Android O compatibility
+      Random random = new Random();
       long atTime = System.currentTimeMillis();
-      PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      PendingIntent pendingIntent = PendingIntent.getService(context, random.nextInt(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
       AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
       alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);
 

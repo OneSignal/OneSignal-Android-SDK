@@ -165,6 +165,7 @@ public class SyncService extends Service {
          LocationGMS.scheduleUpdate(service);
    }
 
+   private static final int SYNC_SERVICE_REQUEST_CODE = 2071862119;
    static void scheduleServiceSyncTask(Context context, long atTime) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleServiceSyncTask:atTime: " + atTime);
       
@@ -175,7 +176,7 @@ public class SyncService extends Service {
       //    Some Samsung devices will throw the below exception otherwise.
       //    "java.lang.SecurityException: !@Too many alarms (500) registered"
       
-      PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      PendingIntent pendingIntent = PendingIntent.getService(context, SYNC_SERVICE_REQUEST_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
       AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
       alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);
    }

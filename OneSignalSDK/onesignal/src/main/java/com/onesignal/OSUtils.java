@@ -42,6 +42,10 @@ import android.os.Looper;
 import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -235,6 +239,25 @@ class OSUtils {
       soundId = resources.getIdentifier("onesignal_default_sound", "raw", packageName);
       if (soundId != 0)
          return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
+      
+      return null;
+   }
+   
+   static long[] parseVibrationPattern(JSONObject gcmBundle) {
+      try {
+         Object patternObj = gcmBundle.opt("vib_pt");
+         JSONArray jsonVibArray;
+         if (patternObj instanceof String)
+            jsonVibArray = new JSONArray((String)patternObj);
+         else
+            jsonVibArray = (JSONArray)patternObj;
+         
+         long[] longArray = new long[jsonVibArray.length()];
+         for (int i = 0; i < jsonVibArray.length(); i++)
+            longArray[i] = jsonVibArray.optLong(i);
+         
+         return longArray;
+      } catch (JSONException e) {}
       
       return null;
    }

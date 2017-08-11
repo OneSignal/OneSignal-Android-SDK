@@ -35,7 +35,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
-import android.os.PersistableBundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -145,28 +144,32 @@ class NotificationRestorer {
       }
    }
    
-   // TODO: Update method to support both Services and JobServices
+   // Android O - Works when app is cold started but not from Boot or app update event.
+   //               AlarmManager is also restricted on those 2 events.
+   //             Due to NotificationExtenderService being a public class we can't just upgrade to a
+   //               JobScheduler.
    private static void startService(Context context, Intent intent) {
       context.startService(intent);
    }
    
-   static void startRestoreTaskFromReceiver(WakefulBroadcastReceiver receiver, Context context) {
+   static void startRestoreTaskFromReceiver(Context context) {
       if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-         ComponentName componentName = new ComponentName(context.getPackageName(),
-             NotificationRestoreJobService.class.getName());
-         
-         Random random = new Random();
-         JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
-             .setOverrideDeadline(0)
-             .build();
-         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-         jobScheduler.schedule(jobInfo);
+// Skipping for Android O due to startService note above.
+//         ComponentName componentName = new ComponentName(context.getPackageName(),
+//             NotificationRestoreJobService.class.getName());
+//
+//         Random random = new Random();
+//         JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
+//             .setOverrideDeadline(0)
+//             .build();
+//         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+//         jobScheduler.schedule(jobInfo);
       }
       else {
          Intent intentForService = new Intent();
          intentForService.setComponent(new ComponentName(context.getPackageName(),
              NotificationRestoreService.class.getName()));
-         receiver.startWakefulService(context, intentForService);
+         WakefulBroadcastReceiver.startWakefulService(context, intentForService);
       }
    }
 }

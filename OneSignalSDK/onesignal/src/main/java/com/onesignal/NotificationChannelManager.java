@@ -134,11 +134,9 @@ class NotificationChannelManager {
       channel.enableLights(payload.optInt("led", 1) == 1);
 
       if (payload.has("vib_pt")) {
-         JSONArray json_vib_array = payload.optJSONArray("vib_pt");
-         long[] long_array = new long[json_vib_array.length()];
-         for (int i = 0; i < json_vib_array.length(); i++)
-            long_array[i] = json_vib_array.optLong(i);
-         channel.setVibrationPattern(long_array);
+         long[] vibrationPattern = OSUtils.parseVibrationPattern(payload);
+         if (vibrationPattern != null)
+            channel.setVibrationPattern(vibrationPattern);
       }
       channel.enableVibration(payload.optInt("vib", 1) == 1);
 
