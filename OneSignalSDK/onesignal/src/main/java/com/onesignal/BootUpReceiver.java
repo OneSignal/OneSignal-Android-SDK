@@ -35,6 +35,6 @@ public class BootUpReceiver extends WakefulBroadcastReceiver {
 
    @Override
    public void onReceive(Context context, Intent intent) {
-      NotificationRestorer.startRestoreTaskFromReceiver(this, context);
+      NotificationRestorer.startRestoreTaskFromReceiver(context);
    }
 }

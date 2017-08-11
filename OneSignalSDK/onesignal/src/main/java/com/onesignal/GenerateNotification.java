@@ -228,35 +228,19 @@ class GenerateNotification {
          .setContentText(message)
          .setTicker(message);
       
-      if (notifJob.shownTimeStamp != null) {
-         try {
-            notifBuilder.setWhen(notifJob.shownTimeStamp * 1000L);
-         } catch (Throwable t) {} // Can throw if an old android support lib is used.
-      }
-
-      try {
-         BigInteger accentColor = getAccentColor(gcmBundle);
-         if (accentColor != null)
-            notifBuilder.setColor(accentColor.intValue());
-      } catch (Throwable t) {} // Can throw if an old android support lib is used.
-      
       int notificationDefaults = 0;
       
-      if (OneSignal.getVibrate(currentContext)) {
-         if (gcmBundle.optBoolean("vib", true))
-            notificationDefaults = Notification.DEFAULT_VIBRATE;
+      if (OneSignal.getVibrate(currentContext) && gcmBundle.optInt("vib", 1) == 1) {
          if (gcmBundle.has("vib_pt")) {
-            JSONArray json_vib_array = gcmBundle.optJSONArray("vib_pt");
-            long[] long_array = new long[json_vib_array.length()];
-            for (int i = 0; i < json_vib_array.length(); i++)
-               long_array[i] = json_vib_array.optLong(i);
-   
-            notificationDefaults = Notification.DEFAULT_VIBRATE;
-            notifBuilder.setVibrate(long_array);
+            long[] vibrationPattern = OSUtils.parseVibrationPattern(gcmBundle);
+            if (vibrationPattern != null)
+               notifBuilder.setVibrate(vibrationPattern);
          }
+         else
+            notificationDefaults = Notification.DEFAULT_VIBRATE;
       }
-
-      if (gcmBundle.has("ledc")) {
+      
+      if (gcmBundle.has("ledc") && gcmBundle.optInt("led", 1) == 1) {
          try {
             BigInteger ledColor = new BigInteger(gcmBundle.optString("ledc"), 16);
             notifBuilder.setLights(ledColor.intValue(), 2000, 5000);
@@ -266,6 +250,18 @@ class GenerateNotification {
       }
       else
          notificationDefaults |= Notification.DEFAULT_LIGHTS;
+   
+      if (notifJob.shownTimeStamp != null) {
+         try {
+            notifBuilder.setWhen(notifJob.shownTimeStamp * 1000L);
+         } catch (Throwable t) {} // Can throw if an old android support lib is used.
+      }
+   
+      try {
+         BigInteger accentColor = getAccentColor(gcmBundle);
+         if (accentColor != null)
+            notifBuilder.setColor(accentColor.intValue());
+      } catch (Throwable t) {} // Can throw if an old android support lib is used.
 
       try {
          int visibility = NotificationCompat.VISIBILITY_PUBLIC;
