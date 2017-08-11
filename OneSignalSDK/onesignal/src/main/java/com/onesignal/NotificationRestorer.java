@@ -27,8 +27,6 @@
 
 package com.onesignal;
 
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -116,8 +114,6 @@ class NotificationRestorer {
    }
    
    // NOTE: This can be running from a Application, Service, or JobService context.
-   // TODO: Android O - NotificationExtenderService compatibility
-   //        1.  Query services that match action and instance a class.
    static void showNotifications(Context context, Cursor cursor) {
       if (cursor.moveToFirst()) {
          boolean useExtender = (NotificationExtenderService.getIntent(context) != null);

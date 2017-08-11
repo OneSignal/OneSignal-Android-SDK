@@ -4,7 +4,6 @@ import android.app.job.JobParameters;
 import android.app.job.JobService;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
-import android.util.Log;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 abstract class OneSignalJobServiceBase extends JobService {
@@ -31,8 +30,6 @@ abstract class OneSignalJobServiceBase extends JobService {
    
    @Override
    public boolean onStopJob(JobParameters jobParameters) {
-      // TODO: Check if this normally fires. When jobFinished is called maybe?
-      Log.e("OneSignal", "OneSignalJobServiceBase.onStopJob!!!!!!!!!!!!!!!!!!!!!!!");
       return true;
    }
    
