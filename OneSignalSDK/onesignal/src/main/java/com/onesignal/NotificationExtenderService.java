@@ -107,6 +107,9 @@ public abstract class NotificationExtenderService extends IntentService {
 
    @Override
    protected final void onHandleIntent(Intent intent) {
+      if (intent == null)
+         return;
+      
       processIntent(intent);
       GcmBroadcastReceiver.completeWakefulIntent(intent);
    }
