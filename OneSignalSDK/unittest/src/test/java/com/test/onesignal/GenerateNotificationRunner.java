@@ -707,6 +707,26 @@ public class GenerateNotificationRunner {
       Assert.assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
    }
    
+   @Test
+   @Config(shadows = {ShadowGcmBroadcastReceiver.class}, sdk = 26)
+   public void shouldStartGCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() throws Exception {
+      
+      Intent intentGcm = new Intent();
+      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intentGcm.putExtra("message_type", "gcm");
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putString("pri", "10");
+      bundle.putString("licon", "http://domain.com/image.jpg");
+      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
+      intentGcm.putExtras(bundle);
+      
+      GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
+      gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
+      
+      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
+      Assert.assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+   }
+   
    private OSNotification lastNotificationReceived;
    @Test
    public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {

@@ -58,9 +58,8 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
    @Override
    public void onReceive(Context context, Intent intent) {
-      // Google Play services started sending an extra non-ordered broadcast with the mBundle:
-      //    { "COM": "RST_FULL", "from": "google.com/iid" }
-      // Result codes are not valid with non-ordered broadcasts so omit it to prevent errors to the logcat.
+      // Do not process token update messages here.
+      // They are also non-ordered broadcasts.
       Bundle bundle = intent.getExtras();
       if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
          return;
@@ -120,18 +119,19 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    }
    
    private static void startGCMService(Context context, Bundle bundle) {
-      BundleCompat taskExtras = BundleCompatFactory.getInstance();
-      taskExtras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
-      taskExtras.putLong("timestamp", System.currentTimeMillis() / 1000L);
+      BundleCompat taskExtras;
       
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
+         taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
          NotificationBundleProcessor.ProcessFromGCMIntentService(context, taskExtras, null);
          return;
       }
       
       boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
       if (!isHighPriority && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+         taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
+         
          ComponentName componentName = new ComponentName(context.getPackageName(),
                                                          GcmIntentJobService.class.getName());
          Random random = new Random();
@@ -150,10 +150,18 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       else {
          ComponentName componentName = new ComponentName(context.getPackageName(),
                                                          GcmIntentService.class.getName());
+         
+         taskExtras = setCompatBundleForServer(bundle, new BundleCompatBundle());
          Intent intentForService = new Intent()
                                     .replaceExtras((Bundle)taskExtras.getBundle())
                                     .setComponent(componentName);
          startWakefulService(context, intentForService);
       }
+   }
+   
+   private static BundleCompat setCompatBundleForServer(Bundle bundle, BundleCompat taskExtras) {
+      taskExtras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
+      taskExtras.putLong("timestamp", System.currentTimeMillis() / 1000L);
+      return taskExtras;
    }
 }
