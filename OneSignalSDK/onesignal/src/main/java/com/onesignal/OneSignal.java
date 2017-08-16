@@ -107,6 +107,7 @@ public class OneSignal {
       // Default true in 4.0.0 release.
       boolean mUnsubscribeWhenNotificationsAreDisabled;
       boolean mFilterOtherGCMReceivers;
+      boolean mShareLocation = true;
 
       // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
       //  calling startInit().init()
@@ -158,6 +159,11 @@ public class OneSignal {
       
       public Builder filterOtherGCMReceivers(boolean set) {
          mFilterOtherGCMReceivers = set;
+         return this;
+      }
+
+      public Builder disableLocationSharing() {
+         mShareLocation = false;
          return this;
       }
 
@@ -344,6 +350,10 @@ public class OneSignal {
       mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
       if (!mGoogleProjectNumberIsRemote)
          mGoogleProjectNumber = googleProjectNumber;
+
+      if (!mInitBuilder.mShareLocation) {
+         shareLocation = false;
+      }
 
       osUtils = new OSUtils();
       deviceType = osUtils.getDeviceType();
@@ -790,7 +800,7 @@ public class OneSignal {
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
 
-            if (lastLocationPoint != null)
+            if (shareLocation && lastLocationPoint != null)
                userState.setLocation(lastLocationPoint);
 
             OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
@@ -1389,14 +1399,15 @@ public class OneSignal {
          return;
       }
 
-      LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
-         @Override
-         public void complete(LocationGMS.LocationPoint point) {
-            if (point != null)
-               OneSignalStateSynchronizer.updateLocation(point);
-         }
-      });
-  
+      if (shareLocation) {
+         LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
+            @Override
+            public void complete(LocationGMS.LocationPoint point) {
+               if (point != null)
+                  OneSignalStateSynchronizer.updateLocation(point);
+            }
+         });
+      }
       promptedLocation = true;
    }
 
