@@ -226,6 +226,9 @@ class OneSignalStateSynchronizer {
    }
    
    static void clearLocation() {
+      if (appContext == null)
+         return;
+      
       getToSyncUserState().clearLocation();
       getToSyncUserState().persistState();
    }

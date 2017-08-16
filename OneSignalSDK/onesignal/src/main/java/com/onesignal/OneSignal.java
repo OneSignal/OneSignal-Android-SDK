@@ -790,7 +790,7 @@ public class OneSignal {
             userState.set("carrier", osUtils.getCarrierName());
             userState.set("rooted", RootToolsInternalMethods.isRooted());
 
-            if (lastLocationPoint != null)
+            if (shareLocation && lastLocationPoint != null)
                userState.setLocation(lastLocationPoint);
 
             OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
