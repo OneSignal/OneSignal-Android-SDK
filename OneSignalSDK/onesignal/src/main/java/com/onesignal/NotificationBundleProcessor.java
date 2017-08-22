@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.v4.content.WakefulBroadcastReceiver;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -74,17 +73,18 @@ class NotificationBundleProcessor {
          }
          
          notifJob.overrideSettings = overrideSettings;
-         Process(notifJob);
+         ProcessJobForDisplay(notifJob);
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
-   static int Process(NotificationGenerationJob notifJob) {
+   static int ProcessJobForDisplay(NotificationGenerationJob notifJob) {
       notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
       processCollapseKey(notifJob);
-      
-      GenerateNotification.fromJsonPayload(notifJob);
+
+      if (shouldDisplay(notifJob.jsonPayload.optString("alert")))
+         GenerateNotification.fromJsonPayload(notifJob);
 
       if (!notifJob.restoring) {
          saveNotification(notifJob, false);
@@ -98,14 +98,14 @@ class NotificationBundleProcessor {
       return notifJob.getAndroidId();
    }
 
-   static JSONArray bundleAsJsonArray(Bundle bundle) {
+   private static JSONArray bundleAsJsonArray(Bundle bundle) {
       JSONArray jsonArray = new JSONArray();
       jsonArray.put(bundleAsJSONObject(bundle));
       return jsonArray;
    }
 
 
-   static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+   private static void saveNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
       notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
@@ -139,8 +139,8 @@ class NotificationBundleProcessor {
             
             // Count any notifications with duplicated android notification ids as dismissed.
             // -1 is used to note never displayed
-            if (notifiJob.overrideSettings.androidNotificationId != -1) {
-               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.overrideSettings.androidNotificationId;
+            if (notifiJob.getAndroidIdWithoutCreate() != -1) {
+               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
    
                ContentValues values = new ContentValues();
                values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
@@ -159,11 +159,12 @@ class NotificationBundleProcessor {
 
             values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
             if (!opened)
-               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.overrideSettings.androidNotificationId);
+               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.getAndroidIdWithoutCreate());
             
             if (notifiJob.getTitle() != null)
                values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
-            values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
+            if (notifiJob.getBody() != null)
+               values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
 
             values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 
@@ -211,7 +212,7 @@ class NotificationBundleProcessor {
    }
 
    // Format our short keys into more readable ones.
-   private static void prepareBundle(Bundle gcmBundle) {
+   private static void unMinifyBundle(Bundle gcmBundle) {
       if (!gcmBundle.containsKey("o"))
          return;
       
@@ -369,8 +370,8 @@ class NotificationBundleProcessor {
       }
    }
 
-   // Return true to count the payload as processed.
-   static ProcessedBundleResult processBundle(Context context, final Bundle bundle) {
+   //  Process bundle passed from gcm / adm broadcast receiver.
+   static ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
       ProcessedBundleResult result = new ProcessedBundleResult();
       
       // Not a OneSignal GCM message
@@ -378,7 +379,7 @@ class NotificationBundleProcessor {
          return result;
       result.isOneSignalPayload = true;
 
-      prepareBundle(bundle);
+      unMinifyBundle(bundle);
 
       if (startExtenderService(context, bundle, result)) return result;
 
@@ -388,10 +389,9 @@ class NotificationBundleProcessor {
          return result;
 
       String alert = bundle.getString("alert");
-      boolean display = shouldDisplay(alert != null && !"".equals(alert));
 
       // Save as a opened notification to prevent duplicates.
-      if (!display) {
+      if (!shouldDisplay(alert)) {
          saveNotification(context, bundle, true, -1);
          // Current thread is meant to be short lived.
          //    Make a new thread to do our OneSignal work on.
@@ -424,7 +424,8 @@ class NotificationBundleProcessor {
       return true;
    }
 
-   static boolean shouldDisplay(boolean hasBody) {
+   static boolean shouldDisplay(String body) {
+      boolean hasBody = body != null && !"".equals(body);
       boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
       boolean isActive = OneSignal.isAppActive();
       return hasBody &&

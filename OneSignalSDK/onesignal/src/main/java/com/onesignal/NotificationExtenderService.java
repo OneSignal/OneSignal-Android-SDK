@@ -97,7 +97,7 @@ public abstract class NotificationExtenderService extends IntentService {
       NotificationGenerationJob notifJob = createNotifJobFromCurrent();
       notifJob.overrideSettings = overrideSettings;
 
-      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.Process(notifJob);
+      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
       return osNotificationDisplayedResult;
    }
 
@@ -172,7 +172,7 @@ public abstract class NotificationExtenderService extends IntentService {
          // Save as processed to prevent possible duplicate calls from canonical ids.
 
          boolean display = !developerProcessed &&
-               NotificationBundleProcessor.shouldDisplay(!"".equals(currentJsonPayload.optString("alert")));
+               NotificationBundleProcessor.shouldDisplay(currentJsonPayload.optString("alert"));
 
          if (!display) {
             if (!restoring) {
@@ -186,7 +186,7 @@ public abstract class NotificationExtenderService extends IntentService {
             }
          }
          else
-            NotificationBundleProcessor.Process(createNotifJobFromCurrent());
+            NotificationBundleProcessor.ProcessJobForDisplay(createNotifJobFromCurrent());
       }
    }
 

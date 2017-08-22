@@ -78,6 +78,10 @@ class NotificationGenerationJob {
       return overrideSettings.androidNotificationId;
    }
 
+   int getAndroidIdWithoutCreate() {
+      return overrideSettings == null ? -1 : overrideSettings.androidNotificationId;
+   }
+
    void setAndroidIdWithOutOverriding(Integer id) {
       if (id == null)
          return;

@@ -53,7 +53,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       Context context = getApplicationContext();
       Bundle bundle = intent.getExtras();
       
-      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(context, bundle);
+      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
 
       if (processedResult.processed())
          return;
@@ -61,7 +61,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
       
-      NotificationBundleProcessor.Process(notifJob);
+      NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
    @Override
