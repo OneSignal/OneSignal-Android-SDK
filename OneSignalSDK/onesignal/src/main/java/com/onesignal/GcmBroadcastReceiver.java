@@ -107,7 +107,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       if (!isGcmMessage(intent))
          return null;
       
-      ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(context, bundle);
+      ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
    
       // Return if the notification will NOT be handled by normal GcmIntentService display flow.
       if (processedResult.processed())

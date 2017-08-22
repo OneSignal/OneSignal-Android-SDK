@@ -6,9 +6,6 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
-import android.support.v4.app.*;
-
-import com.onesignal.example.BlankActivity;
 
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
@@ -73,7 +70,7 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
-      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundle(context, bundle);
+      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
       return processedResult.processed();
    }
 
@@ -81,7 +78,7 @@ public class OneSignalPackagePrivateHelper {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;
-      return NotificationBundleProcessor.Process(notifJob);
+      return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }

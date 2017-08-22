@@ -384,6 +384,27 @@ public class GenerateNotificationRunner {
    }
    
    @Test
+   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() throws Exception {
+      Bundle bundle = getBaseNotifBundle();
+      bundle.remove("alert");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      assertNoNotifications();
+   
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("alert", "");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+   
+      assertNoNotifications();
+   
+      // Should have 2 DB record
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
+      Assert.assertEquals(2, cursor.getCount());
+      cursor.close();
+   }
+   
+   @Test
    public void shouldUpdateNormalNotificationDisplayWhenReplacingANotification() throws Exception {
       // Setup - init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
@@ -917,6 +938,13 @@ public class GenerateNotificationRunner {
       Assert.assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Assert.assertEquals(3, postedNotifs.size());
+   }
+   
+   
+   /* Helpers */
+   
+   private static void assertNoNotifications() {
+      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    }
 
    private static Bundle getBundleWithAllOptionsSet() {
