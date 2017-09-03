@@ -211,12 +211,30 @@ class LocationGMS {
       if (mGoogleApiClient != null)
          mGoogleApiClient.disconnect();
    }
-   
-   private synchronized static void fireComplete(LocationPoint point) {
-      locationHandler.complete(point);
-      if (fallbackFailThread != null && !Thread.currentThread().equals(fallbackFailThread))
-         fallbackFailThread.interrupt();
-      fallbackFailThread = null;
+
+   private static void fireComplete(LocationPoint point) {
+      // create local copies of fields in thread-safe way
+      LocationHandler _locationHandler;
+      Thread _fallbackFailThread;
+      synchronized (LocationGMS.class) {
+         _locationHandler = LocationGMS.locationHandler;
+         _fallbackFailThread = LocationGMS.fallbackFailThread;
+      }
+
+      // execute race-independent logic
+      _locationHandler.complete(point);
+      if (_fallbackFailThread != null && !Thread.currentThread().equals(_fallbackFailThread)) {
+          _fallbackFailThread.interrupt();
+      }
+
+      // clear fallbackFailThread in thread-safe way
+      if (_fallbackFailThread == LocationGMS.fallbackFailThread) {
+         synchronized (LocationGMS.class) {
+            if (_fallbackFailThread == LocationGMS.fallbackFailThread) {
+               LocationGMS.fallbackFailThread = null;
+            }
+         }
+      }
    }
    
    private static void receivedLocationPoint(Location location) {
