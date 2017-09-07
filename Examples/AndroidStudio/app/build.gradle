@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion '25.0.2'
+    compileSdkVersion 26
+    buildToolsVersion '26.0.1'
 
     defaultConfig {
         applicationId "com.onesignal.example"
@@ -29,19 +29,19 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
 
     // OneSignal SDK
-    compile 'com.onesignal:OneSignal:[3.5.3,4.0.0)'
+    compile 'com.onesignal:OneSignal:[3.6.1,3.99.99)'
 
     // OneSignal requires at least version 7.0.0 of GMS but the newest version is recommend.
     // Required for OneSignal, even if you have added FCM.
-    compile 'com.google.android.gms:play-services-gcm:10.2.4'
+    compile 'com.google.android.gms:play-services-gcm:11.0.4'
 
     // Required for geotagging
-    compile 'com.google.android.gms:play-services-location:10.2.4'
+    compile 'com.google.android.gms:play-services-location:11.0.4'
 
 
     // play-services-analytics is only needed when using 8.1.0 or older.
     // compile 'com.google.android.gms:play-services-analytics:+'
     //noinspection GradleCompatible
-    compile 'com.android.support:appcompat-v7:24.0.0'
+    compile 'com.android.support:appcompat-v7:26.0.2'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
 }
