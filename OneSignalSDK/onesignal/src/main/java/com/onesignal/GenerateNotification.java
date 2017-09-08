@@ -921,30 +921,34 @@ class GenerateNotification {
 
    private static void addAlertButtons(Context context, JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
       try {
-         JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
-
-         if (!customJson.has("a"))
-            return;
-            
-         JSONObject additionalDataJSON = customJson.getJSONObject("a");
-         if (!additionalDataJSON.has("actionButtons"))
-            return;
-
-         JSONArray buttons = additionalDataJSON.optJSONArray("actionButtons");
-
-         for (int i = 0; i < buttons.length(); i++) {
-            JSONObject button = buttons.getJSONObject(i);
-
-            buttonsLabels.add(button.optString("text"));
-            buttonsIds.add(button.optString("id"));
-         }
-
-         if (buttonsLabels.size() < 3) {
-            buttonsLabels.add(getResourceString(context, "onesignal_in_app_alert_ok_button_text", "Ok"));
-            buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
-         }
+         addCustomAlertButtons(context, gcmBundle, buttonsLabels, buttonsIds);
       } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse buttons for alert dialog.", t);
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse JSON for custom buttons for alert dialog.", t);
+      }
+
+      if (buttonsLabels.size() == 0 || buttonsLabels.size() < 3) {
+         buttonsLabels.add(getResourceString(context, "onesignal_in_app_alert_ok_button_text", "Ok"));
+         buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
+      }
+   }
+
+   private static void addCustomAlertButtons(Context context, JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) throws JSONException {
+      JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
+
+      if (!customJson.has("a"))
+         return;
+
+      JSONObject additionalDataJSON = customJson.getJSONObject("a");
+      if (!additionalDataJSON.has("actionButtons"))
+         return;
+
+      JSONArray buttons = additionalDataJSON.optJSONArray("actionButtons");
+
+      for (int i = 0; i < buttons.length(); i++) {
+         JSONObject button = buttons.getJSONObject(i);
+
+         buttonsLabels.add(button.optString("text"));
+         buttonsIds.add(button.optString("id"));
       }
    }
    
