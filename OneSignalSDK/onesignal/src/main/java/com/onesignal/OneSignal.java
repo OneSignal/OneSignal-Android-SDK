@@ -187,7 +187,7 @@ public class OneSignal {
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
 
-   public static final String VERSION = "030601";
+   public static final String VERSION = "030602";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
