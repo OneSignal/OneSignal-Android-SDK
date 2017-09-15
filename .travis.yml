@@ -28,9 +28,9 @@ android:
 before_install:
     - pwd
     - ls -la
-    - wget http://services.gradle.org/distributions/gradle-4.1-rc-1-bin.zip
-    - unzip gradle-4.1-rc-1-bin.zip
-    - export GRADLE_HOME=$PWD/gradle-4.1-rc-1
+    - wget http://services.gradle.org/distributions/gradle-4.1-bin.zip
+    - unzip gradle-4.1-bin.zip
+    - export GRADLE_HOME=$PWD/gradle-4.1
     - export PATH=$GRADLE_HOME/bin:$PATH
     - cd OneSignalSDK/unittest
 script: gradle build
