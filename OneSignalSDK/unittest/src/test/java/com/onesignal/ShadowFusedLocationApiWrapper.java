@@ -46,12 +46,10 @@ public class ShadowFusedLocationApiWrapper {
    public static Integer type = 0;
    public static Long time = 12345L;
    
-   public static PendingResult<Status> requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
-      return null;
+   public static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
    }
    
-   public static PendingResult<Status> removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
-      return null;
+   public static void removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
    }
    
    public static Location getLastLocation(GoogleApiClient googleApiClient) {

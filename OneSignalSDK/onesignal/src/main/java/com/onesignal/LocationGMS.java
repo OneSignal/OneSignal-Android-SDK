@@ -27,8 +27,6 @@
 
 package com.onesignal;
 
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
@@ -223,16 +221,14 @@ class LocationGMS {
 
       // execute race-independent logic
       _locationHandler.complete(point);
-      if (_fallbackFailThread != null && !Thread.currentThread().equals(_fallbackFailThread)) {
+      if (_fallbackFailThread != null && !Thread.currentThread().equals(_fallbackFailThread))
           _fallbackFailThread.interrupt();
-      }
 
       // clear fallbackFailThread in thread-safe way
       if (_fallbackFailThread == LocationGMS.fallbackFailThread) {
          synchronized (LocationGMS.class) {
-            if (_fallbackFailThread == LocationGMS.fallbackFailThread) {
+            if (_fallbackFailThread == LocationGMS.fallbackFailThread)
                LocationGMS.fallbackFailThread = null;
-            }
          }
       }
    }
@@ -319,16 +315,22 @@ class LocationGMS {
    
    static class FusedLocationApiWrapper {
       @SuppressWarnings("MissingPermission")
-      static PendingResult<Status> requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
-         if (googleApiClient.isConnected())
-            return LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
-         return null;
+      static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
+         try {
+            if (googleApiClient.isConnected())
+               LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
+         } catch(Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "FusedLocationApi.requestLocationUpdates failed!", t);
+         }
       }
    
-      static PendingResult<Status> removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
-         if (googleApiClient.isConnected())
-            return LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener);
-         return null;
+      static void removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
+         try {
+            if (googleApiClient.isConnected())
+               LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener);
+         } catch(Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "FusedLocationApi.removeLocationUpdates failed!", t);
+         }
       }
    
       @SuppressWarnings("MissingPermission")
