@@ -98,106 +98,81 @@ public class OneSignalPrefs {
 
 
     public static void saveString(final String prefsName,final String key,final String value) {
-//        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-//        SharedPreferences.Editor editor = prefs.edit();
-//        editor.putString(key, value);
-//        editor.apply();
-
         PrefsWriteRunnable saveStringRunnable = new PrefsWriteRunnable(prefsName,key,value);
         prefsExecutor.execute(saveStringRunnable);
     }
 
     public static void saveBool(String prefsName, String key, boolean value) {
-//        SharedPreferences prefs = getObscurePrefs();
-//        SharedPreferences.Editor editor = prefs.edit();
-//        editor.putBoolean(key, value);
-//        editor.apply();
-
         PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
         prefsExecutor.execute(saveBoolRunnable);
     }
 
     public static void saveInt(String prefsName, String key, int value) {
-//        SharedPreferences prefs = getObscurePrefs();
-//        SharedPreferences.Editor editor = prefs.edit();
-//        editor.putInt(key, value);
-//        editor.apply();
-
         PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
         prefsExecutor.execute(saveBoolRunnable);
     }
 
-//    public static void saveStringSet(String prefsName, String key, HashSet<String> set) {
-//        SharedPreferences prefs = getObscurePrefs();
-//        SharedPreferences.Editor editor = prefs.edit();
-//        editor.putStringSet(key, set);
-//        editor.apply();
-//    }
-
     public static void saveLong(String prefsName, String key, long value) {
-//        SharedPreferences prefs = getObscurePrefs();
-//        SharedPreferences.Editor editor = prefs.edit();
-//        editor.putLong(key, value);
-//        editor.apply();
-
         PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
         prefsExecutor.execute(saveBoolRunnable);
     }
 
     public static boolean hasBool(String prefsName, String key) {
-        return getSharedPrefsByName(prefsName).contains(key);
+        SharedPreferences prefs = getSharedPrefsByName(prefsName);
+        if(prefs != null)
+            return getSharedPrefsByName(prefsName).contains(key);
+
+        return false;
     }
 
     public static boolean has(String prefsName, String key) {
-        return getSharedPrefsByName(prefsName).contains(key);
+        SharedPreferences prefs = getSharedPrefsByName(prefsName);
+        if(prefs != null)
+            return getSharedPrefsByName(prefsName).contains(key);
+
+        return false;
     }
 
     public static String getString(String prefsName, String key, String defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        return prefs.getString(key, defValue);
+        if(prefs != null)
+            return prefs.getString(key, defValue);
+
+        return defValue;
     }
 
-    public static boolean getBool(String prefsName, String key, boolean defVale) {
+    public static boolean getBool(String prefsName, String key, boolean defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        return prefs.getBoolean(key, defVale);
+        if(prefs != null)
+            return prefs.getBoolean(key, defValue);
+
+        return defValue;
     }
 
     public static int getInt(String prefsName, String key, int defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        return prefs.getInt(key, defValue);
+        if(prefs != null)
+            return prefs.getInt(key, defValue);
+
+        return defValue;
     }
 
     public static long getLong(String prefsName, String key, long defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        return prefs.getLong(key, defValue);
-    }
+        if(prefs != null)
+            return prefs.getLong(key, defValue);
 
-//    public static Set<String> getStringSet(String prefsName, String key, Set<String> defValue) {
-//        SharedPreferences prefs = getObscurePrefs();
-//        return prefs.getStringSet(key, defValue);
-//    }
+        return defValue;
+    }
 
     public static void remove(String prefsName, String key) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.remove(key);
-        editor.commit();
+        if(prefs != null) {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.remove(key);
+            editor.commit();
+        }
     }
-
-//    /**
-//     * increments integer saved in preferences
-//     * @param key
-//     * @param startingValue the default value if preference is not found.
-//     * @return
-//     */
-//    public static int incrementAndGetInt(String prefsName, String key, int startingValue) {
-//        SharedPreferences prefs = getObscurePrefs();
-//        int curVal = prefs.getInt(key, startingValue - 1) + 1;
-//        SharedPreferences.Editor editor = prefs.edit();
-//        editor.putInt(key, curVal);
-//        editor.commit();
-//        return curVal;
-//    }
 
     private static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
         SharedPreferences prefs;
