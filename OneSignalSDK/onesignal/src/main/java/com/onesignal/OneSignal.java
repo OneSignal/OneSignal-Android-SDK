@@ -1216,10 +1216,8 @@ public class OneSignal {
    private static void SaveAppId(String appId) {
       if (appContext == null)
          return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putString("GT_APP_ID", appId);
-      editor.apply();
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_APP_ID, appId);
    }
 
    static String getSavedAppId() {
@@ -1230,21 +1228,22 @@ public class OneSignal {
       if (inContext == null)
          return "";
 
-      final SharedPreferences prefs = getGcmPreferences(inContext);
-      return prefs.getString("GT_APP_ID", null);
+      return OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_APP_ID,null);
    }
 
    private static String getSavedUserId(Context inContext) {
       if (inContext == null)
          return "";
-      final SharedPreferences prefs = getGcmPreferences(inContext);
-      return prefs.getString("GT_PLAYER_ID", null);
+
+      return OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_PLAYER_ID,null);
    }
 
    static String getUserId() {
       if (userId == null && appContext != null) {
-         final SharedPreferences prefs = getGcmPreferences(appContext);
-         userId = prefs.getString("GT_PLAYER_ID", null);
+         userId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_GT_PLAYER_ID,null);
       }
       return userId;
    }
@@ -1253,24 +1252,21 @@ public class OneSignal {
       userId = inUserId;
       if (appContext == null)
          return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putString("GT_PLAYER_ID", userId);
-      editor.apply();
+
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_PLAYER_ID, userId);
    }
    
    static boolean getFilterOtherGCMReceivers(Context context) {
-      SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getBoolean("OS_FILTER_OTHER_GCM_RECEIVERS", false);
+      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_FILTER_OTHER_GCM_RECEIVERS,false);
    }
    
    static void saveFilterOtherGCMReceivers(boolean set) {
       if (appContext == null)
          return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean("OS_FILTER_OTHER_GCM_RECEIVERS", set);
-      editor.apply();
+
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,"OS_FILTER_OTHER_GCM_RECEIVERS",set);
    }
    
    static void updateUserIdDependents(String userId) {
@@ -1293,15 +1289,14 @@ public class OneSignal {
    public static void enableVibrate(boolean enable) {
       if (appContext == null)
          return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean("GT_VIBRATE_ENABLED", enable);
-      editor.apply();
+
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_VIBRATE_ENABLED,enable);
    }
 
    static boolean getVibrate(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getBoolean("GT_VIBRATE_ENABLED", true);
+      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_SOUND_ENABLED,true);
    }
 
    // If true(default) - Sound plays when receiving notification. Vibrates when device is on vibrate only mode.
@@ -1309,27 +1304,24 @@ public class OneSignal {
    public static void enableSound(boolean enable) {
       if (appContext == null)
          return;
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean("GT_SOUND_ENABLED", enable);
-      editor.apply();
+
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_SOUND_ENABLED,enable);
    }
 
    static boolean getSoundEnabled(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getBoolean("GT_SOUND_ENABLED", true);
+      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_SOUND_ENABLED,true);
    }
 
    static void setLastSessionTime(long time) {
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putLong("OS_LAST_SESSION_TIME", time);
-      editor.apply();
+      OneSignalPrefs.saveLong(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_LAST_SESSION_TIME,time);
    }
 
    private static long getLastSessionTime(Context context) {
-      final SharedPreferences prefs = getGcmPreferences(context);
-      return prefs.getLong("OS_LAST_SESSION_TIME", -31 * 1000);
+      return OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_LAST_SESSION_TIME,-31*1000);
    }
 
    public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
@@ -1646,8 +1638,11 @@ public class OneSignal {
 
    static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
-         final SharedPreferences prefs = getGcmPreferences(appContext);
-         unSentActiveTime = prefs.getLong("GT_UNSENT_ACTIVE_TIME", 0);
+//         final SharedPreferences prefs = getGcmPreferences(appContext);
+//         unSentActiveTime = prefs.getLong("GT_UNSENT_ACTIVE_TIME", 0);
+
+         unSentActiveTime = OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME,0);
       }
 
       Log(LOG_LEVEL.INFO, "GetUnsentActiveTime: " + unSentActiveTime);
@@ -1662,15 +1657,18 @@ public class OneSignal {
 
       Log(LOG_LEVEL.INFO, "SaveUnsentActiveTime: " + unSentActiveTime);
 
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putLong("GT_UNSENT_ACTIVE_TIME", time);
-      editor.apply();
+      OneSignalPrefs.saveLong(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME, time);
    }
 
-   static SharedPreferences getGcmPreferences(Context context) {
-      return context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-   }
+//   private static SharedPreferences mGcmPreferences;
+//   static SharedPreferences getGcmPreferences(Context context) {
+//      if(mGcmPreferences == null)
+//         mGcmPreferences = context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+//
+//      return mGcmPreferences;
+////      return context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+//   }
 
    private static boolean isDuplicateNotification(String id, Context context) {
       if (id == null || "".equals(id))

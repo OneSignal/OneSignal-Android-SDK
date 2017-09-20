@@ -59,7 +59,6 @@ class TrackGooglePurchase {
    private Context appContext;
 
    private ArrayList<String> purchaseTokens;
-   private SharedPreferences.Editor prefsEditor;
 
    // Any new purchases found count as pre-existing.
    // The constructor sets it to false if we already saved any purchases or already found out there isn't any.
@@ -69,17 +68,18 @@ class TrackGooglePurchase {
    TrackGooglePurchase(Context activity) {
       appContext = activity;
 
-      SharedPreferences prefs = appContext.getSharedPreferences("GTPlayerPurchases", Context.MODE_PRIVATE);
-      prefsEditor = prefs.edit();
-
       purchaseTokens = new ArrayList<>();
       try {
-         JSONArray jsonPurchaseTokens = new JSONArray(prefs.getString("purchaseTokens", "[]"));
+         String purchaseTokensString = OneSignalPrefs.getString(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
+                 OneSignalPrefs.PREFS_PURCHASE_TOKENS,"[]");
+
+         JSONArray jsonPurchaseTokens = new JSONArray(purchaseTokensString);
          for (int i = 0; i < jsonPurchaseTokens.length(); i++)
             purchaseTokens.add(jsonPurchaseTokens.get(i).toString());
          newAsExisting = (jsonPurchaseTokens.length() == 0);
          if (newAsExisting)
-            newAsExisting = prefs.getBoolean("ExistingPurchases", true);
+            newAsExisting = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
+                    OneSignalPrefs.PREFS_EXISTING_PURCHASES, true);
       } catch (JSONException e) {
          e.printStackTrace();
       }
@@ -171,8 +171,11 @@ class TrackGooglePurchase {
                      sendPurchases(skusToAdd, newPurchaseTokens);
                   else if (purchaseDataList.size() == 0) {
                      newAsExisting = false;
-                     prefsEditor.putBoolean("ExistingPurchases", false);
-                     prefsEditor.apply();
+
+                     OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
+                             OneSignalPrefs.PREFS_EXISTING_PURCHASES,false);
+//                     prefsEditor.putBoolean("ExistingPurchases", false);
+//                     prefsEditor.apply();
                   }
 
                   // TODO: Handle very large list. Test for continuationToken != null then call getPurchases again
@@ -231,9 +234,11 @@ class TrackGooglePurchase {
    
                   public void onSuccess(String response) {
                      purchaseTokens.addAll(newPurchaseTokens);
-                     prefsEditor.putString("purchaseTokens", purchaseTokens.toString());
-                     prefsEditor.remove("ExistingPurchases");
-                     prefsEditor.apply();
+
+                     OneSignalPrefs.saveString(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
+                             OneSignalPrefs.PREFS_PURCHASE_TOKENS, purchaseTokens.toString());
+                     OneSignalPrefs.remove(OneSignalPrefs.PREFS_PLAYER_PURCHASES,OneSignalPrefs.PREFS_EXISTING_PURCHASES);
+
                      newAsExisting = false;
                      isWaitingForPurchasesRequest = false;
                   }

@@ -104,8 +104,8 @@ public class PushRegistratorGPS implements PushRegistrator {
          PackageInfo info = pm.getPackageInfo("com.google.android.gms", PackageManager.GET_ACTIVITIES);
 
          if (!info.applicationInfo.enabled && isGooglePlayStoreInstalled()) {
-            final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
-            if (prefs.getBoolean("GT_DO_NOT_SHOW_MISSING_GPS", false))
+            if(OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_GT_DO_NOT_SHOW_MISSING_GPS,false))
                return false;
 
             try {
@@ -148,10 +148,9 @@ public class PushRegistratorGPS implements PushRegistrator {
             }).setNegativeButton(alertButtonSkip, new OnClickListener() {
                @Override
                public void onClick(DialogInterface dialog, int which) {
-                  final SharedPreferences prefs = OneSignal.getGcmPreferences(activity);
-                  SharedPreferences.Editor editor = prefs.edit();
-                  editor.putBoolean("GT_DO_NOT_SHOW_MISSING_GPS", true);
-                  editor.apply();
+                  OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+                          OneSignalPrefs.PREFS_GT_DO_NOT_SHOW_MISSING_GPS,true);
+
                }
             }).setNeutralButton(alertButtonClose, null).create().show();
          }

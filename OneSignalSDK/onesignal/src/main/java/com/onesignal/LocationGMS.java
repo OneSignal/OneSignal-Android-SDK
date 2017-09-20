@@ -93,15 +93,14 @@ class LocationGMS {
    }
    
    private static void setLastLocationTime(long time) {
-      final SharedPreferences prefs = OneSignal.getGcmPreferences(classContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putLong("OS_LAST_LOCATION_TIME", time);
-      editor.apply();
+      OneSignalPrefs.saveLong(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,time);
    }
    
    private static long getLastLocationTime(Context context) {
-      final SharedPreferences prefs = OneSignal.getGcmPreferences(context);
-      return prefs.getLong("OS_LAST_LOCATION_TIME", -TIME_BACKGROUND * 1000);
+      return OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,
+              -TIME_BACKGROUND*1000);
    }
    
    private static boolean hasLocationPermission(Context context) {

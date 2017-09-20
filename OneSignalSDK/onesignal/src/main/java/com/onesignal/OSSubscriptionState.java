@@ -28,12 +28,9 @@
 package com.onesignal;
 
 
-import android.content.SharedPreferences;
-
 import org.json.JSONObject;
 
 import static com.onesignal.OneSignal.appContext;
-import static com.onesignal.OneSignal.getGcmPreferences;
 
 public class OSSubscriptionState implements Cloneable {
    
@@ -43,11 +40,14 @@ public class OSSubscriptionState implements Cloneable {
       observable = new OSObservable<>("changed", false);
       
       if (asFrom) {
-         final SharedPreferences prefs = getGcmPreferences(appContext);
-         userSubscriptionSetting = prefs.getBoolean("ONESIGNAL_SUBSCRIPTION_LAST", false);
-         userId = prefs.getString("ONESIGNAL_PLAYER_ID_LAST", null);
-         pushToken = prefs.getString("ONESIGNAL_PUSH_TOKEN_LAST", null);
-         accepted = prefs.getBoolean("ONESIGNAL_PERMISSION_ACCEPTED_LAST", false);
+         userSubscriptionSetting = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_SUBSCRIPTION_LAST, false);
+         userId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_PLAYER_ID_LAST, null);
+         pushToken = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_PUSH_TOKEN_LAST, null);
+         accepted = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST, false);
       }
       else {
          userSubscriptionSetting = OneSignalStateSynchronizer.getUserSubscribePreference();
@@ -114,15 +114,14 @@ public class OSSubscriptionState implements Cloneable {
    }
    
    void persistAsFrom() {
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      
-      editor.putBoolean("ONESIGNAL_SUBSCRIPTION_LAST", userSubscriptionSetting);
-      editor.putString("ONESIGNAL_PLAYER_ID_LAST", userId);
-      editor.putString("ONESIGNAL_PUSH_TOKEN_LAST", pushToken);
-      editor.putBoolean("ONESIGNAL_PERMISSION_ACCEPTED_LAST", accepted);
-      
-      editor.apply();
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_ONESIGNAL_SUBSCRIPTION_LAST, userSubscriptionSetting);
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_ONESIGNAL_PLAYER_ID_LAST, userId);
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_ONESIGNAL_PUSH_TOKEN_LAST, pushToken);
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST, accepted);
    }
    
    boolean compare(OSSubscriptionState from) {

@@ -366,10 +366,10 @@ class OneSignalStateSynchronizer {
       }
 
       private void loadState() {
-         final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
-
-         String dependValuesStr = prefs.getString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, null);
          // null if first run of a 2.0+ version.
+         String dependValuesStr = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_+persistKey,null);
+
          if (dependValuesStr == null) {
             dependValues = new JSONObject();
             try {
@@ -377,9 +377,11 @@ class OneSignalStateSynchronizer {
                boolean userSubscribePref = true;
                // Convert 1.X SDK settings to 2.0+.
                if (persistKey.equals("CURRENT_STATE"))
-                  subscribableStatus = prefs.getInt("ONESIGNAL_SUBSCRIPTION", 1);
+                  subscribableStatus = OneSignalPrefs.getInt(OneSignalPrefs.PREFS_ONESIGNAL,
+                          OneSignalPrefs.PREFS_ONESIGNAL_SUBSCRIPTION,1);
                else
-                  subscribableStatus = prefs.getInt("ONESIGNAL_SYNCED_SUBSCRIPTION", 1);
+                  subscribableStatus = OneSignalPrefs.getInt(OneSignalPrefs.PREFS_ONESIGNAL,
+                       OneSignalPrefs.PREFS_ONESIGNAL_SYNCED_SUBSCRIPTION,1);
 
                if (subscribableStatus == NOTIFICATION_TYPES_UNSUBSCRIBE) {
                   subscribableStatus = 1;
@@ -398,11 +400,14 @@ class OneSignalStateSynchronizer {
             }
          }
 
-         String syncValuesStr = prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, null);
+         String syncValuesStr = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_+persistKey,null);
          try {
             if (syncValuesStr == null) {
                syncValues = new JSONObject();
-               syncValues.put("identifier", prefs.getString("GT_REGISTRATION_ID", null));
+               String gtRegistrationId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                       OneSignalPrefs.PREFS_GT_REGISTRATION_ID,null);
+               syncValues.put("identifier", gtRegistrationId);
             }
             else
                syncValues = new JSONObject(syncValuesStr);
@@ -415,12 +420,10 @@ class OneSignalStateSynchronizer {
          synchronized(syncLock) {
             modifySyncValuesJsonArray("pkgs");
 
-            final SharedPreferences prefs = OneSignal.getGcmPreferences(appContext);
-            SharedPreferences.Editor editor = prefs.edit();
-
-            editor.putString("ONESIGNAL_USERSTATE_SYNCVALYES_" + persistKey, syncValues.toString());
-            editor.putString("ONESIGNAL_USERSTATE_DEPENDVALYES_" + persistKey, dependValues.toString());
-            editor.apply();
+            OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_+persistKey,syncValues.toString());
+            OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_+persistKey,dependValues.toString());
          }
       }
 
