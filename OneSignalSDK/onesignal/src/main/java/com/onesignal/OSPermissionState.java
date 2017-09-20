@@ -27,12 +27,9 @@
 
 package com.onesignal;
 
-import android.content.SharedPreferences;
-
 import org.json.JSONObject;
 
 import static com.onesignal.OneSignal.appContext;
-import static com.onesignal.OneSignal.getGcmPreferences;
 
 public class OSPermissionState implements Cloneable {
    
@@ -44,8 +41,8 @@ public class OSPermissionState implements Cloneable {
       observable = new OSObservable<>("changed", false);
       
       if (asFrom) {
-         final SharedPreferences prefs = getGcmPreferences(appContext);
-         enabled = prefs.getBoolean("ONESIGNAL_ACCEPTED_NOTIFICATION_LAST", false);
+         enabled = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_ACCEPTED_NOTIFICATION_LAST,false);
       }
       else
          refreshAsTo();
@@ -69,10 +66,8 @@ public class OSPermissionState implements Cloneable {
    }
    
    void persistAsFrom() {
-      final SharedPreferences prefs = getGcmPreferences(appContext);
-      SharedPreferences.Editor editor = prefs.edit();
-      editor.putBoolean("ONESIGNAL_ACCEPTED_NOTIFICATION_LAST", enabled);
-      editor.apply();
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_ONESIGNAL_ACCEPTED_NOTIFICATION_LAST, enabled);
    }
    
    boolean compare(OSPermissionState from) {
