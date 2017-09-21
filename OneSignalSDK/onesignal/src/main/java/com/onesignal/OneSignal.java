@@ -1638,9 +1638,6 @@ public class OneSignal {
 
    static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
-//         final SharedPreferences prefs = getGcmPreferences(appContext);
-//         unSentActiveTime = prefs.getLong("GT_UNSENT_ACTIVE_TIME", 0);
-
          unSentActiveTime = OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME,0);
       }
@@ -1660,15 +1657,6 @@ public class OneSignal {
       OneSignalPrefs.saveLong(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME, time);
    }
-
-//   private static SharedPreferences mGcmPreferences;
-//   static SharedPreferences getGcmPreferences(Context context) {
-//      if(mGcmPreferences == null)
-//         mGcmPreferences = context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-//
-//      return mGcmPreferences;
-////      return context.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-//   }
 
    private static boolean isDuplicateNotification(String id, Context context) {
       if (id == null || "".equals(id))

@@ -368,7 +368,7 @@ class OneSignalStateSynchronizer {
       private void loadState() {
          // null if first run of a 2.0+ version.
          String dependValuesStr = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
-                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_+persistKey,null);
+                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_ + persistKey,null);
 
          if (dependValuesStr == null) {
             dependValues = new JSONObject();
@@ -401,7 +401,7 @@ class OneSignalStateSynchronizer {
          }
 
          String syncValuesStr = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
-                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_+persistKey,null);
+                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ + persistKey,null);
          try {
             if (syncValuesStr == null) {
                syncValues = new JSONObject();
@@ -421,9 +421,9 @@ class OneSignalStateSynchronizer {
             modifySyncValuesJsonArray("pkgs");
 
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
-                    OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_+persistKey,syncValues.toString());
+                    OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ + persistKey, syncValues.toString());
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
-                    OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_+persistKey,dependValues.toString());
+                    OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_ + persistKey, dependValues.toString());
          }
       }
 

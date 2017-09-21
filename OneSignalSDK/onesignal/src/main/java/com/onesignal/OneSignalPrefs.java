@@ -11,10 +11,11 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 
 /**
+ * Copyright 2017 OneSignal
  * Created by alamgir on 9/20/17.
  */
 
-public class OneSignalPrefs {
+class OneSignalPrefs {
 
     static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
     static final String PREFS_PLAYER_PURCHASES = "GTPlayerPurchases";
@@ -52,7 +53,7 @@ public class OneSignalPrefs {
             @Override
             public Thread newThread(@NonNull Runnable runnable) {
                 Thread newThread = new Thread(runnable);
-                newThread.setName("ONESIGNAL_EXECUTOR_"+newThread.getId());
+                newThread.setName("ONESIGNAL_EXECUTOR_" + newThread.getId());
                 return newThread;
             }
         });
@@ -64,7 +65,7 @@ public class OneSignalPrefs {
         private String prefKeyToWrite;
         private Object prefValueToWrite;
 
-        public PrefsWriteRunnable(String prefsName,
+        PrefsWriteRunnable(String prefsName,
                                   String prefKeyToWrite,
                                   Object prefValueToWrite) {
             this.prefsName = prefsName;
@@ -88,7 +89,8 @@ public class OneSignalPrefs {
                 } else if(prefValueToWrite instanceof Long) {
                     editor.putLong(prefKeyToWrite, (Long)prefValueToWrite);
                 }
-                OneSignal.Log(OneSignal.LOG_LEVEL.INFO,"updating prefs: "+prefsName+", "+prefKeyToWrite);
+                OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
+                        "updating prefs: " + prefsName + ", "+ prefKeyToWrite);
 
                 editor.apply();
             }
@@ -97,27 +99,27 @@ public class OneSignalPrefs {
     }
 
 
-    public static void saveString(final String prefsName,final String key,final String value) {
-        PrefsWriteRunnable saveStringRunnable = new PrefsWriteRunnable(prefsName,key,value);
+    static void saveString(final String prefsName,final String key,final String value) {
+        PrefsWriteRunnable saveStringRunnable = new PrefsWriteRunnable(prefsName, key, value);
         prefsExecutor.execute(saveStringRunnable);
     }
 
-    public static void saveBool(String prefsName, String key, boolean value) {
+    static void saveBool(String prefsName, String key, boolean value) {
+        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName, key, value);
+        prefsExecutor.execute(saveBoolRunnable);
+    }
+
+    static void saveInt(String prefsName, String key, int value) {
+        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName, key, value);
+        prefsExecutor.execute(saveBoolRunnable);
+    }
+
+    static void saveLong(String prefsName, String key, long value) {
         PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
         prefsExecutor.execute(saveBoolRunnable);
     }
 
-    public static void saveInt(String prefsName, String key, int value) {
-        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
-        prefsExecutor.execute(saveBoolRunnable);
-    }
-
-    public static void saveLong(String prefsName, String key, long value) {
-        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
-        prefsExecutor.execute(saveBoolRunnable);
-    }
-
-    public static boolean hasBool(String prefsName, String key) {
+    static boolean hasBool(String prefsName, String key) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null)
             return getSharedPrefsByName(prefsName).contains(key);
@@ -125,7 +127,7 @@ public class OneSignalPrefs {
         return false;
     }
 
-    public static boolean has(String prefsName, String key) {
+    static boolean has(String prefsName, String key) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null)
             return getSharedPrefsByName(prefsName).contains(key);
@@ -133,7 +135,7 @@ public class OneSignalPrefs {
         return false;
     }
 
-    public static String getString(String prefsName, String key, String defValue) {
+    static String getString(String prefsName, String key, String defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null)
             return prefs.getString(key, defValue);
@@ -141,7 +143,7 @@ public class OneSignalPrefs {
         return defValue;
     }
 
-    public static boolean getBool(String prefsName, String key, boolean defValue) {
+    static boolean getBool(String prefsName, String key, boolean defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null)
             return prefs.getBoolean(key, defValue);
@@ -149,7 +151,7 @@ public class OneSignalPrefs {
         return defValue;
     }
 
-    public static int getInt(String prefsName, String key, int defValue) {
+    static int getInt(String prefsName, String key, int defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null)
             return prefs.getInt(key, defValue);
@@ -157,7 +159,7 @@ public class OneSignalPrefs {
         return defValue;
     }
 
-    public static long getLong(String prefsName, String key, long defValue) {
+    static long getLong(String prefsName, String key, long defValue) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null)
             return prefs.getLong(key, defValue);
@@ -165,12 +167,12 @@ public class OneSignalPrefs {
         return defValue;
     }
 
-    public static void remove(String prefsName, String key) {
+    static void remove(String prefsName, String key) {
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
         if(prefs != null) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.remove(key);
-            editor.commit();
+            editor.apply();
         }
     }
 
@@ -181,11 +183,10 @@ public class OneSignalPrefs {
 
         if(!preferencesMap.contains(prefsName)) {
             prefs = OneSignal.appContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
-            preferencesMap.put(prefsName,prefs);
+            preferencesMap.put(prefsName, prefs);
         }
-        else {
+        else
             prefs = preferencesMap.get(prefsName);
-        }
 
         return prefs;
     }
