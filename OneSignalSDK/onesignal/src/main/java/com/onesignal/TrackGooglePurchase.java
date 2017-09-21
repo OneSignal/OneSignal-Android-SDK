@@ -174,8 +174,6 @@ class TrackGooglePurchase {
 
                      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
                              OneSignalPrefs.PREFS_EXISTING_PURCHASES,false);
-//                     prefsEditor.putBoolean("ExistingPurchases", false);
-//                     prefsEditor.apply();
                   }
 
                   // TODO: Handle very large list. Test for continuationToken != null then call getPurchases again
@@ -237,7 +235,7 @@ class TrackGooglePurchase {
 
                      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
                              OneSignalPrefs.PREFS_PURCHASE_TOKENS, purchaseTokens.toString());
-                     OneSignalPrefs.remove(OneSignalPrefs.PREFS_PLAYER_PURCHASES,OneSignalPrefs.PREFS_EXISTING_PURCHASES);
+                     OneSignalPrefs.remove(OneSignalPrefs.PREFS_PLAYER_PURCHASES, OneSignalPrefs.PREFS_EXISTING_PURCHASES);
 
                      newAsExisting = false;
                      isWaitingForPurchasesRequest = false;
