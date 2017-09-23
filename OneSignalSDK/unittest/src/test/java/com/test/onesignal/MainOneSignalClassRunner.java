@@ -38,6 +38,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
@@ -60,6 +61,7 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
@@ -1420,9 +1422,16 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
    
       // Setting up a new point and testing it is sent
-      ShadowFusedLocationApiWrapper.lat = 1.1d; ShadowFusedLocationApiWrapper.log = 2.2d;
-      ShadowFusedLocationApiWrapper.accuracy = 3.3f;
-      ShadowFusedLocationApiWrapper.time = 12346L;
+      Location fakeLocation = new Location("UnitTest");
+      fakeLocation.setLatitude(1.1d);
+      fakeLocation.setLongitude(2.2d);
+      fakeLocation.setAccuracy(3.3f);
+      fakeLocation.setTime(12346L);
+      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
+
+//      ShadowFusedLocationApiWrapper.lat = 1.1d; ShadowFusedLocationApiWrapper.log = 2.2d;
+//      ShadowFusedLocationApiWrapper.accuracy = 3.3f;
+//      ShadowFusedLocationApiWrapper.time = 12346L;
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
       Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));

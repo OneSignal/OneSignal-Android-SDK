@@ -90,7 +90,7 @@ class LocationGMS {
       long minTime = 1000 * (OneSignal.isForeground() ? TIME_FOREGROUND : TIME_BACKGROUND);
       long scheduleTime = lastTime + minTime;
       
-      SyncService.scheduleServiceSyncTask(context, scheduleTime);
+      OneSignalSyncUtils.scheduleSyncTask(context,scheduleTime);
    }
    
    private static void setLastLocationTime(long time) {
@@ -263,7 +263,7 @@ class LocationGMS {
    }
    
    // Hold on to reference incase gms uses weak referencing.
-   private static LocationUpdateListener locationUpdateListener;
+   static LocationUpdateListener locationUpdateListener;
    
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
       @Override
@@ -291,7 +291,7 @@ class LocationGMS {
    }
    
    
-   private static class LocationUpdateListener implements LocationListener {
+   static class LocationUpdateListener implements LocationListener {
       
       private GoogleApiClient mGoogleApiClient;
       

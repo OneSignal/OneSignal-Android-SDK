@@ -45,19 +45,13 @@ public class SyncService extends Service {
    static final int TASK_SYNC = 1;
    private static boolean startedFromActivity;
    
-   private static void checkOnFocusSync() {
-      long unsentTime = OneSignal.GetUnsentActiveTime();
-      if (unsentTime < OneSignal.MIN_ON_FOCUS_TIME)
-         return;
-
-      OneSignal.sendOnFocus(unsentTime, true);
-   }
-   
    private void doSync() {
       if (startedFromActivity)
          doForegroundSync();
-      else
-         doBackgroundSync();
+      else {
+         OneSignalSyncUtils.doBackgroundSync(getApplicationContext(),
+                 new OneSignalSyncUtils.LegacySyncRunnable(this));
+      }
    }
    
    private void doForegroundSync() {
@@ -67,35 +61,6 @@ public class SyncService extends Service {
                OneSignalStateSynchronizer.updateLocation(point);
          }
       });
-   }
-   
-   private void doBackgroundSync() {
-      OneSignal.appContext = getApplicationContext();
-      new Thread(new Runnable() {
-         @Override
-         public void run() {
-            if (OneSignal.getUserId() == null) {
-               stopSelf();
-               return;
-            }
-   
-            OneSignal.appId = OneSignal.getSavedAppId();
-            OneSignalStateSynchronizer.initUserState(OneSignal.appContext);
-            
-            LocationGMS.getLocation(OneSignal.appContext, false, new LocationGMS.LocationHandler() {
-               @Override
-               public void complete(LocationGMS.LocationPoint point) {
-                  if (point != null)
-                     OneSignalStateSynchronizer.updateLocation(point);
-                  
-                  OneSignalStateSynchronizer.syncUserState(true);
-                  checkOnFocusSync();
-   
-                  stopSelf();
-               }
-            });
-         }
-      }, "OS_SYNCSRV_BG_SYNC").start();
    }
 
    @Override
@@ -160,24 +125,8 @@ public class SyncService extends Service {
       service.stopSelf();
       
       if (scheduleServerRestart)
-         scheduleServiceSyncTask(service, System.currentTimeMillis() + 10000);
+         OneSignalSyncUtils.scheduleSyncTask(service,System.currentTimeMillis() + 10000);
       else
          LocationGMS.scheduleUpdate(service);
-   }
-
-   private static final int SYNC_SERVICE_REQUEST_CODE = 2071862119;
-   static void scheduleServiceSyncTask(Context context, long atTime) {
-      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleServiceSyncTask:atTime: " + atTime);
-      
-      Intent intent = new Intent(context, SyncService.class);
-      intent.putExtra("task", TASK_SYNC);
-      
-      // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
-      //    Some Samsung devices will throw the below exception otherwise.
-      //    "java.lang.SecurityException: !@Too many alarms (500) registered"
-      
-      PendingIntent pendingIntent = PendingIntent.getService(context, SYNC_SERVICE_REQUEST_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-      AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
-      alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);
    }
 }

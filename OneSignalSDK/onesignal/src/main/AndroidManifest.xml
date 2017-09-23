@@ -69,6 +69,9 @@
         <service android:name="com.onesignal.GcmIntentJobService"
                  android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <service android:name="com.onesignal.SyncJobService"
+                 android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <service android:name="com.onesignal.SyncService" />
         <activity android:name="com.onesignal.PermissionsActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar" />
