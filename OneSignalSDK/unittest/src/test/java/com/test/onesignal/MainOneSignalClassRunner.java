@@ -1366,8 +1366,13 @@ public class MainOneSignalClassRunner {
 
       ShadowOneSignalRestClient.lastPost = null;
       StaticResetHelper.restSetStaticFields();
-      ShadowFusedLocationApiWrapper.lat = 30.0;
-      ShadowFusedLocationApiWrapper.accuracy = 5.0f;
+
+      Location fakeLocation = new Location("UnitTest");
+      fakeLocation.setLatitude(30.0d); // change the Lat
+      fakeLocation.setLongitude(2.0d);
+      fakeLocation.setAccuracy(5.0f); // change the accuracy
+      fakeLocation.setTime(12345L);
+      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
 
       OneSignalInit();
       threadAndTaskWait();
@@ -1405,8 +1410,7 @@ public class MainOneSignalClassRunner {
       ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
       ShadowFusedLocationApiWrapper.time = 12345L;
-      
-      
+
       // location if we have permission
       OneSignalInit();
       threadAndTaskWait();
@@ -1420,7 +1424,7 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
       Assert.assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
-   
+
       // Setting up a new point and testing it is sent
       Location fakeLocation = new Location("UnitTest");
       fakeLocation.setLatitude(1.1d);
@@ -1429,9 +1433,6 @@ public class MainOneSignalClassRunner {
       fakeLocation.setTime(12346L);
       ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
 
-//      ShadowFusedLocationApiWrapper.lat = 1.1d; ShadowFusedLocationApiWrapper.log = 2.2d;
-//      ShadowFusedLocationApiWrapper.accuracy = 3.3f;
-//      ShadowFusedLocationApiWrapper.time = 12346L;
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
       Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
@@ -1458,19 +1459,27 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testLocationFromSyncAlarm() throws Exception {
-      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
-      ShadowFusedLocationApiWrapper.accuracy = 3.0f;
-      ShadowFusedLocationApiWrapper.time = 12345L;
-      
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      ShadowFusedLocationApiWrapper.lat = 1.1d; ShadowFusedLocationApiWrapper.log = 2.1d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.1f;
+      ShadowFusedLocationApiWrapper.time = 12346L;
+
       OneSignalInit();
       threadAndTaskWait();
+
       StaticResetHelper.restSetStaticFields();
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       shadowOf(alarmManager).getScheduledAlarms().clear();
       ShadowOneSignalRestClient.lastPost = null;
-      
-      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-   
+
+      Location fakeLocation = new Location("UnitTest");
+      fakeLocation.setLatitude(1.0d);
+      fakeLocation.setLongitude(2.0d);
+      fakeLocation.setAccuracy(3.0f);
+      fakeLocation.setTime(12345L);
+      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
+
       Intent intent = new Intent();
       intent.putExtra("task", 1); // Sync
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);

@@ -185,7 +185,7 @@ class LocationGMS {
 
             mGoogleApiClient.connect();
          }
-         else if(mLastLocation != null && mGoogleApiClient.realInstance().isConnected()) {
+         else if(mLastLocation != null) {
             receivedLocationPoint(mLastLocation);
          }
 
@@ -211,6 +211,7 @@ class LocationGMS {
 
    static void fireFailedComplete() {
       PermissionsActivity.answered = false;
+      mGoogleApiClient = null;
 
       fireComplete(null);
    }
