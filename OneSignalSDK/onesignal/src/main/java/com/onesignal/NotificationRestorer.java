@@ -27,12 +27,17 @@
 
 package com.onesignal;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.PersistableBundle;
+import android.support.annotation.RequiresApi;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -124,18 +129,42 @@ class NotificationRestorer {
             Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
          
             Intent serviceIntent;
-         
-            if (useExtender)
-               serviceIntent = NotificationExtenderService.getIntent(context);
-            else
-               serviceIntent = new Intent().setComponent(new ComponentName(context.getPackageName(), GcmIntentService.class.getName()));
-         
-            serviceIntent.putExtra("json_payload", fullData);
-            serviceIntent.putExtra("android_notif_id", existingId);
-            serviceIntent.putExtra("restoring", true);
-            serviceIntent.putExtra("timestamp", datetime);
-   
-            startService(context, serviceIntent);
+
+            //Code-sensitive to Android O
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+               if (useExtender)
+                  serviceIntent = NotificationExtenderService.getIntent(context);
+               else
+                  serviceIntent = new Intent().setComponent(new ComponentName(context.getPackageName(), GcmIntentService.class.getName()));
+
+               serviceIntent.putExtra("json_payload", fullData);
+               serviceIntent.putExtra("android_notif_id", existingId);
+               serviceIntent.putExtra("restoring", true);
+               serviceIntent.putExtra("timestamp", datetime);
+
+               startService(context, serviceIntent);
+            }
+            else {
+               OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreNotif:" + existingId);
+
+               //schedule the job with the job service here...
+               PersistableBundle restoreBundle = new PersistableBundle();
+               restoreBundle.putString("json_payload",fullData);
+               restoreBundle.putInt("android_notif_id", existingId);
+               restoreBundle.putBoolean("restoring", true);
+               restoreBundle.putLong("timestamp", datetime);
+
+               //set the job id to android notif id - that way we don't restore any notif twice
+               JobInfo.Builder jobBuilder = new JobInfo.Builder(existingId,
+                       new ComponentName(context, RestoreJobService.class));
+               JobInfo job = jobBuilder.setOverrideDeadline(0)
+                                       .setExtras(restoreBundle)
+                                       .build();
+
+               JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+               jobScheduler.schedule(job);
+            }
+
          } while (cursor.moveToNext());
       }
    }
@@ -150,16 +179,8 @@ class NotificationRestorer {
    
    static void startRestoreTaskFromReceiver(Context context) {
       if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-// Skipping for Android O due to startService note above.
-//         ComponentName componentName = new ComponentName(context.getPackageName(),
-//             NotificationRestoreJobService.class.getName());
-//
-//         Random random = new Random();
-//         JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
-//             .setOverrideDeadline(0)
-//             .build();
-//         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-//         jobScheduler.schedule(jobInfo);
+         // NotificationRestorer#restore is Code-sensitive to Android O
+         NotificationRestorer.restore(context);
       }
       else {
          Intent intentForService = new Intent();

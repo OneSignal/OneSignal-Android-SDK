@@ -78,10 +78,12 @@
 
         <service android:name="com.onesignal.NotificationRestoreService" />
         <!-- For Android O -->
-        <service android:name="com.onesignal.NotificationRestoreJobService"
+        <service android:name="com.onesignal.RestoreJobService"
                  android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <receiver android:name="com.onesignal.BootUpReceiver">
             <intent-filter>
+                <action android:name="android.intent.action.ACTION_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
