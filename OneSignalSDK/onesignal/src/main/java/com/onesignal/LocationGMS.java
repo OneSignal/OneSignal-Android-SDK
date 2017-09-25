@@ -90,7 +90,7 @@ class LocationGMS {
       long minTime = 1000 * (OneSignal.isForeground() ? TIME_FOREGROUND : TIME_BACKGROUND);
       long scheduleTime = lastTime + minTime;
       
-      OneSignalSyncUtils.scheduleSyncTask(context,scheduleTime);
+      OneSignalSyncUtils.scheduleSyncTask(context, scheduleTime);
    }
    
    private static void setLastLocationTime(long time) {
@@ -185,9 +185,8 @@ class LocationGMS {
 
             mGoogleApiClient.connect();
          }
-         else if(mLastLocation != null) {
+         else if(mLastLocation != null)
             receivedLocationPoint(mLastLocation);
-         }
 
 
       } catch (Throwable t) {
@@ -211,6 +210,8 @@ class LocationGMS {
 
    static void fireFailedComplete() {
       PermissionsActivity.answered = false;
+      if(mGoogleApiClient != null)
+         mGoogleApiClient.disconnect();
       mGoogleApiClient = null;
 
       fireComplete(null);
