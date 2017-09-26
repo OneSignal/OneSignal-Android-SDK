@@ -79,6 +79,18 @@ class NotificationBundleProcessor {
       }
    }
 
+   /**
+    * Android O - Process the restoration of notifications from a JobService
+    * This branch of logic differs from pre-O in that it is not coming through the GcmIntentService
+    * and doesn't accommodate the developer's NotificationExtenderService. This is preferred to otherwise
+    * not getting any notifications restored on Oreo at all.
+    * @param context
+    * @param bundle
+    */
+   static void ProcessFromRestorerJobService(Context context, BundleCompat bundle) {
+      ProcessFromGCMIntentService(context, bundle, null); // re-use the GCM method
+   }
+
    static int ProcessJobForDisplay(NotificationGenerationJob notifJob) {
       notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
       processCollapseKey(notifJob);
