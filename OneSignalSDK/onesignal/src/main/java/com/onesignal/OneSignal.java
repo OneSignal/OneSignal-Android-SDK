@@ -64,6 +64,13 @@ import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
+/**
+ * The main OneSignal class - this is where you will interface with the OneSignal SDK
+ * <br/><br/>
+ * <b>Reminder:</b> Add your {@code onesignal_app_id} to your build.gradle config in <i>android</i> > <i>defaultConfig</i>
+ * <br/>
+ * @see <a href="https://documentation.onesignal.com/docs/android-sdk-setup#section-1-gradle-setup">OneSignal Gradle Setup</a>
+ */
 public class OneSignal {
    
    public enum LOG_LEVEL {
@@ -125,21 +132,66 @@ public class OneSignal {
          mDisplayOptionCarryOver = carryOver;
       }
 
+      /**
+       * Sets a notification opened handler. The instance will be called when a notification
+       * is tapped on from the notification shade or when closing an Alert notification shown in the app.
+       * <br/><br/>
+       * See the
+       * <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationopenedhandler-">
+       *     NotificationOpenedHandler
+       * </a> documentation for an example of the {@code ExampleNotificationOpenedHandler} class.
+       *
+       *
+       * @param handler Instance of a class implementing the {@link NotificationOpenedHandler} interface
+       * @return the builder on which you called this method
+       */
       public Builder setNotificationOpenedHandler(NotificationOpenedHandler handler) {
          mNotificationOpenedHandler = handler;
          return this;
       }
 
+      /**
+       * Sets a notification received handler that will fire when a notification is received. It will
+       * be fired when your app is in focus or in the background.
+       * <br/><br/>
+       * See the
+       * <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationreceivedhandler-">
+       *     NotificationReceivedHandler
+       * </a> documentation for an example of the {@code ExampleNotificationReceivedHandler} class.
+       *
+       * @param handler Instance of a class implementing the {@link NotificationReceivedHandler} interface
+       * @return the builder on which you called this method
+       */
       public Builder setNotificationReceivedHandler(NotificationReceivedHandler handler) {
          mNotificationReceivedHandler = handler;
          return this;
       }
 
+      /**
+       * Prompts the user for location permissions.
+       * This allows for geotagging so you can send notifications to users based on location.
+       * This does not accomodate any rationale-gating that is encouraged before requesting
+       * permissions from the user.
+       * <br/><br/>
+       * See {@link #promptLocation()} for more details on how to manually prompt location permissions.
+       *
+       * @param enable If set to {@code false}, OneSignal will not prompt for location.
+       *               If set to {@code true}, OneSignal will prompt users for location permissions
+       *               when your app starts
+       * @return the builder object you called this method on
+       */
       public Builder autoPromptLocation(boolean enable) {
          mPromptLocation = enable;
          return this;
       }
 
+      /**
+       * Prompts the user to update/enable Google Play Services if it's disabled on the device.
+       *
+       * @param disable if {@code false}, prompt users. if {@code true}, never show the out of date prompt.
+       *                Default is {@code false}
+       * @return
+       */
       public Builder disableGmsMissingPrompt(boolean disable) {
          mDisableGmsMissingPrompt = disable;
          return this;
@@ -150,12 +202,33 @@ public class OneSignal {
          mDisplayOption = displayOption;
          return this;
       }
-      
+
+      /**
+       * If notifications are disabled for your app, unsubscribe the user from OneSignal.
+       * This will happen when your users go to <i>Settings</i> > <i>Apps</i> and turn off notifications or
+       * they long press your notifications and select "block notifications". This is {@code false} by default.
+       * @param set if {@code false} - don't unsubscribe users<br/>
+       *            if {@code true} - unsubscribe users when notifications are disabled<br/>
+       *            the default is {@code false}
+       * @return the builder you called this method on
+       */
       public Builder unsubscribeWhenNotificationsAreDisabled(boolean set) {
          mUnsubscribeWhenNotificationsAreDisabled = set;
          return this;
       }
-      
+
+      /**
+       * Enable to prevent other broadcast receivers from receiving OneSignal FCM/GCM payloads.
+       * Prevent thrown exceptions or double notifications from other libraries/SDKs that implement
+       * notifications. Other non-OneSignal payloads will still be passed through so your app can
+       * handle FCM/GCM payloads from other back-ends.
+       * <br/><br/>
+       * <b>Note:</b> You can't use multiple
+       * Google Project numbers/Sender IDs. They must be the same if you are using multiple providers,
+       * otherwise there will be unexpected subscribes.
+       * @param set
+       * @return
+       */
       public Builder filterOtherGCMReceivers(boolean set) {
          mFilterOtherGCMReceivers = set;
          return this;
@@ -303,10 +376,28 @@ public class OneSignal {
       return mInitBuilder;
    }
 
+   /**
+    * Initializes OneSignal to register the device for push notifications.
+    *<br/>
+    * Call this first from your application class' {@code onCreate} method
+    *<br/><br/>
+    * <i>Don't have a class that extends Application in your project?</i>
+    * <br/>Follow <a href="https://www.mobomo.com/2011/05/how-to-use-application-object-of-android/">this tutorial</a> to create one.
+    * @see <a href="https://documentation.onesignal.com/docs/android-sdk-setup#section-2-add-required-code">Initializing OneSignal</a>
+    * @param context The application context
+    * @return a {@link OneSignal.Builder} instance to begin building the OneSignal instance
+    */
    public static OneSignal.Builder startInit(Context context) {
       return new OneSignal.Builder(context);
    }
 
+   /**
+    * Initializes Onesignal to register the device for push notifications.
+    * Should be called upon a {@link OneSignal.Builder} instance after you've defined options on it.
+    * <br/><br/>
+    * Refer to {@link #startInit(Context)}
+    * @param inBuilder
+    */
    private static void init(OneSignal.Builder inBuilder) {
       if (getCurrentOrNewInitBuilder().mDisplayOptionCarryOver)
          inBuilder.mDisplayOption = getCurrentOrNewInitBuilder().mDisplayOption;
@@ -813,6 +904,15 @@ public class OneSignal {
       }
    }
 
+   /**
+    * Tag a user based on an app event of your choosing so later you can create
+    * <a href="https://documentation.onesignal.com/docs/segmentation">OneSignal Segments</a>
+    * to target these users. Use {@link #sendTags(String)} to set more than one tag on a user at
+    * a time.
+    * @param key Key of your chossing to create or update
+    * @param value Value to set on the key. <b>Note:</b> Passing in a blank {@code String} deletes
+    *              the key. You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
+    */
    public static void sendTag(String key, String value) {
       try {
          sendTags(new JSONObject().put(key, value));
@@ -829,6 +929,15 @@ public class OneSignal {
       }
    }
 
+   /**
+    * Tag a user based on an app event of your choosing so later you can create
+    * <a href="https://documentation.onesignal.com/docs/segmentation">OneSignal Segments</a>
+    *  to target these users.
+    * @param keyValues Key value pairs of your choosing to create or update. <b>Note:</b>
+    *                  Passing in a blank String as a value deletes a key.
+    *                  You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
+    *
+    */
    public static void sendTags(JSONObject keyValues) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags! Omitting this tag operation.");
@@ -1324,6 +1433,18 @@ public class OneSignal {
               OneSignalPrefs.PREFS_OS_LAST_SESSION_TIME,-31*1000);
    }
 
+   /**
+    * Setting to control how OneSignal notifications will be shown when one is received while your app
+    * is in focus.
+    * <br/><br/>
+    * {@link OneSignal.OSInFocusDisplayOption#Notification Notification} - native notification display while user has app in focus (can be distracting).
+    * <br/>
+    * {@link OneSignal.OSInFocusDisplayOption#InAppAlert In-App Alert (Default)} - native alert dialog display, which can be helpful during development.
+    * <br/>
+    * {@link OneSignal.OSInFocusDisplayOption#None None} - notification is silent.
+    *
+    * @param displayOption the {@link OneSignal.OSInFocusDisplayOption OSInFocusDisplayOption} to set
+    */
    public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
       getCurrentOrNewInitBuilder().mDisplayOptionCarryOver = true;
       getCurrentOrNewInitBuilder().mDisplayOption = displayOption;
@@ -1375,6 +1496,17 @@ public class OneSignal {
       Log(LOG_LEVEL.DEBUG, "shareLocation:" + shareLocation);
    }
 
+   /**
+    * Use this method to manually prompt the user for location permissions.
+    * This allows for geotagging so you send notifications to users based on location.
+    *
+    * <br/><br/>Be aware of best practices regarding asking permissions on Android:
+    * <a href="https://developer.android.com/guide/topics/permissions/requesting.html">
+    *     Requesting Permissions | Android Developers
+    * </a>
+    *
+    * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
+    */
    public static void promptLocation() {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not prompt for location.");
@@ -1580,7 +1712,22 @@ public class OneSignal {
    public static void removeNotificationReceivedHandler() {
       getCurrentOrNewInitBuilder().mNotificationReceivedHandler = null;
    }
-   
+
+   /**
+    * The {@link OSPermissionObserver#onOSPermissionChanged(OSPermissionStateChanges)}
+    * method will be fired on the passed-in object when a notification permission setting changes.
+    * This happens when the user enables or disables notifications for your app from the system
+    * settings outside of your app. Disable detection is supported on Android 4.4+
+    * <br/><br/>
+    * <b>Keep a reference</b> - Make sure to hold a reference to your observable at the class level,
+    * otherwise it may not fire
+    * <br/>
+    * <b>Leak Safe</b> - OneSignal holds a weak reference to your observer so it's guaranteed not to
+    * leak your {@code Activity}
+    *
+    * @param observer the instance of {@link OSPermissionObserver} that you want to process the permission
+    *                 changes within
+    */
    public static void addPermissionObserver(OSPermissionObserver observer) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add permission observer");
@@ -1601,7 +1748,22 @@ public class OneSignal {
    
       getPermissionStateChangesObserver().removeObserver(observer);
    }
-   
+
+   /**
+    * The {@link OSSubscriptionObserver#onOSSubscriptionChanged(OSSubscriptionStateChanges)}
+    * method will be fired on the passed-in object when a notification subscription property changes.
+    *<br/><br/>
+    * This includes the following events:
+    * <br/>
+    * - Getting a Registration ID (push token) from Google
+    * <br/>
+    * - Getting a player/user ID from OneSignal
+    * <br/>
+    * - {@link OneSignal#setSubscription(boolean)} is called
+    * <br/>
+    * - User disables or enables notifications
+    * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
+    */
    public static void addSubscriptionObserver(OSSubscriptionObserver observer) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
@@ -1622,7 +1784,15 @@ public class OneSignal {
       
       getSubscriptionStateChangesObserver().removeObserver(observer);
    }
-   
+
+   /**
+    * Get the current notification and permission state.
+    *<br/><br/>
+    * {@code permissionStatus} - {@link OSPermissionState} - Android Notification Permissions State
+    * <br/>
+    * {@code subscriptionStatus} - {@link OSSubscriptionState} - Google and OneSignal subscription state
+    * @return a {@link OSPermissionSubscriptionState} as described above
+    */
    public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSPermissionSubscriptionState");
