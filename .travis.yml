@@ -20,20 +20,17 @@ android:
             # Required to get the newest platform-tools.
     - platform-tools
     - build-tools-26.0.1
-    - extra-android-m2repository
-    - extra-google-m2repository
     - android-26
   licenses:
     - '.+'
 before_install:
     - pwd
     - ls -la
-    - wget http://services.gradle.org/distributions/gradle-4.1-bin.zip
-    - unzip gradle-4.1-bin.zip
-    - export GRADLE_HOME=$PWD/gradle-4.1
-    - export PATH=$GRADLE_HOME/bin:$PATH
-    - cd OneSignalSDK/unittest
-script: gradle build
+    - cd OneSignalSDK
+before_script:
+    - chmod +x gradlew
+script:
+    - ./gradlew unittest:build
 after_failure:
     - cat build/reports/lint-results.xml
     - cat build/outputs/lint-results-debug.xml
