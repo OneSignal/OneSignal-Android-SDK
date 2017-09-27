@@ -53,6 +53,19 @@ import java.util.List;
 </service>
 */
 
+/**
+ * OneSignal supports sending additional data along with a notification as key/value pairs.
+ * You can read this additional data when a notification is opened by adding a
+ * {@link com.onesignal.OneSignal.NotificationOpenedHandler} instead.
+ * <br/><br/>
+ * However, if you want to do one of the following, continue with the instructions
+ * <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationextenderservice-">here</a>:
+ * <br/><br/>
+ * - Receive data in the background with our without displaying a notification
+ * <br/>
+ * - Override specific notification settings depending on client-side app logic (e.g. custom accent color,
+ * vibration pattern, any other {@link NotificationCompat} options)
+ */
 public abstract class NotificationExtenderService extends IntentService {
 
    public static class OverrideSettings {

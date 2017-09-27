@@ -34,6 +34,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Notification properties received from OneSignal.
+
+/**
+ * Contents and settings of the notification received. See
+ * <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--osnotificationpayload-">
+ *     OSNotificationPayload | OneSignal Docs
+ * </a> for a list of explanations for each field.
+ */
 public class OSNotificationPayload {
    public String notificationID;
    public String title, body;
@@ -87,7 +94,10 @@ public class OSNotificationPayload {
       priority = jsonObject.optInt("priority");
       rawPayload = jsonObject.optString("rawPayload");
    }
-   
+
+   /**
+    * List of action buttons on the notification. Part of {@link OSNotificationPayload}.
+    */
    public static class ActionButton {
       public String id;
       public String text;
@@ -116,6 +126,9 @@ public class OSNotificationPayload {
       }
    }
 
+   /**
+    * If a background image was set, this object will be available. Part of {@link OSNotificationPayload}.
+    */
    public static class BackgroundImageLayout {
       public String image;
       public String titleTextColor;

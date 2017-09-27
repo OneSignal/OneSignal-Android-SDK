@@ -84,11 +84,36 @@ public class OneSignal {
    static final long MIN_ON_FOCUS_TIME = 60;
    private static final long MIN_ON_SESSION_TIME = 30;
 
+   /**
+    * An interface used to process a OneSignal notification the user just tapped on.
+    * <br/>
+    * Set this during OneSignal init in
+    * {@link OneSignal.Builder#setNotificationOpenedHandler(NotificationOpenedHandler) setNotificationOpenedHandler}
+    *<br/><br/>
+    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationopenedhandler-">NotificationOpenedHandler | OneSignal Docs</a>
+    */
    public interface NotificationOpenedHandler {
+      /**
+       * Fires when a user taps on a notification.
+       * @param result a {@link OSNotificationOpenResult} with the user's response and properties of this notification
+       */
       void notificationOpened(OSNotificationOpenResult result);
    }
 
+   /**
+    * An interface used to handle notifications that are received.
+    * <br/>
+    * Set this during OneSignal init in
+    * {@link OneSignal.Builder#setNotificationReceivedHandler(NotificationReceivedHandler) setNotificationReceivedHandler}
+    *<br/><br/>
+    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationreceivedhandler-">NotificationReceivedHandler | OneSignal Docs</a>
+    */
    public interface NotificationReceivedHandler {
+      /**
+       * Fires when a notification is received. It will be fired when your app is in focus or
+       * in the background.
+       * @param notification Contains both the user's response and properties of the notification
+       */
       void notificationReceived(OSNotification notification);
    }
 
@@ -96,10 +121,25 @@ public class OneSignal {
       void idsAvailable(String userId, String registrationId);
    }
 
+   /**
+    * Interface which you can implement and pass to {@link OneSignal#getTags(GetTagsHandler)} to
+    * get all the tags set on a user
+    * <br/><br/>
+    * <b>Note:</b> the {@link #tagsAvailable(JSONObject)} callback does not run on the Main(UI)
+    * Thread, so be aware when modifying UI in this method.
+    */
    public interface GetTagsHandler {
+      /**
+       * <b>Note:</b> this callback does not run on the Main(UI)
+       * Thread, so be aware when modifying UI in this method.
+       * @param tags a JSONObject containing the OneSignal tags for the user in a key/value map
+       */
       void tagsAvailable(JSONObject tags);
    }
 
+   /**
+    * Fires delegate when the notification was created or fails to be created.
+    */
    public interface PostNotificationResponseHandler {
       void onSuccess(JSONObject response);
       void onFailure(JSONObject response);
@@ -638,7 +678,27 @@ public class OneSignal {
    public static void setLogLevel(LOG_LEVEL inLogCatLevel, LOG_LEVEL inVisualLogLevel) {
       logCatLevel = inLogCatLevel; visualLogLevel = inVisualLogLevel;
    }
-   
+
+   /**
+    * Enable logging to help debug if you run into an issue setting up OneSignal.
+    * The following options are available with increasingly more information:
+    * <br/>
+    * - {@code NONE}
+    * <br/>
+    * - {@code FATAL}
+    * <br/>
+    * - {@code ERROR}
+    * <br/>
+    * - {@code WARN}
+    * <br/>
+    * - {@code INFO}
+    * <br/>
+    * - {@code DEBUG}
+    * <br/>
+    * - {@code VERBOSE}
+    * @param inLogCatLevel Sets the logging level to print to the Android LogCat log
+    * @param inVisualLogLevel Sets the logging level to show as alert dialogs
+    */
    public static void setLogLevel(int inLogCatLevel, int inVisualLogLevel) {
       setLogLevel(getLogLevel(inLogCatLevel), getLogLevel(inVisualLogLevel));
    }
@@ -892,6 +952,11 @@ public class OneSignal {
       }, "OS_REG_USER").start();
    }
 
+   /**
+    * Sync hashed email if you have a login system or collect it from the user. It will be used to
+    * reach the user at the most optimal time of the day.
+    * @param email the email that you want to sync with the user
+    */
    public static void syncHashedEmail(String email) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before calling syncHashedEmail! Omitting this operation.");
@@ -982,6 +1047,18 @@ public class OneSignal {
       }
    }
 
+   /**
+    * Allows you to send notifications from user to user or schedule ones in the future to be delivered
+    * to the current device.
+    * <br/><br/>
+    * <b>Note:</b> You can only use {@code include_player_ids} as a targeting parameter from your app.
+    * Other target options such as {@code tags} and {@code included_segments} require your OneSignal
+    * App REST API key which can only be used from your server.
+    *
+    * @param json Contains notification options, see <a href="https://documentation.onesignal.com/reference#create-notification">OneSignal | Create Notification</a>
+    *              POST call for all options.
+    * @param handler a {@link PostNotificationResponseHandler} object to receive the request result
+    */
    public static void postNotification(JSONObject json, final PostNotificationResponseHandler handler) {
       try {
          if (!json.has("app_id"))
@@ -1035,6 +1112,12 @@ public class OneSignal {
       }
    }
 
+   /**
+    * Retrieve a list of tags that have been set on the user frm the OneSignal server.
+    * @param getTagsHandler an instance of {@link GetTagsHandler}.
+    *                       <br/>
+    *                       Calls {@link GetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
+    */
    public static void getTags(final GetTagsHandler getTagsHandler) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! Omitting this tag operation.");
@@ -1068,12 +1151,23 @@ public class OneSignal {
       }, "OS_GETTAGS_CALLBACK").start();
    }
 
+   /**
+    * Deletes a single tag that was previously set on a user with {@link #sendTag(String, String)}
+    * or {@link #sendTags(JSONObject)}. Use {@link #deleteTags(String)} if you need to delete
+    * more than one.
+    * @param key Key to remove.
+    */
    public static void deleteTag(String key) {
       Collection<String> tempList = new ArrayList<>(1);
       tempList.add(key);
       deleteTags(tempList);
    }
 
+   /**
+    * Deletes one or more tags that were previously set on a user with {@link #sendTag(String, String)}
+    * or {@link #sendTags(JSONObject)}.
+    * @param keys Keys to remove.
+    */
    public static void deleteTags(Collection<String> keys) {
       try {
          JSONObject jsonTags = new JSONObject();
@@ -1395,6 +1489,13 @@ public class OneSignal {
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
    // If false - Device will only vibrate when the device is set on it's vibrate only mode.
+   /**
+    * By default OneSignal always vibrates the device when a notification is displayed unless the
+    * device is in a total silent mode.
+    * <br/><br/>
+    * <i>You can link this action to a UI button to give your user a vibration option for your notifications.</i>
+    * @param enable Passing {@code false} means that the device will only vibrate lightly when the device is in it's vibrate only mode.
+    */
    public static void enableVibrate(boolean enable) {
       if (appContext == null)
          return;
@@ -1410,6 +1511,13 @@ public class OneSignal {
 
    // If true(default) - Sound plays when receiving notification. Vibrates when device is on vibrate only mode.
    // If false - Only vibrates unless EnableVibrate(false) was set.
+   /**
+    * By default OneSignal plays the system's default notification sound when the
+    * device's notification system volume is turned on.
+    * <br/><br/>
+    * <i>You can link this action to a UI button to give your user a different sound option for your notifications.</i>
+    * @param enable Passing {@code false} means that the device will only vibrate unless the device is set to a total silent mode.
+    */
    public static void enableSound(boolean enable) {
       if (appContext == null)
          return;
@@ -1479,6 +1587,11 @@ public class OneSignal {
       return mInitBuilder.mDisplayOption == OSInFocusDisplayOption.InAppAlert;
    }
 
+   /**
+    * You can call this method with {@code false} to opt users out of receiving all notifications through
+    * OneSignal. You can pass {@code true} later to opt users back into notifications.
+    * @param enable whether to subscribe the user to notifications or not
+    */
    public static void setSubscription(boolean enable) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not set subscription.");
@@ -1499,6 +1612,12 @@ public class OneSignal {
    /**
     * Use this method to manually prompt the user for location permissions.
     * This allows for geotagging so you send notifications to users based on location.
+    *<br/><br/>
+    * Make sure you have one of the following permission in your {@code AndroidManifest.xml} as well.
+    * <br/>
+    * {@code <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>}
+    * <br/>
+    * {@code <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>}
     *
     * <br/><br/>Be aware of best practices regarding asking permissions on Android:
     * <a href="https://developer.android.com/guide/topics/permissions/requesting.html">
@@ -1524,6 +1643,11 @@ public class OneSignal {
       promptedLocation = true;
    }
 
+   /**
+    * Removes all OneSignal notifications from the Notification Shade. If you just use
+    * {@link NotificationManager#cancelAll()}, OneSignal notifications will be restored when
+    * your app is restarted.
+    */
    public static void clearOneSignalNotifications() {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notifications.");
@@ -1590,6 +1714,12 @@ public class OneSignal {
       }
    }
 
+   /**
+    * Cancels a single OneSignal notification based on its Android notification integer ID. Use
+    * instead of Android's {@link NotificationManager#cancel(int)}, otherwise the notification will be restored
+    * when your app is restarted.
+    * @param id
+    */
    public static void cancelNotification(int id) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notification id: " + id);
