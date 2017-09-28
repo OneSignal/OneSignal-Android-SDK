@@ -77,6 +77,7 @@ import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -186,6 +187,11 @@ public class MainOneSignalClassRunner {
       RemoveDisableNotificationOpenedToManifest();
 
       cleanUp();
+   }
+
+   @After
+   public void afterEachTest() throws Exception {
+      Thread.sleep(1000*5);
    }
 
    @AfterClass
