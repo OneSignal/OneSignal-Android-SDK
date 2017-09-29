@@ -27,6 +27,9 @@
 
 package com.onesignal;
 
+/**
+ * The action the user took on the notification.
+ */
 public class OSNotificationAction {
    public enum ActionType {
       // Notification was tapped on.

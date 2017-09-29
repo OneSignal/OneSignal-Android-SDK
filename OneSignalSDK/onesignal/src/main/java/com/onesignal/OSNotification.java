@@ -34,8 +34,28 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * The notification the user received
+ * <br/><br/>
+ * {@link #isAppInFocus} - Was app in focus.
+ * <br/>
+ * {@link #shown} - Was notification shown to the user. Will be {@code false} for silent notifications.
+ * <br/>
+ * {@link #androidNotificationId} - Android Notification ID assigned to the notification. Can be used to cancel or replace the notification
+ * <br/>
+ * {@link #payload} - Payload received from OneSignal
+ * <br/>
+ * {@link #displayType} - How the notification was displayed ot the user. Can be set to {@link DisplayType#Notification Notification},
+ * {@link DisplayType#InAppAlert InAppAlert}, or {@link DisplayType#None None} if it was not displayed.
+ * <br/>
+ * {@link #groupedNotifications} - If the notification is a summary notification for a group, this will contain
+ * all notification payloads it was created from.
+ */
 public class OSNotification {
 
+   /**
+    * How the notification was displayed to the user. Part of {@link OSNotification}.
+    */
    public enum DisplayType {
       // Notification shown in the notification shade.
       Notification,

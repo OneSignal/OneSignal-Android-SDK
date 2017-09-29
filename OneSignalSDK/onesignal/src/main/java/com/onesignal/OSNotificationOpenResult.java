@@ -30,6 +30,13 @@ package com.onesignal;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * The information returned from a notification the user received.
+ * <br/><br/>
+ * {@link #notification} - Notification the user received
+ * <br/>
+ * {@link #action} - The action the user took on the notification
+ */
 public class OSNotificationOpenResult {
    public OSNotification notification;
    public OSNotificationAction action;
