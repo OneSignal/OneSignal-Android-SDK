@@ -41,6 +41,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSNotification;
@@ -944,6 +945,41 @@ public class MainOneSignalClassRunner {
 
       Assert.assertFalse(lastGetTags.has("array"));
       Assert.assertFalse(lastGetTags.has("object"));
+   }
+
+   @Test
+   public void testOneSignalMethodsBeforeInit() throws Exception {
+      //queue up a bunch of actions and check that the queue gains size before init
+      OneSignal.syncHashedEmail("test@test.com");
+
+      for(int a = 0; a < 10; a++) {
+         OneSignal.sendTag("a"+a,String.valueOf(a));
+      }
+
+      OneSignal.getTags(new OneSignal.GetTagsHandler() {
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            Assert.assertTrue(true);
+         }
+      });
+//
+      OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+         @Override
+         public void idsAvailable(String userId, String registrationId) {
+            Assert.assertTrue(true);
+         }
+      });
+//
+//      OneSignal.setSubscription(true);
+
+      Assert.assertEquals(13, OneSignal.taskQueueWaitingForInit.size());
+
+      OneSignalInit();
+
+      Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
+
+      threadAndTaskWait();
+
    }
 
    private static boolean failedCurModTest;
