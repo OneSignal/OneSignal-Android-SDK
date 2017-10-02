@@ -300,7 +300,7 @@ public class OneSignal {
    // the concurrent queue in which we pin pending tasks upon finishing initialization
    public static ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
 
-   private static WeakReference<IdsAvailableHandler> idsAvailableHandler;
+   private static WeakReference<IdsAvailableHandler> idsAvailableHandler  = new WeakReference<>(null);
 
    private static long lastTrackedFocusTime = 1, unSentActiveTime = -1;
 
@@ -328,7 +328,7 @@ public class OneSignal {
    private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
 
-   private static WeakReference<GetTagsHandler> pendingGetTagsHandler;
+   private static WeakReference<GetTagsHandler> pendingGetTagsHandler = new WeakReference<>(null);
    private static boolean getTagsCall;
 
    private static boolean waitingToPostStateSync;
@@ -1194,7 +1194,7 @@ public class OneSignal {
    }
 
    private static void internalFireGetTagsCallback(final WeakReference<GetTagsHandler> getTagsHandler) {
-      if (getTagsHandler == null || getTagsHandler.get() == null) return;
+      if (getTagsHandler.get() == null) return;
 
       new Thread(new Runnable() {
          @Override
@@ -1280,8 +1280,7 @@ public class OneSignal {
    }
 
    private static void fireIdsAvailableCallback() {
-      if (idsAvailableHandler != null &&
-              idsAvailableHandler.get() != null) {
+      if (idsAvailableHandler.get() != null) {
          OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
@@ -1292,8 +1291,7 @@ public class OneSignal {
    }
 
    private synchronized static void internalFireIdsAvailableCallback() {
-      if (idsAvailableHandler == null ||
-              idsAvailableHandler.get() == null)
+      if (idsAvailableHandler.get() == null)
          return;
 
       String regId = OneSignalStateSynchronizer.getRegistrationId();
@@ -1307,7 +1305,7 @@ public class OneSignal {
       idsAvailableHandler.get().idsAvailable(userId, regId);
 
       if (regId != null)
-         idsAvailableHandler = null;
+         idsAvailableHandler = new WeakReference<>(null);
    }
 
    static void sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {

@@ -952,34 +952,60 @@ public class MainOneSignalClassRunner {
       //queue up a bunch of actions and check that the queue gains size before init
       OneSignal.syncHashedEmail("test@test.com");
 
-      for(int a = 0; a < 10; a++) {
+      for(int a = 0; a < 5; a++) {
          OneSignal.sendTag("a"+a,String.valueOf(a));
       }
 
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            Assert.assertTrue(true);
+            //assert that the tags sent were available
+            try {
+               for(int a = 0; a < 5; a++) {
+                  Assert.assertEquals(String.valueOf(a),tags.get("a"+a));
+               }
+            }
+            catch (Exception e) {
+               e.printStackTrace();
+            }
          }
       });
-//
+
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
          @Override
          public void idsAvailable(String userId, String registrationId) {
-            Assert.assertTrue(true);
+            //Assert the userId being returned
+            Assert.assertEquals(ShadowOneSignalRestClient.testUserId, userId);
          }
       });
-//
+
+
 //      OneSignal.setSubscription(true);
 
-      Assert.assertEquals(13, OneSignal.taskQueueWaitingForInit.size());
+      //there should be 8 pending operations in the queue
+      Assert.assertEquals(8, OneSignal.taskQueueWaitingForInit.size());
 
       OneSignalInit();
 
+      //after init, the queue should be empty...
       Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
 
       threadAndTaskWait();
 
+      //Assert that the queued up operations ran and that the correct user state was POSTed and synced
+
+      //assert the hashed email
+      Assert.assertEquals("b642b4217b34b1e8d3bd915fc65c4452", ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      Assert.assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a", ShadowOneSignalRestClient.lastPost.getString("em_s"));
+
+      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
+
+      JSONObject tags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
+      Assert.assertEquals("0",tags.getString("a0"));
+      Assert.assertEquals("1",tags.getString("a1"));
+      Assert.assertEquals("2",tags.getString("a2"));
+      Assert.assertEquals("3",tags.getString("a3"));
+      Assert.assertEquals("4",tags.getString("a4"));
    }
 
    private static boolean failedCurModTest;
