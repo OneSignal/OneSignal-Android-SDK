@@ -41,7 +41,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSNotification;
@@ -948,8 +947,79 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testOneSignalMethodsBeforeDuringInitThreads() throws Exception {
+
+      for(int a = 0; a < 10; a++) {
+         List<Thread> threadList = new ArrayList<>(30);
+         for (int i = 0; i < 30; i++) {
+            Thread lastThread = newSendTagTestThread(Thread.currentThread(), i);
+            lastThread.start();
+            threadList.add(lastThread);
+            Assert.assertFalse(failedCurModTest);
+         }
+
+         for(Thread thread : threadList)
+            thread.join();
+         Assert.assertFalse(failedCurModTest);
+      }
+
+      OneSignalInit();
+
+      for(int a = 0; a < 10; a++) {
+         List<Thread> threadList = new ArrayList<>(30);
+         for (int i = 0; i < 30; i++) {
+            Thread lastThread = newSendTagSetZeroThread(Thread.currentThread(), i);
+            lastThread.start();
+            threadList.add(lastThread);
+            Assert.assertFalse(failedCurModTest);
+         }
+
+         for(Thread thread : threadList)
+            thread.join();
+         Assert.assertFalse(failedCurModTest);
+      }
+
+      threadAndTaskWait();
+
+      JSONObject tags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
+      //assert the tags...which should all be 0
+      for(int a = 0; a < 10; a++) {
+         for (int i = 0; i < 30; i++) {
+            Assert.assertEquals("0",tags.getString("key"+i));
+         }
+      }
+
+   }
+
+   private static Thread newSendTagSetZeroThread(final Thread mainThread, final int id) {
+      //sets all keys to "0"
+      return new Thread(new Runnable() {
+         @Override
+         public void run() {
+            try {
+               OneSignal.sendTags("{\"key" + id + "\": " + 0 + "}");
+            } catch (Throwable t) {
+               // Ignore the flaky Robolectric null error.
+               if (t.getStackTrace()[0].getClassName().equals("org.robolectric.shadows.ShadowMessageQueue"))
+                  return;
+               failedCurModTest = true;
+               mainThread.interrupt();
+               throw t;
+            }
+         }
+      });
+   }
+
+   @Test
+   @Config(shadows = {ShadowFusedLocationApiWrapper.class})
    public void testOneSignalMethodsBeforeInit() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.0f;
+      ShadowFusedLocationApiWrapper.time = 12345L;
+
       //queue up a bunch of actions and check that the queue gains size before init
+      // ----- START QUEUE ------
       OneSignal.syncHashedEmail("test@test.com");
 
       for(int a = 0; a < 500; a++) {
@@ -979,24 +1049,76 @@ public class MainOneSignalClassRunner {
          }
       });
 
-
-//      OneSignal.setSubscription(true);
+      // ----- END QUEUE ------
 
       //there should be 8 pending operations in the queue
       Assert.assertEquals(503, OneSignal.taskQueueWaitingForInit.size());
 
-      OneSignalInit();
+      OneSignalInit(); //starts the pending tasks executor
 
-      OneSignal.sendTag("a499","5"); //this operation should be sent to the executor queue
+      //these operations should be sent straight to the executor which is still running...
+      OneSignal.sendTag("a499","5");
+      OneSignal.sendTag("a498","4");
+      OneSignal.sendTag("a497","3");
+      OneSignal.sendTag("a496","2");
+      OneSignal.sendTag("a495","1");
+      OneSignal.syncHashedEmail("test1@test.com");
 
       //after init, the queue should be empty...
       Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
 
       threadAndTaskWait();
 
-      //Assert that the queued up operations ran and that the correct user state was POSTed and synced
+      //Assert that the queued up operations ran in correct order
+      // and that the correct user state was POSTed and synced
 
-      //assert the hashed email
+      //assert the hashed email which should be test1@test.com, NOT test@test.com
+      Assert.assertEquals("94fba03762323f286d7c3ca9e001c541", ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      Assert.assertEquals("c31ddeb0a3d6cc32d82b494336d9f27444904fd7", ShadowOneSignalRestClient.lastPost.getString("em_s"));
+
+      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
+
+      JSONObject tags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
+      Assert.assertEquals("0",tags.getString("a0"));
+      Assert.assertEquals("1",tags.getString("a1"));
+      Assert.assertEquals("2",tags.getString("a2"));
+      Assert.assertEquals("3",tags.getString("a3"));
+      Assert.assertEquals("4",tags.getString("a4"));
+
+      //we changed these tags while the executor was running...
+      Assert.assertEquals("5",tags.getString("a499"));
+      Assert.assertEquals("4",tags.getString("a498"));
+      Assert.assertEquals("3",tags.getString("a497"));
+      Assert.assertEquals("2",tags.getString("a496"));
+      Assert.assertEquals("1",tags.getString("a495"));
+
+   }
+
+   @Test
+   @Config(shadows = {ShadowFusedLocationApiWrapper.class})
+   public void testOneSignalEmptyPendingTaskQueue() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.0f;
+      ShadowFusedLocationApiWrapper.time = 12345L;
+
+      OneSignalInit(); //starts the pending tasks executor
+
+      OneSignal.syncHashedEmail("test@test.com");
+
+      for(int a = 0; a < 5; a++) {
+         OneSignal.sendTag("a"+a,String.valueOf(a));
+      }
+
+      //the queue should be empty since we already initialized the SDK
+      Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
+
+      threadAndTaskWait();
+
+      //Assert that the queued up operations ran in correct order
+      // and that the correct user state was POSTed and synced
+
+      //assert the hashed email which should be test1@test.com, NOT test@test.com
       Assert.assertEquals("b642b4217b34b1e8d3bd915fc65c4452", ShadowOneSignalRestClient.lastPost.getString("em_m"));
       Assert.assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a", ShadowOneSignalRestClient.lastPost.getString("em_s"));
 
@@ -1008,8 +1130,6 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("2",tags.getString("a2"));
       Assert.assertEquals("3",tags.getString("a3"));
       Assert.assertEquals("4",tags.getString("a4"));
-      Assert.assertEquals("5",tags.getString("a499"));
-
    }
 
    private static boolean failedCurModTest;
