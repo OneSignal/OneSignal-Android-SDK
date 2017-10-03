@@ -952,16 +952,16 @@ public class MainOneSignalClassRunner {
       //queue up a bunch of actions and check that the queue gains size before init
       OneSignal.syncHashedEmail("test@test.com");
 
-      for(int a = 0; a < 5; a++) {
+      for(int a = 0; a < 500; a++) {
          OneSignal.sendTag("a"+a,String.valueOf(a));
       }
 
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            //assert that the tags sent were available
+            //assert that the first 10 tags sent were available
             try {
-               for(int a = 0; a < 5; a++) {
+               for(int a = 0; a < 10; a++) {
                   Assert.assertEquals(String.valueOf(a),tags.get("a"+a));
                }
             }
@@ -983,9 +983,11 @@ public class MainOneSignalClassRunner {
 //      OneSignal.setSubscription(true);
 
       //there should be 8 pending operations in the queue
-      Assert.assertEquals(8, OneSignal.taskQueueWaitingForInit.size());
+      Assert.assertEquals(503, OneSignal.taskQueueWaitingForInit.size());
 
       OneSignalInit();
+
+      OneSignal.sendTag("a499","5"); //this operation should be sent to the executor queue
 
       //after init, the queue should be empty...
       Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
@@ -1006,6 +1008,8 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("2",tags.getString("a2"));
       Assert.assertEquals("3",tags.getString("a3"));
       Assert.assertEquals("4",tags.getString("a4"));
+      Assert.assertEquals("5",tags.getString("a499"));
+
    }
 
    private static boolean failedCurModTest;

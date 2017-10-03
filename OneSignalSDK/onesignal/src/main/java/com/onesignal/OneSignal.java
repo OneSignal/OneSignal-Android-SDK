@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.*;
 
@@ -298,7 +299,9 @@ public class OneSignal {
    private static boolean foreground;
 
    // the concurrent queue in which we pin pending tasks upon finishing initialization
+   static ExecutorService pendingTaskExecutor;
    public static ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
+   static AtomicLong lastTaskId = new AtomicLong();
 
    private static WeakReference<IdsAvailableHandler> idsAvailableHandler  = new WeakReference<>(null);
 
@@ -560,8 +563,30 @@ public class OneSignal {
       startPendingTasks();
    }
 
+   private static void onTaskRan(long taskId) {
+      if(lastTaskId.get() == taskId) {
+         OneSignal.Log(LOG_LEVEL.INFO,"Last Pending Task has been ran, shutting down");
+         pendingTaskExecutor.shutdown();
+      }
+   }
+
+   private static class PendingTaskRunnable implements Runnable {
+      private Runnable innerTask;
+      private long taskId;
+
+      PendingTaskRunnable(Runnable innerTask) {
+         this.innerTask = innerTask;
+      }
+
+      @Override
+      public void run() {
+         innerTask.run();
+         onTaskRan(taskId);
+      }
+   }
+
    private static void startPendingTasks() {
-      ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+      pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
          @Override
          public Thread newThread(@NonNull Runnable runnable) {
             Thread newThread = new Thread(runnable);
@@ -571,10 +596,31 @@ public class OneSignal {
       });
 
       while(!taskQueueWaitingForInit.isEmpty()) {
-         singleThreadExecutor.submit(taskQueueWaitingForInit.poll());
+         pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
+      }
+   }
+
+   private static void addTaskToQueue(PendingTaskRunnable task) {
+      task.taskId = lastTaskId.incrementAndGet();
+
+      if(pendingTaskExecutor == null) {
+         OneSignal.Log(LOG_LEVEL.INFO,"Adding a task to the pending queue with ID: " + task.taskId);
+         //the tasks haven't been executed yet...add them to the waiting queue
+         taskQueueWaitingForInit.add(task);
+      }
+      else if(!pendingTaskExecutor.isShutdown()) {
+         OneSignal.Log(LOG_LEVEL.INFO,"Executor is still running, add to the executor with ID: " + task.taskId);
+         //if the executor isn't done with tasks, submit the task to the executor
+         pendingTaskExecutor.submit(task);
       }
 
-      singleThreadExecutor.shutdown();
+   }
+
+   private static boolean shouldRunTaskThroughQueue() {
+      return (
+              (!initDone && pendingTaskExecutor == null) ||
+              !pendingTaskExecutor.isShutdown()
+      );
    }
 
    private static void startRegistrationOrOnSession() {
@@ -996,10 +1042,10 @@ public class OneSignal {
       };
 
       //If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling syncHashedEmail! " +
                  "Moving this operation to a pending task queue.");
-         taskQueueWaitingForInit.add(runSyncHashedEmail);
+         addTaskToQueue(new PendingTaskRunnable(runSyncHashedEmail));
          return;
       }
 
@@ -1076,10 +1122,10 @@ public class OneSignal {
       };
 
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags!" +
                  "Moving this operation to a pending task queue.");
-         taskQueueWaitingForInit.add(sendTagsRunnable);
+         addTaskToQueue(new PendingTaskRunnable(sendTagsRunnable));
          return;
       }
 
@@ -1268,10 +1314,10 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
                  "Moving this tag operation to a pending queue.");
-         taskQueueWaitingForInit.add(runIdsAvailable);
+         addTaskToQueue(new PendingTaskRunnable(runIdsAvailable));
          return;
       }
 
@@ -1679,10 +1725,10 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Moving subscription action to a waiting task queue.");
-         taskQueueWaitingForInit.add(runSetSubscription);
+         addTaskToQueue(new PendingTaskRunnable(runSetSubscription));
          return;
       }
 
@@ -1729,11 +1775,11 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not prompt for location at this time - moving this operation to a" +
                  "waiting queue.");
-         taskQueueWaitingForInit.add(runPromptLocation);
+         addTaskToQueue(new PendingTaskRunnable(runPromptLocation));
          return;
       }
 
@@ -1810,11 +1856,11 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not clear notifications at this time - moving this operation to" +
                  "a waiting task queue.");
-         taskQueueWaitingForInit.add(runClearOneSignalNotifications);
+         addTaskToQueue(new PendingTaskRunnable(runClearOneSignalNotifications));
          return;
       }
 
@@ -1865,7 +1911,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not clear notification id: " + id + " at this time - moving" +
                  "this operation to a waiting task queue. The notification will still be canceled" +
@@ -1952,11 +1998,11 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || !taskQueueWaitingForInit.isEmpty()) {
+      if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not clear notifications part of group " + group + " - moving" +
                  "this operation to a waiting task queue.");
-         taskQueueWaitingForInit.add(runCancelGroupedNotifications);
+         addTaskToQueue(new PendingTaskRunnable(runCancelGroupedNotifications));
          return;
       }
 
