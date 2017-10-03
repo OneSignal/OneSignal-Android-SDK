@@ -586,17 +586,19 @@ public class OneSignal {
    }
 
    private static void startPendingTasks() {
-      pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-         @Override
-         public Thread newThread(@NonNull Runnable runnable) {
-            Thread newThread = new Thread(runnable);
-            newThread.setName("OS_PENDING_EXECUTOR_" + newThread.getId());
-            return newThread;
-         }
-      });
+      if(!taskQueueWaitingForInit.isEmpty()) {
+         pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(@NonNull Runnable runnable) {
+               Thread newThread = new Thread(runnable);
+               newThread.setName("OS_PENDING_EXECUTOR_" + newThread.getId());
+               return newThread;
+            }
+         });
 
-      while(!taskQueueWaitingForInit.isEmpty()) {
-         pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
+         while(!taskQueueWaitingForInit.isEmpty()) {
+            pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
+         }
       }
    }
 
@@ -617,10 +619,18 @@ public class OneSignal {
    }
 
    private static boolean shouldRunTaskThroughQueue() {
-      return (
-              (!initDone && pendingTaskExecutor == null) ||
-              !pendingTaskExecutor.isShutdown()
-      );
+      if(initDone && pendingTaskExecutor == null) // there never were any waiting tasks
+         return false;
+
+      //if init isn't finished and the pending executor hasn't been defined yet...
+      if(!initDone && pendingTaskExecutor == null)
+         return true;
+
+      //or if the pending executor is alive and hasn't been shutdown yet...
+      if(pendingTaskExecutor != null && !pendingTaskExecutor.isShutdown())
+         return true;
+
+      return false;
    }
 
    private static void startRegistrationOrOnSession() {
