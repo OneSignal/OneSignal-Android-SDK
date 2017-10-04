@@ -1059,7 +1059,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(runSyncHashedEmail);
+      runSyncHashedEmail.run();
    }
 
    /**
@@ -1139,7 +1139,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(sendTagsRunnable);
+      sendTagsRunnable.run();
    }
 
    public static void postNotification(String json, final PostNotificationResponseHandler handler) {
@@ -1246,7 +1246,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(getTagsRunnable);
+      getTagsRunnable.run();
    }
 
    private static void internalFireGetTagsCallback(final WeakReference<GetTagsHandler> getTagsHandler) {
@@ -1331,8 +1331,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(runIdsAvailable);
-
+      runIdsAvailable.run();
    }
 
    private static void fireIdsAvailableCallback() {
@@ -1742,7 +1741,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(runSetSubscription);
+      runSetSubscription.run();
    }
 
    public static void setLocationShared(boolean enable) {
@@ -1793,7 +1792,7 @@ public class OneSignal {
          return;
       }
 
-      osUtils.runOnMainUIThread(runPromptLocation);
+      runPromptLocation.run();
    }
 
    /**
@@ -1874,7 +1873,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(runClearOneSignalNotifications);
+      runClearOneSignalNotifications.run();
    }
 
    /**
@@ -1930,7 +1929,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(runCancelNotification);
+      runCancelNotification.run();
 
       NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancel(id);
@@ -2016,7 +2015,7 @@ public class OneSignal {
          return;
       }
 
-      OSUtils.runOnMainUIThread(runCancelGroupedNotifications);
+      runCancelGroupedNotifications.run();
    }
 
    public static void removeNotificationOpenedHandler() {
