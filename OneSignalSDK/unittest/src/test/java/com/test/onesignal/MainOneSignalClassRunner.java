@@ -947,7 +947,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testOneSignalMethodsBeforeDuringInitThreads() throws Exception {
+   public void testOneSignalMethodsBeforeDuringInitMultipleThreads() throws Exception {
 
       for(int a = 0; a < 10; a++) {
          List<Thread> threadList = new ArrayList<>(30);
@@ -1056,6 +1056,7 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit(); //starts the pending tasks executor
 
+      // ---- EXECUTOR STILL RUNNING -----
       //these operations should be sent straight to the executor which is still running...
       OneSignal.sendTag("a499","5");
       OneSignal.sendTag("a498","4");
@@ -1063,6 +1064,36 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("a496","2");
       OneSignal.sendTag("a495","1");
       OneSignal.syncHashedEmail("test1@test.com");
+
+      OneSignal.getTags(new OneSignal.GetTagsHandler() {
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            try {
+               //assert that the first 10 tags sent were available
+               for(int a = 0; a < 10; a++) {
+                  Assert.assertEquals(String.valueOf(a),tags.get("a"+a));
+               }
+               //these tags should be returned with new values - getTags should be the
+               //last operation with new tag values
+               Assert.assertEquals("5",tags.getString("a499"));
+               Assert.assertEquals("4",tags.getString("a498"));
+               Assert.assertEquals("3",tags.getString("a497"));
+               Assert.assertEquals("2",tags.getString("a496"));
+               Assert.assertEquals("1",tags.getString("a495"));
+            }
+            catch (Exception e) {
+               e.printStackTrace();
+            }
+         }
+      });
+
+      OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+         @Override
+         public void idsAvailable(String userId, String registrationId) {
+            //Assert the userId being returned
+            Assert.assertEquals(ShadowOneSignalRestClient.testUserId, userId);
+         }
+      });
 
       //after init, the queue should be empty...
       Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
@@ -1091,7 +1122,6 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("3",tags.getString("a497"));
       Assert.assertEquals("2",tags.getString("a496"));
       Assert.assertEquals("1",tags.getString("a495"));
-
    }
 
    @Test

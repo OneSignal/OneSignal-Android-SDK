@@ -565,7 +565,7 @@ public class OneSignal {
 
    private static void onTaskRan(long taskId) {
       if(lastTaskId.get() == taskId) {
-         OneSignal.Log(LOG_LEVEL.INFO,"Last Pending Task has been ran, shutting down");
+         OneSignal.Log(LOG_LEVEL.INFO,"Last Pending Task has ran, shutting down");
          pendingTaskExecutor.shutdown();
       }
    }
