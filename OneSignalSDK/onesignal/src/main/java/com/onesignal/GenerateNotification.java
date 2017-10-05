@@ -350,7 +350,7 @@ class GenerateNotification {
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
 
-         try{
+         try {
             notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
          }
          catch (Throwable t) {
@@ -559,8 +559,14 @@ class GenerateNotification {
               .setLargeIcon(getDefaultLargeIcon())
               .setOnlyAlertOnce(updateSummary)
               .setGroup(group)
-              .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
               .setGroupSummary(true);
+
+         try {
+            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         }
+         catch (Throwable t) {
+            //do nothing in this case...Android support lib 26 isn't in the project
+         }
 
          if (!updateSummary)
             summaryBuilder.setTicker(summaryMessage);
@@ -610,7 +616,7 @@ class GenerateNotification {
                        .setGroup(group)
                        .setGroupSummary(true);
 
-         try{
+         try {
             summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
          }
          catch (Throwable t) {
