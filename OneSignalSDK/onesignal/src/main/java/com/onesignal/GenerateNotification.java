@@ -349,8 +349,14 @@ class GenerateNotification {
          PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
-         notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
-   
+
+         try{
+            notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         }
+         catch (Throwable t) {
+            //do nothing in this case...Android support lib 26 isn't in the project
+         }
+
          notification = createSingleNotificationBeforeSummaryBuilder(notifJob, notifBuilder);
          
          createSummaryNotification(notifJob, oneSignalNotificationBuilder);
@@ -602,8 +608,14 @@ class GenerateNotification {
                        .setDeleteIntent(summaryDeleteIntent)
                        .setOnlyAlertOnce(updateSummary)
                        .setGroup(group)
-                       .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
                        .setGroupSummary(true);
+
+         try{
+            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         }
+         catch (Throwable t) {
+            //do nothing in this case...Android support lib 26 isn't in the project
+         }
 
          summaryNotification = summaryBuilder.build();
          addXiaomiSettings(notifBuilder, summaryNotification);
