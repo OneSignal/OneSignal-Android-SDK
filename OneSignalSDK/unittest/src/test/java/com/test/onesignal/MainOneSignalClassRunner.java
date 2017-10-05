@@ -1049,9 +1049,10 @@ public class MainOneSignalClassRunner {
          }
       });
 
+
       // ----- END QUEUE ------
 
-      //there should be 8 pending operations in the queue
+      //there should be 503 pending operations in the queue
       Assert.assertEquals(503, OneSignal.taskQueueWaitingForInit.size());
 
       OneSignalInit(); //starts the pending tasks executor
@@ -1160,6 +1161,28 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("2",tags.getString("a2"));
       Assert.assertEquals("3",tags.getString("a3"));
       Assert.assertEquals("4",tags.getString("a4"));
+   }
+
+   @Test
+   public void testIdsHandlerWeakReference() throws Exception {
+      // test a nullified/collected IdsAvailableHandler - test the WeakReference
+      OneSignal.IdsAvailableHandler nullableHandler = new OneSignal.IdsAvailableHandler() {
+         @Override
+         public void idsAvailable(String userId, String registrationId) {
+            //if we reach here...then fail
+            Assert.assertTrue(false);
+         }
+      };
+      OneSignal.idsAvailable(nullableHandler);
+      nullableHandler = null;
+      System.gc();
+
+      OneSignalInit(); //starts the pending tasks executor
+
+      threadAndTaskWait();
+
+      Assert.assertTrue(nullableHandler == null);
+
    }
 
    private static boolean failedCurModTest;
