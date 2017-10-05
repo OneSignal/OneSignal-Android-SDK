@@ -349,7 +349,14 @@ class GenerateNotification {
          PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
          notifBuilder.setDeleteIntent(deleteIntent);
          notifBuilder.setGroup(group);
-   
+
+         try {
+            notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         }
+         catch (Throwable t) {
+            //do nothing in this case...Android support lib 26 isn't in the project
+         }
+
          notification = createSingleNotificationBeforeSummaryBuilder(notifJob, notifBuilder);
          
          createSummaryNotification(notifJob, oneSignalNotificationBuilder);
@@ -379,19 +386,19 @@ class GenerateNotification {
    private static Notification createSingleNotificationBeforeSummaryBuilder(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
       // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
       // Android 4.2 and older just post the summary only.
-      boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT <Build.VERSION_CODES.N
+      boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N
                                        && !notifJob.restoring;
       
       if (singleNotifWorkArounds) {
          if (notifJob.overriddenSound != null && !notifJob.overriddenSound.equals(notifJob.orgSound))
             notifBuilder.setSound(null);
       }
-   
+
       Notification notification = notifBuilder.build();
-      
+
       if (singleNotifWorkArounds)
          notifBuilder.setSound(notifJob.overriddenSound);
-      
+
       return notification;
    }
 
@@ -554,6 +561,13 @@ class GenerateNotification {
               .setGroup(group)
               .setGroupSummary(true);
 
+         try {
+            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         }
+         catch (Throwable t) {
+            //do nothing in this case...Android support lib 26 isn't in the project
+         }
+
          if (!updateSummary)
             summaryBuilder.setTicker(summaryMessage);
 
@@ -601,6 +615,13 @@ class GenerateNotification {
                        .setOnlyAlertOnce(updateSummary)
                        .setGroup(group)
                        .setGroupSummary(true);
+
+         try {
+            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         }
+         catch (Throwable t) {
+            //do nothing in this case...Android support lib 26 isn't in the project
+         }
 
          summaryNotification = summaryBuilder.build();
          addXiaomiSettings(notifBuilder, summaryNotification);
