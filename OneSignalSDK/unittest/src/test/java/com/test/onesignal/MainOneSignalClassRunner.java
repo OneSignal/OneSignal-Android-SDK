@@ -100,6 +100,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
@@ -1041,13 +1042,18 @@ public class MainOneSignalClassRunner {
          }
       });
 
-      OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+      final AtomicBoolean callbackFired = new AtomicBoolean(false);
+      OneSignal.IdsAvailableHandler idsAvailableHandler = new OneSignal.IdsAvailableHandler() {
          @Override
          public void idsAvailable(String userId, String registrationId) {
             //Assert the userId being returned
+            callbackFired.set(true);
             Assert.assertEquals(ShadowOneSignalRestClient.testUserId, userId);
          }
-      });
+      };
+
+      OneSignal.idsAvailable(idsAvailableHandler);
+      System.gc(); //make sure the IdsAvailableHandler is retained...
 
 
       // ----- END QUEUE ------
@@ -1088,14 +1094,6 @@ public class MainOneSignalClassRunner {
          }
       });
 
-      OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
-         @Override
-         public void idsAvailable(String userId, String registrationId) {
-            //Assert the userId being returned
-            Assert.assertEquals(ShadowOneSignalRestClient.testUserId, userId);
-         }
-      });
-
       //after init, the queue should be empty...
       Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
 
@@ -1103,6 +1101,7 @@ public class MainOneSignalClassRunner {
 
       //Assert that the queued up operations ran in correct order
       // and that the correct user state was POSTed and synced
+      Assert.assertTrue(callbackFired.get()); //check if the callback got fired
 
       //assert the hashed email which should be test1@test.com, NOT test@test.com
       Assert.assertEquals("94fba03762323f286d7c3ca9e001c541", ShadowOneSignalRestClient.lastPost.getString("em_m"));
