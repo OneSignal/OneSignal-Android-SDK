@@ -303,7 +303,7 @@ public class OneSignal {
    public static ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
    static AtomicLong lastTaskId = new AtomicLong();
 
-   private static WeakReference<IdsAvailableHandler> idsAvailableHandler  = new WeakReference<>(null);
+   private static IdsAvailableHandler idsAvailableHandler;
 
    private static long lastTrackedFocusTime = 1, unSentActiveTime = -1;
 
@@ -331,7 +331,7 @@ public class OneSignal {
    private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
 
-   private static WeakReference<GetTagsHandler> pendingGetTagsHandler = new WeakReference<>(null);
+   private static GetTagsHandler pendingGetTagsHandler;
    private static boolean getTagsCall;
 
    private static boolean waitingToPostStateSync;
@@ -1222,7 +1222,7 @@ public class OneSignal {
     *                       Calls {@link GetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
     */
    public static void getTags(final GetTagsHandler getTagsHandler) {
-      pendingGetTagsHandler = new WeakReference<>(getTagsHandler);
+      pendingGetTagsHandler = getTagsHandler;
 
       Runnable getTagsRunnable = new Runnable() {
          @Override
@@ -1249,8 +1249,8 @@ public class OneSignal {
       getTagsRunnable.run();
    }
 
-   private static void internalFireGetTagsCallback(final WeakReference<GetTagsHandler> getTagsHandler) {
-      if (getTagsHandler.get() == null) return;
+   private static void internalFireGetTagsCallback(final GetTagsHandler getTagsHandler) {
+      if (getTagsHandler == null) return;
 
       new Thread(new Runnable() {
          @Override
@@ -1258,9 +1258,9 @@ public class OneSignal {
             final OneSignalStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
             if (tags.serverSuccess) getTagsCall = true;
             if (tags.result == null || tags.toString().equals("{}"))
-               getTagsHandler.get().tagsAvailable(null);
+               getTagsHandler.tagsAvailable(null);
             else
-               getTagsHandler.get().tagsAvailable(tags.result);
+               getTagsHandler.tagsAvailable(tags.result);
          }
       }, "OS_GETTAGS_CALLBACK").start();
    }
@@ -1309,7 +1309,7 @@ public class OneSignal {
    }
 
    public static void idsAvailable(IdsAvailableHandler inIdsAvailableHandler) {
-      idsAvailableHandler = new WeakReference<>(inIdsAvailableHandler);
+      idsAvailableHandler = inIdsAvailableHandler;
 
       Runnable runIdsAvailable = new Runnable() {
          @Override
@@ -1335,7 +1335,7 @@ public class OneSignal {
    }
 
    private static void fireIdsAvailableCallback() {
-      if (idsAvailableHandler.get() != null) {
+      if (idsAvailableHandler != null) {
          OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
@@ -1346,7 +1346,7 @@ public class OneSignal {
    }
 
    private synchronized static void internalFireIdsAvailableCallback() {
-      if (idsAvailableHandler.get() == null)
+      if (idsAvailableHandler == null)
          return;
 
       String regId = OneSignalStateSynchronizer.getRegistrationId();
@@ -1357,10 +1357,10 @@ public class OneSignal {
       if (userId == null)
          return;
 
-      idsAvailableHandler.get().idsAvailable(userId, regId);
+      idsAvailableHandler.idsAvailable(userId, regId);
 
       if (regId != null)
-         idsAvailableHandler = new WeakReference<>(null);
+         idsAvailableHandler = null;
    }
 
    static void sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {

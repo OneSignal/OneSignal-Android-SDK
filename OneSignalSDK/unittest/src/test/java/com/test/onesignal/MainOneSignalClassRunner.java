@@ -1163,28 +1163,6 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("4",tags.getString("a4"));
    }
 
-   @Test
-   public void testIdsHandlerWeakReference() throws Exception {
-      // test a nullified/collected IdsAvailableHandler - test the WeakReference
-      OneSignal.IdsAvailableHandler nullableHandler = new OneSignal.IdsAvailableHandler() {
-         @Override
-         public void idsAvailable(String userId, String registrationId) {
-            //if we reach here...then fail
-            Assert.assertTrue(false);
-         }
-      };
-      OneSignal.idsAvailable(nullableHandler);
-      nullableHandler = null;
-      System.gc();
-
-      OneSignalInit(); //starts the pending tasks executor
-
-      threadAndTaskWait();
-
-      Assert.assertTrue(nullableHandler == null);
-
-   }
-
    private static boolean failedCurModTest;
    @Test
    public void testSendTagsConcurrentModificationException() throws Exception {
