@@ -29,6 +29,7 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.ref.WeakReference;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -38,6 +39,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.*;
 
@@ -48,7 +54,6 @@ import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -210,7 +215,7 @@ public class OneSignal {
       /**
        * Prompts the user for location permissions.
        * This allows for geotagging so you can send notifications to users based on location.
-       * This does not accomodate any rationale-gating that is encouraged before requesting
+       * This does not accommodate any rationale-gating that is encouraged before requesting
        * permissions from the user.
        * <br/><br/>
        * See {@link #promptLocation()} for more details on how to manually prompt location permissions.
@@ -292,6 +297,11 @@ public class OneSignal {
 
    static boolean initDone;
    private static boolean foreground;
+
+   // the concurrent queue in which we pin pending tasks upon finishing initialization
+   static ExecutorService pendingTaskExecutor;
+   public static ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
+   static AtomicLong lastTaskId = new AtomicLong();
 
    private static IdsAvailableHandler idsAvailableHandler;
 
@@ -548,6 +558,79 @@ public class OneSignal {
          trackGooglePurchase = new TrackGooglePurchase(appContext);
       
       initDone = true;
+
+      //clean up any pending tasks that were queued up before initialization
+      startPendingTasks();
+   }
+
+   private static void onTaskRan(long taskId) {
+      if(lastTaskId.get() == taskId) {
+         OneSignal.Log(LOG_LEVEL.INFO,"Last Pending Task has ran, shutting down");
+         pendingTaskExecutor.shutdown();
+      }
+   }
+
+   private static class PendingTaskRunnable implements Runnable {
+      private Runnable innerTask;
+      private long taskId;
+
+      PendingTaskRunnable(Runnable innerTask) {
+         this.innerTask = innerTask;
+      }
+
+      @Override
+      public void run() {
+         innerTask.run();
+         onTaskRan(taskId);
+      }
+   }
+
+   private static void startPendingTasks() {
+      if(!taskQueueWaitingForInit.isEmpty()) {
+         pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(@NonNull Runnable runnable) {
+               Thread newThread = new Thread(runnable);
+               newThread.setName("OS_PENDING_EXECUTOR_" + newThread.getId());
+               return newThread;
+            }
+         });
+
+         while(!taskQueueWaitingForInit.isEmpty()) {
+            pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
+         }
+      }
+   }
+
+   private static void addTaskToQueue(PendingTaskRunnable task) {
+      task.taskId = lastTaskId.incrementAndGet();
+
+      if(pendingTaskExecutor == null) {
+         OneSignal.Log(LOG_LEVEL.INFO,"Adding a task to the pending queue with ID: " + task.taskId);
+         //the tasks haven't been executed yet...add them to the waiting queue
+         taskQueueWaitingForInit.add(task);
+      }
+      else if(!pendingTaskExecutor.isShutdown()) {
+         OneSignal.Log(LOG_LEVEL.INFO,"Executor is still running, add to the executor with ID: " + task.taskId);
+         //if the executor isn't done with tasks, submit the task to the executor
+         pendingTaskExecutor.submit(task);
+      }
+
+   }
+
+   private static boolean shouldRunTaskThroughQueue() {
+      if(initDone && pendingTaskExecutor == null) // there never were any waiting tasks
+         return false;
+
+      //if init isn't finished and the pending executor hasn't been defined yet...
+      if(!initDone && pendingTaskExecutor == null)
+         return true;
+
+      //or if the pending executor is alive and hasn't been shutdown yet...
+      if(pendingTaskExecutor != null && !pendingTaskExecutor.isShutdown())
+         return true;
+
+      return false;
    }
 
    private static void startRegistrationOrOnSession() {
@@ -957,16 +1040,26 @@ public class OneSignal {
     * reach the user at the most optimal time of the day.
     * @param email the email that you want to sync with the user
     */
-   public static void syncHashedEmail(String email) {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before calling syncHashedEmail! Omitting this operation.");
+   public static void syncHashedEmail(final String email) {
+      Runnable runSyncHashedEmail = new Runnable() {
+         @Override
+         public void run() {
+            if (OSUtils.isValidEmail(email)) {
+               String trimmedEmail = email.trim();
+               OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
+            }
+         }
+      };
+
+      //If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling syncHashedEmail! " +
+                 "Moving this operation to a pending task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runSyncHashedEmail));
          return;
       }
 
-      if (OSUtils.isValidEmail(email)) {
-         email = email.trim();
-         OneSignalStateSynchronizer.syncHashedEmail(email.toLowerCase());
-      }
+      runSyncHashedEmail.run();
    }
 
    /**
@@ -1003,40 +1096,50 @@ public class OneSignal {
     *                  You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
     *
     */
-   public static void sendTags(JSONObject keyValues) {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags! Omitting this tag operation.");
+   public static void sendTags(final JSONObject keyValues) {
+      Runnable sendTagsRunnable = new Runnable() {
+         @Override
+         public void run() {
+            if (keyValues == null) return;
+
+            JSONObject existingKeys = OneSignalStateSynchronizer.getTags(false).result;
+
+            JSONObject toSend = new JSONObject();
+
+            Iterator<String> keys = keyValues.keys();
+            String key;
+            Object value;
+
+            while (keys.hasNext()) {
+               key = keys.next();
+               try {
+                  value = keyValues.opt(key);
+                  if (value instanceof JSONArray || value instanceof JSONObject)
+                     Log(LOG_LEVEL.ERROR, "Omitting key '" + key  + "'! sendTags DO NOT supported nested values!");
+                  else if (keyValues.isNull(key) || "".equals(value)) {
+                     if (existingKeys != null && existingKeys.has(key))
+                        toSend.put(key, "");
+                  }
+                  else
+                     toSend.put(key, value.toString());
+               }
+               catch (Throwable t) {}
+            }
+
+            if (!toSend.toString().equals("{}"))
+               OneSignalStateSynchronizer.sendTags(toSend);
+         }
+      };
+
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags!" +
+                 "Moving this operation to a pending task queue.");
+         addTaskToQueue(new PendingTaskRunnable(sendTagsRunnable));
          return;
       }
 
-      if (keyValues == null) return;
-
-      JSONObject existingKeys = OneSignalStateSynchronizer.getTags(false).result;
-
-      JSONObject toSend = new JSONObject();
-
-      Iterator<String> keys = keyValues.keys();
-      String key;
-      Object value;
-
-      while (keys.hasNext()) {
-         key = keys.next();
-         try {
-            value = keyValues.opt(key);
-            if (value instanceof JSONArray || value instanceof JSONObject)
-               Log(LOG_LEVEL.ERROR, "Omitting key '" + key  + "'! sendTags DO NOT supported nested values!");
-            else if (keyValues.isNull(key) || "".equals(value)) {
-               if (existingKeys != null && existingKeys.has(key))
-                  toSend.put(key, "");
-            }
-            else
-               toSend.put(key, value.toString());
-         }
-         catch (Throwable t) {}
-      }
-
-      if (!toSend.toString().equals("{}"))
-         OneSignalStateSynchronizer.sendTags(toSend);
+      sendTagsRunnable.run();
    }
 
    public static void postNotification(String json, final PostNotificationResponseHandler handler) {
@@ -1119,20 +1222,31 @@ public class OneSignal {
     *                       Calls {@link GetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
     */
    public static void getTags(final GetTagsHandler getTagsHandler) {
+      pendingGetTagsHandler = getTagsHandler;
+
+      Runnable getTagsRunnable = new Runnable() {
+         @Override
+         public void run() {
+            if (getTagsHandler == null) {
+               Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
+               return;
+            }
+
+            if (getUserId() == null) {
+               return;
+            }
+            internalFireGetTagsCallback(pendingGetTagsHandler);
+         }
+      };
+
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! Omitting this tag operation.");
-         return;
-      }
-      if (getTagsHandler == null) {
-         Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
+                 "Moving this tag operation to a pending queue.");
+         taskQueueWaitingForInit.add(getTagsRunnable);
          return;
       }
 
-      if (getUserId() == null) {
-         pendingGetTagsHandler = getTagsHandler;
-         return;
-      }
-      internalFireGetTagsCallback(getTagsHandler);
+      getTagsRunnable.run();
    }
 
    private static void internalFireGetTagsCallback(final GetTagsHandler getTagsHandler) {
@@ -1197,8 +1311,27 @@ public class OneSignal {
    public static void idsAvailable(IdsAvailableHandler inIdsAvailableHandler) {
       idsAvailableHandler = inIdsAvailableHandler;
 
-      if (getUserId() != null)
-         internalFireIdsAvailableCallback();
+      Runnable runIdsAvailable = new Runnable() {
+         @Override
+         public void run() {
+            if (getUserId() != null)
+               OSUtils.runOnMainUIThread(new Runnable() {
+                  @Override
+                  public void run() {
+                     internalFireIdsAvailableCallback();
+                  }
+               });
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
+                 "Moving this tag operation to a pending queue.");
+         addTaskToQueue(new PendingTaskRunnable(runIdsAvailable));
+         return;
+      }
+
+      runIdsAvailable.run();
    }
 
    private static void fireIdsAvailableCallback() {
@@ -1592,14 +1725,23 @@ public class OneSignal {
     * OneSignal. You can pass {@code true} later to opt users back into notifications.
     * @param enable whether to subscribe the user to notifications or not
     */
-   public static void setSubscription(boolean enable) {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not set subscription.");
+   public static void setSubscription(final boolean enable) {
+      Runnable runSetSubscription = new Runnable() {
+         @Override
+         public void run() {
+            getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
+            OneSignalStateSynchronizer.setSubscription(enable);
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Moving subscription action to a waiting task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runSetSubscription));
          return;
       }
-      
-      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
-      OneSignalStateSynchronizer.setSubscription(enable);
+
+      runSetSubscription.run();
    }
 
    public static void setLocationShared(boolean enable) {
@@ -1627,20 +1769,30 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
     */
    public static void promptLocation() {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not prompt for location.");
+      Runnable runPromptLocation = new Runnable() {
+         @Override
+         public void run() {
+            LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
+               @Override
+               public void complete(LocationGMS.LocationPoint point) {
+                  if (point != null)
+                     OneSignalStateSynchronizer.updateLocation(point);
+               }
+            });
+
+            promptedLocation = true;
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Could not prompt for location at this time - moving this operation to a" +
+                 "waiting queue.");
+         addTaskToQueue(new PendingTaskRunnable(runPromptLocation));
          return;
       }
 
-      LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
-         @Override
-         public void complete(LocationGMS.LocationPoint point) {
-            if (point != null)
-               OneSignalStateSynchronizer.updateLocation(point);
-         }
-      });
-  
-      promptedLocation = true;
+      runPromptLocation.run();
    }
 
    /**
@@ -1649,69 +1801,79 @@ public class OneSignal {
     * your app is restarted.
     */
    public static void clearOneSignalNotifications() {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notifications.");
+      Runnable runClearOneSignalNotifications = new Runnable() {
+         @Override
+         public void run() {
+            NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            Cursor cursor = null;
+            try {
+               SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+
+               String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
+
+               cursor = readableDb.query(
+                       OneSignalDbContract.NotificationTable.TABLE_NAME,
+                       retColumn,
+                       OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                               OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
+                       null,
+                       null,                                                    // group by
+                       null,                                                    // filter by row groups
+                       null                                                     // sort order
+               );
+
+               if (cursor.moveToFirst()) {
+                  do {
+                     int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+                     notificationManager.cancel(existingId);
+                  } while (cursor.moveToNext());
+               }
+
+
+               // Mark all notifications as dismissed unless they were already opened.
+               SQLiteDatabase writableDb = null;
+               try {
+                  writableDb = dbHelper.getWritableDbWithRetries();
+                  writableDb.beginTransaction();
+
+                  String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
+                  ContentValues values = new ContentValues();
+                  values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+                  writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+                  writableDb.setTransactionSuccessful();
+               } catch (Throwable t) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking all notifications as dismissed! ", t);
+               } finally {
+                  if (writableDb != null) {
+                     try {
+                        writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+                     } catch (Throwable t) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+                     }
+                  }
+               }
+
+               BadgeCountUpdater.updateCount(0, appContext);
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error canceling all notifications! ", t);
+            } finally {
+               if (cursor != null)
+                  cursor.close();
+            }
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Could not clear notifications at this time - moving this operation to" +
+                 "a waiting task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runClearOneSignalNotifications));
          return;
       }
 
-      NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
-
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
-      Cursor cursor = null;
-      try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
-   
-         String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
-   
-         cursor = readableDb.query(
-             OneSignalDbContract.NotificationTable.TABLE_NAME,
-             retColumn,
-             OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                 OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
-             null,
-             null,                                                    // group by
-             null,                                                    // filter by row groups
-             null                                                     // sort order
-         );
-   
-         if (cursor.moveToFirst()) {
-            do {
-               int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-               notificationManager.cancel(existingId);
-            } while (cursor.moveToNext());
-         }
-   
-   
-         // Mark all notifications as dismissed unless they were already opened.
-         SQLiteDatabase writableDb = null;
-         try {
-            writableDb = dbHelper.getWritableDbWithRetries();
-            writableDb.beginTransaction();
-            
-            String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
-            ContentValues values = new ContentValues();
-            values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-            writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-            writableDb.setTransactionSuccessful();
-         } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking all notifications as dismissed! ", t);
-         } finally {
-            if (writableDb != null) {
-               try {
-                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-               } catch (Throwable t) {
-                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-               }
-            }
-         }
-   
-         BadgeCountUpdater.updateCount(0, appContext);
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error canceling all notifications! ", t);
-      } finally {
-         if (cursor != null)
-            cursor.close();
-      }
+      runClearOneSignalNotifications.run();
    }
 
    /**
@@ -1720,119 +1882,140 @@ public class OneSignal {
     * when your app is restarted.
     * @param id
     */
-   public static void cancelNotification(int id) {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notification id: " + id);
+   public static void cancelNotification(final int id) {
+      Runnable runCancelNotification = new Runnable() {
+         @Override
+         public void run() {
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            SQLiteDatabase writableDb = null;
+            try {
+               writableDb = dbHelper.getWritableDbWithRetries();
+               writableDb.beginTransaction();
+
+               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
+                       NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                       NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
+
+               ContentValues values = new ContentValues();
+               values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+
+               int records = writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+
+               if (records > 0)
+                  NotificationSummaryManager.updatePossibleDependentSummaryOnDismiss(appContext, writableDb, id);
+               BadgeCountUpdater.update(writableDb, appContext);
+
+               writableDb.setTransactionSuccessful();
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notification id " + id + " as dismissed! ", t);
+            } finally {
+               if (writableDb != null) {
+                  try {
+                     writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+                  } catch (Throwable t) {
+                     OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+                  }
+               }
+            }
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Could not clear notification id: " + id + " at this time - moving" +
+                 "this operation to a waiting task queue. The notification will still be canceled" +
+                 "from NotificationManager at this time.");
+         taskQueueWaitingForInit.add(runCancelNotification);
          return;
       }
 
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
-      SQLiteDatabase writableDb = null;
-      try {
-         writableDb = dbHelper.getWritableDbWithRetries();
-         writableDb.beginTransaction();
-         
-         String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
-                           NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                           NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
-
-         ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-
-         int records = writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-         
-         if (records > 0)
-            NotificationSummaryManager.updatePossibleDependentSummaryOnDismiss(appContext, writableDb, id);
-         BadgeCountUpdater.update(writableDb, appContext);
-         
-         writableDb.setTransactionSuccessful();
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notification id " + id + " as dismissed! ", t);
-      } finally {
-         if (writableDb != null) {
-            try {
-               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (Throwable t) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-            }
-         }
-      }
+      runCancelNotification.run();
 
       NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancel(id);
    }
    
    
-   public static void cancelGroupedNotifications(String group) {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not clear notifications part of group " + group);
-         return;
-      }
-   
-      NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
-      
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
-      Cursor cursor = null;
-   
-      try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
-      
-         String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID };
-      
-         String whereStr =  NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
-             NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-             NotificationTable.COLUMN_NAME_OPENED + " = 0";
-         String[] whereArgs = { group };
-      
-         cursor = readableDb.query(
-             NotificationTable.TABLE_NAME,
-             retColumn,
-             whereStr,
-             whereArgs,
-             null, null, null);
-         
-         while (cursor.moveToNext()) {
-            int notifId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            if (notifId != -1)
-               notificationManager.cancel(notifId);
-         }
-      }
-      catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error getting android notifications part of group: " + group, t);
-      }
-      finally {
-         if (cursor != null && !cursor.isClosed())
-            cursor.close();
-      }
-      
-      SQLiteDatabase writableDb = null;
-      try {
-         writableDb = dbHelper.getWritableDbWithRetries();
-         writableDb.beginTransaction();
-      
-         String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
-             NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-             NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
-         String[] whereArgs = { group };
-      
-         ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-      
-         writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, whereArgs);
-         BadgeCountUpdater.update(writableDb, appContext);
-      
-         writableDb.setTransactionSuccessful();
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notifications with group " + group + " as dismissed! ", t);
-      } finally {
-         if (writableDb != null) {
+   public static void cancelGroupedNotifications(final String group) {
+      Runnable runCancelGroupedNotifications = new Runnable() {
+         @Override
+         public void run() {
+            NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            Cursor cursor = null;
+
             try {
-               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+
+               String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID };
+
+               String whereStr =  NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+                       NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                       NotificationTable.COLUMN_NAME_OPENED + " = 0";
+               String[] whereArgs = { group };
+
+               cursor = readableDb.query(
+                       NotificationTable.TABLE_NAME,
+                       retColumn,
+                       whereStr,
+                       whereArgs,
+                       null, null, null);
+
+               while (cursor.moveToNext()) {
+                  int notifId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+                  if (notifId != -1)
+                     notificationManager.cancel(notifId);
+               }
+            }
+            catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error getting android notifications part of group: " + group, t);
+            }
+            finally {
+               if (cursor != null && !cursor.isClosed())
+                  cursor.close();
+            }
+
+            SQLiteDatabase writableDb = null;
+            try {
+               writableDb = dbHelper.getWritableDbWithRetries();
+               writableDb.beginTransaction();
+
+               String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+                       NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                       NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
+               String[] whereArgs = { group };
+
+               ContentValues values = new ContentValues();
+               values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+
+               writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, whereArgs);
+               BadgeCountUpdater.update(writableDb, appContext);
+
+               writableDb.setTransactionSuccessful();
             } catch (Throwable t) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error marking a notifications with group " + group + " as dismissed! ", t);
+            } finally {
+               if (writableDb != null) {
+                  try {
+                     writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+                  } catch (Throwable t) {
+                     OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+                  }
+               }
             }
          }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Could not clear notifications part of group " + group + " - moving" +
+                 "this operation to a waiting task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runCancelGroupedNotifications));
+         return;
       }
+
+      runCancelGroupedNotifications.run();
    }
 
    public static void removeNotificationOpenedHandler() {
