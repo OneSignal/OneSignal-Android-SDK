@@ -100,11 +100,7 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationopenedhandler-">NotificationOpenedHandler | OneSignal Docs</a>
     */
    public interface NotificationOpenedHandler {
-      /**
-       * Fires when a user taps on a notification.
-       * @param result a {@link OSNotificationOpenResult} with the user's response and properties of this notification
-       */
-      void notificationOpened(OSNotificationOpenResult result);
+      void notificationOpened(String message, JSONObject additionalData, boolean isActive);
    }
 
    /**
@@ -1155,6 +1151,21 @@ public class OneSignal {
       waitingToPostStateSync = false;
    }
 
+
+   // MARMALADE SDK COMPATIBILITY METHOD STUBS
+   public static void onPaused() {}
+   public static void onResumed() {}
+   public static void enableInAppAlertNotification(boolean enable) {
+      setInFocusDisplaying(OSInFocusDisplayOption.InAppAlert);
+   }
+   public static void enableNotificationsWhenActive(boolean enable) {
+      if(enable && mInitBuilder.mDisplayOption != OSInFocusDisplayOption.Notification)
+         setInFocusDisplaying(OSInFocusDisplayOption.Notification);
+      else if(!enable)
+         setInFocusDisplaying(OSInFocusDisplayOption.None);
+   }
+
+
    /**
     * @deprecated Please migrate to setEmail. This will be removed in next major release
     */
@@ -1699,7 +1710,11 @@ public class OneSignal {
       OSUtils.runOnMainUIThread(new Runnable() {
          @Override
          public void run() {
-            mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
+            String message = openedResult.notification.payload.body;
+            JSONObject additionalData  = openedResult.notification.payload.additionalData;
+            boolean isActive = openedResult.notification.isAppInFocus;
+
+            mInitBuilder.mNotificationOpenedHandler.notificationOpened(message, additionalData, isActive);
          }
       });
    }
