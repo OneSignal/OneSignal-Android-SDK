@@ -33,6 +33,8 @@ import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
+import android.app.job.JobScheduler;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
@@ -57,6 +59,7 @@ import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
@@ -67,6 +70,7 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.StaticResetHelper;
+import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
@@ -196,6 +200,24 @@ public class GenerateNotificationRunner {
       
       NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
       Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
+   }
+
+   @Test
+   @Config(sdk = Build.VERSION_CODES.O)
+   public void shouldNotRestoreActiveNotifs() throws Exception {
+      // Display a notification
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+
+      //try to restore notifs
+      NotificationRestorer.restore(blankActivity);
+
+      threadAndTaskWait();
+
+      //assert that no restoration jobs were scheduled...
+      JobScheduler scheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      Assert.assertTrue(scheduler.getAllPendingJobs().isEmpty());
    }
    
    
