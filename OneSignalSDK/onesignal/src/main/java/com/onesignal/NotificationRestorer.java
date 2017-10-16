@@ -48,7 +48,7 @@ import java.util.Random;
 
 class NotificationRestorer {
 
-   private static final int RESTORE_KICKOFF_REQUEST_CODE = 2071862119;
+   private static final int RESTORE_KICKOFF_REQUEST_CODE = 2071862120;
 
    static final String[] COLUMNS_FOR_RESTORE = {
        NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
