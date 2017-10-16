@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
@@ -45,6 +47,8 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import java.util.Random;
 
 class NotificationRestorer {
+
+   private static final int RESTORE_KICKOFF_REQUEST_CODE = 2071862119;
 
    static final String[] COLUMNS_FOR_RESTORE = {
        NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
@@ -68,6 +72,8 @@ class NotificationRestorer {
       if (restored)
          return;
       restored = true;
+
+      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "restoring notifications");
 
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       SQLiteDatabase writableDb = null;
@@ -187,6 +193,36 @@ class NotificationRestorer {
          intentForService.setComponent(new ComponentName(context.getPackageName(),
              NotificationRestoreService.class.getName()));
          WakefulBroadcastReceiver.startWakefulService(context, intentForService);
+      }
+   }
+
+   static void startDelayedRestoreTaskFromReceiver(Context context) {
+      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+         // NotificationRestorer#restore is Code-sensitive to Android O
+         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreKickoffJob");
+
+         //set the job id to android notif id - that way we don't restore any notif twice
+         JobInfo.Builder jobBuilder = new JobInfo.Builder(RESTORE_KICKOFF_REQUEST_CODE,
+                 new ComponentName(context, RestoreKickoffJobService.class));
+         JobInfo job = jobBuilder.setOverrideDeadline(15*1000)
+                 .setMinimumLatency(15*1000)
+                 .build();
+         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+         jobScheduler.schedule(job);
+      }
+      else {
+         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreKickoffAlarmTask");
+
+         Intent intentForService = new Intent();
+         intentForService.setComponent(new ComponentName(context.getPackageName(),
+                 NotificationRestoreService.class.getName()));
+
+         PendingIntent pendingIntent = PendingIntent.getService(context,
+                 RESTORE_KICKOFF_REQUEST_CODE, intentForService, PendingIntent.FLAG_CANCEL_CURRENT);
+
+         long scheduleTime = System.currentTimeMillis()+(15*1000);
+         AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+         alarm.set(AlarmManager.RTC_WAKEUP, scheduleTime, pendingIntent);
       }
    }
 }

@@ -36,11 +36,6 @@ public class UpgradeReceiver extends WakefulBroadcastReceiver {
 
    @Override
    public void onReceive(final Context context, Intent intent) {
-      new Handler().postDelayed(new Runnable() {
-         @Override
-         public void run() {
-            NotificationRestorer.startRestoreTaskFromReceiver(context);
-         }
-      }, 1000*10);
+      NotificationRestorer.startDelayedRestoreTaskFromReceiver(context);
    }
 }
