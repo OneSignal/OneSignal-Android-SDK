@@ -55,6 +55,7 @@ class TrackFirebaseAnalytics {
    private Context appContext;
 
    private static AtomicLong lastReceivedTime;
+   private static OSNotificationPayload lastReceivedPayload;
 
    private static final String EVENT_NOTIFICATION_OPENED = "os_notification_opened";
    private static final String EVENT_NOTIFICATION_INFLUENCE_OPEN = "os_notification_influence_open";
@@ -76,6 +77,35 @@ class TrackFirebaseAnalytics {
       }
    }
 
+   void trackInfluenceOpenEvent() {
+      try {
+
+         long currentTime = System.currentTimeMillis();
+         if(lastReceivedTime != null &&
+                 currentTime-lastReceivedTime.get() < 1000*60*2 &&
+                 lastReceivedPayload != null) {
+
+            Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);
+
+            Method trackMethod = getTrackMethod(FirebaseAnalyticsClass);
+
+            String event = EVENT_NOTIFICATION_INFLUENCE_OPEN;
+
+           //construct the firebase analytics event bundle
+            Bundle bundle = new Bundle();
+            bundle.putString("source", "OneSignal");
+            bundle.putString("medium", "notification");
+            bundle.putString("notification_id", lastReceivedPayload.notificationID);
+            bundle.putString("campaign", getCampaignNameFromPayload(lastReceivedPayload));
+
+            trackMethod.invoke(firebaseAnalyticsInstance, event, bundle);
+         }
+
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
+   }
+
    void trackOpenedEvent(OSNotificationOpenResult openResult) {
       try {
 
@@ -85,13 +115,6 @@ class TrackFirebaseAnalytics {
 
          Method trackMethod = getTrackMethod(FirebaseAnalyticsClass);
 
-         String event;
-         long currentTime = System.currentTimeMillis();
-         if(lastReceivedTime != null && currentTime-lastReceivedTime.get() < 1000*60*2)
-            event = EVENT_NOTIFICATION_INFLUENCE_OPEN;
-         else
-            event = EVENT_NOTIFICATION_OPENED;
-
          //construct the firebase analytics event bundle
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
@@ -99,7 +122,7 @@ class TrackFirebaseAnalytics {
          bundle.putString("notification_id", openResult.notification.payload.notificationID);
          bundle.putString("campaign", getCampaignNameFromPayload(openResult.notification.payload));
 
-         trackMethod.invoke(firebaseAnalyticsInstance, event, bundle);
+         trackMethod.invoke(firebaseAnalyticsInstance, EVENT_NOTIFICATION_OPENED, bundle);
 
       } catch (Throwable t) {
          t.printStackTrace();
@@ -128,6 +151,8 @@ class TrackFirebaseAnalytics {
             lastReceivedTime = new AtomicLong();
          lastReceivedTime.set(System.currentTimeMillis());
 
+         lastReceivedPayload = receivedResult.notification.payload;
+
       } catch (Throwable t) {
          t.printStackTrace();
       }
@@ -137,7 +162,7 @@ class TrackFirebaseAnalytics {
 
    private String getCampaignNameFromPayload(OSNotificationPayload payload) {
       String campaign;
-      if(payload.templateName != null && payload.templateId != null)
+      if(!payload.templateName.isEmpty() && !payload.templateId.isEmpty())
          campaign = payload.templateName + " - " + payload.templateId;
       else
          campaign = payload.title.substring(0, Math.min(10, payload.title.length()));

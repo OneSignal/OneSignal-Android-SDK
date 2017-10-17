@@ -955,6 +955,9 @@ public class OneSignal {
       NotificationRestorer.asyncRestore(appContext);
       
       getCurrentPermissionState(appContext).refreshAsTo();
+
+      if(trackFirebaseAnalytics != null)
+         trackFirebaseAnalytics.trackInfluenceOpenEvent();
    }
 
    static boolean isForeground() {
