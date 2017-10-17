@@ -29,6 +29,7 @@ package com.onesignal;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.app.NotificationManager;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
@@ -39,11 +40,15 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.service.notification.StatusBarNotification;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.WakefulBroadcastReceiver;
+import android.text.TextUtils;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 class NotificationRestorer {
@@ -96,18 +101,42 @@ class NotificationRestorer {
             }
          }
       }
-      
+
+      StringBuilder dbQuerySelection = new StringBuilder(
+              // 1 Week back.
+              NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + ((System.currentTimeMillis() / 1000L) - 604800L) + " AND " +
+              NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+              NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+              NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0");
+
+      //retrieve the list of notifications that are currently in the shade
+      //this is used to prevent notifications from being restored twice in M and newer
+      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+         NotificationManager notifManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+         if(notifManager != null) {
+            StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
+            if(activeNotifs.length > 0) {
+               ArrayList<Integer> activeNotifIds = new ArrayList<>();
+               for(StatusBarNotification activeNotif : activeNotifs)
+                  activeNotifIds.add(activeNotif.getId());
+
+               dbQuerySelection.append(" AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " NOT IN (")
+                       .append(TextUtils.join(",",activeNotifIds))
+                       .append(")");
+            }
+         }
+      }
+
+      OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
+              "Querying DB for notfs to restore: " + dbQuerySelection.toString());
+
       Cursor cursor = null;
       try {
          SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
          cursor = readableDb.query(
              NotificationTable.TABLE_NAME,
              COLUMNS_FOR_RESTORE,
-             // 1 Week back.
-             NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + ((System.currentTimeMillis() / 1000L) - 604800L) + " AND " +
-                 NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
+                 dbQuerySelection.toString(),
              null,
              null,                            // group by
              null,                            // filter by row groups
