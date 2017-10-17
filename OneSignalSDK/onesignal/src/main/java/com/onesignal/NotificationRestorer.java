@@ -165,7 +165,7 @@ class NotificationRestorer {
             Intent serviceIntent;
 
             //Code-sensitive to Android O
-            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
                if (useExtender)
                   serviceIntent = NotificationExtenderService.getIntent(context);
                else
