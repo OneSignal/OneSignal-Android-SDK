@@ -104,6 +104,7 @@ class NotificationRestorer {
               NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0");
 
       //retrieve the list of notifications that are currently in the shade
+      //this is used to prevent notifications from being restored twice in M and newer
       if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
          NotificationManager notifManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
          if(notifManager != null) {
