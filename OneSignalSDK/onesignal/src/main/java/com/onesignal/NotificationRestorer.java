@@ -110,7 +110,7 @@ class NotificationRestorer {
               NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0");
 
       //retrieve the list of notifications that are currently in the shade
-      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
          NotificationManager notifManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
          if(notifManager != null) {
             StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
@@ -165,7 +165,7 @@ class NotificationRestorer {
             Intent serviceIntent;
 
             //Code-sensitive to Android O
-            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                if (useExtender)
                   serviceIntent = NotificationExtenderService.getIntent(context);
                else
