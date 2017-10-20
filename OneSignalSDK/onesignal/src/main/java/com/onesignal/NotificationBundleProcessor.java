@@ -429,15 +429,12 @@ class NotificationBundleProcessor {
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
 
-      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-
+      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
          NotificationExtenderService.enqueueWork(context,
                  intent.getComponent(), new Random().nextInt(),
                  intent);
-      }
-      else {
+      else
          context.startService(intent);
-      }
 
       result.hasExtenderService = true;
       return true;

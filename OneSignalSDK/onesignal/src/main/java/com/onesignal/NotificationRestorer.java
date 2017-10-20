@@ -209,11 +209,7 @@ class NotificationRestorer {
          } while (cursor.moveToNext());
       }
    }
-   
-   // Android O - Works when app is cold started but not from Boot or app update event.
-   //               AlarmManager is also restricted on those 2 events.
-   //             Due to NotificationExtenderService being a public class we can't just upgrade to a
-   //               JobScheduler.
+
    private static void startService(Context context, Intent intent) {
       context.startService(intent);
    }

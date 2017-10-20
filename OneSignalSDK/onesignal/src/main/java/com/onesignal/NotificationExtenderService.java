@@ -27,7 +27,6 @@
 
 package com.onesignal;
 
-import android.app.IntentService;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
