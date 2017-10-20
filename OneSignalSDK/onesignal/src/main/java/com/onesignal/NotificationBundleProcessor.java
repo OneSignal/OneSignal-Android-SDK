@@ -276,6 +276,8 @@ class NotificationBundleProcessor {
       try {
          JSONObject customJson = new JSONObject(currentJsonPayload.optString("custom"));
          notification.notificationID = customJson.optString("i");
+         notification.templateId = customJson.optString("ti");
+         notification.templateName = customJson.optString("tn");
          notification.rawPayload = currentJsonPayload.toString();
          notification.additionalData = customJson.optJSONObject("a");
          notification.launchURL = customJson.optString("u", null);

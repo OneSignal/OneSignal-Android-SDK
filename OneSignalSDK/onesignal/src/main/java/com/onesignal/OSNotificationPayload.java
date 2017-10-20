@@ -43,6 +43,7 @@ import java.util.List;
  */
 public class OSNotificationPayload {
    public String notificationID;
+   public String templateName, templateId;
    public String title, body;
    public JSONObject additionalData;
    public String smallIcon;

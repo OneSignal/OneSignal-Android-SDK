@@ -309,6 +309,7 @@ public class OneSignal {
 
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
+   private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
    public static final String VERSION = "030604";
 
@@ -556,6 +557,9 @@ public class OneSignal {
 
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
+
+      if(TrackFirebaseAnalytics.CanTrack(appContext))
+         trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
       
       initDone = true;
 
@@ -951,6 +955,9 @@ public class OneSignal {
       NotificationRestorer.asyncRestore(appContext);
       
       getCurrentPermissionState(appContext).refreshAsTo();
+
+      if(trackFirebaseAnalytics != null)
+         trackFirebaseAnalytics.trackInfluenceOpenEvent();
    }
 
    static boolean isForeground() {
@@ -1479,6 +1486,9 @@ public class OneSignal {
             mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
          }
       });
+
+      if(trackFirebaseAnalytics != null)
+         trackFirebaseAnalytics.trackOpenedEvent(openedResult);
    }
 
    // Called when receiving GCM/ADM message after it has been displayed.
@@ -1490,6 +1500,10 @@ public class OneSignal {
 
       OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed, fromAlert);
       mInitBuilder.mNotificationReceivedHandler.notificationReceived(openResult.notification);
+
+      if(trackFirebaseAnalytics != null)
+         trackFirebaseAnalytics.trackReceivedEvent(openResult);
+
    }
 
    // Called when opening a notification
