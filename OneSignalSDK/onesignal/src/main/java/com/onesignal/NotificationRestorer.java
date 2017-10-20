@@ -174,7 +174,8 @@ class NotificationRestorer {
             serviceIntent.putExtra("restoring", true);
             serviceIntent.putExtra("timestamp", datetime);
 
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            //Using API 22 as the cutoff due to PersistableBundle#putBoolean being 22+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
                //use the job intent service...
                if (useExtender) {
                   NotificationExtenderService.enqueueWork(context,
