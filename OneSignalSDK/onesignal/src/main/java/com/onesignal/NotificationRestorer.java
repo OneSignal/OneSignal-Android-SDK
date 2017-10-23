@@ -164,50 +164,53 @@ class NotificationRestorer {
             Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
          
             Intent serviceIntent;
+            if (useExtender)
+               serviceIntent = NotificationExtenderService.getIntent(context);
+            else
+               serviceIntent = new Intent().setComponent(new ComponentName(context.getPackageName(), GcmIntentService.class.getName()));
 
-            //Code-sensitive to Android O
-            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-               if (useExtender)
-                  serviceIntent = NotificationExtenderService.getIntent(context);
-               else
-                  serviceIntent = new Intent().setComponent(new ComponentName(context.getPackageName(), GcmIntentService.class.getName()));
+            serviceIntent.putExtra("json_payload", fullData);
+            serviceIntent.putExtra("android_notif_id", existingId);
+            serviceIntent.putExtra("restoring", true);
+            serviceIntent.putExtra("timestamp", datetime);
 
-               serviceIntent.putExtra("json_payload", fullData);
-               serviceIntent.putExtra("android_notif_id", existingId);
-               serviceIntent.putExtra("restoring", true);
-               serviceIntent.putExtra("timestamp", datetime);
+            //Using API 22 as the cutoff due to PersistableBundle#putBoolean being 22+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+               //use the job intent service...
+               if (useExtender) {
+                  NotificationExtenderService.enqueueWork(context,
+                          serviceIntent.getComponent(), existingId,
+                          serviceIntent);
+               } else {
+                  //use a job scheduler...
+                  OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreNotif:" + existingId);
 
-               startService(context, serviceIntent);
+                  //schedule the job with the job service here...
+                  PersistableBundle restoreBundle = new PersistableBundle();
+                  restoreBundle.putString("json_payload",fullData);
+                  restoreBundle.putInt("android_notif_id", existingId);
+                  restoreBundle.putBoolean("restoring", true);
+                  restoreBundle.putLong("timestamp", datetime);
+
+                  //set the job id to android notif id - that way we don't restore any notif twice
+                  JobInfo.Builder jobBuilder = new JobInfo.Builder(existingId,
+                          new ComponentName(context, RestoreJobService.class));
+                  JobInfo job = jobBuilder.setOverrideDeadline(0)
+                          .setExtras(restoreBundle)
+                          .build();
+
+                  JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+                  jobScheduler.schedule(job);
+               }
             }
             else {
-               OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreNotif:" + existingId);
-
-               //schedule the job with the job service here...
-               PersistableBundle restoreBundle = new PersistableBundle();
-               restoreBundle.putString("json_payload",fullData);
-               restoreBundle.putInt("android_notif_id", existingId);
-               restoreBundle.putBoolean("restoring", true);
-               restoreBundle.putLong("timestamp", datetime);
-
-               //set the job id to android notif id - that way we don't restore any notif twice
-               JobInfo.Builder jobBuilder = new JobInfo.Builder(existingId,
-                       new ComponentName(context, RestoreJobService.class));
-               JobInfo job = jobBuilder.setOverrideDeadline(0)
-                                       .setExtras(restoreBundle)
-                                       .build();
-
-               JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-               jobScheduler.schedule(job);
+               startService(context, serviceIntent);
             }
 
          } while (cursor.moveToNext());
       }
    }
-   
-   // Android O - Works when app is cold started but not from Boot or app update event.
-   //               AlarmManager is also restricted on those 2 events.
-   //             Due to NotificationExtenderService being a public class we can't just upgrade to a
-   //               JobScheduler.
+
    private static void startService(Context context, Intent intent) {
       context.startService(intent);
    }

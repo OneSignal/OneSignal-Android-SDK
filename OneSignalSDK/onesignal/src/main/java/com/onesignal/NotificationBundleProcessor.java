@@ -40,6 +40,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.os.Bundle;
 
 import java.util.ArrayList;
@@ -427,12 +428,13 @@ class NotificationBundleProcessor {
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
-      // Using Alarm for Android O compatibility
-      Random random = new Random();
-      long atTime = System.currentTimeMillis();
-      PendingIntent pendingIntent = PendingIntent.getService(context, random.nextInt(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
-      AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
-      alarm.set(AlarmManager.RTC_WAKEUP, atTime, pendingIntent);
+
+      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+         NotificationExtenderService.enqueueWork(context,
+                 intent.getComponent(), new Random().nextInt(),
+                 intent);
+      else
+         context.startService(intent);
 
       result.hasExtenderService = true;
       return true;

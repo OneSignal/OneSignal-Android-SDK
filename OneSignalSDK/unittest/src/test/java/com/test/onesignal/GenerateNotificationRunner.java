@@ -44,6 +44,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Button;
 
@@ -918,14 +919,6 @@ public class GenerateNotificationRunner {
       boolean ret = OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       Assert.assertTrue(ret);
       
-      // Ensure the Extension service was schedule to start
-      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
-      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
-      PendingIntent intent = shadowOf(alarmManager).getNextScheduledAlarm().operation;
-      Intent savedIntent = shadowOf(intent).getSavedIntent();
-      Assert.assertEquals("com.onesignal.NotificationExtender", savedIntent.getAction());
-      
-      
       // Test that all options are set.
       NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
                                                                           NotificationExtenderServiceTest.class);
@@ -1025,11 +1018,12 @@ public class GenerateNotificationRunner {
    
    
    static abstract class NotificationExtenderServiceTestBase extends NotificationExtenderService {
-      // Override onStart to manually call onHandleIntent on the main thread.
+      // Override onStartCommand to manually call onHandleIntent on the main thread.
       @Override
-      public void onStart(Intent intent, int startId) {
-         onHandleIntent(intent);
+      public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+         onHandleWork(intent);
          stopSelf(startId);
+         return START_REDELIVER_INTENT;
       }
    }
    
