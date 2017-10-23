@@ -1653,7 +1653,7 @@ public class OneSignal {
 
    static boolean getVibrate(Context context) {
       return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_SOUND_ENABLED,true);
+              OneSignalPrefs.PREFS_GT_VIBRATE_ENABLED,true);
    }
 
    // If true(default) - Sound plays when receiving notification. Vibrates when device is on vibrate only mode.
