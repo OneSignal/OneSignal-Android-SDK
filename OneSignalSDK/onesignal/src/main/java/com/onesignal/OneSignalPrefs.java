@@ -25,6 +25,7 @@ class OneSignalPrefs {
     static final String PREFS_GT_SOUND_ENABLED = "GT_SOUND_ENABLED";
     static final String PREFS_OS_LAST_SESSION_TIME = "OS_LAST_SESSION_TIME";
     static final String PREFS_GT_VIBRATE_ENABLED = "GT_VIBRATE_ENABLED";
+    static final String PREFS_GT_FIREBASE_TRACKING_ENABLED = "GT_FIREBASE_TRACKING_ENABLED";
     static final String PREFS_OS_FILTER_OTHER_GCM_RECEIVERS = "OS_FILTER_OTHER_GCM_RECEIVERS";
     static final String PREFS_GT_APP_ID = "GT_APP_ID";
     static final String PREFS_GT_PLAYER_ID = "GT_PLAYER_ID";
