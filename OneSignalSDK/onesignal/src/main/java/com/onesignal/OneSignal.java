@@ -1634,6 +1634,13 @@ public class OneSignal {
       OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
    }
 
+   /**
+    * By default, OneSignal does not auto-track notification events through Firebase.
+    * Call this method with {@code true} to start tracking.
+    *
+    * @see <a href="https://documentation.onesignal.com/docs/firebase-analytics">Firebase Analytics | OneSignal Docs</a>
+    * @param enable whether to enable Firebase tracking
+    */
    public static void enableFirebaseAnalytics(boolean enable) {
       if (appContext == null)
          return;
