@@ -956,7 +956,7 @@ public class OneSignal {
       
       getCurrentPermissionState(appContext).refreshAsTo();
 
-      if(trackFirebaseAnalytics != null)
+      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
    }
 
@@ -1487,7 +1487,7 @@ public class OneSignal {
          }
       });
 
-      if(trackFirebaseAnalytics != null)
+      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
          trackFirebaseAnalytics.trackOpenedEvent(openedResult);
    }
 
@@ -1501,7 +1501,7 @@ public class OneSignal {
       OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed, fromAlert);
       mInitBuilder.mNotificationReceivedHandler.notificationReceived(openResult.notification);
 
-      if(trackFirebaseAnalytics != null)
+      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
          trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
    }
@@ -1632,6 +1632,19 @@ public class OneSignal {
       }
       
       OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+   }
+
+   public static void enableFirebaseAnalytics(boolean enable) {
+      if (appContext == null)
+         return;
+
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED, enable);
+   }
+
+   static boolean getFirebaseAnalyticsEnabled(Context context) {
+      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED,false);
    }
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
