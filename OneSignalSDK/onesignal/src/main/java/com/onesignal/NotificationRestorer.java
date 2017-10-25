@@ -50,6 +50,7 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import java.util.ArrayList;
 import java.util.Random;
+import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 class NotificationRestorer {
 
@@ -179,7 +180,7 @@ class NotificationRestorer {
                //use the job intent service...
                if (useExtender) {
                   NotificationExtenderService.enqueueWork(context,
-                          serviceIntent.getComponent(), existingId,
+                          serviceIntent.getComponent(), EXTENDER_SERVICE_JOB_ID,
                           serviceIntent);
                } else {
                   //use a job scheduler...

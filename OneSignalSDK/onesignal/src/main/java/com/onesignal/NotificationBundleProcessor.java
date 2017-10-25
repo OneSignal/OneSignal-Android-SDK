@@ -46,6 +46,7 @@ import android.os.Bundle;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
+import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 class NotificationBundleProcessor {
 
@@ -431,7 +432,7 @@ class NotificationBundleProcessor {
 
       if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
          NotificationExtenderService.enqueueWork(context,
-                 intent.getComponent(), new Random().nextInt(),
+                 intent.getComponent(), EXTENDER_SERVICE_JOB_ID,
                  intent);
       else
          context.startService(intent);

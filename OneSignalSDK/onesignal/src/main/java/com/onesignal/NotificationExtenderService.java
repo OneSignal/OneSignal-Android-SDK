@@ -68,6 +68,8 @@ import java.util.List;
  */
 public abstract class NotificationExtenderService extends JobIntentService {
 
+   static final int EXTENDER_SERVICE_JOB_ID = 2071862121;
+
    public static class OverrideSettings {
       public NotificationCompat.Extender extender;
       public Integer androidNotificationId;
