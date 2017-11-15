@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,34 +27,21 @@
 
 package com.onesignal;
 
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.IBinder;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 class TrackFirebaseAnalytics {
-
-   static private boolean firebaseAnalyticsEnabled = false;
+   
    private static Class<?> FirebaseAnalyticsClass;
    private Object mFirebaseAnalyticsInstance;
    private Context appContext;
 
    private static AtomicLong lastReceivedTime;
+   private static AtomicLong lastOpenedTime;
+   
    private static OSNotificationPayload lastReceivedPayload;
 
    private static final String EVENT_NOTIFICATION_OPENED = "os_notification_opened";
@@ -65,52 +52,56 @@ class TrackFirebaseAnalytics {
       appContext = activity;
    }
 
-   static boolean CanTrack(Context context) {
+   static boolean CanTrack() {
       try {
          FirebaseAnalyticsClass = Class.forName("com.google.firebase.analytics.FirebaseAnalytics");
-         firebaseAnalyticsEnabled = true;
+         return true;
       } catch (Throwable t) {
-         firebaseAnalyticsEnabled = false;
-      }
-      finally {
-         return firebaseAnalyticsEnabled;
+         return false;
       }
    }
 
    void trackInfluenceOpenEvent() {
+      if (lastReceivedTime == null || lastReceivedPayload == null)
+         return;
+   
+      // Attribute if app was opened in 2 minutes or less after displaying the notification
+      long now = System.currentTimeMillis();
+      if (now - lastReceivedTime.get() > 1000 * 60 * 2)
+         return;
+   
+      // Don't attribute if we opened a notification in the last 30 seconds.
+      //  To prevent an open and an influenced open from firing for the same notification.
+      if (lastOpenedTime != null && now - lastOpenedTime.get() < 1000 * 30)
+         return;
+      
       try {
+         Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);
 
-         long currentTime = System.currentTimeMillis();
-         if(lastReceivedTime != null &&
-                 currentTime-lastReceivedTime.get() < 1000*60*2 &&
-                 lastReceivedPayload != null) {
+         Method trackMethod = getTrackMethod(FirebaseAnalyticsClass);
 
-            Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);
+         String event = EVENT_NOTIFICATION_INFLUENCE_OPEN;
 
-            Method trackMethod = getTrackMethod(FirebaseAnalyticsClass);
+        //construct the firebase analytics event bundle
+         Bundle bundle = new Bundle();
+         bundle.putString("source", "OneSignal");
+         bundle.putString("medium", "notification");
+         bundle.putString("notification_id", lastReceivedPayload.notificationID);
+         bundle.putString("campaign", getCampaignNameFromPayload(lastReceivedPayload));
 
-            String event = EVENT_NOTIFICATION_INFLUENCE_OPEN;
-
-           //construct the firebase analytics event bundle
-            Bundle bundle = new Bundle();
-            bundle.putString("source", "OneSignal");
-            bundle.putString("medium", "notification");
-            bundle.putString("notification_id", lastReceivedPayload.notificationID);
-            bundle.putString("campaign", getCampaignNameFromPayload(lastReceivedPayload));
-
-            trackMethod.invoke(firebaseAnalyticsInstance, event, bundle);
-         }
-
+         trackMethod.invoke(firebaseAnalyticsInstance, event, bundle);
       } catch (Throwable t) {
          t.printStackTrace();
       }
    }
 
    void trackOpenedEvent(OSNotificationOpenResult openResult) {
+      if(lastOpenedTime == null)
+         lastOpenedTime = new AtomicLong();
+      lastOpenedTime.set(System.currentTimeMillis());
+      
       try {
-
          //get the source, medium, campaign params from the openResult
-
          Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);
 
          Method trackMethod = getTrackMethod(FirebaseAnalyticsClass);
@@ -134,7 +125,6 @@ class TrackFirebaseAnalytics {
    void trackReceivedEvent(OSNotificationOpenResult receivedResult) {
       try {
          //get the source, medium, campaign params from the openResult
-
          Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);
 
          Method trackMethod = getTrackMethod(FirebaseAnalyticsClass);
@@ -156,18 +146,15 @@ class TrackFirebaseAnalytics {
       } catch (Throwable t) {
          t.printStackTrace();
       }
-
-
    }
 
    private String getCampaignNameFromPayload(OSNotificationPayload payload) {
-      String campaign;
-      if(!payload.templateName.isEmpty() && !payload.templateId.isEmpty())
-         campaign = payload.templateName + " - " + payload.templateId;
-      else
-         campaign = payload.title.substring(0, Math.min(10, payload.title.length()));
-
-      return campaign;
+      if (!payload.templateName.isEmpty() && !payload.templateId.isEmpty())
+         return payload.templateName + " - " + payload.templateId;
+      else if (payload.title != null)
+         return payload.title.substring(0, Math.min(10, payload.title.length()));
+      
+      return "";
    }
 
    private Object getFirebaseAnalyticsInstance(Context context) {

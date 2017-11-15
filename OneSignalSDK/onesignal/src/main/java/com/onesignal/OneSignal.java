@@ -558,7 +558,7 @@ public class OneSignal {
       if (TrackGooglePurchase.CanTrack(appContext))
          trackGooglePurchase = new TrackGooglePurchase(appContext);
 
-      if(TrackFirebaseAnalytics.CanTrack(appContext))
+      if (TrackFirebaseAnalytics.CanTrack())
          trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
       
       initDone = true;
@@ -736,6 +736,10 @@ public class OneSignal {
                mEnterp = responseJson.optBoolean("enterp", false);
                
                awl = responseJson.getJSONObject("awl_list");
+   
+               boolean firebaseAnalytics = responseJson.optBoolean("fba", false);
+               OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
+                   OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED, firebaseAnalytics);
    
                NotificationChannelManager.processChannelList(appContext, responseJson);
             } catch (Throwable t) {
@@ -956,7 +960,7 @@ public class OneSignal {
       
       getCurrentPermissionState(appContext).refreshAsTo();
 
-      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
+      if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
    }
 
@@ -1632,21 +1636,6 @@ public class OneSignal {
       }
       
       OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
-   }
-
-   /**
-    * By default, OneSignal does not auto-track notification events through Firebase.
-    * Call this method with {@code true} to start tracking.
-    *
-    * @see <a href="https://documentation.onesignal.com/docs/firebase-analytics">Firebase Analytics | OneSignal Docs</a>
-    * @param enable whether to enable Firebase tracking
-    */
-   public static void enableFirebaseAnalytics(boolean enable) {
-      if (appContext == null)
-         return;
-
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED, enable);
    }
 
    static boolean getFirebaseAnalyticsEnabled(Context context) {
