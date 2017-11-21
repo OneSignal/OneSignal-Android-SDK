@@ -1416,7 +1416,7 @@ public class OneSignal {
                if (!url.contains("://"))
                   url = "http://" + url;
 
-               if (!url.contains("http://") || !url.contains("https://")) {
+               if (!(url.contains("http://") || url.contains("https://"))) {
                   intent = new Intent(Intent.ACTION_MAIN, Uri.parse(url.trim()));
                   intent.addCategory(Intent.CATEGORY_LAUNCHER);
                }
