@@ -28,6 +28,8 @@
 package com.onesignal;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.net.URL;
 import java.util.ArrayList;
@@ -57,10 +59,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Debug;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -377,6 +382,7 @@ class GenerateNotification {
       //     created by Android itself.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
+         forceCreateNotificationViews(notification);
          NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
    }
@@ -421,6 +427,38 @@ class GenerateNotification {
          extraNotificationField.setAccessible(true);
          extraNotificationField.set(notification, miuiNotification);
       } catch (Throwable t) {} // Ignore if not a Xiaomi device
+   }
+
+
+   // Android 7+: Force create views to debug Android system process exception
+   //             Android 7 made a change to not render them on the app process any more
+   //             This is only designed to throw sooner if there is an error to get a better stacktrace
+   // https://github.com/OneSignal/OneSignal-Android-SDK/issues/263
+   static void forceCreateNotificationViews(Notification notification) {
+      // Will only be debugging Android 7+ devices
+      if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+         return;
+
+      // Simulates NotificationData.java:cacheContentViews
+      // https://github.com/aosp-mirror/platform_frameworks_base/blob/android-7.1.2_r33/packages/SystemUI/src/com/android/systemui/statusbar/NotificationData.java
+
+      if (currentContext.getApplicationInfo().targetSdkVersion < Build.VERSION_CODES.N)
+         return;
+
+      final Notification.Builder builder
+              = Notification.Builder.recoverBuilder(currentContext, notification);
+
+      builder.createContentView();
+      builder.createBigContentView();
+      builder.createHeadsUpContentView();
+
+      try {
+         Method makePublicContentViewMethod = Notification.Builder.class.getMethod("makePublicContentView");
+         makePublicContentViewMethod.invoke(builder);
+      } catch (NoSuchMethodException e) {
+      } catch (IllegalAccessException e) {
+      } catch (InvocationTargetException e) {
+      }
    }
    
    static void updateSummaryNotification(NotificationGenerationJob notifJob) {
@@ -627,6 +665,7 @@ class GenerateNotification {
          addXiaomiSettings(notifBuilder, summaryNotification);
       }
 
+      forceCreateNotificationViews(summaryNotification);
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
    
