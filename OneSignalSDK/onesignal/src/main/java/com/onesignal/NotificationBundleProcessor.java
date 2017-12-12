@@ -203,6 +203,40 @@ class NotificationBundleProcessor {
       }
    }
 
+   static void markRestoredNotificationAsDismissed(NotificationGenerationJob notifiJob) {
+      if (notifiJob.getAndroidIdWithoutCreate() == -1)
+         return;
+
+      String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
+
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
+      SQLiteDatabase writableDb = null;
+
+      try {
+         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb.beginTransaction();
+
+         ContentValues values = new ContentValues();
+         values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+
+         writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+         BadgeCountUpdater.update(writableDb, notifiJob.context);
+
+         writableDb.setTransactionSuccessful();
+
+      } catch (Exception e) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
+      } finally {
+         if (writableDb != null) {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (Throwable t) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            }
+         }
+      }
+   }
+
    // Clean up old records after 1 week.
    static void deleteOldNotifications(SQLiteDatabase writableDb) {
       writableDb.delete(NotificationTable.TABLE_NAME,

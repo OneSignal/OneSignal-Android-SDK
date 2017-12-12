@@ -194,6 +194,10 @@ public abstract class NotificationExtenderService extends JobIntentService {
                NotificationBundleProcessor.saveNotification(notifJob, true);
                OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
             }
+            // If are are not displaying a restored notification make sure we mark it as dismissed
+            //   This will prevent it from being restored again.
+            else if (currentBaseOverrideSettings != null)
+               NotificationBundleProcessor.markRestoredNotificationAsDismissed(createNotifJobFromCurrent());
          }
          else
             NotificationBundleProcessor.ProcessJobForDisplay(createNotifJobFromCurrent());
