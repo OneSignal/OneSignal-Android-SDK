@@ -95,6 +95,7 @@ import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.android.controller.ServiceController;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
@@ -1062,8 +1063,16 @@ public class GenerateNotificationRunner {
             @Override
             public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
                // Must disable the default sound when setting a custom one
-               builder.mNotification.flags &= ~Notification.DEFAULT_SOUND;
-               builder.setDefaults(builder.mNotification.flags);
+               try {
+                  Field mNotificationField = NotificationCompat.Builder.class.getDeclaredField("mNotification");
+                  mNotificationField.setAccessible(true);
+                  Notification mNotification = (Notification) mNotificationField.get(builder);
+
+                  mNotification.flags &= ~Notification.DEFAULT_SOUND;
+                  builder.setDefaults(mNotification.flags);
+               } catch (Throwable t) {
+                  t.printStackTrace();
+               }
                
                return builder.setSound(Uri.parse("content://media/internal/audio/media/32"))
                    .setColor(new BigInteger("FF00FF00", 16).intValue())
