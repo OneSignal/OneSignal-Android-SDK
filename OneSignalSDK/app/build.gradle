@@ -1,15 +1,22 @@
+plugins {
+    id 'com.onesignal.androidsdk.onesignal-gradle-plugin' version '0.8.0'
+}
+apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
+
 apply plugin: 'com.android.application'
 
+//apply plugin: com.onesignal.androidsdk.GradleProjectPlugin
+
 android {
-    compileSdkVersion 26
-    buildToolsVersion '26.0.1'
+    compileSdkVersion 27
+    buildToolsVersion '27.0.2'
     defaultConfig {
         applicationId "com.onesignal.example"
         manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
                                 // Project number pulled from dashboard, local value is ignored.
                                 onesignal_google_project_number: "REMOTE"]
         minSdkVersion 15
-        targetSdkVersion 26
+        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
     }
@@ -31,20 +38,21 @@ repositories {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:appcompat-v7:26.1.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:appcompat-v7:27.0.2'
 
     // Use for SDK Development
-    compile(project(':onesignal')) {
-        exclude group: 'com.android.support', module: 'support-v4'
-        exclude group: 'com.android.support', module: 'customtabs'
-        exclude group: 'com.google.android.gms', module: 'play-services-gcm'
-        exclude group: 'com.google.android.gms', module: 'play-services-analytics'
-        exclude group: 'com.google.android.gms', module: 'play-services-location'
+    implementation(project(':onesignal')) {
+//        exclude group: 'com.android.support', module: 'support-v4'
+//        exclude group: 'com.android.support', module: 'customtabs'
+//        exclude group: 'com.google.android.gms', module: 'play-services-gcm'
+//        exclude group: 'com.google.android.gms', module: 'play-services-analytics'
+//        exclude group: 'com.google.android.gms', module: 'play-services-location'
     }
 
     // Use snapshot
     // compile 'com.onesignal:OneSignal:4.0.0-SNAPSHOT'
+    // compile 'com.onesignal:OneSignal:4.0.0-20171206.043726-5'
 
     // Use to run local .aar file
     // compile(name: 'OneSignal-release', ext: 'aar')
@@ -55,9 +63,11 @@ dependencies {
     // Old Instructions - Use for released SDK
     // compile 'com.onesignal:OneSignal:3.+@aar'
 
-    compile 'com.google.android.gms:play-services-gcm:11.2.2'
-    compile 'com.google.android.gms:play-services-location:11.2.2'
+    //implementation 'com.google.android.gms:play-services-gcm:11.2.2'
+    //implementation 'com.google.android.gms:play-services-location:11.2.2'
 
     // For Chrome tabs
-    compile 'com.android.support:customtabs:26.1.0'
+   // compile 'com.android.support:customtabs:26.1.0'
 }
+
+//apply plugin: 'com.google.gms.google-services'
