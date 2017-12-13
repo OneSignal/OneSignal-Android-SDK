@@ -27,12 +27,11 @@
 
 package com.onesignal;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import android.support.v4.content.WakefulBroadcastReceiver;
 
-public class UpgradeReceiver extends WakefulBroadcastReceiver {
+public class UpgradeReceiver extends BroadcastReceiver {
 
    @Override
    public void onReceive(final Context context, Intent intent) {
