@@ -215,19 +215,6 @@ class NotificationRestorer {
    private static void startService(Context context, Intent intent) {
       context.startService(intent);
    }
-   
-   static void startRestoreTaskFromReceiver(Context context) {
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-         // NotificationRestorer#restore is Code-sensitive to Android O
-         NotificationRestorer.restore(context);
-      }
-      else {
-         Intent intentForService = new Intent();
-         intentForService.setComponent(new ComponentName(context.getPackageName(),
-             NotificationRestoreService.class.getName()));
-         WakefulBroadcastReceiver.startWakefulService(context, intentForService);
-      }
-   }
 
    static void startDelayedRestoreTaskFromReceiver(Context context) {
       if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
