@@ -1,8 +1,17 @@
+plugins {
+    id 'com.onesignal.androidsdk.onesignal-gradle-plugin' version '0.8.0'
+}
+apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
+
+repositories {
+    maven { url 'https://maven.google.com' }
+}
+
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion '26.0.1'
+    compileSdkVersion 27
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "com.onesignal.example"
@@ -12,8 +21,8 @@ android {
                                 // Project number pulled from dashboard, local value is ignored.
                                 onesignal_google_project_number: "REMOTE"]
 
-        minSdkVersion 15
-        targetSdkVersion 26
+        minSdkVersion 16
+        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
     }
@@ -33,7 +42,7 @@ dependencies {
 
     // OneSignal requires at least version 7.0.0 of GMS but the newest version is recommend.
     // Required for OneSignal, even if you have added FCM.
-    compile 'com.google.android.gms:play-services-gcm:11.0.4'
+    //compile 'com.google.android.gms:play-services-gcm:11.0.4'
 
     // Required for geotagging
     compile 'com.google.android.gms:play-services-location:11.0.4'
@@ -43,5 +52,5 @@ dependencies {
     // compile 'com.google.android.gms:play-services-analytics:+'
     //noinspection GradleCompatible
     compile 'com.android.support:appcompat-v7:26.0.2'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+    //compile 'com.android.support.constraint:constraint-layout:1.0.2'
 }
