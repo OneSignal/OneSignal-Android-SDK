@@ -30,6 +30,7 @@ package com.onesignal;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.iid.InstanceID;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -156,13 +157,14 @@ public class PushRegistratorGPS implements PushRegistrator {
    private void registerInBackground(final String googleProjectNumber) {
       new Thread(new Runnable() {
          public void run() {
-            String registrationId = null;
+            String registrationId;
             boolean firedComplete = false;
 
             for (int currentRetry = 0; currentRetry < GCM_RETRY_COUNT; currentRetry++) {
                try {
-                  GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(appContext);
-                  registrationId = gcm.register(googleProjectNumber);
+                  InstanceID instanceID = InstanceID.getInstance(appContext);
+                  registrationId = instanceID.getToken(googleProjectNumber,
+                                                       GoogleCloudMessaging.INSTANCE_ID_SCOPE);
                   OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, Google Registration ID = " + registrationId);
                   registeredHandler.complete(registrationId);
                   break;
