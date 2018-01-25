@@ -98,11 +98,7 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationopenedhandler-">NotificationOpenedHandler | OneSignal Docs</a>
     */
    public interface NotificationOpenedHandler {
-      /**
-       * Fires when a user taps on a notification.
-       * @param result a {@link OSNotificationOpenResult} with the user's response and properties of this notification
-       */
-      void notificationOpened(OSNotificationOpenResult result);
+      void notificationOpened(String message, JSONObject additionalData, boolean isActive);
    }
 
    /**
@@ -1046,6 +1042,21 @@ public class OneSignal {
       }, "OS_REG_USER").start();
    }
 
+
+   // MARMALADE SDK COMPATIBILITY METHOD STUBS
+   public static void onPaused() {}
+   public static void onResumed() {}
+   public static void enableInAppAlertNotification(boolean enable) {
+      setInFocusDisplaying(OSInFocusDisplayOption.InAppAlert);
+   }
+   public static void enableNotificationsWhenActive(boolean enable) {
+      if(enable && mInitBuilder.mDisplayOption != OSInFocusDisplayOption.Notification)
+         setInFocusDisplaying(OSInFocusDisplayOption.Notification);
+      else if(!enable)
+         setInFocusDisplaying(OSInFocusDisplayOption.None);
+   }
+
+
    /**
     * Sync hashed email if you have a login system or collect it from the user. It will be used to
     * reach the user at the most optimal time of the day.
@@ -1487,7 +1498,11 @@ public class OneSignal {
       OSUtils.runOnMainUIThread(new Runnable() {
          @Override
          public void run() {
-            mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
+            String message = openedResult.notification.payload.body;
+            JSONObject additionalData  = openedResult.notification.payload.additionalData;
+            boolean isActive = openedResult.notification.isAppInFocus;
+
+            mInitBuilder.mNotificationOpenedHandler.notificationOpened(message, additionalData, isActive);
          }
       });
 
