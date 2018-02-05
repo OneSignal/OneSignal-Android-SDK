@@ -136,9 +136,16 @@ class OSUtils {
    }
 
    String getCarrierName() {
-      TelephonyManager manager = (TelephonyManager)OneSignal.appContext.getSystemService(Context.TELEPHONY_SERVICE);
-      String carrierName = manager.getNetworkOperatorName();
-      return "".equals(carrierName) ? null : carrierName;
+      try {
+         TelephonyManager manager = (TelephonyManager) OneSignal.appContext.getSystemService(Context.TELEPHONY_SERVICE);
+         // May throw even though it's not in noted in the Android docs.
+         // Issue #427
+         String carrierName = manager.getNetworkOperatorName();
+         return "".equals(carrierName) ? null : carrierName;
+      } catch(Throwable t) {
+         t.printStackTrace();
+         return null;
+      }
    }
 
    static String getManifestMeta(Context context, String metaName) {
