@@ -110,23 +110,7 @@ class NotificationRestorer {
               NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
               NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0");
 
-      //retrieve the list of notifications that are currently in the shade
-      //this is used to prevent notifications from being restored twice in M and newer
-      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-         NotificationManager notifManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-         if(notifManager != null) {
-            StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
-            if(activeNotifs.length > 0) {
-               ArrayList<Integer> activeNotifIds = new ArrayList<>();
-               for(StatusBarNotification activeNotif : activeNotifs)
-                  activeNotifIds.add(activeNotif.getId());
-
-               dbQuerySelection.append(" AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " NOT IN (")
-                       .append(TextUtils.join(",",activeNotifIds))
-                       .append(")");
-            }
-         }
-      }
+      skipVisibleNotifications(context, dbQuerySelection);
 
       OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
               "Querying DB for notfs to restore: " + dbQuerySelection.toString());
@@ -153,6 +137,41 @@ class NotificationRestorer {
             cursor.close();
       }
    }
+
+   // Retrieve the list of notifications that are currently in the shade
+   //    this is used to prevent notifications from being restored twice in M and newer.
+   // This is important mostly for Android O as they can't be redisplayed in a silent way unless
+   //    they are displayed under a different channel which isn't ideal.
+   // For pre-O devices this still have the benefit of being more efficient
+   private static void skipVisibleNotifications(Context context, StringBuilder dbQuerySelection) {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+         return;
+
+      NotificationManager notifManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      if (notifManager == null)
+         return;
+
+      try {
+         StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
+         if (activeNotifs.length == 0)
+            return;
+
+         ArrayList<Integer> activeNotifIds = new ArrayList<>();
+         for (StatusBarNotification activeNotif : activeNotifs)
+            activeNotifIds.add(activeNotif.getId());
+
+         dbQuerySelection
+                 .append(" AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " NOT IN (")
+                 .append(TextUtils.join(",", activeNotifIds))
+                 .append(")");
+      } catch(Throwable t) {
+         // try-catch for Android 6.0.X bug work around,
+         //    getActiveNotifications sometimes throws an exception.
+         // Seem to be related to what Android's internal method getAppActiveNotifications returns.
+         // Issue #422
+      }
+   }
+
    
    // NOTE: This can be running from a Application, Service, or JobService context.
    static void showNotifications(Context context, Cursor cursor) {
