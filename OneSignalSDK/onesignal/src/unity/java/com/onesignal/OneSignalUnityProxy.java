@@ -128,7 +128,7 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
 
    public void enableVibrate(boolean enable) { OneSignal.enableVibrate(enable); }
 
-   void setInFocusDisplaying(int displayOption) { OneSignal.setInFocusDisplaying(displayOption); }
+   public void setInFocusDisplaying(int displayOption) { OneSignal.setInFocusDisplaying(displayOption); }
 
    public void setSubscription(boolean enable) { OneSignal.setSubscription(enable); }
 
