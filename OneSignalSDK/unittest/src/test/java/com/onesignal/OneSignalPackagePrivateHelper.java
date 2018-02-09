@@ -11,13 +11,18 @@ import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
    public static boolean runAllNetworkRunnables() {
       boolean startedRunnable = false;
-      for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet()) {
+
+      Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
+      entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
+
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet) {
          Scheduler scheduler = shadowOf(handlerThread.getValue().getLooper()).getScheduler();
          if (scheduler.advanceToLastPostedRunnable())
             startedRunnable = true;
@@ -38,7 +43,10 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void resetRunnables() {
-      for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet())
+      Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
+      entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
+
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
          handlerThread.getValue().stopScheduledRunnable();
 
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();

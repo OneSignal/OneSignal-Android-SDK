@@ -192,7 +192,7 @@ public class MainOneSignalClassRunner {
 
    @After
    public void afterEachTest() throws Exception {
-      Thread.sleep(1000*5);
+     // Thread.sleep(10*5);
    }
 
    @AfterClass
@@ -846,6 +846,21 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals("value1.5", sentTags.getString("test1"));
       Assert.assertFalse(sentTags.has(("test2")));
       Assert.assertEquals("value3", sentTags.getString("test3"));
+   }
+
+   @Test
+   public void shouldSetEmail() throws Exception {
+      OneSignalInit();
+      String email = "josh@onesignal.com";
+
+      OneSignal.setEmail(email);
+      threadAndTaskWait();
+
+      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      String sendEmail = ShadowOneSignalRestClient.lastPost.getString("email");
+      Assert.assertEquals(email, sendEmail);
+
+      // TODO: Test that we sent a 2nd POST for the new email device type
    }
 
    @Test
