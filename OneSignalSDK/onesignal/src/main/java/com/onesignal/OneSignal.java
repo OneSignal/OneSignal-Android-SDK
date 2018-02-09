@@ -77,7 +77,7 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
  * @see <a href="https://documentation.onesignal.com/docs/android-sdk-setup#section-1-gradle-setup">OneSignal Gradle Setup</a>
  */
 public class OneSignal {
-   
+
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
@@ -521,7 +521,7 @@ public class OneSignal {
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
-      OneSignalStateSynchronizer.initUserState(appContext);
+      OneSignalStateSynchronizer.initUserState();
       
       ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
 
@@ -992,7 +992,7 @@ public class OneSignal {
 
       new Thread(new Runnable() {
          public void run() {
-            OneSignalStateSynchronizer.UserState userState = OneSignalStateSynchronizer.getNewUserState();
+            UserState userState = OneSignalStateSynchronizer.getNewUserState();
 
             String packageName = appContext.getPackageName();
             PackageManager packageManager = appContext.getPackageManager();
@@ -1052,13 +1052,14 @@ public class OneSignal {
     * @param email the email that you want to sync with the user
     */
    public static void syncHashedEmail(final String email) {
+      if (!OSUtils.isValidEmail(email))
+         return;
+
       Runnable runSyncHashedEmail = new Runnable() {
          @Override
          public void run() {
-            if (OSUtils.isValidEmail(email)) {
-               String trimmedEmail = email.trim();
-               OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
-            }
+            String trimmedEmail = email.trim();
+            OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
          }
       };
 
@@ -1071,6 +1072,33 @@ public class OneSignal {
       }
 
       runSyncHashedEmail.run();
+   }
+
+   /**
+    * Set an email for the device to later send emails to this address
+    * @param email the email that you want to set for the device
+    */
+   public static void setEmail(final String email) {
+      if (!OSUtils.isValidEmail(email))
+         return;
+
+      Runnable runSetEmail = new Runnable() {
+         @Override
+         public void run() {
+            String trimmedEmail = email.trim();
+            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase());
+         }
+      };
+
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling syncHashedEmail! " +
+                 "Moving this operation to a pending task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runSetEmail));
+         return;
+      }
+
+      runSetEmail.run();
    }
 
    /**
@@ -1266,7 +1294,7 @@ public class OneSignal {
       new Thread(new Runnable() {
          @Override
          public void run() {
-            final OneSignalStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
+            final UserStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
             if (tags.serverSuccess) getTagsCall = true;
             if (tags.result == null || tags.toString().equals("{}"))
                getTagsHandler.tagsAvailable(null);
@@ -1622,7 +1650,9 @@ public class OneSignal {
 
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,"OS_FILTER_OTHER_GCM_RECEIVERS",set);
    }
-   
+
+   // Called when a player id is returned from OneSignal
+   // Updates anything else that might have been waiting for this id.
    static void updateUserIdDependents(String userId) {
       saveUserId(userId);
       fireIdsAvailableCallback();
@@ -1636,6 +1666,12 @@ public class OneSignal {
       }
       
       OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+
+      updateEmailRecord(userId);
+   }
+
+   private static void updateEmailRecord(String userId) {
+
    }
 
    static boolean getFirebaseAnalyticsEnabled(Context context) {
