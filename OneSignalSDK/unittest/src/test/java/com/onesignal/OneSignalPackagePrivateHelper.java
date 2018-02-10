@@ -16,17 +16,37 @@ import java.util.Set;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
-   public static boolean runAllNetworkRunnables() {
-      boolean startedRunnable = false;
 
+   private static abstract class RunnableArg<T> {
+      abstract void run(T object);
+   }
+
+   static private void processNetworkHandles(RunnableArg runnable) {
       Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
-      entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
 
-      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet) {
-         Scheduler scheduler = shadowOf(handlerThread.getValue().getLooper()).getScheduler();
-         if (scheduler.advanceToLastPostedRunnable())
-            startedRunnable = true;
-      }
+      entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
+         runnable.run(handlerThread.getValue());
+
+      entrySet = OneSignalStateSynchronizer.getEmailStateSynchronizer().networkHandlerThreads.entrySet();
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
+         runnable.run(handlerThread.getValue());
+   }
+
+   private static boolean startedRunnable;
+   public static boolean runAllNetworkRunnables() {
+      startedRunnable = false;
+
+      RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
+         @Override
+         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
+            Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
+            if (scheduler.advanceToLastPostedRunnable())
+               startedRunnable = true;
+         }
+      };
+
+      processNetworkHandles(runnable);
 
       return startedRunnable;
    }
@@ -43,11 +63,14 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void resetRunnables() {
-      Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
-      entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
+      RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
+         @Override
+         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
+            handlerThread.stopScheduledRunnable();
+         }
+      };
 
-      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
-         handlerThread.getValue().stopScheduledRunnable();
+      processNetworkHandles(runnable);
 
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
       if (looper == null) return;

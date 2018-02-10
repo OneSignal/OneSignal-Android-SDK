@@ -32,43 +32,47 @@ import org.json.JSONObject;
 
 class OneSignalStateSynchronizer {
 
-   private static UserStateSynchronizer userStateSynchronizer;
+   private static UserStatePushSynchronizer userStatePushSynchronizer;
+   private static UserStateEmailSynchronizer userStateEmailSynchronizer;
 
-   static UserStateSynchronizer getPushStateSynchronizer() {
-      if (userStateSynchronizer == null)
-         userStateSynchronizer = new UserStatePushSynchronizer();
-      return userStateSynchronizer;
+   static UserStatePushSynchronizer getPushStateSynchronizer() {
+      if (userStatePushSynchronizer == null)
+         userStatePushSynchronizer = new UserStatePushSynchronizer();
+      return userStatePushSynchronizer;
+   }
+
+   static UserStateEmailSynchronizer getEmailStateSynchronizer() {
+      if (userStateEmailSynchronizer == null)
+         userStateEmailSynchronizer = new UserStateEmailSynchronizer();
+      return userStateEmailSynchronizer;
    }
    
    static boolean stopAndPersist() {
+      // TODO: Add Email.
+      //       Look into what the return value show be if one is true and one is false.
       return getPushStateSynchronizer().stopAndPersist();
    }
    
    static void clearLocation() {
       getPushStateSynchronizer().clearLocation();
+      getEmailStateSynchronizer().clearLocation();
    }
-
-
 
    static void initUserState() {
       getPushStateSynchronizer().initUserState();
-   }
-
-   static UserState getNewUserState() {
-      return new UserState("nonPersist", false);
+      getEmailStateSynchronizer().initUserState();
    }
 
    static void syncUserState(boolean fromSyncService) {
       getPushStateSynchronizer().syncUserState(fromSyncService);
-   }
-
-   static void postUpdate(UserState postSession, boolean isSession) {
-      getPushStateSynchronizer().postUpdate(postSession, isSession);
+      getEmailStateSynchronizer().syncUserState(fromSyncService);
    }
 
    static void sendTags(JSONObject newTags) {
       try {
-         getPushStateSynchronizer().sendTags(new JSONObject().put("tags", newTags));
+         JSONObject jsonField = new JSONObject().put("tags", newTags);
+         getPushStateSynchronizer().sendTags(jsonField);
+         getEmailStateSynchronizer().sendTags(jsonField);
       } catch (JSONException e) {
          e.printStackTrace();
       }
@@ -86,17 +90,9 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   public static void setEmail(String email) {
-      try {
-         JSONObject emailJSON = new JSONObject();
-         emailJSON.put("email", email);
-
-         getPushStateSynchronizer().setEmail(emailJSON);
-         // TODO: Add getEmailStateSynchronizer().setEmail(emailJSON);
-
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
+   static void setEmail(String email) {
+      getPushStateSynchronizer().setEmail(email);
+      getEmailStateSynchronizer().setEmail(email);
    }
 
    static void setSubscription(boolean enable) {
@@ -113,7 +109,7 @@ class OneSignalStateSynchronizer {
 
    static void updateLocation(LocationGMS.LocationPoint point) {
       getPushStateSynchronizer().updateLocation(point);
-      // TODO: Add getEmailState....
+      // TODO: Add getEmailState...
    }
 
    static boolean getSubscribed() {
@@ -135,5 +131,23 @@ class OneSignalStateSynchronizer {
       // TODO: Email user Id should be set to null as well.
 
       OneSignal.setLastSessionTime(-60 * 61);
+   }
+
+   static void updateDeviceInfo(JSONObject deviceInfo) {
+      getPushStateSynchronizer().updateDeviceInfo(deviceInfo);
+      getEmailStateSynchronizer().updateDeviceInfo(deviceInfo);
+   }
+
+   static void updatePushState(JSONObject pushState) {
+      getPushStateSynchronizer().updateState(pushState);
+   }
+
+   static void refreshEmailState() {
+      getEmailStateSynchronizer().refresh();
+   }
+
+   static void setSyncAsNewSession() {
+      getPushStateSynchronizer().setSyncAsNewSession();
+      getEmailStateSynchronizer().setSyncAsNewSession();
    }
 }

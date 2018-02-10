@@ -29,7 +29,6 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.ref.WeakReference;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -292,7 +291,7 @@ public class OneSignal {
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
-   private static String userId = null;
+   private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
    static boolean initDone;
@@ -992,58 +991,72 @@ public class OneSignal {
 
       new Thread(new Runnable() {
          public void run() {
-            UserState userState = OneSignalStateSynchronizer.getNewUserState();
-
-            String packageName = appContext.getPackageName();
-            PackageManager packageManager = appContext.getPackageManager();
-
-            userState.set("app_id", appId);
-            userState.set("identifier", lastRegistrationId);
-
-            String adId = mainAdIdProvider.getIdentifier(appContext);
-            if (adId != null)
-               userState.set("ad_id", adId);
-            userState.set("device_os", Build.VERSION.RELEASE);
-            userState.set("timezone", getTimeZoneOffset());
-            userState.set("language", OSUtils.getCorrectedLanguage());
-            userState.set("sdk", VERSION);
-            userState.set("sdk_type", sdkType);
-            userState.set("android_package", packageName);
-            userState.set("device_model", Build.MODEL);
-            userState.set("device_type", deviceType);
-            userState.setState("subscribableStatus", subscribableStatus);
-            userState.setState("androidPermission", areNotificationsEnabledForSubscribedState());
-
             try {
-               userState.set("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
-            } catch (PackageManager.NameNotFoundException e) {}
-
-            try {
-               List<PackageInfo> packList = packageManager.getInstalledPackages(0);
-               JSONArray pkgs = new JSONArray();
-               MessageDigest md = MessageDigest.getInstance("SHA-256");
-               for (int i = 0; i < packList.size(); i++) {
-                  md.update(packList.get(i).packageName.getBytes());
-                  String pck = Base64.encodeToString(md.digest(), Base64.NO_WRAP);
-                  if (awl.has(pck))
-                     pkgs.put(pck);
-               }
-               userState.set("pkgs", pkgs);
-            } catch (Throwable t) {}
-
-            userState.set("net_type", osUtils.getNetType());
-            userState.set("carrier", osUtils.getCarrierName());
-            userState.set("rooted", RootToolsInternalMethods.isRooted());
-
-            if (shareLocation && lastLocationPoint != null)
-               userState.setLocation(lastLocationPoint);
-
-            OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
-            waitingToPostStateSync = false;
-            
-            OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+               registerUserTask();
+               OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+            } catch(JSONException t) {
+               Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
+            }
          }
       }, "OS_REG_USER").start();
+   }
+
+   private static void registerUserTask() throws JSONException {
+      String packageName = appContext.getPackageName();
+      PackageManager packageManager = appContext.getPackageManager();
+
+      JSONObject deviceInfo = new JSONObject();
+
+      deviceInfo.put("app_id", appId);
+
+      String adId = mainAdIdProvider.getIdentifier(appContext);
+      if (adId != null)
+         deviceInfo.put("ad_id", adId);
+      deviceInfo.put("device_os", Build.VERSION.RELEASE);
+      deviceInfo.put("timezone", getTimeZoneOffset());
+      deviceInfo.put("language", OSUtils.getCorrectedLanguage());
+      deviceInfo.put("sdk", VERSION);
+      deviceInfo.put("sdk_type", sdkType);
+      deviceInfo.put("android_package", packageName);
+      deviceInfo.put("device_model", Build.MODEL);
+
+      try {
+         deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
+      } catch (PackageManager.NameNotFoundException e) {}
+
+      try {
+         List<PackageInfo> packList = packageManager.getInstalledPackages(0);
+         JSONArray pkgs = new JSONArray();
+         MessageDigest md = MessageDigest.getInstance("SHA-256");
+         for (int i = 0; i < packList.size(); i++) {
+            md.update(packList.get(i).packageName.getBytes());
+            String pck = Base64.encodeToString(md.digest(), Base64.NO_WRAP);
+            if (awl.has(pck))
+               pkgs.put(pck);
+         }
+         deviceInfo.put("pkgs", pkgs);
+      } catch (Throwable t) {}
+
+      deviceInfo.put("net_type", osUtils.getNetType());
+      deviceInfo.put("carrier", osUtils.getCarrierName());
+      deviceInfo.put("rooted", RootToolsInternalMethods.isRooted());
+
+      OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+
+      JSONObject pushState = new JSONObject();
+      pushState.put("identifier", lastRegistrationId);
+      pushState.put("subscribableStatus", subscribableStatus);
+      pushState.put("androidPermission", areNotificationsEnabledForSubscribedState());
+      pushState.put("device_type", deviceType);
+      OneSignalStateSynchronizer.updatePushState(pushState);
+
+      if (shareLocation && lastLocationPoint != null)
+         OneSignalStateSynchronizer.updateLocation(lastLocationPoint);
+
+      if (sendAsSession)
+         OneSignalStateSynchronizer.setSyncAsNewSession();
+
+      waitingToPostStateSync = false;
    }
 
    /**
@@ -1638,6 +1651,23 @@ public class OneSignal {
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_PLAYER_ID, userId);
    }
+
+   static String getEmailId() {
+      if (emailId == null && appContext != null) {
+         emailId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_OS_EMAIL_ID,null);
+      }
+      return emailId;
+   }
+
+   static void saveEmailId(String id) {
+      emailId = id;
+      if (appContext == null)
+         return;
+
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_EMAIL_ID, emailId);
+   }
    
    static boolean getFilterOtherGCMReceivers(Context context) {
       return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
@@ -1664,14 +1694,20 @@ public class OneSignal {
          sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
          iapUpdateJob = null;
       }
+
+      OneSignalStateSynchronizer.refreshEmailState();
       
       OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
-
-      updateEmailRecord(userId);
    }
 
-   private static void updateEmailRecord(String userId) {
-
+   static void updateEmailIdDependents(String emailId) {
+      saveEmailId(emailId);
+      try {
+         JSONObject updateJson = new JSONObject().put("parent_player_id", emailId);
+         OneSignalStateSynchronizer.updatePushState(updateJson);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
    }
 
    static boolean getFirebaseAnalyticsEnabled(Context context) {

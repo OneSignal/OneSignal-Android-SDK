@@ -33,7 +33,7 @@ abstract class UserStateSynchronizer {
     abstract GetTagsResult getTags(boolean fromServer);
 
     class NetworkHandlerThread extends HandlerThread {
-        private static final int NETWORK_HANDLER_USERSTATE = 0;
+        protected static final int NETWORK_HANDLER_USERSTATE = 0;
 
         int mType;
 
@@ -84,14 +84,12 @@ abstract class UserStateSynchronizer {
     HashMap<Integer, NetworkHandlerThread> networkHandlerThreads = new HashMap<>();
     private final Object networkHandlerSyncLock = new Object() {};
 
-    private boolean nextSyncIsSession = false, waitingForSessionResponse = false;
+    protected boolean nextSyncIsSession = false, waitingForSessionResponse = false;
 
     // currentUserState - Current known state of the user on OneSignal's server.
     // toSyncUserState  - Pending state that will be synced to the OneSignal server.
     //                    diff will be generated between currentUserState when a sync call is made to the server.
     protected UserState currentUserState, toSyncUserState;
-
-    protected abstract String userStatePrefix();
 
     protected JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
         synchronized (syncLock) {
@@ -101,18 +99,20 @@ abstract class UserStateSynchronizer {
 
     protected UserState getToSyncUserState() {
         if (toSyncUserState == null)
-            toSyncUserState = new UserState(userStatePrefix() + "TOSYNC_STATE", true);
+            toSyncUserState = newUserState("TOSYNC_STATE", true);
 
         return toSyncUserState;
     }
 
     void initUserState() {
         if (currentUserState == null)
-            currentUserState = new UserState(userStatePrefix() + "CURRENT_STATE", true);
+            currentUserState = newUserState("CURRENT_STATE", true);
 
         if (toSyncUserState == null)
-            toSyncUserState = new UserState(userStatePrefix() + "TOSYNC_STATE", true);
+            toSyncUserState = newUserState("TOSYNC_STATE", true);
     }
+
+    abstract protected UserState newUserState(String inPersistKey, boolean load);
 
     void clearLocation() {
         getToSyncUserState().clearLocation();
@@ -131,13 +131,15 @@ abstract class UserStateSynchronizer {
         return false;
     }
 
+    abstract String getId();
+
     private boolean isSessionCall() {
-        final String userId = OneSignal.getUserId();
+        final String userId = getId();
         return userId == null || (nextSyncIsSession && !waitingForSessionResponse);
     }
 
     void syncUserState(boolean fromSyncService) {
-        final String userId = OneSignal.getUserId();
+        final String userId = getId();
         boolean isSessionCall =  isSessionCall();
 
         final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
@@ -179,6 +181,7 @@ abstract class UserStateSynchronizer {
                 urlStr = "players/" + userId + "/on_session";
 
             waitingForSessionResponse = true;
+            addPostUserExtras(jsonBody);
             OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
                 @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
@@ -201,12 +204,12 @@ abstract class UserStateSynchronizer {
 
                         if (jsonResponse.has("id")) {
                             String userId = jsonResponse.optString("id");
-                            OneSignal.updateUserIdDependents(userId);
+                            updateIdDependents(userId);
 
                             OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + userId);
                         }
                         else
-                            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + OneSignal.getUserId());
+                            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + getId());
 
                         OneSignal.updateOnSessionDependents();
                     } catch (Throwable t) {
@@ -216,6 +219,8 @@ abstract class UserStateSynchronizer {
             });
         }
     }
+
+    protected abstract void addPostUserExtras(JSONObject jsonBody);
 
     private boolean response400WithErrorsContaining(int statusCode, String response, String contains) {
         if (statusCode == 400 && response != null) {
@@ -230,7 +235,7 @@ abstract class UserStateSynchronizer {
         return false;
     }
 
-    private NetworkHandlerThread getNetworkHandlerThread(Integer type) {
+    protected NetworkHandlerThread getNetworkHandlerThread(Integer type) {
         synchronized (networkHandlerSyncLock) {
             if (!networkHandlerThreads.containsKey(type))
                 networkHandlerThreads.put(type, new NetworkHandlerThread(type));
@@ -247,18 +252,21 @@ abstract class UserStateSynchronizer {
         return toSyncUserState;
     }
 
-    private void postNewSyncUserState() {
-        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
-    }
+    abstract protected void postNewSyncUserState();
 
-    void postUpdate(UserState postSession, boolean isSession) {
+    void updateDeviceInfo(JSONObject deviceInfo) {
         JSONObject toSync = getUserStateForModification().syncValues;
-        generateJsonDiff(toSync, postSession.syncValues, toSync, null);
-        JSONObject dependValues = getUserStateForModification().dependValues;
-        generateJsonDiff(dependValues, postSession.dependValues, dependValues, null);
+        generateJsonDiff(toSync, deviceInfo, toSync, null);
 
-        nextSyncIsSession = nextSyncIsSession || isSession || OneSignal.getUserId() == null;
+        nextSyncIsSession = nextSyncIsSession || getId() == null;
     }
+
+    abstract void updateState(JSONObject state);
+
+    void setSyncAsNewSession() {
+        nextSyncIsSession = true;
+    }
+
 
     void sendTags(JSONObject tags) {
         JSONObject userStateTags = getUserStateForModification().syncValues;
@@ -270,10 +278,7 @@ abstract class UserStateSynchronizer {
         generateJsonDiff(syncValues, emailFields, syncValues, null);
     }
 
-    public void setEmail(JSONObject emailJSON) {
-        JSONObject syncValues = getUserStateForModification().syncValues;
-        generateJsonDiff(syncValues, emailJSON, syncValues, null);
-    }
+    abstract void setEmail(String email);
 
     abstract void setSubscription(boolean enable);
 
@@ -295,4 +300,6 @@ abstract class UserStateSynchronizer {
         UserState userState = getUserStateForModification();
         userState.setLocation(point);
     }
+
+    abstract void updateIdDependents(String id);
 }
