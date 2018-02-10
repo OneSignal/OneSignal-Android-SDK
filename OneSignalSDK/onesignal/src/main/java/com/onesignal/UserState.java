@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import android.os.Bundle;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,11 +11,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-class UserState {
+abstract class UserState {
 
-    private final int NOTIFICATION_TYPES_SUBSCRIBED = 1;
-    private final int NOTIFICATION_TYPES_NO_PERMISSION = 0;
-    private final int NOTIFICATION_TYPES_UNSUBSCRIBE = -2;
+    protected final int NOTIFICATION_TYPES_SUBSCRIBED = 1;
+    protected final int NOTIFICATION_TYPES_NO_PERMISSION = 0;
+    protected final int NOTIFICATION_TYPES_UNSUBSCRIBE = -2;
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
@@ -35,8 +37,10 @@ class UserState {
         }
     }
 
+    abstract UserState newInstance(String persistKey);
+
     UserState deepClone(String persistKey) {
-        UserState clonedUserState = new UserState(persistKey, false);
+        UserState clonedUserState = newInstance(persistKey);
 
         try {
             clonedUserState.dependValues = new JSONObject(dependValues.toString());
@@ -48,27 +52,9 @@ class UserState {
         return clonedUserState;
     }
 
-    private void addDependFields() {
-        try {
-            syncValues.put("notification_types", getNotificationTypes());
-        } catch (JSONException e) {}
-    }
+    abstract protected void addDependFields();
 
-    int getNotificationTypes() {
-        int subscribableStatus = dependValues.optInt("subscribableStatus", 1);
-        if (subscribableStatus < NOTIFICATION_TYPES_UNSUBSCRIBE)
-            return subscribableStatus;
-
-        boolean androidPermission = dependValues.optBoolean("androidPermission", true);
-        if (!androidPermission)
-            return NOTIFICATION_TYPES_NO_PERMISSION;
-
-        boolean userSubscribePref = dependValues.optBoolean("userSubscribePref", true);
-        if (!userSubscribePref)
-            return NOTIFICATION_TYPES_UNSUBSCRIBE;
-
-        return NOTIFICATION_TYPES_SUBSCRIBED;
-    }
+    abstract boolean isSubscribed();
 
     private Set<String> getGroupChangeFields(UserState changedTo) {
         try {
@@ -134,14 +120,6 @@ class UserState {
     void set(String key, Object value) {
         try {
             syncValues.put(key, value);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    void setState(String key, Object value) {
-        try {
-            dependValues.put(key, value);
         } catch (JSONException e) {
             e.printStackTrace();
         }

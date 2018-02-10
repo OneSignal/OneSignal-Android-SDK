@@ -16,12 +16,7 @@ class TestHelpers {
    static void betweenTestsCleanup() {
       StaticResetHelper.restSetStaticFields();
 
-      ShadowOneSignalRestClient.lastPost = null;
-      ShadowOneSignalRestClient.nextSuccessResponse = null;
-      ShadowOneSignalRestClient.failNext = false;
-      ShadowOneSignalRestClient.failNextPut = false;
-      ShadowOneSignalRestClient.failAll = false;
-      ShadowOneSignalRestClient.networkCallCount = 0;
+      ShadowOneSignalRestClient.resetStatics();
 
       ShadowPushRegistratorGPS.skipComplete = false;
       ShadowPushRegistratorGPS.fail = false;

@@ -192,7 +192,7 @@ public class MainOneSignalClassRunner {
 
    @After
    public void afterEachTest() throws Exception {
-     // Thread.sleep(10*5);
+     Thread.sleep(100);
    }
 
    @AfterClass
@@ -573,7 +573,7 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      Assert.assertEquals(ShadowOneSignalRestClient.testUserId, callBackUseId);
+      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
    }
 
    @Test
@@ -603,7 +603,7 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      Assert.assertEquals(ShadowOneSignalRestClient.testUserId, callBackUseId);
+      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
    }
 
    @Test
@@ -856,11 +856,20 @@ public class MainOneSignalClassRunner {
       OneSignal.setEmail(email);
       threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      String sendEmail = ShadowOneSignalRestClient.lastPost.getString("email");
-      Assert.assertEquals(email, sendEmail);
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
-      // TODO: Test that we sent a 2nd POST for the new email device type
+      JSONObject pushPost = ShadowOneSignalRestClient.posts.get(0);
+      Assert.assertEquals(email, pushPost.getString("email"));
+      Assert.assertEquals(1, pushPost.getInt("device_type"));
+
+      JSONObject emailPost = ShadowOneSignalRestClient.posts.get(1);
+      Assert.assertEquals(email, emailPost.getString("identifier"));
+      Assert.assertEquals(11, emailPost.getInt("device_type"));
+      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, emailPost.getString("device_player_id"));
+
+      JSONObject pushPut = ShadowOneSignalRestClient.posts.get(2);
+      Assert.assertEquals(ShadowOneSignalRestClient.emailUserId, pushPut.getString("parent_player_id"));
+      Assert.assertFalse(pushPut.has("identifier"));
    }
 
    @Test
@@ -1063,7 +1072,7 @@ public class MainOneSignalClassRunner {
          public void idsAvailable(String userId, String registrationId) {
             //Assert the userId being returned
             callbackFired.set(true);
-            Assert.assertEquals(ShadowOneSignalRestClient.testUserId, userId);
+            Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, userId);
          }
       };
 
@@ -1489,7 +1498,7 @@ public class MainOneSignalClassRunner {
 
       Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertEquals("value1", lastGetTags.getString("test1"));
-      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.testUserId));
+      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.pushUserId));
    }
 
 
@@ -2061,7 +2070,7 @@ public class MainOneSignalClassRunner {
       Assert.assertTrue(currentSubscription);
       Assert.assertTrue(lastSubscriptionStateChanges.getTo().getUserSubscriptionSetting());
       Assert.assertEquals(ShadowPushRegistratorGPS.regId, lastSubscriptionStateChanges.getTo().getPushToken());
-      Assert.assertEquals(ShadowOneSignalRestClient.testUserId, lastSubscriptionStateChanges.getTo().getUserId());
+      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, lastSubscriptionStateChanges.getTo().getUserId());
    }
    
    @Test

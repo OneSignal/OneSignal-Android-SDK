@@ -30,7 +30,7 @@ public class StaticResetHelper {
       classes.add(new StaticResetHelper().new ClassState(OneSignalStateSynchronizer.class, new OtherFieldHandler() {
          @Override
          public boolean onOtherField(Field field) throws Exception {
-            if (field.getName().equals("currentUserState") || field.getName().equals("toSyncUserState")) {
+            if (field.getName().equals("userStatePushSynchronizer") || field.getName().equals("userStateEmailSynchronizer")) {
                field.set(null, null);
                return true;
             }

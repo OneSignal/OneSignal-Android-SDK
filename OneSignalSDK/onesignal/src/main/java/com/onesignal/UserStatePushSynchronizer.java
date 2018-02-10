@@ -6,8 +6,13 @@ import org.json.JSONObject;
 class UserStatePushSynchronizer extends UserStateSynchronizer {
 
     @Override
+    protected UserState newUserState(String inPersistKey, boolean load) {
+        return new UserStatePush(inPersistKey, load);
+    }
+
+    @Override
     boolean getSubscribed() {
-        return getToSyncUserState().getNotificationTypes() > 0;
+        return getToSyncUserState().isSubscribed();
     }
 
     private static boolean serverSuccess;
@@ -52,8 +57,52 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    protected String userStatePrefix() {
-        return "";
+    protected void postNewSyncUserState() {
+        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
+    }
+
+    @Override
+    void updateState(JSONObject pushState) {
+        try {
+            JSONObject syncUpdate = new JSONObject();
+            syncUpdate.putOpt("identifier", pushState.optString("identifier", null));
+            if (pushState.has("device_type"))
+                syncUpdate.put("device_type", pushState.optInt("device_type"));
+            syncUpdate.putOpt("parent_player_id", pushState.optString("parent_player_id", null));
+            JSONObject toSync = getUserStateForModification().syncValues;
+            generateJsonDiff(toSync, syncUpdate, toSync, null);
+        } catch(JSONException t) {
+            t.printStackTrace();
+        }
+
+        try {
+            JSONObject dependUpdate = new JSONObject();
+            if (pushState.has("subscribableStatus"))
+                dependUpdate.put("subscribableStatus", pushState.optInt("subscribableStatus"));
+            if (pushState.has("androidPermission"))
+                dependUpdate.put("androidPermission", pushState.optBoolean("androidPermission"));
+            JSONObject dependValues = getUserStateForModification().dependValues;
+            generateJsonDiff(dependValues, dependUpdate, dependValues, null);
+        } catch(JSONException t) {
+            t.printStackTrace();
+        }
+
+        nextSyncIsSession = nextSyncIsSession || getId() == null;
+    }
+
+    @Override
+    void setEmail(String email) {
+        try {
+            JSONObject emailJSON = new JSONObject();
+            emailJSON.put("email", email);
+
+
+            JSONObject syncValues = getUserStateForModification().syncValues;
+            generateJsonDiff(syncValues, emailJSON, syncValues, null);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -78,4 +127,17 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
             e.printStackTrace();
         }
     }
+
+    @Override
+    String getId() {
+        return OneSignal.getUserId();
+    }
+
+    @Override
+    void updateIdDependents(String id) {
+        OneSignal.updateUserIdDependents(id);
+    }
+
+    @Override
+    protected void addPostUserExtras(JSONObject jsonBody) {}
 }
