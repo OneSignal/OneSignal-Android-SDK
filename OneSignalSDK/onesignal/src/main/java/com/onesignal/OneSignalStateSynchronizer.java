@@ -151,4 +151,13 @@ class OneSignalStateSynchronizer {
       getPushStateSynchronizer().setSyncAsNewSession();
       getEmailStateSynchronizer().setSyncAsNewSession();
    }
+
+   static void setSyncAsNewSessionForEmail() {
+      getEmailStateSynchronizer().setSyncAsNewSession();
+   }
+
+   static void logoutEmail() {
+      getPushStateSynchronizer().logoutEmail();
+      getEmailStateSynchronizer().logoutEmail();
+   }
 }

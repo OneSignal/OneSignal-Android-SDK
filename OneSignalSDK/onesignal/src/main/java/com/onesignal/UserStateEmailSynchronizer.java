@@ -46,19 +46,12 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     @Override
     protected void scheduleSyncToServer() {
         // Don't make a POST / PUT network call if we never set an email.
-
         boolean neverEmail = getId() == null && getRegistrationId() == null;
-        if (neverEmail || OneSignal.getUserId() == null) {
-            // TODO: Research if persistState is needed here at all.
-            //       Persisting here is to often. Locks some tests, could be an issue on a device.
-            //       Could do so on a delay if we still need this.
-            // toSyncUserState.persistState();
+        if (neverEmail || OneSignal.getUserId() == null)
             return;
-        }
 
         getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
     }
-
 
     void setEmail(String email, String emailAuthHash) {
         try {
@@ -104,5 +97,12 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    void logoutEmail() {
+        OneSignal.saveEmailId("");
+        resetCurrentState();
+        nextSyncIsSession = false;
     }
 }

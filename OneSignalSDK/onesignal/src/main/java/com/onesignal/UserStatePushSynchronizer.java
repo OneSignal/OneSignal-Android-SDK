@@ -137,4 +137,13 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
 
     @Override
     protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {}
+
+    @Override
+    void logoutEmail() {
+        try {
+            getUserStateForModification().dependValues.put("logoutEmail", true);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 }

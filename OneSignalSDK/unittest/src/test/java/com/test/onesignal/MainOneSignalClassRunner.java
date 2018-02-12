@@ -246,7 +246,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.matches(".*android_params.js.*"));
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -873,6 +873,40 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldSendTagsToEmailBeforeCreate() throws Exception {
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+      OneSignal.sendTags(tagsJson);
+      threadAndTaskWait();
+
+      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(2);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      Assert.assertEquals("josh@onesignal.com", emailPost.payload.get("identifier"));
+      Assert.assertEquals(tagsJson.toString(), emailPost.payload.getJSONObject("tags").toString());
+   }
+
+   @Test
+   public void shouldSendTagsToEmailAfterCreate() throws Exception {
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+      OneSignal.sendTags(tagsJson);
+      threadAndTaskWait();
+
+      Assert.assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(5);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
+      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
+      Assert.assertEquals(tagsJson.toString(), emailPut.payload.getJSONObject("tags").toString());
+   }
+
+   @Test
    public void shouldSetEmailWithAuthHash() throws Exception {
       OneSignalInit();
       String email = "josh@onesignal.com";
@@ -891,14 +925,106 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldDoPostOnEmailChange() throws Exception {
       OneSignalInit();
-      String email = "josh@onesignal.com";
 
-      OneSignal.setEmail(email);
+      OneSignal.setEmail("josh@onesignal.com");
       threadAndTaskWait();
+
+      String newMockEmailPlayerId = "c007f967-98cc-11e4-bed1-118f05be4533";
+      ShadowOneSignalRestClient.emailUserId = newMockEmailPlayerId;
+      String newEmail = "different@email.com";
+      OneSignal.setEmail(newEmail);
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(5);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      Assert.assertEquals(newEmail, emailPost.payload.get("identifier"));
+
+      ShadowOneSignalRestClient.Request playerPut = ShadowOneSignalRestClient.requests.get(6);
+      Assert.assertEquals(newMockEmailPlayerId, playerPut.payload.get("parent_player_id"));
+   }
+
+   // Should update player with new email instead of creating a new one when auth hash is provided
+   @Test
+   public void shouldUpdateEmailWhenAuthHashIsUsed() throws Exception {
+      OneSignalInit();
+      String email = "josh@onesignal.com";
+      String mockEmailHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setEmail(email, mockEmailHash);
+      threadAndTaskWait();
+      OneSignal.setEmail("different@email.com", mockEmailHash);
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request pushPut = ShadowOneSignalRestClient.requests.get(4);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, pushPut.method);
+      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", pushPut.url);
+      Assert.assertEquals("different@email.com", pushPut.payload.get("email"));
+
+      ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(5);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
+      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
+      Assert.assertEquals("different@email.com", emailPut.payload.get("identifier"));
+   }
+
+   private void emailSetThenLogout() throws Exception {
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      OneSignal.logoutEmail();
+      threadAndTaskWait();
+   }
+
+   @Test
+   public void shouldLogoutOfEmail() throws Exception {
+      OneSignalInit();
+
+      emailSetThenLogout();
+
+      ShadowOneSignalRestClient.Request logoutEmailPost = ShadowOneSignalRestClient.requests.get(4);
+      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", logoutEmailPost.url);
+   }
+
+   @Test
+   public void shouldCreateNewEmailAfterLogout() throws Exception {
+      OneSignalInit();
+
+      emailSetThenLogout();
+
+      String newMockEmailPlayerId = "c007f967-98cc-11e4-bed1-118f05be4533";
+      ShadowOneSignalRestClient.emailUserId = newMockEmailPlayerId;
       OneSignal.setEmail("different@email.com");
       threadAndTaskWait();
 
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, ShadowOneSignalRestClient.requests.get(5).method);
+
+      // Update Push record's email field.
+      ShadowOneSignalRestClient.Request putPushEmail = ShadowOneSignalRestClient.requests.get(5);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, putPushEmail.method);
+      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", putPushEmail.url);
+      Assert.assertEquals("different@email.com", putPushEmail.payload.get("email"));
+
+      // Create new Email record
+      ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      Assert.assertEquals("different@email.com", emailPost.payload.get("identifier"));
+
+      // Update Push record's parent_player_id
+      ShadowOneSignalRestClient.Request playerPut2 = ShadowOneSignalRestClient.requests.get(7);
+      Assert.assertEquals(newMockEmailPlayerId, playerPut2.payload.get("parent_player_id"));
+   }
+
+   @Test
+   public void shouldSendOnSessionToEmail() throws Exception {
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession();
+      OneSignalInit();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_session", emailPost.url);
    }
 
    @Test
@@ -1577,6 +1703,28 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       Assert.assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
       Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+   }
+
+   @Test
+   public void sendsOnFocusToEmail() throws Exception {
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      Assert.assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
+      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postPush.url);
+      Assert.assertEquals(60, postPush.payload.getInt("active_time"));
+
+      ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
+      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_focus", postEmail.url);
+      Assert.assertEquals(60, postEmail.payload.getInt("active_time"));
    }
 
    /*
