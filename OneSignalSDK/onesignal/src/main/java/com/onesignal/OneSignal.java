@@ -1087,19 +1087,27 @@ public class OneSignal {
       runSyncHashedEmail.run();
    }
 
+   public static void setEmail(final String email) {
+      setEmail(email, null);
+   }
+
    /**
     * Set an email for the device to later send emails to this address
     * @param email the email that you want to set for the device
+    * @param emailAuthHash SHA256(ONESIGNAL_API_KEY + email) from your server.
+    *                      DO NOT use ONESIGNAL_API_KEY directly in your app!!!
     */
-   public static void setEmail(final String email) {
-      if (!OSUtils.isValidEmail(email))
+   public static void setEmail(final String email, final String emailAuthHash) {
+      if (!OSUtils.isValidEmail(email)) {
+         Log(LOG_LEVEL.ERROR, "Email '" + email + "' is not a valid format.");
          return;
+      }
 
       Runnable runSetEmail = new Runnable() {
          @Override
          public void run() {
             String trimmedEmail = email.trim();
-            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase());
+            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), emailAuthHash);
          }
       };
 
@@ -1643,8 +1651,8 @@ public class OneSignal {
       return userId;
    }
 
-   static void saveUserId(String inUserId) {
-      userId = inUserId;
+   static void saveUserId(String id) {
+      userId = id;
       if (appContext == null)
          return;
 
@@ -1653,6 +1661,9 @@ public class OneSignal {
    }
 
    static String getEmailId() {
+      if ("".equals(emailId))
+         return null;
+
       if (emailId == null && appContext != null) {
          emailId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_OS_EMAIL_ID,null);
@@ -1666,7 +1677,7 @@ public class OneSignal {
          return;
 
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_OS_EMAIL_ID, emailId);
+              OneSignalPrefs.PREFS_OS_EMAIL_ID, "".equals(emailId) ? null : emailId);
    }
    
    static boolean getFilterOtherGCMReceivers(Context context) {

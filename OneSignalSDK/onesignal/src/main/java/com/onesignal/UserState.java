@@ -1,7 +1,5 @@
 package com.onesignal;
 
-import android.os.Bundle;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -107,9 +105,11 @@ abstract class UserState {
             return null;
 
         try {
-            // This makes sure app_id is in all our REST calls.
+            // app_id required for all REST API calls
             if (!sendJson.has("app_id"))
                 sendJson.put("app_id", syncValues.optString("app_id"));
+            if (syncValues.has("email_auth_hash"))
+                sendJson.put("email_auth_hash", syncValues.optString("email_auth_hash"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -188,9 +188,6 @@ abstract class UserState {
     }
 
     private void modifySyncValuesJsonArray(String baseKey) {
-        if (!syncValues.has(baseKey + "_d") && syncValues.has(baseKey + "_d"))
-            return;
-
         try {
             JSONArray orgArray = syncValues.has(baseKey) ? syncValues.getJSONArray(baseKey) : new JSONArray();
             JSONArray tempArray = new JSONArray();

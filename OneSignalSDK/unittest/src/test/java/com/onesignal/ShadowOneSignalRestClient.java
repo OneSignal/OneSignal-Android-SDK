@@ -35,8 +35,24 @@ import java.util.ArrayList;
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
 
+   public enum REST_METHOD {
+      GET, POST, PUT
+   }
+
+   public static class Request {
+      public REST_METHOD method;
+      public JSONObject payload;
+      public String url;
+
+      Request(REST_METHOD method, JSONObject payload, String url) {
+         this.method = method;
+         this.payload = payload;
+         this.url = url;
+      }
+   }
+
    public static JSONObject lastPost;
-   public static ArrayList<JSONObject> posts;
+   public static ArrayList<Request> requests;
    public static String lastUrl;
    public static boolean failNext, failNextPut, failAll;
    public static String failResponse = "{}", nextSuccessResponse, nextSuccessfulGETResponse;
@@ -46,7 +62,7 @@ public class ShadowOneSignalRestClient {
    public static final String emailUserId = "b007f967-98cc-11e4-bed1-118f05be4522";
 
    public static void resetStatics() {
-      posts = new ArrayList<>();
+      requests = new ArrayList<>();
       lastPost = null;
       nextSuccessResponse = null;
       failNext = false;
@@ -55,9 +71,10 @@ public class ShadowOneSignalRestClient {
       networkCallCount = 0;
    }
 
-   private static void trackPost(JSONObject jsonBody) {
-      lastPost = jsonBody;
-      posts.add(jsonBody);
+   private static void trackRequest(REST_METHOD method, JSONObject payload, String url) {
+      if (method == REST_METHOD.POST || method == REST_METHOD.PUT)
+         lastPost = payload;
+      requests.add(new Request(method, payload, url));
    }
 
    private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler, boolean doFail) {
@@ -77,7 +94,7 @@ public class ShadowOneSignalRestClient {
    private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
-      trackPost(jsonBody);
+      trackRequest(REST_METHOD.POST, jsonBody, url);
 
       if (doFail(responseHandler)) return;
 
@@ -111,7 +128,7 @@ public class ShadowOneSignalRestClient {
    public static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
-      trackPost(jsonBody);
+      trackRequest(REST_METHOD.PUT, jsonBody, url);
 
       System.out.println("putSync:lastPost:jsonBody: " + lastPost.toString());
 
@@ -123,7 +140,7 @@ public class ShadowOneSignalRestClient {
    public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       lastUrl = url;
       networkCallCount++;
-      trackPost(jsonBody);
+      trackRequest(REST_METHOD.PUT, jsonBody, url);
 
       if (doFail(responseHandler, failNextPut)) return;
 
@@ -135,6 +152,7 @@ public class ShadowOneSignalRestClient {
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("get: " + url);
       networkCallCount++;
+      trackRequest(REST_METHOD.GET, null, url);
    
       if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
@@ -149,6 +167,8 @@ public class ShadowOneSignalRestClient {
 
    public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
       System.out.println("getSync: " + url);
+
+      trackRequest(REST_METHOD.GET, null, url);
 
       lastUrl = url;
       networkCallCount++;
