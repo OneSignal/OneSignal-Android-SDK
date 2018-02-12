@@ -339,7 +339,7 @@ public class OneSignal {
 
    private static JSONObject awl;
    static boolean mEnterp;
-   
+   private static boolean useEmailAuth;
    
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -733,6 +733,8 @@ public class OneSignal {
                }
                
                mEnterp = responseJson.optBoolean("enterp", false);
+
+               useEmailAuth = responseJson.optBoolean("use_email_auth", false);
                
                awl = responseJson.getJSONObject("awl_list");
    
@@ -920,27 +922,36 @@ public class OneSignal {
          jsonBody.put("active_time", totalTimeActive);
          addNetType(jsonBody);
 
-         String url = "players/" + getUserId() + "/on_focus";
-         OneSignalRestClient.ResponseHandler responseHandler =  new OneSignalRestClient.ResponseHandler() {
-            @Override
-            void onFailure(int statusCode, String response, Throwable throwable) {
-               logHttpError("sending on_focus Failed", statusCode, throwable, response);
-            }
+         sendOnFocusToPlayer(getUserId(), jsonBody, synchronous);
+         String emailId = getEmailId();
+         if (emailId != null)
+            sendOnFocusToPlayer(emailId, jsonBody, synchronous);
 
-            @Override
-            void onSuccess(String response) {
-               SaveUnsentActiveTime(0);
-            }
-         };
-
-         if (synchronous)
-            OneSignalRestClient.postSync(url, jsonBody, responseHandler);
-         else
-            OneSignalRestClient.post(url, jsonBody, responseHandler);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
       }
    }
+
+   private static void sendOnFocusToPlayer(String userId, JSONObject jsonBody, boolean synchronous) {
+      String url = "players/" + userId + "/on_focus";
+      OneSignalRestClient.ResponseHandler responseHandler =  new OneSignalRestClient.ResponseHandler() {
+         @Override
+         void onFailure(int statusCode, String response, Throwable throwable) {
+            logHttpError("sending on_focus Failed", statusCode, throwable, response);
+         }
+
+         @Override
+         void onSuccess(String response) {
+            SaveUnsentActiveTime(0);
+         }
+      };
+
+      if (synchronous)
+         OneSignalRestClient.postSync(url, jsonBody, responseHandler);
+      else
+         OneSignalRestClient.post(url, jsonBody, responseHandler);
+   }
+
 
    static void onAppFocus() {
       startSyncService();
@@ -1083,7 +1094,6 @@ public class OneSignal {
          addTaskToQueue(new PendingTaskRunnable(runSyncHashedEmail));
          return;
       }
-
       runSyncHashedEmail.run();
    }
 
@@ -1094,12 +1104,17 @@ public class OneSignal {
    /**
     * Set an email for the device to later send emails to this address
     * @param email the email that you want to set for the device
-    * @param emailAuthHash SHA256(ONESIGNAL_API_KEY + email) from your server.
+    * @param emailAuthHash SHA256(ONESIGNAL_API_KEY + email) from your own remote server.
     *                      DO NOT use ONESIGNAL_API_KEY directly in your app!!!
     */
    public static void setEmail(final String email, final String emailAuthHash) {
       if (!OSUtils.isValidEmail(email)) {
          Log(LOG_LEVEL.ERROR, "Email '" + email + "' is not a valid format.");
+         return;
+      }
+
+      if (useEmailAuth && emailAuthHash == null) {
+         Log(LOG_LEVEL.ERROR, "Missing required emailAuthHash");
          return;
       }
 
@@ -1113,13 +1128,40 @@ public class OneSignal {
 
       // If either the app context is null or the waiting queue isn't done (to preserve operation order)
       if (appContext == null || shouldRunTaskThroughQueue()) {
-         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling syncHashedEmail! " +
+         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling setEmail! " +
                  "Moving this operation to a pending task queue.");
          addTaskToQueue(new PendingTaskRunnable(runSetEmail));
          return;
       }
-
       runSetEmail.run();
+   }
+
+   /**
+    * Call when user logs out of their account.
+    * This dissociates the device from the email address.
+    * The email address will stay subscribed, unless they have unsubscribed from your emails
+    */
+   public static void logoutEmail() {
+      if (getEmailId() == null) {
+         Log(LOG_LEVEL.ERROR, "logoutEmail not valid as email was not set or already logged out!");
+         return;
+      }
+
+      Runnable emailLogout = new Runnable() {
+         @Override
+         public void run() {
+            OneSignalStateSynchronizer.logoutEmail();
+         }
+      };
+
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling logoutEmail! " +
+                 "Moving this operation to a pending task queue.");
+         addTaskToQueue(new PendingTaskRunnable(emailLogout));
+         return;
+      }
+      emailLogout.run();
    }
 
    /**

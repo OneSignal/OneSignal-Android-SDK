@@ -3,6 +3,7 @@ package com.onesignal;
 import android.os.Handler;
 import android.os.HandlerThread;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
@@ -137,8 +138,18 @@ abstract class UserStateSynchronizer {
         return nextSyncIsSession && !waitingForSessionResponse;
     }
 
+    private boolean syncEmailLogout() {
+        return toSyncUserState.dependValues.optBoolean("logoutEmail", false);
+    }
+
     void syncUserState(boolean fromSyncService) {
         final String userId = getId();
+
+        if (syncEmailLogout() && userId != null) {
+            doEmailLogout(userId);
+            return;
+        }
+
         final boolean isSessionCall = isSessionCall();
 
         final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
@@ -150,72 +161,127 @@ abstract class UserStateSynchronizer {
         }
         toSyncUserState.persistState();
 
-        if (!isSessionCall || fromSyncService) {
-            if (userId == null)
-                return;
+        if (!isSessionCall || fromSyncService)
+            doPutSync(userId, jsonBody, dependDiff);
+        else
+            doCreateOrNewSession(userId, jsonBody, dependDiff);
+    }
 
-            OneSignalRestClient.putSync("players/" + userId, jsonBody, new OneSignalRestClient.ResponseHandler() {
-                @Override
-                void onFailure(int statusCode, String response, Throwable throwable) {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
-
-                    if (response400WithErrorsContaining(statusCode, response, "No user with this id found"))
-                        handlePlayerDeletedFromServer();
-                    else
-                        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
-                }
-
-                @Override
-                void onSuccess(String response) {
-                    currentUserState.persistStateAfterSync(dependDiff, jsonBody);
-                }
-            });
+    private void doEmailLogout(String userId) {
+        String urlStr = "players/" + userId + "/email_logout";
+        JSONObject jsonBody = new JSONObject();
+        try {
+            if (currentUserState.syncValues.has("email_auth_hash"))
+                jsonBody.put("email_auth_hash", currentUserState.syncValues.optString("email_auth_hash"));
+            if (currentUserState.syncValues.has("parent_player_id"))
+                jsonBody.put("parent_player_id", currentUserState.syncValues.optString("parent_player_id"));
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
-        else {
-            String urlStr;
-            if (userId == null)
-                urlStr = "players";
-            else
-                urlStr = "players/" + userId + "/on_session";
 
-            waitingForSessionResponse = true;
-            addOnSessionOrCreateExtras(jsonBody);
-            OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
-                @Override
-                void onFailure(int statusCode, String response, Throwable throwable) {
-                    waitingForSessionResponse = false;
-                    OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
+        OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
 
-                    if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
-                        handlePlayerDeletedFromServer();
-                    else
-                        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+                if (response400WithErrorsContaining(statusCode, response, "already logged out of email")) {
+                    logoutEmailSyncSuccess();
+                    return;
                 }
 
-                @Override
-                void onSuccess(String response) {
-                    nextSyncIsSession = waitingForSessionResponse = false;
-                    currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+                if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
+                    handlePlayerDeletedFromServer();
+                else
+                    getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+            }
 
-                    try {
-                        JSONObject jsonResponse = new JSONObject(response);
+            @Override
+            void onSuccess(String response) {
+                logoutEmailSyncSuccess();
+            }
+        });
+    }
 
-                        if (jsonResponse.has("id")) {
-                            String newUserId = jsonResponse.optString("id");
-                            updateIdDependents(newUserId);
+    private void logoutEmailSyncSuccess() {
+        toSyncUserState.dependValues.remove("logoutEmail");
+        toSyncUserState.syncValues.remove("parent_player_id");
+        toSyncUserState.persistState();
 
-                            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + newUserId);
-                        }
-                        else
-                            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + userId);
+        currentUserState.syncValues.remove("parent_player_id");
+        String emailLoggedOut = currentUserState.syncValues.optString("email");
+        currentUserState.syncValues.remove("email");
 
-                        OneSignal.updateOnSessionDependents();
-                    } catch (Throwable t) {
-                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
+        OneSignalStateSynchronizer.setSyncAsNewSessionForEmail();
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device successfully logged out of email: " + emailLoggedOut);
+    }
+
+    private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
+        if (userId == null)
+            return;
+
+        OneSignalRestClient.putSync("players/" + userId, jsonBody, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
+
+                if (response400WithErrorsContaining(statusCode, response, "No user with this id found"))
+                    handlePlayerDeletedFromServer();
+                else
+                    getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+            }
+
+            @Override
+            void onSuccess(String response) {
+                currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+            }
+        });
+    }
+
+    private void doCreateOrNewSession(final String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
+        String urlStr;
+        if (userId == null)
+            urlStr = "players";
+        else
+            urlStr = "players/" + userId + "/on_session";
+
+        waitingForSessionResponse = true;
+        addOnSessionOrCreateExtras(jsonBody);
+        OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                waitingForSessionResponse = false;
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
+
+                if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
+                    handlePlayerDeletedFromServer();
+                else
+                    getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+            }
+
+            @Override
+            void onSuccess(String response) {
+                nextSyncIsSession = waitingForSessionResponse = false;
+                currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+
+                try {
+                    JSONObject jsonResponse = new JSONObject(response);
+
+                    if (jsonResponse.has("id")) {
+                        String newUserId = jsonResponse.optString("id");
+                        updateIdDependents(newUserId);
+
+                        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + newUserId);
                     }
+                    else
+                        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + userId);
+
+                    OneSignal.updateOnSessionDependents();
+                } catch (Throwable t) {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
                 }
-            });
-        }
+            }
+        });
     }
 
     protected abstract void addOnSessionOrCreateExtras(JSONObject jsonBody);
@@ -299,4 +365,6 @@ abstract class UserStateSynchronizer {
     }
 
     abstract void updateIdDependents(String id);
+
+    abstract void logoutEmail();
 }
