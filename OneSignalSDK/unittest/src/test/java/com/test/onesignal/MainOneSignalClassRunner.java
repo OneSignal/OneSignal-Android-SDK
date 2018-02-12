@@ -858,18 +858,47 @@ public class MainOneSignalClassRunner {
 
       Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
-      JSONObject pushPost = ShadowOneSignalRestClient.posts.get(0);
+      JSONObject pushPost = ShadowOneSignalRestClient.requests.get(1).payload;
       Assert.assertEquals(email, pushPost.getString("email"));
       Assert.assertEquals(1, pushPost.getInt("device_type"));
 
-      JSONObject emailPost = ShadowOneSignalRestClient.posts.get(1);
+      JSONObject emailPost = ShadowOneSignalRestClient.requests.get(2).payload;
       Assert.assertEquals(email, emailPost.getString("identifier"));
       Assert.assertEquals(11, emailPost.getInt("device_type"));
       Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, emailPost.getString("device_player_id"));
 
-      JSONObject pushPut = ShadowOneSignalRestClient.posts.get(2);
+      JSONObject pushPut = ShadowOneSignalRestClient.requests.get(3).payload;
       Assert.assertEquals(ShadowOneSignalRestClient.emailUserId, pushPut.getString("parent_player_id"));
       Assert.assertFalse(pushPut.has("identifier"));
+   }
+
+   @Test
+   public void shouldSetEmailWithAuthHash() throws Exception {
+      OneSignalInit();
+      String email = "josh@onesignal.com";
+      String mockEmailHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setEmail(email, mockEmailHash);
+      threadAndTaskWait();
+
+      JSONObject emailPost = ShadowOneSignalRestClient.requests.get(2).payload;
+      Assert.assertEquals(email, emailPost.getString("identifier"));
+      Assert.assertEquals(11, emailPost.getInt("device_type"));
+      Assert.assertEquals(mockEmailHash, emailPost.getString("email_auth_hash"));
+   }
+
+   // Should create a new email instead of updating existing player record when no auth hash
+   @Test
+   public void shouldDoPostOnEmailChange() throws Exception {
+      OneSignalInit();
+      String email = "josh@onesignal.com";
+
+      OneSignal.setEmail(email);
+      threadAndTaskWait();
+      OneSignal.setEmail("different@email.com");
+      threadAndTaskWait();
+
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, ShadowOneSignalRestClient.requests.get(5).method);
    }
 
    @Test

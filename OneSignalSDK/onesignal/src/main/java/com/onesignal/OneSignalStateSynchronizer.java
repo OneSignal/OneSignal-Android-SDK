@@ -90,9 +90,9 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   static void setEmail(String email) {
+   static void setEmail(String email, String emailAuthHash) {
       getPushStateSynchronizer().setEmail(email);
-      getEmailStateSynchronizer().setEmail(email);
+      getEmailStateSynchronizer().setEmail(email, emailAuthHash);
    }
 
    static void setSubscription(boolean enable) {
@@ -126,9 +126,10 @@ class OneSignalStateSynchronizer {
 
    static void resetCurrentState() {
       getPushStateSynchronizer().resetCurrentState();
+      getEmailStateSynchronizer().resetCurrentState();
 
       OneSignal.saveUserId(null);
-      // TODO: Email user Id should be set to null as well.
+      OneSignal.saveEmailId(null);
 
       OneSignal.setLastSessionTime(-60 * 61);
    }

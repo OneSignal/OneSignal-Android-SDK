@@ -40,17 +40,12 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     void updateState(JSONObject state) {}
 
     void refresh() {
-        postNewSyncUserState();
+        scheduleSyncToServer();
     }
 
     @Override
-    protected void postNewSyncUserState() {
+    protected void scheduleSyncToServer() {
         // Don't make a POST / PUT network call if we never set an email.
-
-        System.out.println("getId()" + getId());
-        System.out.println("getRegistrationId()" + getRegistrationId());
-        System.out.println("OneSignal.getUserId()()" + OneSignal.getUserId());
-
 
         boolean neverEmail = getId() == null && getRegistrationId() == null;
         if (neverEmail || OneSignal.getUserId() == null) {
@@ -65,13 +60,25 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     }
 
 
-    @Override
-    void setEmail(String email) {
+    void setEmail(String email, String emailAuthHash) {
         try {
             JSONObject emailJSON = new JSONObject();
             emailJSON.put("identifier", email);
 
+            if (emailAuthHash != null)
+                emailJSON.put("email_auth_hash", emailAuthHash);
+
             JSONObject syncValues = getUserStateForModification().syncValues;
+
+            if (emailAuthHash == null) {
+                String existingEmail = syncValues.optString("identifier", null);
+                if (existingEmail != null && !existingEmail.equals(email)) {
+                    OneSignal.saveEmailId("");
+                    resetCurrentState();
+                    setSyncAsNewSession();
+                }
+            }
+
             generateJsonDiff(syncValues, emailJSON, syncValues, null);
         }
         catch (JSONException e) {
@@ -80,7 +87,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    String getId() {
+    protected String getId() {
         return OneSignal.getEmailId();
     }
 
@@ -90,10 +97,10 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    protected void addPostUserExtras(JSONObject jsonBody) {
+    protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {
         try {
             jsonBody.put("device_type", 11);
-            jsonBody.put("device_player_id", OneSignal.getUserId());
+            jsonBody.putOpt("device_player_id", OneSignal.getUserId());
         } catch (JSONException e) {
             e.printStackTrace();
         }

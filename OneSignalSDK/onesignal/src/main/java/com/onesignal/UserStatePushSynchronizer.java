@@ -57,7 +57,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    protected void postNewSyncUserState() {
+    protected void scheduleSyncToServer() {
         getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
     }
 
@@ -86,11 +86,8 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         } catch(JSONException t) {
             t.printStackTrace();
         }
-
-        nextSyncIsSession = nextSyncIsSession || getId() == null;
     }
 
-    @Override
     void setEmail(String email) {
         try {
             JSONObject emailJSON = new JSONObject();
@@ -129,7 +126,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    String getId() {
+    protected String getId() {
         return OneSignal.getUserId();
     }
 
@@ -139,5 +136,5 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    protected void addPostUserExtras(JSONObject jsonBody) {}
+    protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {}
 }
