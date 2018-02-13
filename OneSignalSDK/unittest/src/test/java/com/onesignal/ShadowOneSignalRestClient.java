@@ -54,8 +54,8 @@ public class ShadowOneSignalRestClient {
    public static JSONObject lastPost;
    public static ArrayList<Request> requests;
    public static String lastUrl;
-   public static boolean failNext, failNextPut, failAll;
-   public static String failResponse = "{}", nextSuccessResponse, nextSuccessfulGETResponse;
+   public static boolean failNext, failNextPut, failAll, failPosts;
+   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse;
    public static int networkCallCount;
 
    public static String pushUserId, emailUserId;
@@ -66,11 +66,16 @@ public class ShadowOneSignalRestClient {
 
       requests = new ArrayList<>();
       lastPost = null;
+      networkCallCount = 0;
+
+      nextSuccessfulGETResponse = null;
+
+      failResponse = "{}";
       nextSuccessResponse = null;
       failNext = false;
       failNextPut = false;
       failAll = false;
-      networkCallCount = 0;
+      failPosts = false;
    }
 
    private static void trackRequest(REST_METHOD method, JSONObject payload, String url) {
@@ -101,7 +106,7 @@ public class ShadowOneSignalRestClient {
    private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       trackRequest(REST_METHOD.POST, jsonBody, url);
 
-      if (doFail(responseHandler)) return;
+      if (doFail(responseHandler, failPosts)) return;
 
       String retJson;
       if (url.contains("on_session"))
@@ -113,10 +118,11 @@ public class ShadowOneSignalRestClient {
       }
 
       if (nextSuccessResponse != null) {
-         responseHandler.onSuccess(nextSuccessResponse);
+         if (responseHandler != null)
+            responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
       }
-      else
+      else if (responseHandler != null)
          responseHandler.onSuccess(retJson);
    }
 

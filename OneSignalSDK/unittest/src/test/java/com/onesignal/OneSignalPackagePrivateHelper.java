@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
@@ -41,7 +42,7 @@ public class OneSignalPackagePrivateHelper {
          @Override
          void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
             Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
-            if (scheduler.advanceToLastPostedRunnable())
+            while (scheduler.runOneTask())
                startedRunnable = true;
          }
       };
@@ -76,6 +77,10 @@ public class OneSignalPackagePrivateHelper {
       if (looper == null) return;
 
       shadowOf(looper).reset();
+   }
+
+   public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
+      OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
    public static void SyncService_onTaskRemoved(Service service) {

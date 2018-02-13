@@ -109,7 +109,7 @@ class OneSignalStateSynchronizer {
 
    static void updateLocation(LocationGMS.LocationPoint point) {
       getPushStateSynchronizer().updateLocation(point);
-      // TODO: Add getEmailState...
+      getEmailStateSynchronizer().updateLocation(point);
    }
 
    static boolean getSubscribed() {
