@@ -48,9 +48,12 @@ class OneSignalStateSynchronizer {
    }
    
    static boolean stopAndPersist() {
-      // TODO: Add Email.
-      //       Look into what the return value show be if one is true and one is false.
-      return getPushStateSynchronizer().stopAndPersist();
+      boolean pushPersisted = getPushStateSynchronizer().stopAndPersist();
+      boolean emailPersisted = getEmailStateSynchronizer().stopAndPersist();
+      if (emailPersisted)
+         emailPersisted = getEmailStateSynchronizer().getRegistrationId() != null;
+
+      return pushPersisted || emailPersisted;
    }
    
    static void clearLocation() {
