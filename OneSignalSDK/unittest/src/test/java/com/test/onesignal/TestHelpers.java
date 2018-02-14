@@ -20,9 +20,7 @@ class TestHelpers {
 
       ShadowOneSignalRestClient.resetStatics();
 
-      ShadowPushRegistratorGPS.skipComplete = false;
-      ShadowPushRegistratorGPS.fail = false;
-      ShadowPushRegistratorGPS.lastProjectNumber = null;
+      ShadowPushRegistratorGPS.resetStatics();
    
       ShadowNotificationManagerCompat.enabled = true;
 

@@ -1104,19 +1104,39 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorGPS.skipComplete = true;
       OneSignalInit();
       GetIdsAvailable();
-
       threadAndTaskWait();
+
       Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       // Should not attempt to make a network call yet as we don't have a player_id
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       threadAndTaskWait();
+
       Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowPushRegistratorGPS.fireLastCallback();
       threadAndTaskWait(); threadAndTaskWait();
+
       Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       Assert.assertNotNull(callBackUseId);
+   }
+
+   @Test
+   public void shouldCreatePlayerAfterDelayedTokenFromApplicationOnCreate() throws Exception {
+      ShadowPushRegistratorGPS.skipComplete = true;
+      OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      ShadowPushRegistratorGPS.fireLastCallback();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request createPlayer = ShadowOneSignalRestClient.requests.get(1);
+      Assert.assertEquals(2, ShadowOneSignalRestClient.requests.size());
+      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, createPlayer.method);
+      Assert.assertEquals("players", createPlayer.url);
+      Assert.assertEquals("b2f7f966-d8cc-11e4-bed1-df8f05be55ba", createPlayer.payload.get("app_id"));
+      Assert.assertEquals(1, createPlayer.payload.get("device_type"));
    }
 
    @Test
@@ -1927,6 +1947,7 @@ public class MainOneSignalClassRunner {
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
       ShadowFusedLocationApiWrapper.time = 12345L;
 
+      blankActivityController.pause();
       Intent intent = new Intent();
       intent.putExtra("task", 1); // Sync
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
@@ -2438,6 +2459,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      blankActivityController.resume();
    }
 
    private void OneSignalInitFromApplication() {

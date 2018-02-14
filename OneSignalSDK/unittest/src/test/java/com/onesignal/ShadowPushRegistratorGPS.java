@@ -42,11 +42,18 @@ public class ShadowPushRegistratorGPS {
    
    public static final String regId = "aspdfoh0fhj02hr-2h";
 
-   public static boolean fail = false;
+   public static boolean fail;
    public static boolean skipComplete;
    public static String lastProjectNumber;
 
    private static PushRegistrator.RegisteredHandler lastCallback;
+
+   public static void resetStatics() {
+      skipComplete = false;
+      fail = false;
+      lastProjectNumber = null;
+      lastCallback = null;
+   }
 
    public static void manualFireRegisterForPush() {
       lastCallback.complete(regId, 1);
