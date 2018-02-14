@@ -43,6 +43,9 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.OSEmailSubscriptionObserver;
+import com.onesignal.OSEmailSubscriptionState;
+import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
@@ -61,6 +64,7 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -1814,17 +1818,13 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
 
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
-
-      Location fakeLocation = new Location("UnitTest");
-      fakeLocation.setLatitude(30.0d); // change the Lat
-      fakeLocation.setLongitude(2.0d);
-      fakeLocation.setAccuracy(5.0f); // change the accuracy
-      fakeLocation.setTime(12345L);
-      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
-
+      ShadowFusedLocationApiWrapper.lat = 30d;
+      ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.accuracy = 5.0f;
+      restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
+
       Assert.assertEquals(30.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
       Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
       Assert.assertEquals(5.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
@@ -1922,12 +1922,10 @@ public class MainOneSignalClassRunner {
       shadowOf(alarmManager).getScheduledAlarms().clear();
       ShadowOneSignalRestClient.lastPost = null;
 
-      Location fakeLocation = new Location("UnitTest");
-      fakeLocation.setLatitude(1.0d);
-      fakeLocation.setLongitude(2.0d);
-      fakeLocation.setAccuracy(3.0f);
-      fakeLocation.setTime(12345L);
-      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
+
+      ShadowFusedLocationApiWrapper.lat = 1.0; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.accuracy = 3.0f;
+      ShadowFusedLocationApiWrapper.time = 12345L;
 
       Intent intent = new Intent();
       intent.putExtra("task", 1); // Sync
@@ -2310,6 +2308,69 @@ public class MainOneSignalClassRunner {
       
       Assert.assertFalse(currentSubscription);
       Assert.assertNull(lastSubscriptionStateChanges);
+   }
+
+   private OSEmailSubscriptionStateChanges lastEmailSubscriptionStateChanges;
+
+   @Test
+   public void shouldFireEmailSubscriptionObserverOnSetEmail() throws Exception {
+      OneSignalInit();
+      OSEmailSubscriptionObserver subscriptionObserver = new OSEmailSubscriptionObserver() {
+         @Override
+         public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+            lastEmailSubscriptionStateChanges = stateChanges;
+         }
+      };
+      OneSignal.addEmailSubscriptionObserver(subscriptionObserver);
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      Assert.assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
+      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
+      Assert.assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
+      Assert.assertTrue(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+   }
+
+   @Test
+   public void shouldFireEmailSubscriptionObserverOnLogoutEmail() throws Exception {
+      OneSignalInit();
+      OSEmailSubscriptionObserver subscriptionObserver = new OSEmailSubscriptionObserver() {
+         @Override
+         public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+            lastEmailSubscriptionStateChanges = stateChanges;
+         }
+      };
+      OneSignal.addEmailSubscriptionObserver(subscriptionObserver);
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      OneSignal.logoutEmail();
+      threadAndTaskWait();
+
+      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
+      Assert.assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getFrom().getEmailAddress());
+
+      Assert.assertFalse(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+      Assert.assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
+      Assert.assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
+   }
+
+   @Test
+   public void shouldGetCorrectCurrentEmailSubscriptionState() throws Exception {
+      OneSignalInit();
+      OSEmailSubscriptionState emailSubscriptionState = OneSignal.getEmailSubscriptionState();
+
+      Assert.assertNull(emailSubscriptionState.getEmailUserId());
+      Assert.assertNull(emailSubscriptionState.getEmailAddress());
+      Assert.assertFalse(emailSubscriptionState.getSubscribed());
+
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+      emailSubscriptionState = OneSignal.getEmailSubscriptionState();
+
+      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", emailSubscriptionState.getEmailUserId());
+      Assert.assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
+      Assert.assertTrue(emailSubscriptionState.getSubscribed());
    }
    
    @Test

@@ -30,8 +30,6 @@ package com.onesignal;
 
 import org.json.JSONObject;
 
-import static com.onesignal.OneSignal.appContext;
-
 public class OSSubscriptionState implements Cloneable {
    
    OSObservable<Object, OSSubscriptionState> observable;

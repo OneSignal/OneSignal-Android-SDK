@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,42 +27,25 @@
 
 package com.onesignal;
 
-import android.location.Location;
+class OSEmailSubscriptionChangedInternalObserver {
+    void changed(OSEmailSubscriptionState state) {
+        fireChangesToPublicObserver(state);
+    }
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
+    // Handles firing a public facing EmailSubscriptionStateChangesObserver
+    //    1. Generates a OSEmailSubscriptionStateChanges object and sets to and from states
+    //    2. Persists acknowledgement
+    //      - Prevents duplicated events
+    //      - Notifies if changes were made outside of the app
+    static void fireChangesToPublicObserver(OSEmailSubscriptionState state) {
+        OSEmailSubscriptionStateChanges stateChanges = new OSEmailSubscriptionStateChanges();
+        stateChanges.from = OneSignal.lastEmailSubscriptionState;
+        stateChanges.to = (OSEmailSubscriptionState)state.clone();
 
-import org.robolectric.annotation.Implements;
-
-@Implements(LocationGMS.FusedLocationApiWrapper.class)
-public class ShadowFusedLocationApiWrapper {
-   
-   public static Double lat, log;
-   public static Float accuracy;
-   public static Integer type;
-   public static Long time;
-
-   public static void resetStatics() {
-      lat = 1.0;
-      log = 2.0;
-      accuracy = 3.0f;
-      type = 0;
-      time = 12345L;
-   }
-   
-   public static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
-   }
-   
-   public static void removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
-   }
-   
-   public static Location getLastLocation(GoogleApiClient googleApiClient) {
-      Location location = new Location("");
-      location.setLatitude(lat); location.setLongitude(log);
-      location.setAccuracy(accuracy);
-      location.setTime(time);
-      
-      return location;
-   }
+        boolean hasReceiver = OneSignal.getEmailSubscriptionStateChangesObserver().notifyChange(stateChanges);
+        if (hasReceiver) {
+            OneSignal.lastEmailSubscriptionState = (OSEmailSubscriptionState)state.clone();
+            OneSignal.lastEmailSubscriptionState.persistAsFrom();
+        }
+    }
 }

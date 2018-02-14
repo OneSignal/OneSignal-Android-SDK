@@ -104,5 +104,6 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         OneSignal.saveEmailId("");
         resetCurrentState();
         nextSyncIsSession = false;
+        OneSignal.getEmailSubscriptionState().clearEmailAndId();
     }
 }
