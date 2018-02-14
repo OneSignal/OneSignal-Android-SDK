@@ -34,9 +34,16 @@ import org.robolectric.annotation.Implements;
 @Implements(LocationGMS.class)
 public class ShadowLocationGMS {
 
-   public static Double lat = 1.0, log = 2.0;
-   public static Float accuracy = 3.0f;
-   public static Integer type = 0;
+   public static Double lat, log;
+   public static Float accuracy;
+   public static Integer type;
+
+   public static void resetStatics() {
+      lat = 1.0;
+      log = 2.0;
+      accuracy = 3.0f;
+      type = 0;
+   }
 
    public static void getLocation(Context context, boolean promptLocation, LocationGMS.LocationHandler handler) {
       LocationGMS.LocationPoint point = new LocationGMS.LocationPoint();

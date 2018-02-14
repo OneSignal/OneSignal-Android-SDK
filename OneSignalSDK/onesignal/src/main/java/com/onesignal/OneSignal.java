@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,6 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.ref.WeakReference;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -77,7 +76,7 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
  * @see <a href="https://documentation.onesignal.com/docs/android-sdk-setup#section-1-gradle-setup">OneSignal Gradle Setup</a>
  */
 public class OneSignal {
-   
+
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
@@ -292,7 +291,7 @@ public class OneSignal {
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
-   private static String userId = null;
+   private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
    static boolean initDone;
@@ -340,7 +339,7 @@ public class OneSignal {
 
    private static JSONObject awl;
    static boolean mEnterp;
-   
+   private static boolean useEmailAuth;
    
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -380,27 +379,27 @@ public class OneSignal {
    private static OSSubscriptionState getCurrentSubscriptionState(Context context) {
       if (context == null)
          return null;
-      
+
       if (currentSubscriptionState == null) {
          currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).getEnabled());
          getCurrentPermissionState(context).observable.addObserver(currentSubscriptionState);
          currentSubscriptionState.observable.addObserverStrong(new OSSubscriptionChangedInternalObserver());
       }
-      
+
       return currentSubscriptionState;
    }
-   
+
    static OSSubscriptionState lastSubscriptionState;
    private static OSSubscriptionState getLastSubscriptionState(Context context) {
       if (context == null)
          return null;
-      
+
       if (lastSubscriptionState == null)
          lastSubscriptionState = new OSSubscriptionState(true, false);
-      
+
       return lastSubscriptionState;
    }
-   
+
    private static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> subscriptionStateChangesObserver;
    static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> getSubscriptionStateChangesObserver() {
       if (subscriptionStateChangesObserver == null)
@@ -408,6 +407,40 @@ public class OneSignal {
       return subscriptionStateChangesObserver;
    }
    // End SubscriptionState
+
+
+   // Start EmailSubscriptionState
+   private static OSEmailSubscriptionState currentEmailSubscriptionState;
+   private static OSEmailSubscriptionState getCurrentEmailSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+
+      if (currentEmailSubscriptionState == null) {
+         currentEmailSubscriptionState = new OSEmailSubscriptionState(false);
+         currentEmailSubscriptionState.observable.addObserverStrong(new OSEmailSubscriptionChangedInternalObserver());
+      }
+
+      return currentEmailSubscriptionState;
+   }
+
+   static OSEmailSubscriptionState lastEmailSubscriptionState;
+   private static OSEmailSubscriptionState getLastEmailSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+
+      if (lastEmailSubscriptionState == null)
+         lastEmailSubscriptionState = new OSEmailSubscriptionState(true);
+
+      return lastEmailSubscriptionState;
+   }
+
+   private static OSObservable<OSEmailSubscriptionObserver, OSEmailSubscriptionStateChanges> emailSubscriptionStateChangesObserver;
+   static OSObservable<OSEmailSubscriptionObserver, OSEmailSubscriptionStateChanges> getEmailSubscriptionStateChangesObserver() {
+      if (emailSubscriptionStateChangesObserver == null)
+         emailSubscriptionStateChangesObserver = new OSObservable<>("onOSEmailSubscriptionChanged", true);
+      return emailSubscriptionStateChangesObserver;
+   }
+   // End EmailSubscriptionState
    
    
    private static class IAPUpdateJob {
@@ -521,7 +554,7 @@ public class OneSignal {
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
-      OneSignalStateSynchronizer.initUserState(appContext);
+      OneSignalStateSynchronizer.initUserState();
       
       ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
 
@@ -734,6 +767,8 @@ public class OneSignal {
                }
                
                mEnterp = responseJson.optBoolean("enterp", false);
+
+               useEmailAuth = responseJson.optBoolean("use_email_auth", false);
                
                awl = responseJson.getJSONObject("awl_list");
    
@@ -921,27 +956,36 @@ public class OneSignal {
          jsonBody.put("active_time", totalTimeActive);
          addNetType(jsonBody);
 
-         String url = "players/" + getUserId() + "/on_focus";
-         OneSignalRestClient.ResponseHandler responseHandler =  new OneSignalRestClient.ResponseHandler() {
-            @Override
-            void onFailure(int statusCode, String response, Throwable throwable) {
-               logHttpError("sending on_focus Failed", statusCode, throwable, response);
-            }
+         sendOnFocusToPlayer(getUserId(), jsonBody, synchronous);
+         String emailId = getEmailId();
+         if (emailId != null)
+            sendOnFocusToPlayer(emailId, jsonBody, synchronous);
 
-            @Override
-            void onSuccess(String response) {
-               SaveUnsentActiveTime(0);
-            }
-         };
-
-         if (synchronous)
-            OneSignalRestClient.postSync(url, jsonBody, responseHandler);
-         else
-            OneSignalRestClient.post(url, jsonBody, responseHandler);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
       }
    }
+
+   private static void sendOnFocusToPlayer(String userId, JSONObject jsonBody, boolean synchronous) {
+      String url = "players/" + userId + "/on_focus";
+      OneSignalRestClient.ResponseHandler responseHandler =  new OneSignalRestClient.ResponseHandler() {
+         @Override
+         void onFailure(int statusCode, String response, Throwable throwable) {
+            logHttpError("sending on_focus Failed", statusCode, throwable, response);
+         }
+
+         @Override
+         void onSuccess(String response) {
+            SaveUnsentActiveTime(0);
+         }
+      };
+
+      if (synchronous)
+         OneSignalRestClient.postSync(url, jsonBody, responseHandler);
+      else
+         OneSignalRestClient.post(url, jsonBody, responseHandler);
+   }
+
 
    static void onAppFocus() {
       startSyncService();
@@ -992,58 +1036,72 @@ public class OneSignal {
 
       new Thread(new Runnable() {
          public void run() {
-            OneSignalStateSynchronizer.UserState userState = OneSignalStateSynchronizer.getNewUserState();
-
-            String packageName = appContext.getPackageName();
-            PackageManager packageManager = appContext.getPackageManager();
-
-            userState.set("app_id", appId);
-            userState.set("identifier", lastRegistrationId);
-
-            String adId = mainAdIdProvider.getIdentifier(appContext);
-            if (adId != null)
-               userState.set("ad_id", adId);
-            userState.set("device_os", Build.VERSION.RELEASE);
-            userState.set("timezone", getTimeZoneOffset());
-            userState.set("language", OSUtils.getCorrectedLanguage());
-            userState.set("sdk", VERSION);
-            userState.set("sdk_type", sdkType);
-            userState.set("android_package", packageName);
-            userState.set("device_model", Build.MODEL);
-            userState.set("device_type", deviceType);
-            userState.setState("subscribableStatus", subscribableStatus);
-            userState.setState("androidPermission", areNotificationsEnabledForSubscribedState());
-
             try {
-               userState.set("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
-            } catch (PackageManager.NameNotFoundException e) {}
-
-            try {
-               List<PackageInfo> packList = packageManager.getInstalledPackages(0);
-               JSONArray pkgs = new JSONArray();
-               MessageDigest md = MessageDigest.getInstance("SHA-256");
-               for (int i = 0; i < packList.size(); i++) {
-                  md.update(packList.get(i).packageName.getBytes());
-                  String pck = Base64.encodeToString(md.digest(), Base64.NO_WRAP);
-                  if (awl.has(pck))
-                     pkgs.put(pck);
-               }
-               userState.set("pkgs", pkgs);
-            } catch (Throwable t) {}
-
-            userState.set("net_type", osUtils.getNetType());
-            userState.set("carrier", osUtils.getCarrierName());
-            userState.set("rooted", RootToolsInternalMethods.isRooted());
-
-            if (shareLocation && lastLocationPoint != null)
-               userState.setLocation(lastLocationPoint);
-
-            OneSignalStateSynchronizer.postUpdate(userState, sendAsSession);
-            waitingToPostStateSync = false;
-            
-            OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+               registerUserTask();
+               OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+            } catch(JSONException t) {
+               Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
+            }
          }
       }, "OS_REG_USER").start();
+   }
+
+   private static void registerUserTask() throws JSONException {
+      String packageName = appContext.getPackageName();
+      PackageManager packageManager = appContext.getPackageManager();
+
+      JSONObject deviceInfo = new JSONObject();
+
+      deviceInfo.put("app_id", appId);
+
+      String adId = mainAdIdProvider.getIdentifier(appContext);
+      if (adId != null)
+         deviceInfo.put("ad_id", adId);
+      deviceInfo.put("device_os", Build.VERSION.RELEASE);
+      deviceInfo.put("timezone", getTimeZoneOffset());
+      deviceInfo.put("language", OSUtils.getCorrectedLanguage());
+      deviceInfo.put("sdk", VERSION);
+      deviceInfo.put("sdk_type", sdkType);
+      deviceInfo.put("android_package", packageName);
+      deviceInfo.put("device_model", Build.MODEL);
+
+      try {
+         deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
+      } catch (PackageManager.NameNotFoundException e) {}
+
+      try {
+         List<PackageInfo> packList = packageManager.getInstalledPackages(0);
+         JSONArray pkgs = new JSONArray();
+         MessageDigest md = MessageDigest.getInstance("SHA-256");
+         for (int i = 0; i < packList.size(); i++) {
+            md.update(packList.get(i).packageName.getBytes());
+            String pck = Base64.encodeToString(md.digest(), Base64.NO_WRAP);
+            if (awl.has(pck))
+               pkgs.put(pck);
+         }
+         deviceInfo.put("pkgs", pkgs);
+      } catch (Throwable t) {}
+
+      deviceInfo.put("net_type", osUtils.getNetType());
+      deviceInfo.put("carrier", osUtils.getCarrierName());
+      deviceInfo.put("rooted", RootToolsInternalMethods.isRooted());
+
+      OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+
+      JSONObject pushState = new JSONObject();
+      pushState.put("identifier", lastRegistrationId);
+      pushState.put("subscribableStatus", subscribableStatus);
+      pushState.put("androidPermission", areNotificationsEnabledForSubscribedState());
+      pushState.put("device_type", deviceType);
+      OneSignalStateSynchronizer.updatePushState(pushState);
+
+      if (shareLocation && lastLocationPoint != null)
+         OneSignalStateSynchronizer.updateLocation(lastLocationPoint);
+
+      if (sendAsSession)
+         OneSignalStateSynchronizer.setSyncAsNewSession();
+
+      waitingToPostStateSync = false;
    }
 
    /**
@@ -1052,13 +1110,14 @@ public class OneSignal {
     * @param email the email that you want to sync with the user
     */
    public static void syncHashedEmail(final String email) {
+      if (!OSUtils.isValidEmail(email))
+         return;
+
       Runnable runSyncHashedEmail = new Runnable() {
          @Override
          public void run() {
-            if (OSUtils.isValidEmail(email)) {
-               String trimmedEmail = email.trim();
-               OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
-            }
+            String trimmedEmail = email.trim();
+            OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
          }
       };
 
@@ -1069,8 +1128,78 @@ public class OneSignal {
          addTaskToQueue(new PendingTaskRunnable(runSyncHashedEmail));
          return;
       }
-
       runSyncHashedEmail.run();
+   }
+
+   public static void setEmail(@NonNull final String email) {
+      setEmail(email, null);
+   }
+
+   /**
+    * Set an email for the device to later send emails to this address
+    * @param email The email that you want subscribe and associate with the device
+    * @param emailAuthHash Generated auth hash from your server to authorize. (Recommended)
+    *                      Create and send this hash from your backend to your app after
+    *                          the user logs into your app.
+    *                      DO NOT generate this from your app!
+    *                      Omit this value if you do not have a backend to authenticate the user.
+    */
+   public static void setEmail(@NonNull final String email, final String emailAuthHash) {
+      if (!OSUtils.isValidEmail(email)) {
+         Log(LOG_LEVEL.ERROR, "Email '" + email + "' is not a valid format.");
+         return;
+      }
+
+      if (useEmailAuth && emailAuthHash == null) {
+         Log(LOG_LEVEL.ERROR, "Missing required emailAuthHash");
+         return;
+      }
+
+      Runnable runSetEmail = new Runnable() {
+         @Override
+         public void run() {
+            String trimmedEmail = email.trim();
+            getCurrentEmailSubscriptionState(appContext).setEmailAddress(trimmedEmail);
+            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), emailAuthHash);
+         }
+      };
+
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling setEmail! " +
+                 "Moving this operation to a pending task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runSetEmail));
+         return;
+      }
+      runSetEmail.run();
+   }
+
+   /**
+    * Call when user logs out of their account.
+    * This dissociates the device from the email address.
+    * This does not effect the subscription status of the email address itself.
+    */
+   public static void logoutEmail() {
+      if (getEmailId() == null) {
+         Log(LOG_LEVEL.ERROR, "logoutEmail not valid as email was not set or already logged out!");
+         return;
+      }
+
+      Runnable emailLogout = new Runnable() {
+         @Override
+         public void run() {
+            OneSignalStateSynchronizer.logoutEmail();
+         }
+      };
+
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling logoutEmail! " +
+                 "Moving this operation to a pending task queue.");
+         addTaskToQueue(new PendingTaskRunnable(emailLogout));
+         return;
+      }
+      emailLogout.run();
    }
 
    /**
@@ -1266,7 +1395,7 @@ public class OneSignal {
       new Thread(new Runnable() {
          @Override
          public void run() {
-            final OneSignalStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
+            final UserStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
             if (tags.serverSuccess) getTagsCall = true;
             if (tags.result == null || tags.toString().equals("{}"))
                getTagsHandler.tagsAvailable(null);
@@ -1391,6 +1520,8 @@ public class OneSignal {
          jsonBody.put("purchases", purchases);
          
          OneSignalRestClient.post("players/" + getUserId() + "/on_purchase", jsonBody, responseHandler);
+         if (getEmailId() != null)
+            OneSignalRestClient.post("players/" + getEmailId() + "/on_purchase", jsonBody, null);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for sendPurchases.", t);
       }
@@ -1602,13 +1733,33 @@ public class OneSignal {
       return userId;
    }
 
-   static void saveUserId(String inUserId) {
-      userId = inUserId;
+   static void saveUserId(String id) {
+      userId = id;
       if (appContext == null)
          return;
 
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_PLAYER_ID, userId);
+   }
+
+   static String getEmailId() {
+      if ("".equals(emailId))
+         return null;
+
+      if (emailId == null && appContext != null) {
+         emailId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_OS_EMAIL_ID,null);
+      }
+      return emailId;
+   }
+
+   static void saveEmailId(String id) {
+      emailId = id;
+      if (appContext == null)
+         return;
+
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_EMAIL_ID, "".equals(emailId) ? null : emailId);
    }
    
    static boolean getFilterOtherGCMReceivers(Context context) {
@@ -1622,7 +1773,9 @@ public class OneSignal {
 
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,"OS_FILTER_OTHER_GCM_RECEIVERS",set);
    }
-   
+
+   // Called when a player id is returned from OneSignal
+   // Updates anything else that might have been waiting for this id.
    static void updateUserIdDependents(String userId) {
       saveUserId(userId);
       fireIdsAvailableCallback();
@@ -1634,8 +1787,21 @@ public class OneSignal {
          sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
          iapUpdateJob = null;
       }
+
+      OneSignalStateSynchronizer.refreshEmailState();
       
       OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+   }
+
+   static void updateEmailIdDependents(String emailId) {
+      saveEmailId(emailId);
+      getCurrentEmailSubscriptionState(appContext).setEmailUserId(emailId);
+      try {
+         JSONObject updateJson = new JSONObject().put("parent_player_id", emailId);
+         OneSignalStateSynchronizer.updatePushState(updateJson);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
    }
 
    static boolean getFirebaseAnalyticsEnabled(Context context) {
@@ -2121,12 +2287,47 @@ public class OneSignal {
       getSubscriptionStateChangesObserver().removeObserver(observer);
    }
 
+
+   /**
+    * The {@link OSEmailSubscriptionObserver#onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges)}
+    * method will be fired on the passed-in object when a email subscription property changes.
+    *<br/><br/>
+    * This includes the following events:
+    * <br/>
+    * - Email address set
+    * <br/>
+    * - Getting a player/user ID from OneSignal
+    * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
+    */
+   public static void addEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add email subscription observer");
+         return;
+      }
+
+      getEmailSubscriptionStateChangesObserver().addObserver(observer);
+
+      if (getCurrentEmailSubscriptionState(appContext).compare(getLastEmailSubscriptionState(appContext)))
+         OSEmailSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentEmailSubscriptionState(appContext));
+   }
+
+   public static void removeEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify email subscription observer");
+         return;
+      }
+
+      getEmailSubscriptionStateChangesObserver().removeObserver(observer);
+   }
+
    /**
     * Get the current notification and permission state.
     *<br/><br/>
     * {@code permissionStatus} - {@link OSPermissionState} - Android Notification Permissions State
     * <br/>
     * {@code subscriptionStatus} - {@link OSSubscriptionState} - Google and OneSignal subscription state
+    * <br/>
+    * {@code emailSubscriptionStatus} - {@link OSEmailSubscriptionState} - Email subscription state
     * @return a {@link OSPermissionSubscriptionState} as described above
     */
    public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
@@ -2138,6 +2339,7 @@ public class OneSignal {
       OSPermissionSubscriptionState status = new OSPermissionSubscriptionState();
       status.subscriptionStatus = getCurrentSubscriptionState(appContext);
       status.permissionStatus = getCurrentPermissionState(appContext);
+      status.emailSubscriptionStatus = getCurrentEmailSubscriptionState(appContext);
    
       return status;
    }
@@ -2249,6 +2451,9 @@ public class OneSignal {
    }
 
    private static boolean isPastOnSessionTime() {
+      if (sendAsSession)
+         return true;
+
       return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
    }
    

@@ -29,40 +29,34 @@ package com.onesignal;
 
 import org.json.JSONObject;
 
-public class OSPermissionSubscriptionState {
-   OSSubscriptionState subscriptionStatus;
-   OSPermissionState permissionStatus;
-   OSEmailSubscriptionState emailSubscriptionStatus;
+public class OSEmailSubscriptionStateChanges {
+    OSEmailSubscriptionState to, from;
 
-   public OSPermissionState getPermissionStatus() {
-      return permissionStatus;
-   }
-   
-   public OSSubscriptionState getSubscriptionStatus() {
-      return subscriptionStatus;
-   }
+    public OSEmailSubscriptionState getTo() {
+        return to;
+    }
 
-   public OSEmailSubscriptionState getEmailSubscriptionStatus() {
-      return emailSubscriptionStatus;
-   }
-   
-   public JSONObject toJSONObject() {
-      JSONObject mainObj = new JSONObject();
-      
-      try {
-         mainObj.put("permissionStatus", permissionStatus.toJSONObject());
-         mainObj.put("subscriptionStatus", subscriptionStatus.toJSONObject());
-         mainObj.put("emailSubscriptionStatus", emailSubscriptionStatus.toJSONObject());
-      }
-      catch(Throwable t) {
-         t.printStackTrace();
-      }
-      
-      return mainObj;
-   }
-   
-   @Override
-   public String toString() {
-      return toJSONObject().toString();
-   }
+    public OSEmailSubscriptionState getFrom() {
+        return from;
+    }
+
+    public JSONObject toJSONObject() {
+        JSONObject mainObj = new JSONObject();
+
+        try {
+            mainObj.put("from", from.toJSONObject());
+            mainObj.put("to", to.toJSONObject());
+        }
+        catch(Throwable t) {
+            t.printStackTrace();
+        }
+
+        return mainObj;
+    }
+
+    @Override
+    public String toString() {
+        return toJSONObject().toString();
+    }
+
 }

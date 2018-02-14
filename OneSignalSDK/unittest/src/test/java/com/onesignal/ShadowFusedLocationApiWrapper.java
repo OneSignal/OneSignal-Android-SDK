@@ -30,21 +30,26 @@ package com.onesignal;
 import android.location.Location;
 
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
-import com.google.common.primitives.Floats;
 
 import org.robolectric.annotation.Implements;
 
 @Implements(LocationGMS.FusedLocationApiWrapper.class)
 public class ShadowFusedLocationApiWrapper {
    
-   public static Double lat = 1.0, log = 2.0;
-   public static Float accuracy = 3.0f;
-   public static Integer type = 0;
-   public static Long time = 12345L;
+   public static Double lat, log;
+   public static Float accuracy;
+   public static Integer type;
+   public static Long time;
+
+   public static void resetStatics() {
+      lat = 1.0;
+      log = 2.0;
+      accuracy = 3.0f;
+      type = 0;
+      time = 12345L;
+   }
    
    public static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
    }

@@ -27,42 +27,25 @@
 
 package com.onesignal;
 
-import org.json.JSONObject;
+class OSEmailSubscriptionChangedInternalObserver {
+    void changed(OSEmailSubscriptionState state) {
+        fireChangesToPublicObserver(state);
+    }
 
-public class OSPermissionSubscriptionState {
-   OSSubscriptionState subscriptionStatus;
-   OSPermissionState permissionStatus;
-   OSEmailSubscriptionState emailSubscriptionStatus;
+    // Handles firing a public facing EmailSubscriptionStateChangesObserver
+    //    1. Generates a OSEmailSubscriptionStateChanges object and sets to and from states
+    //    2. Persists acknowledgement
+    //      - Prevents duplicated events
+    //      - Notifies if changes were made outside of the app
+    static void fireChangesToPublicObserver(OSEmailSubscriptionState state) {
+        OSEmailSubscriptionStateChanges stateChanges = new OSEmailSubscriptionStateChanges();
+        stateChanges.from = OneSignal.lastEmailSubscriptionState;
+        stateChanges.to = (OSEmailSubscriptionState)state.clone();
 
-   public OSPermissionState getPermissionStatus() {
-      return permissionStatus;
-   }
-   
-   public OSSubscriptionState getSubscriptionStatus() {
-      return subscriptionStatus;
-   }
-
-   public OSEmailSubscriptionState getEmailSubscriptionStatus() {
-      return emailSubscriptionStatus;
-   }
-   
-   public JSONObject toJSONObject() {
-      JSONObject mainObj = new JSONObject();
-      
-      try {
-         mainObj.put("permissionStatus", permissionStatus.toJSONObject());
-         mainObj.put("subscriptionStatus", subscriptionStatus.toJSONObject());
-         mainObj.put("emailSubscriptionStatus", emailSubscriptionStatus.toJSONObject());
-      }
-      catch(Throwable t) {
-         t.printStackTrace();
-      }
-      
-      return mainObj;
-   }
-   
-   @Override
-   public String toString() {
-      return toJSONObject().toString();
-   }
+        boolean hasReceiver = OneSignal.getEmailSubscriptionStateChangesObserver().notifyChange(stateChanges);
+        if (hasReceiver) {
+            OneSignal.lastEmailSubscriptionState = (OSEmailSubscriptionState)state.clone();
+            OneSignal.lastEmailSubscriptionState.persistAsFrom();
+        }
+    }
 }

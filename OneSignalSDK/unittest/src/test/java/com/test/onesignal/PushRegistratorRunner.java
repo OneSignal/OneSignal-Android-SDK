@@ -77,7 +77,6 @@ public class PushRegistratorRunner {
       pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id, int status) {
-            System.out.println("HERE: " + id);
             callbackFired = true;
             testThread.interrupt();
          }
@@ -97,7 +96,6 @@ public class PushRegistratorRunner {
       pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id, int status) {
-            System.out.println("HERE: " + id);
             callbackFired = true;
             testThread.interrupt();
          }

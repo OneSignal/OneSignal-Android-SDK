@@ -30,16 +30,64 @@ package com.onesignal;
 import org.json.JSONObject;
 import org.robolectric.annotation.Implements;
 
+import java.util.ArrayList;
+
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
 
+   public enum REST_METHOD {
+      GET, POST, PUT
+   }
+
+   public static class Request {
+      public REST_METHOD method;
+      public JSONObject payload;
+      public String url;
+
+      Request(REST_METHOD method, JSONObject payload, String url) {
+         this.method = method;
+         this.payload = payload;
+         this.url = url;
+      }
+   }
+
    public static JSONObject lastPost;
+   public static ArrayList<Request> requests;
    public static String lastUrl;
-   public static boolean failNext, failNextPut, failAll;
-   public static String failResponse = "{}", nextSuccessResponse, nextSuccessfulGETResponse;
+   public static boolean failNext, failNextPut, failAll, failPosts;
+   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse;
    public static int networkCallCount;
 
-   public static final String testUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
+   public static String pushUserId, emailUserId;
+
+   public static void resetStatics() {
+      pushUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
+      emailUserId = "b007f967-98cc-11e4-bed1-118f05be4522";
+
+      requests = new ArrayList<>();
+      lastPost = null;
+      networkCallCount = 0;
+
+      nextSuccessfulGETResponse = null;
+
+      failResponse = "{}";
+      nextSuccessResponse = null;
+      failNext = false;
+      failNextPut = false;
+      failAll = false;
+      failPosts = false;
+   }
+
+   private static void trackRequest(REST_METHOD method, JSONObject payload, String url) {
+      if (method == REST_METHOD.POST || method == REST_METHOD.PUT)
+         lastPost = payload;
+      lastUrl = url;
+      networkCallCount++;
+
+      requests.add(new Request(method, payload, url));
+
+      System.out.println(networkCallCount + ":" + method + "@URL:" + url + "\nBODY: " + payload);
+   }
 
    private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler, boolean doFail) {
       if (failNext || failAll || doFail) {
@@ -56,63 +104,54 @@ public class ShadowOneSignalRestClient {
    }
 
    private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
-      lastUrl = url;
-      networkCallCount++;
-      lastPost = jsonBody;
+      trackRequest(REST_METHOD.POST, jsonBody, url);
 
-      if (doFail(responseHandler)) return;
+      if (doFail(responseHandler, failPosts)) return;
 
-      String retJson = null;
+      String retJson;
       if (url.contains("on_session"))
          retJson = "{}";
-      else
-         retJson = "{\"id\": \"" + testUserId + "\"}";
+      else {
+         int device_type = jsonBody.optInt("device_type", 0);
+         String id = device_type == 11 ? emailUserId : pushUserId;
+         retJson = "{\"id\": \"" + id + "\"}";
+      }
 
       if (nextSuccessResponse != null) {
-         responseHandler.onSuccess(nextSuccessResponse);
+         if (responseHandler != null)
+            responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
       }
-      else
+      else if (responseHandler != null)
          responseHandler.onSuccess(retJson);
    }
 
    public static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
-      System.out.println("POST:URL:" + url + "  jsonBody: " + jsonBody.toString());
       mockPost(url, jsonBody, responseHandler);
    }
 
    public static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
-      System.out.println("POST Sync:URL:" + url + "  jsonBody: " + jsonBody.toString());
       mockPost(url, jsonBody, responseHandler);
    }
 
    public static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
-      lastUrl = url;
-      networkCallCount++;
-      lastPost = jsonBody;
-
-      System.out.println("putSync:lastPost:jsonBody: " + lastPost.toString());
+      trackRequest(REST_METHOD.PUT, jsonBody, url);
 
       if (doFail(responseHandler, failNextPut)) return;
 
-      responseHandler.onSuccess("{\"id\": \"" + testUserId + "\"}");
+      responseHandler.onSuccess("{\"id\": \"" + pushUserId + "\"}");
    }
 
    public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
-      lastUrl = url;
-      networkCallCount++;
-      lastPost = jsonBody;
+      trackRequest(REST_METHOD.PUT, jsonBody, url);
 
       if (doFail(responseHandler, failNextPut)) return;
-
-      System.out.println("put:lastPost:jsonBody: " + lastPost.toString());
 
       responseHandler.onSuccess("{}");
    }
 
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
-      System.out.println("get: " + url);
-      networkCallCount++;
+      trackRequest(REST_METHOD.GET, null, url);
    
       if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
@@ -126,10 +165,8 @@ public class ShadowOneSignalRestClient {
    }
 
    public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
-      System.out.println("getSync: " + url);
+      trackRequest(REST_METHOD.GET, null, url);
 
-      lastUrl = url;
-      networkCallCount++;
       if (doFail(responseHandler)) return;
 
       if (nextSuccessfulGETResponse != null) {

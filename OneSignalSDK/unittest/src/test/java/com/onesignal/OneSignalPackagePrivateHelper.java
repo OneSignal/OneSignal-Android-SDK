@@ -7,21 +7,47 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
+
+   private static abstract class RunnableArg<T> {
+      abstract void run(T object);
+   }
+
+   static private void processNetworkHandles(RunnableArg runnable) {
+      Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
+
+      entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
+         runnable.run(handlerThread.getValue());
+
+      entrySet = OneSignalStateSynchronizer.getEmailStateSynchronizer().networkHandlerThreads.entrySet();
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
+         runnable.run(handlerThread.getValue());
+   }
+
+   private static boolean startedRunnable;
    public static boolean runAllNetworkRunnables() {
-      boolean startedRunnable = false;
-      for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet()) {
-         Scheduler scheduler = shadowOf(handlerThread.getValue().getLooper()).getScheduler();
-         if (scheduler.advanceToLastPostedRunnable())
-            startedRunnable = true;
-      }
+      startedRunnable = false;
+
+      RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
+         @Override
+         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
+            Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
+            while (scheduler.runOneTask())
+               startedRunnable = true;
+         }
+      };
+
+      processNetworkHandles(runnable);
 
       return startedRunnable;
    }
@@ -34,17 +60,32 @@ public class OneSignalPackagePrivateHelper {
       Scheduler scheduler = shadowOf(looper).getScheduler();
       if (scheduler == null)
          return false;
-      return scheduler.advanceToLastPostedRunnable();
+
+      boolean ranTask = false;
+      while (scheduler.runOneTask())
+         ranTask = true;
+
+      return ranTask;
    }
 
    public static void resetRunnables() {
-      for (Map.Entry<Integer, OneSignalStateSynchronizer.NetworkHandlerThread> handlerThread : OneSignalStateSynchronizer.networkHandlerThreads.entrySet())
-         handlerThread.getValue().stopScheduledRunnable();
+      RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
+         @Override
+         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
+            handlerThread.stopScheduledRunnable();
+         }
+      };
+
+      processNetworkHandles(runnable);
 
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
       if (looper == null) return;
 
       shadowOf(looper).reset();
+   }
+
+   public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
+      OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
    public static void SyncService_onTaskRemoved(Service service) {

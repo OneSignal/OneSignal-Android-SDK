@@ -2,7 +2,9 @@ package com.test.onesignal;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGcmBroadcastReceiver;
+import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -16,16 +18,9 @@ class TestHelpers {
    static void betweenTestsCleanup() {
       StaticResetHelper.restSetStaticFields();
 
-      ShadowOneSignalRestClient.lastPost = null;
-      ShadowOneSignalRestClient.nextSuccessResponse = null;
-      ShadowOneSignalRestClient.failNext = false;
-      ShadowOneSignalRestClient.failNextPut = false;
-      ShadowOneSignalRestClient.failAll = false;
-      ShadowOneSignalRestClient.networkCallCount = 0;
+      ShadowOneSignalRestClient.resetStatics();
 
-      ShadowPushRegistratorGPS.skipComplete = false;
-      ShadowPushRegistratorGPS.fail = false;
-      ShadowPushRegistratorGPS.lastProjectNumber = null;
+      ShadowPushRegistratorGPS.resetStatics();
    
       ShadowNotificationManagerCompat.enabled = true;
 
@@ -33,6 +28,9 @@ class TestHelpers {
    
       ShadowCustomTabsClient.resetStatics();
       ShadowGcmBroadcastReceiver.resetStatics();
+
+      ShadowFusedLocationApiWrapper.resetStatics();
+      ShadowLocationGMS.resetStatics();
 
       // DB seems to be cleaned up on it's own.
       /*

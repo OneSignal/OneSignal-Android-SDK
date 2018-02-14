@@ -102,7 +102,7 @@ class OneSignalSyncUtils {
             }
 
             OneSignal.appId = OneSignal.getSavedAppId();
-            OneSignalStateSynchronizer.initUserState(OneSignal.appContext);
+            OneSignalStateSynchronizer.initUserState();
 
             LocationGMS.getLocation(OneSignal.appContext, false, new LocationGMS.LocationHandler() {
                 @Override
