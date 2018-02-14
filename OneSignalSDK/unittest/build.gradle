@@ -66,12 +66,12 @@ dependencies {
 
     // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
     // This insure that the SDK will work if an app developer is using an older version of GMS.
-    compile "com.google.android.gms:play-services-gcm:11.6.2"
+    compile 'com.google.android.gms:play-services-gcm:11.8.0'
 
     // play-services-analytics is required for AdvertisingIdClient when using GMS 8.1.0 or lower.
     // 8.3.0 it is included in 'basement' which is required by 'base'.
     //compile "com.google.android.gms:play-services-analytics:7.0.0"
-    compile "com.google.android.gms:play-services-location:11.6.2"
+    compile 'com.google.android.gms:play-services-location:11.8.0'
 
     // compile 'com.google.android.gms:play-services-analytics:7.0.0'
 
