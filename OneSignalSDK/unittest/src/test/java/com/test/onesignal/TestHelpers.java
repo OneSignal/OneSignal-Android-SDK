@@ -2,7 +2,9 @@ package com.test.onesignal;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGcmBroadcastReceiver;
+import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -28,6 +30,9 @@ class TestHelpers {
    
       ShadowCustomTabsClient.resetStatics();
       ShadowGcmBroadcastReceiver.resetStatics();
+
+      ShadowFusedLocationApiWrapper.resetStatics();
+      ShadowLocationGMS.resetStatics();
 
       // DB seems to be cleaned up on it's own.
       /*

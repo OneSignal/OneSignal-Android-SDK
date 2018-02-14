@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,42 +27,36 @@
 
 package com.onesignal;
 
-import android.location.Location;
+import org.json.JSONObject;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
+public class OSEmailSubscriptionStateChanges {
+    OSEmailSubscriptionState to, from;
 
-import org.robolectric.annotation.Implements;
+    public OSEmailSubscriptionState getTo() {
+        return to;
+    }
 
-@Implements(LocationGMS.FusedLocationApiWrapper.class)
-public class ShadowFusedLocationApiWrapper {
-   
-   public static Double lat, log;
-   public static Float accuracy;
-   public static Integer type;
-   public static Long time;
+    public OSEmailSubscriptionState getFrom() {
+        return from;
+    }
 
-   public static void resetStatics() {
-      lat = 1.0;
-      log = 2.0;
-      accuracy = 3.0f;
-      type = 0;
-      time = 12345L;
-   }
-   
-   public static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
-   }
-   
-   public static void removeLocationUpdates(GoogleApiClient googleApiClient, LocationListener locationListener) {
-   }
-   
-   public static Location getLastLocation(GoogleApiClient googleApiClient) {
-      Location location = new Location("");
-      location.setLatitude(lat); location.setLongitude(log);
-      location.setAccuracy(accuracy);
-      location.setTime(time);
-      
-      return location;
-   }
+    public JSONObject toJSONObject() {
+        JSONObject mainObj = new JSONObject();
+
+        try {
+            mainObj.put("from", from.toJSONObject());
+            mainObj.put("to", to.toJSONObject());
+        }
+        catch(Throwable t) {
+            t.printStackTrace();
+        }
+
+        return mainObj;
+    }
+
+    @Override
+    public String toString() {
+        return toJSONObject().toString();
+    }
+
 }

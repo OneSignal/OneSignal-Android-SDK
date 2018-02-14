@@ -379,27 +379,27 @@ public class OneSignal {
    private static OSSubscriptionState getCurrentSubscriptionState(Context context) {
       if (context == null)
          return null;
-      
+
       if (currentSubscriptionState == null) {
          currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).getEnabled());
          getCurrentPermissionState(context).observable.addObserver(currentSubscriptionState);
          currentSubscriptionState.observable.addObserverStrong(new OSSubscriptionChangedInternalObserver());
       }
-      
+
       return currentSubscriptionState;
    }
-   
+
    static OSSubscriptionState lastSubscriptionState;
    private static OSSubscriptionState getLastSubscriptionState(Context context) {
       if (context == null)
          return null;
-      
+
       if (lastSubscriptionState == null)
          lastSubscriptionState = new OSSubscriptionState(true, false);
-      
+
       return lastSubscriptionState;
    }
-   
+
    private static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> subscriptionStateChangesObserver;
    static OSObservable<OSSubscriptionObserver, OSSubscriptionStateChanges> getSubscriptionStateChangesObserver() {
       if (subscriptionStateChangesObserver == null)
@@ -407,6 +407,40 @@ public class OneSignal {
       return subscriptionStateChangesObserver;
    }
    // End SubscriptionState
+
+
+   // Start EmailSubscriptionState
+   private static OSEmailSubscriptionState currentEmailSubscriptionState;
+   private static OSEmailSubscriptionState getCurrentEmailSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+
+      if (currentEmailSubscriptionState == null) {
+         currentEmailSubscriptionState = new OSEmailSubscriptionState(false);
+         currentEmailSubscriptionState.observable.addObserverStrong(new OSEmailSubscriptionChangedInternalObserver());
+      }
+
+      return currentEmailSubscriptionState;
+   }
+
+   static OSEmailSubscriptionState lastEmailSubscriptionState;
+   private static OSEmailSubscriptionState getLastEmailSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+
+      if (lastEmailSubscriptionState == null)
+         lastEmailSubscriptionState = new OSEmailSubscriptionState(true);
+
+      return lastEmailSubscriptionState;
+   }
+
+   private static OSObservable<OSEmailSubscriptionObserver, OSEmailSubscriptionStateChanges> emailSubscriptionStateChangesObserver;
+   static OSObservable<OSEmailSubscriptionObserver, OSEmailSubscriptionStateChanges> getEmailSubscriptionStateChangesObserver() {
+      if (emailSubscriptionStateChangesObserver == null)
+         emailSubscriptionStateChangesObserver = new OSObservable<>("onOSEmailSubscriptionChanged", true);
+      return emailSubscriptionStateChangesObserver;
+   }
+   // End EmailSubscriptionState
    
    
    private static class IAPUpdateJob {
@@ -1097,17 +1131,18 @@ public class OneSignal {
       runSyncHashedEmail.run();
    }
 
-   public static void setEmail(final String email) {
+   public static void setEmail(@NonNull final String email) {
       setEmail(email, null);
    }
 
    /**
     * Set an email for the device to later send emails to this address
     * @param email the email that you want to set for the device
-    * @param emailAuthHash SHA256(ONESIGNAL_API_KEY + email) from your own remote server.
-    *                      DO NOT use ONESIGNAL_API_KEY directly in your app!!!
+    * @param emailAuthHash Hash generated from your server to authorize setting an email.
+    *                      TODO: Add link to instructions.
+    *                      DO NOT generate this from your app!
     */
-   public static void setEmail(final String email, final String emailAuthHash) {
+   public static void setEmail(@NonNull final String email, final String emailAuthHash) {
       if (!OSUtils.isValidEmail(email)) {
          Log(LOG_LEVEL.ERROR, "Email '" + email + "' is not a valid format.");
          return;
@@ -1122,6 +1157,7 @@ public class OneSignal {
          @Override
          public void run() {
             String trimmedEmail = email.trim();
+            getCurrentEmailSubscriptionState(appContext).setEmailAddress(trimmedEmail);
             OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), emailAuthHash);
          }
       };
@@ -1757,6 +1793,7 @@ public class OneSignal {
 
    static void updateEmailIdDependents(String emailId) {
       saveEmailId(emailId);
+      getCurrentEmailSubscriptionState(appContext).setEmailUserId(emailId);
       try {
          JSONObject updateJson = new JSONObject().put("parent_player_id", emailId);
          OneSignalStateSynchronizer.updatePushState(updateJson);
@@ -2248,6 +2285,39 @@ public class OneSignal {
       getSubscriptionStateChangesObserver().removeObserver(observer);
    }
 
+
+   /**
+    * The {@link OSEmailSubscriptionObserver#onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges)}
+    * method will be fired on the passed-in object when a email subscription property changes.
+    *<br/><br/>
+    * This includes the following events:
+    * <br/>
+    * - Email address set
+    * <br/>
+    * - Getting a player/user ID from OneSignal
+    * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
+    */
+   public static void addEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add email subscription observer");
+         return;
+      }
+
+      getEmailSubscriptionStateChangesObserver().addObserver(observer);
+
+      if (getCurrentEmailSubscriptionState(appContext).compare(getLastEmailSubscriptionState(appContext)))
+         OSEmailSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentEmailSubscriptionState(appContext));
+   }
+
+   public static void removeEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify email subscription observer");
+         return;
+      }
+
+      getEmailSubscriptionStateChangesObserver().removeObserver(observer);
+   }
+
    /**
     * Get the current notification and permission state.
     *<br/><br/>
@@ -2267,6 +2337,20 @@ public class OneSignal {
       status.permissionStatus = getCurrentPermissionState(appContext);
    
       return status;
+   }
+
+   /**
+    * Get the current email subscription state.
+    *<br/><br/>
+    * @return a {@link OSEmailSubscriptionState} current state of the email subscription state
+    */
+   public static OSEmailSubscriptionState getEmailSubscriptionState() {
+      if (appContext == null) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSEmailSubscriptionState");
+         return null;
+      }
+
+      return getCurrentEmailSubscriptionState(appContext);
    }
 
    static long GetUnsentActiveTime() {

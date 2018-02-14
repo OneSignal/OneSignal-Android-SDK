@@ -40,6 +40,7 @@ public class StaticResetHelper {
       
       classes.add(new StaticResetHelper().new ClassState(OneSignalChromeTab.class, null));
       classes.add(new StaticResetHelper().new ClassState(OneSignalDbHelper.class, null));
+      classes.add(new StaticResetHelper().new ClassState(LocationGMS.class, null));
    }
 
    private interface OtherFieldHandler {
@@ -83,7 +84,6 @@ public class StaticResetHelper {
          for (Map.Entry<Field, Object> entry : orginalVals.entrySet()) {
             Field field = entry.getKey();
             Object value = entry.getValue();
-            Class<?> type = field.getType();
             field.getName();
             field.setAccessible(true);
 
