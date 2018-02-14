@@ -1137,10 +1137,12 @@ public class OneSignal {
 
    /**
     * Set an email for the device to later send emails to this address
-    * @param email the email that you want to set for the device
-    * @param emailAuthHash Hash generated from your server to authorize setting an email.
-    *                      TODO: Add link to instructions.
+    * @param email The email that you want subscribe and associate with the device
+    * @param emailAuthHash Generated auth hash from your server to authorize. (Recommended)
+    *                      Create and send this hash from your backend to your app after
+    *                          the user logs into your app.
     *                      DO NOT generate this from your app!
+    *                      Omit this value if you do not have a backend to authenticate the user.
     */
    public static void setEmail(@NonNull final String email, final String emailAuthHash) {
       if (!OSUtils.isValidEmail(email)) {
