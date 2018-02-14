@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1177,7 +1177,7 @@ public class OneSignal {
    /**
     * Call when user logs out of their account.
     * This dissociates the device from the email address.
-    * The email address will stay subscribed, unless they have unsubscribed from your emails
+    * This does not effect the subscription status of the email address itself.
     */
    public static void logoutEmail() {
       if (getEmailId() == null) {
@@ -2326,6 +2326,8 @@ public class OneSignal {
     * {@code permissionStatus} - {@link OSPermissionState} - Android Notification Permissions State
     * <br/>
     * {@code subscriptionStatus} - {@link OSSubscriptionState} - Google and OneSignal subscription state
+    * <br/>
+    * {@code emailSubscriptionStatus} - {@link OSEmailSubscriptionState} - Email subscription state
     * @return a {@link OSPermissionSubscriptionState} as described above
     */
    public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
@@ -2337,22 +2339,9 @@ public class OneSignal {
       OSPermissionSubscriptionState status = new OSPermissionSubscriptionState();
       status.subscriptionStatus = getCurrentSubscriptionState(appContext);
       status.permissionStatus = getCurrentPermissionState(appContext);
+      status.emailSubscriptionStatus = getCurrentEmailSubscriptionState(appContext);
    
       return status;
-   }
-
-   /**
-    * Get the current email subscription state.
-    *<br/><br/>
-    * @return a {@link OSEmailSubscriptionState} current state of the email subscription state
-    */
-   public static OSEmailSubscriptionState getEmailSubscriptionState() {
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSEmailSubscriptionState");
-         return null;
-      }
-
-      return getCurrentEmailSubscriptionState(appContext);
    }
 
    static long GetUnsentActiveTime() {

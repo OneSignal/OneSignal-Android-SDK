@@ -2379,7 +2379,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldGetCorrectCurrentEmailSubscriptionState() throws Exception {
       OneSignalInit();
-      OSEmailSubscriptionState emailSubscriptionState = OneSignal.getEmailSubscriptionState();
+      OSEmailSubscriptionState emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
 
       Assert.assertNull(emailSubscriptionState.getEmailUserId());
       Assert.assertNull(emailSubscriptionState.getEmailAddress());
@@ -2387,7 +2387,7 @@ public class MainOneSignalClassRunner {
 
       OneSignal.setEmail("josh@onesignal.com");
       threadAndTaskWait();
-      emailSubscriptionState = OneSignal.getEmailSubscriptionState();
+      emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
 
       Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", emailSubscriptionState.getEmailUserId());
       Assert.assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,13 +32,18 @@ import org.json.JSONObject;
 public class OSPermissionSubscriptionState {
    OSSubscriptionState subscriptionStatus;
    OSPermissionState permissionStatus;
-   
+   OSEmailSubscriptionState emailSubscriptionStatus;
+
    public OSPermissionState getPermissionStatus() {
       return permissionStatus;
    }
    
    public OSSubscriptionState getSubscriptionStatus() {
       return subscriptionStatus;
+   }
+
+   public OSEmailSubscriptionState getEmailSubscriptionStatus() {
+      return emailSubscriptionStatus;
    }
    
    public JSONObject toJSONObject() {
@@ -47,6 +52,7 @@ public class OSPermissionSubscriptionState {
       try {
          mainObj.put("permissionStatus", permissionStatus.toJSONObject());
          mainObj.put("subscriptionStatus", subscriptionStatus.toJSONObject());
+         mainObj.put("emailSubscriptionStatus", emailSubscriptionStatus.toJSONObject());
       }
       catch(Throwable t) {
          t.printStackTrace();
