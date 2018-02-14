@@ -2460,6 +2460,9 @@ public class OneSignal {
    }
 
    private static boolean isPastOnSessionTime() {
+      if (sendAsSession)
+         return true;
+
       return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
    }
    

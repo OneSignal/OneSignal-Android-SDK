@@ -60,7 +60,12 @@ public class OneSignalPackagePrivateHelper {
       Scheduler scheduler = shadowOf(looper).getScheduler();
       if (scheduler == null)
          return false;
-      return scheduler.advanceToLastPostedRunnable();
+
+      boolean ranTask = false;
+      while (scheduler.runOneTask())
+         ranTask = true;
+
+      return ranTask;
    }
 
    public static void resetRunnables() {
