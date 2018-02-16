@@ -952,6 +952,59 @@ public class MainOneSignalClassRunner {
       Assert.assertEquals(mockEmailHash, emailPost.getString("email_auth_hash"));
    }
 
+   private class TestEmailUpdateHandler implements OneSignal.EmailUpdateHandler {
+      boolean emailFiredSuccess = false;
+      OneSignal.EmailUpdateError emailFiredFailure = null;
+
+      @Override
+      public void onSuccess() {
+         emailFiredSuccess = true;
+      }
+
+      @Override
+      public void onFailure(OneSignal.EmailUpdateError error) {
+         emailFiredFailure = error;
+      }
+   }
+
+   @Test
+   public void shouldFireOnSuccessOfEmailUpdate() throws Exception {
+      OneSignalInit();
+      TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+      OneSignal.setEmail("josh@onesignal.com", testEmailUpdateHandler);
+      threadAndTaskWait();
+
+      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+   }
+
+   @Test
+   public void shouldFireOnSuccessOfEmailEvenWhenNoChanges() throws Exception {
+      OneSignalInit();
+      String email = "josh@onesignal.com";
+      OneSignal.setEmail(email);
+      threadAndTaskWait();
+
+      TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+      OneSignal.setEmail(email, testEmailUpdateHandler);
+      threadAndTaskWait();
+
+      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+   }
+
+   @Test
+   public void shouldFireOnFailureOfEmailUpdateOnNetworkFailure() throws Exception {
+      OneSignalInit();
+      TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+      OneSignal.setEmail("josh@onesignal.com", testEmailUpdateHandler);
+      ShadowOneSignalRestClient.failAll = true;
+      threadAndTaskWait();
+
+      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      Assert.assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+   }
+
    // Should create a new email instead of updating existing player record when no auth hash
    @Test
    public void shouldDoPostOnEmailChange() throws Exception {
@@ -1013,6 +1066,38 @@ public class MainOneSignalClassRunner {
 
       ShadowOneSignalRestClient.Request logoutEmailPost = ShadowOneSignalRestClient.requests.get(4);
       Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", logoutEmailPost.url);
+   }
+
+   @Test
+   public void shouldFireOnSuccessOfLogoutEmail() throws Exception {
+      OneSignalInit();
+      TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+      OneSignal.logoutEmail(testEmailUpdateHandler);
+      threadAndTaskWait();
+
+      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+   }
+
+   @Test
+   public void shouldFireOnFailureOfLogoutEmailOnNetworkFailure() throws Exception {
+      OneSignalInit();
+      TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.failAll = true;
+      OneSignal.logoutEmail(testEmailUpdateHandler);
+      threadAndTaskWait();
+
+      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      Assert.assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
    }
 
    @Test

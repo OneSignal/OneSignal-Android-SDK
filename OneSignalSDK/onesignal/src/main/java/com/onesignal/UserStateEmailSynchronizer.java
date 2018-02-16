@@ -54,14 +54,19 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     }
 
     void setEmail(String email, String emailAuthHash) {
+        JSONObject syncValues = getUserStateForModification().syncValues;
+
+        if (email.equals(syncValues.optString("identifier")) && syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash)) {
+            OneSignal.fireEmailUpdateSuccess();
+            return;
+        }
+
         try {
             JSONObject emailJSON = new JSONObject();
             emailJSON.put("identifier", email);
 
             if (emailAuthHash != null)
                 emailJSON.put("email_auth_hash", emailAuthHash);
-
-            JSONObject syncValues = getUserStateForModification().syncValues;
 
             if (emailAuthHash == null) {
                 String existingEmail = syncValues.optString("identifier", null);
@@ -105,5 +110,17 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         resetCurrentState();
         nextSyncIsSession = false;
         OneSignal.getPermissionSubscriptionState().emailSubscriptionStatus.clearEmailAndId();
+    }
+
+    @Override
+    protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
+        if (jsonFields.has("identifier"))
+            OneSignal.fireEmailUpdateFailure();
+    }
+
+    @Override
+    protected void onSuccessfulSync(JSONObject jsonFields) {
+        if (jsonFields.has("identifier"))
+            OneSignal.fireEmailUpdateSuccess();
     }
 }
