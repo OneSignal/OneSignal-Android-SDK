@@ -1223,9 +1223,6 @@ public class OneSignal {
       runSetEmail.run();
    }
 
-
-
-
    /**
     * Call when user logs out of their account.
     * This dissociates the device from the email address.
