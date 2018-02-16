@@ -146,4 +146,16 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
             e.printStackTrace();
         }
     }
+
+    @Override
+    protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
+        if (jsonFields.has("email"))
+            OneSignal.fireEmailUpdateFailure();
+    }
+
+    @Override
+    protected void onSuccessfulSync(JSONObject jsonFields) {
+        if (jsonFields.has("email"))
+            OneSignal.fireEmailUpdateSuccess();
+    }
 }

@@ -74,11 +74,18 @@ abstract class UserStateSynchronizer {
             mHandler.removeCallbacksAndMessages(null);
         }
 
-        void doRetry() {
-            if (currentRetry < MAX_RETRIES && !mHandler.hasMessages(0)) {
+        // Retries if not passed limit.
+        // Returns true if there retrying or there is another future sync scheduled already
+        boolean doRetry() {
+            boolean doRetry = currentRetry < MAX_RETRIES;
+            boolean futureSync = mHandler.hasMessages(0);
+
+            if (doRetry && !futureSync) {
                 currentRetry++;
                 mHandler.postDelayed(getNewRunnable(), currentRetry * 15000);
             }
+
+            return mHandler.hasMessages(0);
         }
     }
 
@@ -192,7 +199,7 @@ abstract class UserStateSynchronizer {
                 if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
                     handlePlayerDeletedFromServer();
                 else
-                    getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+                    handleNetworkFailure();
             }
 
             @Override
@@ -214,6 +221,7 @@ abstract class UserStateSynchronizer {
         OneSignalStateSynchronizer.setSyncAsNewSessionForEmail();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device successfully logged out of email: " + emailLoggedOut);
+        OneSignal.handleSuccessfulEmailLogout();
     }
 
     private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
@@ -228,12 +236,13 @@ abstract class UserStateSynchronizer {
                 if (response400WithErrorsContaining(statusCode, response, "No user with this id found"))
                     handlePlayerDeletedFromServer();
                 else
-                    getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+                    handleNetworkFailure();
             }
 
             @Override
             void onSuccess(String response) {
                 currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+                onSuccessfulSync(jsonBody);
             }
         });
     }
@@ -256,7 +265,7 @@ abstract class UserStateSynchronizer {
                 if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
                     handlePlayerDeletedFromServer();
                 else
-                    getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+                    handleNetworkFailure();
             }
 
             @Override
@@ -277,12 +286,31 @@ abstract class UserStateSynchronizer {
                         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + userId);
 
                     OneSignal.updateOnSessionDependents();
+                    onSuccessfulSync(jsonBody);
                 } catch (Throwable t) {
                     OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
                 }
             }
         });
     }
+
+    protected abstract void onSuccessfulSync(JSONObject jsonField);
+
+    private void handleNetworkFailure() {
+        boolean retried = getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).doRetry();
+        if (retried)
+            return;
+
+        // If there are no more retries and still pending changes send out event of what failed to sync
+        final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, false);
+        if (jsonBody != null)
+            fireEventsForUpdateFailure(jsonBody);
+
+        if (toSyncUserState.dependValues.optBoolean("logoutEmail", false))
+            OneSignal.handleFailedEmailLogout();
+    }
+
+    protected abstract void fireEventsForUpdateFailure(JSONObject jsonFields);
 
     protected abstract void addOnSessionOrCreateExtras(JSONObject jsonBody);
 
@@ -346,6 +374,8 @@ abstract class UserStateSynchronizer {
     abstract void setSubscription(boolean enable);
 
     private void handlePlayerDeletedFromServer() {
+        OneSignal.handleSuccessfulEmailLogout();
+
         resetCurrentState();
         nextSyncIsSession = true;
         scheduleSyncToServer();

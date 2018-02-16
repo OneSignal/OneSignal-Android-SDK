@@ -63,6 +63,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.util.Log;
 
@@ -140,6 +141,37 @@ public class OneSignal {
        */
       void tagsAvailable(JSONObject tags);
    }
+
+
+   public enum EmailErrorType {
+      VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
+   }
+
+   public static class EmailUpdateError {
+      private EmailErrorType type;
+      private String message;
+
+      EmailUpdateError(EmailErrorType type, String message) {
+         this.type = type;
+         this.message = message;
+      }
+
+      public EmailErrorType getType() {
+         return type;
+      }
+
+      public String getMessage() {
+         return message;
+      }
+   }
+
+   public interface EmailUpdateHandler {
+      void onSuccess();
+      void onFailure(EmailUpdateError error);
+   }
+
+   private static EmailUpdateHandler emailUpdateHandler;
+   private static EmailUpdateHandler emailLogoutHandler;
 
    /**
     * Fires delegate when the notification was created or fails to be created.
@@ -1131,8 +1163,16 @@ public class OneSignal {
       runSyncHashedEmail.run();
    }
 
+   public static void setEmail(@NonNull final String email, EmailUpdateHandler callback) {
+      setEmail(email, null, callback);
+   }
+
    public static void setEmail(@NonNull final String email) {
-      setEmail(email, null);
+      setEmail(email, null, null);
+   }
+
+   public static void setEmail(@NonNull final String email, @Nullable final String emailAuthHash) {
+      setEmail(email, emailAuthHash, null);
    }
 
    /**
@@ -1143,17 +1183,26 @@ public class OneSignal {
     *                          the user logs into your app.
     *                      DO NOT generate this from your app!
     *                      Omit this value if you do not have a backend to authenticate the user.
+    * @param callback Fire onSucces or onFailure if the update fails or successes.
     */
-   public static void setEmail(@NonNull final String email, final String emailAuthHash) {
+   public static void setEmail(@NonNull final String email, @Nullable final String emailAuthHash, @Nullable EmailUpdateHandler callback) {
       if (!OSUtils.isValidEmail(email)) {
-         Log(LOG_LEVEL.ERROR, "Email '" + email + "' is not a valid format.");
+         String errorMessage = "Email is invalid";
+         if (callback != null)
+            callback.onFailure(new EmailUpdateError(EmailErrorType.VALIDATION, errorMessage));
+         Log(LOG_LEVEL.ERROR, errorMessage);
          return;
       }
 
       if (useEmailAuth && emailAuthHash == null) {
-         Log(LOG_LEVEL.ERROR, "Missing required emailAuthHash");
+         String errorMessage = "Email authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
+         if (callback != null)
+            callback.onFailure(new EmailUpdateError(EmailErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
+         Log(LOG_LEVEL.ERROR, errorMessage);
          return;
       }
+
+      emailUpdateHandler = callback;
 
       Runnable runSetEmail = new Runnable() {
          @Override
@@ -1174,16 +1223,28 @@ public class OneSignal {
       runSetEmail.run();
    }
 
+
+
+
    /**
     * Call when user logs out of their account.
     * This dissociates the device from the email address.
     * This does not effect the subscription status of the email address itself.
     */
    public static void logoutEmail() {
+      logoutEmail(null);
+   }
+
+   public static void logoutEmail(@Nullable EmailUpdateHandler callback) {
       if (getEmailId() == null) {
-         Log(LOG_LEVEL.ERROR, "logoutEmail not valid as email was not set or already logged out!");
+         final String message = "logoutEmail not valid as email was not set or already logged out!";
+         if (callback != null)
+            callback.onFailure(new EmailUpdateError(EmailErrorType.INVALID_OPERATION, message));
+         Log(LOG_LEVEL.ERROR, message);
          return;
       }
+
+      emailLogoutHandler = callback;
 
       Runnable emailLogout = new Runnable() {
          @Override
@@ -2468,5 +2529,33 @@ public class OneSignal {
       if (mInitBuilder.mUnsubscribeWhenNotificationsAreDisabled)
          return OSUtils.areNotificationsEnabled(appContext);
       return true;
+   }
+
+   static void handleSuccessfulEmailLogout() {
+      if (emailLogoutHandler != null) {
+         emailLogoutHandler.onSuccess();
+         emailLogoutHandler = null;
+      }
+   }
+
+   static void handleFailedEmailLogout() {
+      if (emailLogoutHandler != null) {
+         emailLogoutHandler.onFailure(new EmailUpdateError(EmailErrorType.NETWORK, "Failed due to network failure. Will retry on next sync."));
+         emailLogoutHandler = null;
+      }
+   }
+
+   static void fireEmailUpdateSuccess() {
+      if (emailUpdateHandler != null) {
+        emailUpdateHandler.onSuccess();
+        emailUpdateHandler = null;
+      }
+   }
+
+   static void fireEmailUpdateFailure() {
+      if (emailUpdateHandler != null) {
+         emailUpdateHandler.onFailure(new EmailUpdateError(EmailErrorType.NETWORK, "Failed due to network failure. Will retry on next sync."));
+         emailUpdateHandler = null;
+      }
    }
 }

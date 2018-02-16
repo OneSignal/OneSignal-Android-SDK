@@ -82,6 +82,34 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
       OneSignal.sendTags(json);
    }
 
+   public void setEmail(String email, String authHash) {
+      OneSignal.setEmail(email, authHash, new OneSignal.EmailUpdateHandler() {
+         @Override
+         public void onSuccess() {
+            unitySafeInvoke("onSetEmailSuccess", "{\"status\": \"success\"}");
+         }
+
+         @Override
+         public void onFailure(OneSignal.EmailUpdateError error) {
+            unitySafeInvoke("onSetEmailFailure", "{\"error\": \"" + error.getMessage() + "\"}");
+         }
+      });
+   }
+
+   public void logoutEmail() {
+      OneSignal.logoutEmail(new OneSignal.EmailUpdateHandler() {
+         @Override
+         public void onSuccess() {
+            unitySafeInvoke("onLogoutEmailSuccess", "{\"status\": \"success\"}");
+         }
+
+         @Override
+         public void onFailure(OneSignal.EmailUpdateError error) {
+            unitySafeInvoke("onLogoutEmailFailure", "{\"error\": \"" + error.getMessage() + "\"}");
+         }
+      });
+   }
+
    public void getTags() {
       OneSignal.getTags(new GetTagsHandler() {
          @Override
