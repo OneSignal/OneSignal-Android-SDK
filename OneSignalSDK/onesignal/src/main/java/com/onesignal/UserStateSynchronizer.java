@@ -178,10 +178,14 @@ abstract class UserStateSynchronizer {
         String urlStr = "players/" + userId + "/email_logout";
         JSONObject jsonBody = new JSONObject();
         try {
-            if (currentUserState.syncValues.has("email_auth_hash"))
-                jsonBody.put("email_auth_hash", currentUserState.syncValues.optString("email_auth_hash"));
-            if (currentUserState.syncValues.has("parent_player_id"))
-                jsonBody.put("parent_player_id", currentUserState.syncValues.optString("parent_player_id"));
+            JSONObject syncValues = currentUserState.syncValues;
+
+            if (syncValues.has("email_auth_hash"))
+                jsonBody.put("email_auth_hash", syncValues.optString("email_auth_hash"));
+            if (syncValues.has("parent_player_id"))
+                jsonBody.put("parent_player_id", syncValues.optString("parent_player_id"));
+
+            jsonBody.put("app_id", syncValues.optString("app_id"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
