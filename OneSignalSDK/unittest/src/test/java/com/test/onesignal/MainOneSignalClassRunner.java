@@ -972,6 +972,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
       OneSignal.setEmail("josh@onesignal.com", testEmailUpdateHandler);
+      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
       threadAndTaskWait();
 
       Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
@@ -1003,6 +1004,19 @@ public class MainOneSignalClassRunner {
 
       Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
       Assert.assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+   }
+
+   @Test
+   public void shouldFireOnSuccessOnlyAfterNetworkCallAfterLogout() throws Exception {
+      OneSignalInit();
+      emailSetThenLogout();
+      TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+      OneSignal.setEmail("josh@onesignal.com", testEmailUpdateHandler);
+      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      threadAndTaskWait();
+
+      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
    }
 
    // Should create a new email instead of updating existing player record when no auth hash
