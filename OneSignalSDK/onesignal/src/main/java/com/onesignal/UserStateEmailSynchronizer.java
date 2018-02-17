@@ -56,10 +56,16 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     void setEmail(String email, String emailAuthHash) {
         JSONObject syncValues = getUserStateForModification().syncValues;
 
-        if (email.equals(syncValues.optString("identifier")) && syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash)) {
+        boolean noChange = email.equals(syncValues.optString("identifier")) &&
+                               syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash);
+        if (noChange) {
             OneSignal.fireEmailUpdateSuccess();
             return;
         }
+
+        String existingEmail = syncValues.optString("identifier", null);
+        if (existingEmail == null)
+            setSyncAsNewSession();
 
         try {
             JSONObject emailJSON = new JSONObject();
@@ -69,7 +75,6 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
                 emailJSON.put("email_auth_hash", emailAuthHash);
 
             if (emailAuthHash == null) {
-                String existingEmail = syncValues.optString("identifier", null);
                 if (existingEmail != null && !existingEmail.equals(email)) {
                     OneSignal.saveEmailId("");
                     resetCurrentState();
@@ -78,6 +83,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
             }
 
             generateJsonDiff(syncValues, emailJSON, syncValues, null);
+            scheduleSyncToServer();
         }
         catch (JSONException e) {
             e.printStackTrace();
@@ -107,8 +113,13 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     @Override
     void logoutEmail() {
         OneSignal.saveEmailId("");
+
         resetCurrentState();
-        nextSyncIsSession = false;
+        toSyncUserState.syncValues.remove("identifier");
+        toSyncUserState.syncValues.remove("email_auth_hash");
+        toSyncUserState.syncValues.remove("device_player_id");
+        toSyncUserState.persistState();
+
         OneSignal.getPermissionSubscriptionState().emailSubscriptionStatus.clearEmailAndId();
     }
 
