@@ -37,7 +37,7 @@ import com.onesignal.OneSignal.GetTagsHandler;
 import com.onesignal.OneSignal.IdsAvailableHandler;
 import com.onesignal.OneSignal.PostNotificationResponseHandler;
 
-public class OneSignalUnityProxy implements NotificationOpenedHandler, NotificationReceivedHandler, OSPermissionObserver, OSSubscriptionObserver {
+public class OneSignalUnityProxy implements NotificationOpenedHandler, NotificationReceivedHandler, OSPermissionObserver, OSSubscriptionObserver, OSEmailSubscriptionObserver {
 
    private static String unityListenerName;
    private static java.lang.reflect.Method unitySendMessage;
@@ -205,6 +205,10 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    public void removeSubscriptionObserver() {
       OneSignal.removeSubscriptionObserver(this);
    }
+
+   public void addEmailSubscriptionObserver() { OneSignal.addEmailSubscriptionObserver(this); }
+
+   public void removeEmailSubscriptionObserver() { OneSignal.removeEmailSubscriptionObserver(this); }
    
    public String getPermissionSubscriptionState() {
       return OneSignal.getPermissionSubscriptionState().toJSONObject().toString();
@@ -218,6 +222,11 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    @Override
    public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
       unitySafeInvoke("onOSSubscriptionChanged", stateChanges.toJSONObject().toString());
+   }
+
+   @Override
+   public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+      unitySafeInvoke("onOSEmailSubscriptionChanged", stateChanges.toJSONObject().toString());
    }
    
    private static void unitySafeInvoke(String method, String params) {
