@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,12 +28,9 @@
 package com.test.onesignal;
 
 import android.app.Activity;
-import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.app.Service;
 import android.app.job.JobScheduler;
 import android.content.Context;
 import android.content.Intent;
@@ -60,7 +57,6 @@ import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
@@ -71,12 +67,9 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
-
-import junit.framework.Assert;
 
 import org.json.JSONObject;
 import org.junit.AfterClass;
@@ -105,7 +98,20 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
+
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
+
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+
+import static org.junit.Assert.assertThat;
+
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
@@ -183,15 +189,15 @@ public class GenerateNotificationRunner {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals("title123", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
-      Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
+      assertEquals("title123", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
+      assertEquals(2, ShadowBadgeCountUpdater.lastCount);
    }
    
    @Test
@@ -201,7 +207,7 @@ public class GenerateNotificationRunner {
       bundle.putBoolean("restoring", true);
       
       NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
-      Assert.assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
+      assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
    }
 
    @Test
@@ -219,7 +225,7 @@ public class GenerateNotificationRunner {
 
       //assert that no restoration jobs were scheduled...
       JobScheduler scheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-      Assert.assertTrue(scheduler.getAllPendingJobs().isEmpty());
+      assertTrue(scheduler.getAllPendingJobs().isEmpty());
    }
    
    
@@ -260,9 +266,9 @@ public class GenerateNotificationRunner {
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
       
       // Make sure we get a payload when it is opened.
-      Assert.assertNotNull(lastOpenResult.notification.payload);
+      assertNotNull(lastOpenResult.notification.payload);
    }
-   
+
    @Test
    public void shouldSetCorrectNumberOfButtonsOnSummaryNotification() throws Exception {
       // Setup - Init
@@ -281,8 +287,8 @@ public class GenerateNotificationRunner {
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
    
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
-      Assert.assertEquals(1, postedSummaryNotification.notif.actions.length);
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(1, postedSummaryNotification.notif.actions.length);
    }
    
    
@@ -305,10 +311,10 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       
-      Assert.assertEquals(4, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(4, ShadowRoboNotificationManager.notifications.size());
       
       OneSignal.cancelGroupedNotifications("test1");
-      Assert.assertEquals(1, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(1, ShadowRoboNotificationManager.notifications.size());
    }
    
    
@@ -339,13 +345,13 @@ public class GenerateNotificationRunner {
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       
       // Test - 3 notifis + 1 summary
-      Assert.assertEquals(4, postedNotifs.size());
+      assertEquals(4, postedNotifs.size());
       
       
       // Test - First notification should be the summary
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("3 new messages", postedSummaryNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals("3 new messages", postedSummaryNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
    
       // Setup - Let's cancel a child notification.
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
@@ -353,11 +359,11 @@ public class GenerateNotificationRunner {
    
       // Test - It should update summary text to say 2 notifications
       postedNotifs = ShadowRoboNotificationManager.notifications;
-      Assert.assertEquals(3, postedNotifs.size());       // 2 notifis + 1 summary
+      assertEquals(3, postedNotifs.size());       // 2 notifis + 1 summary
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
    
       // Setup - Let's cancel a 2nd child notification.
       postedNotification = postedNotifsIterator.next().getValue();
@@ -365,30 +371,30 @@ public class GenerateNotificationRunner {
    
       // Test - It should update summary notification to be the text of the last remaining one.
       postedNotifs = ShadowRoboNotificationManager.notifications;
-      Assert.assertEquals(2, postedNotifs.size()); // 1 notifis + 1 summary
+      assertEquals(2, postedNotifs.size()); // 1 notifis + 1 summary
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
       
       // Test - Let's make sure we will have our last notification too
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals(notifMessage, postedNotification.getShadow().getContentText());
+      assertEquals(notifMessage, postedNotification.getShadow().getContentText());
       
       // Setup - Let's cancel our 3rd and last child notification.
       OneSignal.cancelNotification(postedNotification.id);
    
       // Test - No more notifications! :)
       postedNotifs = ShadowRoboNotificationManager.notifications;
-      Assert.assertEquals(0, postedNotifs.size());
+      assertEquals(0, postedNotifs.size());
    }
    
    @Test
    public void shouldUpdateBadgesWhenDismissingNotification() {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
@@ -396,7 +402,7 @@ public class GenerateNotificationRunner {
       Intent intent = Shadows.shadowOf(postedNotification.notif.deleteIntent).getSavedIntent();
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
    
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
    
    @Test
@@ -407,7 +413,7 @@ public class GenerateNotificationRunner {
       
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
    
    @Test
@@ -427,7 +433,7 @@ public class GenerateNotificationRunner {
       // Should have 2 DB record
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
-      Assert.assertEquals(2, cursor.getCount());
+      assertEquals(2, cursor.getCount());
       cursor.close();
    }
    
@@ -453,10 +459,10 @@ public class GenerateNotificationRunner {
       // Test - Summary created and sub notification. Summary will look the same as the normal notification.
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
-      Assert.assertEquals(2, postedNotifs.size());
+      assertEquals(2, postedNotifs.size());
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
    
       int lastNotifId = postedNotifsIterator.next().getValue().id;
       ShadowRoboNotificationManager.notifications.clear();
@@ -471,9 +477,9 @@ public class GenerateNotificationRunner {
       postedNotifs = ShadowRoboNotificationManager.notifications;
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       // Test - 1 notifi + 1 summary
-      Assert.assertEquals(2, postedNotifs.size());
-      Assert.assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(2, postedNotifs.size());
+      assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
    }
    
 
@@ -482,33 +488,33 @@ public class GenerateNotificationRunner {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
-      Assert.assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should have 1 DB record with the correct time stamp
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
-      Assert.assertEquals(1, cursor.getCount());
+      assertEquals(1, cursor.getCount());
       // Time stamp should be set and within a small range.
       long currentTime = System.currentTimeMillis() / 1000;
       cursor.moveToFirst();
-      Assert.assertTrue(cursor.getLong(0) > currentTime - 2 && cursor.getLong(0) <= currentTime);
+      assertTrue(cursor.getLong(0) > currentTime - 2 && cursor.getLong(0) <= currentTime);
       cursor.close();
 
       // Should get marked as opened.
       NotificationOpenedProcessor_processFromContext(blankActivity, createOpenIntent(bundle));
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "opened", "android_notification_id" }, null, null, null, null, null);
       cursor.moveToFirst();
-      Assert.assertEquals(1, cursor.getInt(0));
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(1, cursor.getInt(0));
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
-      Assert.assertEquals(1, cursor.getCount());
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(1, cursor.getCount());
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
 
       // Display a second notification
@@ -527,8 +533,8 @@ public class GenerateNotificationRunner {
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id", "created_time" }, null, null, null, null, null);
 
-      Assert.assertEquals(1, cursor.getCount());
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(1, cursor.getCount());
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       cursor.close();
    }
@@ -541,7 +547,7 @@ public class GenerateNotificationRunner {
 
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      Assert.assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+      assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
 
       // Go forward 1 week
       // Note: Does not effect the SQL function strftime
@@ -549,7 +555,7 @@ public class GenerateNotificationRunner {
 
       // Restorer should not fire service since the notification is over 1 week old.
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
-      Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
    }
 
    @Test
@@ -560,27 +566,27 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-      Assert.assertEquals(2, postedNotifs.size());
+      assertEquals(2, postedNotifs.size());
 
       // Test summary notification
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
 
-      Assert.assertEquals(notifMessage, postedNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(notifMessage, postedNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Test Android Wear notification
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals(notifMessage, postedNotification.getShadow().getContentText());
-      Assert.assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(notifMessage, postedNotification.getShadow().getContentText());
+      assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
       // Badge count should only be one as only one notification is visible in the notification area.
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
 
       // Should be 2 DB entries (summary and individual)
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
-      Assert.assertEquals(2, cursor.getCount());
+      assertEquals(2, cursor.getCount());
       cursor.close();
 
 
@@ -593,24 +599,24 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
 
       postedNotifs = ShadowRoboNotificationManager.notifications;
-      Assert.assertEquals(2, postedNotifs.size());
-      Assert.assertEquals(2, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(2, postedNotifs.size());
+      assertEquals(2, ShadowBadgeCountUpdater.lastCount);
 
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("2 new messages",postedNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals("2 new messages",postedNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Test Android Wear notification
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("Notif test 2", postedNotification.getShadow().getContentText());
-      Assert.assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals("Notif test 2", postedNotification.getShadow().getContentText());
+      assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
 
       // Should be 3 DB entries (summary and 2 individual)
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
-      Assert.assertEquals(3, cursor.getCount());
+      assertEquals(3, cursor.getCount());
 
 
       // Open summary notification
@@ -618,9 +624,9 @@ public class GenerateNotificationRunner {
       postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       // 2 open calls should fire.
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification
@@ -632,9 +638,9 @@ public class GenerateNotificationRunner {
 
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("Notif test 3", postedNotification.getShadow().getContentText());
-      Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals("Notif test 3", postedNotification.getShadow().getContentText());
+      assertEquals(Notification.FLAG_GROUP_SUMMARY, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       cursor.close();
    }
    
@@ -659,7 +665,7 @@ public class GenerateNotificationRunner {
       // Test1 - Manually trigger a refresh on grouped notification.
       SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
-      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    
    
       // Setup2 - Display a 2nd notification with the same group key
@@ -670,7 +676,7 @@ public class GenerateNotificationRunner {
       // Test2 - Manually trigger a refresh on grouped notification.
       writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
-      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    }
    
    
@@ -686,7 +692,7 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       
-      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    
       // Setup - Background app
       blankActivityController.pause();
@@ -702,7 +708,7 @@ public class GenerateNotificationRunner {
    
       // Test - equals 3 - Should be 2 notifications + 1 summary.
       //         Alert should stay as an in-app alert.
-      Assert.assertEquals(3, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(3, ShadowRoboNotificationManager.notifications.size());
    }
    
    
@@ -722,15 +728,15 @@ public class GenerateNotificationRunner {
       
       // Normal notifications should be generated right from the BroadcastReceiver
       //   without creating a service.
-      Assert.assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
       
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       PostedNotification lastNotification = postedNotifsIterator.next().getValue();
       
-      Assert.assertEquals(1, lastNotification.notif.actions.length);
+      assertEquals(1, lastNotification.notif.actions.length);
       String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra("onesignal_data");
-      Assert.assertEquals("id1", new JSONObject(json_data).optString("actionSelected"));
+      assertEquals("id1", new JSONObject(json_data).optString("actionSelected"));
    }
 
 
@@ -745,7 +751,7 @@ public class GenerateNotificationRunner {
 
       AlertDialog alert = ShadowAlertDialog.getLatestAlertDialog();
       Button button = alert.getButton(AlertDialog.BUTTON_NEUTRAL);
-      Assert.assertEquals(button.getText(), "Ok");
+      assertEquals(button.getText(), "Ok");
    }
    
    @Test
@@ -766,8 +772,8 @@ public class GenerateNotificationRunner {
       GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
       gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
       
-      Assert.assertNull(ShadowGcmBroadcastReceiver.lastResultCode);
-      Assert.assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
+      assertNull(ShadowGcmBroadcastReceiver.lastResultCode);
+      assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
    }
    
    @Test
@@ -787,7 +793,7 @@ public class GenerateNotificationRunner {
       gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
       
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      Assert.assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+      assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
    }
    
    private OSNotification lastNotificationReceived;
@@ -805,7 +811,7 @@ public class GenerateNotificationRunner {
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()),
                                 NotificationExtenderServiceTestReturnFalse.class);
 
-      Assert.assertNotNull(lastNotificationReceived);
+      assertNotNull(lastNotificationReceived);
    }
    
    @Test
@@ -816,7 +822,7 @@ public class GenerateNotificationRunner {
           NotificationExtenderServiceTest.class);
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID2")),
           NotificationExtenderServiceTest.class);
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    }
    
    
@@ -830,10 +836,10 @@ public class GenerateNotificationRunner {
       
       // Test - First notification should be the summary with the custom sound set.
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertNotSame(Notification.DEFAULT_SOUND, postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND);
-      Assert.assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
+      assertThat(postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
    
-      Assert.assertEquals(1, postedNotifs.size());
+      assertEquals(1, postedNotifs.size());
    }
    
    @Test
@@ -846,18 +852,18 @@ public class GenerateNotificationRunner {
    
       // Test - First notification should be the summary with the custom sound set.
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertNotSame(Notification.DEFAULT_SOUND, postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND);
-      Assert.assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
+      assertThat(postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
       
       // Test - individual notification 1 should not play a sound
       PostedNotification notification = postedNotifsIterator.next().getValue();
-      Assert.assertNotSame(Notification.DEFAULT_SOUND, notification.notif.flags & Notification.DEFAULT_SOUND);
-      Assert.assertNull(notification.notif.sound);
+      assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertNull(notification.notif.sound);
    
       // Test - individual notification 2 should not play a sound
       notification = postedNotifsIterator.next().getValue();
-      Assert.assertNotSame(Notification.DEFAULT_SOUND, notification.notif.flags & Notification.DEFAULT_SOUND);
-      Assert.assertNull(notification.notif.sound);
+      assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertNull(notification.notif.sound);
    }
    
    // Test to make sure changed bodies and titles are used for the summary notification.
@@ -880,15 +886,15 @@ public class GenerateNotificationRunner {
    
       // Test - First notification should be the summary
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-      Assert.assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
+      assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
       if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT)
-         Assert.assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+         assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
    
       // Test - Make sure summary build saved and used the developer's extender settings for the body and title
       if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2) {
          CharSequence[] lines = postedSummaryNotification.notif.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
          for (CharSequence line : lines)
-            Assert.assertEquals("[Modified Tile] [Modified Body(ContentText)]", line.toString());
+            assertEquals("[Modified Tile] [Modified Body(ContentText)]", line.toString());
       }
    }
    
@@ -918,7 +924,7 @@ public class GenerateNotificationRunner {
       shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(serviceIntent, resolveInfo);
 
       boolean ret = OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, bundle);
-      Assert.assertTrue(ret);
+      assertTrue(ret);
       
       // Test that all options are set.
       NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
@@ -926,59 +932,59 @@ public class GenerateNotificationRunner {
 
       OSNotificationReceivedResult notificationReceived = service.notification;
       OSNotificationPayload notificationPayload = notificationReceived.payload;
-      Assert.assertEquals("Test H", notificationPayload.title);
-      Assert.assertEquals("Test B", notificationPayload.body);
-      Assert.assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationID);
+      assertEquals("Test H", notificationPayload.title);
+      assertEquals("Test B", notificationPayload.body);
+      assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationID);
 
-      Assert.assertEquals(0, notificationPayload.lockScreenVisibility);
-      Assert.assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
-      Assert.assertEquals("703322744261", notificationPayload.fromProjectNumber);
-      Assert.assertEquals("FFFFFF00", notificationPayload.ledColor);
-      Assert.assertEquals("big_picture", notificationPayload.bigPicture);
-      Assert.assertEquals("large_icon", notificationPayload.largeIcon);
-      Assert.assertEquals("small_icon", notificationPayload.smallIcon);
-      Assert.assertEquals("test_sound", notificationPayload.sound);
-      Assert.assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
-      Assert.assertEquals("http://google.com", notificationPayload.launchURL);
-      Assert.assertEquals(10, notificationPayload.priority);
-      Assert.assertEquals("a_key", notificationPayload.collapseId);
+      assertEquals(0, notificationPayload.lockScreenVisibility);
+      assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
+      assertEquals("703322744261", notificationPayload.fromProjectNumber);
+      assertEquals("FFFFFF00", notificationPayload.ledColor);
+      assertEquals("big_picture", notificationPayload.bigPicture);
+      assertEquals("large_icon", notificationPayload.largeIcon);
+      assertEquals("small_icon", notificationPayload.smallIcon);
+      assertEquals("test_sound", notificationPayload.sound);
+      assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
+      assertEquals("http://google.com", notificationPayload.launchURL);
+      assertEquals(10, notificationPayload.priority);
+      assertEquals("a_key", notificationPayload.collapseId);
 
-      Assert.assertEquals("id1", notificationPayload.actionButtons.get(0).id);
-      Assert.assertEquals("button1", notificationPayload.actionButtons.get(0).text);
-      Assert.assertEquals("ic_menu_share", notificationPayload.actionButtons.get(0).icon);
-      Assert.assertEquals("id2", notificationPayload.actionButtons.get(1).id);
-      Assert.assertEquals("button2", notificationPayload.actionButtons.get(1).text);
-      Assert.assertEquals("ic_menu_send", notificationPayload.actionButtons.get(1).icon);
+      assertEquals("id1", notificationPayload.actionButtons.get(0).id);
+      assertEquals("button1", notificationPayload.actionButtons.get(0).text);
+      assertEquals("ic_menu_share", notificationPayload.actionButtons.get(0).icon);
+      assertEquals("id2", notificationPayload.actionButtons.get(1).id);
+      assertEquals("button2", notificationPayload.actionButtons.get(1).text);
+      assertEquals("ic_menu_send", notificationPayload.actionButtons.get(1).icon);
 
-      Assert.assertEquals("test_image_url", notificationPayload.backgroundImageLayout.image);
-      Assert.assertEquals("FF000000", notificationPayload.backgroundImageLayout.titleTextColor);
-      Assert.assertEquals("FFFFFFFF", notificationPayload.backgroundImageLayout.bodyTextColor);
+      assertEquals("test_image_url", notificationPayload.backgroundImageLayout.image);
+      assertEquals("FF000000", notificationPayload.backgroundImageLayout.titleTextColor);
+      assertEquals("FFFFFFFF", notificationPayload.backgroundImageLayout.bodyTextColor);
 
       JSONObject additionalData = notificationPayload.additionalData;
-      Assert.assertEquals("myValue", additionalData.getString("myKey"));
-      Assert.assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
+      assertEquals("myValue", additionalData.getString("myKey"));
+      assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
 
-      Assert.assertNotSame(-1, service.notificationId);
+      assertThat(service.notificationId, not(-1));
 
 
       // Test a basic notification without anything special.
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()), NotificationExtenderServiceTest.class);
-      Assert.assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
+      assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
 
       // Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception.
       NotificationExtenderServiceTest.throwInAppCode = true;
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")), NotificationExtenderServiceTest.class);
 
-      Assert.assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
+      assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-      Assert.assertEquals(3, postedNotifs.size());
+      assertEquals(3, postedNotifs.size());
    }
    
    
    /* Helpers */
    
    private static void assertNoNotifications() {
-      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    }
 
    private static Bundle getBundleWithAllOptionsSet() {
