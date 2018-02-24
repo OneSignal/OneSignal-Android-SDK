@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,7 +64,6 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -76,8 +75,6 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
-
-import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -111,6 +108,19 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.core.Is.is;
+
+import static org.junit.Assert.assertThat;
+
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
@@ -210,7 +220,7 @@ public class MainOneSignalClassRunner {
       // Application.onCreate
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
-      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
+      assertNotNull(ShadowOneSignalRestClient.lastPost);
 
       ShadowOneSignalRestClient.lastPost = null;
       restartAppAndElapseTimeToNextSession();
@@ -218,12 +228,12 @@ public class MainOneSignalClassRunner {
       // Restart app, should not send onSession automatically
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Starting of first Activity should trigger onSession
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost);
+      assertNotNull(ShadowOneSignalRestClient.lastPost);
    }
 
    @Test
@@ -233,7 +243,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
-      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+      assertEquals("players", ShadowOneSignalRestClient.lastUrl);
 
       // Shouldn't call on_session if just resuming app with a short delay
       blankActivityController.pause();
@@ -241,7 +251,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
+      assertNull(ShadowOneSignalRestClient.lastUrl);
 
       // Or when restarting the app quickly.
       ShadowOneSignalRestClient.lastPost = null;
@@ -250,7 +260,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.matches(".*android_params.js.*"));
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches(".*android_params.js.*"));
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -258,8 +268,8 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
-      Assert.assertEquals("{\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+      assertEquals("{\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
    }
 
    @Test
@@ -268,7 +278,7 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
+      assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
 
       // A 2nd init call
       OneSignalInit();
@@ -281,7 +291,7 @@ public class MainOneSignalClassRunner {
 
       // Make sure when we try to register again before our on_session call it is with the remote
       // project number instead of the local one.
-      Assert.assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
+      assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
    }
 
    @Test
@@ -291,7 +301,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
-      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+      assertEquals("players", ShadowOneSignalRestClient.lastUrl);
 
       // Shouldn't call on_session if just resuming app with a short delay
       blankActivityController.pause();
@@ -299,8 +309,8 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastUrl);
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertNull(ShadowOneSignalRestClient.lastUrl);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowOSUtils.carrierName = "test2";
 
@@ -312,10 +322,10 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
       GetIdsAvailable();
-      Assert.assertEquals("players/" + callBackUseId, ShadowOneSignalRestClient.lastUrl);
-      Assert.assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+      assertEquals("players/" + callBackUseId, ShadowOneSignalRestClient.lastUrl);
+      assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
    }
 
 
@@ -326,7 +336,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
-      Assert.assertEquals("players", ShadowOneSignalRestClient.lastUrl);
+      assertEquals("players", ShadowOneSignalRestClient.lastUrl);
    }
 
    @Test
@@ -337,15 +347,15 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
-      Assert.assertEquals("Robo test message", notificationOpenedMessage);
+      assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
    public void testAndroidParamsProjectNumberOverridesLocal() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
-      Assert.assertNotSame("123456789", ShadowPushRegistratorGPS.lastProjectNumber);
+
+      assertThat(ShadowPushRegistratorGPS.lastProjectNumber, not("123456789"));
    }
    
    @Test
@@ -358,7 +368,7 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
       threadAndTaskWait();
       
-      Assert.assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
    
    @Test
@@ -388,10 +398,10 @@ public class MainOneSignalClassRunner {
 
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
-      Assert.assertNull(notificationOpenedMessage);
+      assertNull(notificationOpenedMessage);
 
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
-      Assert.assertEquals("Robo test message", notificationOpenedMessage);
+      assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
@@ -414,16 +424,16 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
-      Assert.assertEquals(null, notificationOpenedMessage);
+      assertEquals(null, notificationOpenedMessage);
    }
 
    @Test
    public void testOpenFromNotificationWhenAppIsInBackground() throws Exception {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
-      Assert.assertNull(notificationOpenedMessage);
+      assertNull(notificationOpenedMessage);
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
-      Assert.assertEquals("Test Msg", notificationOpenedMessage);
+      assertEquals("Test Msg", notificationOpenedMessage);
       threadAndTaskWait();
    }
 
@@ -432,12 +442,12 @@ public class MainOneSignalClassRunner {
       AddLauncherIntentFilter();
 
       // From app launching normally
-      Assert.assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
-      Assert.assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
-      Assert.assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    @Test
@@ -450,9 +460,9 @@ public class MainOneSignalClassRunner {
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
 
       Intent intent = shadowOf(blankActivity).getNextStartedActivity();
-      Assert.assertEquals("android.intent.action.VIEW", intent.getAction());
-      Assert.assertEquals("http://google.com", intent.getData().toString());
-      Assert.assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertEquals("android.intent.action.VIEW", intent.getAction());
+      assertEquals("http://google.com", intent.getData().toString());
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    @Test
@@ -465,7 +475,7 @@ public class MainOneSignalClassRunner {
       // No OneSignal init here to test case where it is located in an Activity.
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
-      Assert.assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    @Test
@@ -474,14 +484,14 @@ public class MainOneSignalClassRunner {
       AddLauncherIntentFilter();
 
       // From app launching normally
-      Assert.assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
-      Assert.assertNull(notificationOpenedMessage);
+      assertNull(notificationOpenedMessage);
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
 
-      Assert.assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      Assert.assertEquals("Test Msg", notificationOpenedMessage);
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertEquals("Test Msg", notificationOpenedMessage);
    }
 
    private static String notificationReceivedBody;
@@ -502,23 +512,23 @@ public class MainOneSignalClassRunner {
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait(); threadAndTaskWait();
-      Assert.assertEquals(null, notificationOpenedMessage);
-      Assert.assertFalse(processResult);
+      assertEquals(null, notificationOpenedMessage);
+      assertFalse(processResult);
       // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
-      Assert.assertEquals("Robo test message", notificationReceivedBody);
-      Assert.assertFalse(0 == androidNotificationId);
+      assertEquals("Robo test message", notificationReceivedBody);
+      assertFalse(0 == androidNotificationId);
 
       // Don't fire for duplicates
       notificationOpenedMessage = null;
       notificationReceivedBody = null;
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
-      Assert.assertNull(notificationOpenedMessage);
+      assertNull(notificationOpenedMessage);
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      Assert.assertEquals(null, notificationOpenedMessage);
-      Assert.assertEquals(null, notificationReceivedBody);
+      assertEquals(null, notificationOpenedMessage);
+      assertEquals(null, notificationReceivedBody);
 
       // Test that only NotificationReceivedHandler fires
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
@@ -528,9 +538,9 @@ public class MainOneSignalClassRunner {
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait(); threadAndTaskWait();
-      Assert.assertEquals(null, notificationOpenedMessage);
-      Assert.assertNull(notificationOpenedMessage);
-      Assert.assertEquals("Robo test message", notificationReceivedBody);
+      assertEquals(null, notificationOpenedMessage);
+      assertNull(notificationOpenedMessage);
+      assertEquals("Robo test message", notificationReceivedBody);
    }
 
    @Test
@@ -541,19 +551,19 @@ public class MainOneSignalClassRunner {
       // First run should set badge to 0
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
 
       // Resume should have no effect on badges.
       ShadowBadgeCountUpdater.lastCount = -1;
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
 
       // Nor an app restart
       StaticResetHelper.restSetStaticFields();
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
-      Assert.assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
@@ -561,7 +571,7 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorGPS.fail = true;
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
 
    @Test
@@ -574,17 +584,17 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
+      assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
    }
 
    @Test
    public void testGMSErrorsAfterSuccessfulSubscribeDoNotUnsubscribeTheDevice() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
 
       ShadowOneSignalRestClient.lastPost = null;
       restartAppAndElapseTimeToNextSession();
@@ -592,7 +602,7 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorGPS.fail = true;
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
 
    @Test
@@ -604,10 +614,10 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      Assert.assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
+      assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
    }
 
    @Test
@@ -615,15 +625,15 @@ public class MainOneSignalClassRunner {
       GetIdsAvailable();
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
+      assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
 
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      Assert.assertEquals(ShadowPushRegistratorGPS.regId, getCallBackRegId);
+      assertEquals(ShadowPushRegistratorGPS.regId, getCallBackRegId);
 
       OneSignal.setSubscription(false);
       GetIdsAvailable();
       threadAndTaskWait();
-      Assert.assertNull(getCallBackRegId);
+      assertNull(getCallBackRegId);
    }
 
    @Test
@@ -634,13 +644,13 @@ public class MainOneSignalClassRunner {
       // Should not try to update server
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.setSubscription(true);
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Restart app - Should omit notification_types
       restartAppAndElapseTimeToNextSession();
       OneSignalInitWithBadProjectNum();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
 
    @Test
@@ -648,13 +658,13 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.setSubscription(false);
       threadAndTaskWait();
-      Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       restartAppAndElapseTimeToNextSession();
 
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
 
    @Test
@@ -671,13 +681,13 @@ public class MainOneSignalClassRunner {
       restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Restart app again - Value synced last time so don't send again.
       restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
 
    @Test
@@ -692,7 +702,7 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorGPS.fail = false;
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
 
 
@@ -704,24 +714,24 @@ public class MainOneSignalClassRunner {
       OneSignal.setSubscription(false);
       threadAndTaskWait();
 
-      Assert.assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.setSubscription(false);
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
 
 
 
       OneSignal.setSubscription(true);
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.setSubscription(true);
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
    }
 
    private static boolean userIdWasNull = false;
@@ -739,7 +749,7 @@ public class MainOneSignalClassRunner {
       });
 
       OneSignalInit();
-      Assert.assertFalse(userIdWasNull);
+      assertFalse(userIdWasNull);
       threadAndTaskWait();
    }
 
@@ -749,20 +759,20 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorGPS.fail = true;
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
 
       // Registers for GCM after a retry
       ShadowPushRegistratorGPS.fail = false;
       ShadowPushRegistratorGPS.manualFireRegisterForPush();
       threadAndTaskWait();
-      Assert.assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
+      assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
 
       // Cold restart app, should not send the same identifier again.
       ShadowOneSignalRestClient.lastPost = null;
       restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
    }
 
    @Test
@@ -775,7 +785,7 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
       threadAndTaskWait();
 
-      Assert.assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
+      assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
    }
 
    @Test
@@ -794,7 +804,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      Assert.assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
+      assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
 
 
       // Developer deletes users again from dashboard while app is running.
@@ -804,7 +814,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("key1", "value1");
       threadAndTaskWait();
 
-      Assert.assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length() - 1);
+      assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length() - 1);
    }
 
    @Test
@@ -830,26 +840,26 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
-      Assert.assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
-      Assert.assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
+      assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
+      assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
 
       // Should omit sending repeated tags
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Should only send changed and new tags
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1.5\", \"test2\": \"value2\", \"test3\": \"value3\"}"));
       threadAndTaskWait();
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       JSONObject sentTags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
-      Assert.assertEquals("value1.5", sentTags.getString("test1"));
-      Assert.assertFalse(sentTags.has(("test2")));
-      Assert.assertEquals("value3", sentTags.getString("test3"));
+      assertEquals("value1.5", sentTags.getString("test1"));
+      assertFalse(sentTags.has(("test2")));
+      assertEquals("value3", sentTags.getString("test3"));
    }
 
    @Test
@@ -860,20 +870,20 @@ public class MainOneSignalClassRunner {
       OneSignal.setEmail(email);
       threadAndTaskWait();
 
-      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
       JSONObject pushPost = ShadowOneSignalRestClient.requests.get(1).payload;
-      Assert.assertEquals(email, pushPost.getString("email"));
-      Assert.assertEquals(1, pushPost.getInt("device_type"));
+      assertEquals(email, pushPost.getString("email"));
+      assertEquals(1, pushPost.getInt("device_type"));
 
       JSONObject emailPost = ShadowOneSignalRestClient.requests.get(2).payload;
-      Assert.assertEquals(email, emailPost.getString("identifier"));
-      Assert.assertEquals(11, emailPost.getInt("device_type"));
-      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, emailPost.getString("device_player_id"));
+      assertEquals(email, emailPost.getString("identifier"));
+      assertEquals(11, emailPost.getInt("device_type"));
+      assertEquals(ShadowOneSignalRestClient.pushUserId, emailPost.getString("device_player_id"));
 
       JSONObject pushPut = ShadowOneSignalRestClient.requests.get(3).payload;
-      Assert.assertEquals(ShadowOneSignalRestClient.emailUserId, pushPut.getString("parent_player_id"));
-      Assert.assertFalse(pushPut.has("identifier"));
+      assertEquals(ShadowOneSignalRestClient.emailUserId, pushPut.getString("parent_player_id"));
+      assertFalse(pushPut.has("identifier"));
    }
 
    @Test
@@ -884,12 +894,12 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags(tagsJson);
       threadAndTaskWait();
 
-      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(2);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
-      Assert.assertEquals("josh@onesignal.com", emailPost.payload.get("identifier"));
-      Assert.assertEquals(tagsJson.toString(), emailPost.payload.getJSONObject("tags").toString());
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      assertEquals("josh@onesignal.com", emailPost.payload.get("identifier"));
+      assertEquals(tagsJson.toString(), emailPost.payload.getJSONObject("tags").toString());
    }
 
    @Test
@@ -901,11 +911,11 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Assert we are sending / retry for the push player first.
-      Assert.assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
       for(int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
          ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(i);
-         Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
-         Assert.assertEquals(1, emailPost.payload.getInt("device_type"));
+         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+         assertEquals(1, emailPost.payload.getInt("device_type"));
       }
 
       // Turn off fail mocking, call sendTags to trigger another retry
@@ -915,8 +925,8 @@ public class MainOneSignalClassRunner {
 
       // Should now POST to create device_type 11 (email)
       ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
-      Assert.assertEquals("josh@onesignal.com", emailPost.payload.get("identifier"));
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      assertEquals("josh@onesignal.com", emailPost.payload.get("identifier"));
    }
 
    @Test
@@ -929,12 +939,12 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags(tagsJson);
       threadAndTaskWait();
 
-      Assert.assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(5);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
-      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
-      Assert.assertEquals(tagsJson.toString(), emailPut.payload.getJSONObject("tags").toString());
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
+      assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
+      assertEquals(tagsJson.toString(), emailPut.payload.getJSONObject("tags").toString());
    }
 
    @Test
@@ -947,9 +957,9 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       JSONObject emailPost = ShadowOneSignalRestClient.requests.get(2).payload;
-      Assert.assertEquals(email, emailPost.getString("identifier"));
-      Assert.assertEquals(11, emailPost.getInt("device_type"));
-      Assert.assertEquals(mockEmailHash, emailPost.getString("email_auth_hash"));
+      assertEquals(email, emailPost.getString("identifier"));
+      assertEquals(11, emailPost.getInt("device_type"));
+      assertEquals(mockEmailHash, emailPost.getString("email_auth_hash"));
    }
 
    private class TestEmailUpdateHandler implements OneSignal.EmailUpdateHandler {
@@ -972,11 +982,11 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
       OneSignal.setEmail("josh@onesignal.com", testEmailUpdateHandler);
-      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      assertFalse(testEmailUpdateHandler.emailFiredSuccess);
       threadAndTaskWait();
 
-      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
-      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+      assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      assertNull(testEmailUpdateHandler.emailFiredFailure);
    }
 
    @Test
@@ -990,8 +1000,8 @@ public class MainOneSignalClassRunner {
       OneSignal.setEmail(email, testEmailUpdateHandler);
       threadAndTaskWait();
 
-      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
-      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+      assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      assertNull(testEmailUpdateHandler.emailFiredFailure);
    }
 
    @Test
@@ -1002,8 +1012,8 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.failAll = true;
       threadAndTaskWait();
 
-      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
-      Assert.assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+      assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
    }
 
    @Test
@@ -1012,11 +1022,11 @@ public class MainOneSignalClassRunner {
       emailSetThenLogout();
       TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
       OneSignal.setEmail("josh@onesignal.com", testEmailUpdateHandler);
-      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      assertFalse(testEmailUpdateHandler.emailFiredSuccess);
       threadAndTaskWait();
 
-      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
-      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+      assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      assertNull(testEmailUpdateHandler.emailFiredFailure);
    }
 
    // Should create a new email instead of updating existing player record when no auth hash
@@ -1034,11 +1044,11 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(5);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
-      Assert.assertEquals(newEmail, emailPost.payload.get("identifier"));
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      assertEquals(newEmail, emailPost.payload.get("identifier"));
 
       ShadowOneSignalRestClient.Request playerPut = ShadowOneSignalRestClient.requests.get(6);
-      Assert.assertEquals(newMockEmailPlayerId, playerPut.payload.get("parent_player_id"));
+      assertEquals(newMockEmailPlayerId, playerPut.payload.get("parent_player_id"));
    }
 
    // Should update player with new email instead of creating a new one when auth hash is provided
@@ -1054,14 +1064,14 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request pushPut = ShadowOneSignalRestClient.requests.get(4);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, pushPut.method);
-      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", pushPut.url);
-      Assert.assertEquals("different@email.com", pushPut.payload.get("email"));
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, pushPut.method);
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", pushPut.url);
+      assertEquals("different@email.com", pushPut.payload.get("email"));
 
       ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(5);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
-      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
-      Assert.assertEquals("different@email.com", emailPut.payload.get("identifier"));
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
+      assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
+      assertEquals("different@email.com", emailPut.payload.get("identifier"));
    }
 
    private void emailSetThenLogout() throws Exception {
@@ -1079,9 +1089,9 @@ public class MainOneSignalClassRunner {
       emailSetThenLogout();
 
       ShadowOneSignalRestClient.Request logoutEmailPost = ShadowOneSignalRestClient.requests.get(4);
-      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", logoutEmailPost.url);
-      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", logoutEmailPost.payload.get("parent_player_id"));
-      Assert.assertEquals("b2f7f966-d8cc-11e4-bed1-df8f05be55ba", logoutEmailPost.payload.get("app_id"));
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", logoutEmailPost.url);
+      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", logoutEmailPost.payload.get("parent_player_id"));
+      assertEquals("b2f7f966-d8cc-11e4-bed1-df8f05be55ba", logoutEmailPost.payload.get("app_id"));
    }
 
    @Test
@@ -1095,8 +1105,8 @@ public class MainOneSignalClassRunner {
       OneSignal.logoutEmail(testEmailUpdateHandler);
       threadAndTaskWait();
 
-      Assert.assertTrue(testEmailUpdateHandler.emailFiredSuccess);
-      Assert.assertNull(testEmailUpdateHandler.emailFiredFailure);
+      assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+      assertNull(testEmailUpdateHandler.emailFiredFailure);
    }
 
    @Test
@@ -1112,8 +1122,8 @@ public class MainOneSignalClassRunner {
       OneSignal.logoutEmail(testEmailUpdateHandler);
       threadAndTaskWait();
 
-      Assert.assertFalse(testEmailUpdateHandler.emailFiredSuccess);
-      Assert.assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+      assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+      assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
    }
 
    @Test
@@ -1130,18 +1140,18 @@ public class MainOneSignalClassRunner {
 
       // Update Push record's email field.
       ShadowOneSignalRestClient.Request putPushEmail = ShadowOneSignalRestClient.requests.get(5);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, putPushEmail.method);
-      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", putPushEmail.url);
-      Assert.assertEquals("different@email.com", putPushEmail.payload.get("email"));
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, putPushEmail.method);
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", putPushEmail.url);
+      assertEquals("different@email.com", putPushEmail.payload.get("email"));
 
       // Create new Email record
       ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
-      Assert.assertEquals("different@email.com", emailPost.payload.get("identifier"));
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      assertEquals("different@email.com", emailPost.payload.get("identifier"));
 
       // Update Push record's parent_player_id
       ShadowOneSignalRestClient.Request playerPut2 = ShadowOneSignalRestClient.requests.get(7);
-      Assert.assertEquals(newMockEmailPlayerId, playerPut2.payload.get("parent_player_id"));
+      assertEquals(newMockEmailPlayerId, playerPut2.payload.get("parent_player_id"));
    }
 
    @Test
@@ -1155,8 +1165,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
-      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_session", emailPost.url);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+      assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_session", emailPost.url);
    }
 
    @Test
@@ -1164,30 +1174,30 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTag("test1", "value1");
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
-      Assert.assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(ONESIGNAL_APP_ID, ShadowOneSignalRestClient.lastPost.getString("app_id"));
+      assertEquals("value1", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test1"));
 
       // Should only send new tag
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.sendTag("test2", "value2");
       threadAndTaskWait();
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("value2", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("test2"));
 
       // Should not resend first tags
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.sendTag("test1", "value1");
       threadAndTaskWait();
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertNull(ShadowOneSignalRestClient.lastPost);
    }
 
    @Test
    public void shouldSendTagsWithRequestBatching() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       OneSignal.sendTags(new JSONObject("{\"test2\": \"value2\"}"));
 
@@ -1195,9 +1205,9 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       threadAndTaskWait();
 
-      Assert.assertEquals("value1", lastGetTags.getString("test1"));
-      Assert.assertEquals("value2", lastGetTags.getString("test2"));
-      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("value1", lastGetTags.getString("test1"));
+      assertEquals("value2", lastGetTags.getString("test2"));
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
@@ -1207,19 +1217,19 @@ public class MainOneSignalClassRunner {
       GetIdsAvailable();
       threadAndTaskWait();
 
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       // Should not attempt to make a network call yet as we don't have a player_id
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       threadAndTaskWait();
 
-      Assert.assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowPushRegistratorGPS.fireLastCallback();
       threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertNotNull(callBackUseId);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertNotNull(callBackUseId);
    }
 
    @Test
@@ -1233,11 +1243,11 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request createPlayer = ShadowOneSignalRestClient.requests.get(1);
-      Assert.assertEquals(2, ShadowOneSignalRestClient.requests.size());
-      Assert.assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, createPlayer.method);
-      Assert.assertEquals("players", createPlayer.url);
-      Assert.assertEquals("b2f7f966-d8cc-11e4-bed1-df8f05be55ba", createPlayer.payload.get("app_id"));
-      Assert.assertEquals(1, createPlayer.payload.get("device_type"));
+      assertEquals(2, ShadowOneSignalRestClient.requests.size());
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, createPlayer.method);
+      assertEquals("players", createPlayer.url);
+      assertEquals("b2f7f966-d8cc-11e4-bed1-df8f05be55ba", createPlayer.payload.get("app_id"));
+      assertEquals(1, createPlayer.payload.get("device_type"));
    }
 
    @Test
@@ -1256,7 +1266,7 @@ public class MainOneSignalClassRunner {
 
       GetTags();
 
-      Assert.assertNull(lastGetTags);
+      assertNull(lastGetTags);
    }
 
    @Test
@@ -1266,16 +1276,16 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(String.class, lastGetTags.get("int").getClass());
-      Assert.assertEquals("122", lastGetTags.get("int"));
-      Assert.assertEquals(String.class, lastGetTags.get("bool").getClass());
-      Assert.assertEquals("true", lastGetTags.get("bool"));
+      assertEquals(String.class, lastGetTags.get("int").getClass());
+      assertEquals("122", lastGetTags.get("int"));
+      assertEquals(String.class, lastGetTags.get("bool").getClass());
+      assertEquals("true", lastGetTags.get("bool"));
 
       // null should be the same as a blank string.
-      Assert.assertFalse(lastGetTags.has("null"));
+      assertFalse(lastGetTags.has("null"));
 
-      Assert.assertFalse(lastGetTags.has("array"));
-      Assert.assertFalse(lastGetTags.has("object"));
+      assertFalse(lastGetTags.has("array"));
+      assertFalse(lastGetTags.has("object"));
    }
 
    @Test
@@ -1287,12 +1297,12 @@ public class MainOneSignalClassRunner {
             Thread lastThread = newSendTagTestThread(Thread.currentThread(), i);
             lastThread.start();
             threadList.add(lastThread);
-            Assert.assertFalse(failedCurModTest);
+            assertFalse(failedCurModTest);
          }
 
          for(Thread thread : threadList)
             thread.join();
-         Assert.assertFalse(failedCurModTest);
+         assertFalse(failedCurModTest);
       }
 
       OneSignalInit();
@@ -1303,12 +1313,12 @@ public class MainOneSignalClassRunner {
             Thread lastThread = newSendTagSetZeroThread(Thread.currentThread(), i);
             lastThread.start();
             threadList.add(lastThread);
-            Assert.assertFalse(failedCurModTest);
+            assertFalse(failedCurModTest);
          }
 
          for(Thread thread : threadList)
             thread.join();
-         Assert.assertFalse(failedCurModTest);
+         assertFalse(failedCurModTest);
       }
 
       threadAndTaskWait();
@@ -1317,7 +1327,7 @@ public class MainOneSignalClassRunner {
       //assert the tags...which should all be 0
       for(int a = 0; a < 10; a++) {
          for (int i = 0; i < 30; i++) {
-            Assert.assertEquals("0",tags.getString("key"+i));
+            assertEquals("0",tags.getString("key"+i));
          }
       }
 
@@ -1346,7 +1356,8 @@ public class MainOneSignalClassRunner {
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testOneSignalMethodsBeforeInit() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
-      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.lat = 1.0d;
+      ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
       ShadowFusedLocationApiWrapper.time = 12345L;
 
@@ -1364,7 +1375,7 @@ public class MainOneSignalClassRunner {
             //assert that the first 10 tags sent were available
             try {
                for(int a = 0; a < 10; a++) {
-                  Assert.assertEquals(String.valueOf(a),tags.get("a"+a));
+                  assertEquals(String.valueOf(a),tags.get("a"+a));
                }
             }
             catch (Exception e) {
@@ -1379,7 +1390,7 @@ public class MainOneSignalClassRunner {
          public void idsAvailable(String userId, String registrationId) {
             //Assert the userId being returned
             callbackFired.set(true);
-            Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, userId);
+            assertEquals(ShadowOneSignalRestClient.pushUserId, userId);
          }
       };
 
@@ -1390,7 +1401,7 @@ public class MainOneSignalClassRunner {
       // ----- END QUEUE ------
 
       //there should be 503 pending operations in the queue
-      Assert.assertEquals(503, OneSignal.taskQueueWaitingForInit.size());
+      assertEquals(503, OneSignal.taskQueueWaitingForInit.size());
 
       OneSignalInit(); //starts the pending tasks executor
 
@@ -1409,15 +1420,15 @@ public class MainOneSignalClassRunner {
             try {
                //assert that the first 10 tags sent were available
                for(int a = 0; a < 10; a++) {
-                  Assert.assertEquals(String.valueOf(a),tags.get("a"+a));
+                  assertEquals(String.valueOf(a),tags.get("a"+a));
                }
                //these tags should be returned with new values - getTags should be the
                //last operation with new tag values
-               Assert.assertEquals("5",tags.getString("a499"));
-               Assert.assertEquals("4",tags.getString("a498"));
-               Assert.assertEquals("3",tags.getString("a497"));
-               Assert.assertEquals("2",tags.getString("a496"));
-               Assert.assertEquals("1",tags.getString("a495"));
+               assertEquals("5",tags.getString("a499"));
+               assertEquals("4",tags.getString("a498"));
+               assertEquals("3",tags.getString("a497"));
+               assertEquals("2",tags.getString("a496"));
+               assertEquals("1",tags.getString("a495"));
             }
             catch (Exception e) {
                e.printStackTrace();
@@ -1426,40 +1437,41 @@ public class MainOneSignalClassRunner {
       });
 
       //after init, the queue should be empty...
-      Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
+      assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
 
       threadAndTaskWait();
 
       //Assert that the queued up operations ran in correct order
       // and that the correct user state was POSTed and synced
-      Assert.assertTrue(callbackFired.get()); //check if the callback got fired
+      assertTrue(callbackFired.get()); //check if the callback got fired
 
       //assert the hashed email which should be test1@test.com, NOT test@test.com
-      Assert.assertEquals("94fba03762323f286d7c3ca9e001c541", ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      Assert.assertEquals("c31ddeb0a3d6cc32d82b494336d9f27444904fd7", ShadowOneSignalRestClient.lastPost.getString("em_s"));
+      assertEquals("94fba03762323f286d7c3ca9e001c541", ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      assertEquals("c31ddeb0a3d6cc32d82b494336d9f27444904fd7", ShadowOneSignalRestClient.lastPost.getString("em_s"));
 
-      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
+      assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
 
       JSONObject tags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
-      Assert.assertEquals("0",tags.getString("a0"));
-      Assert.assertEquals("1",tags.getString("a1"));
-      Assert.assertEquals("2",tags.getString("a2"));
-      Assert.assertEquals("3",tags.getString("a3"));
-      Assert.assertEquals("4",tags.getString("a4"));
+      assertEquals("0",tags.getString("a0"));
+      assertEquals("1",tags.getString("a1"));
+      assertEquals("2",tags.getString("a2"));
+      assertEquals("3",tags.getString("a3"));
+      assertEquals("4",tags.getString("a4"));
 
       //we changed these tags while the executor was running...
-      Assert.assertEquals("5",tags.getString("a499"));
-      Assert.assertEquals("4",tags.getString("a498"));
-      Assert.assertEquals("3",tags.getString("a497"));
-      Assert.assertEquals("2",tags.getString("a496"));
-      Assert.assertEquals("1",tags.getString("a495"));
+      assertEquals("5",tags.getString("a499"));
+      assertEquals("4",tags.getString("a498"));
+      assertEquals("3",tags.getString("a497"));
+      assertEquals("2",tags.getString("a496"));
+      assertEquals("1",tags.getString("a495"));
    }
 
    @Test
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testOneSignalEmptyPendingTaskQueue() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
-      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.lat = 1.0d;
+      ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
       ShadowFusedLocationApiWrapper.time = 12345L;
 
@@ -1467,12 +1479,11 @@ public class MainOneSignalClassRunner {
 
       OneSignal.syncHashedEmail("test@test.com");
 
-      for(int a = 0; a < 5; a++) {
-         OneSignal.sendTag("a"+a,String.valueOf(a));
-      }
+      for(int a = 0; a < 5; a++)
+         OneSignal.sendTag("a" + a, String.valueOf(a));
 
       //the queue should be empty since we already initialized the SDK
-      Assert.assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
+      assertEquals(0, OneSignal.taskQueueWaitingForInit.size());
 
       threadAndTaskWait();
 
@@ -1480,17 +1491,17 @@ public class MainOneSignalClassRunner {
       // and that the correct user state was POSTed and synced
 
       //assert the hashed email which should be test1@test.com, NOT test@test.com
-      Assert.assertEquals("b642b4217b34b1e8d3bd915fc65c4452", ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      Assert.assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a", ShadowOneSignalRestClient.lastPost.getString("em_s"));
+      assertEquals("b642b4217b34b1e8d3bd915fc65c4452", ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a", ShadowOneSignalRestClient.lastPost.getString("em_s"));
 
-      Assert.assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
+      assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
 
       JSONObject tags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
-      Assert.assertEquals("0",tags.getString("a0"));
-      Assert.assertEquals("1",tags.getString("a1"));
-      Assert.assertEquals("2",tags.getString("a2"));
-      Assert.assertEquals("3",tags.getString("a3"));
-      Assert.assertEquals("4",tags.getString("a4"));
+      assertEquals("0", tags.getString("a0"));
+      assertEquals("1", tags.getString("a1"));
+      assertEquals("2", tags.getString("a2"));
+      assertEquals("3", tags.getString("a3"));
+      assertEquals("4", tags.getString("a4"));
    }
 
    private static boolean failedCurModTest;
@@ -1505,12 +1516,12 @@ public class MainOneSignalClassRunner {
             Thread lastThread = newSendTagTestThread(Thread.currentThread(), i);
             lastThread.start();
             threadList.add(lastThread);
-            Assert.assertFalse(failedCurModTest);
+            assertFalse(failedCurModTest);
          }
 
          for(Thread thread : threadList)
             thread.join();
-         Assert.assertFalse(failedCurModTest);
+         assertFalse(failedCurModTest);
       }
    }
 
@@ -1550,7 +1561,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.resetRunnables();
 
       // Network call for android params and player create should have been made.
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       // App is re-opened.
       StaticResetHelper.restSetStaticFields();
@@ -1558,7 +1569,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Un-synced tag should now sync.
-      Assert.assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
+      assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
    }
 
    @Test
@@ -1575,14 +1586,14 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.resetRunnables();
       
       threadAndTaskWait();
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       
       StaticResetHelper.restSetStaticFields();
    
       // There were unsynced changes so service should have been scheduled for a restart.
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
-      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
-      Assert.assertEquals(SyncService.class, shadowOf(shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
+      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      assertEquals(SyncService.class, shadowOf(shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
       shadowOf(alarmManager).getScheduledAlarms().clear();
    
       // Service is restarted
@@ -1591,15 +1602,15 @@ public class MainOneSignalClassRunner {
       service = Robolectric.buildService(SyncService.class, intent).startCommand(0, 0).get();
 
       threadAndTaskWait();
-      Assert.assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    
       OneSignalInit();
       threadAndTaskWait();
       
       // No new changes, don't schedule another restart.
       OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
-      Assert.assertEquals(0, shadowOf(alarmManager).getScheduledAlarms().size());
+      assertEquals(0, shadowOf(alarmManager).getScheduledAlarms().size());
    }
 
    @Test
@@ -1639,7 +1650,7 @@ public class MainOneSignalClassRunner {
       Field OneSignal_Builder_mDisplayOption = builder.getClass().getDeclaredField("mDisplayOption");
       OneSignal_Builder_mDisplayOption.setAccessible(true);
       OneSignal.OSInFocusDisplayOption inFocusDisplayOption = (OneSignal.OSInFocusDisplayOption)OneSignal_Builder_mDisplayOption.get(builder);
-      Assert.assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
+      assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
 
       threadAndTaskWait();
    }
@@ -1659,26 +1670,26 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait();
 
-      Assert.assertFalse(lastGetTags.has("int"));
+      assertFalse(lastGetTags.has("int"));
       lastGetTags = null;
 
       // Should only send the tag we added back.
       OneSignal.sendTags("{\"str\": \"str1\", \"int\": 122, \"bool\": true}");
       threadAndTaskWait();
-      Assert.assertEquals("{\"int\":\"122\"}", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").toString());
+      assertEquals("{\"int\":\"122\"}", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").toString());
 
       // Make sure a single delete works.
       OneSignal.deleteTag("int");
       GetTags();
       threadAndTaskWait();
-      Assert.assertFalse(lastGetTags.has("int"));
+      assertFalse(lastGetTags.has("int"));
 
       // Delete all other tags, the 'tags' key should not exists in local storage.
       OneSignal.deleteTags(Arrays.asList("bool", "str"));
       threadAndTaskWait();
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       String syncValues = prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null);
-      Assert.assertFalse(new JSONObject(syncValues).has("tags"));
+      assertFalse(new JSONObject(syncValues).has("tags"));
    }
 
 
@@ -1687,21 +1698,21 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags("{\"foo\": \"bar\", \"fuz\": \"baz\"}");
       threadAndTaskWait();
-      Assert.assertEquals("bar", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
-      Assert.assertEquals("baz", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
+      assertEquals("bar", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
+      assertEquals("baz", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
 
       OneSignal.deleteTags("[\"foo\", \"fuz\"]");
       threadAndTaskWait();
-      Assert.assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
-      Assert.assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
+      assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
+      assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
 
       GetTags();
 
-      Assert.assertNull(lastGetTags);
+      assertNull(lastGetTags);
 
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
-      Assert.assertFalse(syncValues.has("tags"));
+      assertFalse(syncValues.has("tags"));
    }
 
    @Test
@@ -1710,7 +1721,7 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTag("this_key_does_not_exist");
       threadAndTaskWait();
 
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("tags"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("tags"));
    }
 
 
@@ -1723,9 +1734,9 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait();
       
-      Assert.assertNull(lastGetTags);
+      assertNull(lastGetTags);
       String lastUrl = ShadowOneSignalRestClient.lastUrl;
-      Assert.assertEquals("?app_id=" + ONESIGNAL_APP_ID, lastUrl.substring(lastUrl.lastIndexOf("?")));
+      assertEquals("?app_id=" + ONESIGNAL_APP_ID, lastUrl.substring(lastUrl.lastIndexOf("?")));
    }
 
    @Test
@@ -1742,8 +1753,8 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait();
 
-      Assert.assertEquals("value1", lastGetTags.getString("test1"));
-      Assert.assertEquals("value2", lastGetTags.getString("test2"));
+      assertEquals("value1", lastGetTags.getString("test1"));
+      assertEquals("value2", lastGetTags.getString("test2"));
    }
 
    @Test
@@ -1755,21 +1766,21 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait();
 
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertEquals("value1", lastGetTags.getString("test1"));
-      Assert.assertEquals("value2", lastGetTags.getString("test2"));
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("value1", lastGetTags.getString("test1"));
+      assertEquals("value2", lastGetTags.getString("test2"));
 
       // Makes sure a 2nd call to GetTags correctly uses existing tags and merges new local changes.
       lastGetTags = null;
       OneSignal.sendTag("test3", "value3");
       GetTags();
       threadAndTaskWait();
-      Assert.assertEquals("value1", lastGetTags.getString("test1"));
-      Assert.assertEquals("value2", lastGetTags.getString("test2"));
-      Assert.assertEquals("value3", lastGetTags.getString("test3"));
+      assertEquals("value1", lastGetTags.getString("test1"));
+      assertEquals("value2", lastGetTags.getString("test2"));
+      assertEquals("value3", lastGetTags.getString("test3"));
       threadAndTaskWait();
       // Also ensure only 1 network call is made to just send the new tags only.
-      Assert.assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
       StaticResetHelper.restSetStaticFields();
       OneSignalInit();
@@ -1783,14 +1794,14 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\",\"test3\": \"ShouldOverride\",\"test4\": \"RemoteShouldNotOverwriteLocalPending\"}}";
       GetTags();
       threadAndTaskWait();
-      Assert.assertEquals("value1", lastGetTags.getString("test1"));
+      assertEquals("value1", lastGetTags.getString("test1"));
       System.out.println("lastGetTags: " + lastGetTags);
-      Assert.assertFalse(lastGetTags.has("test2"));
-      Assert.assertEquals("ShouldOverride", lastGetTags.getString("test3"));
-      Assert.assertEquals("value4", lastGetTags.getString("test4"));
-      Assert.assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
+      assertFalse(lastGetTags.has("test2"));
+      assertEquals("ShouldOverride", lastGetTags.getString("test3"));
+      assertEquals("value4", lastGetTags.getString("test4"));
+      assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
 
-      Assert.assertEquals("{\"test2\":\"\",\"test4\":\"value4\"}",
+      assertEquals("{\"test2\":\"\",\"test4\":\"value4\"}",
                            ShadowOneSignalRestClient.lastPost.optJSONObject("tags").toString());
    }
 
@@ -1802,9 +1813,9 @@ public class MainOneSignalClassRunner {
       GetTags();
       threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
 
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
-      Assert.assertEquals("value1", lastGetTags.getString("test1"));
-      Assert.assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.pushUserId));
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("value1", lastGetTags.getString("test1"));
+      assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.pushUserId));
    }
 
 
@@ -1814,31 +1825,31 @@ public class MainOneSignalClassRunner {
       // Casing should be forced to lower.
       OneSignal.syncHashedEmail("Test@tEst.CoM");
       threadAndTaskWait();
-      Assert.assertEquals("b642b4217b34b1e8d3bd915fc65c4452" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      Assert.assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
+      assertEquals("b642b4217b34b1e8d3bd915fc65c4452" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
 
       // Test email update
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.syncHashedEmail("test@test2.com");
       threadAndTaskWait();
-      Assert.assertEquals("3e1163777d25d2b935057c3ae393efee" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      Assert.assertEquals("69e9ca5af84bc88bc185136cd6f782ee889be5c8" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
+      assertEquals("3e1163777d25d2b935057c3ae393efee" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
+      assertEquals("69e9ca5af84bc88bc185136cd6f782ee889be5c8" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
 
       // Test trim on email
       ShadowOneSignalRestClient.lastPost = null;
       OneSignal.syncHashedEmail(" test@test2.com ");
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Test invalid email.
       OneSignal.syncHashedEmail("aaaaaa");
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Test invalid email.
       OneSignal.syncHashedEmail(null);
       threadAndTaskWait();
-      Assert.assertNull(ShadowOneSignalRestClient.lastPost);
+      assertNull(ShadowOneSignalRestClient.lastPost);
    }
 
    // ####### on_focus Tests ########
@@ -1852,8 +1863,8 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      Assert.assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      Assert.assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
@@ -1867,15 +1878,15 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       threadAndTaskWait();
 
-      Assert.assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
-      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postPush.url);
-      Assert.assertEquals(60, postPush.payload.getInt("active_time"));
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postPush.url);
+      assertEquals(60, postPush.payload.getInt("active_time"));
 
       ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
-      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_focus", postEmail.url);
-      Assert.assertEquals(60, postEmail.payload.getInt("active_time"));
+      assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_focus", postEmail.url);
+      assertEquals(60, postEmail.payload.getInt("active_time"));
    }
 
    /*
@@ -1920,8 +1931,8 @@ public class MainOneSignalClassRunner {
       System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
       System.out.println("ShadowOneSignalRestClient.networkCallCount: " + ShadowOneSignalRestClient.networkCallCount);
 
-      Assert.assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      Assert.assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
    }
    */
 
@@ -1933,10 +1944,10 @@ public class MainOneSignalClassRunner {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
-      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
-      Assert.assertEquals(3.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
-      Assert.assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
+      assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
+      assertEquals(3.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
+      assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
 
       ShadowOneSignalRestClient.lastPost = null;
       ShadowFusedLocationApiWrapper.lat = 30d;
@@ -1946,10 +1957,10 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      Assert.assertEquals(30.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
-      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
-      Assert.assertEquals(5.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
-      Assert.assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
+      assertEquals(30.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
+      assertEquals(5.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
+      assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
    }
 
    @Test
@@ -1970,7 +1981,7 @@ public class MainOneSignalClassRunner {
       method.invoke(null);
       threadAndTaskWait();
 
-      Assert.assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
+      assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
    }
    
    @Test
@@ -1984,16 +1995,16 @@ public class MainOneSignalClassRunner {
       // location if we have permission
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-      Assert.assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
    
       // Checking make sure an update is scheduled.
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
-      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
-      Assert.assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
+      assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
 
       // Setting up a new point and testing it is sent
       Location fakeLocation = new Location("UnitTest");
@@ -2005,12 +2016,12 @@ public class MainOneSignalClassRunner {
 
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
-      Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-      Assert.assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-      Assert.assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
+      assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
       
-      Assert.assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-      Assert.assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
+      assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+      assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
    
       // Testing loc_bg
       blankActivityController.pause();
@@ -2018,12 +2029,12 @@ public class MainOneSignalClassRunner {
       ShadowFusedLocationApiWrapper.time = 12347L;
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
-      Assert.assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-      Assert.assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-      Assert.assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
-      Assert.assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-      Assert.assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
+      assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
+      assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
    }
    
    @Test
@@ -2053,17 +2064,17 @@ public class MainOneSignalClassRunner {
       intent.putExtra("task", 1); // Sync
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
-      Assert.assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-      Assert.assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-      Assert.assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
-      Assert.assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-      Assert.assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+      assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
+      assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
    
       // Checking make sure an update is scheduled.
       alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
-      Assert.assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
-      Assert.assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
+      assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
       shadowOf(alarmManager).getScheduledAlarms().clear();
    }
 
@@ -2077,11 +2088,11 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       JSONObject postEmailPayload = ShadowOneSignalRestClient.requests.get(2).payload;
-      Assert.assertEquals(11, postEmailPayload.getInt("device_type"));
-      Assert.assertEquals(1.0, postEmailPayload.getDouble("lat"));
-      Assert.assertEquals(2.0, postEmailPayload.getDouble("long"));
-      Assert.assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
-      Assert.assertEquals(0.0, postEmailPayload.getDouble("loc_type"));
+      assertEquals(11, postEmailPayload.getInt("device_type"));
+      assertEquals(1.0, postEmailPayload.getDouble("lat"));
+      assertEquals(2.0, postEmailPayload.getDouble("long"));
+      assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
+      assertEquals(0.0, postEmailPayload.getDouble("loc_type"));
    }
 
    @Test
@@ -2092,30 +2103,30 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       String baseKey = "pkgs";
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
 
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
-      Assert.assertFalse(syncValues.has(baseKey + "_a"));
-      Assert.assertEquals(1, syncValues.getJSONArray(baseKey).length());
+      assertFalse(syncValues.has(baseKey + "_a"));
+      assertEquals(1, syncValues.getJSONArray(baseKey).length());
 
       JSONObject toSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_TOSYNC_STATE", null));
-      Assert.assertFalse(toSyncValues.has(baseKey + "_a"));
-      Assert.assertEquals(1, toSyncValues.getJSONArray(baseKey).length());
+      assertFalse(toSyncValues.has(baseKey + "_a"));
+      assertEquals(1, toSyncValues.getJSONArray(baseKey).length());
 
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.lastPost = null;
       shadowOf(blankActivity.getPackageManager()).addPackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
 
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.lastPost = null;
       shadowOf(blankActivity.getPackageManager()).removePackage("org.test.app2");
       OneSignalInit();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
 
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.lastPost = null;
@@ -2124,8 +2135,8 @@ public class MainOneSignalClassRunner {
 
       System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
 
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
    }
 
    // ####### Unit test postNotification #####
@@ -2151,15 +2162,15 @@ public class MainOneSignalClassRunner {
       // Not testing input here, just that HTTP 200 fires a success.
       OneSignal.postNotification("{}", handler);
       threadAndTaskWait();
-      Assert.assertNotNull(postNotificationSuccess);
-      Assert.assertNull(postNotificationFailure);
+      assertNotNull(postNotificationSuccess);
+      assertNull(postNotificationFailure);
       postNotificationSuccess = postNotificationFailure = null;
 
 
       ShadowOneSignalRestClient.nextSuccessResponse = "{\"id\":\"\",\"recipients\":0,\"errors\":[\"All included players are not subscribed\"]}";
       OneSignal.postNotification("{}", handler);
-      Assert.assertNull(postNotificationSuccess);
-      Assert.assertNotNull(postNotificationFailure);
+      assertNull(postNotificationSuccess);
+      assertNotNull(postNotificationFailure);
    }
 
 
@@ -2182,18 +2193,18 @@ public class MainOneSignalClassRunner {
       ShadowRoboNotificationManager.PostedNotification postedNotification = postedNotifsIterator.next().getValue();
 
       OneSignal.cancelNotification(postedNotification.id);
-      Assert.assertEquals(1, ShadowBadgeCountUpdater.lastCount);
-      Assert.assertEquals(1, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(1, ShadowRoboNotificationManager.notifications.size());
 
       OneSignal.clearOneSignalNotifications();
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
-      Assert.assertEquals(0, ShadowRoboNotificationManager.notifications.size());
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(0, ShadowRoboNotificationManager.notifications.size());
 
       // Make sure they are marked dismissed.
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, new String[] { "created_time" },
           OneSignalPackagePrivateHelper.NotificationTable.COLUMN_NAME_DISMISSED + " = 1", null, null, null, null);
-      Assert.assertEquals(2, cursor.getCount());
+      assertEquals(2, cursor.getCount());
       cursor.close();
    }
 
@@ -2205,12 +2216,12 @@ public class MainOneSignalClassRunner {
 
       JSONObject testJsonObj = osNotification.toJSONObject();
 
-      Assert.assertEquals("msg_body", testJsonObj.optJSONObject("payload").optString("body"));
+      assertEquals("msg_body", testJsonObj.optJSONObject("payload").optString("body"));
       JSONObject firstActionButton = (JSONObject)testJsonObj.optJSONObject("payload").optJSONArray("actionButtons").get(0);
-      Assert.assertEquals("text", firstActionButton.optString("text"));
+      assertEquals("text", firstActionButton.optString("text"));
 
       JSONObject additionalData = testJsonObj.optJSONObject("payload").optJSONObject("additionalData");
-      Assert.assertEquals("bar", additionalData.optString("foo"));
+      assertEquals("bar", additionalData.optString("foo"));
    }
 
    @Test
@@ -2223,10 +2234,10 @@ public class MainOneSignalClassRunner {
       JSONObject testJsonObj = osNotificationOpenResult.toJSONObject();
 
       JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("payload").optJSONObject("additionalData");
-      Assert.assertEquals("bar", additionalData.optString("foo"));
+      assertEquals("bar", additionalData.optString("foo"));
       
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
-      Assert.assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
+      assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
    }
    
    @Test
@@ -2239,8 +2250,8 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       
-      Assert.assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
-      Assert.assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
+      assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
+      assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
    }
    
    @Test
@@ -2267,10 +2278,10 @@ public class MainOneSignalClassRunner {
       };
       OneSignal.addPermissionObserver(permissionObserver);
       
-      Assert.assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
-      Assert.assertTrue(lastPermissionStateChanges.getTo().getEnabled());
+      assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
+      assertTrue(lastPermissionStateChanges.getTo().getEnabled());
       // Test to make sure object was correct at the time of firing.
-      Assert.assertTrue(currentPermission);
+      assertTrue(currentPermission);
    }
    
    @Test
@@ -2296,12 +2307,12 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       
-      Assert.assertTrue(lastPermissionStateChanges.getFrom().getEnabled());
-      Assert.assertFalse(lastPermissionStateChanges.getTo().getEnabled());
+      assertTrue(lastPermissionStateChanges.getFrom().getEnabled());
+      assertFalse(lastPermissionStateChanges.getTo().getEnabled());
       // Test to make sure object was correct at the time of firing.
-      Assert.assertFalse(currentPermission);
+      assertFalse(currentPermission);
       // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
    
    @Test
@@ -2311,14 +2322,14 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
       
-      Assert.assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
       
       blankActivityController.pause();
       threadAndTaskWait();
       ShadowNotificationManagerCompat.enabled = true;
       blankActivityController.resume();
       threadAndTaskWait();
-      Assert.assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
    
    @Test
@@ -2334,7 +2345,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       
-      Assert.assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
    
    
@@ -2354,10 +2365,10 @@ public class MainOneSignalClassRunner {
       };
       OneSignal.addSubscriptionObserver(permissionObserver);
       
-      Assert.assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
-      Assert.assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
       // Test to make sure object was correct at the time of firing.
-      Assert.assertTrue(currentSubscription);
+      assertTrue(currentSubscription);
    }
    
    @Test
@@ -2383,12 +2394,12 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       
-      Assert.assertTrue(lastSubscriptionStateChanges.getFrom().getSubscribed());
-      Assert.assertFalse(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getTo().getSubscribed());
       // Test to make sure object was correct at the time of firing.
-      Assert.assertFalse(currentSubscription);
+      assertFalse(currentSubscription);
       // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
-      Assert.assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
+      assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
    
    @Test
@@ -2404,13 +2415,13 @@ public class MainOneSignalClassRunner {
       OneSignal.addSubscriptionObserver(permissionObserver);
       threadAndTaskWait();
       
-      Assert.assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
-      Assert.assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
       // Test to make sure object was correct at the time of firing.
-      Assert.assertTrue(currentSubscription);
-      Assert.assertTrue(lastSubscriptionStateChanges.getTo().getUserSubscriptionSetting());
-      Assert.assertEquals(ShadowPushRegistratorGPS.regId, lastSubscriptionStateChanges.getTo().getPushToken());
-      Assert.assertEquals(ShadowOneSignalRestClient.pushUserId, lastSubscriptionStateChanges.getTo().getUserId());
+      assertTrue(currentSubscription);
+      assertTrue(lastSubscriptionStateChanges.getTo().getUserSubscriptionSetting());
+      assertEquals(ShadowPushRegistratorGPS.regId, lastSubscriptionStateChanges.getTo().getPushToken());
+      assertEquals(ShadowOneSignalRestClient.pushUserId, lastSubscriptionStateChanges.getTo().getUserId());
    }
    
    @Test
@@ -2428,8 +2439,8 @@ public class MainOneSignalClassRunner {
       OneSignal.removeSubscriptionObserver(permissionObserver);
       threadAndTaskWait();
       
-      Assert.assertFalse(currentSubscription);
-      Assert.assertNull(lastSubscriptionStateChanges);
+      assertFalse(currentSubscription);
+      assertNull(lastSubscriptionStateChanges);
    }
 
    private OSEmailSubscriptionStateChanges lastEmailSubscriptionStateChanges;
@@ -2447,10 +2458,10 @@ public class MainOneSignalClassRunner {
       OneSignal.setEmail("josh@onesignal.com");
       threadAndTaskWait();
 
-      Assert.assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
-      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
-      Assert.assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
-      Assert.assertTrue(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+      assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
+      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
+      assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
+      assertTrue(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
    }
 
    @Test
@@ -2469,12 +2480,12 @@ public class MainOneSignalClassRunner {
       OneSignal.logoutEmail();
       threadAndTaskWait();
 
-      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
-      Assert.assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getFrom().getEmailAddress());
+      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
+      assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getFrom().getEmailAddress());
 
-      Assert.assertFalse(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
-      Assert.assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
-      Assert.assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
+      assertFalse(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+      assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
+      assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
    }
 
    @Test
@@ -2482,17 +2493,17 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OSEmailSubscriptionState emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
 
-      Assert.assertNull(emailSubscriptionState.getEmailUserId());
-      Assert.assertNull(emailSubscriptionState.getEmailAddress());
-      Assert.assertFalse(emailSubscriptionState.getSubscribed());
+      assertNull(emailSubscriptionState.getEmailUserId());
+      assertNull(emailSubscriptionState.getEmailAddress());
+      assertFalse(emailSubscriptionState.getSubscribed());
 
       OneSignal.setEmail("josh@onesignal.com");
       threadAndTaskWait();
       emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
 
-      Assert.assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", emailSubscriptionState.getEmailUserId());
-      Assert.assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
-      Assert.assertTrue(emailSubscriptionState.getSubscribed());
+      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", emailSubscriptionState.getEmailUserId());
+      assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
+      assertTrue(emailSubscriptionState.getSubscribed());
    }
    
    @Test
@@ -2500,8 +2511,8 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       OSPermissionSubscriptionState permissionSubscriptionState = OneSignal.getPermissionSubscriptionState();
-      Assert.assertTrue(permissionSubscriptionState.getPermissionStatus().getEnabled());
-      Assert.assertTrue(permissionSubscriptionState.getSubscriptionStatus().getSubscribed());
+      assertTrue(permissionSubscriptionState.getPermissionStatus().getEnabled());
+      assertTrue(permissionSubscriptionState.getSubscriptionStatus().getSubscribed());
    }
 
    @Test
@@ -2520,12 +2531,12 @@ public class MainOneSignalClassRunner {
 
       String expectedPayload = "{\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\",\"purchases\":[{\"sku\":\"com.test.sku\"}]}";
       ShadowOneSignalRestClient.Request pushPurchase = ShadowOneSignalRestClient.requests.get(4);
-      Assert.assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_purchase", pushPurchase.url);
-      Assert.assertEquals(expectedPayload, pushPurchase.payload.toString());
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_purchase", pushPurchase.url);
+      assertEquals(expectedPayload, pushPurchase.payload.toString());
 
       ShadowOneSignalRestClient.Request emailPurchase = ShadowOneSignalRestClient.requests.get(5);
-      Assert.assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_purchase", emailPurchase.url);
-      Assert.assertEquals(expectedPayload, emailPurchase.payload.toString());
+      assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_purchase", emailPurchase.url);
+      assertEquals(expectedPayload, emailPurchase.payload.toString());
    }
 
    // ####### Unit test helper methods ########
