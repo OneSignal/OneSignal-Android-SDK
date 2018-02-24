@@ -1343,7 +1343,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFusedLocationApiWrapper.class})
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testOneSignalMethodsBeforeInit() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
@@ -1456,7 +1456,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFusedLocationApiWrapper.class})
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testOneSignalEmptyPendingTaskQueue() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
