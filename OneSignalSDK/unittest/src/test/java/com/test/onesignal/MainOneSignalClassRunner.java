@@ -199,7 +199,6 @@ public class MainOneSignalClassRunner {
    public void beforeEachTest() throws Exception {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
-      RemoveDisableNotificationOpenedToManifest();
 
       cleanUp();
    }
@@ -406,7 +405,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldNotFireNotificationOpenAgainAfterAppRestart() throws Exception {
-      AddLauncherIntentFilter();
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
@@ -465,10 +463,9 @@ public class MainOneSignalClassRunner {
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
+   @Config(manifest="AndroidManifestDefaultOpenDisabled.xml")
    @Test
    public void testOpeningLaunchUrlWithDisableDefault() throws Exception {
-      AddDisableNotificationOpenedToManifest();
-
       // Removes app launch
       shadowOf(blankActivity).getNextStartedActivity();
 
@@ -478,11 +475,9 @@ public class MainOneSignalClassRunner {
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
+   @Config(manifest="AndroidManifestDefaultOpenDisabled.xml")
    @Test
    public void testDisableOpeningLauncherActivityOnNotifiOpen() throws Exception {
-      AddDisableNotificationOpenedToManifest();
-      AddLauncherIntentFilter();
-
       // From app launching normally
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
@@ -2097,7 +2092,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAppl() throws Exception {
-      AddLauncherIntentFilter();
       shadowOf(blankActivity.getPackageManager()).addPackage("org.robolectric.default");
 
       OneSignalInit();
@@ -2596,17 +2590,6 @@ public class MainOneSignalClassRunner {
       resolveInfo.activityInfo.name = "MainActivity";
 
       shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(launchIntent, resolveInfo);
-      shadowOf(blankActivity.getPackageManager()).addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest());
-   }
-
-   private static void AddDisableNotificationOpenedToManifest() {
-      ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().put("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
-      shadowOf(blankActivity.getPackageManager()).addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest());
-   }
-
-   private static void RemoveDisableNotificationOpenedToManifest() {
-      ShadowApplication.getInstance().getAppManifest().getApplicationMetaData().remove("com.onesignal.NotificationOpened.DEFAULT");
-      shadowOf(blankActivity.getPackageManager()).addManifest(shadowOf(RuntimeEnvironment.application).getAppManifest());
    }
 
    private static int sessionCountOffset = 1;
