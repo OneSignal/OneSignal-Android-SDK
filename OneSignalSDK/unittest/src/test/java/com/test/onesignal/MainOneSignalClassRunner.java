@@ -205,7 +205,6 @@ public class MainOneSignalClassRunner {
 
    @After
    public void afterEachTest() throws Exception {
-     Thread.sleep(100);
    }
 
    @AfterClass
