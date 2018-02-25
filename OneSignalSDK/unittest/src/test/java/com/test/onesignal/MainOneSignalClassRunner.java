@@ -505,7 +505,7 @@ public class MainOneSignalClassRunner {
 
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = GcmBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait();
       assertEquals(null, notificationOpenedMessage);
       assertFalse(processResult);
       // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
@@ -531,7 +531,7 @@ public class MainOneSignalClassRunner {
       notificationReceivedBody = null;
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait();
       assertEquals(null, notificationOpenedMessage);
       assertNull(notificationOpenedMessage);
       assertEquals("Robo test message", notificationReceivedBody);
@@ -1197,7 +1197,6 @@ public class MainOneSignalClassRunner {
 
       GetTags();
       threadAndTaskWait();
-      threadAndTaskWait();
 
       assertEquals("value1", lastGetTags.getString("test1"));
       assertEquals("value2", lastGetTags.getString("test2"));
@@ -1220,7 +1219,7 @@ public class MainOneSignalClassRunner {
       assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
       ShadowPushRegistratorGPS.fireLastCallback();
-      threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait();
 
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       assertNotNull(callBackUseId);
@@ -1259,8 +1258,9 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       GetTags();
+      threadAndTaskWait();
 
-      assertNull(lastGetTags);
+      assertEquals("{}", lastGetTags.toString());
    }
 
    @Test
@@ -1268,7 +1268,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags("{\"int\": 122, \"bool\": true, \"null\": null, \"array\": [123], \"object\": {}}");
       GetTags();
-      threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait();
 
       assertEquals(String.class, lastGetTags.get("int").getClass());
       assertEquals("122", lastGetTags.get("int"));
@@ -1701,8 +1701,9 @@ public class MainOneSignalClassRunner {
       assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
 
       GetTags();
+      threadAndTaskWait();
 
-      assertNull(lastGetTags);
+      assertEquals("{}", lastGetTags.toString());
 
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
@@ -1805,7 +1806,7 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit();
       GetTags();
-      threadAndTaskWait(); threadAndTaskWait(); threadAndTaskWait();
+      threadAndTaskWait();
 
       assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       assertEquals("value1", lastGetTags.getString("test1"));
