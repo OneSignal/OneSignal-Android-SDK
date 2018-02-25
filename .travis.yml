@@ -19,7 +19,7 @@ android:
             # https://github.com/travis-ci/travis-ci/issues/6193
             # Required to get the newest platform-tools.
     - platform-tools
-    - build-tools-27.0.2
+    - build-tools-27.0.3
     - android-27
   licenses:
     - '.+'
