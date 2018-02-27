@@ -28,7 +28,6 @@
 package com.onesignal;
 
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import org.json.JSONObject;
 
@@ -44,6 +43,10 @@ public class OSEmailSubscriptionState implements Cloneable {
                     OneSignalPrefs.PREFS_ONESIGNAL_EMAIL_ID_LAST, null);
             emailAddress = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST, null);
+        }
+        else {
+            emailUserId = OneSignal.getEmailId();
+            emailAddress = OneSignalStateSynchronizer.getEmailStateSynchronizer().getRegistrationId();
         }
     }
 

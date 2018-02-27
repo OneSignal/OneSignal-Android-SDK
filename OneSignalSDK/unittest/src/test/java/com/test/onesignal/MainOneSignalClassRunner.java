@@ -2483,6 +2483,33 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldNotFireEmailSubscriptionObserverOnAppRestart() throws Exception {
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      OSEmailSubscriptionObserver subscriptionObserver = new OSEmailSubscriptionObserver() {
+         @Override
+         public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+            lastEmailSubscriptionStateChanges = stateChanges;
+         }
+      };
+      OneSignal.addEmailSubscriptionObserver(subscriptionObserver);
+      threadAndTaskWait();
+      assertNotNull(lastEmailSubscriptionStateChanges);
+
+      restartAppAndElapseTimeToNextSession();
+
+      OneSignalInit();
+      threadAndTaskWait();
+      lastEmailSubscriptionStateChanges = null;
+      OneSignal.addEmailSubscriptionObserver(subscriptionObserver);
+      threadAndTaskWait();
+
+      assertNull(lastEmailSubscriptionStateChanges);
+   }
+
+   @Test
    public void shouldGetCorrectCurrentEmailSubscriptionState() throws Exception {
       OneSignalInit();
       OSEmailSubscriptionState emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
@@ -2498,6 +2525,20 @@ public class MainOneSignalClassRunner {
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", emailSubscriptionState.getEmailUserId());
       assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
       assertTrue(emailSubscriptionState.getSubscribed());
+   }
+
+   @Test
+   public void shouldGetEmailUserIdAfterAppRestart() throws Exception {
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession();
+
+      OneSignalInit();
+      OSEmailSubscriptionState emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
+      assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
+      assertNotNull(emailSubscriptionState.getEmailUserId());
    }
    
    @Test
