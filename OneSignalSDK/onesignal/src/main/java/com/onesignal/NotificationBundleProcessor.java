@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -73,6 +73,11 @@ class NotificationBundleProcessor {
          
          notifJob.overrideSettings = overrideSettings;
          ProcessJobForDisplay(notifJob);
+
+         // Delay to prevent CPU spikes.
+         //    Normally more than one notification is restored at a time.
+         if (notifJob.restoring)
+            OSUtils.sleep(100);
       } catch (JSONException e) {
          e.printStackTrace();
       }

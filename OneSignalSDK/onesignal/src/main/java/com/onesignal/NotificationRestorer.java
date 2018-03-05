@@ -188,6 +188,12 @@ class NotificationRestorer {
       }
    }
 
+   /**
+    * Restores a set of notifications back to the notification shade based on an SQL cursor.
+    * @param context - Context required to start JobIntentService
+    * @param cursor - Source cursor to generate notifications from
+    * @param delay - Delay to slow down process to ensure we don't spike CPU and I/O on the device.
+    */
    static void showNotifications(Context context, Cursor cursor, int delay) {
       if (!cursor.moveToFirst())
          return;
@@ -209,12 +215,8 @@ class NotificationRestorer {
             RestoreJobService.enqueueWork(context, componentName, RestoreJobService.RESTORE_SERVICE_JOB_ID, intent);
          }
 
-         try {
-            if (delay > 0)
-               Thread.sleep(delay);
-         } catch (InterruptedException e) {
-            e.printStackTrace();
-         }
+         if (delay > 0)
+            OSUtils.sleep(delay);
       } while (cursor.moveToNext());
    }
 
