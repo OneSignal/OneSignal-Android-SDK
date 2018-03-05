@@ -168,8 +168,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
       boolean developerProcessed = false;
       try {
          developerProcessed = onNotificationProcessing(receivedResult);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
          //noinspection ConstantConditions - displayNotification might have been called by the developer
          if (osNotificationDisplayedResult == null)
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
@@ -201,6 +200,11 @@ public abstract class NotificationExtenderService extends JobIntentService {
          }
          else
             NotificationBundleProcessor.ProcessJobForDisplay(createNotifJobFromCurrent());
+
+         // Delay to prevent CPU spikes.
+         //    Normally more than one notification is restored at a time.
+         if (restoring)
+            OSUtils.sleep(100);
       }
    }
 
