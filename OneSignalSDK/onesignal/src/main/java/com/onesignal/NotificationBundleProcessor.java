@@ -33,8 +33,6 @@ import org.json.JSONObject;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -44,7 +42,6 @@ import android.os.Build;
 import android.os.Bundle;
 
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.Set;
 import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
@@ -79,18 +76,6 @@ class NotificationBundleProcessor {
       } catch (JSONException e) {
          e.printStackTrace();
       }
-   }
-
-   /**
-    * Android O - Process the restoration of notifications from a JobService
-    * This branch of logic differs from pre-O in that it is not coming through the GcmIntentService
-    * and doesn't accommodate the developer's NotificationExtenderService. This is preferred to otherwise
-    * not getting any notifications restored on Oreo at all.
-    * @param context
-    * @param bundle
-    */
-   static void ProcessFromRestorerJobService(Context context, BundleCompat bundle) {
-      ProcessFromGCMIntentService(context, bundle, null); // re-use the GCM method
    }
 
    static int ProcessJobForDisplay(NotificationGenerationJob notifJob) {

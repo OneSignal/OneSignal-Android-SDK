@@ -3,7 +3,6 @@ package com.onesignal;
 import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -136,17 +135,17 @@ class NotificationSummaryManager {
          cursor = readableDb.query(
              NotificationTable.TABLE_NAME,
              NotificationRestorer.COLUMNS_FOR_RESTORE,
-             NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
-                 NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
+            NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+             NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+             NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+             NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
              whereArgs,
-             null,                            // group by
+             null,                           // group by
              null,                            // filter by row groups
              null
          );
    
-         NotificationRestorer.showNotifications(context, cursor);
+         NotificationRestorer.showNotifications(context, cursor, 0);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
       } finally {

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,11 +35,11 @@ public class NotificationRestoreService extends IntentService {
 
    public NotificationRestoreService() {
       super("NotificationRestoreService");
-      setIntentRedelivery(true);
    }
 
    @Override
    protected void onHandleIntent(Intent intent) {
+      Thread.currentThread().setPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
       NotificationRestorer.restore(this);
       WakefulBroadcastReceiver.completeWakefulIntent(intent);
    }
