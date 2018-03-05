@@ -34,7 +34,7 @@ import android.content.Intent;
 public class UpgradeReceiver extends BroadcastReceiver {
 
    @Override
-   public void onReceive(final Context context, Intent intent) {
+   public void onReceive(Context context, Intent intent) {
       NotificationRestorer.startDelayedRestoreTaskFromReceiver(context);
    }
 }

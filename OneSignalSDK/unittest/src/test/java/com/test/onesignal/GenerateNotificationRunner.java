@@ -31,7 +31,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
@@ -57,10 +59,10 @@ import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
-import com.onesignal.ShadowNotificationRestorer;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -91,6 +93,7 @@ import org.robolectric.android.controller.ServiceController;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
@@ -107,7 +110,6 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 
 import static org.junit.Assert.assertThat;
@@ -320,12 +322,12 @@ public class GenerateNotificationRunner {
    
    
    @Test
-   @Config(shadows = {ShadowNotificationRestorer.class})
    public void shouldCancelNotificationAndUpdateSummary() throws Exception {
       // Setup - Init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       threadAndTaskWait();
+      runImplicitServices(); // Flushes out other services, seems to be a roboelectric bug
       
       // Setup - Display 3 notifications that will be grouped together.
       Bundle bundle = getBaseNotifBundle("UUID1");
@@ -368,6 +370,8 @@ public class GenerateNotificationRunner {
       // Setup - Let's cancel a 2nd child notification.
       postedNotification = postedNotifsIterator.next().getValue();
       OneSignal.cancelNotification(postedNotification.id);
+      runImplicitServices();
+      Thread.sleep(1_000); // TODO: Service runs AsyncTask. Need to wait for this
    
       // Test - It should update summary notification to be the text of the last remaining one.
       postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -387,6 +391,23 @@ public class GenerateNotificationRunner {
       // Test - No more notifications! :)
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(0, postedNotifs.size());
+   }
+
+   // NOTE: SIDE EFFECT: Consumes non-Implicit without running them.
+   private void runImplicitServices() throws Exception {
+      do {
+         Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
+         if (intent == null)
+            break;
+
+         ComponentName componentName = intent.getComponent();
+         if (componentName == null)
+            break;
+
+         Class serviceClass = Class.forName(componentName.getClassName());
+
+         Robolectric.buildService(serviceClass, intent).create().startCommand(0, 0);
+      } while (true);
    }
    
    @Test
@@ -547,7 +568,7 @@ public class GenerateNotificationRunner {
 
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+      assertEquals(RestoreJobService.class.getName(), intent.getComponent().getClassName());
 
       // Go forward 1 week
       // Note: Does not effect the SQL function strftime

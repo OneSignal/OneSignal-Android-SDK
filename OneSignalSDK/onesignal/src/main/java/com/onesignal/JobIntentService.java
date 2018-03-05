@@ -87,7 +87,7 @@ import java.util.HashMap;
  * {@sample frameworks/support/samples/Support4Demos/src/com/example/android/supportv4/app/SimpleJobIntentService.java
  *      complete}
  */
-public abstract class JobIntentService extends Service {
+abstract class JobIntentService extends Service {
     static final String TAG = "JobIntentService";
 
     static final boolean DEBUG = false;
