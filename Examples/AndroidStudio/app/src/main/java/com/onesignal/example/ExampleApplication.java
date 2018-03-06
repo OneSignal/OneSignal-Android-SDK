@@ -7,7 +7,6 @@ import android.util.Log;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotification;
-import com.onesignal.OSNotificationPayload;
 import com.onesignal.OneSignal;
 
 import org.json.JSONObject;
@@ -19,19 +18,14 @@ public class ExampleApplication extends Application {
       super.onCreate();
 
       // Logging set to help debug issues, remove before releasing your app.
-      //OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.WARN);
+      //OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.WARN);
 
       OneSignal.startInit(this)
-              .autoPromptLocation(false) // default call promptLocation later
               .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
               .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
               .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
               .unsubscribeWhenNotificationsAreDisabled(true)
               .init();
-
-      // Call syncHashedEmail anywhere in your app if you have the user's email.
-      // This improves the effectiveness of OneSignal's "best-time" notification scheduling feature.
-      // OneSignal.syncHashedEmail(userEmail);
    }
 
    private class ExampleNotificationReceivedHandler implements OneSignal.NotificationReceivedHandler {
@@ -51,7 +45,6 @@ public class ExampleApplication extends Application {
          String groupKey = notification.payload.groupKey;
          String groupMessage = notification.payload.groupMessage;
          String fromProjectNumber = notification.payload.fromProjectNumber;
-         //BackgroundImageLayout backgroundImageLayout = notification.payload.backgroundImageLayout;
          String rawPayload = notification.payload.rawPayload;
 
          String customKey;
@@ -92,13 +85,12 @@ public class ExampleApplication extends Application {
 
          if (actionType == OSNotificationAction.ActionType.ActionTaken) {
             Log.i("OneSignalExample", "Button pressed with id: " + result.action.actionID);
+
             if (result.action.actionID.equals("id1")) {
                Log.i("OneSignalExample", "button id called: " + result.action.actionID);
                activityToLaunch = GreenActivity.class;
-            } else {
+            } else
                Log.i("OneSignalExample", "button id called: " + result.action.actionID);
-            }
-
          }
          // The following can be used to open an Activity of your choice.
          // Replace - getApplicationContext() - with any Android Context.
@@ -113,15 +105,11 @@ public class ExampleApplication extends Application {
 
          // Add the following to your AndroidManifest.xml to prevent the launching of your main Activity
          //   if you are calling startActivity above.
-     /*
-        <application ...>
-          <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
-        </application>
-     */
-
-
-
-
+        /*
+           <application ...>
+             <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
+           </application>
+        */
       }
    }
 }

@@ -1,6 +1,5 @@
 package com.onesignal.example
 
-import android.content.Intent
 import android.util.Log
 import com.onesignal.OSNotificationAction
 import com.onesignal.OSNotificationOpenResult
@@ -16,10 +15,10 @@ class ExampleNotificationOpenedHandler : OneSignal.NotificationOpenedHandler {
 
         val customKey = data?.optString("customkey", null)
         if (customKey != null)
-            Log.i("OneSignalExample", "customkey set with value: " + customKey)
+            Log.i("OneSignalExample", "customkey set with value: $customKey")
 
         if (actionType == OSNotificationAction.ActionType.ActionTaken)
-            Log.i("OneSignalExample", "Button pressed with id: " + result.action.actionID)
+            Log.i("OneSignalExample", "Button pressed with id: $result.action.actionID")
 
         // The following can be used to open an Activity of your choice.
         //   Replace MainActivity with your own Activity class.

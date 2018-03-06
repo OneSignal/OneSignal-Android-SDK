@@ -1,5 +1,5 @@
 plugins {
-    id 'com.onesignal.androidsdk.onesignal-gradle-plugin' version '0.8.0'
+    id 'com.onesignal.androidsdk.onesignal-gradle-plugin' version '0.8.1'
 }
 apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
 
@@ -39,7 +39,7 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.0.2'
+    implementation 'com.android.support:appcompat-v7:27.1.0'
 
     // Use for SDK Development
     implementation(project(':onesignal')) {

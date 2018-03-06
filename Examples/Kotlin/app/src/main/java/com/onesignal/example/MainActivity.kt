@@ -14,14 +14,14 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         OneSignal.idsAvailable { userId, registrationId ->
-            var text = "OneSignal UserID:\n" + userId + "\n\n"
+            var text = "OneSignal UserID:\n$userId\n\n"
 
-            if (registrationId != null)
-                text += "Google Registration Id:\n" + registrationId
+            text += if (registrationId != null)
+                "Google Registration Id:\n$registrationId"
             else
-                text += "Google Registration Id:\nCould not subscribe for push"
+                "Google Registration Id:\nCould not subscribe for push"
 
-            val textView = findViewById(R.id.debug_view) as TextView
+            val textView: TextView = findViewById(R.id.debug_view)
             textView.text = text
         }
     }

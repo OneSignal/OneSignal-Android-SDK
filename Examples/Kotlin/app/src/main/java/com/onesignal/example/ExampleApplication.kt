@@ -12,7 +12,7 @@ class ExampleApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        instance = this;
+        instance = this
 
         // Logging set to help debug issues, remove before releasing your app.
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.WARN)

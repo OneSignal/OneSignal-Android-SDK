@@ -18,11 +18,11 @@ public class GreenActivity extends AppCompatActivity {
 
         String openURL = getIntent().getStringExtra("openURL");
 
-        final TextView textView = (TextView)findViewById(R.id.debug_view);
+        final TextView textView = findViewById(R.id.debug_view);
         textView.setText("URL from additionalData: " + openURL);
 
 
-        Button onBackButton = (Button)(findViewById(R.id.back_button));
+        Button onBackButton = findViewById(R.id.back_button);
         onBackButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -31,15 +31,13 @@ public class GreenActivity extends AppCompatActivity {
             }
         });
 
-        WebView webView = (WebView)(findViewById(R.id.webview));
+        WebView webView = findViewById(R.id.webview);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setWebViewClient(new WebViewClient());
-        if (openURL == null) {
+        if (openURL == null)
             webView.loadUrl("https://google.com");
-        } else {
+        else
             webView.loadUrl(openURL);
-        }
-
 
     }
 }

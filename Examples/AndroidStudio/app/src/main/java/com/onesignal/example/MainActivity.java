@@ -1,6 +1,5 @@
 package com.onesignal.example;
 
-import android.app.Activity;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
@@ -21,14 +20,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class MainActivity extends AppCompatActivity {
-
-   private static Activity currentActivity;
    
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       setContentView(R.layout.activity_main);
-      final TextView textView = (TextView)findViewById(R.id.debug_view);
+      final TextView textView = findViewById(R.id.debug_view);
       textView.setText("OneSignal is Ready!");
 
       /* Deprecated, use getPermissionSubscriptionState, addPermissionObserver, or add SubscriptionObserver instead
@@ -47,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
          }
       });
       */
-      Button onSendTagsButton = (Button)(findViewById(R.id.send_tags_button));
+      Button onSendTagsButton = findViewById(R.id.send_tags_button);
       onSendTagsButton.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
@@ -64,11 +61,11 @@ public class MainActivity extends AppCompatActivity {
 
       });
 
-      Button onGetTagsButton = (Button)(findViewById(R.id.get_tags_button));
+      Button onGetTagsButton = findViewById(R.id.get_tags_button);
       onGetTagsButton.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
-            final Collection<String> receivedTags = new ArrayList<String>();
+            final Collection<String> receivedTags = new ArrayList<>();
             OneSignal.getTags(new OneSignal.GetTagsHandler() {
                @Override
                public void tagsAvailable(final JSONObject tags) {
@@ -85,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
          }
       });
 
-      Button onDeleteOrUpdateTagsButton = (Button)(findViewById(R.id.delete_update_tags_button));
+      Button onDeleteOrUpdateTagsButton = findViewById(R.id.delete_update_tags_button);
       onDeleteOrUpdateTagsButton.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
@@ -98,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
                   new Handler(Looper.getMainLooper()).post(new Runnable() {
                      @Override
                      public void run() {
-                        textView.setText("Updated Tags: " + tags.toString());
+                        textView.setText("Updated Tags: " + tags);
                      }
                   });
                }
@@ -106,15 +103,15 @@ public class MainActivity extends AppCompatActivity {
          }
       });
 
-      Button onGetIDsAvailableButton = (Button)(findViewById(R.id.get_ids_available_button));
+      Button onGetIDsAvailableButton = findViewById(R.id.get_ids_available_button);
       onGetIDsAvailableButton.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
             OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
             boolean isEnabled = status.getPermissionStatus().getEnabled();
-
             boolean isSubscribed = status.getSubscriptionStatus().getSubscribed();
             boolean subscriptionSetting = status.getSubscriptionStatus().getUserSubscriptionSetting();
+
             String userID = status.getSubscriptionStatus().getUserId();
             String pushToken = status.getSubscriptionStatus().getPushToken();
 
@@ -135,66 +132,69 @@ public class MainActivity extends AppCompatActivity {
          }
       });
 
-      Button onSendNotification1 = (Button)(findViewById(R.id.send_notification_button));
+      Button onSendNotification1 = findViewById(R.id.send_notification_button);
       onSendNotification1.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
             OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
             String userId = status.getSubscriptionStatus().getUserId();
-            String pushToken = status.getSubscriptionStatus().getPushToken();
             boolean isSubscribed = status.getSubscriptionStatus().getSubscribed();
 
-            if (isSubscribed) {
-               textView.setText("Subscription Status, is subscribed:" + isSubscribed);
-               try {
-                  JSONObject notificationContent = new JSONObject("{'contents': {'en': 'The notification message or body'}," +
-                          "'include_player_ids': ['" + userId + "'], " +
-                          "'headings': {'en': 'Notification Title'}, " +
-                          "'big_picture': 'http://i.imgur.com/DKw1J2F.gif'}");
-                  OneSignal.postNotification(notificationContent, null);
-               } catch (JSONException e) {
-                  e.printStackTrace();
-               }
+            textView.setText("Subscription Status, is subscribed:" + isSubscribed);
+
+            if (!isSubscribed)
+               return;
+
+            try {
+               JSONObject notificationContent = new JSONObject("{'contents': {'en': 'The notification message or body'}," +
+                       "'include_player_ids': ['" + userId + "'], " +
+                       "'headings': {'en': 'Notification Title'}, " +
+                       "'big_picture': 'http://i.imgur.com/DKw1J2F.gif'}");
+               OneSignal.postNotification(notificationContent, null);
+            } catch (JSONException e) {
+               e.printStackTrace();
             }
          }
       });
 
-      Button onSendNotification2 = (Button)(findViewById(R.id.send_notification_button2));
+      Button onSendNotification2 = findViewById(R.id.send_notification_button2);
       onSendNotification2.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
             OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
             String userID = status.getSubscriptionStatus().getUserId();
-            String pushToken = status.getSubscriptionStatus().getPushToken();
             boolean isSubscribed = status.getSubscriptionStatus().getSubscribed();
 
-            if (isSubscribed) {
-               textView.setText("Subscription Status, is subscribed:" + isSubscribed);
-               try {
-                  OneSignal.postNotification(new JSONObject("{'contents': {'en':'Tag substitution value for key1 = {{key1}}'}, " +
-                                  "'include_player_ids': ['" + userID + "'], " +
-                                  "'headings': {'en': 'Tag sub Title HI {{user_name}}'}, " +
-                                  "'data': {'openURL': 'https://imgur.com'}," +
-                                  "'buttons':[{'id': 'id1', 'text': 'Go to GreenActivity'}, {'id':'id2', 'text': 'Go to MainActivity'}]}"),
-                          new OneSignal.PostNotificationResponseHandler() {
-                             @Override
-                             public void onSuccess(JSONObject response) {
-                                Log.i("OneSignalExample", "postNotification Success: " + response.toString());
-                             }
+            textView.setText("Subscription Status, is subscribed:" + isSubscribed);
 
-                             @Override
-                             public void onFailure(JSONObject response) {
-                                Log.e("OneSignalExample", "postNotification Failure: " + response.toString());
-                             }
-                          });
-               } catch (JSONException e) {
-                  e.printStackTrace();
-               }
+            if (!isSubscribed)
+               return;
+
+            try {
+               OneSignal.postNotification(new JSONObject("{'contents': {'en':'Tag substitution value for key1 = {{key1}}'}, " +
+                           "'include_player_ids': ['" + userID + "'], " +
+                           "'headings': {'en': 'Tag sub Title HI {{user_name}}'}, " +
+                           "'data': {'openURL': 'https://imgur.com'}," +
+                           "'buttons':[{'id': 'id1', 'text': 'Go to GreenActivity'}, {'id':'id2', 'text': 'Go to MainActivity'}]}"),
+                     new OneSignal.PostNotificationResponseHandler() {
+                        @Override
+                        public void onSuccess(JSONObject response) {
+                           Log.i("OneSignalExample", "postNotification Success: " + response);
+                        }
+
+                        @Override
+                        public void onFailure(JSONObject response) {
+                           Log.e("OneSignalExample", "postNotification Failure: " + response);
+                        }
+                     });
+            } catch (JSONException e) {
+               e.printStackTrace();
             }
+
          }
       });
 
-      final Switch onSetSubscriptionSwitch = (Switch)(findViewById(R.id.set_subscription_switch));
+      final Switch onSetSubscriptionSwitch = findViewById(R.id.set_subscription_switch);
       onSetSubscriptionSwitch.setOnClickListener(new View.OnClickListener() {
          @Override
          public void onClick(View view) {
@@ -208,7 +208,5 @@ public class MainActivity extends AppCompatActivity {
             }
          }
       });
-
-
    }
 }
