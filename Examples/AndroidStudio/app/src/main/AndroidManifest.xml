@@ -31,6 +31,15 @@
             </intent-filter>
         </activity>
         <activity android:name=".GreenActivity" />
+
+        <service
+            android:name=".NotificationExtenderExample"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.onesignal.NotificationExtender" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
