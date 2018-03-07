@@ -1679,29 +1679,28 @@ public class OneSignal {
             mInitBuilder.mNotificationOpenedHandler.notificationOpened(openedResult);
          }
       });
-
-      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
-         trackFirebaseAnalytics.trackOpenedEvent(openedResult);
    }
 
    // Called when receiving GCM/ADM message after it has been displayed.
    // Or right when it is received if it is a silent one
    //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
    static void handleNotificationReceived(JSONArray data, boolean displayed, boolean fromAlert) {
-      if (mInitBuilder == null || mInitBuilder.mNotificationReceivedHandler == null)
-         return;
-
       OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed, fromAlert);
-      mInitBuilder.mNotificationReceivedHandler.notificationReceived(openResult.notification);
-
       if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
          trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
+      if (mInitBuilder == null || mInitBuilder.mNotificationReceivedHandler == null)
+         return;
+
+      mInitBuilder.mNotificationReceivedHandler.notificationReceived(openResult.notification);
    }
 
    // Called when opening a notification
    public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert) {
       notificationOpenedRESTCall(inContext, data);
+
+      if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
+         trackFirebaseAnalytics.trackOpenedEvent(generateOsNotificationOpenResult(data, true, fromAlert));
 
       boolean urlOpened = false;
       boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(inContext, "com.onesignal.NotificationOpened.DEFAULT"));
