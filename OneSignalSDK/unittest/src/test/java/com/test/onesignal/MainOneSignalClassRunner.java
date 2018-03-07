@@ -61,6 +61,7 @@ import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
@@ -2572,6 +2573,67 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.Request emailPurchase = ShadowOneSignalRestClient.requests.get(5);
       assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_purchase", emailPurchase.url);
       assertEquals(expectedPayload, emailPurchase.payload.toString());
+   }
+
+   @Test
+   @Config(shadows = { ShadowFirebaseAnalytics.class })
+   public void shouldSendFirebaseAnalyticsNotificationOpen() throws Exception {
+      ShadowOneSignalRestClient.paramExtras = new JSONObject().put("fba", true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      JSONObject openPayload = new JSONObject();
+      openPayload.put("title", "Test title");
+      openPayload.put("alert", "Test Msg");
+      openPayload.put("custom", new JSONObject("{ \"i\": \"UUID\" }"));
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), false);
+
+      assertEquals("os_notification_opened", ShadowFirebaseAnalytics.lastEventString);
+      Bundle expectedBundle = new Bundle();
+      expectedBundle.putString("notification_id", "UUID");
+      expectedBundle.putString("medium", "notification");
+      expectedBundle.putString("source", "OneSignal");
+      expectedBundle.putString("campaign", "Test title");
+      assertEquals(expectedBundle.toString(), ShadowFirebaseAnalytics.lastEventBundle.toString());
+
+      // Assert that another open isn't trigger later when the unprocessed opens are fired
+      ShadowFirebaseAnalytics.lastEventString = null;
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      assertNull(ShadowFirebaseAnalytics.lastEventString);
+   }
+
+   @Test
+   @Config(shadows = { ShadowFirebaseAnalytics.class })
+   public void shouldSendFirebaseAnalyticsNotificationReceived() throws Exception {
+      ShadowOneSignalRestClient.paramExtras = new JSONObject().put("fba", true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      JSONObject openPayload = new JSONObject();
+      openPayload.put("title", "Test title");
+      openPayload.put("alert", "Test Msg");
+      openPayload.put("custom", new JSONObject("{ \"i\": \"UUID\" }"));
+      NotificationBundleProcessor_Process(blankActivity, false, openPayload, null);
+
+      assertEquals("os_notification_received", ShadowFirebaseAnalytics.lastEventString);
+      Bundle expectedBundle = new Bundle();
+      expectedBundle.putString("notification_id", "UUID");
+      expectedBundle.putString("medium", "notification");
+      expectedBundle.putString("source", "OneSignal");
+      expectedBundle.putString("campaign", "Test title");
+      assertEquals(expectedBundle.toString(), ShadowFirebaseAnalytics.lastEventBundle.toString());
+
+      // Assert that another receive isn't trigger later when the unprocessed receives are fired
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
+         @Override
+         public void notificationReceived(OSNotification notification) {
+         }
+      });
+      threadAndTaskWait();
+
+      ShadowFirebaseAnalytics.lastEventString = null;
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      assertNull(ShadowFirebaseAnalytics.lastEventString);
    }
 
    // ####### Unit test helper methods ########

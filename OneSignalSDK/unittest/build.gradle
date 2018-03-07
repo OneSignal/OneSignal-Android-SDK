@@ -5,10 +5,10 @@ android {
     buildToolsVersion '27.0.3'
 
     defaultConfig {
-        applicationId "com.onesignal.example"
-        manifestPlaceholders = [onesignal_app_id: "b2f7f966-d8cc-11e4-bed1-df8f05be55ba",
+        applicationId 'com.onesignal.example'
+        manifestPlaceholders = [onesignal_app_id: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba',
                                 // Project number pulled from dashboard, local value is ignored.
-                                onesignal_google_project_number: "REMOTE"]
+                                onesignal_google_project_number: 'REMOTE']
         minSdkVersion 15
         targetSdkVersion 27
         versionCode 1
@@ -25,7 +25,7 @@ android {
     testOptions {
         unitTests.all {
             maxParallelForks 1
-            maxHeapSize "2048m"
+            maxHeapSize '2048m'
         }
         unitTests {
             includeAndroidResources = true
@@ -33,50 +33,15 @@ android {
     }
 }
 
-repositories {
-    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
-}
-
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-
-    compile 'com.android.support:support-v4:27.0.2'
-
-//    compile 'com.android.support:support-compat:26.0.0'
-//    compile 'com.android.support:support-media-compat:26.0.0'
-//    compile 'com.android.support:support-fragment:26.0.0'
-//    compile 'com.android.support:support-core-ui:26.0.0'
-//    compile 'com.android.support:support-core-utils:26.0.0'
-
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     // Use for SDK Development
-    compile(project(':onesignal')) {
-        exclude group: 'com.android.support', module: 'support-v4'
-        exclude group: 'com.android.support', module: 'customtabs'
-        exclude group: 'com.google.android.gms', module: 'play-services-gcm'
-        exclude group: 'com.google.android.gms', module: 'play-services-analytics'
-        exclude group: 'com.google.android.gms', module: 'play-services-location'
-    }
+    implementation(project(':onesignal'))
 
-    // Use to run local .aar file
-    // compile(name: 'OneSignal-release', ext: 'aar')
+    implementation 'com.google.firebase:firebase-core:11.8.0'
+    implementation 'com.google.android.gms:play-services-location:11.8.0'
 
-    // Use for released SDK
-    // compile 'com.onesignal:OneSignal:3.+@aar'
-
-    // Test with 7.0.0 to make sure there are no breaking changes in Google's libraries.
-    // This insure that the SDK will work if an app developer is using an older version of GMS.
-    compile 'com.google.android.gms:play-services-gcm:11.8.0'
-
-    // play-services-analytics is required for AdvertisingIdClient when using GMS 8.1.0 or lower.
-    // 8.3.0 it is included in 'basement' which is required by 'base'.
-    //compile "com.google.android.gms:play-services-analytics:7.0.0"
-    compile 'com.google.android.gms:play-services-location:11.8.0'
-
-    // compile 'com.google.android.gms:play-services-analytics:7.0.0'
-
-    compile 'com.android.support:customtabs:27.1.0'
-
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.robolectric:robolectric:3.7.1'
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.robolectric:robolectric:3.7.1'
 }
