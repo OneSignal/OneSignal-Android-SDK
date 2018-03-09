@@ -168,7 +168,7 @@ class ActivityLifecycleHandler {
             return;
 
          backgrounded = true;
-         OneSignal.onAppLostFocus(false);
+         OneSignal.onAppLostFocus();
          completed = true;
       }
    }

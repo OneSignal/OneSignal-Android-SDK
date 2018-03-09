@@ -61,6 +61,7 @@ public class PushRegistratorRunner {
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
+      TestHelpers.beforeTestSuite();
    }
 
    @Before // Before each test

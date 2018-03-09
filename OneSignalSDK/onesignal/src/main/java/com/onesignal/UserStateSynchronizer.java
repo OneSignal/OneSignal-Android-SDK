@@ -7,8 +7,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 abstract class UserStateSynchronizer {
 
@@ -33,6 +33,7 @@ abstract class UserStateSynchronizer {
 
     abstract GetTagsResult getTags(boolean fromServer);
 
+    private AtomicBoolean runningSyncUserState = new AtomicBoolean();
     class NetworkHandlerThread extends HandlerThread {
         protected static final int NETWORK_HANDLER_USERSTATE = 0;
 
@@ -50,10 +51,16 @@ abstract class UserStateSynchronizer {
             mHandler = new Handler(getLooper());
         }
 
-        void runNewJob() {
+        void runNewJobDelayed() {
             currentRetry = 0;
             mHandler.removeCallbacksAndMessages(null);
-            mHandler.postDelayed(getNewRunnable(), 5000);
+            mHandler.postDelayed(getNewRunnable(), 5_000);
+        }
+
+        void runNewJobImmediate() {
+            currentRetry = 0;
+            mHandler.removeCallbacksAndMessages(null);
+            mHandler.post(getNewRunnable());
         }
 
         private Runnable getNewRunnable() {
@@ -62,7 +69,8 @@ abstract class UserStateSynchronizer {
                     return new Runnable() {
                         @Override
                         public void run() {
-                            syncUserState(false);
+                            if (!runningSyncUserState.get())
+                                syncUserState(false);
                         }
                     };
             }
@@ -82,7 +90,7 @@ abstract class UserStateSynchronizer {
 
             if (doRetry && !futureSync) {
                 currentRetry++;
-                mHandler.postDelayed(getNewRunnable(), currentRetry * 15000);
+                mHandler.postDelayed(getNewRunnable(), currentRetry * 15_000);
             }
 
             return mHandler.hasMessages(0);
@@ -127,10 +135,7 @@ abstract class UserStateSynchronizer {
         getToSyncUserState().persistState();
     }
 
-    boolean stopAndPersist() {
-        for (Map.Entry<Integer, NetworkHandlerThread> handlerThread : networkHandlerThreads.entrySet())
-            handlerThread.getValue().stopScheduledRunnable();
-
+    boolean persist() {
         if (toSyncUserState != null) {
             boolean unSynced = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall()) != null;
             toSyncUserState.persistState();
@@ -149,7 +154,13 @@ abstract class UserStateSynchronizer {
         return toSyncUserState.dependValues.optBoolean("logoutEmail", false);
     }
 
-    void syncUserState(boolean fromSyncService) {
+    synchronized void syncUserState(boolean fromSyncService) {
+        runningSyncUserState.set(true);
+        internalSyncUserState(fromSyncService);
+        runningSyncUserState.set(false);
+    }
+
+    private void internalSyncUserState(boolean fromSyncService) {
         final String userId = getId();
 
         if (syncEmailLogout() && userId != null) {
@@ -162,11 +173,13 @@ abstract class UserStateSynchronizer {
         final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
         final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
 
-        if (jsonBody == null) {
-            currentUserState.persistStateAfterSync(dependDiff, null);
-            return;
+        synchronized (syncLock) {
+            if (jsonBody == null) {
+                currentUserState.persistStateAfterSync(dependDiff, null);
+                return;
+            }
+            toSyncUserState.persistState();
         }
-        toSyncUserState.persistState();
 
         if (!isSessionCall || fromSyncService)
             doPutSync(userId, jsonBody, dependDiff);

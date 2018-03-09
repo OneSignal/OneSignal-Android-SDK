@@ -27,12 +27,15 @@
 
 package com.onesignal;
 
+import android.app.job.JobParameters;
+
+import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
-@Implements(LocationGMS.class)
-public class ShadowLocationGMS {
-
-   public static int getApiFallbackWait() {
-      return 0;
+@Implements(android.app.job.JobService.class)
+public class ShadowJobService {
+   @Implementation
+   public final void jobFinished(JobParameters params, boolean needsReschedule) {
+      // Do nothing, real implementation throws due to onBind not being used
    }
 }

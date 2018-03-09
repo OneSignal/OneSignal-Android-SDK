@@ -50,7 +50,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         if (neverEmail || OneSignal.getUserId() == null)
             return;
 
-        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
+        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJobDelayed();
     }
 
     void setEmail(String email, String emailAuthHash) {

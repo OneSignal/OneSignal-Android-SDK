@@ -31,9 +31,16 @@ import org.robolectric.annotation.Implements;
 
 @Implements(GoogleApiClientCompatProxy.class)
 public class ShadowGoogleApiClientCompatProxy {
+
+   public static boolean skipOnConnected;
+
+   public static void restSetStaticFields() {
+      skipOnConnected = false;
+   }
    
    public void connect() {
-      ShadowGoogleApiClientBuilder.connectionCallback.onConnected(null);
+      if (!skipOnConnected)
+         ShadowGoogleApiClientBuilder.connectionCallback.onConnected(null);
    }
    
    public void disconnect() { }

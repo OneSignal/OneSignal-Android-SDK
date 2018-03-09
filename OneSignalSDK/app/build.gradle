@@ -64,7 +64,7 @@ dependencies {
     // compile 'com.onesignal:OneSignal:3.+@aar'
 
     //implementation 'com.google.android.gms:play-services-gcm:11.2.2'
-    //implementation 'com.google.android.gms:play-services-location:11.2.2'
+    implementation 'com.google.android.gms:play-services-location:11.8.0'
 
     // For Chrome tabs
    // compile 'com.android.support:customtabs:26.1.0'

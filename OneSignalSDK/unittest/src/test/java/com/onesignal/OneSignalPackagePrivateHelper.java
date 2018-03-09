@@ -1,6 +1,5 @@
 package com.onesignal;
 
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
@@ -11,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,20 +52,44 @@ public class OneSignalPackagePrivateHelper {
       return startedRunnable;
    }
 
-   public static boolean runFocusRunnables() {
+   private static boolean isExecutingRunnable(Scheduler scheduler) throws Exception {
+      Field isExecutingRunnableField = Scheduler.class.getDeclaredField("isExecutingRunnable");
+      isExecutingRunnableField.setAccessible(true);
+      return (Boolean)isExecutingRunnableField.get(scheduler);
+   }
+
+   public static boolean runFocusRunnables() throws Exception {
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
       if (looper == null)
          return false;
       
-      Scheduler scheduler = shadowOf(looper).getScheduler();
+      final Scheduler scheduler = shadowOf(looper).getScheduler();
       if (scheduler == null)
          return false;
 
-      boolean ranTask = false;
-      while (scheduler.runOneTask())
-         ranTask = true;
+      // Need to check this before .size() as it will block
+      if (isExecutingRunnable(scheduler))
+         return false;
 
-      return ranTask;
+      if (scheduler.size() == 0)
+         return false;
+
+      Thread handlerThread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            while (scheduler.runOneTask());
+         }
+      });
+      handlerThread.start();
+
+      while (true) {
+         if (!ShadowOneSignalRestClient.isAFrozenThread(handlerThread))
+            handlerThread.join(1);
+         if (handlerThread.getState() == Thread.State.WAITING ||
+             handlerThread.getState() == Thread.State.TERMINATED)
+            break;
+      }
+      return true;
    }
 
    public static void resetRunnables() {
@@ -86,10 +110,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
-   }
-
-   public static void SyncService_onTaskRemoved(Service service) {
-      SyncService.onTaskRemoved(service);
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -127,6 +147,12 @@ public class OneSignalPackagePrivateHelper {
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
       NotificationGenerationJob(Context context) {
          super(context);
+      }
+   }
+
+   public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
+      @Override
+      protected void stopSync() {
       }
    }
 

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -82,15 +81,16 @@ class LocationGMS {
 
    private static boolean locationCoarse;
    
-   static void scheduleUpdate(Context context) {
-      if (!hasLocationPermission(context) && OneSignal.shareLocation)
-         return;
+   static boolean scheduleUpdate(Context context) {
+      if (!hasLocationPermission(context) || !OneSignal.shareLocation)
+         return false;
       
-      long lastTime = getLastLocationTime(context);
-      long minTime = 1000 * (OneSignal.isForeground() ? TIME_FOREGROUND : TIME_BACKGROUND);
-      long scheduleTime = lastTime + minTime;
+      long lastTime = System.currentTimeMillis() - getLastLocationTime();
+      long minTime = 1_000 * (OneSignal.isForeground() ? TIME_FOREGROUND : TIME_BACKGROUND);
+      long scheduleTime = minTime - lastTime;
       
-      OneSignalSyncUtils.scheduleSyncTask(context, scheduleTime);
+      OneSignalSyncServiceUtils.scheduleLocationUpdateTask(context, scheduleTime);
+      return true;
    }
    
    private static void setLastLocationTime(long time) {
@@ -98,10 +98,10 @@ class LocationGMS {
               OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,time);
    }
    
-   private static long getLastLocationTime(Context context) {
+   private static long getLastLocationTime() {
       return OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,
-              -TIME_BACKGROUND*1000);
+              TIME_BACKGROUND * -1_000);
    }
    
    private static boolean hasLocationPermission(Context context) {
@@ -173,7 +173,7 @@ class LocationGMS {
          if (locationHandlerThread == null)
             locationHandlerThread = new LocationHandlerThread();
 
-         if(mGoogleApiClient == null || mLastLocation == null) {
+         if (mGoogleApiClient == null || mLastLocation == null) {
             GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
             GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
                     .addApi(LocationServices.API)
@@ -185,24 +185,29 @@ class LocationGMS {
 
             mGoogleApiClient.connect();
          }
-         else if(mLastLocation != null)
-            receivedLocationPoint(mLastLocation);
-
-
+         else if (mLastLocation != null)
+            fireCompleteForLocation(mLastLocation);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but there was an error initializing: ", t);
          fireFailedComplete();
       }
    }
 
+   private static int getApiFallbackWait() {
+      return 30_000;
+   }
+
    private static void startFallBackThread() {
       fallbackFailThread = new Thread(new Runnable() {
          public void run() {
             try {
-               Thread.sleep(30000);
+               Thread.sleep(getApiFallbackWait());
                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but GoogleApiClient timed out. Maybe related to mismatch google-play aar versions.");
                fireFailedComplete();
-            } catch (Throwable t) {}
+               scheduleUpdate(classContext);
+            } catch (InterruptedException e) {
+               // Interruptions expected when connection is made to the api
+            }
          }
       }, "OS_GMS_LOCATION_FALLBACK");
       fallbackFailThread.start();
@@ -238,9 +243,11 @@ class LocationGMS {
                LocationGMS.fallbackFailThread = null;
          }
       }
+      // Save last time so even if a failure we trigger the same schedule update
+      setLastLocationTime(System.currentTimeMillis());
    }
    
-   private static void receivedLocationPoint(Location location) {
+   private static void fireCompleteForLocation(Location location) {
       LocationPoint point = new LocationPoint();
       
       point.accuracy = location.getAccuracy();
@@ -258,9 +265,8 @@ class LocationGMS {
          point.lat = location.getLatitude();
          point.log = location.getLongitude();
       }
-      
+
       fireComplete(point);
-      setLastLocationTime(System.currentTimeMillis());
       scheduleUpdate(classContext);
    }
    
@@ -272,10 +278,10 @@ class LocationGMS {
       public void onConnected(Bundle bundle) {
          PermissionsActivity.answered = false;
 
-         if(mLastLocation == null) {
+         if (mLastLocation == null) {
             mLastLocation = FusedLocationApiWrapper.getLastLocation(mGoogleApiClient.realInstance());
-            if(mLastLocation != null)
-               receivedLocationPoint(mLastLocation);
+            if (mLastLocation != null)
+               fireCompleteForLocation(mLastLocation);
          }
 
          locationUpdateListener = new LocationUpdateListener(mGoogleApiClient.realInstance());
@@ -301,8 +307,8 @@ class LocationGMS {
          mGoogleApiClient = googleApiClient;
 
          LocationRequest locationRequest = new LocationRequest();
-         locationRequest.setInterval(300000) // 5 mins
-                        .setFastestInterval(300000) // 5 min interval
+         locationRequest.setInterval(TIME_FOREGROUND)
+                        .setFastestInterval(TIME_FOREGROUND)
                         .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
    
          FusedLocationApiWrapper.requestLocationUpdates(mGoogleApiClient, locationRequest, this);
