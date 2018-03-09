@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.*;
@@ -64,6 +65,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.WorkerThread;
 import android.util.Base64;
 import android.util.Log;
 
@@ -579,7 +581,6 @@ public class OneSignal {
       if (contextIsActivity) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
          NotificationRestorer.asyncRestore(appContext);
-         startSyncService();
       }
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
@@ -944,7 +945,8 @@ public class OneSignal {
    }
 
    // Returns true if there is active time that is unsynced.
-   static boolean onAppLostFocus(boolean onlySave) {
+   @WorkerThread
+   static boolean onAppLostFocus() {
       foreground = false;
 
       if (!initDone) return false;
@@ -955,37 +957,53 @@ public class OneSignal {
       if (lastTrackedFocusTime == -1)
          return false;
 
-      long time_elapsed = (long) (((SystemClock.elapsedRealtime() - lastTrackedFocusTime) / 1000d) + 0.5d);
+      long time_elapsed = (long)(((SystemClock.elapsedRealtime() - lastTrackedFocusTime) / 1_000d) + 0.5d);
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
-      if (time_elapsed < 0 || time_elapsed > 86400)
+      if (time_elapsed < 0 || time_elapsed > 86_400)
          return false;
+
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
          return false;
       }
+
+      boolean scheduleSyncService = scheduleSyncService();
 
       setLastSessionTime(System.currentTimeMillis());
 
       long unSentActiveTime = GetUnsentActiveTime();
       long totalTimeActive = unSentActiveTime + time_elapsed;
 
-      if (onlySave || totalTimeActive < MIN_ON_FOCUS_TIME || getUserId() == null) {
-         SaveUnsentActiveTime(totalTimeActive);
-         return totalTimeActive >= MIN_ON_FOCUS_TIME;
-      }
+      SaveUnsentActiveTime(totalTimeActive);
 
-      sendOnFocus(totalTimeActive, true);
+      if (totalTimeActive < MIN_ON_FOCUS_TIME || getUserId() == null)
+         return totalTimeActive >= MIN_ON_FOCUS_TIME;
+
+      // Schedule this sync in case app is killed before completing
+      if (!scheduleSyncService)
+         OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
+
+      OneSignalSyncServiceUtils.syncOnFocusTime();
       
       return false;
    }
 
+   static boolean scheduleSyncService() {
+      boolean unsyncedChanges = OneSignalStateSynchronizer.persist();
+      if (unsyncedChanges)
+         OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
+
+      boolean locationScheduled = LocationGMS.scheduleUpdate(appContext);
+      return locationScheduled || unsyncedChanges;
+   }
+
    static void sendOnFocus(long totalTimeActive, boolean synchronous) {
-      JSONObject jsonBody = new JSONObject();
       try {
-         jsonBody.put("app_id", appId);
-         jsonBody.put("type", 1);
-         jsonBody.put("state", "ping");
-         jsonBody.put("active_time", totalTimeActive);
+         JSONObject jsonBody = new JSONObject()
+            .put("app_id", appId)
+            .put("type", 1)
+            .put("state", "ping")
+            .put("active_time", totalTimeActive);
          addNetType(jsonBody);
 
          sendOnFocusToPlayer(getUserId(), jsonBody, synchronous);
@@ -1000,7 +1018,7 @@ public class OneSignal {
 
    private static void sendOnFocusToPlayer(String userId, JSONObject jsonBody, boolean synchronous) {
       String url = "players/" + userId + "/on_focus";
-      OneSignalRestClient.ResponseHandler responseHandler =  new OneSignalRestClient.ResponseHandler() {
+      OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
          @Override
          void onFailure(int statusCode, String response, Throwable throwable) {
             logHttpError("sending on_focus Failed", statusCode, throwable, response);
@@ -1020,7 +1038,6 @@ public class OneSignal {
 
 
    static void onAppFocus() {
-      startSyncService();
       foreground = true;
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
@@ -1038,6 +1055,8 @@ public class OneSignal {
 
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
+
+      OneSignalSyncServiceUtils.cancelSyncTask(appContext);
    }
 
    static boolean isForeground() {
@@ -2512,12 +2531,6 @@ public class OneSignal {
          return true;
 
       return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
-   }
-   
-   private static void startSyncService() {
-      Intent intent = new Intent(appContext, SyncService.class);
-      intent.putExtra("task", SyncService.TASK_APP_STARTUP);
-      appContext.startService(intent);
    }
    
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.

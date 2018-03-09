@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,9 +47,9 @@ class OneSignalStateSynchronizer {
       return userStateEmailSynchronizer;
    }
    
-   static boolean stopAndPersist() {
-      boolean pushPersisted = getPushStateSynchronizer().stopAndPersist();
-      boolean emailPersisted = getEmailStateSynchronizer().stopAndPersist();
+   static boolean persist() {
+      boolean pushPersisted = getPushStateSynchronizer().persist();
+      boolean emailPersisted = getEmailStateSynchronizer().persist();
       if (emailPersisted)
          emailPersisted = getEmailStateSynchronizer().getRegistrationId() != null;
 

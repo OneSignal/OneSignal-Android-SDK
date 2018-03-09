@@ -33,6 +33,7 @@ import org.robolectric.annotation.Implements;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
@@ -53,6 +54,23 @@ public class ShadowOneSignalRestClient {
       }
    }
 
+   private static class PendingResponse {
+      boolean success;
+      String response;
+      OneSignalRestClient.ResponseHandler responseHandler;
+      Object waitingThread;
+
+      PendingResponse(boolean success, String response, OneSignalRestClient.ResponseHandler responseHandler) {
+         this.success = success;
+         this.response = response;
+         this.responseHandler = responseHandler;
+      }
+
+      PendingResponse(Object waitingThread) {
+         this.waitingThread = waitingThread;
+      }
+   }
+
    public static JSONObject lastPost;
    public static ArrayList<Request> requests;
    public static String lastUrl;
@@ -63,6 +81,11 @@ public class ShadowOneSignalRestClient {
    public static String pushUserId, emailUserId;
 
    public static JSONObject paramExtras;
+
+   // Pauses any network callbacks from firing.
+   // Also blocks any sync network calls.
+   public static boolean freezeResponses;
+   private static ConcurrentHashMap<Object, PendingResponse> pendingResponses;
 
    public static void resetStatics() {
       pushUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
@@ -82,6 +105,46 @@ public class ShadowOneSignalRestClient {
       failPosts = false;
 
       paramExtras = null;
+
+      freezeResponses = false;
+      pendingResponses = new ConcurrentHashMap<>();
+   }
+
+   public static void unFreezeResponses() {
+      if (!freezeResponses)
+         return;
+      freezeResponses = false;
+      for (Object thread : pendingResponses.keySet()) {
+         if (thread instanceof Thread) {
+            System.out.println("Start thread notify: " + thread);
+            synchronized (thread) {
+               thread.notifyAll();
+            }
+            System.out.println("End thread notify: " + thread);
+         }
+      }
+   }
+
+   private static void freezeSyncCall() {
+      if (!freezeResponses)
+         return;
+
+      Object toLock = Thread.currentThread();
+      pendingResponses.put(toLock, new PendingResponse(toLock));
+      synchronized (toLock) {
+         try {
+            toLock.wait();
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
+      }
+   }
+
+   public static boolean isAFrozenThread(Thread thread) {
+      synchronized (thread) {
+         boolean isIt = pendingResponses.containsKey(thread);
+         return isIt;
+      }
    }
 
    private static void trackRequest(REST_METHOD method, JSONObject payload, String url) {
@@ -95,9 +158,21 @@ public class ShadowOneSignalRestClient {
       System.out.println(networkCallCount + ":" + method + "@URL:" + url + "\nBODY: " + payload);
    }
 
+   private static boolean suspendResponse(
+      boolean success,
+      String response,
+      OneSignalRestClient.ResponseHandler responseHandler) {
+      if (!freezeResponses || responseHandler == null)
+         return false;
+
+      pendingResponses.put(responseHandler, new PendingResponse(success, response, responseHandler));
+      return true;
+   }
+
    private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler, boolean doFail) {
       if (failNext || failAll || doFail) {
-         responseHandler.onFailure(400, failResponse, new Exception());
+         if (!suspendResponse(false, failResponse, responseHandler))
+            responseHandler.onFailure(400, failResponse, new Exception());
          failNext = failNextPut = false;
          return true;
       }
@@ -110,8 +185,6 @@ public class ShadowOneSignalRestClient {
    }
 
    private static void mockPost(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
-      trackRequest(REST_METHOD.POST, jsonBody, url);
-
       if (doFail(responseHandler, failPosts)) return;
 
       String retJson;
@@ -124,28 +197,39 @@ public class ShadowOneSignalRestClient {
       }
 
       if (nextSuccessResponse != null) {
-         if (responseHandler != null)
-            responseHandler.onSuccess(nextSuccessResponse);
+         if (responseHandler != null) {
+            if (!suspendResponse(true, nextSuccessResponse, responseHandler))
+               responseHandler.onSuccess(nextSuccessResponse);
+         }
          nextSuccessResponse = null;
       }
-      else if (responseHandler != null)
-         responseHandler.onSuccess(retJson);
+      else if (responseHandler != null) {
+         if (!suspendResponse(true, retJson, responseHandler))
+            responseHandler.onSuccess(retJson);
+      }
    }
 
    public static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      trackRequest(REST_METHOD.POST, jsonBody, url);
       mockPost(url, jsonBody, responseHandler);
    }
 
    public static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      trackRequest(REST_METHOD.POST, jsonBody, url);
+      freezeSyncCall();
       mockPost(url, jsonBody, responseHandler);
    }
 
    public static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
       trackRequest(REST_METHOD.PUT, jsonBody, url);
 
+      freezeSyncCall();
+
       if (doFail(responseHandler, failNextPut)) return;
 
-      responseHandler.onSuccess("{\"id\": \"" + pushUserId + "\"}");
+      String response = "{\"id\": \"" + pushUserId + "\"}";
+      if (!suspendResponse(true, response, responseHandler))
+         responseHandler.onSuccess(response);
    }
 
    public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {

@@ -15,7 +15,7 @@ abstract class UserState {
     protected final int NOTIFICATION_TYPES_NO_PERMISSION = 0;
     protected final int NOTIFICATION_TYPES_UNSUBSCRIBE = -2;
 
-    private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "ad_id"};
+    private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
 
     // Object to synchronize on to prevent concurrent modifications on syncValues and dependValues
@@ -56,12 +56,9 @@ abstract class UserState {
 
     private Set<String> getGroupChangeFields(UserState changedTo) {
         try {
-            if (dependValues.optLong("loc_time_stamp") != changedTo.dependValues.getLong("loc_time_stamp")
-                    || syncValues.optDouble("lat") != changedTo.syncValues.getDouble("lat")
-                    || syncValues.optDouble("long") != changedTo.syncValues.getDouble("long")
-                    || syncValues.optDouble("loc_acc") != changedTo.syncValues.getDouble("loc_acc")
-                    || syncValues.optInt("loc_type ") != changedTo.syncValues.optInt("loc_type")) {
+            if (dependValues.optLong("loc_time_stamp") != changedTo.dependValues.getLong("loc_time_stamp")) {
                 changedTo.syncValues.put("loc_bg", changedTo.dependValues.opt("loc_bg"));
+                changedTo.syncValues.put("loc_time_stamp", changedTo.dependValues.opt("loc_time_stamp"));
                 return LOCATION_FIELDS_SET;
             }
         } catch (Throwable t) {}
@@ -88,7 +85,10 @@ abstract class UserState {
             syncValues.put("long", null);
             syncValues.put("loc_acc", null);
             syncValues.put("loc_type", null);
+
             syncValues.put("loc_bg", null);
+            syncValues.put("loc_time_stamp", null);
+
             dependValues.put("loc_bg", null);
             dependValues.put("loc_time_stamp", null);
         } catch (JSONException e) {

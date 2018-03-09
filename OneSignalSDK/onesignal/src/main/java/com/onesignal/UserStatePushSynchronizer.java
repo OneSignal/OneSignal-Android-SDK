@@ -58,7 +58,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
 
     @Override
     protected void scheduleSyncToServer() {
-        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJob();
+        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJobDelayed();
     }
 
     @Override

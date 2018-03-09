@@ -30,7 +30,7 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
-import android.app.Service;
+import android.app.job.JobScheduler;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -65,6 +65,8 @@ import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowJobService;
+import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -74,6 +76,7 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowPushRegistratorGPS;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
+import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
 
@@ -89,6 +92,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
@@ -110,13 +114,14 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
+import static com.test.onesignal.TestHelpers.runOSThreads;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
 
@@ -124,14 +129,19 @@ import static org.junit.Assert.assertThat;
 
 import static org.robolectric.Shadows.shadowOf;
 
+import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
+
 @Config(packageName = "com.onesignal.example",
-        shadows = {ShadowOneSignalRestClient.class,
-                   ShadowPushRegistratorGPS.class,
-                   ShadowOSUtils.class,
-                   ShadowAdvertisingIdProviderGPS.class,
-                   ShadowCustomTabsClient.class,
-                   ShadowCustomTabsSession.class,
-                   ShadowNotificationManagerCompat.class},
+        shadows = {
+           ShadowOneSignalRestClient.class,
+           ShadowPushRegistratorGPS.class,
+           ShadowOSUtils.class,
+           ShadowAdvertisingIdProviderGPS.class,
+           ShadowCustomTabsClient.class,
+           ShadowCustomTabsSession.class,
+           ShadowNotificationManagerCompat.class,
+           ShadowJobService.class
+        },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
         sdk = 21)
@@ -188,6 +198,8 @@ public class MainOneSignalClassRunner {
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
+
+      TestHelpers.beforeTestSuite();
 
       Field OneSignal_CurrentSubscription = OneSignal.class.getDeclaredField("subscribableStatus");
       OneSignal_CurrentSubscription.setAccessible(true);
@@ -1544,21 +1556,19 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void shouldSaveToSyncIfKilledBeforeDelayedCompare() throws Exception {
+   public void shouldSaveToSyncIfKilledAndSyncOnNextAppStart() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      Service service = Robolectric.buildService(SyncService.class).create().get();
       
       OneSignal.sendTag("key", "value");
-
-      // Swipe app away from Recent Apps list, should save unsynced data.
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
-      OneSignalPackagePrivateHelper.resetRunnables();
+      // Pause Activity and trigger delayed runnable that will trigger out of focus logic
+      blankActivityController.pause();
+      OneSignalPackagePrivateHelper.runFocusRunnables();
 
       // Network call for android params and player create should have been made.
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
-      // App is re-opened.
+      // App closed and re-opened.
       StaticResetHelper.restSetStaticFields();
       OneSignalInit();
       threadAndTaskWait();
@@ -1568,6 +1578,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   @Config(sdk = 19)
    public void shouldSyncPendingChangesFromSyncService() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
@@ -1575,43 +1586,242 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("key", "value");
    
       // App is swiped away
-      Service service = Robolectric.buildService(SyncService.class).create().get();
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
-      
-      OneSignalPackagePrivateHelper.resetRunnables();
-      
-      threadAndTaskWait();
+      blankActivityController.pause();
+      OneSignalPackagePrivateHelper.runFocusRunnables();
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      
       StaticResetHelper.restSetStaticFields();
+      threadAndTaskWait();
    
-      // There were unsynced changes so service should have been scheduled for a restart.
+      // Tags did not get synced so SyncService should be scheduled
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
-      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
-      assertEquals(SyncService.class, shadowOf(shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
-      shadowOf(alarmManager).getScheduledAlarms().clear();
+      ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
+      assertEquals(1, shadowAlarmManager.getScheduledAlarms().size());
+      assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
+      shadowAlarmManager.getScheduledAlarms().clear();
    
-      // Service is restarted
-      Intent intent = new Intent();
-      intent.putExtra("task", 1); // TASK_SYNC
-      service = Robolectric.buildService(SyncService.class, intent).startCommand(0, 0).get();
-
+      // Test running the service
+      Robolectric.buildService(SyncService.class).startCommand(0, 0);
       threadAndTaskWait();
       assertEquals("value", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").getString("key"));
       assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
-   
+
+      // Test starting app
       OneSignalInit();
       threadAndTaskWait();
       
       // No new changes, don't schedule another restart.
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
+      // App is swiped away
+      blankActivityController.pause();
+      OneSignalPackagePrivateHelper.runFocusRunnables();
       assertEquals(0, shadowOf(alarmManager).getScheduledAlarms().size());
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
    }
 
    @Test
-   public void shouldNotCrashIfOnTaskRemovedIsCalledBeforeInitIsDone() {
-      Service service = Robolectric.buildService(SyncService.class).create().get();
-      OneSignalPackagePrivateHelper.SyncService_onTaskRemoved(service);
+   public void shouldNotCrashIfSyncServiceIsRunBeforeInitIsDone() throws Exception {
+      Robolectric.buildService(SyncService.class).create().startCommand(0,0);
+      Robolectric.buildService(SyncJobService.class).create().get().onStartJob(null);
+      threadAndTaskWait();
+   }
+
+   // Only fails if you run on it's own when running locally.
+   //   Untested on travis CI
+   @Test
+   public void syncServiceRunnableShouldWorkConcurrently() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      for(int a = 0; a < 10; a++) {
+         List<Thread> threadList = new ArrayList<>(30);
+         for (int i = 0; i < 30; i++) {
+            Thread lastThread = newSendTagTestThread(Thread.currentThread(), i);
+            lastThread.start();
+            threadList.add(lastThread);
+            Runnable syncRunable = new OneSignalPackagePrivateHelper.OneSignalSyncServiceUtils_SyncRunnable();
+            new Thread(syncRunable).start();
+         }
+
+         for(Thread thread : threadList)
+            thread.join();
+         assertFalse(failedCurModTest);
+      }
+
+      threadAndTaskWait();
+   }
+
+
+   private void sendTagsAndImmediatelyBackgroundApp() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Set tags and background app before a network call can be made
+      OneSignal.sendTag("test", "value");
+      blankActivityController.pause();
+      OneSignalPackagePrivateHelper.runFocusRunnables();
+   }
+
+   @Test
+   public void ensureSchedulingOfSyncJobServiceOnActivityPause() throws Exception {
+      sendTagsAndImmediatelyBackgroundApp();
+
+      // A future job should be scheduled to finish the sync.
+      JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+   }
+
+   @Test
+   public void ensureSyncJobIsCanceledOnAppResume() throws Exception {
+      sendTagsAndImmediatelyBackgroundApp();
+      blankActivityController.resume();
+
+      // Jobs should no longer be not be scheduled
+      JobScheduler jobScheduler = (JobScheduler) blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      assertEquals(0, jobScheduler.getAllPendingJobs().size());
+   }
+
+   @Test
+   public void ensureSyncIsRunOnAppResume() throws Exception {
+      sendTagsAndImmediatelyBackgroundApp();
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.requests.size());
+      ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(REST_METHOD.PUT, lastRequest.method);
+      assertEquals("value", lastRequest.payload.getJSONObject("tags").get("test"));
+   }
+
+   @Test
+   @Config(sdk = 26)
+   public void ensureNoConcurrentUpdateCallsWithSameData() throws Exception {
+      sendTagsAndImmediatelyBackgroundApp();
+
+      // Simulate a hung network connection when SyncJobService starts.
+      ShadowOneSignalRestClient.freezeResponses = true;
+      SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
+      syncJobService.onStartJob(null);
+      threadAndTaskWait(); // Kicks off the Job service's background thread.
+
+      // App is resumed, the SyncJobService is still waiting on a network response at this point.
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // Should only be 3 requests if there are no duplicates
+      assertEquals(3, ShadowOneSignalRestClient.requests.size());
+   }
+
+   @Test
+   @Config(sdk = 26, shadows = { ShadowGoogleApiClientCompatProxy.class, ShadowLocationGMS.class })
+   public void ensureSyncJobServiceRescheduleOnApiTimeout() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+   }
+
+   private void useAppFor2minThenBackground() throws Exception {
+      // 1. Start app
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Wait 2 minutes
+      ShadowSystemClock.setCurrentTimeMillis(120_000);
+
+      // 3. Put app in background
+      blankActivityController.pause();
+      OneSignalPackagePrivateHelper.runFocusRunnables();
+   }
+
+   @Test
+   @Config(sdk = 26)
+   public void ensureSchedulingOfSyncJobServiceOnActivityPause_forPendingActiveTime() throws Exception {
+      useAppFor2minThenBackground();
+
+      // A future job should be scheduled to finish the sync.
+      JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+   }
+
+   private static void assertSuccessfulOnFocus(ShadowOneSignalRestClient.Request request) {
+      assertThat(request.method, is(REST_METHOD.POST));
+      assertThat(request.url, containsString("focus"));
+      assertThat(request.payload.optInt("active_time"), is(120));
+   }
+
+   @Test
+   public void ensureSyncIsRunOnAppResume_forPendingActiveTime() throws Exception {
+      useAppFor2minThenBackground();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertThat(ShadowOneSignalRestClient.requests.size(), is(3));
+      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(2));
+   }
+
+   @Test
+   @Config(sdk = 26)
+   public void ensureFailureOnPauseIsSentFromSyncService_forPendingActiveTime() throws Exception {
+      // 1. Start app
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Wait 2 minutes
+      ShadowSystemClock.setCurrentTimeMillis(120_000);
+
+      // 3. Put app in background, simulating network issue.
+      ShadowOneSignalRestClient.failAll = true;
+      blankActivityController.pause();
+      threadAndTaskWait();
+      assertEquals(3, ShadowOneSignalRestClient.requests.size());
+
+
+      // Simulate a hung network connection when SyncJobService starts.
+      ShadowOneSignalRestClient.failAll = false;
+      SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
+      syncJobService.onStartJob(null);
+      threadAndTaskWait(); // Kicks off the Job service's background thread.
+
+      assertEquals(4, ShadowOneSignalRestClient.requests.size());
+      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(3));
+   }
+
+
+   @Test
+   @Config(sdk = 26)
+   public void ensureNoConcurrentUpdateCallsWithSameData_forPendingActiveTime() throws Exception {
+      //useAppFor2minThenBackground();
+
+      // 1. Start app
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Wait 2 minutes
+      ShadowSystemClock.setCurrentTimeMillis(120_000);
+
+      // 3. Put app in background
+      ShadowOneSignalRestClient.freezeResponses = true;
+      blankActivityController.pause();
+      OneSignalPackagePrivateHelper.runFocusRunnables();
+
+      // 4. Simulate a hung network connection when SyncJobService starts.
+      SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
+      syncJobService.onStartJob(null);
+      threadAndTaskWait(); // Kicks off the Job service's background thread.
+
+      // 5. App is resumed, the SyncJobService is still waiting on a network response at this point.
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 6. Network connection now responding
+      ShadowOneSignalRestClient.unFreezeResponses();
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.requests.size());
    }
 
    @Test
@@ -1936,7 +2146,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
-   public void shouldUpdateAllLocationFieldsWhenAnyFieldsChange() throws Exception {
+   public void shouldUpdateAllLocationFieldsWhenTimeStampChanges() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
       OneSignalInit();
       threadAndTaskWait();
@@ -1949,6 +2159,7 @@ public class MainOneSignalClassRunner {
       ShadowFusedLocationApiWrapper.lat = 30d;
       ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 5.0f;
+      ShadowFusedLocationApiWrapper.time = 2L;
       restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
@@ -1981,7 +2192,11 @@ public class MainOneSignalClassRunner {
    }
    
    @Test
-   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   @Config(shadows = {
+            ShadowGoogleApiClientBuilder.class,
+            ShadowGoogleApiClientCompatProxy.class,
+            ShadowFusedLocationApiWrapper.class },
+         sdk = 19)
    public void testLocationSchedule() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
@@ -2022,7 +2237,8 @@ public class MainOneSignalClassRunner {
       // Testing loc_bg
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowFusedLocationApiWrapper.time = 12347L;
+      fakeLocation.setTime(12347L);
+      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
       assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
@@ -2034,11 +2250,16 @@ public class MainOneSignalClassRunner {
    }
    
    @Test
-   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   @Config(shadows = {
+            ShadowGoogleApiClientBuilder.class,
+            ShadowGoogleApiClientCompatProxy.class,
+            ShadowFusedLocationApiWrapper.class },
+         sdk = 19)
    public void testLocationFromSyncAlarm() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
-      ShadowFusedLocationApiWrapper.lat = 1.1d; ShadowFusedLocationApiWrapper.log = 2.1d;
+      ShadowFusedLocationApiWrapper.lat = 1.1d;
+      ShadowFusedLocationApiWrapper.log = 2.1d;
       ShadowFusedLocationApiWrapper.accuracy = 3.1f;
       ShadowFusedLocationApiWrapper.time = 12346L;
 
@@ -2050,26 +2271,26 @@ public class MainOneSignalClassRunner {
       shadowOf(alarmManager).getScheduledAlarms().clear();
       ShadowOneSignalRestClient.lastPost = null;
 
-
-      ShadowFusedLocationApiWrapper.lat = 1.0; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.lat = 1.0;
+      ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
       ShadowFusedLocationApiWrapper.time = 12345L;
 
       blankActivityController.pause();
-      Intent intent = new Intent();
-      intent.putExtra("task", 1); // Sync
-      Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
+      Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
       threadAndTaskWait();
+
       assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
       assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
       assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
       assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      assertEquals(12345L, ShadowOneSignalRestClient.lastPost.optInt("loc_time_stamp"));
       assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
    
       // Checking make sure an update is scheduled.
       alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
-      intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
+      Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
       assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
       shadowOf(alarmManager).getScheduledAlarms().clear();
    }

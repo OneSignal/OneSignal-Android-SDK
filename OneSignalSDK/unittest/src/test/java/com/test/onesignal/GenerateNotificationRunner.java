@@ -31,7 +31,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
@@ -93,7 +92,6 @@ import org.robolectric.android.controller.ServiceController;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
@@ -138,6 +136,7 @@ public class GenerateNotificationRunner {
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
+      TestHelpers.beforeTestSuite();
       StaticResetHelper.saveStaticValues();
    }
    
