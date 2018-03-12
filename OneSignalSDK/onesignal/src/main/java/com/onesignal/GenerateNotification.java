@@ -223,10 +223,13 @@ class GenerateNotification {
       notifBuilder
          .setAutoCancel(true)
          .setSmallIcon(getSmallIconId(gcmBundle))
-         .setContentTitle(getTitle(gcmBundle))
          .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
          .setContentText(message)
          .setTicker(message);
+
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
+          !gcmBundle.optString("title").equals(""))
+         notifBuilder.setContentTitle(getTitle(gcmBundle));
       
       int notificationDefaults = 0;
       
