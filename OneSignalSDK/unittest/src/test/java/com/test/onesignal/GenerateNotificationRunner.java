@@ -449,12 +449,8 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
    
       assertNoNotifications();
-   
-      // Should have 2 DB record
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
-      Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
-      assertEquals(2, cursor.getCount());
-      cursor.close();
+
+      assertNotificationDbRecords(2);
    }
    
    @Test
@@ -833,6 +829,24 @@ public class GenerateNotificationRunner {
 
       assertNotNull(lastNotificationReceived);
    }
+
+   @Test
+   public void shouldNotFailedNotificationExtenderServiceWhenAlertIsNull() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      Bundle bundle = getBaseNotifBundle();
+      bundle.remove("alert");
+
+      startNotificationExtender(
+         createInternalPayloadBundle(bundle),
+         NotificationExtenderServiceTest.class
+      );
+      threadAndTaskWait();
+
+      assertNotificationDbRecords(1);
+   }
    
    @Test
    public void notificationExtenderServiceOverrideShouldOverrideAndroidNotificationId() throws Exception {
@@ -1042,7 +1056,13 @@ public class GenerateNotificationRunner {
 
       return bundle;
    }
-   
+
+   private void assertNotificationDbRecords(int expected) {
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
+      assertEquals(expected, cursor.getCount());
+      cursor.close();
+   }
    
    static abstract class NotificationExtenderServiceTestBase extends NotificationExtenderService {
       // Override onStartCommand to manually call onHandleIntent on the main thread.

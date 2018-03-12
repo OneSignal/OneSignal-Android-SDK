@@ -87,7 +87,12 @@ class NotificationBundleProcessor {
       notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
       processCollapseKey(notifJob);
 
-      if (shouldDisplay(notifJob.jsonPayload.optString("alert")))
+      boolean doDisplay =
+         notifJob.hasExtender()
+         || shouldDisplay(notifJob.jsonPayload.optString("alert"));
+
+
+      if (doDisplay)
          GenerateNotification.fromJsonPayload(notifJob);
 
       if (!notifJob.restoring) {
