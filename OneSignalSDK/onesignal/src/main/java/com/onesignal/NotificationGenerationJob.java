@@ -79,7 +79,10 @@ class NotificationGenerationJob {
    }
 
    int getAndroidIdWithoutCreate() {
-      return overrideSettings == null ? -1 : overrideSettings.androidNotificationId;
+      if (overrideSettings == null || overrideSettings.androidNotificationId == null)
+         return -1;
+
+      return overrideSettings.androidNotificationId;
    }
 
    void setAndroidIdWithOutOverriding(Integer id) {
@@ -92,5 +95,9 @@ class NotificationGenerationJob {
       if (overrideSettings == null)
          overrideSettings = new NotificationExtenderService.OverrideSettings();
       overrideSettings.androidNotificationId = id;
+   }
+
+   boolean hasExtender() {
+      return overrideSettings != null && overrideSettings.extender != null;
    }
 }
