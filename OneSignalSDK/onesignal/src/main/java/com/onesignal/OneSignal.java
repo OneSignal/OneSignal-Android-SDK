@@ -1156,10 +1156,9 @@ public class OneSignal {
    }
 
    /**
-    * Sync hashed email if you have a login system or collect it from the user. It will be used to
-    * reach the user at the most optimal time of the day.
-    * @param email the email that you want to sync with the user
+    * @deprecated Please migrate to setEmail. This will be removed in next major release
     */
+   @Deprecated
    public static void syncHashedEmail(final String email) {
       if (!OSUtils.isValidEmail(email))
          return;
@@ -1202,7 +1201,7 @@ public class OneSignal {
     *                          the user logs into your app.
     *                      DO NOT generate this from your app!
     *                      Omit this value if you do not have a backend to authenticate the user.
-    * @param callback Fire onSucces or onFailure if the update fails or successes.
+    * @param callback Fire onSuccess or onFailure depending if the update successes or fails
     */
    public static void setEmail(@NonNull final String email, @Nullable final String emailAuthHash, @Nullable EmailUpdateHandler callback) {
       if (!OSUtils.isValidEmail(email)) {
@@ -1227,8 +1226,13 @@ public class OneSignal {
          @Override
          public void run() {
             String trimmedEmail = email.trim();
+
+            String internalEmailAuthHash = emailAuthHash;
+            if (internalEmailAuthHash != null)
+               internalEmailAuthHash.toLowerCase();
+
             getCurrentEmailSubscriptionState(appContext).setEmailAddress(trimmedEmail);
-            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), emailAuthHash);
+            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), internalEmailAuthHash);
          }
       };
 
