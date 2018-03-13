@@ -19,9 +19,9 @@ public class ExampleApplication extends Application {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.WARN);
 
       OneSignal.startInit(this)
-          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
-          .autoPromptLocation(true)
-          .init();
+        .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
+        .unsubscribeWhenNotificationsAreDisabled(true)
+        .init();
    }
 
 
