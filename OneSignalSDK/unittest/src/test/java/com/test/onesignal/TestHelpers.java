@@ -14,13 +14,17 @@ import com.onesignal.StaticResetHelper;
 
 import java.util.Set;
 
-import com.onesignal.ShadowOneSignalRestClient;
-
 class TestHelpers {
 
    static Exception lastException;
 
    static void betweenTestsCleanup() {
+      try {
+         stopAllOSThreads();
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
+
       StaticResetHelper.restSetStaticFields();
 
       ShadowOneSignalRestClient.resetStatics();
@@ -46,12 +50,6 @@ class TestHelpers {
       writableDb.delete(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, null, null);
       writableDb.close();
       */
-
-      try {
-         stopAllOSThreads();
-      } catch (Exception e) {
-         e.printStackTrace();
-      }
       lastException = null;
    }
 
