@@ -51,7 +51,7 @@ class OneSignalPrefs {
 
     static ConcurrentHashMap<String,SharedPreferences> preferencesMap = new ConcurrentHashMap<>();
     //use a thread pool executor to execute disk writes
-    private static final ScheduledThreadPoolExecutor prefsExecutor = new ScheduledThreadPoolExecutor(10);
+    private static final ScheduledThreadPoolExecutor prefsExecutor = new ScheduledThreadPoolExecutor(1);
     static {
         prefsExecutor.setThreadFactory(new ThreadFactory() {
             @Override
