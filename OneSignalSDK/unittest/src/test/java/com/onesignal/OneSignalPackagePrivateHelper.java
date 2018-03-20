@@ -8,9 +8,11 @@ import android.os.Looper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.robolectric.shadows.ShadowMessageQueue;
 import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,10 +21,10 @@ import static org.robolectric.Shadows.shadowOf;
 public class OneSignalPackagePrivateHelper {
 
    private static abstract class RunnableArg<T> {
-      abstract void run(T object);
+      abstract void run(T object) throws Exception;
    }
 
-   static private void processNetworkHandles(RunnableArg runnable) {
+   static private void processNetworkHandles(RunnableArg runnable) throws Exception {
       Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
 
       entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
@@ -35,15 +37,17 @@ public class OneSignalPackagePrivateHelper {
    }
 
    private static boolean startedRunnable;
-   public static boolean runAllNetworkRunnables() {
+   public static boolean runAllNetworkRunnables() throws Exception {
       startedRunnable = false;
 
       RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
          @Override
-         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
-            Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
-            while (scheduler.runOneTask())
-               startedRunnable = true;
+         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) throws Exception {
+            synchronized (handlerThread.mHandler) {
+               Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
+               while (scheduler.runOneTask())
+                  startedRunnable = true;
+            }
          }
       };
 
@@ -92,7 +96,7 @@ public class OneSignalPackagePrivateHelper {
       return true;
    }
 
-   public static void resetRunnables() {
+   public static void resetRunnables() throws Exception {
       RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
          @Override
          void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {

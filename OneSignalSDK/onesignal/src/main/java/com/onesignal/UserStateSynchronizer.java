@@ -41,7 +41,7 @@ abstract class UserStateSynchronizer {
 
         Handler mHandler = null;
 
-        static final int MAX_RETRIES = 3;
+        static final int MAX_RETRIES = 3, NETWORK_CALL_DELAY_TO_BUFFER_MS = 5_000;
         int currentRetry;
 
         NetworkHandlerThread(int type) {
@@ -52,15 +52,11 @@ abstract class UserStateSynchronizer {
         }
 
         void runNewJobDelayed() {
-            currentRetry = 0;
-            mHandler.removeCallbacksAndMessages(null);
-            mHandler.postDelayed(getNewRunnable(), 5_000);
-        }
-
-        void runNewJobImmediate() {
-            currentRetry = 0;
-            mHandler.removeCallbacksAndMessages(null);
-            mHandler.post(getNewRunnable());
+            synchronized (mHandler) {
+                currentRetry = 0;
+                mHandler.removeCallbacksAndMessages(null);
+                mHandler.postDelayed(getNewRunnable(), NETWORK_CALL_DELAY_TO_BUFFER_MS);
+            }
         }
 
         private Runnable getNewRunnable() {
@@ -85,15 +81,17 @@ abstract class UserStateSynchronizer {
         // Retries if not passed limit.
         // Returns true if there retrying or there is another future sync scheduled already
         boolean doRetry() {
-            boolean doRetry = currentRetry < MAX_RETRIES;
-            boolean futureSync = mHandler.hasMessages(0);
+            synchronized (mHandler) {
+                boolean doRetry = currentRetry < MAX_RETRIES;
+                boolean futureSync = mHandler.hasMessages(0);
 
-            if (doRetry && !futureSync) {
-                currentRetry++;
-                mHandler.postDelayed(getNewRunnable(), currentRetry * 15_000);
+                if (doRetry && !futureSync) {
+                    currentRetry++;
+                    mHandler.postDelayed(getNewRunnable(), currentRetry * 15_000);
+                }
+
+                return mHandler.hasMessages(0);
             }
-
-            return mHandler.hasMessages(0);
         }
     }
 
@@ -169,11 +167,11 @@ abstract class UserStateSynchronizer {
         }
 
         final boolean isSessionCall = isSessionCall();
-
-        final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
-        final JSONObject dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
-
+        JSONObject jsonBody, dependDiff;
         synchronized (syncLock) {
+            jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
+            dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
+
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
                 return;

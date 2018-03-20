@@ -1513,22 +1513,28 @@ public class MainOneSignalClassRunner {
 
    private static boolean failedCurModTest;
    @Test
+   @Config(sdk = 26)
    public void testSendTagsConcurrentModificationException() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
 
-      for(int a = 0; a < 10; a++) {
-         List<Thread> threadList = new ArrayList<>(30);
-         for (int i = 0; i < 30; i++) {
-            Thread lastThread = newSendTagTestThread(Thread.currentThread(), i);
+      final int TOTAL_RUNS = 75, CONCURRENT_THREADS = 15;
+      for(int a = 0; a < TOTAL_RUNS; a++) {
+         List<Thread> threadList = new ArrayList<>(CONCURRENT_THREADS);
+         for (int i = 0; i < CONCURRENT_THREADS; i++) {
+            Thread lastThread = newSendTagTestThread(Thread.currentThread(), a * i);
             lastThread.start();
             threadList.add(lastThread);
             assertFalse(failedCurModTest);
          }
 
+         OneSignalPackagePrivateHelper.runAllNetworkRunnables();
+
          for(Thread thread : threadList)
             thread.join();
+
          assertFalse(failedCurModTest);
+         System.out.println("Pass " + a + " out of " + TOTAL_RUNS);
       }
    }
 
@@ -1541,12 +1547,12 @@ public class MainOneSignalClassRunner {
                   if (failedCurModTest)
                      break;
                   OneSignal.sendTags("{\"key" + id + "\": " + i + "}");
-//                  OneSignalPackagePrivateHelper.OneSignalStateSynchronizer_syncUserState(false);
                }
             } catch (Throwable t) {
                // Ignore the flaky Robolectric null error.
                if (t.getStackTrace()[0].getClassName().equals("org.robolectric.shadows.ShadowMessageQueue"))
                   return;
+               t.printStackTrace();
                failedCurModTest = true;
                mainThread.interrupt();
                throw t;
