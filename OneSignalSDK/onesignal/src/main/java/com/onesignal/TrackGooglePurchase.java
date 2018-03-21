@@ -231,7 +231,8 @@ class TrackGooglePurchase {
 
                      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
                              OneSignalPrefs.PREFS_PURCHASE_TOKENS, purchaseTokens.toString());
-                     OneSignalPrefs.remove(OneSignalPrefs.PREFS_PLAYER_PURCHASES, OneSignalPrefs.PREFS_EXISTING_PURCHASES);
+                     OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_PLAYER_PURCHASES,
+                              OneSignalPrefs.PREFS_EXISTING_PURCHASES, true);
 
                      newAsExisting = false;
                      isWaitingForPurchasesRequest = false;
