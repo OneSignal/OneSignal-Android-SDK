@@ -194,7 +194,7 @@ class OneSignalPrefs {
                 return true;
 
             Object cachedValue = pref.get(key);
-            if (cachedValue != null)
+            if (cachedValue != null || pref.containsKey(key))
                 return cachedValue;
         }
 
@@ -215,22 +215,6 @@ class OneSignalPrefs {
         }
 
         return defValue;
-    }
-
-    // TODO: Removes could be optimized as well.
-    //        running applying here for safely for now.
-    static void remove(String prefsName, String key) {
-        HashMap<String, Object> pref = prefsToApply.get(prefsName);
-        synchronized (pref) {
-            pref.remove(key);
-        }
-
-        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if (prefs != null) {
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.remove(key);
-            editor.apply();
-        }
     }
 
     private static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
