@@ -88,14 +88,14 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         }
     }
 
-    void setEmail(String email) {
+    void setEmail(String email, String emailAuthHash) {
         try {
-            JSONObject emailJSON = new JSONObject();
-            emailJSON.put("email", email);
+            UserState userState = getUserStateForModification();
 
+            userState.dependValues.put("email_auth_hash", emailAuthHash);
 
-            JSONObject syncValues = getUserStateForModification().syncValues;
-            generateJsonDiff(syncValues, emailJSON, syncValues, null);
+            JSONObject syncValues = userState.syncValues;
+            generateJsonDiff(syncValues, new JSONObject().put("email", email), syncValues, null);
         }
         catch (JSONException e) {
             e.printStackTrace();

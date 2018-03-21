@@ -94,7 +94,7 @@ class OneSignalStateSynchronizer {
    }
 
    static void setEmail(String email, String emailAuthHash) {
-      getPushStateSynchronizer().setEmail(email);
+      getPushStateSynchronizer().setEmail(email, emailAuthHash);
       getEmailStateSynchronizer().setEmail(email, emailAuthHash);
    }
 
