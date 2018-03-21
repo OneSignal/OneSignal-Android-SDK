@@ -61,8 +61,8 @@ class LocationGMS {
       Long timeStamp;
    }
    
-   private static final int TIME_FOREGROUND = 5 * 60;
-   private static final int TIME_BACKGROUND = 10 * 60;
+   private static final int TIME_FOREGROUND = 5 * 60, TIME_BACKGROUND = 10 * 60;
+   private static final int FASTEST_UPDATE_TIME_MS = (TIME_FOREGROUND - 30) * 1_000;
    
    private static GoogleApiClientCompatProxy mGoogleApiClient;
    private static Location mLastLocation;
@@ -307,8 +307,8 @@ class LocationGMS {
          mGoogleApiClient = googleApiClient;
 
          LocationRequest locationRequest = new LocationRequest();
-         locationRequest.setInterval(TIME_FOREGROUND)
-                        .setFastestInterval(TIME_FOREGROUND)
+         locationRequest.setInterval(FASTEST_UPDATE_TIME_MS)
+                        .setFastestInterval(FASTEST_UPDATE_TIME_MS)
                         .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
    
          FusedLocationApiWrapper.requestLocationUpdates(mGoogleApiClient, locationRequest, this);
