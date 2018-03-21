@@ -189,10 +189,11 @@ abstract class UserStateSynchronizer {
         String urlStr = "players/" + userId + "/email_logout";
         JSONObject jsonBody = new JSONObject();
         try {
-            JSONObject syncValues = currentUserState.syncValues;
+            JSONObject dependValues = currentUserState.dependValues;
+            if (dependValues.has("email_auth_hash"))
+                jsonBody.put("email_auth_hash", dependValues.optString("email_auth_hash"));
 
-            if (syncValues.has("email_auth_hash"))
-                jsonBody.put("email_auth_hash", syncValues.optString("email_auth_hash"));
+            JSONObject syncValues = currentUserState.syncValues;
             if (syncValues.has("parent_player_id"))
                 jsonBody.put("parent_player_id", syncValues.optString("parent_player_id"));
 
@@ -226,9 +227,11 @@ abstract class UserStateSynchronizer {
 
     private void logoutEmailSyncSuccess() {
         toSyncUserState.dependValues.remove("logoutEmail");
+        toSyncUserState.dependValues.remove("email_auth_hash");
         toSyncUserState.syncValues.remove("parent_player_id");
         toSyncUserState.persistState();
 
+        currentUserState.dependValues.remove("email_auth_hash");
         currentUserState.syncValues.remove("parent_player_id");
         String emailLoggedOut = currentUserState.syncValues.optString("email");
         currentUserState.syncValues.remove("email");
