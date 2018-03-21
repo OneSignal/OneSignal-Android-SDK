@@ -52,7 +52,9 @@ abstract class UserStateSynchronizer {
         }
 
         void runNewJobDelayed() {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "runNewJobDelayed");
             synchronized (mHandler) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "runNewJobDelayed:synchronized (mHandler)");
                 currentRetry = 0;
                 mHandler.removeCallbacksAndMessages(null);
                 mHandler.postDelayed(getNewRunnable(), NETWORK_CALL_DELAY_TO_BUFFER_MS);
@@ -65,6 +67,7 @@ abstract class UserStateSynchronizer {
                     return new Runnable() {
                         @Override
                         public void run() {
+                            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "NETWORK_HANDLER_USERSTATE:Runnable:runningSyncUserState.get():" + runningSyncUserState.get());
                             if (!runningSyncUserState.get())
                                 syncUserState(false);
                         }
@@ -161,6 +164,8 @@ abstract class UserStateSynchronizer {
     private void internalSyncUserState(boolean fromSyncService) {
         final String userId = getId();
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "internalSyncUserState:userId:" + userId);
+
         if (syncEmailLogout() && userId != null) {
             doEmailLogout(userId);
             return;
@@ -178,6 +183,9 @@ abstract class UserStateSynchronizer {
             }
             toSyncUserState.persistState();
         }
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "internalSyncUserState:isSessionCall:" + isSessionCall);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "internalSyncUserState:fromSyncService:" + fromSyncService);
 
         if (!isSessionCall || fromSyncService)
             doPutSync(userId, jsonBody, dependDiff);
@@ -269,8 +277,12 @@ abstract class UserStateSynchronizer {
         else
             urlStr = "players/" + userId + "/on_session";
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "doCreateOrNewSession:urlStr:" + urlStr);
+
         waitingForSessionResponse = true;
         addOnSessionOrCreateExtras(jsonBody);
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "doCreateOrNewSession:OneSignalRestClient.postSync:jsonBody:" + jsonBody);
         OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {

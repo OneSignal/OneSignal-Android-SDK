@@ -1098,6 +1098,7 @@ public class OneSignal {
    }
 
    private static void registerUserTask() throws JSONException {
+      Log(LOG_LEVEL.DEBUG, "Start:registerUserTask!");
       String packageName = appContext.getPackageName();
       PackageManager packageManager = appContext.getPackageManager();
 
@@ -1144,15 +1145,18 @@ public class OneSignal {
       pushState.put("subscribableStatus", subscribableStatus);
       pushState.put("androidPermission", areNotificationsEnabledForSubscribedState());
       pushState.put("device_type", deviceType);
+      Log(LOG_LEVEL.DEBUG, "registerUserTask:pushState:" + pushState);
       OneSignalStateSynchronizer.updatePushState(pushState);
 
       if (shareLocation && lastLocationPoint != null)
          OneSignalStateSynchronizer.updateLocation(lastLocationPoint);
 
+      Log(LOG_LEVEL.DEBUG, "registerUserTask:sendAsSession:" + sendAsSession);
       if (sendAsSession)
          OneSignalStateSynchronizer.setSyncAsNewSession();
 
       waitingToPostStateSync = false;
+      Log(LOG_LEVEL.DEBUG, "End:registerUserTask!");
    }
 
    /**

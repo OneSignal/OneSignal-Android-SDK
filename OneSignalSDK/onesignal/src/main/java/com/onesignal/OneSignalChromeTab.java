@@ -82,9 +82,14 @@ class OneSignalChromeTab {
          if (customTabsClient == null)
             return;
 
+         // TODO: This method runs on the main thread.
+         //    See why an ANR can happen here.
+         //    Can we move all this to a different thread?
+         long beforeWarmUpTime = System.currentTimeMillis();
          customTabsClient.warmup(0);
+         System.out.println("ChromeTab warm up time: " + (System.currentTimeMillis() - beforeWarmUpTime));
 
-         CustomTabsSession session = customTabsClient.newSession(new CustomTabsCallback()  {
+         CustomTabsSession session = customTabsClient.newSession(new CustomTabsCallback() {
             public void onNavigationEvent(int navigationEvent, Bundle extras) {
                super.onNavigationEvent(navigationEvent, extras);
             }
