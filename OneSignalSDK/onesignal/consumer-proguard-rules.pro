@@ -7,7 +7,6 @@
 }
 
 
--keep public interface android.app.OnActivityPausedListener {*;}
 -keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 
 
@@ -55,3 +54,5 @@
 -keep public class com.onesignal.ADMMessageHandler {*;}
 
 -keep class com.onesignal.JobIntentService$* {*;}
+
+-keep class com.onesignal.OneSignalUnityProxy {*;}
