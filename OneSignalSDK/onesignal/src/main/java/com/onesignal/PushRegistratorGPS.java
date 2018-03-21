@@ -35,7 +35,6 @@ import android.app.AlertDialog;
 import android.app.PendingIntent.CanceledException;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.SharedPreferences;
 import android.content.DialogInterface.OnClickListener;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;

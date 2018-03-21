@@ -1,6 +1,7 @@
 package com.test.onesignal;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
@@ -12,18 +13,17 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGPS;
 import com.onesignal.StaticResetHelper;
 
+import org.robolectric.util.Scheduler;
+
 import java.util.Set;
+
+import static org.robolectric.Shadows.shadowOf;
 
 class TestHelpers {
 
    static Exception lastException;
 
-   static void betweenTestsCleanup() {
-      try {
-         stopAllOSThreads();
-      } catch (Exception e) {
-         e.printStackTrace();
-      }
+   static void beforeTestInitAndCleanup() {
 
       StaticResetHelper.restSetStaticFields();
 
@@ -50,7 +50,18 @@ class TestHelpers {
       writableDb.delete(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, null, null);
       writableDb.close();
       */
+
       lastException = null;
+
+      OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
+   }
+
+   static void afterTestCleanup() {
+      try {
+         stopAllOSThreads();
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
    }
 
    static void stopAllOSThreads() throws Exception {
@@ -68,6 +79,15 @@ class TestHelpers {
       } while (joinedAThread);
    }
 
+   static void flushBufferedSharedPrefs() {
+      OneSignalPrefs.WritePrefHandlerThread handlerThread = OneSignalPackagePrivateHelper.OneSignalPrefs.prefsHandler;
+
+      synchronized (handlerThread.mHandler) {
+         Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
+         while (scheduler.runOneTask());
+      }
+   }
+
    // Join all OS_ threads
    //   Returns true if we had to join any threads
    static boolean runOSThreads() throws Exception {
@@ -82,7 +102,7 @@ class TestHelpers {
                if (ShadowOneSignalRestClient.isAFrozenThread(thread))
                   continue;
 
-               thread.join(1);
+               thread.join(0, 1);
 
                if (lastException != null)
                   throw lastException;
@@ -116,7 +136,7 @@ class TestHelpers {
       if (ranBeforeTestSuite)
          return;
 
-      betweenTestsCleanup();
+      beforeTestInitAndCleanup();
 
       System.out.println("beforeTestSuite!!!!!!");
 
@@ -130,5 +150,10 @@ class TestHelpers {
          }
       );
       ranBeforeTestSuite = true;
+   }
+
+   static void fastAppRestart() {
+      flushBufferedSharedPrefs();
+      StaticResetHelper.restSetStaticFields();
    }
 }

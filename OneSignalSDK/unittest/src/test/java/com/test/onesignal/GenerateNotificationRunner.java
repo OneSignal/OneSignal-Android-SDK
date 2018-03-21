@@ -151,7 +151,7 @@ public class GenerateNotificationRunner {
    
       overrideNotificationId = -1;
       
-      TestHelpers.betweenTestsCleanup();
+      TestHelpers.beforeTestInitAndCleanup();
 
       NotificationManager notificationManager = (NotificationManager) blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancelAll();
