@@ -96,22 +96,6 @@ public class OneSignalPackagePrivateHelper {
       return true;
    }
 
-   public static void resetRunnables() throws Exception {
-      RunnableArg runnable = new RunnableArg<UserStateSynchronizer.NetworkHandlerThread>() {
-         @Override
-         void run(UserStateSynchronizer.NetworkHandlerThread handlerThread) {
-            handlerThread.stopScheduledRunnable();
-         }
-      };
-
-      processNetworkHandles(runnable);
-
-      Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
-      if (looper == null) return;
-
-      shadowOf(looper).reset();
-   }
-
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
@@ -182,4 +166,6 @@ public class OneSignalPackagePrivateHelper {
    public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
       NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
    }
+
+   public class OneSignalPrefs extends com.onesignal.OneSignalPrefs {}
 }

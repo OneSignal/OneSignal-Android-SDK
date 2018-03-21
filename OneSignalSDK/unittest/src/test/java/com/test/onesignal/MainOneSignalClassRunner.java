@@ -114,7 +114,9 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 
-import static com.test.onesignal.TestHelpers.runOSThreads;
+import static com.test.onesignal.TestHelpers.afterTestCleanup;
+import static com.test.onesignal.TestHelpers.fastAppRestart;
+import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -192,7 +194,7 @@ public class MainOneSignalClassRunner {
       notificationOpenedMessage = null;
       lastGetTags = null;
 
-      TestHelpers.betweenTestsCleanup();
+      TestHelpers.beforeTestInitAndCleanup();
    }
 
    @BeforeClass // Runs only once, before any tests
@@ -218,6 +220,7 @@ public class MainOneSignalClassRunner {
 
    @After
    public void afterEachTest() throws Exception {
+      afterTestCleanup();
    }
 
    @AfterClass
@@ -266,7 +269,7 @@ public class MainOneSignalClassRunner {
 
       // Or when restarting the app quickly.
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -327,7 +330,7 @@ public class MainOneSignalClassRunner {
 
       // Should make PUT call with changes on app restart
       ShadowOneSignalRestClient.lastPost = null;
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -705,7 +708,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setSubscription(true);
 
       // Restart app - Should send subscribe with on_session call.
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       ShadowPushRegistratorGPS.fail = false;
       OneSignalInit();
       threadAndTaskWait();
@@ -788,7 +791,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
       threadAndTaskWait();
 
@@ -1575,7 +1578,7 @@ public class MainOneSignalClassRunner {
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       // App closed and re-opened.
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -1595,7 +1598,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       OneSignalPackagePrivateHelper.runFocusRunnables();
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       threadAndTaskWait();
    
       // Tags did not get synced so SyncService should be scheduled
@@ -1898,6 +1901,8 @@ public class MainOneSignalClassRunner {
       // Delete all other tags, the 'tags' key should not exists in local storage.
       OneSignal.deleteTags(Arrays.asList("bool", "str"));
       threadAndTaskWait();
+
+      flushBufferedSharedPrefs();
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       String syncValues = prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null);
       assertFalse(new JSONObject(syncValues).has("tags"));
@@ -1922,6 +1927,7 @@ public class MainOneSignalClassRunner {
 
       assertEquals("{}", lastGetTags.toString());
 
+      flushBufferedSharedPrefs();
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
       assertFalse(syncValues.has("tags"));
@@ -1994,7 +2000,7 @@ public class MainOneSignalClassRunner {
       // Also ensure only 1 network call is made to just send the new tags only.
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -2272,7 +2278,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      StaticResetHelper.restSetStaticFields();
+      fastAppRestart();
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       shadowOf(alarmManager).getScheduledAlarms().clear();
       ShadowOneSignalRestClient.lastPost = null;
@@ -2327,6 +2333,7 @@ public class MainOneSignalClassRunner {
       String baseKey = "pkgs";
       assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
 
+      flushBufferedSharedPrefs();
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
       JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
       assertFalse(syncValues.has(baseKey + "_a"));
@@ -2924,7 +2931,8 @@ public class MainOneSignalClassRunner {
 
    private static int sessionCountOffset = 1;
    private static void restartAppAndElapseTimeToNextSession() {
+      flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1000 * 31 * sessionCountOffset++);
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1_000 * 31 * sessionCountOffset++);
    }
 }

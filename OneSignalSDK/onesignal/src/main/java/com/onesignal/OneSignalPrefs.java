@@ -1,26 +1,47 @@
+/**
+ * Modified MIT License
+ *
+ * Copyright 2018 OneSignal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * 1. The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * 2. All copies of substantial portions of the Software may only be used in connection
+ * with services provided by OneSignal.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+
 package com.onesignal;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.support.annotation.NonNull;
+import android.os.Handler;
+import android.os.HandlerThread;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-
-/**
- * Copyright 2017 OneSignal
- * Created by alamgir on 9/20/17.
- */
+import java.util.HashMap;
 
 class OneSignalPrefs {
 
+    // SharedPreferences Instances
     static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
     static final String PREFS_PLAYER_PURCHASES = "GTPlayerPurchases";
 
-//    PREFERENCES KEYS
+    // PREFERENCES KEYS
     static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
     static final String PREFS_GT_SOUND_ENABLED = "GT_SOUND_ENABLED";
     static final String PREFS_OS_LAST_SESSION_TIME = "OS_LAST_SESSION_TIME";
@@ -45,135 +66,167 @@ class OneSignalPrefs {
     static final String PREFS_ONESIGNAL_SYNCED_SUBSCRIPTION = "ONESIGNAL_SYNCED_SUBSCRIPTION";
     static final String PREFS_GT_REGISTRATION_ID = "GT_REGISTRATION_ID";
 
-//    PLAYER PURCHASE KEYS
+    // PLAYER PURCHASE KEYS
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
     static final String PREFS_EXISTING_PURCHASES = "ExistingPurchases";
 
-    static ConcurrentHashMap<String,SharedPreferences> preferencesMap = new ConcurrentHashMap<>();
-    //use a thread pool executor to execute disk writes
-    private static final ScheduledThreadPoolExecutor prefsExecutor = new ScheduledThreadPoolExecutor(1);
+    // Buffered writes to apply on WritePrefHandlerThread with a short delay
+    static HashMap<String, HashMap<String, Object>> prefsToApply;
+    public static WritePrefHandlerThread prefsHandler;
+
     static {
-        prefsExecutor.setThreadFactory(new ThreadFactory() {
-            @Override
-            public Thread newThread(@NonNull Runnable runnable) {
-                Thread newThread = new Thread(runnable);
-                newThread.setName("ONESIGNAL_EXECUTOR_" + newThread.getId());
-                return newThread;
-            }
-        });
+        initializePool();
     }
 
-    private static class PrefsWriteRunnable implements Runnable {
+    public static class WritePrefHandlerThread extends HandlerThread {
+        public Handler mHandler;
 
-        private String prefsName;
-        private String prefKeyToWrite;
-        private Object prefValueToWrite;
+        private static final int WRITE_CALL_DELAY_TO_BUFFER_MS = 200;
+        private long lastSyncTime = 0L;
 
-        PrefsWriteRunnable(String prefsName,
-                                  String prefKeyToWrite,
-                                  Object prefValueToWrite) {
-            this.prefsName = prefsName;
-            this.prefKeyToWrite = prefKeyToWrite;
-            this.prefValueToWrite = prefValueToWrite;
+        WritePrefHandlerThread() {
+            super("OSH_WritePrefs");
+            start();
+            mHandler = new Handler(getLooper());
         }
 
-        @Override
-        public void run() {
-            SharedPreferences prefsToWrite = getSharedPrefsByName(prefsName);
+        void startDelayedWrite() {
+            synchronized (mHandler) {
+                mHandler.removeCallbacksAndMessages(null);
+                if (lastSyncTime == 0)
+                    lastSyncTime = System.currentTimeMillis();
 
-            if(prefsToWrite != null) {
-                SharedPreferences.Editor editor = prefsToWrite.edit();
+                long delay = lastSyncTime - System.currentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
 
-                if(prefValueToWrite instanceof String) {
-                    editor.putString(prefKeyToWrite,(String)prefValueToWrite);
-                } else if(prefValueToWrite instanceof Boolean) {
-                    editor.putBoolean(prefKeyToWrite, (Boolean)prefValueToWrite);
-                } else if(prefValueToWrite instanceof Integer) {
-                    editor.putInt(prefKeyToWrite, (Integer)prefValueToWrite);
-                } else if(prefValueToWrite instanceof Long) {
-                    editor.putLong(prefKeyToWrite, (Long)prefValueToWrite);
+                mHandler.postDelayed(getNewRunnable(), delay);
+            }
+        }
+
+        private Runnable getNewRunnable() {
+            return new Runnable() {
+                @Override
+                public void run() {
+                    flushBufferToDisk();
                 }
-                OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
-                        "updating prefs: " + prefsName + ", "+ prefKeyToWrite);
+            };
+        }
 
+        private void flushBufferToDisk() {
+            for (String pref : prefsToApply.keySet()) {
+                SharedPreferences prefsToWrite = getSharedPrefsByName(pref);
+                SharedPreferences.Editor editor = prefsToWrite.edit();
+                HashMap<String, Object> prefHash = prefsToApply.get(pref);
+                synchronized (prefHash) {
+                    for (String key : prefHash.keySet()) {
+                        Object value = prefHash.get(key);
+                        if (value instanceof String)
+                            editor.putString(key, (String)value);
+                        else if (value instanceof Boolean)
+                            editor.putBoolean(key, (Boolean)value);
+                        else if (value instanceof Integer)
+                            editor.putInt(key, (Integer)value);
+                        else if (value instanceof Long)
+                            editor.putLong(key, (Long)value);
+                    }
+                    prefHash.clear();
+                }
                 editor.apply();
             }
 
+            lastSyncTime = System.currentTimeMillis();
         }
     }
 
+    public static void initializePool() {
+        prefsToApply = new HashMap<>();
+        prefsToApply.put(PREFS_ONESIGNAL, new HashMap<String, Object>());
+        prefsToApply.put(PREFS_PLAYER_PURCHASES, new HashMap<String, Object>());
 
-    static void saveString(final String prefsName,final String key,final String value) {
-        PrefsWriteRunnable saveStringRunnable = new PrefsWriteRunnable(prefsName, key, value);
-        prefsExecutor.execute(saveStringRunnable);
+        prefsHandler = new WritePrefHandlerThread();
+    }
+
+    static void saveString(final String prefsName, final String key, final String value) {
+        save(prefsName, key, value);
     }
 
     static void saveBool(String prefsName, String key, boolean value) {
-        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName, key, value);
-        prefsExecutor.execute(saveBoolRunnable);
+        save(prefsName, key, value);
     }
 
     static void saveInt(String prefsName, String key, int value) {
-        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName, key, value);
-        prefsExecutor.execute(saveBoolRunnable);
+        save(prefsName, key, value);
     }
 
     static void saveLong(String prefsName, String key, long value) {
-        PrefsWriteRunnable saveBoolRunnable = new PrefsWriteRunnable(prefsName,key,value);
-        prefsExecutor.execute(saveBoolRunnable);
+        save(prefsName, key, value);
     }
 
-    static boolean hasBool(String prefsName, String key) {
-        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null)
-            return getSharedPrefsByName(prefsName).contains(key);
-
-        return false;
-    }
-
-    static boolean has(String prefsName, String key) {
-        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null)
-            return getSharedPrefsByName(prefsName).contains(key);
-
-        return false;
+    static private void save(String prefsName, String key, Object value) {
+        HashMap<String, Object> pref = prefsToApply.get(prefsName);
+        synchronized (pref) {
+            pref.put(key, value);
+        }
+        prefsHandler.startDelayedWrite();
     }
 
     static String getString(String prefsName, String key, String defValue) {
-        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null)
-            return prefs.getString(key, defValue);
-
-        return defValue;
+        return (String)get(prefsName, key, String.class, defValue);
     }
 
     static boolean getBool(String prefsName, String key, boolean defValue) {
-        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null)
-            return prefs.getBoolean(key, defValue);
-
-        return defValue;
+        return (Boolean)get(prefsName, key, Boolean.class, defValue);
     }
 
     static int getInt(String prefsName, String key, int defValue) {
-        SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null)
-            return prefs.getInt(key, defValue);
-
-        return defValue;
+        return (Integer)get(prefsName, key, Integer.class, defValue);
     }
 
     static long getLong(String prefsName, String key, long defValue) {
+        return (Long)get(prefsName, key, Long.class, defValue);
+    }
+
+    // If type == Object then this is a contains check
+    private static Object get(String prefsName, String key, Class type, Object defValue) {
+        HashMap<String, Object> pref = prefsToApply.get(prefsName);
+
+        synchronized (pref) {
+            if (type.equals(Object.class) && pref.containsKey(key))
+                return true;
+
+            Object cachedValue = pref.get(key);
+            if (cachedValue != null)
+                return cachedValue;
+        }
+
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null)
-            return prefs.getLong(key, defValue);
+        if (prefs != null ) {
+            if (type.equals(String.class))
+               return prefs.getString(key, (String)defValue);
+            else if (type.equals(Boolean.class))
+                return prefs.getBoolean(key, (Boolean)defValue);
+            else if (type.equals(Integer.class))
+                return prefs.getInt(key, (Integer)defValue);
+            else if (type.equals(Long.class))
+                return prefs.getLong(key, (Long)defValue);
+            else if (type.equals(Object.class))
+                return prefs.contains(key);
+
+            return null;
+        }
 
         return defValue;
     }
 
+    // TODO: Removes could be optimized as well.
+    //        running applying here for safely for now.
     static void remove(String prefsName, String key) {
+        HashMap<String, Object> pref = prefsToApply.get(prefsName);
+        synchronized (pref) {
+            pref.remove(key);
+        }
+
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if(prefs != null) {
+        if (prefs != null) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.remove(key);
             editor.apply();
@@ -181,18 +234,10 @@ class OneSignalPrefs {
     }
 
     private static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
-        SharedPreferences prefs;
-        if(OneSignal.appContext == null)
+        if (OneSignal.appContext == null)
             return null;
 
-        if(!preferencesMap.contains(prefsName)) {
-            prefs = OneSignal.appContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
-            preferencesMap.put(prefsName, prefs);
-        }
-        else
-            prefs = preferencesMap.get(prefsName);
-
-        return prefs;
+        return OneSignal.appContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
     }
 
 }
