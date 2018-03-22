@@ -48,7 +48,9 @@ import com.google.android.gms.location.LocationServices;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 class LocationGMS {
    
@@ -71,11 +73,15 @@ class LocationGMS {
    
    private static LocationHandlerThread locationHandlerThread;
 
+   enum CALLBACK_TYPE {
+      STARTUP, PROMPT_LOCATION, SYNC_SERVICE
+   }
    interface LocationHandler {
+      CALLBACK_TYPE getType();
       void complete(LocationPoint point);
    }
 
-   private static LocationHandler locationHandler;
+   private static ConcurrentHashMap<CALLBACK_TYPE, LocationHandler> locationHandlers = new ConcurrentHashMap<>();
 
    private static Thread fallbackFailThread;
 
@@ -111,7 +117,7 @@ class LocationGMS {
 
    static void getLocation(Context context, boolean promptLocation, LocationHandler handler) {
       classContext = context;
-      locationHandler = handler;
+      locationHandlers.put(handler.getType(), handler);
    
       if (!OneSignal.shareLocation) {
          fireFailedComplete();
@@ -224,15 +230,17 @@ class LocationGMS {
 
    private static void fireComplete(LocationPoint point) {
       // create local copies of fields in thread-safe way
-      LocationHandler _locationHandler;
+      HashMap<CALLBACK_TYPE, LocationHandler> _locationHandlers = new HashMap<>();
       Thread _fallbackFailThread;
       synchronized (LocationGMS.class) {
-         _locationHandler = LocationGMS.locationHandler;
+         _locationHandlers.putAll(LocationGMS.locationHandlers);
+         LocationGMS.locationHandlers.clear();
          _fallbackFailThread = LocationGMS.fallbackFailThread;
       }
 
       // execute race-independent logic
-      _locationHandler.complete(point);
+      for(CALLBACK_TYPE type : _locationHandlers.keySet())
+         _locationHandlers.get(type).complete(point);
       if (_fallbackFailThread != null && !Thread.currentThread().equals(_fallbackFailThread))
           _fallbackFailThread.interrupt();
 

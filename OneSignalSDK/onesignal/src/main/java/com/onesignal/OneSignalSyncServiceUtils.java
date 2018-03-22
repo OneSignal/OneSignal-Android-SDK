@@ -206,6 +206,11 @@ class OneSignalSyncServiceUtils {
 
          LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
             @Override
+            public LocationGMS.CALLBACK_TYPE getType() {
+               return LocationGMS.CALLBACK_TYPE.SYNC_SERVICE;
+            }
+
+            @Override
             public void complete(LocationGMS.LocationPoint point) {
                if (point != null)
                   OneSignalStateSynchronizer.updateLocation(point);
