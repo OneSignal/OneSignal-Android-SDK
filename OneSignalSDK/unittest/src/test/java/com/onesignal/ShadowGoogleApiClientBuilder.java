@@ -39,7 +39,7 @@ public class ShadowGoogleApiClientBuilder {
    
    @RealObject private GoogleApiClient.Builder realBuilder;
    
-   static GoogleApiClient.ConnectionCallbacks connectionCallback;
+   public static GoogleApiClient.ConnectionCallbacks connectionCallback;
    
    public GoogleApiClient.Builder addConnectionCallbacks(@NonNull GoogleApiClient.ConnectionCallbacks connectionCallback) {
       ShadowGoogleApiClientBuilder.connectionCallback = connectionCallback;
