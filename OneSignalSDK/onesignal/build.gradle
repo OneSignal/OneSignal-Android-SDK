@@ -28,8 +28,8 @@ android {
 dependencies {
     provided fileTree(dir: 'libs', include: ['*.jar'])
 
-    api 'com.google.android.gms:play-services-gcm:11.8.0'
-    implementation 'com.google.android.gms:play-services-location:11.8.0'
+    api 'com.google.android.gms:play-services-gcm:12.0.0'
+    implementation 'com.google.android.gms:play-services-location:12.0.0'
 
     api 'com.android.support:support-v4:27.1.0'
     api 'com.android.support:customtabs:27.1.0'

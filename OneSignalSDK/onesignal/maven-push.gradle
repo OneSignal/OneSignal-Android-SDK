@@ -28,7 +28,7 @@ class Global {
 
     // Limit upper number (exclusive) to prevent untested versions
     static def versionGroupOverrides = [
-        'com.google.android.gms': '[10.2.1, 11.9.0)',
+        'com.google.android.gms': '[10.2.1, 12.1.0)',
         'com.android.support': '[26.0.0, 27.2.0)'
     ]
 

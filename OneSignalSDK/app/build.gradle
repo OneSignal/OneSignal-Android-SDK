@@ -58,16 +58,15 @@ dependencies {
     // compile(name: 'OneSignal-release', ext: 'aar')
 
     // New Instructions - Use for released SDK
-    // compile 'com.onesignal:OneSignal:[3.5.8, 3.99.99]'
+//     compile 'com.onesignal:OneSignal:[3.8.2, 3.99.99]'
 
     // Old Instructions - Use for released SDK
     // compile 'com.onesignal:OneSignal:3.+@aar'
 
-    //implementation 'com.google.android.gms:play-services-gcm:11.2.2'
-    implementation 'com.google.android.gms:play-services-location:11.8.0'
+    implementation 'com.google.android.gms:play-services-location:12.0.0'
 
     // For Chrome tabs
-   // compile 'com.android.support:customtabs:26.1.0'
+    compile 'com.android.support:customtabs:27.1.0'
 }
 
 //apply plugin: 'com.google.gms.google-services'
