@@ -2359,6 +2359,31 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   public void shouldCallOnSessionEvenIfSyncJobStarted() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession();
+      ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
+      OneSignalInit();
+
+      // TODO: Other, this sync seems to not omit PUT when there isn't anything to change....
+      SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
+      syncJobService.onStartJob(null);
+      Thread.sleep(1_000); // Short sleep to wait for the Thread in the job to run
+      OneSignalPackagePrivateHelper.runAllNetworkRunnables();
+      ShadowGoogleApiClientBuilder.connectionCallback.onConnected(null);
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(3);
+      assertEquals(REST_METHOD.POST, request.method);
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_session", request.url);
+   }
+
+   @Test
    public void testAppl() throws Exception {
       shadowOf(blankActivity.getPackageManager()).addPackage("org.robolectric.default");
 

@@ -42,7 +42,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.json.*;
@@ -720,26 +719,20 @@ public class OneSignal {
    }
 
    private static void startLocationUpdate() {
-      LocationGMS.getLocation(
-         appContext,
-         mInitBuilder.mPromptLocation && !promptedLocation,
-         getGetLocationCompleteHandler()
-      );
-   }
-
-   private static LocationGMS.LocationHandler getGetLocationCompleteHandler() {
-      return new LocationGMS.LocationHandler() {
+      LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+         @Override
+         public LocationGMS.CALLBACK_TYPE getType() {
+            return LocationGMS.CALLBACK_TYPE.STARTUP;
+         }
          @Override
          public void complete(LocationGMS.LocationPoint point) {
             lastLocationPoint = point;
             locationFired = true;
-
-            if (point != null)
-               OneSignalStateSynchronizer.updateLocation(point);
-
             registerUser();
          }
       };
+      boolean doPrompt = mInitBuilder.mPromptLocation && !promptedLocation;
+      LocationGMS.getLocation(appContext, doPrompt, locationHandler);
    }
 
    private static void registerForPushToken() {
@@ -2053,11 +2046,19 @@ public class OneSignal {
       Runnable runPromptLocation = new Runnable() {
          @Override
          public void run() {
-            LocationGMS.getLocation(
-               appContext,
-               true,
-               getGetLocationCompleteHandler()
-            );
+            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+               @Override
+               public LocationGMS.CALLBACK_TYPE getType() {
+                  return LocationGMS.CALLBACK_TYPE.PROMPT_LOCATION;
+               }
+               @Override
+               public void complete(LocationGMS.LocationPoint point) {
+                  if (point != null)
+                     OneSignalStateSynchronizer.updateLocation(point);
+               }
+            };
+
+            LocationGMS.getLocation(appContext, true, locationHandler);
             promptedLocation = true;
          }
       };
