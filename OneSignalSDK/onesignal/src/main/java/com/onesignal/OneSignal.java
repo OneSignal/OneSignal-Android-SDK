@@ -720,14 +720,26 @@ public class OneSignal {
    }
 
    private static void startLocationUpdate() {
-      LocationGMS.getLocation(appContext, mInitBuilder.mPromptLocation && !promptedLocation, new LocationGMS.LocationHandler() {
+      LocationGMS.getLocation(
+         appContext,
+         mInitBuilder.mPromptLocation && !promptedLocation,
+         getGetLocationCompleteHandler()
+      );
+   }
+
+   private static LocationGMS.LocationHandler getGetLocationCompleteHandler() {
+      return new LocationGMS.LocationHandler() {
          @Override
          public void complete(LocationGMS.LocationPoint point) {
             lastLocationPoint = point;
             locationFired = true;
+
+            if (point != null)
+               OneSignalStateSynchronizer.updateLocation(point);
+
             registerUser();
          }
-      });
+      };
    }
 
    private static void registerForPushToken() {
@@ -2041,14 +2053,11 @@ public class OneSignal {
       Runnable runPromptLocation = new Runnable() {
          @Override
          public void run() {
-            LocationGMS.getLocation(appContext, true, new LocationGMS.LocationHandler() {
-               @Override
-               public void complete(LocationGMS.LocationPoint point) {
-                  if (point != null)
-                     OneSignalStateSynchronizer.updateLocation(point);
-               }
-            });
-
+            LocationGMS.getLocation(
+               appContext,
+               true,
+               getGetLocationCompleteHandler()
+            );
             promptedLocation = true;
          }
       };

@@ -2340,6 +2340,25 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   public void shouldRegisterWhenPromptingAfterInit() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+      ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
+
+      // Test promptLocation right after init race condition
+      OneSignalInit();
+      OneSignal.promptLocation();
+
+      ShadowGoogleApiClientBuilder.connectionCallback.onConnected(null);
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
+      assertEquals(REST_METHOD.POST, request.method);
+      assertEquals(1, request.payload.get("device_type"));
+      assertEquals(ShadowPushRegistratorGPS.regId, request.payload.get("identifier"));
+   }
+
+   @Test
    public void testAppl() throws Exception {
       shadowOf(blankActivity.getPackageManager()).addPackage("org.robolectric.default");
 
