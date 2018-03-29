@@ -39,6 +39,9 @@ public class NotificationRestoreService extends IntentService {
 
    @Override
    protected void onHandleIntent(Intent intent) {
+      if (intent == null)
+         return;
+      
       Thread.currentThread().setPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
       NotificationRestorer.restore(this);
       WakefulBroadcastReceiver.completeWakefulIntent(intent);
