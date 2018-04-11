@@ -168,4 +168,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public class OneSignalPrefs extends com.onesignal.OneSignalPrefs {}
+
+   public static void OneSignal_onAppLostFocus() {
+      OneSignal.onAppLostFocus();
+   }
 }
