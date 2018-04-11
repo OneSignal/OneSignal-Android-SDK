@@ -954,6 +954,8 @@ public class OneSignal {
    static boolean onAppLostFocus() {
       foreground = false;
 
+      LocationGMS.onFocusChange();
+
       if (!initDone) return false;
 
       if (trackAmazonPurchase != null)
@@ -1044,6 +1046,9 @@ public class OneSignal {
 
    static void onAppFocus() {
       foreground = true;
+
+      LocationGMS.onFocusChange();
+
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
       sendAsSession = isPastOnSessionTime();

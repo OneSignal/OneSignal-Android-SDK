@@ -63,8 +63,10 @@ class LocationGMS {
       Long timeStamp;
    }
    
-   private static final int TIME_FOREGROUND = 5 * 60, TIME_BACKGROUND = 10 * 60;
-   private static final int FASTEST_UPDATE_TIME_MS = (TIME_FOREGROUND - 30) * 1_000;
+   private static final long TIME_FOREGROUND_SEC = 5 * 60;
+   private static final long TIME_BACKGROUND_SEC = 10 * 60;
+   private static final long FOREGROUND_UPDATE_TIME_MS = (TIME_FOREGROUND_SEC - 30) * 1_000;
+   private static final long BACKGROUND_UPDATE_TIME_MS = (TIME_BACKGROUND_SEC - 30) * 1_000;
    
    private static GoogleApiClientCompatProxy mGoogleApiClient;
    private static Location mLastLocation;
@@ -92,7 +94,7 @@ class LocationGMS {
          return false;
       
       long lastTime = System.currentTimeMillis() - getLastLocationTime();
-      long minTime = 1_000 * (OneSignal.isForeground() ? TIME_FOREGROUND : TIME_BACKGROUND);
+      long minTime = 1_000 * (OneSignal.isForeground() ? TIME_FOREGROUND_SEC : TIME_BACKGROUND_SEC);
       long scheduleTime = minTime - lastTime;
       
       OneSignalSyncServiceUtils.scheduleLocationUpdateTask(context, scheduleTime);
@@ -105,9 +107,11 @@ class LocationGMS {
    }
    
    private static long getLastLocationTime() {
-      return OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,
-              TIME_BACKGROUND * -1_000);
+      return OneSignalPrefs.getLong(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,
+               TIME_BACKGROUND_SEC * -1_000
+      );
    }
    
    private static boolean hasLocationPermission(Context context) {
@@ -277,8 +281,18 @@ class LocationGMS {
       fireComplete(point);
       scheduleUpdate(classContext);
    }
-   
-   // Hold on to reference incase gms uses weak referencing.
+
+   static void onFocusChange() {
+      if (mGoogleApiClient == null || !mGoogleApiClient.realInstance().isConnected())
+         return;
+
+      GoogleApiClient googleApiClient = mGoogleApiClient.realInstance();
+      if (locationUpdateListener != null)
+         LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationUpdateListener);
+
+      locationUpdateListener = new LocationUpdateListener(googleApiClient);
+   }
+
    static LocationUpdateListener locationUpdateListener;
    
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -314,10 +328,15 @@ class LocationGMS {
       LocationUpdateListener(GoogleApiClient googleApiClient) {
          mGoogleApiClient = googleApiClient;
 
-         LocationRequest locationRequest = new LocationRequest();
-         locationRequest.setInterval(FASTEST_UPDATE_TIME_MS)
-                        .setFastestInterval(FASTEST_UPDATE_TIME_MS)
-                        .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+         long updateInterval = BACKGROUND_UPDATE_TIME_MS;
+         if (OneSignal.isForeground())
+            updateInterval =  FOREGROUND_UPDATE_TIME_MS;
+
+         LocationRequest locationRequest = LocationRequest.create()
+            .setFastestInterval(updateInterval)
+            .setInterval(updateInterval)
+            .setMaxWaitTime((long)(updateInterval * 1.5))
+            .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
    
          FusedLocationApiWrapper.requestLocationUpdates(mGoogleApiClient, locationRequest, this);
       }
@@ -349,7 +368,7 @@ class LocationGMS {
    }
    
    private static class LocationHandlerThread extends HandlerThread {
-      Handler mHandler = null;
+      Handler mHandler;
       
       LocationHandlerThread() {
          super("OSH_LocationHandlerThread");
