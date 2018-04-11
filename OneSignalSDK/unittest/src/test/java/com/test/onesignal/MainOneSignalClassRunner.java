@@ -1556,6 +1556,33 @@ public class MainOneSignalClassRunner {
       }
    }
 
+   @Test
+   @Config(sdk = 26)
+   public void testFocusConcurrentModificationException() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      final int TOTAL_RUNS = 75, CONCURRENT_THREADS = 15;
+      for(int a = 0; a < TOTAL_RUNS; a++) {
+         List<Thread> threadList = new ArrayList<>(CONCURRENT_THREADS);
+         for (int i = 0; i < CONCURRENT_THREADS; i++) {
+            OneSignalPackagePrivateHelper.OneSignal_onAppLostFocus();
+            Thread lastThread = newSendTagTestThread(Thread.currentThread(), a * i);
+            lastThread.start();
+            threadList.add(lastThread);
+            assertFalse(failedCurModTest);
+         }
+
+         OneSignalPackagePrivateHelper.runAllNetworkRunnables();
+
+         for(Thread thread : threadList)
+            thread.join();
+
+         assertFalse(failedCurModTest);
+         System.out.println("Pass " + a + " out of " + TOTAL_RUNS);
+      }
+   }
+
    private static Thread newSendTagTestThread(final Thread mainThread, final int id) {
       return new Thread(new Runnable() {
          @Override

@@ -135,9 +135,11 @@ abstract class UserStateSynchronizer {
 
     boolean persist() {
         if (toSyncUserState != null) {
-            boolean unSynced = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall()) != null;
-            toSyncUserState.persistState();
-            return unSynced;
+            synchronized (syncLock) {
+                boolean unSynced = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall()) != null;
+                toSyncUserState.persistState();
+                return unSynced;
+            }
         }
         return false;
     }
