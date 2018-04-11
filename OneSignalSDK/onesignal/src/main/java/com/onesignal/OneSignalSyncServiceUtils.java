@@ -133,8 +133,16 @@ class OneSignalSyncServiceUtils {
          .build();
 
       JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-      int result = jobScheduler.schedule(job);
-      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleSyncServiceAsJob:result: " + result);
+      try {
+         int result = jobScheduler.schedule(job);
+         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleSyncServiceAsJob:result: " + result);
+      } catch (NullPointerException e) {
+         // Catch for buggy Oppo devices
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/487
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR,
+            "scheduleSyncServiceAsJob called JobScheduler.jobScheduler which " +
+               "triggered an internal null Android error. Skipping job.", e);
+      }
    }
 
    private static void scheduleSyncServiceAsAlarm(Context context, long delayMs) {
