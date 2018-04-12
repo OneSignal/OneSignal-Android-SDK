@@ -5,12 +5,19 @@ buildscript {
         jcenter()
         google()
         maven { url 'https://maven.google.com' }
+        // OneSignal-Gradle-Plugin - Local testing
+//      maven { url uri('../../repo') }
+        // OneSignal-Gradle-Plugin - Public version
+//      maven { url 'https://plugins.gradle.org/m2/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.0.1'
+        classpath 'com.android.tools.build:gradle:3.1.0'
 
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
+        // OneSignal-Gradle-Plugin - Local testing
+        // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
+
+        // OneSignal-Gradle-Plugin - Public version
+        // classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
     }
 }
 
