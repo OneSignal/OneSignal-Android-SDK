@@ -534,7 +534,9 @@ public class OneSignal {
          if (sender_id != null && sender_id.length() > 4)
             sender_id = sender_id.substring(4);
 
-         requiresUserPrivacyConsent = false;
+         // Read the current privacy consent setting from AndroidManifest.xml
+         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
+         requiresUserPrivacyConsent = "ENABLE".equalsIgnoreCase(requireSetting) ? true : false;
 
          OneSignal.init(context, sender_id, bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
@@ -551,8 +553,9 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      appContext = context.getApplicationContext();
+
       if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
-         appContext = context.getApplicationContext();
          OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
          delayedInitParams = new DelayedConsentInitializationParameters(context, googleProjectNumber, oneSignalAppId, notificationOpenedHandler, notificationReceivedHandler);
          return;

@@ -35,7 +35,7 @@
 
 
 
-
+        <meta-data android:name="com.onesignal.PrivacyConsent" android:value="ENABLE" />
 
 <!--
 
