@@ -103,6 +103,17 @@ public class MainActivity extends Activity {
       OneSignal.setSubscription(false);
    }
 
+
+   public void onSendTagsClicked(View v) {
+      OneSignal.sendTags("{\"test\":\"value\"}");
+   }
+
+   public void onConsentButtonClicked(View v) {
+      Log.d("onesignal", "Current consent status: " + String.valueOf(OneSignal.userProvidedPrivacyConsent()));
+      OneSignal.provideUserConsent(!OneSignal.userProvidedPrivacyConsent());
+      Log.d("onesignal", "New consent status: " + String.valueOf(OneSignal.userProvidedPrivacyConsent()));
+   }
+
 //   @Override
 //   protected void onPause() {
 //      super.onPause();

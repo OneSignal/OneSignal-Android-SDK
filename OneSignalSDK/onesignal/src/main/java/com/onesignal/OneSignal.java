@@ -373,6 +373,9 @@ public class OneSignal {
    private static JSONObject awl;
    static boolean mEnterp;
    private static boolean useEmailAuth;
+
+   private static boolean requiresUserPrivacyConsent = false;
+   private static DelayedConsentInitializationParameters delayedInitParams;
    
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -531,6 +534,8 @@ public class OneSignal {
          if (sender_id != null && sender_id.length() > 4)
             sender_id = sender_id.substring(4);
 
+         requiresUserPrivacyConsent = false;
+
          OneSignal.init(context, sender_id, bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
          t.printStackTrace();
@@ -546,6 +551,13 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
+         appContext = context.getApplicationContext();
+         OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
+         delayedInitParams = new DelayedConsentInitializationParameters(context, googleProjectNumber, oneSignalAppId, notificationOpenedHandler, notificationReceivedHandler);
+         return;
+      }
+
       mInitBuilder = getCurrentOrNewInitBuilder();
       mInitBuilder.mDisplayOptionCarryOver = false;
       mInitBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
@@ -837,6 +849,34 @@ public class OneSignal {
          runNotificationOpenedCallback(dataArray, true, false);
 
       unprocessedOpenedNotifis.clear();
+   }
+
+   public static boolean userProvidedPrivacyConsent() {
+      return getSavedUserConsentStatus();
+   }
+
+   public static void provideUserConsent(boolean consent) {
+      boolean previousConsentStatus = userProvidedPrivacyConsent();
+
+      saveUserConsentStatus(consent);
+
+      if (previousConsentStatus == false && consent == true && delayedInitParams != null) {
+         OneSignal.init(delayedInitParams.context, delayedInitParams.googleProjectNumber, delayedInitParams.appId, delayedInitParams.openedHandler, delayedInitParams.receivedHandler);
+      }
+   }
+
+   public static void setRequiresUserPrivacyConsent(boolean required) {
+      requiresUserPrivacyConsent = required;
+   }
+
+   static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
+      if (requiresUserPrivacyConsent == true && userProvidedPrivacyConsent() == false) {
+         if (methodName != null)
+            OneSignal.Log(LOG_LEVEL.WARN, "Method " + methodName + " was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.userProvidedPrivacyConsent()");
+         return true;
+      }
+
+      return false;
    }
 
    public static void setLogLevel(LOG_LEVEL inLogCatLevel, LOG_LEVEL inVisualLogLevel) {
@@ -1170,6 +1210,12 @@ public class OneSignal {
     */
    @Deprecated
    public static void syncHashedEmail(final String email) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("SyncHashedEmail()"))
+         return;
+
+
       if (!OSUtils.isValidEmail(email))
          return;
 
@@ -1214,6 +1260,11 @@ public class OneSignal {
     * @param callback Fire onSuccess or onFailure depending if the update successes or fails
     */
    public static void setEmail(@NonNull final String email, @Nullable final String emailAuthHash, @Nullable EmailUpdateHandler callback) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setEmail()"))
+         return;
+
       if (!OSUtils.isValidEmail(email)) {
          String errorMessage = "Email is invalid";
          if (callback != null)
@@ -1266,6 +1317,11 @@ public class OneSignal {
    }
 
    public static void logoutEmail(@Nullable EmailUpdateHandler callback) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("logoutEmail()"))
+         return;
+
       if (getEmailId() == null) {
          final String message = "logoutEmail not valid as email was not set or already logged out!";
          if (callback != null)
@@ -1303,6 +1359,11 @@ public class OneSignal {
     *              the key. You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
     */
    public static void sendTag(String key, String value) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendTag()"))
+         return;
+
       try {
          sendTags(new JSONObject().put(key, value));
       } catch (JSONException t) {
@@ -1328,6 +1389,11 @@ public class OneSignal {
     *
     */
    public static void sendTags(final JSONObject keyValues) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendTags()"))
+         return;
+
       Runnable sendTagsRunnable = new Runnable() {
          @Override
          public void run() {
@@ -1394,6 +1460,11 @@ public class OneSignal {
     * @param handler a {@link PostNotificationResponseHandler} object to receive the request result
     */
    public static void postNotification(JSONObject json, final PostNotificationResponseHandler handler) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("postNotification()"))
+         return;
+
       try {
          if (!json.has("app_id"))
             json.put("app_id", getSavedAppId());
@@ -1453,6 +1524,11 @@ public class OneSignal {
     *                       Calls {@link GetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
     */
    public static void getTags(final GetTagsHandler getTagsHandler) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTags()"))
+         return;
+
       pendingGetTagsHandler = getTagsHandler;
 
       Runnable getTagsRunnable = new Runnable() {
@@ -1503,6 +1579,11 @@ public class OneSignal {
     * @param key Key to remove.
     */
    public static void deleteTag(String key) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTag()"))
+         return;
+
       Collection<String> tempList = new ArrayList<>(1);
       tempList.add(key);
       deleteTags(tempList);
@@ -1514,6 +1595,11 @@ public class OneSignal {
     * @param keys Keys to remove.
     */
    public static void deleteTags(Collection<String> keys) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTags()"))
+         return;
+
       try {
          JSONObject jsonTags = new JSONObject();
          for (String key : keys)
@@ -1526,6 +1612,11 @@ public class OneSignal {
    }
 
    public static void deleteTags(String jsonArrayString) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTags()"))
+         return;
+
       try {
          JSONObject jsonTags = new JSONObject();
          JSONArray jsonArray = new JSONArray(jsonArrayString);
@@ -1540,6 +1631,11 @@ public class OneSignal {
    }
 
    public static void idsAvailable(IdsAvailableHandler inIdsAvailableHandler) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("idsAvailable()"))
+         return;
+
       idsAvailableHandler = inIdsAvailableHandler;
 
       Runnable runIdsAvailable = new Runnable() {
@@ -1595,6 +1691,11 @@ public class OneSignal {
    }
 
    static void sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendPurchases()"))
+         return;
+
       if (getUserId() == null) {
          iapUpdateJob = new IAPUpdateJob(purchases);
          iapUpdateJob.newAsExisting = newAsExisting;
@@ -1619,6 +1720,11 @@ public class OneSignal {
    }
 
    private static boolean openURLFromNotification(Context context, JSONArray dataArray) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
+         return false;
+
       int jsonArraySize = dataArray.length();
 
       boolean urlOpened = false;
@@ -1730,6 +1836,11 @@ public class OneSignal {
 
    // Called when opening a notification
    public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
+         return;
+
       notificationOpenedRESTCall(inContext, data);
 
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
@@ -1749,6 +1860,11 @@ public class OneSignal {
    }
 
    private static void fireIntentFromNotificationOpen(Context inContext) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
+         return;
+
       Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
       // Make sure we have a launcher intent.
       if (launchIntent != null) {
@@ -1805,6 +1921,22 @@ public class OneSignal {
 
       return OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_APP_ID,null);
+   }
+
+   static boolean getSavedUserConsentStatus() { return getSavedUserConsentStatus(appContext); }
+
+   private static boolean getSavedUserConsentStatus(Context inContext) {
+      if (inContext == null)
+         return false;
+
+      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT, false);
+   }
+
+   static void saveUserConsentStatus(boolean consent) {
+      if (appContext == null)
+         return;
+
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT, consent);
    }
 
    private static String getSavedUserId(Context inContext) {
@@ -2005,6 +2137,11 @@ public class OneSignal {
     * @param enable whether to subscribe the user to notifications or not
     */
    public static void setSubscription(final boolean enable) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setSubscription()"))
+         return;
+
       Runnable runSetSubscription = new Runnable() {
          @Override
          public void run() {
@@ -2024,6 +2161,11 @@ public class OneSignal {
    }
 
    public static void setLocationShared(boolean enable) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLocationShared()"))
+         return;
+
       shareLocation = enable;
       if (!enable)
          OneSignalStateSynchronizer.clearLocation();
@@ -2048,6 +2190,11 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
     */
    public static void promptLocation() {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
+         return;
+
       Runnable runPromptLocation = new Runnable() {
          @Override
          public void run() {
@@ -2085,6 +2232,11 @@ public class OneSignal {
     * your app is restarted.
     */
    public static void clearOneSignalNotifications() {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("clearOneSignalNotifications()"))
+         return;
+
       Runnable runClearOneSignalNotifications = new Runnable() {
          @Override
          public void run() {
@@ -2167,6 +2319,11 @@ public class OneSignal {
     * @param id
     */
    public static void cancelNotification(final int id) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("cancelNotification()"))
+         return;
+
       Runnable runCancelNotification = new Runnable() {
          @Override
          public void run() {
@@ -2221,6 +2378,11 @@ public class OneSignal {
    
    
    public static void cancelGroupedNotifications(final String group) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("cancelGroupedNotifications()"))
+         return;
+
       Runnable runCancelGroupedNotifications = new Runnable() {
          @Override
          public void run() {
@@ -2326,6 +2488,11 @@ public class OneSignal {
     *                 changes within
     */
    public static void addPermissionObserver(OSPermissionObserver observer) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addPermissionObserver()"))
+         return;
+
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add permission observer");
          return;
@@ -2362,6 +2529,11 @@ public class OneSignal {
     * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
     */
    public static void addSubscriptionObserver(OSSubscriptionObserver observer) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addSubscriptionObserver()"))
+         return;
+
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
          return;
@@ -2395,6 +2567,11 @@ public class OneSignal {
     * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
     */
    public static void addEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addEmailSubscriptionObserver()"))
+         return;
+
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add email subscription observer");
          return;
@@ -2426,6 +2603,11 @@ public class OneSignal {
     * @return a {@link OSPermissionSubscriptionState} as described above
     */
    public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getPermissionSubscriptionState()"))
+         return null;
+
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSPermissionSubscriptionState");
          return null;

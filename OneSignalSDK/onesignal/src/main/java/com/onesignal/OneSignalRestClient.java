@@ -87,6 +87,10 @@ class OneSignalRestClient {
    }
    
    private static void makeRequest(final String url, final String method, final JSONObject jsonBody, final ResponseHandler responseHandler, final int timeout) {
+
+      //if not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
+      if (method != null && OneSignal.shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
+         return;
    
       final Thread[] callbackThread = new Thread[1];
       Thread connectionThread = new Thread(new Runnable() {
