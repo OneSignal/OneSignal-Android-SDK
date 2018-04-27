@@ -374,8 +374,8 @@ public class OneSignal {
    static boolean mEnterp;
    private static boolean useEmailAuth;
 
-   private static boolean requiresUserPrivacyConsent = false;
-   private static DelayedConsentInitializationParameters delayedInitParams;
+   static boolean requiresUserPrivacyConsent = false;
+   static DelayedConsentInitializationParameters delayedInitParams;
    
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -536,8 +536,7 @@ public class OneSignal {
 
          // Read the current privacy consent setting from AndroidManifest.xml
          String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
-         requiresUserPrivacyConsent = "ENABLE".equalsIgnoreCase(requireSetting) ? true : false;
-
+         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
          OneSignal.init(context, sender_id, bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
          t.printStackTrace();
@@ -863,17 +862,23 @@ public class OneSignal {
 
       saveUserConsentStatus(consent);
 
-      if (previousConsentStatus == false && consent == true && delayedInitParams != null) {
+      if (!previousConsentStatus && consent && delayedInitParams != null) {
          OneSignal.init(delayedInitParams.context, delayedInitParams.googleProjectNumber, delayedInitParams.appId, delayedInitParams.openedHandler, delayedInitParams.receivedHandler);
+         delayedInitParams = null;
       }
    }
 
    public static void setRequiresUserPrivacyConsent(boolean required) {
+      if (requiresUserPrivacyConsent && !required) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Cannot change requiresUserPrivacyConsent() from TRUE to FALSE");
+         return;
+      }
+
       requiresUserPrivacyConsent = required;
    }
 
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
-      if (requiresUserPrivacyConsent == true && userProvidedPrivacyConsent() == false) {
+      if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
          if (methodName != null)
             OneSignal.Log(LOG_LEVEL.WARN, "Method " + methodName + " was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.userProvidedPrivacyConsent()");
          return true;
@@ -2208,6 +2213,10 @@ public class OneSignal {
                }
                @Override
                public void complete(LocationGMS.LocationPoint point) {
+                  //if applicable, check if the user provided privacy consent
+                  if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
+                     return;
+
                   if (point != null)
                      OneSignalStateSynchronizer.updateLocation(point);
                }
