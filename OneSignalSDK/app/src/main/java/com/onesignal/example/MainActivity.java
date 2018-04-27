@@ -109,9 +109,7 @@ public class MainActivity extends Activity {
    }
 
    public void onConsentButtonClicked(View v) {
-      Log.d("onesignal", "Current consent status: " + String.valueOf(OneSignal.userProvidedPrivacyConsent()));
       OneSignal.provideUserConsent(!OneSignal.userProvidedPrivacyConsent());
-      Log.d("onesignal", "New consent status: " + String.valueOf(OneSignal.userProvidedPrivacyConsent()));
    }
 
 //   @Override
