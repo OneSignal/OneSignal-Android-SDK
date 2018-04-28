@@ -32,7 +32,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
                         if (lastGetTagsResponse.has("tags")) {
                             synchronized(syncLock) {
                                 JSONObject dependDiff = generateJsonDiff(currentUserState.syncValues.optJSONObject("tags"),
-                                        toSyncUserState.syncValues.optJSONObject("tags"),
+                                        getToSyncUserState().syncValues.optJSONObject("tags"),
                                         null, null);
 
                                 currentUserState.syncValues.put("tags", lastGetTagsResponse.optJSONObject("tags"));
@@ -40,8 +40,8 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
 
                                 // Allow server side tags to overwrite local tags expect for any pending changes
                                 //  that haven't been successfully posted.
-                                toSyncUserState.mergeTags(lastGetTagsResponse, dependDiff);
-                                toSyncUserState.persistState();
+                                getToSyncUserState().mergeTags(lastGetTagsResponse, dependDiff);
+                                getToSyncUserState().persistState();
                             }
                         }
                     } catch (JSONException e) {

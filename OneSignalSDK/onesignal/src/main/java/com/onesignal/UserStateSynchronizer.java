@@ -111,7 +111,7 @@ abstract class UserStateSynchronizer {
         }
     }
 
-    protected UserState getToSyncUserState() {
+    protected synchronized UserState getToSyncUserState() {
         if (toSyncUserState == null)
             toSyncUserState = newUserState("TOSYNC_STATE", true);
 
@@ -122,8 +122,7 @@ abstract class UserStateSynchronizer {
         if (currentUserState == null)
             currentUserState = newUserState("CURRENT_STATE", true);
 
-        if (toSyncUserState == null)
-            toSyncUserState = newUserState("TOSYNC_STATE", true);
+        getToSyncUserState();
     }
 
     abstract protected UserState newUserState(String inPersistKey, boolean load);
@@ -151,7 +150,7 @@ abstract class UserStateSynchronizer {
     }
 
     private boolean syncEmailLogout() {
-        return toSyncUserState.dependValues.optBoolean("logoutEmail", false);
+        return getToSyncUserState().dependValues.optBoolean("logoutEmail", false);
     }
 
     synchronized void syncUserState(boolean fromSyncService) {
@@ -171,14 +170,14 @@ abstract class UserStateSynchronizer {
         final boolean isSessionCall = isSessionCall();
         JSONObject jsonBody, dependDiff;
         synchronized (syncLock) {
-            jsonBody = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall);
-            dependDiff = generateJsonDiff(currentUserState.dependValues, toSyncUserState.dependValues, null, null);
+            jsonBody = currentUserState.generateJsonDiff(getToSyncUserState(), isSessionCall);
+            dependDiff = generateJsonDiff(currentUserState.dependValues, getToSyncUserState().dependValues, null, null);
 
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
                 return;
             }
-            toSyncUserState.persistState();
+            getToSyncUserState().persistState();
         }
 
         if (!isSessionCall || fromSyncService)
@@ -228,7 +227,7 @@ abstract class UserStateSynchronizer {
     }
 
     private void logoutEmailSyncSuccess() {
-        toSyncUserState.dependValues.remove("logoutEmail");
+        getToSyncUserState().dependValues.remove("logoutEmail");
         toSyncUserState.dependValues.remove("email_auth_hash");
         toSyncUserState.syncValues.remove("parent_player_id");
         toSyncUserState.persistState();
@@ -326,7 +325,7 @@ abstract class UserStateSynchronizer {
         if (jsonBody != null)
             fireEventsForUpdateFailure(jsonBody);
 
-        if (toSyncUserState.dependValues.optBoolean("logoutEmail", false))
+        if (getToSyncUserState().dependValues.optBoolean("logoutEmail", false))
             OneSignal.handleFailedEmailLogout();
     }
 
