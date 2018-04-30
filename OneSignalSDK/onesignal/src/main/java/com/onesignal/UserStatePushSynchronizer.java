@@ -52,7 +52,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         }
 
         synchronized(syncLock) {
-            return new GetTagsResult(serverSuccess, JSONUtils.getJSONObjectWithoutBlankValues(getToSyncUserState().syncValues, "tags"));
+            return new GetTagsResult(serverSuccess, JSONUtils.getJSONObjectWithoutBlankValues(toSyncUserState.syncValues, "tags"));
         }
     }
 
