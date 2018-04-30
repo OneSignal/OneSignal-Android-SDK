@@ -31,6 +31,28 @@
         android:onClick="onUnsubscribeClicked"
         android:nestedScrollingEnabled="true"/>
 
+    <Button
+        android:id="@+id/sendTags"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@+id/unsubscribe"
+        android:layout_alignRight="@+id/unsubscribe"
+        android:layout_below="@+id/unsubscribe"
+        android:layout_toEndOf="@+id/textView"
+        android:layout_toRightOf="@+id/textView"
+        android:onClick="onSendTagsClicked"
+        android:text="SEND TAGS" />
+
+    <Button
+        android:id="@+id/consentButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sendTags"
+        android:layout_toEndOf="@+id/textView"
+        android:layout_toRightOf="@+id/textView"
+        android:onClick="onConsentButtonClicked"
+        android:text="Provide Consent" />
+
     <!--<WebView  xmlns:android="http://schemas.android.com/apk/res/android"-->
               <!--android:id="@+id/webview"-->
               <!--android:layout_width="fill_parent"-->

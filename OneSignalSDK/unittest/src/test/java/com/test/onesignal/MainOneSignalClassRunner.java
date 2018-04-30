@@ -2149,6 +2149,88 @@ public class MainOneSignalClassRunner {
       assertEquals(60, postEmail.payload.getInt("active_time"));
    }
 
+   @Test
+   public void gdprUserConsent() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+
+      //check to ensure that the privacy consent status can never go from TRUE -> FALSE
+      OneSignal.setRequiresUserPrivacyConsent(false);
+      assertTrue(OneSignalPackagePrivateHelper.OneSignal_requiresUserPrivacyConsent());
+
+      //privacy consent state should still be set to true (user consent required)
+      OneSignalInit();
+
+      //the delayed params should now be set
+      assertNotNull(OneSignalPackagePrivateHelper.OneSignal_delayedInitParams());
+      assertNull(OneSignalPackagePrivateHelper.OneSignal_appId());
+
+      //test to make sure methods, such as PostNotification, don't execute without user consent
+      OneSignal.PostNotificationResponseHandler handler = new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {
+            postNotificationSuccess = response;
+         }
+
+         @Override
+         public void onFailure(JSONObject response) {
+            postNotificationFailure = response;
+         }
+      };
+
+      OneSignal.postNotification("{}", handler);
+      threadAndTaskWait();
+      assertNull(postNotificationSuccess);
+      assertNull(postNotificationFailure);
+      postNotificationSuccess = postNotificationFailure = null;
+
+      OneSignal.provideUserConsent(true);
+
+      assertNull(OneSignalPackagePrivateHelper.OneSignal_delayedInitParams());
+      assertNotNull(OneSignalPackagePrivateHelper.OneSignal_appId());
+
+      // Not testing input here, just that HTTP 200 fires a success.
+      OneSignal.postNotification("{}", handler);
+      threadAndTaskWait();
+      assertNotNull(postNotificationSuccess);
+      assertNull(postNotificationFailure);
+      postNotificationSuccess = postNotificationFailure = null;
+   }
+
+   @Test
+   public void gdprRevokeUserConsent() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+
+      //privacy consent state should still be set to true (user consent required)
+      OneSignalInit();
+
+      OneSignal.provideUserConsent(true);
+
+      threadAndTaskWait();
+
+      OneSignal.provideUserConsent(false);
+
+      threadAndTaskWait();
+
+      //test to make sure methods, such as PostNotification, don't execute without user consent
+      OneSignal.PostNotificationResponseHandler handler = new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {
+            postNotificationSuccess = response;
+         }
+
+         @Override
+         public void onFailure(JSONObject response) {
+            postNotificationFailure = response;
+         }
+      };
+
+      OneSignal.postNotification("{}", handler);
+      threadAndTaskWait();
+      assertNull(postNotificationSuccess);
+      assertNull(postNotificationFailure);
+      postNotificationSuccess = postNotificationFailure = null;
+   }
+
    /*
    // Can't get test to work from a app flow due to the main thread being locked one way or another in a robolectric env.
    // Running ActivityLifecycleListener.focusHandlerThread...advanceToNextPostedRunnable waits on the main thread.

@@ -172,4 +172,11 @@ public class OneSignalPackagePrivateHelper {
    public static void OneSignal_onAppLostFocus() {
       OneSignal.onAppLostFocus();
    }
+
+   public static DelayedConsentInitializationParameters OneSignal_delayedInitParams() { return OneSignal.delayedInitParams; }
+
+   public static boolean OneSignal_requiresUserPrivacyConsent() { return OneSignal.requiresUserPrivacyConsent; }
+
+   public static String OneSignal_appId() { return OneSignal.appId; }
+
 }
