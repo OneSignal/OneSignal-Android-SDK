@@ -57,7 +57,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         JSONObject syncValues = getUserStateForModification().syncValues;
 
         boolean noChange = email.equals(syncValues.optString("identifier")) &&
-                               syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash);
+                syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash);
         if (noChange) {
             OneSignal.fireEmailUpdateSuccess();
             return;
@@ -115,7 +115,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         OneSignal.saveEmailId("");
 
         resetCurrentState();
-        toSyncUserState.syncValues.remove("identifier");
+        getToSyncUserState().syncValues.remove("identifier");
         toSyncUserState.syncValues.remove("email_auth_hash");
         toSyncUserState.syncValues.remove("device_player_id");
         toSyncUserState.persistState();
