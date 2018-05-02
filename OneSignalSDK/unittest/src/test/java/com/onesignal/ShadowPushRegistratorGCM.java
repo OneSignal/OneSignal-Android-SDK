@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,10 @@ import org.robolectric.annotation.RealObject;
 
 import static org.robolectric.shadow.api.Shadow.directlyOn;
 
-@Implements(PushRegistratorGPS.class)
-public class ShadowPushRegistratorGPS {
+@Implements(PushRegistratorAbstractGoogle.class)
+public class ShadowPushRegistratorGCM {
    
-   @RealObject private PushRegistratorGPS realPushRegistratorGPS;
+   @RealObject private PushRegistratorAbstractGoogle realInstance;
    
    public static final String regId = "aspdfoh0fhj02hr-2h";
 
@@ -56,21 +56,23 @@ public class ShadowPushRegistratorGPS {
    }
 
    public static void manualFireRegisterForPush() {
-      lastCallback.complete(regId, 1);
+      lastCallback.complete(regId, UserState.PUSH_STATUS_SUBSCRIBED);
    }
    
    @Implementation
-   public void registerForPush(Context context, String googleProjectNumber, PushRegistrator.RegisteredHandler callback) {
-      directlyOn(realPushRegistratorGPS, PushRegistratorGPS.class).registerForPush(context, googleProjectNumber, callback);
+   public void registerForPush(Context context, String senderId, PushRegistrator.RegisteredHandler callback) {
+      PushRegistratorAbstractGoogle pushRegistrator = directlyOn(realInstance, PushRegistratorAbstractGoogle.class);
+      pushRegistrator.registerForPush(context, senderId, callback);
       
-      lastProjectNumber = googleProjectNumber;
+      lastProjectNumber = senderId;
       lastCallback = callback;
 
       if (!skipComplete)
          callback.complete(fail ? null : regId, fail ? -7 : 1);
    }
-   
-   public void internalRegisterForPush(String googleProjectNumber) {}
+
+   @Implementation
+   public void internalRegisterForPush(String senderId) {}
    
 
    public static void fireLastCallback() {

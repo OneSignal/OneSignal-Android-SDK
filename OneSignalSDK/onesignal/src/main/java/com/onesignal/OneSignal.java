@@ -749,26 +749,36 @@ public class OneSignal {
       LocationGMS.getLocation(appContext, doPrompt, locationHandler);
    }
 
-   private static void registerForPushToken() {
-      PushRegistrator pushRegistrator;
-      if (deviceType == 2)
-         pushRegistrator = new PushRegistratorADM();
-      else
-         pushRegistrator = new PushRegistratorGPS();
+   private static PushRegistrator mPushRegistrator;
+   private static PushRegistrator getPushRegistrator() {
+      if (mPushRegistrator != null)
+         return mPushRegistrator;
 
-      pushRegistrator.registerForPush(appContext, mGoogleProjectNumber, new PushRegistrator.RegisteredHandler() {
+      if (deviceType == UserState.DEVICE_TYPE_FIREOS)
+         mPushRegistrator = new PushRegistratorADM();
+      else if (OSUtils.hasFCMLibrary())
+         mPushRegistrator = new PushRegistratorFCM();
+      else
+         mPushRegistrator = new PushRegistratorGCM();
+
+      return mPushRegistrator;
+   }
+
+   private static void registerForPushToken() {
+      getPushRegistrator().registerForPush(appContext, mGoogleProjectNumber, new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id, int status) {
-            if (status < 1) {
+            if (status < UserState.PUSH_STATUS_SUBSCRIBED) {
                // Only allow errored subscribableStatuses if we have never gotten a token.
                //   This ensures the device will not later be marked unsubscribed due to a
                //   any inconsistencies returned by Google Play services.
-               // Also do not override other types of errors status ( > -6).
+               // Also do not override a config error status if we got a runtime error
                if (OneSignalStateSynchronizer.getRegistrationId() == null &&
-                   (subscribableStatus == 1 || subscribableStatus < -6))
+                   (subscribableStatus == UserState.PUSH_STATUS_SUBSCRIBED ||
+                    pushStatusRuntimeError(subscribableStatus)))
                   subscribableStatus = status;
             }
-            else if (subscribableStatus < -6)
+            else if (pushStatusRuntimeError(subscribableStatus))
                subscribableStatus = status;
 
             lastRegistrationId = id;
@@ -777,6 +787,10 @@ public class OneSignal {
             registerUser();
          }
       });
+   }
+
+   private static boolean pushStatusRuntimeError(int subscribableStatus) {
+      return subscribableStatus < -6;
    }
 
    private static int androidParamsReties = 0;

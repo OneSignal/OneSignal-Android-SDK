@@ -27,13 +27,18 @@
 
 package com.onesignal;
 
-import android.content.Context;
+import com.google.android.gms.gcm.GoogleCloudMessaging;
 
-public interface PushRegistrator {
+class PushRegistratorGCM extends PushRegistratorAbstractGoogle {
 
-   interface RegisteredHandler {
-      void complete(String id, int status);
+   @Override
+   String getProviderName() {
+      return "GCM";
    }
 
-   void registerForPush(Context context, String senderId, RegisteredHandler callback);
+   @Override
+   String getToken(String senderId) throws Throwable {
+      GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(OneSignal.appContext);
+      return gcm.register(senderId);
+   }
 }

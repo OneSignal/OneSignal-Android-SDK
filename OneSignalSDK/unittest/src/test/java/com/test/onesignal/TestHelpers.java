@@ -10,7 +10,7 @@ import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorGPS;
+import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 
 import org.robolectric.util.Scheduler;
@@ -29,7 +29,7 @@ class TestHelpers {
 
       ShadowOneSignalRestClient.resetStatics();
 
-      ShadowPushRegistratorGPS.resetStatics();
+      ShadowPushRegistratorGCM.resetStatics();
    
       ShadowNotificationManagerCompat.enabled = true;
 

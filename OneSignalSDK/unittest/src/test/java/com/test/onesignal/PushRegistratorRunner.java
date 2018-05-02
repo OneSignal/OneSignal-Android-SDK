@@ -31,8 +31,8 @@ import android.app.Activity;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.PushRegistrator;
-import com.onesignal.PushRegistratorGPS;
-import com.onesignal.ShadowGoogleCloudMessaging;
+import com.onesignal.OneSignalPackagePrivateHelper.PushRegistratorGCM;
+import com.onesignal.ShadowFirebaseCloudMessaging;
 import com.onesignal.ShadowGooglePlayServicesUtil;
 import com.onesignal.example.BlankActivity;
 
@@ -50,7 +50,7 @@ import static junit.framework.Assert.assertTrue;
 @Config(packageName = "com.onesignal.example",
       constants = BuildConfig.class,
       instrumentedPackages = {"com.onesignal"},
-      shadows = { ShadowGooglePlayServicesUtil.class, ShadowGoogleCloudMessaging.class },
+      shadows = { ShadowGooglePlayServicesUtil.class, ShadowFirebaseCloudMessaging.class },
       sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class PushRegistratorRunner {
@@ -59,21 +59,21 @@ public class PushRegistratorRunner {
    private static boolean callbackFired;
 
    @BeforeClass // Runs only once, before any tests
-   public static void setUpClass() throws Exception {
+   public static void setUpClass() {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
    }
 
    @Before // Before each test
-   public void beforeEachTest() throws Exception {
+   public void beforeEachTest() {
       blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
       callbackFired = false;
-      ShadowGoogleCloudMessaging.exists = true;
+      ShadowFirebaseCloudMessaging.exists = true;
    }
 
    @Test
    public void testGooglePlayServicesAPKMissingOnDevice() throws Exception {
-      PushRegistratorGPS pushReg = new PushRegistratorGPS();
+      PushRegistratorGCM pushReg = new PushRegistratorGCM();
       final Thread testThread = Thread.currentThread();
 
       pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
@@ -90,8 +90,8 @@ public class PushRegistratorRunner {
 
    @Test
    public void testGCMPartOfGooglePlayServicesMissing() throws Exception {
-      PushRegistratorGPS pushReg = new PushRegistratorGPS();
-      ShadowGoogleCloudMessaging.exists = false;
+      PushRegistratorGCM pushReg = new PushRegistratorGCM();
+      ShadowFirebaseCloudMessaging.exists = false;
 
       final Thread testThread = Thread.currentThread();
 

@@ -70,45 +70,70 @@ class OSUtils {
           "5eb5a37e-b458-11e3-ac11-000c2940e62c".equals(oneSignalAppId))
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "OneSignal Example AppID detected, please update to your app's id found on OneSignal.com");
 
-      if (deviceType == 1) {
-         try {
-            Class.forName("com.google.android.gms.gcm.GoogleCloudMessaging");
-         } catch (ClassNotFoundException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The GCM Google Play services client library was not found. Please make sure to include it in your project.", e);
-            subscribableStatus = -4;
-         }
-
-         try {
-            Class.forName("com.google.android.gms.common.GooglePlayServicesUtil");
-         } catch (ClassNotFoundException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The GooglePlayServicesUtil class part of Google Play services client library was not found. Include this in your project.", e);
-            subscribableStatus = -4;
-         }
+      if (deviceType == UserState.DEVICE_TYPE_ANDROID) {
+         Integer pushErrorType = checkForGooglePushLibrary();
+         if (pushErrorType != null)
+            subscribableStatus = pushErrorType;
       }
 
-      try {
-         Class.forName("android.support.v4.view.MenuCompat");
-         try {
-            Class.forName("android.support.v4.content.WakefulBroadcastReceiver");
-            Class.forName("android.support.v4.app.NotificationManagerCompat");
-            
-            // If running on Android O and targeting O we need version 26.0.0 for
-            //   the new compat NotificationCompat.Builder constructor.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                && getTargetSdkVersion(context) >= Build.VERSION_CODES.O) {
-               // Class was added in 26.0.0-beta2
-               Class.forName("android.support.v4.app.JobIntentService");
-            }
-         } catch (ClassNotFoundException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library is to old or incomplete. Please update to the 26.0.0 revision or newer.", e);
-            subscribableStatus = -5;
-         }
-      } catch (ClassNotFoundException e) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library. Please make sure it has been correctly added to your project.", e);
-         subscribableStatus = -3;
-      }
+      Integer supportErrorType = checkAndroidSupportLibrary(context);
+      if (supportErrorType != null)
+         subscribableStatus = supportErrorType;
 
       return subscribableStatus;
+   }
+
+
+   static boolean hasFCMLibrary() {
+      return classExists("com.google.firebase.messaging.FirebaseMessaging");
+   }
+
+   static boolean hasGCMLibrary() {
+      return classExists("com.google.android.gms.gcm.GoogleCloudMessaging");
+   }
+
+   Integer checkForGooglePushLibrary() {
+      boolean hasFCMLibrary = hasFCMLibrary();
+      boolean hasGCMLibrary = hasGCMLibrary();
+
+      if (!hasFCMLibrary && !hasGCMLibrary) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The Firebase FCM library is missing! Please make sure to include it in your project.");
+         return UserState.PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY;
+      }
+
+      if (hasGCMLibrary && !hasFCMLibrary)
+         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "GCM Library detected, please upgrade to Firebase FCM library as GCM is deprecated!");
+
+      if (hasGCMLibrary && hasFCMLibrary)
+         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Both GCM & FCM Libraries detected! Please remove the deprecated GCM library.");
+
+      return null;
+   }
+
+   Integer checkAndroidSupportLibrary(Context context) {
+      if (!classExists("android.support.v4.view.MenuCompat")) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library. Please make sure it has been correctly added to your project.");
+         return UserState.PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY;
+      }
+
+      if (!classExists("android.support.v4.content.WakefulBroadcastReceiver") ||
+          !classExists("android.support.v4.app.NotificationManagerCompat")) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library is to old or incomplete. Please update to the 26.0.0 revision or newer.");
+         return UserState.PUSH_STATUS_OUTDATED_ANDROID_SUPPORT_LIBRARY;
+      }
+
+      // If running on Android O and targeting O we need version 26.0.0 for
+      //   the new compat NotificationCompat.Builder constructor.
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+         && getTargetSdkVersion(context) >= Build.VERSION_CODES.O) {
+         // Class was added in 26.0.0-beta2
+         if (!classExists("android.support.v4.app.JobIntentService")) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library is to old or incomplete. Please update to the 26.0.0 revision or newer.");
+            return UserState.PUSH_STATUS_OUTDATED_ANDROID_SUPPORT_LIBRARY;
+         }
+      }
+
+      return null;
    }
 
    int getDeviceType() {
@@ -116,9 +141,9 @@ class OSUtils {
          // Class only available on the FireOS and only when the following is in the AndroidManifest.xml.
          // <amazon:enable-feature android:name="com.amazon.device.messaging" android:required="false"/>
          Class.forName("com.amazon.device.messaging.ADM");
-         return 2;
+         return UserState.DEVICE_TYPE_FIREOS;
       } catch (ClassNotFoundException e) {
-         return 1;
+         return UserState.DEVICE_TYPE_ANDROID;
       }
    }
 
@@ -290,6 +315,15 @@ class OSUtils {
          Thread.sleep(ms);
       } catch (InterruptedException e) {
          e.printStackTrace();
+      }
+   }
+
+   static boolean classExists(String classWithNamespace) {
+      try {
+         Class.forName(classWithNamespace);
+         return true;
+      } catch (ClassNotFoundException e) {
+         return false;
       }
    }
 }

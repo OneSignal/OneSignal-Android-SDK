@@ -73,7 +73,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.ShadowPushRegistratorGPS;
+import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -136,7 +136,7 @@ import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 @Config(packageName = "com.onesignal.example",
         shadows = {
            ShadowOneSignalRestClient.class,
-           ShadowPushRegistratorGPS.class,
+           ShadowPushRegistratorGCM.class,
            ShadowOSUtils.class,
            ShadowAdvertisingIdProviderGPS.class,
            ShadowCustomTabsClient.class,
@@ -292,7 +292,7 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit();
       threadAndTaskWait();
-      assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
+      assertEquals("87654321", ShadowPushRegistratorGCM.lastProjectNumber);
 
       // A 2nd init call
       OneSignalInit();
@@ -305,7 +305,7 @@ public class MainOneSignalClassRunner {
 
       // Make sure when we try to register again before our on_session call it is with the remote
       // project number instead of the local one.
-      assertEquals("87654321", ShadowPushRegistratorGPS.lastProjectNumber);
+      assertEquals("87654321", ShadowPushRegistratorGCM.lastProjectNumber);
    }
 
    @Test
@@ -369,7 +369,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      assertThat(ShadowPushRegistratorGPS.lastProjectNumber, not("123456789"));
+      assertThat(ShadowPushRegistratorGCM.lastProjectNumber, not("123456789"));
    }
    
    @Test
@@ -377,7 +377,7 @@ public class MainOneSignalClassRunner {
       // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
       ShadowOneSignalRestClient.nextSuccessResponse = "{\"awl_list\": {}}";
       // Don't fire the mock callback, it will be done from the real class.
-      ShadowPushRegistratorGPS.skipComplete = true;
+      ShadowPushRegistratorGCM.skipComplete = true;
       
       OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
       threadAndTaskWait();
@@ -397,7 +397,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.nextSuccessResponse = androidParams.toString();
       
       // Don't fire the mock callback, it will be done from the real class.
-//      ShadowPushRegistratorGPS.skipComplete = true;
+//      ShadowPushRegistratorGCM.skipComplete = true;
       
       OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
       threadAndTaskWait();
@@ -578,7 +578,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testUnsubscribeStatusShouldBeSetIfGCMErrored() throws Exception {
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
       OneSignalInit();
       threadAndTaskWait();
       assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
@@ -589,7 +589,7 @@ public class MainOneSignalClassRunner {
       GetIdsAvailable();
       // A more real test would be "missing support library" but bad project number is an easier setup
       //   and is testing the same logic.
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
       OneSignalInitWithBadProjectNum();
 
       threadAndTaskWait();
@@ -609,7 +609,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
       restartAppAndElapseTimeToNextSession();
 
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
       OneSignalInit();
       threadAndTaskWait();
       assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
@@ -618,7 +618,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testInvalidGoogleProjectNumberWithFailedRegisterResponse() throws Exception {
       // Ensures lower number notification_types do not over right higher numbered ones.
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
       GetIdsAvailable();
       OneSignalInitWithBadProjectNum();
 
@@ -635,10 +635,10 @@ public class MainOneSignalClassRunner {
       GetIdsAvailable();
       OneSignalInit();
       threadAndTaskWait();
-      assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
+      assertEquals(ShadowPushRegistratorGCM.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
 
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      assertEquals(ShadowPushRegistratorGPS.regId, getCallBackRegId);
+      assertEquals(ShadowPushRegistratorGCM.regId, getCallBackRegId);
 
       OneSignal.setSubscription(false);
       GetIdsAvailable();
@@ -702,14 +702,14 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldUpdateNotificationTypesCorrectlyEvenWhenSetSubscriptionIsCalledInAnErrorState() throws Exception {
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
       OneSignalInit();
       threadAndTaskWait();
       OneSignal.setSubscription(true);
 
       // Restart app - Should send subscribe with on_session call.
       fastAppRestart();
-      ShadowPushRegistratorGPS.fail = false;
+      ShadowPushRegistratorGCM.fail = false;
       OneSignalInit();
       threadAndTaskWait();
       assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
@@ -748,7 +748,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldNotFireIdsAvailableWithoutUserId() throws Exception {
       ShadowOneSignalRestClient.failNext = true;
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
 
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
          @Override
@@ -766,16 +766,16 @@ public class MainOneSignalClassRunner {
    @Test
    public void testGCMTimeOutThenSuccessesLater() throws Exception {
       // Init with a bad connection to Google.
-      ShadowPushRegistratorGPS.fail = true;
+      ShadowPushRegistratorGCM.fail = true;
       OneSignalInit();
       threadAndTaskWait();
       assertFalse(ShadowOneSignalRestClient.lastPost.has("identifier"));
 
       // Registers for GCM after a retry
-      ShadowPushRegistratorGPS.fail = false;
-      ShadowPushRegistratorGPS.manualFireRegisterForPush();
+      ShadowPushRegistratorGCM.fail = false;
+      ShadowPushRegistratorGCM.manualFireRegisterForPush();
       threadAndTaskWait();
-      assertEquals(ShadowPushRegistratorGPS.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
+      assertEquals(ShadowPushRegistratorGCM.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
 
       // Cold restart app, should not send the same identifier again.
       ShadowOneSignalRestClient.lastPost = null;
@@ -1236,7 +1236,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldNotAttemptToSendTagsBeforeGettingPlayerId() throws Exception {
-      ShadowPushRegistratorGPS.skipComplete = true;
+      ShadowPushRegistratorGCM.skipComplete = true;
       OneSignalInit();
       GetIdsAvailable();
       threadAndTaskWait();
@@ -1249,7 +1249,7 @@ public class MainOneSignalClassRunner {
 
       assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
 
-      ShadowPushRegistratorGPS.fireLastCallback();
+      ShadowPushRegistratorGCM.fireLastCallback();
       threadAndTaskWait();
 
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
@@ -1258,12 +1258,12 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldCreatePlayerAfterDelayedTokenFromApplicationOnCreate() throws Exception {
-      ShadowPushRegistratorGPS.skipComplete = true;
+      ShadowPushRegistratorGCM.skipComplete = true;
       OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
       blankActivityController.resume();
       threadAndTaskWait();
 
-      ShadowPushRegistratorGPS.fireLastCallback();
+      ShadowPushRegistratorGCM.fireLastCallback();
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request createPlayer = ShadowOneSignalRestClient.requests.get(1);
@@ -2464,7 +2464,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
       assertEquals(REST_METHOD.POST, request.method);
       assertEquals(1, request.payload.get("device_type"));
-      assertEquals(ShadowPushRegistratorGPS.regId, request.payload.get("identifier"));
+      assertEquals(ShadowPushRegistratorGCM.regId, request.payload.get("identifier"));
    }
 
    @Test
@@ -2817,7 +2817,7 @@ public class MainOneSignalClassRunner {
       // Test to make sure object was correct at the time of firing.
       assertTrue(currentSubscription);
       assertTrue(lastSubscriptionStateChanges.getTo().getUserSubscriptionSetting());
-      assertEquals(ShadowPushRegistratorGPS.regId, lastSubscriptionStateChanges.getTo().getPushToken());
+      assertEquals(ShadowPushRegistratorGCM.regId, lastSubscriptionStateChanges.getTo().getPushToken());
       assertEquals(ShadowOneSignalRestClient.pushUserId, lastSubscriptionStateChanges.getTo().getUserId());
    }
    

@@ -144,6 +144,8 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
+   public static class PushRegistratorGCM extends com.onesignal.PushRegistratorGCM {}
+
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = payload;
