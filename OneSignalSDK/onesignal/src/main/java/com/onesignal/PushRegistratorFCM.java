@@ -1,6 +1,6 @@
 /**
  * Modified MIT License
- * 
+ *
  * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -9,13 +9,13 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,13 +27,40 @@
 
 package com.onesignal;
 
-import android.content.Context;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.messaging.FirebaseMessaging;
 
-public interface PushRegistrator {
+// TODO: 4.0.0 - Switch to using <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
 
-   interface RegisteredHandler {
-      void complete(String id, int status);
+class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
+
+   private static final String FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME";
+
+   private FirebaseApp firebaseApp;
+
+   @Override
+   String getProviderName() {
+      return "FCM";
    }
 
-   void registerForPush(Context context, String senderId, RegisteredHandler callback);
+   @Override
+   String getToken(String senderId) throws Throwable {
+      initFirebaseApp(senderId);
+      FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance(firebaseApp);
+      return instanceId.getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE);
+   }
+
+   private void initFirebaseApp(String senderId) {
+      if (firebaseApp != null)
+         return;
+
+      FirebaseOptions firebaseOptions =
+         new FirebaseOptions.Builder()
+            .setGcmSenderId(senderId)
+            .setApplicationId("OMIT_ID")
+            .build();
+      firebaseApp = FirebaseApp.initializeApp(OneSignal.appContext, firebaseOptions, FCM_APP_NAME);
+   }
 }

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,32 +27,20 @@
 
 package com.onesignal;
 
-import android.content.Context;
-
-import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.firebase.iid.FirebaseInstanceId;
 
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
-@Implements(GoogleCloudMessaging.class)
-public class ShadowGoogleCloudMessaging {
+@Implements(FirebaseInstanceId.class)
+public class ShadowFirebaseCloudMessaging {
    public static boolean exists = true;
 
    @Implementation
-   public static synchronized GoogleCloudMessaging getInstance(Context context) throws ClassNotFoundException {
+   public String getToken(String var1, String var2) throws ClassNotFoundException {
       if (!exists)
          throw new ClassNotFoundException();
 
-      // This does not quite do what the real GoogleCloudMessaging.getInstance(Context) does but seems close enought.
-      return new GoogleCloudMessaging();
-
-      // @RealObject does not work with static methods, even if I create an instance with new then get it from the object.
-      // Last thing to try if this is needed is to use reflection.
-      //GoogleCloudMessaging gcm = new GoogleCloudMessaging();
-      //ShadowGoogleCloudMessaging shadowOfGcm = (ShadowGoogleCloudMessaging)ShadowExtractor.extract(gcm);
-
-      //return shadowOfGcm.realInstance.getInstance(context);
-      //return com.google.android.gms.gcm.GoogleCloudMessaging.getInstance(context);
-      //return GoogleCloudMessaging.getInstance(context);
+      return null;
    }
 }

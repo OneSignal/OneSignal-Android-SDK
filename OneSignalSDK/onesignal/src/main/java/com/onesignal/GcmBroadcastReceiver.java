@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +42,8 @@ import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
 import java.util.Random;
 
+// This is the entry point when a FCM / GCM payload is received from the Google Play services app
+// TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
 public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
    private static final String GCM_RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE";

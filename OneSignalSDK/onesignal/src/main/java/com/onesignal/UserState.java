@@ -11,9 +11,22 @@ import java.util.Set;
 
 abstract class UserState {
 
-    protected final int NOTIFICATION_TYPES_SUBSCRIBED = 1;
-    protected final int NOTIFICATION_TYPES_NO_PERMISSION = 0;
-    protected final int NOTIFICATION_TYPES_UNSUBSCRIBE = -2;
+    static final int DEVICE_TYPE_ANDROID = 1;
+    static final int DEVICE_TYPE_FIREOS = 2;
+
+    static final int PUSH_STATUS_SUBSCRIBED = 1;
+    static final int PUSH_STATUS_NO_PERMISSION = 0;
+    static final int PUSH_STATUS_UNSUBSCRIBE = -2;
+    static final int PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY = -3;
+    static final int PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY = -4;
+    static final int PUSH_STATUS_OUTDATED_ANDROID_SUPPORT_LIBRARY = -5;
+    static final int PUSH_STATUS_INVALID_FCM_SENDER_ID = -6;
+    static final int PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP = -7;
+    static final int PUSH_STATUS_FIREBASE_FCM_INIT_ERROR = -8;
+    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_SERVICE_NOT_AVAILABLE = -9;
+    // -10 is a server side detection only from FCM that the app is no longer installed
+    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION = -11;
+    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION = -12;
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
@@ -143,7 +156,7 @@ abstract class UserState {
                     subscribableStatus = OneSignalPrefs.getInt(OneSignalPrefs.PREFS_ONESIGNAL,
                             OneSignalPrefs.PREFS_ONESIGNAL_SYNCED_SUBSCRIPTION,1);
 
-                if (subscribableStatus == NOTIFICATION_TYPES_UNSUBSCRIBE) {
+                if (subscribableStatus == PUSH_STATUS_UNSUBSCRIBE) {
                     subscribableStatus = 1;
                     userSubscribePref = false;
                 }
