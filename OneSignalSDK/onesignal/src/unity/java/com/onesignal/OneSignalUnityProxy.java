@@ -43,10 +43,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    private static java.lang.reflect.Method unitySendMessage;
 
    @SuppressWarnings({ "unchecked", "rawtypes" })
-   public OneSignalUnityProxy(String listenerName, String googleProjectNumber, String oneSignalAppId, int logLevel, int visualLogLevel) {
+   public OneSignalUnityProxy(String listenerName, String googleProjectNumber, String oneSignalAppId, int logLevel, int visualLogLevel, boolean requiresUserPrivacyConsent) {
       unityListenerName = listenerName;
       
       try {
+         OneSignal.setRequiresUserPrivacyConsent(requiresUserPrivacyConsent);
+
          // We use reflection here so we don't have to include a Unity jar to build this project.
          Class unityPlayerClass;
          unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
@@ -209,6 +211,12 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    public void addEmailSubscriptionObserver() { OneSignal.addEmailSubscriptionObserver(this); }
 
    public void removeEmailSubscriptionObserver() { OneSignal.removeEmailSubscriptionObserver(this); }
+
+   public boolean userProvidedPrivacyConsent() { return OneSignal.userProvidedPrivacyConsent(); }
+
+   public void provideUserConsent(boolean granted) { OneSignal.provideUserConsent(granted); }
+
+   public void setRequiresUserPrivacyConsent(boolean required) { OneSignal.setRequiresUserPrivacyConsent(required); }
    
    public String getPermissionSubscriptionState() {
       return OneSignal.getPermissionSubscriptionState().toJSONObject().toString();
