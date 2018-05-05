@@ -33,7 +33,11 @@ dependencies {
     compileOnly 'com.google.android.gms:play-services-gcm:12.0.1'
     api 'com.google.firebase:firebase-messaging:12.0.1'
 
+    // Can be compileOnly in 4.0.0, can't change until then as some projects may rely on this
     implementation 'com.google.android.gms:play-services-location:12.0.1'
+
+    // Required for GoogleApiAvailability
+    implementation 'com.google.android.gms:play-services-base:12.0.1'
 
     api 'com.android.support:support-v4:27.1.1'
     api 'com.android.support:customtabs:27.1.1'
