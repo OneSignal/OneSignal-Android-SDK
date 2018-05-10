@@ -119,8 +119,10 @@ abstract class UserStateSynchronizer {
     }
 
     void initUserState() {
-        if (currentUserState == null)
-            currentUserState = newUserState("CURRENT_STATE", true);
+        synchronized (syncLock) {
+            if (currentUserState == null)
+                currentUserState = newUserState("CURRENT_STATE", true);
+        }
 
         getToSyncUserState();
     }
@@ -166,6 +168,9 @@ abstract class UserStateSynchronizer {
             doEmailLogout(userId);
             return;
         }
+
+        if (currentUserState == null)
+            initUserState();
 
         final boolean isSessionCall = isSessionCall();
         JSONObject jsonBody, dependDiff;
