@@ -221,6 +221,8 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    public String getPermissionSubscriptionState() {
       return OneSignal.getPermissionSubscriptionState().toJSONObject().toString();
    }
+
+   public void setLocationShared(boolean shared) { OneSignal.setLocationShared(shared); }
    
    @Override
    public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
