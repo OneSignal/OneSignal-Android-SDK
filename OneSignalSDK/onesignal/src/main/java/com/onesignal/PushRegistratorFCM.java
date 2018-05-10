@@ -60,6 +60,7 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
          new FirebaseOptions.Builder()
             .setGcmSenderId(senderId)
             .setApplicationId("OMIT_ID")
+            .setApiKey("OMIT_KEY")
             .build();
       firebaseApp = FirebaseApp.initializeApp(OneSignal.appContext, firebaseOptions, FCM_APP_NAME);
    }
