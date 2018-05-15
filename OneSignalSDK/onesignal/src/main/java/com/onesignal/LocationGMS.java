@@ -75,6 +75,8 @@ class LocationGMS {
    
    private static LocationHandlerThread locationHandlerThread;
 
+   protected static final Object syncLock = new Object() {};
+
    enum CALLBACK_TYPE {
       STARTUP, PROMPT_LOCATION, SYNC_SERVICE
    }
@@ -178,25 +180,27 @@ class LocationGMS {
          return;
 
       try {
-         startFallBackThread();
-         
-         if (locationHandlerThread == null)
-            locationHandlerThread = new LocationHandlerThread();
+         synchronized (syncLock) {
+            startFallBackThread();
 
-         if (mGoogleApiClient == null || mLastLocation == null) {
-            GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
-            GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
-                    .addApi(LocationServices.API)
-                    .addConnectionCallbacks(googleApiClientListener)
-                    .addOnConnectionFailedListener(googleApiClientListener)
-                    .setHandler(locationHandlerThread.mHandler)
-                    .build();
-            mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
+            if (locationHandlerThread == null)
+               locationHandlerThread = new LocationHandlerThread();
 
-            mGoogleApiClient.connect();
+            if (mGoogleApiClient == null || mLastLocation == null) {
+               GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
+               GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
+                       .addApi(LocationServices.API)
+                       .addConnectionCallbacks(googleApiClientListener)
+                       .addOnConnectionFailedListener(googleApiClientListener)
+                       .setHandler(locationHandlerThread.mHandler)
+                       .build();
+               mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
+
+               mGoogleApiClient.connect();
+            }
+            else if (mLastLocation != null)
+               fireCompleteForLocation(mLastLocation);
          }
-         else if (mLastLocation != null)
-            fireCompleteForLocation(mLastLocation);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but there was an error initializing: ", t);
          fireFailedComplete();
@@ -225,9 +229,12 @@ class LocationGMS {
 
    static void fireFailedComplete() {
       PermissionsActivity.answered = false;
-      if(mGoogleApiClient != null)
-         mGoogleApiClient.disconnect();
-      mGoogleApiClient = null;
+
+      synchronized (syncLock) {
+         if(mGoogleApiClient != null)
+            mGoogleApiClient.disconnect();
+         mGoogleApiClient = null;
+      }
 
       fireComplete(null);
    }
@@ -283,14 +290,17 @@ class LocationGMS {
    }
 
    static void onFocusChange() {
-      if (mGoogleApiClient == null || !mGoogleApiClient.realInstance().isConnected())
-         return;
+      synchronized (syncLock) {
+         if (mGoogleApiClient == null || !mGoogleApiClient.realInstance().isConnected())
+            return;
 
-      GoogleApiClient googleApiClient = mGoogleApiClient.realInstance();
-      if (locationUpdateListener != null)
-         LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationUpdateListener);
+         GoogleApiClient googleApiClient = mGoogleApiClient.realInstance();
 
-      locationUpdateListener = new LocationUpdateListener(googleApiClient);
+         if (locationUpdateListener != null)
+            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationUpdateListener);
+
+         locationUpdateListener = new LocationUpdateListener(googleApiClient);
+      }
    }
 
    static LocationUpdateListener locationUpdateListener;
@@ -298,15 +308,17 @@ class LocationGMS {
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
       @Override
       public void onConnected(Bundle bundle) {
-         PermissionsActivity.answered = false;
+         synchronized (syncLock) {
+            PermissionsActivity.answered = false;
 
-         if (mLastLocation == null) {
-            mLastLocation = FusedLocationApiWrapper.getLastLocation(mGoogleApiClient.realInstance());
-            if (mLastLocation != null)
-               fireCompleteForLocation(mLastLocation);
+            if (mLastLocation == null) {
+               mLastLocation = FusedLocationApiWrapper.getLastLocation(mGoogleApiClient.realInstance());
+               if (mLastLocation != null)
+                  fireCompleteForLocation(mLastLocation);
+            }
+
+            locationUpdateListener = new LocationUpdateListener(mGoogleApiClient.realInstance());
          }
-
-         locationUpdateListener = new LocationUpdateListener(mGoogleApiClient.realInstance());
       }
 
       @Override
@@ -324,7 +336,7 @@ class LocationGMS {
    static class LocationUpdateListener implements LocationListener {
       
       private GoogleApiClient mGoogleApiClient;
-      
+
       LocationUpdateListener(GoogleApiClient googleApiClient) {
          mGoogleApiClient = googleApiClient;
 
