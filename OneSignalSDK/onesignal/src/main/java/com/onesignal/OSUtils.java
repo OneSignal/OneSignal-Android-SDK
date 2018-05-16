@@ -150,11 +150,10 @@ class OSUtils {
    }
 
    private Integer checkAndroidSupportLibrary(Context context) {
-      String version = getAndroidSupporVersionFromMetaFile();
       boolean hasWakefulBroadcastReceiver = hasWakefulBroadcastReceiver();
       boolean hasNotificationManagerCompat = hasNotificationManagerCompat();
 
-      if (version == null && !hasWakefulBroadcastReceiver && !hasNotificationManagerCompat) {
+      if (!hasWakefulBroadcastReceiver && !hasNotificationManagerCompat) {
          OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library. Please make sure it has been correctly added to your project.");
          return UserState.PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY;
       }
@@ -176,17 +175,6 @@ class OSUtils {
       }
 
       return null;
-   }
-
-   private static String getAndroidSupporVersionFromMetaFile() {
-      InputStream inputStream = Object.class.getClassLoader().getResourceAsStream("META-INF/com.android.support_support-v4.version");
-      if (inputStream == null)
-         return null;
-
-      Scanner scanner = new Scanner(inputStream, "UTF-8");
-      String version = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : null;
-      scanner.close();
-      return version;
    }
 
    int getDeviceType() {
