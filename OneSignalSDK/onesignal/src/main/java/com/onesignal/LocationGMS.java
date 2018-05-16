@@ -337,6 +337,7 @@ class LocationGMS {
       
       private GoogleApiClient mGoogleApiClient;
 
+      // this initializer method is already synchronized from LocationGMS with respect to the GoogleApiClient lock
       LocationUpdateListener(GoogleApiClient googleApiClient) {
          mGoogleApiClient = googleApiClient;
 
@@ -364,8 +365,10 @@ class LocationGMS {
       @SuppressWarnings("MissingPermission")
       static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
          try {
-            if (googleApiClient.isConnected())
-               LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
+            synchronized (LocationGMS.syncLock) {
+               if (googleApiClient.isConnected())
+                  LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
+            }
          } catch(Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "FusedLocationApi.requestLocationUpdates failed!", t);
          }
@@ -373,8 +376,10 @@ class LocationGMS {
    
       @SuppressWarnings("MissingPermission")
       static Location getLastLocation(GoogleApiClient googleApiClient) {
-         if (googleApiClient.isConnected())
-            return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+         synchronized(LocationGMS.syncLock) {
+            if (googleApiClient.isConnected())
+               return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+         }
          return null;
       }
    }
