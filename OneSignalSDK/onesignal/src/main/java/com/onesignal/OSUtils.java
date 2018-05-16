@@ -46,8 +46,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.Locale;
+import java.util.Scanner;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -83,13 +85,23 @@ class OSUtils {
       return subscribableStatus;
    }
 
-
    static boolean hasFCMLibrary() {
-      return classExists("com.google.firebase.messaging.FirebaseMessaging");
+      try {
+         // Using class instead of Strings for proguard compatibility
+         // noinspection ConstantConditions
+         return com.google.firebase.messaging.FirebaseMessaging.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
    }
 
-   static boolean hasGCMLibrary() {
-      return classExists("com.google.android.gms.gcm.GoogleCloudMessaging");
+   private static boolean hasGCMLibrary() {
+      try {
+         // noinspection ConstantConditions
+         return com.google.android.gms.gcm.GoogleCloudMessaging.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
    }
 
    Integer checkForGooglePushLibrary() {
@@ -110,14 +122,44 @@ class OSUtils {
       return null;
    }
 
-   Integer checkAndroidSupportLibrary(Context context) {
-      if (!classExists("android.support.v4.view.MenuCompat")) {
+   private static boolean hasWakefulBroadcastReceiver() {
+      try {
+         // noinspection ConstantConditions
+         return android.support.v4.content.WakefulBroadcastReceiver.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
+   }
+
+   private static boolean hasNotificationManagerCompat() {
+      try {
+         // noinspection ConstantConditions
+         return android.support.v4.app.NotificationManagerCompat.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
+   }
+
+   private static boolean hasJobIntentService() {
+      try {
+         // noinspection ConstantConditions
+         return android.support.v4.app.JobIntentService.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
+   }
+
+   private Integer checkAndroidSupportLibrary(Context context) {
+      String version = getAndroidSupporVersionFromMetaFile();
+      boolean hasWakefulBroadcastReceiver = hasWakefulBroadcastReceiver();
+      boolean hasNotificationManagerCompat = hasNotificationManagerCompat();
+
+      if (version == null && !hasWakefulBroadcastReceiver && !hasNotificationManagerCompat) {
          OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Could not find the Android Support Library. Please make sure it has been correctly added to your project.");
          return UserState.PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY;
       }
 
-      if (!classExists("android.support.v4.content.WakefulBroadcastReceiver") ||
-          !classExists("android.support.v4.app.NotificationManagerCompat")) {
+      if (!hasWakefulBroadcastReceiver || !hasNotificationManagerCompat) {
          OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library is to old or incomplete. Please update to the 26.0.0 revision or newer.");
          return UserState.PUSH_STATUS_OUTDATED_ANDROID_SUPPORT_LIBRARY;
       }
@@ -127,13 +169,24 @@ class OSUtils {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
          && getTargetSdkVersion(context) >= Build.VERSION_CODES.O) {
          // Class was added in 26.0.0-beta2
-         if (!classExists("android.support.v4.app.JobIntentService")) {
+         if (!hasJobIntentService()) {
             OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "The included Android Support Library is to old or incomplete. Please update to the 26.0.0 revision or newer.");
             return UserState.PUSH_STATUS_OUTDATED_ANDROID_SUPPORT_LIBRARY;
          }
       }
 
       return null;
+   }
+
+   private static String getAndroidSupporVersionFromMetaFile() {
+      InputStream inputStream = Object.class.getClassLoader().getResourceAsStream("META-INF/com.android.support_support-v4.version");
+      if (inputStream == null)
+         return null;
+
+      Scanner scanner = new Scanner(inputStream, "UTF-8");
+      String version = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : null;
+      scanner.close();
+      return version;
    }
 
    int getDeviceType() {
@@ -315,15 +368,6 @@ class OSUtils {
          Thread.sleep(ms);
       } catch (InterruptedException e) {
          e.printStackTrace();
-      }
-   }
-
-   static boolean classExists(String classWithNamespace) {
-      try {
-         Class.forName(classWithNamespace);
-         return true;
-      } catch (ClassNotFoundException e) {
-         return false;
       }
    }
 }
