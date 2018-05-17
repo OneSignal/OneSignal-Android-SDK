@@ -30,11 +30,17 @@ package com.onesignal;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
 public class UpgradeReceiver extends BroadcastReceiver {
 
    @Override
    public void onReceive(Context context, Intent intent) {
+
+      // Return early if using Android 7.0 or earlier due to upgrade restore crash (#263)
+      if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N)
+         return;
+      
       NotificationRestorer.startDelayedRestoreTaskFromReceiver(context);
    }
 }
