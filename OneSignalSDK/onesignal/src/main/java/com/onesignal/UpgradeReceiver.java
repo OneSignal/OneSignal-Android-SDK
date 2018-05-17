@@ -37,7 +37,7 @@ public class UpgradeReceiver extends BroadcastReceiver {
    @Override
    public void onReceive(Context context, Intent intent) {
 
-      // Return early if using Android 7.0 or earlier due to upgrade restore crash (#263)
+      // Return early if using Android 7.0 due to upgrade restore crash (#263)
       if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N)
          return;
       
