@@ -66,12 +66,11 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
            NotificationTable.COLUMN_NAME_CREATED_TIME + " TIMESTAMP DEFAULT (strftime('%s', 'now'))" +
            ");";
 
-   private static final String SQL_INDEX_ENTRIES =
-           NotificationTable.INDEX_CREATE_NOTIFICATION_ID +
-           NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID +
-           NotificationTable.INDEX_CREATE_GROUP_ID +
-           NotificationTable.INDEX_CREATE_COLLAPSE_ID +
-           NotificationTable.INDEX_CREATE_CREATED_TIME;
+   private static final String[] SQL_INDEX_ENTRIES = { NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
+           NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,
+           NotificationTable.INDEX_CREATE_GROUP_ID,
+           NotificationTable.INDEX_CREATE_COLLAPSE_ID,
+           NotificationTable.INDEX_CREATE_CREATED_TIME };
 
    private static OneSignalDbHelper sInstance;
 
@@ -116,7 +115,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    @Override
    public void onCreate(SQLiteDatabase db) {
       db.execSQL(SQL_CREATE_ENTRIES);
-      db.execSQL(SQL_INDEX_ENTRIES);
+      for (String ind : SQL_INDEX_ENTRIES) {
+         db.execSQL(ind);
+      }
    }
 
    @Override
