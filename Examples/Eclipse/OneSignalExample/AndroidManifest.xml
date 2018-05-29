@@ -93,6 +93,15 @@
         <meta-data android:name="onesignal_app_id"
            android:value="b2f7f966-d8cc-11e4-bed1-df8f05be55ba" />
         
+         <receiver android:name="com.onesignal.GcmBroadcastReceiver"
+                   android:permission="com.google.android.c2dm.permission.SEND" >
+            <!-- High priority so OneSignal payloads can be filtered from other GCM receivers if filterOtherGCMReceivers is enabled. -->
+            <intent-filter android:priority="999" >
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <category android:name="com.onesignal.example" />
+            </intent-filter>
+        </receiver>
+        
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
         <service android:name="com.onesignal.GcmIntentService" />
