@@ -591,13 +591,19 @@ public class MainOneSignalClassRunner {
       //   and is testing the same logic.
       ShadowPushRegistratorGCM.fail = true;
       OneSignalInitWithBadProjectNum();
-
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
+      assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
       // Test that idsAvailable still fires
       assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
+      assertNull(getCallBackRegId); // Since GCM registration failed, this should be null
+
+      // We now get a push token after the device registers with Onesignal,
+      //    the idsAvailable callback should fire a 2nd time with a registrationId automatically
+      ShadowPushRegistratorGCM.manualFireRegisterForPush();
+      threadAndTaskWait();
+      assertEquals(ShadowPushRegistratorGCM.regId, getCallBackRegId);
    }
 
    @Test

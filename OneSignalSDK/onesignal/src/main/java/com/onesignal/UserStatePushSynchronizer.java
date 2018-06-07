@@ -157,5 +157,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     protected void onSuccessfulSync(JSONObject jsonFields) {
         if (jsonFields.has("email"))
             OneSignal.fireEmailUpdateSuccess();
+        if (jsonFields.has("identifier"))
+            OneSignal.fireIdsAvailableCallback();
     }
 }
