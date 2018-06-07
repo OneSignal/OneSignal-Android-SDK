@@ -1683,7 +1683,7 @@ public class OneSignal {
       runIdsAvailable.run();
    }
 
-   private static void fireIdsAvailableCallback() {
+   static void fireIdsAvailableCallback() {
       if (idsAvailableHandler != null) {
          OSUtils.runOnMainUIThread(new Runnable() {
             @Override
