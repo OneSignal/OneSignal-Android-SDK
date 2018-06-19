@@ -75,8 +75,6 @@ class OneSignalPrefs {
     static HashMap<String, HashMap<String, Object>> prefsToApply;
     public static WritePrefHandlerThread prefsHandler;
 
-    static final Object synchronizer = new Object();
-
     static {
         initializePool();
     }
@@ -115,11 +113,11 @@ class OneSignalPrefs {
         }
 
         private void flushBufferToDisk() {
-            synchronized(synchronizer) {
-                for (String pref : prefsToApply.keySet()) {
-                    SharedPreferences prefsToWrite = getSharedPrefsByName(pref);
-                    SharedPreferences.Editor editor = prefsToWrite.edit();
-                    HashMap<String, Object> prefHash = prefsToApply.get(pref);
+            for (String pref : prefsToApply.keySet()) {
+                SharedPreferences prefsToWrite = getSharedPrefsByName(pref);
+                SharedPreferences.Editor editor = prefsToWrite.edit();
+                HashMap<String, Object> prefHash = prefsToApply.get(pref);
+                synchronized (prefHash) {
                     for (String key : prefHash.keySet()) {
                         Object value = prefHash.get(key);
                         if (value instanceof String)
@@ -132,23 +130,20 @@ class OneSignalPrefs {
                             editor.putLong(key, (Long)value);
                     }
                     prefHash.clear();
-
-                    editor.apply();
                 }
-
-                lastSyncTime = System.currentTimeMillis();
+                editor.apply();
             }
+
+            lastSyncTime = System.currentTimeMillis();
         }
     }
 
     public static void initializePool() {
-        synchronized(synchronizer) {
-            prefsToApply = new HashMap<>();
-            prefsToApply.put(PREFS_ONESIGNAL, new HashMap<String, Object>());
-            prefsToApply.put(PREFS_PLAYER_PURCHASES, new HashMap<String, Object>());
+        prefsToApply = new HashMap<>();
+        prefsToApply.put(PREFS_ONESIGNAL, new HashMap<String, Object>());
+        prefsToApply.put(PREFS_PLAYER_PURCHASES, new HashMap<String, Object>());
 
-            prefsHandler = new WritePrefHandlerThread();
-        }
+        prefsHandler = new WritePrefHandlerThread();
     }
 
     static void saveString(final String prefsName, final String key, final String value) {
@@ -168,12 +163,11 @@ class OneSignalPrefs {
     }
 
     static private void save(String prefsName, String key, Object value) {
-        synchronized(synchronizer) {
-            HashMap<String, Object> pref = prefsToApply.get(prefsName);
+        HashMap<String, Object> pref = prefsToApply.get(prefsName);
+        synchronized (pref) {
             pref.put(key, value);
-
-            prefsHandler.startDelayedWrite();
         }
+        prefsHandler.startDelayedWrite();
     }
 
     static String getString(String prefsName, String key, String defValue) {
@@ -194,35 +188,34 @@ class OneSignalPrefs {
 
     // If type == Object then this is a contains check
     private static Object get(String prefsName, String key, Class type, Object defValue) {
-        synchronized(synchronizer) {
-            HashMap<String, Object> pref = prefsToApply.get(prefsName);
+        HashMap<String, Object> pref = prefsToApply.get(prefsName);
 
+        synchronized (pref) {
             if (type.equals(Object.class) && pref.containsKey(key))
                 return true;
 
             Object cachedValue = pref.get(key);
             if (cachedValue != null || pref.containsKey(key))
                 return cachedValue;
-
-
-            SharedPreferences prefs = getSharedPrefsByName(prefsName);
-            if (prefs != null ) {
-                if (type.equals(String.class))
-                    return prefs.getString(key, (String)defValue);
-                else if (type.equals(Boolean.class))
-                    return prefs.getBoolean(key, (Boolean)defValue);
-                else if (type.equals(Integer.class))
-                    return prefs.getInt(key, (Integer)defValue);
-                else if (type.equals(Long.class))
-                    return prefs.getLong(key, (Long)defValue);
-                else if (type.equals(Object.class))
-                    return prefs.contains(key);
-
-                return null;
-            }
-
-            return defValue;
         }
+
+        SharedPreferences prefs = getSharedPrefsByName(prefsName);
+        if (prefs != null ) {
+            if (type.equals(String.class))
+               return prefs.getString(key, (String)defValue);
+            else if (type.equals(Boolean.class))
+                return prefs.getBoolean(key, (Boolean)defValue);
+            else if (type.equals(Integer.class))
+                return prefs.getInt(key, (Integer)defValue);
+            else if (type.equals(Long.class))
+                return prefs.getLong(key, (Long)defValue);
+            else if (type.equals(Object.class))
+                return prefs.contains(key);
+
+            return null;
+        }
+
+        return defValue;
     }
 
     private static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
