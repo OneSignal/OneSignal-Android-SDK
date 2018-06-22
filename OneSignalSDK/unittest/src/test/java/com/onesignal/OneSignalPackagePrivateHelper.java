@@ -181,4 +181,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() { return OneSignal.appId; }
 
+
+   public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
 }

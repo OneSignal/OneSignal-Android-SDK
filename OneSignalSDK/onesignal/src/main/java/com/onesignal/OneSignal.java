@@ -496,6 +496,11 @@ public class OneSignal {
       return mInitBuilder;
    }
 
+   static void setAppContext(Context context) {
+      appContext = context.getApplicationContext();
+      OneSignalPrefs.startDelayedWrite();
+   }
+
    /**
     * Initializes OneSignal to register the device for push notifications.
     *<br/>
@@ -552,7 +557,7 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
-      appContext = context.getApplicationContext();
+      OneSignal.setAppContext(context);
 
       if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
@@ -574,9 +579,6 @@ public class OneSignal {
          return;
 
       if (initDone) {
-         if (context != null)
-            appContext = context.getApplicationContext();
-
          if (mInitBuilder.mNotificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
 
@@ -587,7 +589,6 @@ public class OneSignal {
 
       foreground = contextIsActivity;
       appId = oneSignalAppId;
-      appContext = context.getApplicationContext();
    
       saveFilterOtherGCMReceivers(mInitBuilder.mFilterOtherGCMReceivers);
 
