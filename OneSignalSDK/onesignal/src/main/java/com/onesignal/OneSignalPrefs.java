@@ -38,7 +38,7 @@ import java.util.HashMap;
 class OneSignalPrefs {
 
     // SharedPreferences Instances
-    static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
+    public static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
     static final String PREFS_PLAYER_PURCHASES = "GTPlayerPurchases";
 
     // PREFERENCES KEYS
@@ -113,6 +113,10 @@ class OneSignalPrefs {
         }
 
         private void flushBufferToDisk() {
+            // A flush will be triggered later once a context via OneSignal.setAppContext(...)
+            if (OneSignal.appContext == null)
+                return;
+
             for (String pref : prefsToApply.keySet()) {
                 SharedPreferences prefsToWrite = getSharedPrefsByName(pref);
                 SharedPreferences.Editor editor = prefsToWrite.edit();
@@ -146,19 +150,23 @@ class OneSignalPrefs {
         prefsHandler = new WritePrefHandlerThread();
     }
 
-    static void saveString(final String prefsName, final String key, final String value) {
+    public static void startDelayedWrite() {
+       prefsHandler.startDelayedWrite();
+    }
+
+    public static void saveString(final String prefsName, final String key, final String value) {
         save(prefsName, key, value);
     }
 
-    static void saveBool(String prefsName, String key, boolean value) {
+    public static void saveBool(String prefsName, String key, boolean value) {
         save(prefsName, key, value);
     }
 
-    static void saveInt(String prefsName, String key, int value) {
+    public static void saveInt(String prefsName, String key, int value) {
         save(prefsName, key, value);
     }
 
-    static void saveLong(String prefsName, String key, long value) {
+    public static void saveLong(String prefsName, String key, long value) {
         save(prefsName, key, value);
     }
 
@@ -167,7 +175,7 @@ class OneSignalPrefs {
         synchronized (pref) {
             pref.put(key, value);
         }
-        prefsHandler.startDelayedWrite();
+        startDelayedWrite();
     }
 
     static String getString(String prefsName, String key, String defValue) {

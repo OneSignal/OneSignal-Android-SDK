@@ -175,7 +175,7 @@ class OneSignalSyncServiceUtils {
 
    private static Thread syncBgThread;
    static void doBackgroundSync(Context context, SyncRunnable runnable) {
-      OneSignal.appContext = context.getApplicationContext();
+      OneSignal.setAppContext(context);
       syncBgThread = new Thread(runnable, "OS_SYNCSRV_BG_SYNC");
       syncBgThread.start();
    }
