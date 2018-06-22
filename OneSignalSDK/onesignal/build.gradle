@@ -25,25 +25,34 @@ android {
     }
 }
 
-// api || implementation = compile and runtime
-
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
-    compileOnly 'com.google.android.gms:play-services-gcm:12.0.1'
-    api 'com.google.firebase:firebase-messaging:12.0.1'
+    // TODO: Create version ranges for the below.
+    //       Find a way to expand by 1 minor version and make that exclusive.
+    //       This logic could be done in maven-push.gradle
 
-    // Can be compileOnly in 4.0.0, can't change until then as some projects may rely on this
-    implementation 'com.google.android.gms:play-services-location:12.0.1'
+    // Firebase Messaging library (FCM)
+    api 'com.google.firebase:firebase-messaging:17.0.0'
+
+    // GCM library backwards compatibility
+    compileOnly 'com.google.android.gms:play-services-gcm:15.0.1'
+
+    // Location - Can be compileOnly in 4.0.0,
+    //    can't change until then as some projects may rely on this
+    api 'com.google.android.gms:play-services-location:15.0.1'
 
     // Required for GoogleApiAvailability
-    implementation 'com.google.android.gms:play-services-base:12.0.1'
+    api 'com.google.android.gms:play-services-base:15.0.1'
 
+    // Required for AdvertisingIdClient
+    api 'com.google.android.gms:play-services-ads:15.0.1'
+
+    // Required for NotificationCompat.Builder and a number of other classes
     api 'com.android.support:support-v4:27.1.1'
-    api 'com.android.support:customtabs:27.1.1'
 
-    // Change api to implementation. Need to check however this has any effect in production
-    //   projects that pull from maven.
+    // Required for CustomTabsSession
+    api 'com.android.support:customtabs:27.1.1'
 }
 
 apply from: 'maven-push.gradle'

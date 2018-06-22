@@ -26,6 +26,8 @@ class Global {
     static def POM_PACKAGING = 'aar'
     static def VERSION_NAME = '3.9.1'
 
+    // TODO: Can't force ranges like this any more.
+    //   Should remove this and define ranges in onesignal/build.gradle
     // Limit upper number (exclusive) to prevent untested versions
     static def versionGroupOverrides = [
         'com.google.android.gms': '[10.2.1, 12.1.0)',

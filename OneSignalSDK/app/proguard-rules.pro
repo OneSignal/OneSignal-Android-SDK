@@ -105,3 +105,5 @@
 -keepclasseswithmembers class * {
     @android.support.annotation.Keep <init>(...);
 }
+
+-dontwarn com.android.tools.profiler.**

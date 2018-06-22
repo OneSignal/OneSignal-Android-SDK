@@ -34,13 +34,16 @@ android {
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
-    // Use for SDK Development
+    // Use local OneSignal SDK
     implementation(project(':onesignal'))
 
-    // Required to shadow firebase analytics classes
-    implementation 'com.google.firebase:firebase-core:12.0.1'
+    // Needed for Firebase Analytics Tests
+    implementation 'com.google.firebase:firebase-core:16.0.1'
 
-    implementation 'com.google.android.gms:play-services-location:12.0.1'
+    // Normally app includes appcompat-v7 which included this.
+    // Need otherwise we get this error
+    //    java.lang.NoClassDefFoundError: android/arch/lifecycle/ViewModelStoreOwner
+    implementation 'android.arch.lifecycle:viewmodel:1.1.1'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.robolectric:robolectric:3.8'
