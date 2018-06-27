@@ -32,6 +32,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.Nullable;
 
 import java.util.HashMap;
 
@@ -119,23 +120,25 @@ class OneSignalPrefs {
 
             for (String pref : prefsToApply.keySet()) {
                 SharedPreferences prefsToWrite = getSharedPrefsByName(pref);
-                SharedPreferences.Editor editor = prefsToWrite.edit();
-                HashMap<String, Object> prefHash = prefsToApply.get(pref);
-                synchronized (prefHash) {
-                    for (String key : prefHash.keySet()) {
-                        Object value = prefHash.get(key);
-                        if (value instanceof String)
-                            editor.putString(key, (String)value);
-                        else if (value instanceof Boolean)
-                            editor.putBoolean(key, (Boolean)value);
-                        else if (value instanceof Integer)
-                            editor.putInt(key, (Integer)value);
-                        else if (value instanceof Long)
-                            editor.putLong(key, (Long)value);
+                if (prefsToWrite != null) {
+                    SharedPreferences.Editor editor = prefsToWrite.edit();
+                    HashMap<String, Object> prefHash = prefsToApply.get(pref);
+                    synchronized (prefHash) {
+                        for (String key : prefHash.keySet()) {
+                            Object value = prefHash.get(key);
+                            if (value instanceof String)
+                                editor.putString(key, (String) value);
+                            else if (value instanceof Boolean)
+                                editor.putBoolean(key, (Boolean) value);
+                            else if (value instanceof Integer)
+                                editor.putInt(key, (Integer) value);
+                            else if (value instanceof Long)
+                                editor.putLong(key, (Long) value);
+                        }
+                        prefHash.clear();
                     }
-                    prefHash.clear();
+                    editor.apply();
                 }
-                editor.apply();
             }
 
             lastSyncTime = System.currentTimeMillis();
@@ -226,6 +229,7 @@ class OneSignalPrefs {
         return defValue;
     }
 
+    @Nullable
     private static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
         if (OneSignal.appContext == null)
             return null;
