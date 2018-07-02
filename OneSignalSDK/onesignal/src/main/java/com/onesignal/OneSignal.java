@@ -640,6 +640,8 @@ public class OneSignal {
 
       if (TrackFirebaseAnalytics.CanTrack())
          trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
+
+      PushRegistratorFCM.disableFirebaseInstanceIdService(appContext);
       
       initDone = true;
 
