@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
@@ -121,46 +122,62 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    }
    
    private static void startGCMService(Context context, Bundle bundle) {
-      BundleCompat taskExtras;
-      
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
-         taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
+         BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
          NotificationBundleProcessor.ProcessFromGCMIntentService(context, taskExtras, null);
          return;
       }
       
       boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
-      if (!isHighPriority && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-         taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
-         
-         ComponentName componentName = new ComponentName(context.getPackageName(),
-                                                         GcmIntentJobService.class.getName());
-         Random random = new Random();
-         JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
-             .setOverrideDeadline(0)
-             .setExtras((PersistableBundle)taskExtras.getBundle())
-             .build();
-         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-         
-         // TODO: Might want to use enqueue in the future. This will process one notification
-         //         sequentially like an IntentService
-         //       JobIntentService can be used instead, however app developer would have to use
-         //         Android support library 26+
-         jobScheduler.schedule(jobInfo);
-      }
+      if (!isHighPriority && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+         startGCMServiceWithJobScheduler(context, bundle);
       else {
-         ComponentName componentName = new ComponentName(context.getPackageName(),
-                                                         GcmIntentService.class.getName());
-         
-         taskExtras = setCompatBundleForServer(bundle, new BundleCompatBundle());
-         Intent intentForService = new Intent()
-                                    .replaceExtras((Bundle)taskExtras.getBundle())
-                                    .setComponent(componentName);
-         startWakefulService(context, intentForService);
+         try {
+            startGCMServiceWithWakefulService(context, bundle);
+         } catch (IllegalStateException e) {
+            // If the high priority FCM message failed to add this app to the temporary whitelist
+            // https://github.com/OneSignal/OneSignal-Android-SDK/issues/498
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+               startGCMServiceWithWakefulService(context, bundle);
+            else
+               throw e;
+         }
       }
    }
-   
+
+   @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+   private static void startGCMServiceWithJobScheduler(Context context, Bundle bundle) {
+      BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
+
+      ComponentName componentName = new ComponentName(context.getPackageName(),
+         GcmIntentJobService.class.getName());
+      Random random = new Random();
+      JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
+         .setOverrideDeadline(0)
+         .setExtras((PersistableBundle)taskExtras.getBundle())
+         .build();
+      JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+
+      // TODO: Might want to use enqueue in the future. This will process one notification
+      //         sequentially like an IntentService
+      //       JobIntentService can be used instead, however app developer would have to use
+      //         Android support library 26+
+      jobScheduler.schedule(jobInfo);
+   }
+
+   private static void startGCMServiceWithWakefulService(Context context, Bundle bundle) {
+      ComponentName componentName =
+         new ComponentName(context.getPackageName(), GcmIntentService.class.getName());
+
+      BundleCompat taskExtras = setCompatBundleForServer(bundle, new BundleCompatBundle());
+      Intent intentForService =
+         new Intent()
+         .replaceExtras((Bundle)taskExtras.getBundle())
+         .setComponent(componentName);
+      startWakefulService(context, intentForService);
+   }
+
    private static BundleCompat setCompatBundleForServer(Bundle bundle, BundleCompat taskExtras) {
       taskExtras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
       taskExtras.putLong("timestamp", System.currentTimeMillis() / 1000L);
