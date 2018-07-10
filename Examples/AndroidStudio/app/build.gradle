@@ -19,17 +19,17 @@ android {
     buildToolsVersion '27.0.3'
 
     defaultConfig {
-        applicationId "com.onesignal.example"
+        applicationId 'com.onesignal.example'
 
         // TODO: Please update the OneSignal ID below to yours!
-        manifestPlaceholders = [onesignal_app_id: "3beb3078-e0f1-4629-af17-fde833b9f716",
+        manifestPlaceholders = [onesignal_app_id: '3beb3078-e0f1-4629-af17-fde833b9f716',
                                 // Project number pulled from dashboard, local value is ignored.
-                                onesignal_google_project_number: "REMOTE"]
+                                onesignal_google_project_number: 'REMOTE']
 
-        minSdkVersion 16
+        minSdkVersion 15
         targetSdkVersion 27
         versionCode 1
-        versionName "1.0"
+        versionName '1.0'
     }
     buildTypes {
         release {
@@ -42,16 +42,10 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:appcompat-v7:27.+'
-    implementation 'com.android.support:animated-vector-drawable:27.+'
-    implementation 'com.android.support:support-compat:27.+'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
-
 
     // OneSignal SDK
     implementation 'com.onesignal:OneSignal:[3.9.2, 3.99.99)'
 
     // Required for geotagging
     implementation 'com.google.android.gms:play-services-location:15.0.1'
-
-
 }
