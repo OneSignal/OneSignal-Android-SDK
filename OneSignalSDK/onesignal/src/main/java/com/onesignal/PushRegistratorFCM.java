@@ -69,6 +69,14 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       }
    }
 
+
+   void inspectClasses() {
+//      com.google.firebase.components.ComponentDiscoveryService
+//      com.google.firebase.iid.FirebaseInstanceIdReceiver
+   }
+
+
+
    @Override
    String getProviderName() {
       return "FCM";

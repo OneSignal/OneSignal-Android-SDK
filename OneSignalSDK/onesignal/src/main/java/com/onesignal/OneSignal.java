@@ -589,8 +589,11 @@ public class OneSignal {
 
       foreground = contextIsActivity;
       appId = oneSignalAppId;
-   
-      saveFilterOtherGCMReceivers(mInitBuilder.mFilterOtherGCMReceivers);
+
+      FCMIntentFilterHelper.setEnabledStateOfOtherReceivers(
+         appContext,
+         !mInitBuilder.mFilterOtherGCMReceivers
+      );
 
       if (contextIsActivity) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
@@ -2009,16 +2012,22 @@ public class OneSignal {
               OneSignalPrefs.PREFS_OS_EMAIL_ID, "".equals(emailId) ? null : emailId);
    }
    
-   static boolean getFilterOtherGCMReceivers(Context context) {
-      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_OS_FILTER_OTHER_GCM_RECEIVERS,false);
+   static boolean getFilterOtherGCMReceivers() {
+      return OneSignalPrefs.getBool(
+         OneSignalPrefs.PREFS_ONESIGNAL,
+         OneSignalPrefs.PREFS_OS_FILTER_OTHER_GCM_RECEIVERS,
+         false);
    }
    
    static void saveFilterOtherGCMReceivers(boolean set) {
       if (appContext == null)
          return;
 
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,"OS_FILTER_OTHER_GCM_RECEIVERS",set);
+      OneSignalPrefs.saveBool(
+         OneSignalPrefs.PREFS_ONESIGNAL,
+         OneSignalPrefs.PREFS_OS_FILTER_OTHER_GCM_RECEIVERS,
+         set
+      );
    }
 
    // Called when a player id is returned from OneSignal

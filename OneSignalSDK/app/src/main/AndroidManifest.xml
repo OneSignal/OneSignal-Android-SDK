@@ -35,7 +35,7 @@
 
 
 
-        <meta-data android:name="com.onesignal.PrivacyConsent" android:value="ENABLE" />
+        <!--<meta-data android:name="com.onesignal.PrivacyConsent" android:value="ENABLE" />-->
 
 <!--
 
@@ -82,6 +82,25 @@
                 <!--<action android:name="com.onesignal.NotificationExtender" />-->
             <!--</intent-filter>-->
         <!--</service>-->
+
+
+        <receiver
+            android:name="com.onesignal.example.TestGcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <!-- High priority so OneSignal payloads can be filtered from other GCM receivers if filterOtherGCMReceivers is enabled. -->
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <category android:name="${applicationId}" />
+            </intent-filter>
+        </receiver>
+
+
+        <service
+            android:name=".MyFcmListenerService">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
     </application>
 

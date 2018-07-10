@@ -12,7 +12,11 @@
         <receiver
             android:name="com.onesignal.GcmBroadcastReceiver"
             android:permission="com.google.android.c2dm.permission.SEND" >
-            <!-- High priority so OneSignal payloads can be filtered from other GCM receivers if filterOtherGCMReceivers is enabled. -->
+            <!-- Uses high priority so OneSignal payloads can be filtered from other GCM receivers
+                 if filterOtherGCMReceivers is enabled. -->
+            <!-- com.google.android.c2dm.intent.RECEIVE instead of com.google.firebase.MESSAGING_EVENT
+                 is also used to support this for Android Oreo+ devices
+             -->
             <intent-filter android:priority="999" >
                 <action android:name="com.google.android.c2dm.intent.RECEIVE" />
                 <category android:name="${applicationId}" />

@@ -38,13 +38,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.v4.content.WakefulBroadcastReceiver;
+import android.util.Log;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
 import java.util.Random;
 
-// This is the entry point when a FCM / GCM payload is received from the Google Play services app
-// TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+// This is the entry point when a FCM / GCM payload is received from
+//   the Google Play services app (com.google.android.gms)
+// The broadcast will be ordered on pre-Oreo devices and unordered on Android Oreo+
 public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
    private static final String GCM_RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE";
@@ -59,64 +61,63 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       return false;
    }
 
+   // Ordered VS Un-Ordered broadcasts here.
+   // These intents are unordered on GMS version 11580448 on Android 8.1
+   // On same device version 12.8.74 of GMS is back to ordered broadcasts....
+   // Using FCM or GCM libraries had no effect
+
    @Override
    public void onReceive(Context context, Intent intent) {
-      // Do not process token update messages here.
-      // They are also non-ordered broadcasts.
+      Log.w("OneSignal", "isOrderedBroadcast(): " + isOrderedBroadcast());
+      boolean processed = processIntent(context, intent);
+      handleBroadcastResult(context, intent, processed);
+   }
+
+   private void handleBroadcastResult(Context context, Intent intent, boolean processed) {
+      Log.w("OneSignal", "handleBroadcastResult: " + processed);
+      if (processed) {
+         if (OneSignal.getFilterOtherGCMReceivers()) {
+            if (isOrderedBroadcast())
+               abortBroadcast();
+            // else, broadcast receivers already disabled before this event even fired
+         }
+         else if (isOrderedBroadcast())
+            setResultCode(Activity.RESULT_OK);
+      }
+      else {
+         if (isOrderedBroadcast())
+            setResultCode(Activity.RESULT_OK);
+         else if (OneSignal.getFilterOtherGCMReceivers()) {
+            Log.w("OneSignal", "Calling FCMIntentFilterHelper.sendBroadcastToRuntimeReceivers");
+            FCMIntentFilterHelper.sendBroadcastToRuntimeReceivers(context, intent);
+         }
+      }
+   }
+
+   private static boolean isTokenUpdate(Bundle bundle) {
+      return "google.com/iid".equals(bundle.getString("from"));
+   }
+
+   private static boolean processIntent(Context context, Intent intent) {
       Bundle bundle = intent.getExtras();
-      if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
-         return;
-      
-      ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
-      
-      // Null means this isn't a GCM / FCM message.
-      if (processedResult == null) {
-         setResult(Activity.RESULT_OK);
-         return;
-      }
-      
-      // Prevent other GCM receivers from firing if;
-      //   This is a duplicated GCM message
-      //   OR app developer setup a extender service to handle the notification.
-      if (processedResult.isDup || processedResult.hasExtenderService) {
-         // Abort to prevent other GCM receivers from process this Intent.
-         setAbort();
-         return;
-      }
-   
-      // Prevent other GCM receivers from firing if;
-      //   This is a OneSignal payload
-      //   AND the setting is enabled to allow filtering in this case.
-      if (processedResult.isOneSignalPayload &&
-          OneSignal.getFilterOtherGCMReceivers(context)) {
-         setAbort();
-         return;
-      }
 
-      setResult(Activity.RESULT_OK);
-   }
+      // Do not process token update messages here
+      if (bundle == null || isTokenUpdate(bundle))
+         return false;
 
-   private void setResult(int code) {
-      if (isOrderedBroadcast())
-         setResultCode(code);
-   }
-
-   private void setAbort() {
-      if (isOrderedBroadcast())
-         abortBroadcast();
-   }
-   
-   private static ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
       if (!isGcmMessage(intent))
-         return null;
-      
-      ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+         return false;
+
+      ProcessedBundleResult processedResult = processBundle(context, bundle);
+      return processedResult.isOneSignalPayload;
+   }
    
-      // Return if the notification will NOT be handled by normal GcmIntentService display flow.
-      if (processedResult.processed())
-         return processedResult;
-   
-      startGCMService(context, bundle);
+   private static ProcessedBundleResult processBundle(Context context, Bundle bundle) {
+      ProcessedBundleResult processedResult
+         = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+
+      if (!processedResult.processed())
+         startGCMService(context, bundle);
       
       return processedResult;
    }
