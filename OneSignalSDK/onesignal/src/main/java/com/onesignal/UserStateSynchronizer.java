@@ -2,6 +2,9 @@ package com.onesignal;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Log;
+import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
+import com.onesignal.OneSignal.SendTagsError;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,6 +37,9 @@ abstract class UserStateSynchronizer {
     abstract GetTagsResult getTags(boolean fromServer);
 
     private AtomicBoolean runningSyncUserState = new AtomicBoolean();
+
+    private ChangeTagsUpdateHandler sendTagsHandler;
+
     class NetworkHandlerThread extends HandlerThread {
         protected static final int NETWORK_HANDLER_USERSTATE = 0;
 
@@ -180,6 +186,10 @@ abstract class UserStateSynchronizer {
 
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
+
+                if (sendTagsHandler != null) {
+                    sendTagsHandler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
+                }
                 return;
             }
             getToSyncUserState().persistState();
@@ -249,8 +259,16 @@ abstract class UserStateSynchronizer {
     }
 
     private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
-        if (userId == null)
+        if (userId == null) {
+            if (this.sendTagsHandler != null) {
+                this.sendTagsHandler.onFailure(new SendTagsError(-1, "Unable to update tags: the current user is not registered with OneSignal"));
+            }
             return;
+        }
+
+        final ChangeTagsUpdateHandler tagsHandler = this.sendTagsHandler;
+
+        this.sendTagsHandler = null;
 
         OneSignalRestClient.putSync("players/" + userId, jsonBody, new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -261,12 +279,18 @@ abstract class UserStateSynchronizer {
                     handlePlayerDeletedFromServer();
                 else
                     handleNetworkFailure();
+
+                if (tagsHandler != null && jsonBody.has("tags"))
+                    tagsHandler.onFailure(new SendTagsError(statusCode, response));
             }
 
             @Override
             void onSuccess(String response) {
                 currentUserState.persistStateAfterSync(dependDiff, jsonBody);
                 onSuccessfulSync(jsonBody);
+
+                if (tagsHandler != null && jsonBody.has("tags"))
+                    tagsHandler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
             }
         });
     }
@@ -385,7 +409,8 @@ abstract class UserStateSynchronizer {
     }
 
 
-    void sendTags(JSONObject tags) {
+    void sendTags(JSONObject tags, ChangeTagsUpdateHandler handler) {
+        this.sendTagsHandler = handler;
         JSONObject userStateTags = getUserStateForModification().syncValues;
         generateJsonDiff(userStateTags, tags, userStateTags, null);
     }
