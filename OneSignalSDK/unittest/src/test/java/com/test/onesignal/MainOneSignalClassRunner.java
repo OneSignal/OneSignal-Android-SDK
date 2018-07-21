@@ -1287,6 +1287,7 @@ public class MainOneSignalClassRunner {
       }
    }
 
+   // Tests to make sure the onSuccess handler works
    @Test
    public void shouldSendNewTagsWithResponse() throws Exception {
       OneSignalInit();
@@ -1312,15 +1313,35 @@ public class MainOneSignalClassRunner {
       assertTrue(handler.getSucceeded());
    }
 
+   // Tests to make sure that the onFailure callback works
    @Test
    public void shouldFailToSendTagsWithResponse() throws Exception {
       TestChangeTagsUpdateHandler handler = new TestChangeTagsUpdateHandler();
 
+      // should fail because there is no OneSignal player ID
       OneSignal.sendTags(new JSONObject("{\"test\" : \"value\"}"), handler);
 
       threadAndTaskWait();
 
       assertTrue(handler.getFailed());
+   }
+
+   // Tests to make sure that the SDK will call both handlers
+   @Test
+   public void shouldCallMultipleHandlers() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      TestChangeTagsUpdateHandler firstHandler = new TestChangeTagsUpdateHandler();
+      TestChangeTagsUpdateHandler secondHandler = new TestChangeTagsUpdateHandler();
+
+      OneSignal.sendTags(new JSONObject("{\"test1\" : \"value1\"}"), firstHandler);
+      OneSignal.sendTags(new JSONObject("{\"test2\" : \"value2\"}"), secondHandler);
+
+      threadAndTaskWait();
+
+      assertTrue(firstHandler.getSucceeded());
+      assertTrue(secondHandler.getSucceeded());
    }
 
    @Test
