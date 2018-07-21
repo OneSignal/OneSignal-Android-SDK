@@ -9,6 +9,7 @@ import com.onesignal.OneSignal.SendTagsError;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,7 +39,9 @@ abstract class UserStateSynchronizer {
 
     private AtomicBoolean runningSyncUserState = new AtomicBoolean();
 
-    private ChangeTagsUpdateHandler sendTagsHandler;
+    // maintain an array of handlers so that if the user calls
+    // sendTags() multiple times, it will call each callback
+    private ArrayList<ChangeTagsUpdateHandler> sendTagsHandlers = new ArrayList<ChangeTagsUpdateHandler>();
 
     class NetworkHandlerThread extends HandlerThread {
         protected static final int NETWORK_HANDLER_USERSTATE = 0;
@@ -187,9 +190,12 @@ abstract class UserStateSynchronizer {
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
 
-                if (sendTagsHandler != null) {
-                    sendTagsHandler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
-                }
+                if (this.sendTagsHandlers.size() > 0)
+                    for (ChangeTagsUpdateHandler handler : this.sendTagsHandlers)
+                        handler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
+
+                this.sendTagsHandlers.clear();;
+                
                 return;
             }
             getToSyncUserState().persistState();
@@ -260,15 +266,18 @@ abstract class UserStateSynchronizer {
 
     private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
         if (userId == null) {
-            if (this.sendTagsHandler != null) {
-                this.sendTagsHandler.onFailure(new SendTagsError(-1, "Unable to update tags: the current user is not registered with OneSignal"));
-            }
+            if (this.sendTagsHandlers.size() > 0)
+                for (ChangeTagsUpdateHandler handler : this.sendTagsHandlers)
+                    handler.onFailure(new SendTagsError(-1, "Unable to update tags: the current user is not registered with OneSignal"));
+
+            this.sendTagsHandlers.clear();
+
             return;
         }
 
-        final ChangeTagsUpdateHandler tagsHandler = this.sendTagsHandler;
+        final ArrayList<ChangeTagsUpdateHandler> tagsHandlers = this.sendTagsHandlers;
 
-        this.sendTagsHandler = null;
+        this.sendTagsHandlers.clear();
 
         OneSignalRestClient.putSync("players/" + userId, jsonBody, new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -280,8 +289,10 @@ abstract class UserStateSynchronizer {
                 else
                     handleNetworkFailure();
 
-                if (tagsHandler != null && jsonBody.has("tags"))
-                    tagsHandler.onFailure(new SendTagsError(statusCode, response));
+                if (tagsHandlers.size() > 0 && jsonBody.has("tags"))
+                    for (ChangeTagsUpdateHandler handler : tagsHandlers)
+                        handler.onFailure(new SendTagsError(statusCode, response));
+
             }
 
             @Override
@@ -289,8 +300,10 @@ abstract class UserStateSynchronizer {
                 currentUserState.persistStateAfterSync(dependDiff, jsonBody);
                 onSuccessfulSync(jsonBody);
 
-                if (tagsHandler != null && jsonBody.has("tags"))
-                    tagsHandler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
+                if (tagsHandlers.size() > 0 && jsonBody.has("tags"))
+                    for (ChangeTagsUpdateHandler handler : tagsHandlers)
+                        handler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
+
             }
         });
     }
@@ -410,7 +423,7 @@ abstract class UserStateSynchronizer {
 
 
     void sendTags(JSONObject tags, ChangeTagsUpdateHandler handler) {
-        this.sendTagsHandler = handler;
+        this.sendTagsHandlers.add(handler);
         JSONObject userStateTags = getUserStateForModification().syncValues;
         generateJsonDiff(userStateTags, tags, userStateTags, null);
     }
