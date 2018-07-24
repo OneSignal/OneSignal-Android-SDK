@@ -189,9 +189,11 @@ abstract class UserStateSynchronizer {
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
 
-                for (ChangeTagsUpdateHandler handler : this.sendTagsHandlers)
-                    if (handler != null)
+                for (ChangeTagsUpdateHandler handler : this.sendTagsHandlers) {
+                    if (handler != null) {
                         handler.onSuccess(OneSignalStateSynchronizer.getTags(false).result);
+                    }
+                }
 
                 this.sendTagsHandlers.clear();
                 
@@ -265,9 +267,11 @@ abstract class UserStateSynchronizer {
 
     private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
         if (userId == null) {
-            for (ChangeTagsUpdateHandler handler : this.sendTagsHandlers)
-                if (handler != null)
+            for (ChangeTagsUpdateHandler handler : this.sendTagsHandlers) {
+                if (handler != null) {
                     handler.onFailure(new SendTagsError(-1, "Unable to update tags: the current user is not registered with OneSignal"));
+                }
+            }
 
             this.sendTagsHandlers.clear();
 
@@ -289,9 +293,11 @@ abstract class UserStateSynchronizer {
                     handleNetworkFailure();
 
                 if (jsonBody.has("tags"))
-                    for (ChangeTagsUpdateHandler handler : tagsHandlers)
-                        if (handler != null)
+                    for (ChangeTagsUpdateHandler handler : tagsHandlers) {
+                        if (handler != null) {
                             handler.onFailure(new SendTagsError(statusCode, response));
+                        }
+                    }
 
             }
 
@@ -302,9 +308,11 @@ abstract class UserStateSynchronizer {
                 JSONObject tags = OneSignalStateSynchronizer.getTags(false).result;
 
                 if (jsonBody.has("tags") && tags != null)
-                    for (ChangeTagsUpdateHandler handler : tagsHandlers)
-                        if (handler != null)
+                    for (ChangeTagsUpdateHandler handler : tagsHandlers) {
+                        if (handler != null) {
                             handler.onSuccess(tags);
+                        }
+                    }
 
             }
         });
