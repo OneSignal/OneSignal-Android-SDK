@@ -29,6 +29,7 @@ package com.onesignal;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
 class OneSignalStateSynchronizer {
 
@@ -71,12 +72,13 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().syncUserState(fromSyncService);
    }
 
-   static void sendTags(JSONObject newTags) {
+   static void sendTags(JSONObject newTags, ChangeTagsUpdateHandler handler) {
       try {
          JSONObject jsonField = new JSONObject().put("tags", newTags);
-         getPushStateSynchronizer().sendTags(jsonField);
-         getEmailStateSynchronizer().sendTags(jsonField);
+         getPushStateSynchronizer().sendTags(jsonField, handler);
+         getEmailStateSynchronizer().sendTags(jsonField, handler);
       } catch (JSONException e) {
+         handler.onFailure(new OneSignal.SendTagsError(-1, "Encountered an error attempting to serialize your tags into JSON: " + e.getMessage() + "\n" + e.getStackTrace()));
          e.printStackTrace();
       }
    }

@@ -143,6 +143,24 @@ public class OneSignal {
       void tagsAvailable(JSONObject tags);
    }
 
+   public interface ChangeTagsUpdateHandler {
+      void onSuccess(JSONObject tags);
+      void onFailure(SendTagsError error);
+   }
+
+   public static class SendTagsError {
+      private String message;
+      private int code;
+
+      SendTagsError(int errorCode, String errorMessage) {
+         this.message = errorMessage;
+         this.code = errorCode;
+      }
+
+      public int getCode() { return code; }
+      public String getMessage() { return message; }
+   }
+
 
    public enum EmailErrorType {
       VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
@@ -869,6 +887,13 @@ public class OneSignal {
 
       unprocessedOpenedNotifis.clear();
    }
+   /**
+    * Please do not use this method for logging, it is meant solely to be
+    * used by our wrapper SDK's.
+    */
+   public static void onesignalLog(LOG_LEVEL level, String message) {
+      OneSignal.Log(level, message);
+   }
 
    public static boolean userProvidedPrivacyConsent() {
       return getSavedUserConsentStatus();
@@ -1422,6 +1447,24 @@ public class OneSignal {
     *
     */
    public static void sendTags(final JSONObject keyValues) {
+      sendTags(keyValues, null);
+   }
+
+   /**
+    * Tag a user based on an app event of your choosing so later you can create
+    * <a href="https://documentation.onesignal.com/docs/segmentation">OneSignal Segments</a>
+    *  to target these users.
+    *
+    *  NOTE: The ChangeTagsUpdateHandler will not be called under all circumstances. It can also take
+    *  more than 5 seconds in some cases to be called, so please do not block any user action
+    *  based on this callback.
+    * @param keyValues Key value pairs of your choosing to create or update. <b>Note:</b>
+    *                  Passing in a blank String as a value deletes a key.
+    *                  You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
+    *
+    */
+   public static void sendTags(final JSONObject keyValues, ChangeTagsUpdateHandler handler) {
+      final ChangeTagsUpdateHandler tagsHandler = handler;
 
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendTags()"))
@@ -1430,10 +1473,13 @@ public class OneSignal {
       Runnable sendTagsRunnable = new Runnable() {
          @Override
          public void run() {
-            if (keyValues == null) return;
+            if (keyValues == null) {
+               if (tagsHandler != null)
+                  tagsHandler.onFailure(new SendTagsError(-1, "Attempted to send null tags"));
+               return;
+            }
 
             JSONObject existingKeys = OneSignalStateSynchronizer.getTags(false).result;
-
             JSONObject toSend = new JSONObject();
 
             Iterator<String> keys = keyValues.keys();
@@ -1456,8 +1502,11 @@ public class OneSignal {
                catch (Throwable t) {}
             }
 
-            if (!toSend.toString().equals("{}"))
-               OneSignalStateSynchronizer.sendTags(toSend);
+            if (!toSend.toString().equals("{}")) {
+               OneSignalStateSynchronizer.sendTags(toSend, tagsHandler);
+            } else {
+               tagsHandler.onSuccess(existingKeys);
+            }
          }
       };
 
@@ -1465,6 +1514,9 @@ public class OneSignal {
       if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags!" +
                  "Moving this operation to a pending task queue.");
+         if (tagsHandler != null)
+            tagsHandler.onFailure(new SendTagsError(-1, "You must initialize OneSignal before modifying tags!" +
+                    "Moving this operation to a pending task queue."));
          addTaskToQueue(new PendingTaskRunnable(sendTagsRunnable));
          return;
       }
@@ -1612,14 +1664,17 @@ public class OneSignal {
     * @param key Key to remove.
     */
    public static void deleteTag(String key) {
+      deleteTag(key, null);
+   }
 
+   public static void deleteTag(String key, ChangeTagsUpdateHandler handler) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTag()"))
          return;
 
       Collection<String> tempList = new ArrayList<>(1);
       tempList.add(key);
-      deleteTags(tempList);
+      deleteTags(tempList, handler);
    }
 
    /**
@@ -1628,7 +1683,10 @@ public class OneSignal {
     * @param keys Keys to remove.
     */
    public static void deleteTags(Collection<String> keys) {
+      deleteTags(keys, null);
+   }
 
+   public static void deleteTags(Collection<String> keys, ChangeTagsUpdateHandler handler) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTags()"))
          return;
@@ -1638,14 +1696,17 @@ public class OneSignal {
          for (String key : keys)
             jsonTags.put(key, "");
 
-         sendTags(jsonTags);
+         sendTags(jsonTags, handler);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for deleteTags.", t);
       }
    }
 
    public static void deleteTags(String jsonArrayString) {
+      deleteTags(jsonArrayString, null);
+   }
 
+   public static void deleteTags(String jsonArrayString, ChangeTagsUpdateHandler handler) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTags()"))
          return;
@@ -1657,7 +1718,7 @@ public class OneSignal {
          for (int i = 0; i < jsonArray.length(); i++)
             jsonTags.put(jsonArray.getString(i), "");
 
-         sendTags(jsonTags);
+         sendTags(jsonTags, handler);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for deleteTags.", t);
       }
@@ -2136,6 +2197,10 @@ public class OneSignal {
    }
    public static void setInFocusDisplaying(int displayOption) {
       setInFocusDisplaying(getInFocusDisplaying(displayOption));
+   }
+
+   public static OSInFocusDisplayOption currentInFocusDisplayOption() {
+      return getCurrentOrNewInitBuilder().mDisplayOption;
    }
 
    private static OSInFocusDisplayOption getInFocusDisplaying(int displayOption) {

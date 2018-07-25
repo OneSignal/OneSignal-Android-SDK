@@ -41,6 +41,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSEmailSubscriptionObserver;
@@ -79,6 +80,7 @@ import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
+import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -1260,6 +1262,86 @@ public class MainOneSignalClassRunner {
 
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       assertNotNull(callBackUseId);
+   }
+
+   private class TestChangeTagsUpdateHandler implements ChangeTagsUpdateHandler {
+      private AtomicBoolean succeeded = new AtomicBoolean(false);
+      private AtomicBoolean failed = new AtomicBoolean(false);
+
+      @Override
+      public void onSuccess(JSONObject tags) {
+         succeeded.set(true);
+      }
+
+      @Override
+      public void onFailure(OneSignal.SendTagsError error) {
+         failed.set(true);
+      }
+
+      boolean getSucceeded() {
+         return succeeded.get();
+      }
+
+      boolean getFailed() {
+         return failed.get();
+      }
+   }
+
+   // Tests to make sure the onSuccess handler works
+   @Test
+   public void shouldSendNewTagsWithResponse() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      TestChangeTagsUpdateHandler handler = new TestChangeTagsUpdateHandler();
+
+      OneSignal.sendTags(new JSONObject("{\"test\" : \"value\"}"), handler);
+
+      threadAndTaskWait();
+
+      assertTrue(handler.getSucceeded());
+
+      // now test to make sure the handler still fires for a call to
+      // sendTags() that doesn't modify existing tags (no JSON delta)
+
+      handler = new TestChangeTagsUpdateHandler();
+
+      OneSignal.sendTags(new JSONObject("{\"test\" : \"value\"}"), handler);
+
+      threadAndTaskWait();
+
+      assertTrue(handler.getSucceeded());
+   }
+
+   // Tests to make sure that the onFailure callback works
+   @Test
+   public void shouldFailToSendTagsWithResponse() throws Exception {
+      TestChangeTagsUpdateHandler handler = new TestChangeTagsUpdateHandler();
+
+      // should fail because there is no OneSignal player ID
+      OneSignal.sendTags(new JSONObject("{\"test\" : \"value\"}"), handler);
+
+      threadAndTaskWait();
+
+      assertTrue(handler.getFailed());
+   }
+
+   // Tests to make sure that the SDK will call both handlers
+   @Test
+   public void shouldCallMultipleHandlers() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      TestChangeTagsUpdateHandler firstHandler = new TestChangeTagsUpdateHandler();
+      TestChangeTagsUpdateHandler secondHandler = new TestChangeTagsUpdateHandler();
+
+      OneSignal.sendTags(new JSONObject("{\"test1\" : \"value1\"}"), firstHandler);
+      OneSignal.sendTags(new JSONObject("{\"test2\" : \"value2\"}"), secondHandler);
+
+      threadAndTaskWait();
+
+      assertTrue(firstHandler.getSucceeded());
+      assertTrue(secondHandler.getSucceeded());
    }
 
    @Test
