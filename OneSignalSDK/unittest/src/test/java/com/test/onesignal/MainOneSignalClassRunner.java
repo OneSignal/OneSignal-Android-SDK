@@ -2237,6 +2237,19 @@ public class MainOneSignalClassRunner {
       postNotificationSuccess = postNotificationFailure = null;
    }
 
+   @Test
+   public void shouldReturnCorrectConsentRequiredStatus() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+
+      OneSignalInit();
+
+      assertTrue(OneSignal.requiresUserPrivacyConsent());
+
+      OneSignal.provideUserConsent(true);
+
+      assertFalse(OneSignal.requiresUserPrivacyConsent());
+   }
+
    /*
    // Can't get test to work from a app flow due to the main thread being locked one way or another in a robolectric env.
    // Running ActivityLifecycleListener.focusHandlerThread...advanceToNextPostedRunnable waits on the main thread.

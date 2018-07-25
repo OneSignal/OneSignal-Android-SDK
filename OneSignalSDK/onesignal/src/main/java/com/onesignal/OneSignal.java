@@ -894,6 +894,14 @@ public class OneSignal {
       requiresUserPrivacyConsent = required;
    }
 
+
+   /**
+    * Indicates if the SDK is still waiting for the user to provide consent
+    */
+   public static boolean requiresUserPrivacyConsent() {
+      return requiresUserPrivacyConsent && !userProvidedPrivacyConsent();
+   }
+
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
       if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
          if (methodName != null)
