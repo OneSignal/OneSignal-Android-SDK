@@ -41,7 +41,7 @@ import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
-import java.util.SecureRandom;
+import java.security.SecureRandom;
 
 // This is the entry point when a FCM / GCM payload is received from the Google Play services app
 // TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>

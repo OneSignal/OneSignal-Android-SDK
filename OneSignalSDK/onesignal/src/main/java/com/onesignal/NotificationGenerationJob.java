@@ -33,7 +33,7 @@ import android.net.Uri;
 
 import org.json.JSONObject;
 
-import java.util.SecureRandom;
+import java.security.SecureRandom;
 
 class NotificationGenerationJob {
    Context context;
