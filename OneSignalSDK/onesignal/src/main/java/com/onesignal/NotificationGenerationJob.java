@@ -33,7 +33,7 @@ import android.net.Uri;
 
 import org.json.JSONObject;
 
-import java.util.Random;
+import java.util.SecureRandom;
 
 class NotificationGenerationJob {
    Context context;
@@ -73,7 +73,7 @@ class NotificationGenerationJob {
       if (overrideSettings == null)
          overrideSettings = new NotificationExtenderService.OverrideSettings();
       if (overrideSettings.androidNotificationId == null)
-         overrideSettings.androidNotificationId = new Random().nextInt();
+         overrideSettings.androidNotificationId = new SecureRandom().nextInt();
       
       return overrideSettings.androidNotificationId;
    }

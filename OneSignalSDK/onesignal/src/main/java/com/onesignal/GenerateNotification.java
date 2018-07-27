@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
+import java.util.SecureRandom;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -323,7 +323,7 @@ class GenerateNotification {
 
    // Put the message into a notification and post it.
    private static void showNotification(NotificationGenerationJob notifJob) {
-      Random random = new Random();
+      SecureRandom random = new SecureRandom();
 
       int notificationId = notifJob.getAndroidId();
       JSONObject gcmBundle = notifJob.jsonPayload;
@@ -477,7 +477,7 @@ class GenerateNotification {
 
       String group = gcmBundle.optString("grp", null);
 
-      Random random = new Random();
+      SecureRandom random = new SecureRandom();
       PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
       
       Notification summaryNotification;

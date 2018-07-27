@@ -41,7 +41,7 @@ import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
-import java.util.Random;
+import java.util.SecureRandom;
 
 // This is the entry point when a FCM / GCM payload is received from the Google Play services app
 // TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
@@ -164,7 +164,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
 
       ComponentName componentName = new ComponentName(context.getPackageName(),
          GcmIntentJobService.class.getName());
-      Random random = new Random();
+      SecureRandom random = new SecureRandom();
       JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
          .setOverrideDeadline(0)
          .setExtras((PersistableBundle)taskExtras.getBundle())

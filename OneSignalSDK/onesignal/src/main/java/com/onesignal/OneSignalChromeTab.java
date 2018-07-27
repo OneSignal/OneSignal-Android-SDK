@@ -36,7 +36,7 @@ import android.support.customtabs.CustomTabsClient;
 import android.support.customtabs.CustomTabsServiceConnection;
 import android.support.customtabs.CustomTabsSession;
 
-import java.util.Random;
+import java.util.SecureRandom;
 
 class OneSignalChromeTab {
    
@@ -61,7 +61,7 @@ class OneSignalChromeTab {
       String params = "?app_id=" + appId + "&user_id=" + userId;
       if (adId != null)
          params += "&ad_id=" + adId;
-      params += "&cbs_id=" + new Random().nextInt(Integer.MAX_VALUE);
+      params += "&cbs_id=" + new SecureRandom().nextInt(Integer.MAX_VALUE);
       
       CustomTabsServiceConnection connection = new OneSignalCustomTabsServiceConnection(context, params);
       opened = CustomTabsClient.bindCustomTabsService(context, "com.android.chrome", connection);
