@@ -36,7 +36,7 @@ import android.support.customtabs.CustomTabsClient;
 import android.support.customtabs.CustomTabsServiceConnection;
 import android.support.customtabs.CustomTabsSession;
 
-import java.util.SecureRandom;
+import java.security.SecureRandom;
 
 class OneSignalChromeTab {
    

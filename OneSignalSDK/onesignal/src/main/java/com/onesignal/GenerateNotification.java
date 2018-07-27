@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.SecureRandom;
+import java.security.SecureRandom;
 
 import org.json.JSONArray;
 import org.json.JSONException;
