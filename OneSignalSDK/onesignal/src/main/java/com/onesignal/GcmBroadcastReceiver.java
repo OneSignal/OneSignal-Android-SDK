@@ -139,7 +139,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
             // If the high priority FCM message failed to add this app to the temporary whitelist
             // https://github.com/OneSignal/OneSignal-Android-SDK/issues/498
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-               startGCMServiceWithWakefulService(context, bundle);
+               startGCMServiceWithJobScheduler(context, bundle);
             else
                throw e;
          }
