@@ -119,9 +119,11 @@ abstract class UserStateSynchronizer {
         }
     }
 
-    protected synchronized UserState getToSyncUserState() {
-        if (toSyncUserState == null)
-            toSyncUserState = newUserState("TOSYNC_STATE", true);
+    protected UserState getToSyncUserState() {
+        synchronized (syncLock) {
+            if (toSyncUserState == null)
+                toSyncUserState = newUserState("TOSYNC_STATE", true);
+        }
 
         return toSyncUserState;
     }
