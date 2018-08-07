@@ -119,9 +119,11 @@ abstract class UserStateSynchronizer {
         }
     }
 
-    protected synchronized UserState getToSyncUserState() {
-        if (toSyncUserState == null)
-            toSyncUserState = newUserState("TOSYNC_STATE", true);
+    protected UserState getToSyncUserState() {
+        synchronized (syncLock) {
+            if (toSyncUserState == null)
+                toSyncUserState = newUserState("TOSYNC_STATE", true);
+        }
 
         return toSyncUserState;
     }
@@ -163,7 +165,7 @@ abstract class UserStateSynchronizer {
         return getToSyncUserState().dependValues.optBoolean("logoutEmail", false);
     }
 
-    synchronized void syncUserState(boolean fromSyncService) {
+    void syncUserState(boolean fromSyncService) {
         runningSyncUserState.set(true);
         internalSyncUserState(fromSyncService);
         runningSyncUserState.set(false);
@@ -287,10 +289,12 @@ abstract class UserStateSynchronizer {
             void onFailure(int statusCode, String response, Throwable throwable) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
 
-                if (response400WithErrorsContaining(statusCode, response, "No user with this id found"))
-                    handlePlayerDeletedFromServer();
-                else
-                    handleNetworkFailure();
+                synchronized (syncLock) {
+                    if (response400WithErrorsContaining(statusCode, response, "No user with this id found"))
+                        handlePlayerDeletedFromServer();
+                    else
+                        handleNetworkFailure();
+                }
 
                 if (jsonBody.has("tags"))
                     for (ChangeTagsUpdateHandler handler : tagsHandlers) {
@@ -303,8 +307,11 @@ abstract class UserStateSynchronizer {
 
             @Override
             void onSuccess(String response) {
-                currentUserState.persistStateAfterSync(dependDiff, jsonBody);
-                onSuccessfulSync(jsonBody);
+                synchronized (syncLock) {
+                    currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+                    onSuccessfulSync(jsonBody);
+                }
+
                 JSONObject tags = OneSignalStateSynchronizer.getTags(false).result;
 
                 if (jsonBody.has("tags") && tags != null)
@@ -330,36 +337,40 @@ abstract class UserStateSynchronizer {
         OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
-                waitingForSessionResponse = false;
-                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
+                synchronized (syncLock) {
+                    waitingForSessionResponse = false;
+                    OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
 
-                if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
-                    handlePlayerDeletedFromServer();
-                else
-                    handleNetworkFailure();
+                    if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
+                        handlePlayerDeletedFromServer();
+                    else
+                        handleNetworkFailure();
+                }
             }
 
             @Override
             void onSuccess(String response) {
-                nextSyncIsSession = waitingForSessionResponse = false;
-                currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+                synchronized (syncLock) {
+                    nextSyncIsSession = waitingForSessionResponse = false;
+                    currentUserState.persistStateAfterSync(dependDiff, jsonBody);
 
-                try {
-                    JSONObject jsonResponse = new JSONObject(response);
+                    try {
+                        JSONObject jsonResponse = new JSONObject(response);
 
-                    if (jsonResponse.has("id")) {
-                        String newUserId = jsonResponse.optString("id");
-                        updateIdDependents(newUserId);
+                        if (jsonResponse.has("id")) {
+                            String newUserId = jsonResponse.optString("id");
+                            updateIdDependents(newUserId);
 
-                        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + newUserId);
+                            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device registered, UserId = " + newUserId);
+                        }
+                        else
+                            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + userId);
+
+                        OneSignal.updateOnSessionDependents();
+                        onSuccessfulSync(jsonBody);
+                    } catch (Throwable t) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
                     }
-                    else
-                        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "session sent, UserId = " + userId);
-
-                    OneSignal.updateOnSessionDependents();
-                    onSuccessfulSync(jsonBody);
-                } catch (Throwable t) {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
                 }
             }
         });
