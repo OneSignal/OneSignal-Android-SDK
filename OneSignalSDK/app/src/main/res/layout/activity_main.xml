@@ -5,53 +5,121 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".MainActivity">
 
-    <TextView android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-              android:id="@+id/textView"/>
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Subscribe"
-        android:id="@+id/subscribe"
-        android:layout_below="@+id/textView"
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="34dp"
-        android:onClick="onSubscribeClicked"/>
+        android:layout_alignParentTop="true">
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="UnSubscribe"
-        android:id="@+id/unsubscribe"
-        android:layout_below="@+id/subscribe"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:onClick="onUnsubscribeClicked"
-        android:nestedScrollingEnabled="true"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
 
-    <Button
-        android:id="@+id/sendTags"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignEnd="@+id/unsubscribe"
-        android:layout_alignRight="@+id/unsubscribe"
-        android:layout_below="@+id/unsubscribe"
-        android:layout_toEndOf="@+id/textView"
-        android:layout_toRightOf="@+id/textView"
-        android:onClick="onSendTagsClicked"
-        android:text="SEND TAGS" />
+            <Button
+                android:id="@+id/subscribe"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentTop="true"
+                android:layout_toEndOf="@+id/textView"
+                android:layout_toRightOf="@+id/textView"
+                android:onClick="onSubscribeClicked"
+                android:text="Subscribe" />
 
-    <Button
-        android:id="@+id/consentButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/sendTags"
-        android:layout_toEndOf="@+id/textView"
-        android:layout_toRightOf="@+id/textView"
-        android:onClick="onConsentButtonClicked"
-        android:text="Provide Consent" />
+            <Button
+                android:id="@+id/unsubscribe"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentStart="true"
+                android:layout_below="@+id/subscribe"
+                android:nestedScrollingEnabled="true"
+                android:onClick="onUnsubscribeClicked"
+                android:text="UnSubscribe" />
+
+            <Button
+                android:id="@+id/sendTags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_below="@+id/unsubscribe"
+                android:layout_toEndOf="@+id/textView"
+                android:layout_toRightOf="@+id/textView"
+                android:onClick="onSendTagsClicked"
+                android:text="SEND TAGS" />
+
+            <Button
+                android:id="@+id/getTags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="onGetTagsClicked"
+                android:text="Get Tags" />
+
+            <Button
+                android:id="@+id/consentButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_below="@+id/sendTags"
+                android:layout_toEndOf="@+id/textView"
+                android:layout_toRightOf="@+id/textView"
+                android:onClick="onConsentButtonClicked"
+                android:text="Provide Consent" />
+
+            <EditText
+                android:id="@+id/emailTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_below="@+id/consentButton"
+                android:layout_toEndOf="@+id/textView"
+                android:layout_toRightOf="@+id/textView"
+                android:ems="10"
+                android:hint="Set Email"
+                android:inputType="textPersonName"
+                android:selectAllOnFocus="false"
+                android:textAlignment="center" />
+
+            <Button
+                android:id="@+id/logoutEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentStart="true"
+                android:layout_below="@+id/setEmail"
+                android:onClick="onLogoutEmailClicked"
+                android:text="Logout Email" />
+
+            <Button
+                android:id="@+id/setEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_below="@+id/emailTextView"
+                android:layout_toEndOf="@+id/textView"
+                android:layout_toRightOf="@+id/textView"
+                android:onClick="onSetEmailClicked"
+                android:text="Set Email" />
+
+            <TextView
+                android:id="@+id/debugTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+    </ScrollView>
 
     <!--<WebView  xmlns:android="http://schemas.android.com/apk/res/android"-->
               <!--android:id="@+id/webview"-->
