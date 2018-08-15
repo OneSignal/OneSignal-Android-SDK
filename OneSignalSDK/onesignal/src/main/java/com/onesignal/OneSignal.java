@@ -1504,7 +1504,7 @@ public class OneSignal {
 
             if (!toSend.toString().equals("{}")) {
                OneSignalStateSynchronizer.sendTags(toSend, tagsHandler);
-            } else {
+            } else if (tagsHandler != null) {
                tagsHandler.onSuccess(existingKeys);
             }
          }
