@@ -878,6 +878,10 @@ public class MainOneSignalClassRunner {
       assertEquals("value1.5", sentTags.getString("test1"));
       assertFalse(sentTags.has(("test2")));
       assertEquals("value3", sentTags.getString("test3"));
+
+      // Test empty JSONObject
+      OneSignal.sendTags(new JSONObject());
+      OneSignal.sendTags(new JSONObject(), null);
    }
 
    @Test
