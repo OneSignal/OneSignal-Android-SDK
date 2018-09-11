@@ -66,6 +66,8 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       } catch (NoClassDefFoundError ignored) {
          // Will throw if missing FirebaseInstanceIdService class, ignore in this case.
          // We already print a logcat error in another spot
+      } catch (IllegalArgumentException ignored) {
+         // also not handled
       }
    }
 
