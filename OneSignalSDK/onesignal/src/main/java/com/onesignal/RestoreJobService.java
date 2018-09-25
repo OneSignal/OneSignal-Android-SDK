@@ -38,7 +38,10 @@ public class RestoreJobService extends JobIntentService {
       if (intent == null)
          return;
 
-      final Bundle extras = new Bundle(intent.getExtras());
+      // Null check for https://github.com/OneSignal/OneSignal-Android-SDK/issues/591
+      final Bundle extras = intent.getExtras();
+      if (extras == null)
+         return;
 
       NotificationBundleProcessor.ProcessFromGCMIntentService(
             getApplicationContext(),
