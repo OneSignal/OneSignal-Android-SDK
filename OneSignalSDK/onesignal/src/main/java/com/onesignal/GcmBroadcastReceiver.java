@@ -66,6 +66,8 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       Bundle bundle = intent.getExtras();
       if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
          return;
+
+      OneSignal.setAppContext(context);
       
       ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
       

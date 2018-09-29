@@ -514,9 +514,16 @@ public class OneSignal {
       return mInitBuilder;
    }
 
+   // Sets the global shared ApplicationContext for OneSignal
+   // This is set from all OneSignal entry points
+   //   - BroadcastReceivers, Services, and Activities
    static void setAppContext(Context context) {
+      boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
-      OneSignalPrefs.startDelayedWrite();
+
+      // Prefs require a context to save, kick off write in-case it was waiting.
+      if (wasAppContextNull)
+         OneSignalPrefs.startDelayedWrite();
    }
 
    /**

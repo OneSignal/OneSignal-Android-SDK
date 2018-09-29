@@ -12,6 +12,7 @@ public class RestoreKickoffJobService extends OneSignalJobServiceBase {
     @Override
     void startProcessing(JobService jobService, JobParameters jobParameters) {
         Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+        OneSignal.setAppContext(this);
         NotificationRestorer.restore(getApplicationContext());
     }
 }
