@@ -29,8 +29,6 @@ package com.onesignal;
 
 import org.json.JSONObject;
 
-import static com.onesignal.OneSignal.appContext;
-
 public class OSPermissionState implements Cloneable {
    
    OSObservable<Object, OSPermissionState> observable;
@@ -51,7 +49,7 @@ public class OSPermissionState implements Cloneable {
    private boolean enabled;
    
    void refreshAsTo() {
-      setEnabled(OSUtils.areNotificationsEnabled(appContext));
+      setEnabled(OSUtils.areNotificationsEnabled(OneSignal.appContext));
    }
    
    public boolean getEnabled() {

@@ -45,6 +45,8 @@ class NotificationOpenedProcessor {
    static void processFromContext(Context context, Intent intent) {
       if (!isOneSignalIntent(intent))
          return;
+
+      OneSignal.setAppContext(context);
       
       handleDismissFromActionButtonPress(context, intent);
 

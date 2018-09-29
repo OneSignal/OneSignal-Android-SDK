@@ -43,6 +43,8 @@ public class NotificationRestoreService extends IntentService {
          return;
       
       Thread.currentThread().setPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+      OneSignal.setAppContext(this);
+
       NotificationRestorer.restore(this);
       WakefulBroadcastReceiver.completeWakefulIntent(intent);
    }

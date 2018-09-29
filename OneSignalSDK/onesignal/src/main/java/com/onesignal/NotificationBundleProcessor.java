@@ -50,6 +50,7 @@ class NotificationBundleProcessor {
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
    static void ProcessFromGCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+      OneSignal.setAppContext(context);
       try {
          String jsonStrPayload = bundle.getString("json_payload");
          if (jsonStrPayload == null) {
