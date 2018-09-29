@@ -29,6 +29,7 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.Proxy;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -89,6 +90,8 @@ public class OneSignal {
 
    static final long MIN_ON_FOCUS_TIME = 60;
    private static final long MIN_ON_SESSION_TIME = 30;
+
+   static Proxy proxy = null;
 
    /**
     * An interface used to process a OneSignal notification the user just tapped on.
@@ -204,6 +207,7 @@ public class OneSignal {
       Context mContext;
       NotificationOpenedHandler mNotificationOpenedHandler;
       NotificationReceivedHandler mNotificationReceivedHandler;
+      Proxy proxy;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
       // Default true in 4.0.0 release.
@@ -225,6 +229,10 @@ public class OneSignal {
 
       private void setDisplayOptionCarryOver(boolean carryOver) {
          mDisplayOptionCarryOver = carryOver;
+      }
+
+      public void setProxy(Proxy proxy) {
+         this.proxy = proxy;
       }
 
       /**
@@ -550,6 +558,8 @@ public class OneSignal {
       mInitBuilder.mContext = null; // Clear to prevent leaks.
 
       try {
+         OneSignal.proxy = inBuilder.proxy;
+
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
 
