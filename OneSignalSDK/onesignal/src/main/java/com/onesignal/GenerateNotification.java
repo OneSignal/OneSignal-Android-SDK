@@ -227,38 +227,11 @@ class GenerateNotification {
          .setContentText(message)
          .setTicker(message);
 
+      // If title is blank; Set to app name if less than Android 7.
+      //    Android 7.0 always displays the app title now in it's own section
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
           !gcmBundle.optString("title").equals(""))
          notifBuilder.setContentTitle(getTitle(gcmBundle));
-      
-      int notificationDefaults = 0;
-      
-      if (OneSignal.getVibrate(currentContext) && gcmBundle.optInt("vib", 1) == 1) {
-         if (gcmBundle.has("vib_pt")) {
-            long[] vibrationPattern = OSUtils.parseVibrationPattern(gcmBundle);
-            if (vibrationPattern != null)
-               notifBuilder.setVibrate(vibrationPattern);
-         }
-         else
-            notificationDefaults = Notification.DEFAULT_VIBRATE;
-      }
-      
-      if (gcmBundle.has("ledc") && gcmBundle.optInt("led", 1) == 1) {
-         try {
-            BigInteger ledColor = new BigInteger(gcmBundle.optString("ledc"), 16);
-            notifBuilder.setLights(ledColor.intValue(), 2000, 5000);
-         } catch (Throwable t) {
-            notificationDefaults |= Notification.DEFAULT_LIGHTS;
-         } // Can throw if an old android support lib is used or parse error.
-      }
-      else
-         notificationDefaults |= Notification.DEFAULT_LIGHTS;
-   
-      if (notifJob.shownTimeStamp != null) {
-         try {
-            notifBuilder.setWhen(notifJob.shownTimeStamp * 1000L);
-         } catch (Throwable t) {} // Can throw if an old android support lib is used.
-      }
    
       try {
          BigInteger accentColor = getAccentColor(gcmBundle);
@@ -267,10 +240,10 @@ class GenerateNotification {
       } catch (Throwable t) {} // Can throw if an old android support lib is used.
 
       try {
-         int visibility = NotificationCompat.VISIBILITY_PUBLIC;
+         int lockScreenVisibility = NotificationCompat.VISIBILITY_PUBLIC;
          if (gcmBundle.has("vis"))
-            visibility = Integer.parseInt(gcmBundle.optString("vis"));
-         notifBuilder.setVisibility(visibility);
+            lockScreenVisibility = Integer.parseInt(gcmBundle.optString("vis"));
+         notifBuilder.setVisibility(lockScreenVisibility);
       } catch (Throwable t) {} // Can throw if an old android support lib is used or parse error
 
       Bitmap largeIcon = getLargeIcon(gcmBundle);
@@ -283,6 +256,52 @@ class GenerateNotification {
       if (bigPictureIcon != null)
          notifBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
 
+      if (notifJob.shownTimeStamp != null) {
+         try {
+            notifBuilder.setWhen(notifJob.shownTimeStamp * 1000L);
+         } catch (Throwable t) {} // Can throw if an old android support lib is used.
+      }
+
+      setAlertnessOptions(gcmBundle, notifBuilder);
+      
+      oneSignalNotificationBuilder.compatBuilder = notifBuilder;
+      return oneSignalNotificationBuilder;
+   }
+
+   // Sets visibility options including; Priority, LED, Sounds, and Vibration.
+   private static void setAlertnessOptions(JSONObject gcmBundle, NotificationCompat.Builder notifBuilder) {
+      int payloadPriority = gcmBundle.optInt("pri", 6);
+      int androidPriority = convertOSToAndroidPriority(payloadPriority);
+      notifBuilder.setPriority(androidPriority);
+      boolean lowDisplayPriority = androidPriority < NotificationCompat.PRIORITY_DEFAULT;
+
+      // If notification is a low priority don't set Sound, Vibration, or LED
+      if (lowDisplayPriority)
+         return;
+
+      int notificationDefaults = 0;
+
+      if (gcmBundle.has("ledc") && gcmBundle.optInt("led", 1) == 1) {
+         try {
+            BigInteger ledColor = new BigInteger(gcmBundle.optString("ledc"), 16);
+            notifBuilder.setLights(ledColor.intValue(), 2000, 5000);
+         } catch (Throwable t) {
+            notificationDefaults |= Notification.DEFAULT_LIGHTS;
+         } // Can throw if an old android support lib is used or parse error.
+      }
+      else
+         notificationDefaults |= Notification.DEFAULT_LIGHTS;
+
+      if (OneSignal.getVibrate(currentContext) && gcmBundle.optInt("vib", 1) == 1) {
+         if (gcmBundle.has("vib_pt")) {
+            long[] vibrationPattern = OSUtils.parseVibrationPattern(gcmBundle);
+            if (vibrationPattern != null)
+               notifBuilder.setVibrate(vibrationPattern);
+         }
+         else
+            notificationDefaults |= Notification.DEFAULT_VIBRATE;
+      }
+
       if (isSoundEnabled(gcmBundle)) {
          Uri soundUri = OSUtils.getSoundUri(currentContext, gcmBundle.optString("sound", null));
          if (soundUri != null)
@@ -292,12 +311,6 @@ class GenerateNotification {
       }
 
       notifBuilder.setDefaults(notificationDefaults);
-   
-      int payload_priority = gcmBundle.optInt("pri", 6);
-      notifBuilder.setPriority(osPriorityToAndroidPriority(payload_priority));
-      
-      oneSignalNotificationBuilder.compatBuilder = notifBuilder;
-      return oneSignalNotificationBuilder;
    }
 
    private static void removeNotifyOptions(NotificationCompat.Builder builder) {
@@ -1002,14 +1015,14 @@ class GenerateNotification {
       }
    }
    
-   private static int osPriorityToAndroidPriority(int priority) {
+   private static int convertOSToAndroidPriority(int priority) {
       if (priority > 9)
          return NotificationCompat.PRIORITY_MAX;
       if (priority > 7)
          return NotificationCompat.PRIORITY_HIGH;
-      if (priority > 5)
+      if (priority > 4)
          return NotificationCompat.PRIORITY_DEFAULT;
-      if (priority > 3)
+      if (priority > 2)
          return NotificationCompat.PRIORITY_LOW;
       
       return NotificationCompat.PRIORITY_MIN;
