@@ -755,6 +755,26 @@ public class GenerateNotificationRunner {
       assertEquals("id1", new JSONObject(json_data).optString("actionSelected"));
    }
 
+   @Test
+   public void shouldSetAlertnessFieldsOnNormalPriority() {
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putString("pri", "5"); // Notifications from dashboard have priority 5 by default
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+
+      assertEquals(NotificationCompat.PRIORITY_DEFAULT, ShadowRoboNotificationManager.getLastNotif().priority);
+      final int alertnessFlags = Notification.DEFAULT_SOUND | Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE;
+      assertEquals(alertnessFlags, ShadowRoboNotificationManager.getLastNotif().defaults);
+   }
+
+   @Test
+   public void shouldNotSetAlertnessFieldsOnLowPriority() {
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putString("pri", "4");
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+
+      assertEquals(NotificationCompat.PRIORITY_LOW, ShadowRoboNotificationManager.getLastNotif().priority);
+      assertEquals(0, ShadowRoboNotificationManager.getLastNotif().defaults);
+   }
 
    @Test
    public void shouldAddDefaultButtonToAlertDialog() throws Exception {

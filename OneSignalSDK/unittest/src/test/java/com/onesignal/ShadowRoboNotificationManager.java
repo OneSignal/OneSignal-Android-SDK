@@ -58,6 +58,10 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    }
 
    private static Notification lastNotif;
+
+   public static Notification getLastNotif() {
+      return lastNotif;
+   }
    public static ShadowNotification getLastShadowNotif() {
       return shadowOf(lastNotif);
    }
