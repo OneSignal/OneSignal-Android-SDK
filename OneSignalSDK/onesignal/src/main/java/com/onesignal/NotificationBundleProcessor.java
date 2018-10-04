@@ -459,11 +459,16 @@ class NotificationBundleProcessor {
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
+      boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
 
-      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-         NotificationExtenderService.enqueueWork(context,
-                 intent.getComponent(), EXTENDER_SERVICE_JOB_ID,
-                 intent);
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+         NotificationExtenderService.enqueueWork(
+            context,
+            intent.getComponent(),
+            EXTENDER_SERVICE_JOB_ID,
+            intent,
+            isHighPriority
+         );
       else
          context.startService(intent);
 

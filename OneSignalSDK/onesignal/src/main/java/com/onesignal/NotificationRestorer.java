@@ -207,12 +207,13 @@ class NotificationRestorer {
             NotificationExtenderService.enqueueWork(context,
                   intent.getComponent(),
                   NotificationExtenderService.EXTENDER_SERVICE_JOB_ID,
-                  intent);
+                  intent,
+                  false);
          }
          else {
             Intent intent = addRestoreExtras(new Intent(), cursor);
             ComponentName componentName = new ComponentName(context, RestoreJobService.class);
-            RestoreJobService.enqueueWork(context, componentName, RestoreJobService.RESTORE_SERVICE_JOB_ID, intent);
+            RestoreJobService.enqueueWork(context, componentName, RestoreJobService.RESTORE_SERVICE_JOB_ID, intent, false);
          }
 
          if (delay > 0)
