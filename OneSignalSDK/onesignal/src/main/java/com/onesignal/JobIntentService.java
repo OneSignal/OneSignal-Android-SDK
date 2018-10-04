@@ -19,6 +19,15 @@ package com.onesignal;
 // Source from
 // https://github.com/aosp-mirror/platform_frameworks_support/blob/64ac15541ebbfda5e1e45a130043202658a5a809/core/src/main/java/androidx/core/app/JobIntentService.java
 
+// Modified by OneSignal to add useWakefulService option
+// This allows using ether a IntentService even for Android 8.0 (API 26) when needed.
+//    - This allows starting NotificationExtenderService on a high priority FCM message
+//    - Even when the device is in doze mode.
+// - The following can be used to confirm;
+//   - adb shell dumpsys deviceidle force-idle
+// - And the following to undo
+//   - adb shell dumpsys deviceidle unforce
+
 import android.app.Service;
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
@@ -105,7 +114,18 @@ abstract class JobIntentService extends Service {
     final ArrayList<CompatWorkItem> mCompatQueue;
 
     static final Object sLock = new Object();
-    static final HashMap<ComponentName, WorkEnqueuer> sClassWorkEnqueuer = new HashMap<>();
+
+    // Class only used to create a unique hash key for sClassWorkEnqueuer
+    private static class ComponentNameWithWakeful {
+        private ComponentName componentName;
+        private boolean useWakefulService;
+
+        ComponentNameWithWakeful(ComponentName componentName, boolean useWakefulService) {
+            this.componentName = componentName; this.useWakefulService = useWakefulService;
+        }
+    }
+
+    static final HashMap<ComponentNameWithWakeful, WorkEnqueuer> sClassWorkEnqueuer = new HashMap<>();
 
     /**
      * Base class for the target service we can deliver work to and the implementation of
@@ -416,25 +436,21 @@ abstract class JobIntentService extends Service {
      * Default empty constructor.
      */
     public JobIntentService() {
-        if (Build.VERSION.SDK_INT >= 26) {
-            mCompatQueue = null;
-        } else {
-            mCompatQueue = new ArrayList<>();
-        }
+        mCompatQueue = new ArrayList<>();
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
         if (DEBUG) Log.d(TAG, "CREATING: " + this);
+
         if (Build.VERSION.SDK_INT >= 26) {
             mJobImpl = new JobServiceEngineImpl(this);
             mCompatWorkEnqueuer = null;
-        } else {
-            mJobImpl = null;
-            ComponentName cn = new ComponentName(this, this.getClass());
-            mCompatWorkEnqueuer = getWorkEnqueuer(this, cn, false, 0);
         }
+
+        ComponentName cn = new ComponentName(this, this.getClass());
+        mCompatWorkEnqueuer = getWorkEnqueuer(this, cn, false, 0, true);
     }
 
     /**
@@ -443,19 +459,14 @@ abstract class JobIntentService extends Service {
      */
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
-        if (mCompatQueue != null) {
-            mCompatWorkEnqueuer.serviceStartReceived();
-            if (DEBUG) Log.d(TAG, "Received compat start command #" + startId + ": " + intent);
-            synchronized (mCompatQueue) {
-                mCompatQueue.add(new CompatWorkItem(intent != null ? intent : new Intent(),
-                   startId));
-                ensureProcessorRunningLocked(true);
-            }
-            return START_REDELIVER_INTENT;
-        } else {
-            if (DEBUG) Log.d(TAG, "Ignoring start command: " + intent);
-            return START_NOT_STICKY;
+        mCompatWorkEnqueuer.serviceStartReceived();
+        if (DEBUG) Log.d(TAG, "Received compat start command #" + startId + ": " + intent);
+        synchronized (mCompatQueue) {
+            mCompatQueue.add(new CompatWorkItem(intent != null ? intent : new Intent(),
+               startId));
+            ensureProcessorRunningLocked(true);
         }
+        return START_REDELIVER_INTENT;
     }
 
     /**
@@ -476,11 +487,9 @@ abstract class JobIntentService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mCompatQueue != null) {
-            synchronized (mCompatQueue) {
-                mDestroyed = true;
-                mCompatWorkEnqueuer.serviceProcessingFinished();
-            }
+        synchronized (mCompatQueue) {
+            mDestroyed = true;
+            mCompatWorkEnqueuer.serviceProcessingFinished();
         }
     }
 
@@ -499,8 +508,8 @@ abstract class JobIntentService extends Service {
      * @param work The Intent of work to enqueue.
      */
     public static void enqueueWork(@NonNull Context context, @NonNull Class cls, int jobId,
-                                   @NonNull Intent work) {
-        enqueueWork(context, new ComponentName(context, cls), jobId, work);
+                                   @NonNull Intent work, boolean useWakefulService) {
+        enqueueWork(context, new ComponentName(context, cls), jobId, work, useWakefulService);
     }
 
     /**
@@ -515,30 +524,31 @@ abstract class JobIntentService extends Service {
      * @param work The Intent of work to enqueue.
      */
     public static void enqueueWork(@NonNull Context context, @NonNull ComponentName component,
-                                   int jobId, @NonNull Intent work) {
+                                   int jobId, @NonNull Intent work, boolean useWakefulService) {
         if (work == null) {
             throw new IllegalArgumentException("work must not be null");
         }
         synchronized (sLock) {
-            WorkEnqueuer we = getWorkEnqueuer(context, component, true, jobId);
+            WorkEnqueuer we = getWorkEnqueuer(context, component, true, jobId, useWakefulService);
             we.ensureJobId(jobId);
             we.enqueueWork(work);
         }
     }
 
     static WorkEnqueuer getWorkEnqueuer(Context context, ComponentName cn, boolean hasJobId,
-                                        int jobId) {
-        WorkEnqueuer we = sClassWorkEnqueuer.get(cn);
+                                        int jobId, boolean useWakefulService) {
+        ComponentNameWithWakeful key = new ComponentNameWithWakeful(cn, useWakefulService);
+        WorkEnqueuer we = sClassWorkEnqueuer.get(key);
         if (we == null) {
-            if (Build.VERSION.SDK_INT >= 26) {
+            if (Build.VERSION.SDK_INT >= 26 && !useWakefulService) {
                 if (!hasJobId) {
                     throw new IllegalArgumentException("Can't be here without a job id");
                 }
                 we = new JobWorkEnqueuer(context, cn, jobId);
-            } else {
-                we = new CompatWorkEnqueuer(context, cn);
             }
-            sClassWorkEnqueuer.put(cn, we);
+            else
+                we = new CompatWorkEnqueuer(context, cn);
+            sClassWorkEnqueuer.put(key, we);
         }
         return we;
     }
@@ -639,15 +649,16 @@ abstract class JobIntentService extends Service {
 
     GenericWorkItem dequeueWork() {
         if (mJobImpl != null) {
-            return mJobImpl.dequeueWork();
-        } else {
-            synchronized (mCompatQueue) {
-                if (mCompatQueue.size() > 0) {
-                    return mCompatQueue.remove(0);
-                } else {
-                    return null;
-                }
-            }
+            GenericWorkItem jobWork = mJobImpl.dequeueWork();
+            if (jobWork != null)
+                return jobWork;
+        }
+
+        synchronized (mCompatQueue) {
+            if (mCompatQueue.size() > 0)
+                return mCompatQueue.remove(0);
+            else
+                return null;
         }
     }
 }
