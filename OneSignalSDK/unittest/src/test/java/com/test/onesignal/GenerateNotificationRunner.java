@@ -808,7 +808,7 @@ public class GenerateNotificationRunner {
       GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
       gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
       
-      assertNull(ShadowGcmBroadcastReceiver.lastResultCode);
+      assertEquals(Activity.RESULT_OK, (int)ShadowGcmBroadcastReceiver.lastResultCode);
       assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
    }
    
