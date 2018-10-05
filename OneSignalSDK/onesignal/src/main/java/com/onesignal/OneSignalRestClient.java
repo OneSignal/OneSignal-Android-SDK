@@ -29,11 +29,12 @@ package com.onesignal;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
 
 import org.json.JSONObject;
+
+import javax.net.ssl.HttpsURLConnection;
 
 class OneSignalRestClient {
    static class ResponseHandler {
@@ -114,15 +115,21 @@ class OneSignalRestClient {
    }
    
    private static Thread startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout) {
-      HttpURLConnection con = null;
+      HttpsURLConnection con = null;
       int httpResponse = -1;
       String json = null;
       Thread callbackThread = null;
    
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
-         con = (HttpURLConnection)new URL(BASE_URL + url).openConnection();
-         
+         URL urlInstance = new URL(BASE_URL + url);
+
+         if (OneSignal.proxy == null) {
+            con = (HttpsURLConnection) urlInstance.openConnection();
+         } else {
+            con = (HttpsURLConnection) urlInstance.openConnection(OneSignal.proxy);
+         }
+
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
@@ -152,7 +159,7 @@ class OneSignalRestClient {
       
          InputStream inputStream;
          Scanner scanner;
-         if (httpResponse == HttpURLConnection.HTTP_OK) {
+         if (httpResponse == HttpsURLConnection.HTTP_OK) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Successfully finished request to: " + BASE_URL + url);
          
             inputStream = con.getInputStream();
