@@ -73,7 +73,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       
       // Null means this isn't a GCM / FCM message.
       if (processedResult == null) {
-         setResult(Activity.RESULT_OK);
+         setSuccessfulResultCode();
          return;
       }
       
@@ -95,17 +95,27 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
          return;
       }
 
-      setResult(Activity.RESULT_OK);
+      setSuccessfulResultCode();
    }
 
-   private void setResult(int code) {
+   private void setSuccessfulResultCode() {
       if (isOrderedBroadcast())
-         setResultCode(code);
+         setResultCode(Activity.RESULT_OK);
    }
 
    private void setAbort() {
-      if (isOrderedBroadcast())
+      if (isOrderedBroadcast()) {
+         // Prevents other BroadcastReceivers from firing
          abortBroadcast();
+
+         // RESULT_OK prevents the following confusing logcat entry;
+         // W/GCM: broadcast intent callback: result=CANCELLED forIntent {
+         //    act=com.google.android.c2dm.intent.RECEIVE
+         //    flg=0x10000000
+         //    pkg=com.onesignal.example (has extras)
+         // }
+         setResultCode(Activity.RESULT_OK);
+      }
    }
    
    private static ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
