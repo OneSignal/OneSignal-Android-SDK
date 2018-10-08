@@ -1,5 +1,8 @@
 package com.onesignal;
 
+import android.content.Context;
+import android.util.Log;
+
 import org.robolectric.annotation.Implements;
 
 @Implements(OSUtils.class)
@@ -17,7 +20,8 @@ public class ShadowOSUtils {
       return carrierName;
    }
 
-   public int initializationChecker(int deviceType, String oneSignalAppId) {
+   public int initializationChecker(Context context, int deviceType, String oneSignalAppId) {
+      Log.e("HERE", "subscribableStatus: " + subscribableStatus);
       return subscribableStatus;
    }
 }

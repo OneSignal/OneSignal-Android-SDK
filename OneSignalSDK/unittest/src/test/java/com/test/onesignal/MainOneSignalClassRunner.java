@@ -587,12 +587,10 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testInvalidGoogleProjectNumberWithSuccessfulRegisterResponse() throws Exception {
+   public void testIdsAvailableFiresA2ndTimeIfTheFirstTimeDidNotContainAPushToken() throws Exception {
       GetIdsAvailable();
-      // A more real test would be "missing support library" but bad project number is an easier setup
-      //   and is testing the same logic.
       ShadowPushRegistratorGCM.fail = true;
-      OneSignalInitWithBadProjectNum();
+      OneSignalInit();
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
 
@@ -623,16 +621,19 @@ public class MainOneSignalClassRunner {
       assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
 
+   // Specifically that a runtime error with FCM doesn't override a "support library missing" error.
+   // TODO: Rename test
+   // TODO: Larger refactor, split tests up into one thing. Don't test GetIdsAvailable + last network responses
    @Test
    public void testInvalidGoogleProjectNumberWithFailedRegisterResponse() throws Exception {
-      // Ensures lower number notification_types do not over right higher numbered ones.
+      // Ensures lower number notification_types do not overwrite higher numbered ones.
       ShadowPushRegistratorGCM.fail = true;
       GetIdsAvailable();
       OneSignalInitWithBadProjectNum();
 
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
+      assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
       assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
@@ -3057,6 +3058,28 @@ public class MainOneSignalClassRunner {
       assertTrue(permissionSubscriptionState.getPermissionStatus().getEnabled());
       assertTrue(permissionSubscriptionState.getSubscriptionStatus().getSubscribed());
    }
+
+   // TODO: Fix consistencies between getPermissionSubscriptionState and GetIdsAvailable
+   @Test
+   public void getSubscribedShouldBeFalseWhenThereIsASetupError() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession();
+
+//      OneSignalInitWithBadProjectNum();
+      ShadowOSUtils.subscribableStatus = -3; // PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY;
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+
+      GetIdsAvailable();
+
+      assertNull(getCallBackRegId);
+      OSPermissionSubscriptionState permissionSubscriptionState = OneSignal.getPermissionSubscriptionState();
+      assertTrue(permissionSubscriptionState.getPermissionStatus().getEnabled());
+      assertFalse(permissionSubscriptionState.getSubscriptionStatus().getSubscribed());
+   }
+   // TODO: Create tests to ensure Observer fires when subscribableStatus changes
 
    @Test
    public void shouldSendPurchases() throws Exception {

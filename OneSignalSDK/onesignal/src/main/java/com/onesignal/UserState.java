@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 abstract class UserState {
@@ -27,6 +28,20 @@ abstract class UserState {
     // -10 is a server side detection only from FCM that the app is no longer installed
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION = -11;
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION = -12;
+
+    static final List<Integer> CONFIG_ERRORS = Arrays.asList(
+       PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY,
+       PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY,
+       PUSH_STATUS_OUTDATED_ANDROID_SUPPORT_LIBRARY,
+       PUSH_STATUS_INVALID_FCM_SENDER_ID
+    );
+    static final List<Integer> RUNTIME_ERRORS = Arrays.asList(
+       PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP,
+       PUSH_STATUS_FIREBASE_FCM_INIT_ERROR,
+       PUSH_STATUS_FIREBASE_FCM_ERROR_SERVICE_NOT_AVAILABLE,
+       PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION,
+       PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION
+    );
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));

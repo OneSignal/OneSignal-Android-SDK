@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,16 +27,17 @@
 
 package com.onesignal;
 
-
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OSSubscriptionState implements Cloneable {
-   
+
    OSObservable<Object, OSSubscriptionState> observable;
-   
+
    OSSubscriptionState(boolean asFrom, boolean permissionAccepted) {
       observable = new OSObservable<>("changed", false);
-      
+
+      // Initializes as pre-existing state of the last time the observable fired.
       if (asFrom) {
          userSubscriptionSetting = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_ONESIGNAL_SUBSCRIPTION_LAST, false);
@@ -46,12 +47,16 @@ public class OSSubscriptionState implements Cloneable {
                  OneSignalPrefs.PREFS_ONESIGNAL_PUSH_TOKEN_LAST, null);
          accepted = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST, false);
+
+         subscribableStatus = OneSignalPrefs.getInt(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_ONESIGNAL_SUBSCRIBABLE_LAST, 1);
       }
       else {
          userSubscriptionSetting = OneSignalStateSynchronizer.getUserSubscribePreference();
          userId = OneSignal.getUserId();
          pushToken = OneSignalStateSynchronizer.getRegistrationId();
          accepted = permissionAccepted;
+         subscribableStatus = OneSignal.subscribableStatus;
       }
    }
    
@@ -59,6 +64,7 @@ public class OSSubscriptionState implements Cloneable {
    private boolean userSubscriptionSetting;
    private String userId;
    private String pushToken;
+   private int subscribableStatus;
    
    void changed(OSPermissionState state) {
       setAccepted(state.getEnabled());
@@ -106,9 +112,34 @@ public class OSSubscriptionState implements Cloneable {
       if (lastSubscribed != getSubscribed())
          observable.notifyChange(this);
    }
+
+   void setSubscribableStatus(int status) {
+      if (subscribableStatus == status)
+         return;
+
+      // Only count as changed if we are out of or into a config or runtime error
+      // Values less than -2 are considered a config or runtime error state
+      if (subscribableStatus > -2 && status > -2)
+         return;
+
+      subscribableStatus = status;
+      observable.notifyChange(this);
+   }
+
+   public OSSubscriptionError getErrors() {
+      if (subscribableStatus > 0)
+         return null;
+
+      return new OSSubscriptionError(subscribableStatus);
+   }
    
    public boolean getSubscribed() {
-      return userId != null && pushToken != null && userSubscriptionSetting && accepted;
+      return
+         userId != null &&
+         pushToken != null &&
+         userSubscriptionSetting &&
+         accepted &&
+         getErrors() == null;
    }
    
    void persistAsFrom() {
@@ -120,13 +151,16 @@ public class OSSubscriptionState implements Cloneable {
               OneSignalPrefs.PREFS_ONESIGNAL_PUSH_TOKEN_LAST, pushToken);
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST, accepted);
+      OneSignalPrefs.saveInt(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_ONESIGNAL_SUBSCRIBABLE_LAST, subscribableStatus);
    }
    
    boolean compare(OSSubscriptionState from) {
       return userSubscriptionSetting != from.userSubscriptionSetting
           || !(userId != null ? userId : "").equals(from.userId != null ? from.userId : "")
           || !(pushToken != null ? pushToken : "").equals(from.pushToken != null ? from.pushToken : "")
-          || accepted != from.accepted;
+          || accepted != from.accepted
+          || subscribableStatus != from.subscribableStatus;
    }
    
    protected Object clone() {
@@ -152,8 +186,10 @@ public class OSSubscriptionState implements Cloneable {
          
          mainObj.put("userSubscriptionSetting", userSubscriptionSetting);
          mainObj.put("subscribed", getSubscribed());
+         if (getErrors() != null)
+            mainObj.put("errors", getErrors().toJSONObject());
       }
-      catch(Throwable t) {
+      catch(JSONException t) {
          t.printStackTrace();
       }
       

@@ -343,7 +343,7 @@ public class OneSignal {
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
    private static String userId = null, emailId = null;
-   private static int subscribableStatus;
+   static int subscribableStatus;
 
    static boolean initDone;
    private static boolean foreground;
@@ -365,7 +365,7 @@ public class OneSignal {
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
-   private static int deviceType;
+   static int deviceType;
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
 
@@ -449,7 +449,7 @@ public class OneSignal {
          return null;
 
       if (lastSubscriptionState == null)
-         lastSubscriptionState = new OSSubscriptionState(true, false);
+         lastSubscriptionState = new OSSubscriptionState(true, /*Ignored*/false);
 
       return lastSubscriptionState;
    }
@@ -812,6 +812,7 @@ public class OneSignal {
             lastRegistrationId = id;
             registerForPushFired = true;
             getCurrentSubscriptionState(appContext).setPushToken(id);
+            getCurrentSubscriptionState(appContext).setSubscribableStatus(subscribableStatus);
             registerUser();
          }
       });
