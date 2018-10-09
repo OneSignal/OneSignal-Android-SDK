@@ -51,8 +51,11 @@ import java.util.ArrayList;
 // Restore any notifications not interacted by the user back into the notification shade.
 // We consider "not interacted" with if it wasn't swiped away or opened by the user.
 // Android removes all the app's notifications in the following three cases.
-//   1. App was force stopped (AKA forced killed). Different than the app being swiped away.
+//   1. App was force stopped. (AKA force killed)
+//      - Swiped away is a normal close.
 //   2. App is updated.
+//      - From the Play Store or with adb install.
+//      - Also happens each time you run the app from Android Studio.
 //   3. Device is rebooted.
 // Restoring is done to ensure notifications are not missed by the user.
 //
@@ -64,6 +67,7 @@ import java.util.ArrayList;
 //                   The channel has a low priority so the user is not interrupted again.
 // Android 6+ Marshmallow - We check the notification shade if the notification is already there
 //                            we skip generating it again.
+// Up to the most recent 50 notifications will be restored.
 
 class NotificationRestorer {
 
@@ -74,8 +78,22 @@ class NotificationRestorer {
        NotificationTable.COLUMN_NAME_FULL_DATA,
        NotificationTable.COLUMN_NAME_CREATED_TIME
    };
+
+   // Delay to prevent logcat messages and possibly skipping some notifications
+   //    This prevents the following error;
+   // E/NotificationService: Package enqueue rate is 10.56985. Shedding events. package=####
+   private static final int DELAY_BETWEEN_NOTIFICATION_RESTORES_MS = 200;
+
+   // Android does not allow a package to have more than 49 total notifications being shown.
+   //   This prevents the following error;
+   // E/NotificationService: Package has already posted 50 notifications.
+   //                        Not showing more.  package=####
+   // Even though it says 50 in the error it is really a limit of 49.
+   // See NotificationManagerService.java in the ASOP source
+   private static final String MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE = "49";
    
-   // Notifications will never be force removed when the app's process is running.
+   // Notifications will never be force removed when the app's process is running,
+   //   so we only need to restore at most once per cold start of the app.
    public static boolean restored;
 
    static void asyncRestore(final Context context) {
@@ -94,7 +112,7 @@ class NotificationRestorer {
          return;
       restored = true;
 
-      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "restoring notifications");
+      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Restoring notifications");
 
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       SQLiteDatabase writableDb = null;
@@ -103,7 +121,6 @@ class NotificationRestorer {
          writableDb = dbHelper.getWritableDbWithRetries();
          
          writableDb.beginTransaction();
-         
          NotificationBundleProcessor.deleteOldNotifications(writableDb);
          writableDb.setTransactionSuccessful();
       } catch (Throwable t) {
@@ -129,7 +146,7 @@ class NotificationRestorer {
       skipVisibleNotifications(context, dbQuerySelection);
 
       OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
-              "Querying DB for notfs to restore: " + dbQuerySelection.toString());
+              "Querying DB for notifs to restore: " + dbQuerySelection.toString());
 
       Cursor cursor = null;
       try {
@@ -139,12 +156,13 @@ class NotificationRestorer {
              COLUMNS_FOR_RESTORE,
              dbQuerySelection.toString(),
             null,
-            null,                           // group by
-            null,                            // filter by row groups
-            NotificationTable._ID + " ASC"  // sort order, old to new
+            null, // group by
+            null, // filter by row groups
+            NotificationTable._ID + " DESC", // sort order, new to old
+            MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE // limit
          );
-   
-         showNotifications(context, cursor, 100);
+
+         showNotifications(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
          
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
