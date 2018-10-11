@@ -2024,19 +2024,12 @@ public class OneSignal {
               OneSignalPrefs.PREFS_GT_APP_ID,null);
    }
 
-   static boolean getSavedUserConsentStatus() { return getSavedUserConsentStatus(appContext); }
-
-   private static boolean getSavedUserConsentStatus(Context inContext) {
-      if (inContext == null)
-         return false;
-
+   static boolean getSavedUserConsentStatus() {
       return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT, false);
    }
 
    static void saveUserConsentStatus(boolean consent) {
-      if (appContext == null)
-         return;
-
+      
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT, consent);
    }
 
