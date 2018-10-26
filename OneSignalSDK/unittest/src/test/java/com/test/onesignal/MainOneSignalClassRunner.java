@@ -2352,6 +2352,83 @@ public class MainOneSignalClassRunner {
       assertTrue(OneSignal.userProvidedPrivacyConsent());
    }
 
+
+   // Functions to add observers (like addSubscriptionObserver) should continue
+   // to work even if privacy consent has not been granted.
+   @Test
+   public void shouldAddSubscriptionObserverIfConsentNotGranted() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSSubscriptionObserver subscriptionObserver = new OSSubscriptionObserver() {
+         @Override
+         public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+            lastSubscriptionStateChanges = stateChanges;
+            currentSubscription = stateChanges.getTo().getSubscribed();
+         }
+      };
+      OneSignal.addSubscriptionObserver(subscriptionObserver);
+      lastSubscriptionStateChanges = null;
+      // Make sure garbage collection doesn't nuke any observers.
+      Runtime.getRuntime().gc();
+
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+
+      // make sure the subscription observer was fired
+      assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
+   }
+
+   @Test
+   public void shouldAddPermissionObserverIfConsentNotGranted() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSPermissionObserver permissionObserver = new OSPermissionObserver() {
+         @Override
+         public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+            lastPermissionStateChanges = stateChanges;
+            currentPermission = stateChanges.getTo().getEnabled();
+         }
+      };
+      OneSignal.addPermissionObserver(permissionObserver);
+
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+
+      // make sure the permission observer was fired
+      assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
+      assertTrue(lastPermissionStateChanges.getTo().getEnabled());
+   }
+
+   @Test
+   public void shouldAddEmailSubscriptionObserverIfConsentNotGranted() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignalInit();
+      OSEmailSubscriptionObserver subscriptionObserver = new OSEmailSubscriptionObserver() {
+         @Override
+         public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+            lastEmailSubscriptionStateChanges = stateChanges;
+         }
+      };
+      OneSignal.addEmailSubscriptionObserver(subscriptionObserver);
+
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      // make sure the email subscription observer was fired
+      assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
+      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
+      assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
+      assertTrue(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+   }
+
    /*
    // Can't get test to work from a app flow due to the main thread being locked one way or another in a robolectric env.
    // Running ActivityLifecycleListener.focusHandlerThread...advanceToNextPostedRunnable waits on the main thread.
