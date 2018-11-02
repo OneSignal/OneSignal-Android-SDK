@@ -37,8 +37,11 @@ import android.app.job.JobService;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
+
+import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -117,6 +120,13 @@ class OneSignalSyncServiceUtils {
       }
    }
 
+   private static boolean hasBootPermission(Context context) {
+      return ContextCompat.checkSelfPermission(
+               context,
+               "android.permission.RECEIVE_BOOT_COMPLETED"
+             ) == PackageManager.PERMISSION_GRANTED;
+   }
+
    @RequiresApi(21)
    private static void scheduleSyncServiceAsJob(Context context, long delayMs) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob:atTime: " + delayMs);
@@ -126,15 +136,16 @@ class OneSignalSyncServiceUtils {
          new ComponentName(context, SyncJobService.class)
       );
 
-      JobInfo job = jobBuilder
+      jobBuilder
          .setMinimumLatency(delayMs)
-         .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-         .setPersisted(true)
-         .build();
+         .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+
+      if (hasBootPermission(context))
+         jobBuilder.setPersisted(true);
 
       JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
       try {
-         int result = jobScheduler.schedule(job);
+         int result = jobScheduler.schedule(jobBuilder.build());
          OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleSyncServiceAsJob:result: " + result);
       } catch (NullPointerException e) {
          // Catch for buggy Oppo devices
