@@ -12,12 +12,12 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import static com.onesignal.OSUtils.getResourceString;
 
 class GooglePlayServicesUpgradePrompt {
-   private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
+   private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9_000;
 
    static boolean isGMSInstalledAndEnabled() {
       try {
          PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_ACTIVITIES);
+         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
 
          return info.applicationInfo.enabled;
       } catch (PackageManager.NameNotFoundException e) {}
@@ -28,7 +28,7 @@ class GooglePlayServicesUpgradePrompt {
    private static boolean isGooglePlayStoreInstalled() {
       try {
          PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_ACTIVITIES);
+         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
          String label = (String) info.applicationInfo.loadLabel(pm);
          return (label != null && !label.equals("Market"));
       } catch (Throwable e) {}
