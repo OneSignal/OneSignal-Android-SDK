@@ -23,6 +23,8 @@ package com.onesignal;
 // This allows using ether a IntentService even for Android 8.0 (API 26) when needed.
 //    - This allows starting NotificationExtenderService on a high priority FCM message
 //    - Even when the device is in doze mode.
+// Has fallback handling to job service if IllegalStateException is thrown when starting service.
+// ==== Testing ====
 // - The following can be used to confirm;
 //   - adb shell dumpsys deviceidle force-idle
 // - And the following to undo
@@ -314,7 +316,7 @@ abstract class JobIntentService extends Service {
 
         @Override
         public boolean onStopJob(JobParameters params) {
-            if (DEBUG) Log.d(TAG, "onStartJob: " + params);
+            if (DEBUG) Log.d(TAG, "onStopJob: " + params);
             boolean result = mService.doStopCurrentWork();
             synchronized (mLock) {
                 // Once we return, the job is stopped, so its JobParameters are no
@@ -531,7 +533,21 @@ abstract class JobIntentService extends Service {
         synchronized (sLock) {
             WorkEnqueuer we = getWorkEnqueuer(context, component, true, jobId, useWakefulService);
             we.ensureJobId(jobId);
-            we.enqueueWork(work);
+
+            // Can throw on API 26+ if useWakefulService=true and app is NOT whitelisted.
+            // One example is when an FCM high priority message is received the system will
+            // temporarily whitelist the app. However it is possible that it does not end up getting
+            //    whitelisted so we need to catch this and fall back to a job service.
+            try {
+                we.enqueueWork(work);
+            } catch (IllegalStateException e) {
+                if (useWakefulService) {
+                    we = getWorkEnqueuer(context, component, true, jobId, false);
+                    we.enqueueWork(work);
+                }
+                else
+                    throw e;
+            }
         }
     }
 
