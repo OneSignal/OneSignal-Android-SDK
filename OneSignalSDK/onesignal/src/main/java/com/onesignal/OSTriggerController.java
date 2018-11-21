@@ -1,11 +1,16 @@
 package com.onesignal;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.util.Log;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import com.onesignal.OneSignalPrefs;
@@ -14,6 +19,12 @@ class OSTriggerController {
     private ConcurrentHashMap<String, Object> triggers;
 
     private static OSTriggerController sharedInstance;
+
+    private static final String TRIGGERS_KEY = "os_triggers";
+
+    private OSTriggerController() {
+        this.triggers = new ConcurrentHashMap<>();
+    }
 
     static OSTriggerController getController() {
         if (sharedInstance == null) {
@@ -156,5 +167,42 @@ class OSTriggerController {
 
             return null;
         }
+    }
+
+    /** Trigger Set/Delete/Persist Logic */
+    void addTriggers(Map<String, Object> triggers) {
+        synchronized (this.triggers) {
+            for (String key : triggers.keySet()) {
+                Object value = triggers.get(key);
+
+                this.triggers.put(key, value);
+            }
+
+            /*
+                TODO: Refactor so that we don't have to re-write all trigger key/value
+                pairs to disk every single time we save a trigger
+            */
+            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, this.triggers);
         }
+    }
+
+    void removeTriggersForKeys(Collection<String> keys) {
+        synchronized (this.triggers) {
+            for (String key : keys) {
+                this.triggers.remove(key);
+            }
+
+            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, this.triggers);
+        }
+    }
+
+    @Nullable
+    Object getTriggerValue(String key) {
+        synchronized (this.triggers) {
+            if (this.triggers.containsKey(key))
+                return this.triggers.get(key);
+            else
+                return null;
+        }
+    }
 }

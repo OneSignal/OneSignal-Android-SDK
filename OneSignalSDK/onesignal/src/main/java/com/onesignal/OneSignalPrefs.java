@@ -40,6 +40,7 @@ class OneSignalPrefs {
     // SharedPreferences Instances
     public static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
     public static final String PREFS_PLAYER_PURCHASES = "GTPlayerPurchases";
+    public static final String PREFS_TRIGGERS = "OneSignalTriggers";
 
     // PREFERENCES KEYS
     public static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
@@ -88,8 +89,8 @@ class OneSignalPrefs {
         private static final int WRITE_CALL_DELAY_TO_BUFFER_MS = 200;
         private long lastSyncTime = 0L;
 
-        WritePrefHandlerThread() {
-            super("OSH_WritePrefs");
+        WritePrefHandlerThread(String name) {
+            super(name);
             start();
             mHandler = new Handler(getLooper());
         }
@@ -149,8 +150,9 @@ class OneSignalPrefs {
         prefsToApply = new HashMap<>();
         prefsToApply.put(PREFS_ONESIGNAL, new HashMap<String, Object>());
         prefsToApply.put(PREFS_PLAYER_PURCHASES, new HashMap<String, Object>());
+        prefsToApply.put(PREFS_TRIGGERS, new HashMap<String, Object>());
 
-        prefsHandler = new WritePrefHandlerThread();
+        prefsHandler = new WritePrefHandlerThread("OSH_WritePrefs");
     }
 
     public static void startDelayedWrite() {
@@ -170,6 +172,10 @@ class OneSignalPrefs {
     }
 
     public static void saveLong(String prefsName, String key, long value) {
+        save(prefsName, key, value);
+    }
+
+    public static void saveObject(String prefsName, String key, Object value) {
         save(prefsName, key, value);
     }
 
@@ -195,6 +201,10 @@ class OneSignalPrefs {
 
     static long getLong(String prefsName, String key, long defValue) {
         return (Long)get(prefsName, key, Long.class, defValue);
+    }
+
+    static Object getObject(String prefsName, String key, long defValue) {
+        return get(prefsName, key, Object.class, defValue);
     }
 
     // If type == Object then this is a contains check
