@@ -2,6 +2,8 @@ package com.onesignal;
 
 
 import java.util.ArrayList;
+import java.util.List;
+
 import com.onesignal.OSTrigger.OSTriggerOperatorType;
 
 public class InAppMessagingHelpers {
@@ -23,5 +25,17 @@ public class InAppMessagingHelpers {
         trigger.value = value;
 
         return trigger;
+    }
+
+    /**
+     * Used to build a test message for tests that don't look at the
+     * message itself (ie. messages that test trigger evaluation)
+     */
+    public static OSInAppMessage buildDefaultTestMessageWithTrigger(OSTrigger trigger) {
+        ArrayList inner = new ArrayList<OSTrigger>();
+        inner.add(trigger);
+        ArrayList triggers = new ArrayList<ArrayList<OSTrigger>>();
+        triggers.add(inner);
+        return buildMessage("test_id", "test_content_id", triggers);
     }
 }

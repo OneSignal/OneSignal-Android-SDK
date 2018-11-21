@@ -35,6 +35,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -2758,6 +2760,37 @@ public class OneSignal {
    
       return status;
    }
+
+   /** In-App Message Triggers */
+   public static void addTriggers(Map<String, Object> triggers) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTriggers()"))
+         return;
+
+      OSTriggerController.getController().addTriggers(triggers);
+   }
+
+   public static void removeTriggersForKeys(Collection<String> keys) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
+         return;
+
+      OSTriggerController.getController().removeTriggersForKeys(keys);
+   }
+
+   @Nullable
+   public static Object getTriggerValueForKey(String key) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTriggerValueForKey()"))
+         return null;
+
+      return OSTriggerController.getController().getTriggerValue(key);
+   }
+
+
 
    static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
