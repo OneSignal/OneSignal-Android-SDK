@@ -203,4 +203,10 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public class OneSignalDbContract extends com.onesignal.OneSignalDbContract {}
+
+   /** In-App Messaging Helpers */
+
+   public static boolean evaluateMessage(OSInAppMessage message) {
+      return OSTriggerController.getController().evaluateMessageTriggers(message);
+   }
 }
