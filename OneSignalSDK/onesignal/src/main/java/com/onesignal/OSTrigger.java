@@ -70,7 +70,7 @@ public class OSTrigger {
     public OSTrigger(JSONObject json) throws JSONException {
         this.property = json.getString("property");
         this.operatorType = OSTriggerOperatorType.fromString(json.getString("operator"));
-        this.value = json.getString("value");
+        this.value = json.opt("value");
     }
 
     public JSONObject toJSONObject() {
