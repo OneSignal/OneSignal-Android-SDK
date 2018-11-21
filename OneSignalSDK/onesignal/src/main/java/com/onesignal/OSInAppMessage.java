@@ -34,6 +34,8 @@ public class OSInAppMessage {
     @Nullable
     public double maxDisplayTime;
 
+    public OSInAppMessage() { }
+
     public OSInAppMessage(JSONObject json) throws JSONException {
 
         // initialize simple root properties

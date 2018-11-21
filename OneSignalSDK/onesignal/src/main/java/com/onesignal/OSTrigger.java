@@ -65,11 +65,7 @@ public class OSTrigger {
     @Nullable
     public Object value;
 
-    public OSTrigger(String property, OSTriggerOperatorType type, Object value) {
-        this.property = property;
-        this.operatorType = type;
-        this.value = value;
-    }
+    public OSTrigger() {  }
 
     public OSTrigger(JSONObject json) throws JSONException {
         this.property = json.getString("property");
