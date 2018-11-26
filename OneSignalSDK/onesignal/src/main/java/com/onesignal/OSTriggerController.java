@@ -95,9 +95,14 @@ class OSTriggerController {
 
                     // We are only checking to see if the trigger is FALSE. If a trigger evaluates
                     // to false, we immediately break the inner AND loop to proceed to the next OR loop
-                } else if (realValue.getClass() != trigger.value.getClass() ||
-                        (realValue instanceof  Number && !triggerMatchesNumericValue((Number)trigger.value, (Number)realValue, trigger.operatorType)) ||
-                        (realValue instanceof String && !triggerMatchesStringValue((String)trigger.value, (String)realValue, trigger.operatorType))) {
+                } else if (realValue instanceof String && trigger.value instanceof String && !triggerMatchesStringValue((String)trigger.value, (String)realValue, trigger.operatorType)) {
+                    break;
+                    // In Java, we cannot use instanceof since we want to be able to compare floats to ints and so on
+                    // Checking Double instanceof Number appears to return false, so we must use isAssignableTo()
+                } else if (trigger.value instanceof Number && realValue instanceof Number
+                            && !triggerMatchesNumericValue((Number)trigger.value, (Number)realValue, trigger.operatorType)) {
+                    break;
+                } else if (trigger.value instanceof Number == false && trigger.value.getClass() != realValue.getClass()) {
                     break;
                 } else if (lastElement) {
                     // if we reach this point, it means the current trigger (and
