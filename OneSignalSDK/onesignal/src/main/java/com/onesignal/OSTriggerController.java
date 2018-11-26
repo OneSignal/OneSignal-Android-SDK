@@ -69,14 +69,16 @@ class OSTriggerController {
                     if (trigger.operatorType == OSTriggerOperatorType.NOT_EXISTS) {
                         if (lastElement) {
                             return true;
-                        } else continue;
+                        } else
+                            continue;
                     }
 
                     break;
                 } else if (trigger.operatorType == OSTriggerOperatorType.EXISTS) {
                     if (lastElement) {
                         return true;
-                    } else continue;
+                    } else
+                        continue;
                 } else if (trigger.operatorType == OSTriggerOperatorType.NOT_EXISTS) {
                     // the trigger value exists if we reach this point, so it's false and we should break
                     break;
@@ -87,11 +89,12 @@ class OSTriggerController {
                 // CONTAINS operates on arrays, we check every element of the array
                 // to see if it contains the trigger value.
                 if (trigger.operatorType == OSTriggerOperatorType.CONTAINS) {
-                    if (!(realValue instanceof ArrayList) || !((ArrayList)realValue).contains(trigger.value)) {
+                    if (!(realValue instanceof ArrayList) || !((Collection)realValue).contains(trigger.value)) {
                         break;
                     } else if (lastElement) {
                         return true;
-                    } else continue;
+                    } else
+                        continue;
 
                     // We are only checking to see if the trigger is FALSE. If a trigger evaluates
                     // to false, we immediately break the inner AND loop to proceed to the next OR loop
