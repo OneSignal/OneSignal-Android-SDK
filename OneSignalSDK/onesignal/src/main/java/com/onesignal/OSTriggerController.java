@@ -77,6 +77,9 @@ class OSTriggerController {
                     if (lastElement) {
                         return true;
                     } else continue;
+                } else if (trigger.operatorType == OSTriggerOperatorType.NOT_EXISTS) {
+                    // the trigger value exists if we reach this point, so it's false and we should break
+                    break;
                 }
 
                 Object realValue = this.triggers.get(trigger.property);
