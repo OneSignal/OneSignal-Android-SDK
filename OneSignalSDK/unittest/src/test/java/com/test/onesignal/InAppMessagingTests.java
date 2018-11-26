@@ -32,7 +32,7 @@ import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.*;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -125,16 +125,30 @@ public class InAppMessagingTests {
     }
 
     @Test
-    public void testSaveTriggerValue() {
+    public void testSaveMultipleTriggerValues() {
         OneSignalInit();
 
         HashMap<String, Object> testTriggers = new HashMap<>();
-
         testTriggers.put("test1", "value1");
+        testTriggers.put("test2", "value2");
 
         OneSignal.addTriggers(testTriggers);
 
         assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
+        assertEquals(OneSignal.getTriggerValueForKey("test2"), "value2");
+    }
+
+    @Test
+    public void testDeleteSavedTriggerValue() {
+        OneSignalInit();
+
+        OneSignal.addTrigger("test1", "value1");
+
+        assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
+
+        OneSignal.removeTriggerforKey("test1");
+
+        assertNull(OneSignal.getTriggerValueForKey("test1"));
     }
 
     private void OneSignalInit() {
