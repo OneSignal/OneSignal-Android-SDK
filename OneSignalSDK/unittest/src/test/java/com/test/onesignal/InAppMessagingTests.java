@@ -3,7 +3,9 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+
 import com.onesignal.BuildConfig;
+import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OSTrigger;
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -31,7 +33,13 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
+
+import edu.emory.mathcs.backport.java.util.Arrays;
+
 import static junit.framework.Assert.*;
 
 @Config(packageName = "com.onesignal.example",
@@ -63,7 +71,11 @@ public class InAppMessagingTests {
     public static void setupClass() throws Exception {
         ShadowLog.stream = System.out;
 
-        buildTestMessage();
+        try {
+            message = buildTestMessageWithSingleTrigger("os_session_duration", ">=", 3);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
         TestHelpers.beforeTestSuite();
 
@@ -79,33 +91,40 @@ public class InAppMessagingTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
 
+        OneSignalInit();
     }
 
-    static void buildTestMessage() {
+    // Convenience method that wraps an object in a JSON Array
+    static JSONArray wrap(final Object object) {
+        return new JSONArray() {{
+            put(object);
+        }};
+    }
+
+    // Most tests build a test message using only one trigger.
+    // This convenience method makes it easy to build such a message
+    static OSInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
+        JSONObject triggerJson = new JSONObject() {{
+            put("property", key);
+            put("operator", operator);
+            put("value", value);
+        }};
+
+        JSONArray triggersJson = wrap(wrap(triggerJson));
+
+        return buildTestMessage(triggersJson);
+    }
+
+    static OSInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
         // builds a test message to test JSON parsing constructor of OSInAppMessage
-        JSONObject json = new JSONObject();
+        JSONObject json = new JSONObject() {{
+            put("id", testMessageId);
+            put("content_id", testContentId);
+            put("max_display_time", 30);
+            put("triggers", triggerJson);
+        }};
 
-        try {
-            json.put("id", testMessageId);
-            json.put("content_id", testContentId);
-            json.put("max_display_time", 30);
-
-            JSONArray orTriggers = new JSONArray();
-            JSONArray andTriggers = new JSONArray();
-
-            JSONObject triggerJson = new JSONObject();
-            triggerJson.put("property", "os_session_duration");
-            triggerJson.put("operator", ">=");
-            triggerJson.put("value", 3);
-
-            andTriggers.put(triggerJson);
-            orTriggers.put(andTriggers);
-            json.put("triggers", orTriggers);
-
-            message = new OSInAppMessage(json);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        return new OSInAppMessage(json);
     }
 
     @Test
@@ -126,8 +145,6 @@ public class InAppMessagingTests {
 
     @Test
     public void testSaveMultipleTriggerValues() {
-        OneSignalInit();
-
         HashMap<String, Object> testTriggers = new HashMap<>();
         testTriggers.put("test1", "value1");
         testTriggers.put("test2", "value2");
@@ -140,8 +157,6 @@ public class InAppMessagingTests {
 
     @Test
     public void testDeleteSavedTriggerValue() {
-        OneSignalInit();
-
         OneSignal.addTrigger("test1", "value1");
 
         assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
@@ -149,6 +164,107 @@ public class InAppMessagingTests {
         OneSignal.removeTriggerforKey("test1");
 
         assertNull(OneSignal.getTriggerValueForKey("test1"));
+    }
+
+    @Test
+    public void testGreaterThanOperator() throws JSONException {
+        OneSignal.addTrigger("test1", 2);
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test1", ">", 1);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test1", ">", 3);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testGreaterThanOrEqualToOperator() throws JSONException {
+        OneSignal.addTrigger("test1", 3);
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test1", ">=", 2);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test1", ">=", 4);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testLessThanOperator() throws JSONException {
+        OneSignal.addTrigger("test2", 3);
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test2", "<", 4);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test2", "<", -23);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testLessThanOrEqualToOperator() throws JSONException {
+        OneSignal.addTrigger("test2", 512);
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test2", "<=", 1024);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test2", "<=", 511);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testEqualityOperator() throws JSONException {
+        OneSignal.addTrigger("test3", 42);
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test3", "==", 42);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test3", "==", 1);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testNotEqualOperator() throws JSONException {
+        OneSignal.addTrigger("test4", 1);
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test4", "!=", 3);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test4", "!=", 1);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testContainsOperator() throws JSONException {
+        OneSignal.addTrigger("test5", new ArrayList<String>() {{
+            add("test string 1");
+        }});
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test5", "contains", "test string 1");
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test5", "contains", "test string 2");
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testExistsOperator() throws JSONException {
+        OneSignal.addTrigger("test6", "test trig");
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test6", "exists", null);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test_6", "exists", null);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+    }
+
+    @Test
+    public void testNotExistsOperator() throws JSONException {
+        OneSignal.addTrigger("test7", "test trig");
+
+        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test_7", "not_exists", null);
+        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test7", "not_exists", null);
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
+        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
     }
 
     private void OneSignalInit() {

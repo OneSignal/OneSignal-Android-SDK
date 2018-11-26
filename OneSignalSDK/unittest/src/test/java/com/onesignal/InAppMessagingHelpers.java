@@ -38,4 +38,8 @@ public class InAppMessagingHelpers {
         triggers.add(inner);
         return buildMessage("test_id", "test_content_id", triggers);
     }
+
+    public static boolean evaluateMessage(OSInAppMessage message) {
+        return OSTriggerController.getController().evaluateMessageTriggers(message);
+    }
 }
