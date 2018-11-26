@@ -34,11 +34,7 @@ import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 import static junit.framework.Assert.*;
 
@@ -127,6 +123,17 @@ public class InAppMessagingTests {
         return new OSInAppMessage(json);
     }
 
+    private boolean comparativeOperatorTest(String operator, Object triggerValue, Object localValue) throws JSONException {
+        if (localValue != null)
+            OneSignal.addTrigger("test_property", localValue);
+        else
+            OneSignal.removeTriggerforKey("test_property");
+
+        OSInAppMessage testMessage = buildTestMessageWithSingleTrigger("test_property", operator, triggerValue);
+
+        return InAppMessagingHelpers.evaluateMessage(testMessage);
+    }
+
     @Test
     public void testBuiltMessage() {
         assertEquals(message.messageId, testMessageId);
@@ -168,103 +175,60 @@ public class InAppMessagingTests {
 
     @Test
     public void testGreaterThanOperator() throws JSONException {
-        OneSignal.addTrigger("test1", 2);
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test1", ">", 1);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test1", ">", 3);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest(">", 1, 2));
+        assertFalse(comparativeOperatorTest(">", 5, 3));
     }
 
     @Test
     public void testGreaterThanOrEqualToOperator() throws JSONException {
-        OneSignal.addTrigger("test1", 3);
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test1", ">=", 2);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test1", ">=", 4);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest(">=", 2, 2.9));
+        assertFalse(comparativeOperatorTest(">=", 4, 3));
     }
 
     @Test
     public void testLessThanOperator() throws JSONException {
-        OneSignal.addTrigger("test2", 3);
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test2", "<", 4);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test2", "<", -23);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("<", 32, 2));
+        assertFalse(comparativeOperatorTest("<", 2, 3));
     }
 
     @Test
     public void testLessThanOrEqualToOperator() throws JSONException {
-        OneSignal.addTrigger("test2", 512);
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test2", "<=", 1024);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test2", "<=", 511);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("<=", 5, 4));
+        assertFalse(comparativeOperatorTest("<=", 3, 4));
     }
 
     @Test
     public void testEqualityOperator() throws JSONException {
-        OneSignal.addTrigger("test3", 42);
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test3", "==", 42);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test3", "==", 1);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("==", 0.1, 0.1));
+        assertFalse(comparativeOperatorTest("==", 0.0, 2));
     }
 
     @Test
     public void testNotEqualOperator() throws JSONException {
-        OneSignal.addTrigger("test4", 1);
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test4", "!=", 3);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test4", "!=", 1);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("!=", 3, 3.01));
+        assertFalse(comparativeOperatorTest("!=", 3.1, 3.1));
     }
 
     @Test
     public void testContainsOperator() throws JSONException {
-        OneSignal.addTrigger("test5", new ArrayList<String>() {{
+        ArrayList localValue = new ArrayList<String>() {{
             add("test string 1");
-        }});
+        }};
 
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test5", "contains", "test string 1");
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test5", "contains", "test string 2");
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("contains", "test string 1", localValue));
+        assertFalse(comparativeOperatorTest("contains", "test string 2", localValue));
     }
 
     @Test
     public void testExistsOperator() throws JSONException {
-        OneSignal.addTrigger("test6", "test trig");
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test6", "exists", null);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test_6", "exists", null);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("exists", null, "test trig"));
+        assertFalse(comparativeOperatorTest("exists", null, null));
     }
 
     @Test
     public void testNotExistsOperator() throws JSONException {
-        OneSignal.addTrigger("test7", "test trig");
-
-        OSInAppMessage trueMessage = buildTestMessageWithSingleTrigger("test_7", "not_exists", null);
-        OSInAppMessage falseMessage = buildTestMessageWithSingleTrigger("test7", "not_exists", null);
-
-        assertTrue(InAppMessagingHelpers.evaluateMessage(trueMessage));
-        assertFalse(InAppMessagingHelpers.evaluateMessage(falseMessage));
+        assertTrue(comparativeOperatorTest("not_exists", null, null));
+        assertFalse(comparativeOperatorTest("not_exists", null, "test trig"));
     }
 
     private void OneSignalInit() {
