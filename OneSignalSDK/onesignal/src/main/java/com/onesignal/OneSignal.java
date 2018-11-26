@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -2771,6 +2772,18 @@ public class OneSignal {
       OSTriggerController.getController().addTriggers(triggers);
    }
 
+   public static void addTrigger(String key, Object object) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTrigger()"))
+         return;
+
+      HashMap<String, Object> triggerMap = new HashMap<>();
+      triggerMap.put(key, object);
+
+      OSTriggerController.getController().addTriggers(triggerMap);
+   }
+
    public static void removeTriggersForKeys(Collection<String> keys) {
 
       //if applicable, check if the user provided privacy consent
@@ -2778,6 +2791,18 @@ public class OneSignal {
          return;
 
       OSTriggerController.getController().removeTriggersForKeys(keys);
+   }
+
+   public static void removeTriggerforKey(String key) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
+         return;
+
+      ArrayList<String> triggerKeys = new ArrayList<>();
+      triggerKeys.add(key);
+
+      OSTriggerController.getController().removeTriggersForKeys(triggerKeys);
    }
 
    @Nullable
