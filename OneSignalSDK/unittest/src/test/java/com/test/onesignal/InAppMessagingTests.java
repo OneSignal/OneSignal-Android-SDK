@@ -124,6 +124,16 @@ public class InAppMessagingTests {
         return new OSInAppMessage(json);
     }
 
+    /**
+     * Convenience function that saves a local trigger (localValue) for the property name "test_property"
+     * then creates an in-app message with a trigger (triggerValue) for the same property name. It
+     * then evaluates the message for the given trigger conditions and returns the boolean, which
+     * indicates whether or not the message should be shown.
+     *
+     * For example, we can set up a test where the app has a property value of 3 and we want to
+     * test to make sure that if a message has a trigger value of 2 and an operator > that it
+     * returns true when evaluated, because 3 > 2
+     */
     private boolean comparativeOperatorTest(String operator, Object triggerValue, Object localValue) throws JSONException {
         if (localValue != null)
             OneSignal.addTrigger("test_property", localValue);
