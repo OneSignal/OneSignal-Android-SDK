@@ -5,7 +5,9 @@ import android.os.HandlerThread;
 
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
+import com.onesignal.OSInAppMessageController;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -386,6 +388,12 @@ abstract class UserStateSynchronizer {
                         getUserStateForModification().persistState();
 
                         onSuccessfulSync(jsonBody);
+
+                        if (jsonResponse.getJSONArray("messages") != null) {
+                            JSONArray json = jsonResponse.getJSONArray("messages");
+
+                            OSInAppMessageController.getController().onSessionReceivedMessageJSON(json);
+                        }
                     } catch (Throwable t) {
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
                     }

@@ -2769,7 +2769,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTriggers()"))
          return;
 
-      OSTriggerController.getController().addTriggers(triggers);
+      OSInAppMessageController.getController().triggerController.addTriggers(triggers);
    }
 
    public static void addTrigger(String key, Object object) {
@@ -2781,7 +2781,7 @@ public class OneSignal {
       HashMap<String, Object> triggerMap = new HashMap<>();
       triggerMap.put(key, object);
 
-      OSTriggerController.getController().addTriggers(triggerMap);
+      OSInAppMessageController.getController().addTriggers(triggerMap);
    }
 
    public static void removeTriggersForKeys(Collection<String> keys) {
@@ -2790,7 +2790,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
          return;
 
-      OSTriggerController.getController().removeTriggersForKeys(keys);
+      OSInAppMessageController.getController().removeTriggersForKeys(keys);
    }
 
    public static void removeTriggerforKey(String key) {
@@ -2802,7 +2802,7 @@ public class OneSignal {
       ArrayList<String> triggerKeys = new ArrayList<>();
       triggerKeys.add(key);
 
-      OSTriggerController.getController().removeTriggersForKeys(triggerKeys);
+      OSInAppMessageController.getController().removeTriggersForKeys(triggerKeys);
    }
 
    @Nullable
@@ -2812,7 +2812,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTriggerValueForKey()"))
          return null;
 
-      return OSTriggerController.getController().getTriggerValue(key);
+      return OSInAppMessageController.getController().getTriggerValue(key);
    }
 
 

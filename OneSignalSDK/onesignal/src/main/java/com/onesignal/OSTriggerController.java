@@ -16,22 +16,12 @@ import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import com.onesignal.OneSignalPrefs;
 
 class OSTriggerController {
-    private ConcurrentHashMap<String, Object> triggers;
-
-    private static OSTriggerController sharedInstance;
+    private final ConcurrentHashMap<String, Object> triggers;
 
     private static final String TRIGGERS_KEY = "os_triggers";
 
-    private OSTriggerController() {
-        this.triggers = new ConcurrentHashMap<>();
-    }
-
-    static OSTriggerController getController() {
-        if (sharedInstance == null) {
-            sharedInstance = new OSTriggerController();
-        }
-
-        return sharedInstance;
+    public OSTriggerController() {
+        triggers = new ConcurrentHashMap<>();
     }
 
     /**
@@ -62,7 +52,7 @@ class OSTriggerController {
                 if (OSDynamicTriggerType.fromString(trigger.property) != null) {
                     dynamicTriggers.add(trigger);
                     continue;
-                } else if (this.triggers.get(trigger.property) == null) {
+                } else if (triggers.get(trigger.property) == null) {
 
                     // if we don't have a local value for this trigger, it can only
                     // ever evaluate to true if using the NOT_EXISTS operator
@@ -84,7 +74,7 @@ class OSTriggerController {
                     break;
                 }
 
-                Object realValue = this.triggers.get(trigger.property);
+                Object realValue = triggers.get(trigger.property);
 
                 // CONTAINS operates on arrays, we check every element of the array
                 // to see if it contains the trigger value.
@@ -93,9 +83,7 @@ class OSTriggerController {
                         break;
                     } else if (lastElement) {
                         return true;
-                    } else
-                        continue;
-
+                    }
                     // We are only checking to see if the trigger is FALSE. If a trigger evaluates
                     // to false, we immediately break the inner AND loop to proceed to the next OR loop
                 } else if (realValue instanceof String && trigger.value instanceof String && !triggerMatchesStringValue((String)trigger.value, (String)realValue, trigger.operatorType)) {
@@ -105,7 +93,7 @@ class OSTriggerController {
                 } else if (trigger.value instanceof Number && realValue instanceof Number
                             && !triggerMatchesNumericValue((Number)trigger.value, (Number)realValue, trigger.operatorType)) {
                     break;
-                } else if (trigger.value instanceof Number == false && trigger.value.getClass() != realValue.getClass()) {
+                } else if (!(trigger.value instanceof Number) && trigger.value != null && trigger.value.getClass() != realValue.getClass()) {
                     break;
                 } else if (lastElement) {
                     // if we reach this point, it means the current trigger (and
@@ -113,6 +101,8 @@ class OSTriggerController {
                     return true;
                 }
             }
+
+            // TODO: Check dynamic triggers
         }
 
         return false;
@@ -181,37 +171,37 @@ class OSTriggerController {
     }
 
     /** Trigger Set/Delete/Persist Logic */
-    void addTriggers(Map<String, Object> triggers) {
-        synchronized (this.triggers) {
-            for (String key : triggers.keySet()) {
-                Object value = triggers.get(key);
+    void addTriggers(Map<String, Object> newTriggers) {
+        synchronized (triggers) {
+            for (String key : newTriggers.keySet()) {
+                Object value = newTriggers.get(key);
 
-                this.triggers.put(key, value);
+                triggers.put(key, value);
             }
 
             /*
                 TODO: Refactor so that we don't have to re-write all trigger key/value
                 pairs to disk every single time we save a trigger
             */
-            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, this.triggers);
+            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, triggers);
         }
     }
 
     void removeTriggersForKeys(Collection<String> keys) {
-        synchronized (this.triggers) {
+        synchronized (triggers) {
             for (String key : keys) {
-                this.triggers.remove(key);
+                triggers.remove(key);
             }
 
-            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, this.triggers);
+            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, triggers);
         }
     }
 
     @Nullable
     Object getTriggerValue(String key) {
-        synchronized (this.triggers) {
-            if (this.triggers.containsKey(key))
-                return this.triggers.get(key);
+        synchronized (triggers) {
+            if (triggers.containsKey(key))
+                return triggers.get(key);
             else
                 return null;
         }
