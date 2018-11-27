@@ -54,11 +54,12 @@ import static junit.framework.Assert.*;
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingTests {
-    public static OSInAppMessage message;
 
-    public static final String testMessageId = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
-    public static final String testContentId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
+    private static OSInAppMessage message;
+    private static final String testMessageId = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
+    private static final String testContentId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
     private static ActivityController<BlankActivity> blankActivityController;
@@ -91,7 +92,7 @@ public class InAppMessagingTests {
     }
 
     // Convenience method that wraps an object in a JSON Array
-    static JSONArray wrap(final Object object) {
+    private static JSONArray wrap(final Object object) {
         return new JSONArray() {{
             put(object);
         }};
@@ -99,7 +100,7 @@ public class InAppMessagingTests {
 
     // Most tests build a test message using only one trigger.
     // This convenience method makes it easy to build such a message
-    static OSInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
+    private static OSInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
         JSONObject triggerJson = new JSONObject() {{
             put("property", key);
             put("operator", operator);
@@ -111,7 +112,7 @@ public class InAppMessagingTests {
         return buildTestMessage(triggersJson);
     }
 
-    static OSInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
+    private static OSInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
         // builds a test message to test JSON parsing constructor of OSInAppMessage
         JSONObject json = new JSONObject() {{
             put("id", testMessageId);
