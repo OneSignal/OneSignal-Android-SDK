@@ -105,6 +105,7 @@ public class InAppMessagingTests {
             put("property", key);
             put("operator", operator);
             put("value", value);
+            put("id", "test_id");
         }};
 
         JSONArray triggersJson = wrap(wrap(triggerJson));
@@ -134,13 +135,13 @@ public class InAppMessagingTests {
      * test to make sure that if a message has a trigger value of 2 and an operator > that it
      * returns true when evaluated, because 3 > 2
      */
-    private boolean comparativeOperatorTest(String operator, Object triggerValue, Object localValue) throws JSONException {
+    private boolean comparativeOperatorTest(OSTriggerOperatorType operator, Object triggerValue, Object localValue) throws JSONException {
         if (localValue != null)
             OneSignal.addTrigger("test_property", localValue);
         else
             OneSignal.removeTriggerforKey("test_property");
 
-        OSInAppMessage testMessage = buildTestMessageWithSingleTrigger("test_property", operator, triggerValue);
+        OSInAppMessage testMessage = buildTestMessageWithSingleTrigger("test_property", operator.toString(), triggerValue);
 
         return InAppMessagingHelpers.evaluateMessage(testMessage);
     }
@@ -186,38 +187,38 @@ public class InAppMessagingTests {
 
     @Test
     public void testGreaterThanOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(">", 1, 2));
-        assertFalse(comparativeOperatorTest(">", 5, 3));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN, 1, 2));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN, 5, 3));
     }
 
     @Test
     public void testGreaterThanOrEqualToOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(">=", 2, 2.9));
-        assertFalse(comparativeOperatorTest(">=", 4, 3));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 2, 2.9));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 4, 3));
     }
 
     @Test
     public void testLessThanOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest("<", 32, 2));
-        assertFalse(comparativeOperatorTest("<", 2, 3));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 32, 2));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, 3));
     }
 
     @Test
     public void testLessThanOrEqualToOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest("<=", 5, 4));
-        assertFalse(comparativeOperatorTest("<=", 3, 4));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 5, 4));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 3, 4));
     }
 
     @Test
     public void testEqualityOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest("==", 0.1, 0.1));
-        assertFalse(comparativeOperatorTest("==", 0.0, 2));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 0.1, 0.1));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 0.0, 2));
     }
 
     @Test
     public void testNotEqualOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest("!=", 3, 3.01));
-        assertFalse(comparativeOperatorTest("!=", 3.1, 3.1));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.NOT_EQUAL_TO, 3, 3.01));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EQUAL_TO, 3.1, 3.1));
     }
 
     @Test
@@ -226,20 +227,20 @@ public class InAppMessagingTests {
             add("test string 1");
         }};
 
-        assertTrue(comparativeOperatorTest("contains", "test string 1", localValue));
-        assertFalse(comparativeOperatorTest("contains", "test string 2", localValue));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.CONTAINS, "test string 1", localValue));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.CONTAINS, "test string 2", localValue));
     }
 
     @Test
     public void testExistsOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest("exists", null, "test trig"));
-        assertFalse(comparativeOperatorTest("exists", null, null));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, "test trig"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, null));
     }
 
     @Test
     public void testNotExistsOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest("not_exists", null, null));
-        assertFalse(comparativeOperatorTest("not_exists", null, "test trig"));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, null));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, "test trig"));
     }
 
     private void OneSignalInit() {
