@@ -5,20 +5,29 @@ import android.util.Log;
 import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Timer;
 import java.util.TimerTask;
 
 import com.onesignal.OSTriggerController.OSDynamicTriggerType;
 
 class OSDynamicTriggerController {
+
+    interface OSDynamicTriggerControllerObserver {
+
+        //alerts the observer that a trigger timer has fired
+        void messageTriggerConditionChanged();
+    }
+
+    private final OSDynamicTriggerControllerObserver observer;
+
     private static final double REQUIRED_ACCURACY = 0.3;
 
     private ArrayList<String> scheduledMessages;
 
-    private static Date sessionLaunchTime = new Date();
+    static Date sessionLaunchTime = new Date();
 
-    OSDynamicTriggerController() {
+    OSDynamicTriggerController(OSDynamicTriggerControllerObserver triggerObserver) {
         scheduledMessages = new ArrayList<>();
+        observer = triggerObserver;
     }
 
     boolean dynamicTriggerShouldFire(OSTrigger trigger, String messageId) {
@@ -35,20 +44,20 @@ class OSDynamicTriggerController {
             if (scheduledMessages.contains(trigger.triggerId))
                 return false;
 
-            double requiredTimeInterval = ((Number)trigger.value).doubleValue();
+            long requiredTimeInterval = ((Number)trigger.value).longValue() * 1000;
 
-            double offset = 0.0f;
+            long offset = 0;
 
             if (OSDynamicTriggerType.SESSION_DURATION.toString().equals(trigger.property)) {
 
-                double currentDuration = ((new Date()).getTime() - sessionLaunchTime.getTime()) / 1000.0f;
+                long currentDuration = (new Date()).getTime() - sessionLaunchTime.getTime();
 
                 if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentDuration, trigger.operatorType))
                     return true;
 
                 offset = requiredTimeInterval - currentDuration;
             } else if (OSDynamicTriggerType.TIME.toString().equals(trigger.property)) {
-                double currentTimestamp = (new Date()).getTime() / 1000.0f;
+                long currentTimestamp = new Date().getTime();
 
                 if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimestamp, trigger.operatorType))
                     return true;
@@ -59,14 +68,12 @@ class OSDynamicTriggerController {
             if (offset <= 0.0f)
                 return false;
 
-            Timer timer = new Timer("trigger_" + trigger.triggerId);
-
-            timer.schedule(new TimerTask() {
+            OSDynamicTriggerTimer.scheduleTrigger(new TimerTask() {
                 @Override
                 public void run() {
-
+                    observer.messageTriggerConditionChanged();
                 }
-            }, (long)(offset * 1000.0f));
+            }, trigger.triggerId, offset);
 
             scheduledMessages.add(trigger.triggerId);
         }

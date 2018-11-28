@@ -8,8 +8,9 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 
-class OSInAppMessageController {
+class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     private static OSInAppMessageController sharedInstance;
 
     OSTriggerController triggerController;
@@ -27,7 +28,7 @@ class OSInAppMessageController {
     private OSInAppMessageController() {
         messages = new ArrayList<>();
         messageDisplayQueue = new ArrayList<>();
-        triggerController = new OSTriggerController();
+        triggerController = new OSTriggerController(this);
     }
 
     void onSessionReceivedMessageJSON(JSONArray json) {
@@ -43,10 +44,10 @@ class OSInAppMessageController {
             e.printStackTrace();
         }
 
-        didUpdateMessages();
+        evaluateInAppMessages();
     }
 
-    private void didUpdateMessages() {
+    private void evaluateInAppMessages() {
         for (OSInAppMessage message : messages) {
             if (triggerController.evaluateMessageTriggers(message)) {
                 // message should be shown
@@ -72,6 +73,14 @@ class OSInAppMessageController {
 
     private void displayMessage(OSInAppMessage message) {
         // TODO: UI presentation logic
+    }
+
+    @Override
+    public void messageTriggerConditionChanged() {
+
+        // This method is called when a time-based trigger timer fires, meaning the message can
+        // probably be shown now. So the current message conditions should be re-evaluated
+        evaluateInAppMessages();
     }
 
     /**
