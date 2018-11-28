@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 class OSTriggerController {
+    OSDynamicTriggerController dynamicTriggerController = new OSDynamicTriggerController();
+
     private final ConcurrentHashMap<String, Object> triggers;
 
     private static final String TRIGGERS_KEY = "os_triggers";

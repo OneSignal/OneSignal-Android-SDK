@@ -16,6 +16,7 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowTimer;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OSInAppMessage;
@@ -23,6 +24,7 @@ import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,7 +49,8 @@ import static junit.framework.Assert.*;
                 ShadowCustomTabsClient.class,
                 ShadowCustomTabsSession.class,
                 ShadowNotificationManagerCompat.class,
-                ShadowJobService.class
+                ShadowJobService.class,
+                ShadowTimer.class
         },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
@@ -91,6 +94,12 @@ public class InAppMessagingTests {
         OneSignalInit();
     }
 
+    @After
+    public void afterEachTest() {
+        // reset back to the default
+        ShadowTimer.shouldScheduleTimers = true;
+    }
+
     // Convenience method that wraps an object in a JSON Array
     private static JSONArray wrap(final Object object) {
         return new JSONArray() {{
@@ -123,6 +132,17 @@ public class InAppMessagingTests {
         }};
 
         return new OSInAppMessage(json);
+    }
+
+    private static OSTrigger buildTrigger(final String key, final String operator, final Object value) throws JSONException {
+        JSONObject triggerJson = new JSONObject() {{
+            put("property", key);
+            put("operator", operator);
+            put("value", value);
+            put("id", "test_id");
+        }};
+
+        return new OSTrigger(triggerJson);
     }
 
     /**
@@ -241,6 +261,13 @@ public class InAppMessagingTests {
     public void testNotExistsOperator() throws JSONException {
         assertTrue(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, null));
         assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, "test trig"));
+    }
+
+    @Test
+    public void testMessageSchedulesTimer() throws JSONException {
+        OSTrigger trigger = buildTrigger("os_session_duration", OSTriggerOperatorType.EQUAL_TO.toString(), 10);
+
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, "test message id"));
     }
 
     private void OneSignalInit() {
