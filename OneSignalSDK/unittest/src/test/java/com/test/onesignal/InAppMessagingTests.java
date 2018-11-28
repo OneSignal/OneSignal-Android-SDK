@@ -16,7 +16,7 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
-import com.onesignal.ShadowTimer;
+import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OSInAppMessage;
@@ -36,7 +36,9 @@ import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.UUID;
 
 import static junit.framework.Assert.*;
 
@@ -50,7 +52,7 @@ import static junit.framework.Assert.*;
                 ShadowCustomTabsSession.class,
                 ShadowNotificationManagerCompat.class,
                 ShadowJobService.class,
-                ShadowTimer.class
+                ShadowDynamicTimer.class
         },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
@@ -58,6 +60,7 @@ import static junit.framework.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingTests {
 
+    private static final double REQUIRED_TIMER_ACCURACY = 0.75;
     private static OSInAppMessage message;
     private static final String testMessageId = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
     private static final String testContentId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
@@ -72,7 +75,7 @@ public class InAppMessagingTests {
         ShadowLog.stream = System.out;
 
         try {
-            message = buildTestMessageWithSingleTrigger("os_session_duration", ">=", 3);
+            message = buildTestMessageWithSingleTrigger("os_session_duration", OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO.toString(), 3);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -97,7 +100,9 @@ public class InAppMessagingTests {
     @After
     public void afterEachTest() {
         // reset back to the default
-        ShadowTimer.shouldScheduleTimers = true;
+        ShadowDynamicTimer.shouldScheduleTimers = true;
+
+        InAppMessagingHelpers.resetSessionLaunchTime();
     }
 
     // Convenience method that wraps an object in a JSON Array
@@ -114,7 +119,7 @@ public class InAppMessagingTests {
             put("property", key);
             put("operator", operator);
             put("value", value);
-            put("id", "test_id");
+            put("id", UUID.randomUUID().toString());
         }};
 
         JSONArray triggersJson = wrap(wrap(triggerJson));
@@ -139,7 +144,7 @@ public class InAppMessagingTests {
             put("property", key);
             put("operator", operator);
             put("value", value);
-            put("id", "test_id");
+            put("id", UUID.randomUUID().toString());
         }};
 
         return new OSTrigger(triggerJson);
@@ -253,21 +258,39 @@ public class InAppMessagingTests {
 
     @Test
     public void testExistsOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, "test trig"));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, "test"));
         assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, null));
     }
 
     @Test
     public void testNotExistsOperator() throws JSONException {
         assertTrue(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, null));
-        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, "test trig"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, "test"));
     }
 
     @Test
-    public void testMessageSchedulesTimer() throws JSONException {
-        OSTrigger trigger = buildTrigger("os_session_duration", OSTriggerOperatorType.EQUAL_TO.toString(), 10);
+    public void testMessageSchedulesSessionDurationTimer() throws JSONException {
+        OSTrigger trigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTriggerOperatorType.EQUAL_TO.toString(), 10);
 
-        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, "test message id"));
+        // this evaluates the message and should schedule a timer for 10 seconds into the session
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, testMessageId));
+
+        // verify that the timer was scheduled ~10 seconds
+        assertTrue(roughlyEqualTimerValues(10.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
+    }
+
+    @Test
+    public void testMessageSchedulesExactTimeTimer() throws JSONException {
+        OSTrigger trigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
+                OSTriggerOperatorType.GREATER_THAN.toString(), (((double)(new Date()).getTime() / 1000.0f) + 13));
+
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, testMessageId));
+
+        assertTrue(roughlyEqualTimerValues(13.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
+    }
+
+    private boolean roughlyEqualTimerValues(double desired, double actual) {
+        return Math.abs(desired - actual) < REQUIRED_TIMER_ACCURACY;
     }
 
     private void OneSignalInit() {

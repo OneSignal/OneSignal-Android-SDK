@@ -6,16 +6,19 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 
 class OSTriggerController {
-    OSDynamicTriggerController dynamicTriggerController = new OSDynamicTriggerController();
+
+    OSDynamicTriggerController dynamicTriggerController;
 
     private final ConcurrentHashMap<String, Object> triggers;
 
     private static final String TRIGGERS_KEY = "os_triggers";
 
-    OSTriggerController() {
+    OSTriggerController(OSDynamicTriggerControllerObserver dynamicTriggerObserver) {
         triggers = new ConcurrentHashMap<>();
+        dynamicTriggerController = new OSDynamicTriggerController(dynamicTriggerObserver);
     }
 
     /**
