@@ -12,15 +12,15 @@ public class OSTrigger {
      * An enumeration of the operators triggers can use
      */
     public enum OSTriggerOperatorType {
-        GREATER_THAN(">"),
-        LESS_THAN("<"),
-        EQUAL_TO("=="),
-        NOT_EQUAL_TO("!="),
-        LESS_THAN_OR_EQUAL_TO("<="),
-        GREATER_THAN_OR_EQUAL_TO(">="),
+        GREATER_THAN("greater"),
+        LESS_THAN("less"),
+        EQUAL_TO("equal"),
+        NOT_EQUAL_TO("not_equal"),
+        LESS_THAN_OR_EQUAL_TO("less_or_equal"),
+        GREATER_THAN_OR_EQUAL_TO("greater_or_equal"),
         EXISTS("exists"),
         NOT_EXISTS("not_exists"),
-        CONTAINS("contains");
+        CONTAINS("in");
 
         private String text;
 
@@ -43,6 +43,12 @@ public class OSTrigger {
             return null;
         }
     }
+
+    /**
+     * The unique identifier for this trigger, to help avoid scheduling duplicate timers and so on
+     */
+    @NonNull
+    public String triggerId;
 
     /**
      * The property that this trigger operates on, such as 'game_score'
@@ -68,15 +74,18 @@ public class OSTrigger {
     public OSTrigger() {  }
 
     public OSTrigger(JSONObject json) throws JSONException {
+        this.triggerId = json.getString("id");
         this.property = json.getString("property");
         this.operatorType = OSTriggerOperatorType.fromString(json.getString("operator"));
         this.value = json.opt("value");
     }
 
-    public JSONObject toJSONObject() {
+    JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {
+            json.put("id", this.triggerId);
+
             json.put("property", this.property);
 
             json.put("operator", this.operatorType.toString());
