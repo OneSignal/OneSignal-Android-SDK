@@ -6,7 +6,7 @@ import android.support.annotation.Nullable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class OSTrigger {
+class OSTrigger {
 
     /**
      * An enumeration of the operators triggers can use
@@ -80,7 +80,7 @@ public class OSTrigger {
         this.value = json.opt("value");
     }
 
-    JSONObject toJSONObject() {
+    public JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {

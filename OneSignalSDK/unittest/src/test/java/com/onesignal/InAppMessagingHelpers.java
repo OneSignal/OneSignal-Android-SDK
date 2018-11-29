@@ -2,6 +2,9 @@ package com.onesignal;
 
 import com.onesignal.OSTriggerController.OSDynamicTriggerType;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Date;
 
 public class InAppMessagingHelpers {

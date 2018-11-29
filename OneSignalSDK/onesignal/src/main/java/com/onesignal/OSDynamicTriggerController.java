@@ -1,7 +1,5 @@
 package com.onesignal;
 
-import android.util.Log;
-
 import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import java.util.ArrayList;
 import java.util.Date;
@@ -17,7 +15,7 @@ class OSDynamicTriggerController {
         void messageTriggerConditionChanged();
     }
 
-    private final OSDynamicTriggerControllerObserver observer;
+    final OSDynamicTriggerControllerObserver observer;
 
     private static final double REQUIRED_ACCURACY = 0.3;
 
