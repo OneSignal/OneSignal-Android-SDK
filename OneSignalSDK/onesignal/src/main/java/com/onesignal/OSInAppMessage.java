@@ -7,9 +7,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
-public class OSInAppMessage {
+class OSInAppMessage {
 
     /**
      * The unique identifier for this in-app message
@@ -43,13 +44,18 @@ public class OSInAppMessage {
         this.contentId = json.getString("content_id");
         this.maxDisplayTime = json.optDouble("max_display_time");
 
+        JSONArray ors = json.getJSONArray("triggers");
+
+        this.parseTriggerJson(ors);
+
+    }
+
+    public void parseTriggerJson(JSONArray triggersJson) throws JSONException {
         // initialize triggers
         this.triggers = new ArrayList<>();
 
-        JSONArray ors = json.getJSONArray("triggers");
-
-        for (int i = 0; i < ors.length(); i++) {
-            JSONArray ands = ors.getJSONArray(i);
+        for (int i = 0; i < triggersJson.length(); i++) {
+            JSONArray ands = triggersJson.getJSONArray(i);
 
             ArrayList<OSTrigger> converted = new ArrayList();
 

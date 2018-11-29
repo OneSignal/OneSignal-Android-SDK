@@ -5,12 +5,16 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.annotation.NonNull;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -183,7 +187,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() { return OneSignal.appId; }
 
-
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
    
    static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
@@ -208,5 +211,36 @@ public class OneSignalPackagePrivateHelper {
 
    public static boolean evaluateMessage(OSInAppMessage message) {
       return OSTriggerController.getController().evaluateMessageTriggers(message);
+
+   public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
+
+      public OSTestInAppMessage(JSONObject json) throws JSONException {
+         super(json);
+      }
+
+      @Override
+      public void parseTriggerJson(JSONArray triggersJson) throws JSONException {
+         this.triggers = new ArrayList<>();
+
+         for (int i = 0; i < triggersJson.length(); i++) {
+            JSONArray ands = triggersJson.getJSONArray(i);
+
+            ArrayList parsed = new ArrayList();
+
+            for (int j = 0; j < ands.length(); j++) {
+               OSTestTrigger trig = new OSTestTrigger(ands.getJSONObject(j));
+
+               parsed.add(trig);
+            }
+
+            this.triggers.add(parsed);
+         }
+      }
+   }
+
+   public static class OSTestTrigger extends com.onesignal.OSTrigger {
+      public OSTestTrigger(JSONObject json) throws JSONException {
+         super(json);
+      }
    }
 }
