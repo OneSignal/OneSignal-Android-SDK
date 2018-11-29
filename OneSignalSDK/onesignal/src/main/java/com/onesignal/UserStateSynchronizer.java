@@ -5,7 +5,6 @@ import android.os.HandlerThread;
 
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
-import com.onesignal.OSInAppMessageController;
 
 import org.json.JSONArray;
 import org.json.JSONException;
