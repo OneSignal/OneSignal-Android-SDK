@@ -35,6 +35,9 @@ class OSInAppMessage {
     @Nullable
     public double maxDisplayTime;
 
+    @Nullable
+    public ArrayList<OSInAppMessageAction> actions;
+
     public OSInAppMessage() { }
 
     public OSInAppMessage(JSONObject json) throws JSONException {
@@ -48,6 +51,19 @@ class OSInAppMessage {
 
         this.parseTriggerJson(ors);
 
+        if (json.has("actions")) {
+            actions = new ArrayList<>();
+
+            JSONArray jsonActions = json.getJSONArray("actions");
+
+            for (int i = 0; i < jsonActions.length(); i++) {
+                JSONObject actionJson = jsonActions.getJSONObject(i);
+
+                OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
+
+                actions.add(action);
+            }
+        }
     }
 
     public void parseTriggerJson(JSONArray triggersJson) throws JSONException {
