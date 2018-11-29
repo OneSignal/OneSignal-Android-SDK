@@ -31,6 +31,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         triggerController = new OSTriggerController(this);
     }
 
+    // Called when messages are received after registration/on_session
     void onSessionReceivedMessageJSON(JSONArray json) {
         ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
 
@@ -38,11 +39,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
             for (int i = 0; i < json.length(); i++) {
                 JSONObject messageJson = json.getJSONObject(i);
 
-                OSInAppMessage message = new OSInAppMessage(messageJson);
+                newMessages.add(new OSInAppMessage(messageJson));
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
+        messages = newMessages;
 
         evaluateInAppMessages();
     }

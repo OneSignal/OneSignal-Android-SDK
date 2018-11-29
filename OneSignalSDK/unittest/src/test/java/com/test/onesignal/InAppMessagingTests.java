@@ -3,6 +3,7 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -32,6 +33,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadow.api.Shadow;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
@@ -101,8 +103,6 @@ public class InAppMessagingTests {
     public void afterEachTest() {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
-
-        InAppMessagingHelpers.resetSessionLaunchTime();
     }
 
     // Convenience method that wraps an object in a JSON Array
@@ -272,6 +272,8 @@ public class InAppMessagingTests {
     public void testMessageSchedulesSessionDurationTimer() throws JSONException {
         OSTrigger trigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTriggerOperatorType.EQUAL_TO.toString(), 10);
 
+        InAppMessagingHelpers.resetSessionLaunchTime();
+
         // this evaluates the message and should schedule a timer for 10 seconds into the session
         assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, testMessageId));
 
@@ -283,6 +285,8 @@ public class InAppMessagingTests {
     public void testMessageSchedulesExactTimeTimer() throws JSONException {
         OSTrigger trigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
                 OSTriggerOperatorType.GREATER_THAN.toString(), (((double)(new Date()).getTime() / 1000.0f) + 13));
+
+        InAppMessagingHelpers.resetSessionLaunchTime();
 
         assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, testMessageId));
 
