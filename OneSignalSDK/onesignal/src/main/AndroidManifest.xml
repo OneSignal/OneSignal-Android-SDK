@@ -85,7 +85,6 @@
 
         <receiver android:name="com.onesignal.BootUpReceiver">
             <intent-filter>
-                <action android:name="android.intent.action.ACTION_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
