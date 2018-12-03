@@ -243,4 +243,14 @@ public class OneSignalPackagePrivateHelper {
          super(json);
       }
    }
+
+   public static class OSTestInAppMessageAction extends com.onesignal.OSInAppMessageAction {
+      public boolean closes() {
+         return closesMessage;
+      }
+
+      public OSTestInAppMessageAction(JSONObject json) throws JSONException {
+         super(json);
+      }
+   }
 }

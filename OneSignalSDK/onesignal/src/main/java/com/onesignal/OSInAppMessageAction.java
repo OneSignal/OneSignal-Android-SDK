@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
 
 public class OSInAppMessageAction {
 
@@ -24,7 +25,11 @@ public class OSInAppMessageAction {
     public OSInAppMessageActionUrlType urlTarget;
 
     @NonNull
-    public boolean closesMessage;
+    boolean closesMessage;
+
+    /** Contains additional metadata for each action, currently not implemented */
+    @Nullable
+    public JSONObject additionalData;
 
     public OSInAppMessageAction() {}
 
@@ -41,8 +46,13 @@ public class OSInAppMessageAction {
 
         if (json.has("url_target"))
             urlTarget = OSInAppMessageActionUrlType.fromString(json.getString("url_target"));
+        else //default should be webview
+            urlTarget = OSInAppMessageActionUrlType.IN_APP_WEBVIEW;
 
         closesMessage = json.getBoolean("close");
+
+        if (json.has("data"))
+            additionalData = json.getJSONObject("data");
     }
 
     /**
