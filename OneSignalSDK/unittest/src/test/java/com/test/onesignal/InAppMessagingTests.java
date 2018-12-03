@@ -21,6 +21,7 @@ import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -62,7 +63,7 @@ import static junit.framework.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingTests {
 
-    private static final double REQUIRED_TIMER_ACCURACY = 0.75;
+    private static final double REQUIRED_TIMER_ACCURACY = 1.25;
     private static OSTestInAppMessage message;
     private static final String testMessageId = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
     private static final String testContentId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
@@ -134,6 +135,9 @@ public class InAppMessagingTests {
             put("content_id", testContentId);
             put("max_display_time", 30);
             put("triggers", triggerJson);
+            put("actions", new JSONArray() {{
+                put(buildTestActionJson());
+            }});
         }};
 
         return new OSTestInAppMessage(json);
@@ -156,6 +160,9 @@ public class InAppMessagingTests {
             put("url", "https://www.onesignal.com");
             put("url_target", "webview");
             put("close", true);
+            put("data", new JSONObject() {{
+                put("test", "value");
+            }});
         }};
     }
 
@@ -185,6 +192,7 @@ public class InAppMessagingTests {
         assertEquals(message.messageId, testMessageId);
         assertEquals(message.contentId, testContentId);
         assertEquals(message.maxDisplayTime, 30.0);
+        assertEquals(message.actions.size(), 1);
     }
 
     @Test
@@ -194,6 +202,17 @@ public class InAppMessagingTests {
         assertEquals(trigger.operatorType, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO);
         assertEquals(trigger.property, "os_session_duration");
         assertEquals(trigger.value, 3);
+    }
+
+    @Test
+    public void testParsesMessageActions() throws JSONException {
+        OSTestInAppMessageAction action = new OSTestInAppMessageAction(buildTestActionJson());
+
+        assertEquals(action.actionId, "Test_action_id");
+        assertEquals(action.actionUrl.toString(), "https://www.onesignal.com");
+        assertEquals(action.closes(), true);
+        assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
+        assertEquals(action.additionalData.getString("test"), "value");
     }
 
     @Test
@@ -302,15 +321,7 @@ public class InAppMessagingTests {
         assertTrue(roughlyEqualTimerValues(13.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
     }
 
-    @Test
-    public void testParsesMessageActions() throws JSONException {
-        OSInAppMessageAction action = new OSInAppMessageAction(buildTestActionJson());
 
-        assertEquals(action.actionId, "Test_action_id");
-        assertEquals(action.actionUrl.toString(), "https://www.onesignal.com");
-        assertEquals(action.closesMessage, true);
-        assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
-    }
 
     private boolean roughlyEqualTimerValues(double desired, double actual) {
         return Math.abs(desired - actual) < REQUIRED_TIMER_ACCURACY;
