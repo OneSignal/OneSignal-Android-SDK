@@ -392,6 +392,9 @@ public class OneSignal {
    static boolean mEnterp;
    private static boolean useEmailAuth;
 
+   private static boolean performedOnSessionRequest = false;
+   private static String pendingExternalUserId;
+
    static boolean requiresUserPrivacyConsent = false;
    static DelayedConsentInitializationParameters delayedInitParams;
    
@@ -1230,6 +1233,9 @@ public class OneSignal {
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
       deviceInfo.put("device_model", Build.MODEL);
+      deviceInfo.putOpt("external_user_id", pendingExternalUserId);
+
+      performedOnSessionRequest = true;
 
       try {
          deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
@@ -1412,6 +1418,45 @@ public class OneSignal {
          return;
       }
       emailLogout.run();
+   }
+
+   public static void setExternalUserId(final String externalId) {
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalId()"))
+         return;
+
+      if (!performedOnSessionRequest) {
+         pendingExternalUserId = externalId;
+         return;
+      } else if (appId == null || currentSubscriptionState.getUserId() == null) {
+         onesignalLog(LOG_LEVEL.WARN, "Attempted to set external user ID when " + (appId == null ? "app ID" : "OneSignal user ID") + " is null");
+         return;
+      }
+
+      try {
+         JSONObject jsonBody = new JSONObject() {{
+            put("external_user_id", externalId);
+         }};
+
+         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+               logHttpError("setting external user ID Failed", statusCode, throwable, response);
+            }
+         };
+
+         OneSignalRestClient.post("players/" + currentSubscriptionState.getUserId(), jsonBody, responseHandler);
+      } catch (JSONException exception) {
+         onesignalLog(LOG_LEVEL.ERROR, "Attempted to set external ID but encountered a JSON exception");
+      }
+   }
+
+   public static void removeExternalUserId() {
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeExternalUserId()"))
+         return;
+
+      // to remove the external user ID, the API requires an empty string
+      setExternalUserId("");
    }
 
    /**
