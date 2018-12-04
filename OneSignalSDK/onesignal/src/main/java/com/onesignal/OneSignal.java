@@ -1445,7 +1445,7 @@ public class OneSignal {
             }
          };
 
-         OneSignalRestClient.post("players/" + currentSubscriptionState.getUserId(), jsonBody, responseHandler);
+         OneSignalRestClient.put("players/" + currentSubscriptionState.getUserId(), jsonBody, responseHandler);
       } catch (JSONException exception) {
          onesignalLog(LOG_LEVEL.ERROR, "Attempted to set external ID but encountered a JSON exception");
       }

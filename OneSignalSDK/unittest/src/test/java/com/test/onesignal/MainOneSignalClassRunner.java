@@ -3236,6 +3236,57 @@ public class MainOneSignalClassRunner {
       assertNull(ShadowFirebaseAnalytics.lastEventString);
    }
 
+   @Test
+   public void shouldSendExternalUserIdAfterRegistration() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId);
+
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request externalIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, externalIdRequest.method);
+      assertEquals(testExternalId, externalIdRequest.payload.getString("external_user_id"));
+   }
+
+   @Test
+   public void shouldSendExternalUserIdBeforeRegistration() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request registrationRequest = ShadowOneSignalRestClient.requests.get(1);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, registrationRequest.method);
+      assertEquals(testExternalId, registrationRequest.payload.getString("external_user_id"));
+   }
+
+   @Test
+   public void shouldRemoveExternalUserId() throws Exception {
+      OneSignal.setExternalUserId("test_ext_id");
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.removeExternalUserId();
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
+      assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+   }
+
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
