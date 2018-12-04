@@ -392,9 +392,6 @@ public class OneSignal {
    static boolean mEnterp;
    private static boolean useEmailAuth;
 
-   private static boolean performedOnSessionRequest = false;
-   private static String pendingExternalUserId;
-
    static boolean requiresUserPrivacyConsent = false;
    static DelayedConsentInitializationParameters delayedInitParams;
    
@@ -1233,9 +1230,6 @@ public class OneSignal {
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
       deviceInfo.put("device_model", Build.MODEL);
-      deviceInfo.putOpt("external_user_id", pendingExternalUserId);
-
-      performedOnSessionRequest = true;
 
       try {
          deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
@@ -1425,30 +1419,26 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalId()"))
          return;
 
-      if (!performedOnSessionRequest) {
-         pendingExternalUserId = externalId;
-         return;
-      } else if (appId == null || currentSubscriptionState.getUserId() == null) {
-         onesignalLog(LOG_LEVEL.WARN, "Attempted to set external user ID when " + (appId == null ? "app ID" : "OneSignal user ID") + " is null");
-         return;
-      }
-
-      try {
-         JSONObject jsonBody = new JSONObject() {{
-            put("external_user_id", externalId);
-         }};
-
-         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
-            @Override
-            void onFailure(int statusCode, String response, Throwable throwable) {
-               logHttpError("setting external user ID Failed", statusCode, throwable, response);
+      Runnable runSetExternalUserId = new Runnable() {
+         @Override
+         public void run() {
+            try {
+               OneSignalStateSynchronizer.setExternalUserId(externalId);
+            } catch (JSONException exception) {
+               String operation = externalId == "" ? "remove" : "set";
+               onesignalLog(LOG_LEVEL.ERROR, "Attempted to " + operation + " external ID but encountered a JSON exception");
+               exception.printStackTrace();
             }
-         };
+         }
+      };
 
-         OneSignalRestClient.put("players/" + currentSubscriptionState.getUserId(), jsonBody, responseHandler);
-      } catch (JSONException exception) {
-         onesignalLog(LOG_LEVEL.ERROR, "Attempted to set external ID but encountered a JSON exception");
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         addTaskToQueue(new PendingTaskRunnable(runSetExternalUserId));
+         return;
       }
+
+      runSetExternalUserId.run();
    }
 
    public static void removeExternalUserId() {

@@ -454,6 +454,10 @@ abstract class UserStateSynchronizer {
         generateJsonDiff(syncValues, emailFields, syncValues, null);
     }
 
+    void setExternalUserId(final String externalId) throws JSONException {
+        getUserStateForModification().syncValues.put("external_user_id", externalId);
+    }
+
     abstract void setSubscription(boolean enable);
 
     private void handlePlayerDeletedFromServer() {

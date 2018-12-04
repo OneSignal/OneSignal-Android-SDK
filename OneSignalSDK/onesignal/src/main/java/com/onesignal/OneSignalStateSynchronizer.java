@@ -165,4 +165,9 @@ class OneSignalStateSynchronizer {
       getPushStateSynchronizer().logoutEmail();
       getEmailStateSynchronizer().logoutEmail();
    }
+
+   static void setExternalUserId(String externalId) throws JSONException {
+      getPushStateSynchronizer().setExternalUserId(externalId);
+      getEmailStateSynchronizer().setExternalUserId(externalId);
+   }
 }

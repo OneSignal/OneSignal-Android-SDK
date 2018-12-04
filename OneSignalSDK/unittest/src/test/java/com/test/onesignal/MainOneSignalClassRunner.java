@@ -3287,6 +3287,25 @@ public class MainOneSignalClassRunner {
       assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
    }
 
+   @Test
+   public void doesNotSendSameExternalId() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+
+      OneSignal.setExternalUserId(testExternalId);
+      threadAndTaskWait();
+
+      // Setting the same ID again should not generate a duplicate API request
+      // The SDK should detect it is the same and not generate a request
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+   }
+
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
