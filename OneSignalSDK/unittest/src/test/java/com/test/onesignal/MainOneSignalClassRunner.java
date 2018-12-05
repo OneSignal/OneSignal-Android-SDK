@@ -3306,6 +3306,38 @@ public class MainOneSignalClassRunner {
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
    }
 
+   @Test
+   public void sendsExternalIdOnEmailPlayers() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.setEmail("brad@onesignal.com");
+      threadAndTaskWait();
+
+      int currentRequestCount = ShadowOneSignalRestClient.networkCallCount;
+
+      OneSignal.setExternalUserId(testExternalId);
+      threadAndTaskWait();
+
+      // the SDK should have made two additional API calls
+      // One to set extID on the push player record,
+      // and another for the email player record
+      assertEquals(ShadowOneSignalRestClient.networkCallCount, currentRequestCount + 2);
+
+      int externalIdRequests = 0;
+
+      for (ShadowOneSignalRestClient.Request request : ShadowOneSignalRestClient.requests) {
+         if (request.payload != null && request.payload.has("external_user_id")) {
+            externalIdRequests += 1;
+            assertEquals(request.payload.getString("external_user_id"), testExternalId);
+         }
+      }
+
+      assertEquals(externalIdRequests, 2);
+   }
+
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
