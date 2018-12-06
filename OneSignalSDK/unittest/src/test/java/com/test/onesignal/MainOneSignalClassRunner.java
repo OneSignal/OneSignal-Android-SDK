@@ -3236,6 +3236,108 @@ public class MainOneSignalClassRunner {
       assertNull(ShadowFirebaseAnalytics.lastEventString);
    }
 
+   @Test
+   public void shouldSendExternalUserIdAfterRegistration() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId);
+
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request externalIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, externalIdRequest.method);
+      assertEquals(testExternalId, externalIdRequest.payload.getString("external_user_id"));
+   }
+
+   @Test
+   public void shouldSendExternalUserIdBeforeRegistration() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request registrationRequest = ShadowOneSignalRestClient.requests.get(1);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, registrationRequest.method);
+      assertEquals(testExternalId, registrationRequest.payload.getString("external_user_id"));
+   }
+
+   @Test
+   public void shouldRemoveExternalUserId() throws Exception {
+      OneSignal.setExternalUserId("test_ext_id");
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.removeExternalUserId();
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
+      assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+   }
+
+   @Test
+   public void doesNotSendSameExternalId() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+
+      OneSignal.setExternalUserId(testExternalId);
+      threadAndTaskWait();
+
+      // Setting the same ID again should not generate a duplicate API request
+      // The SDK should detect it is the same and not generate a request
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+   }
+
+   @Test
+   public void sendsExternalIdOnEmailPlayers() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.setEmail("brad@onesignal.com");
+      threadAndTaskWait();
+
+      int currentRequestCount = ShadowOneSignalRestClient.networkCallCount;
+
+      OneSignal.setExternalUserId(testExternalId);
+      threadAndTaskWait();
+
+      // the SDK should have made two additional API calls
+      // One to set extID on the push player record,
+      // and another for the email player record
+      assertEquals(ShadowOneSignalRestClient.networkCallCount, currentRequestCount + 2);
+
+      int externalIdRequests = 0;
+
+      for (ShadowOneSignalRestClient.Request request : ShadowOneSignalRestClient.requests) {
+         if (request.payload != null && request.payload.has("external_user_id")) {
+            externalIdRequests += 1;
+            assertEquals(request.payload.getString("external_user_id"), testExternalId);
+         }
+      }
+
+      assertEquals(externalIdRequests, 2);
+   }
+
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {

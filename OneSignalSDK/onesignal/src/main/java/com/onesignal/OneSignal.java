@@ -1414,6 +1414,41 @@ public class OneSignal {
       emailLogout.run();
    }
 
+   public static void setExternalUserId(final String externalId) {
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalId()"))
+         return;
+
+      Runnable runSetExternalUserId = new Runnable() {
+         @Override
+         public void run() {
+            try {
+               OneSignalStateSynchronizer.setExternalUserId(externalId);
+            } catch (JSONException exception) {
+               String operation = externalId == "" ? "remove" : "set";
+               onesignalLog(LOG_LEVEL.ERROR, "Attempted to " + operation + " external ID but encountered a JSON exception");
+               exception.printStackTrace();
+            }
+         }
+      };
+
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         addTaskToQueue(new PendingTaskRunnable(runSetExternalUserId));
+         return;
+      }
+
+      runSetExternalUserId.run();
+   }
+
+   public static void removeExternalUserId() {
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeExternalUserId()"))
+         return;
+
+      // to remove the external user ID, the API requires an empty string
+      setExternalUserId("");
+   }
+
    /**
     * Tag a user based on an app event of your choosing so later you can create
     * <a href="https://documentation.onesignal.com/docs/segmentation">OneSignal Segments</a>
