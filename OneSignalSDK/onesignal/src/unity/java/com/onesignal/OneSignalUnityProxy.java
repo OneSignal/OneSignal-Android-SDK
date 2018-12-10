@@ -217,6 +217,10 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    public void provideUserConsent(boolean granted) { OneSignal.provideUserConsent(granted); }
 
    public void setRequiresUserPrivacyConsent(boolean required) { OneSignal.setRequiresUserPrivacyConsent(required); }
+
+   public void setExternalUserId(String externalId) { OneSignal.setExternalUserId(externalId); }
+
+   public void removeExternalUserId() { OneSignal.removeExternalUserId(); }
    
    public String getPermissionSubscriptionState() {
       return OneSignal.getPermissionSubscriptionState().toJSONObject().toString();
