@@ -48,48 +48,8 @@ class OSTriggerController {
                 if (OSDynamicTriggerType.fromString(trigger.property) != null) {
                     dynamicTriggers.add(trigger);
                     continue;
-                } else if (triggers.get(trigger.property) == null) {
-
-                    // if we don't have a local value for this trigger, it can only
-                    // ever evaluate to true if using the NOT_EXISTS operator
-                    if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EXISTS ||
-                        (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EQUAL_TO && trigger.value != null)) {
-                        continue;
-                    }
-
+                } else if (!this.evaluateTrigger(trigger, message)) {
                     continueToEvaluateDynamicTriggers = false;
-                    break;
-                } else if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.EXISTS) {
-                    continue;
-                } else if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EXISTS) {
-                    // the trigger value exists if we reach this point, so it's false and we should break
-                    continueToEvaluateDynamicTriggers = false;
-                    break;
-                }
-
-                Object realValue = triggers.get(trigger.property);
-
-                // CONTAINS operates on arrays, we check every element of the array
-                // to see if it contains the trigger value.
-                if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.CONTAINS) {
-                    if (!(realValue instanceof ArrayList) || !((Collection)realValue).contains(trigger.value)) {
-                        continueToEvaluateDynamicTriggers = false;
-                        break;
-                    }
-                    // We are only checking to see if the trigger is FALSE. If a trigger evaluates
-                    // to false, we immediately break the inner AND loop to proceed to the next OR loop
-                } else if (realValue instanceof String && trigger.value instanceof String && !triggerMatchesStringValue((String)trigger.value, (String)realValue, trigger.operatorType)) {
-                    continueToEvaluateDynamicTriggers = false;
-                    break;
-                    // In Java, we cannot use instanceof since we want to be able to compare floats to ints and so on
-                    // Checking Double instanceof Number appears to return false, so we must use isAssignableTo()
-                } else if (trigger.value instanceof Number && realValue instanceof Number
-                            && !triggerMatchesNumericValue((Number)trigger.value, (Number)realValue, trigger.operatorType)) {
-                    continueToEvaluateDynamicTriggers = false;
-                    break;
-                } else if (!(trigger.value instanceof Number) && trigger.value != null && trigger.value.getClass() != realValue.getClass()) {
-                    continueToEvaluateDynamicTriggers = false;
-                    break;
                 }
             }
 
@@ -102,6 +62,48 @@ class OSTriggerController {
         }
 
         return false;
+    }
+
+    private boolean evaluateTrigger(OSTrigger trigger, OSInAppMessage message) {
+        if (triggers.get(trigger.property) == null) {
+
+            // if we don't have a local value for this trigger, it can only
+            // ever evaluate to true if using the NOT_EXISTS operator
+            if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EXISTS ||
+                    (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EQUAL_TO && trigger.value != null)) {
+                return true;
+            }
+
+            return false;
+        } else if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.EXISTS) {
+            return true;
+        } else if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EXISTS) {
+            // the trigger value exists if we reach this point, so it's false and we should break
+            return false;
+        }
+
+        Object realValue = triggers.get(trigger.property);
+
+        // CONTAINS operates on arrays, we check every element of the array
+        // to see if it contains the trigger value.
+        if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.CONTAINS) {
+            if (!(realValue instanceof ArrayList) || !((Collection)realValue).contains(trigger.value)) {
+                return false;
+            }
+            // We are only checking to see if the trigger is FALSE. If a trigger evaluates
+            // to false, we immediately break the inner AND loop to proceed to the next OR loop
+        } else if (realValue instanceof String && trigger.value instanceof String && !triggerMatchesStringValue((String)trigger.value, (String)realValue, trigger.operatorType)) {
+            return false;
+            // In Java, we cannot use instanceof since we want to be able to compare floats to ints and so on
+            // Checking Double instanceof Number appears to return false, so we must use isAssignableTo()
+        } else if (trigger.value instanceof Number && realValue instanceof Number
+                && !triggerMatchesNumericValue((Number)trigger.value, (Number)realValue, trigger.operatorType)) {
+            return false;
+        } else if (!(trigger.value instanceof Number) && trigger.value != null && trigger.value.getClass() != realValue.getClass()) {
+            return false;
+        }
+
+        return true;
     }
 
     private boolean triggerMatchesStringValue(String triggerValue, String savedValue, OSTrigger.OSTriggerOperatorType operator) {
