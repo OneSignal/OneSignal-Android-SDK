@@ -50,6 +50,7 @@ class OSTriggerController {
                     continue;
                 } else if (!this.evaluateTrigger(trigger, message)) {
                     continueToEvaluateDynamicTriggers = false;
+                    break;
                 }
             }
 
@@ -58,7 +59,22 @@ class OSTriggerController {
             else if (!continueToEvaluateDynamicTriggers)
                 break;
 
-            // TODO: Check dynamic triggers
+            // check dynamic (time-based) triggers.
+            if (dynamicTriggers.size() > 0) {
+                for (OSTrigger trigger : dynamicTriggers) {
+
+                    /**
+                     * This method call may schedule a timer if, for example, the trigger is
+                     * 'session_duration > 30' and the user just launched the app. The timer
+                     * would be scheduled for 30 seconds from now. At that time, the triggers
+                     * for this message will be re-evaluated.
+                     */
+
+                    if (!dynamicTriggerController.dynamicTriggerShouldFire(trigger, message.messageId)) {
+                        return false;
+                    }
+                }
+            }
         }
 
         return false;
