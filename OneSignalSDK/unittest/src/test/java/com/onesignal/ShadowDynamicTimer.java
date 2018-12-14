@@ -11,6 +11,9 @@ public class ShadowDynamicTimer {
     /** Allows you to control if trigger timers actually get scheduled */
     public static boolean shouldScheduleTimers = true;
 
+    /** Allows us to simply check if a timer was scheduled at all */
+    public static boolean hasScheduledTimer = false;
+
     /** The delay value for the most recently scheduled timer */
     public static long mostRecentlyScheduledTimerDelay = 0;
 
@@ -19,6 +22,8 @@ public class ShadowDynamicTimer {
         mostRecentlyScheduledTimerDelay = delay;
 
         if (shouldScheduleTimers) {
+            hasScheduledTimer = true;
+
             Timer timer = new Timer("trigger_test:" + triggerId);
 
             timer.schedule(task, delay);

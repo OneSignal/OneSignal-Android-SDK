@@ -104,6 +104,7 @@ public class InAppMessagingTests {
     public void afterEachTest() {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
+        ShadowDynamicTimer.hasScheduledTimer = false;
     }
 
     // Convenience method that wraps an object in a JSON Array
@@ -143,6 +144,27 @@ public class InAppMessagingTests {
         return new OSTestInAppMessage(json);
     }
 
+    private static OSTestInAppMessage buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OSTestTrigger>> triggers) throws JSONException {
+        JSONArray ors = new JSONArray();
+
+        for (ArrayList<OSTestTrigger> andBlock : triggers) {
+            JSONArray ands = new JSONArray();
+
+            for (final OSTestTrigger trigger : andBlock) {
+                ands.put(new JSONObject() {{
+                    put("property", trigger.property);
+                    put("operator", trigger.operatorType.toString());
+                    put("value", trigger.value);
+                    put("id", UUID.randomUUID().toString());
+                }});
+            }
+
+            ors.put(ands);
+        }
+
+        return buildTestMessage(ors);
+    }
+
     private static OSTestTrigger buildTrigger(final String key, final String operator, final Object value) throws JSONException {
         JSONObject triggerJson = new JSONObject() {{
             put("property", key);
@@ -166,6 +188,13 @@ public class InAppMessagingTests {
         }};
     }
 
+    private static void setLocalTriggerValue(String key, Object localValue) {
+        if (localValue != null)
+            OneSignal.addTrigger(key, localValue);
+        else
+            OneSignal.removeTriggerforKey(key);
+    }
+
     /**
      * Convenience function that saves a local trigger (localValue) for the property name "test_property"
      * then creates an in-app message with a trigger (triggerValue) for the same property name. It
@@ -177,10 +206,7 @@ public class InAppMessagingTests {
      * returns true when evaluated, because 3 > 2
      */
     private boolean comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType operator, Object triggerValue, Object localValue) throws JSONException {
-        if (localValue != null)
-            OneSignal.addTrigger("test_property", localValue);
-        else
-            OneSignal.removeTriggerforKey("test_property");
+        setLocalTriggerValue("test_property", localValue);
 
         OSTestInAppMessage testMessage = buildTestMessageWithSingleTrigger("test_property", operator.toString(), triggerValue);
 
@@ -321,7 +347,55 @@ public class InAppMessagingTests {
         assertTrue(roughlyEqualTimerValues(13.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
     }
 
+    // This test makes sure that time-based triggers are considered once all non-time-based
+    // triggers evaluate to true and will set up a timer if needed
+    @Test
+    public void testMixedTriggersScheduleTimer() throws JSONException {
+        final OSTestTrigger timeBasedTrigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
+        final OSTestTrigger normalTrigger = buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
 
+        // the time based trigger will be false (but should schedule a timer)
+        // while the normal trigger should evaluate to true
+        setLocalTriggerValue("prop1", 3);
+
+        ArrayList triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
+            add(new ArrayList<OSTestTrigger>() {{
+                add(timeBasedTrigger);
+                add(normalTrigger);
+            }});
+        }};
+
+        OSTestInAppMessage testMessage = buildTestMessageWithMultipleTriggers(triggers);
+
+        assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
+
+        assertTrue(ShadowDynamicTimer.hasScheduledTimer);
+
+        assertTrue(roughlyEqualTimerValues(5.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
+    }
+
+    // When a normal (non-time-based) trigger is false, the time-based triggers should not even
+    // be considered (and no timers should be scheduled as a result)
+    @Test
+    public void testShouldNotConsiderTimeBasedTrigger() throws JSONException {
+        final OSTestTrigger timeBasedTrigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
+        final OSTestTrigger normalTrigger = buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
+
+        setLocalTriggerValue("prop1", 4);
+
+        ArrayList triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
+            add(new ArrayList<OSTestTrigger>() {{
+                add(timeBasedTrigger);
+                add(normalTrigger);
+            }});
+        }};
+
+        OSTestInAppMessage testMessage = buildTestMessageWithMultipleTriggers(triggers);
+
+        assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
+
+        assertFalse(ShadowDynamicTimer.hasScheduledTimer);
+    }
 
     private boolean roughlyEqualTimerValues(double desired, double actual) {
         return Math.abs(desired - actual) < REQUIRED_TIMER_ACCURACY;
