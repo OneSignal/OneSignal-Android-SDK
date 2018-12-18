@@ -12,6 +12,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -219,8 +220,8 @@ public class OneSignalPackagePrivateHelper {
       }
 
       @Override
-      public void parseTriggerJson(JSONArray triggersJson) throws JSONException {
-         this.triggers = new ArrayList<>();
+      ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
+         ArrayList<ArrayList<OSTrigger>> parsedTriggers = new ArrayList<>();
 
          for (int i = 0; i < triggersJson.length(); i++) {
             JSONArray ands = triggersJson.getJSONArray(i);
@@ -233,8 +234,10 @@ public class OneSignalPackagePrivateHelper {
                parsed.add(trig);
             }
 
-            this.triggers.add(parsed);
+            parsedTriggers.add(parsed);
          }
+
+         return parsedTriggers;
       }
    }
 

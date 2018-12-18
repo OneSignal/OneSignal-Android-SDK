@@ -69,6 +69,10 @@ public class InAppMessagingTests {
     private static final String testContentId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
 
+    private static final String testSpanishAndroidVariantId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
+    private static final String testEnglishAndroidVariantId = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc";
+
+
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
     private static ActivityController<BlankActivity> blankActivityController;
@@ -133,7 +137,12 @@ public class InAppMessagingTests {
         // builds a test message to test JSON parsing constructor of OSInAppMessage
         JSONObject json = new JSONObject() {{
             put("id", testMessageId);
-            put("content_id", testContentId);
+            put("variants", new JSONObject() {{
+                put("android", new JSONObject() {{
+                    put("es", testSpanishAndroidVariantId);
+                    put("en", testEnglishAndroidVariantId);
+                }});
+            }});
             put("max_display_time", 30);
             put("triggers", triggerJson);
             put("actions", new JSONArray() {{
@@ -216,9 +225,15 @@ public class InAppMessagingTests {
     @Test
     public void testBuiltMessage() {
         assertEquals(message.messageId, testMessageId);
-        assertEquals(message.contentId, testContentId);
+        assertNotNull(message.variants);
         assertEquals(message.maxDisplayTime, 30.0);
         assertEquals(message.actions.size(), 1);
+    }
+
+    @Test
+    public void testBuiltMessageVariants() {
+        assertEquals(message.variants.get("android").get("es"), testSpanishAndroidVariantId);
+        assertEquals(message.variants.get("android").get("en"), testEnglishAndroidVariantId);
     }
 
     @Test

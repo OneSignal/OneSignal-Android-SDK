@@ -9,6 +9,8 @@ import org.json.JSONObject;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 class OSInAppMessage {
 
@@ -19,13 +21,16 @@ class OSInAppMessage {
     public String messageId;
 
     /**
-     * The unique identifier for the in-app message webpage content (HTML)
+     * Allows in-app messages to use multiple language variants, or to have variations between
+     * different device types (ie. a different image for phones vs. tablets, etc.).
+     *
+     * An example: {'ios' : {'en' : 'wfgkv-...', 'es' : '56ytdygd...' }}
      */
     @NonNull
-    public String contentId;
+    public HashMap<String, HashMap<String, String>> variants;
 
     /**
-     * An ar1ray of arrays of triggers. The outer array represents AND conditions,
+     * An array of arrays of triggers. The outer array represents AND conditions,
      * while the inner array represents AND conditions.
      */
     @NonNull
@@ -44,12 +49,9 @@ class OSInAppMessage {
 
         // initialize simple root properties
         this.messageId = json.getString("id");
-        this.contentId = json.getString("content_id");
         this.maxDisplayTime = json.optDouble("max_display_time");
-
-        JSONArray ors = json.getJSONArray("triggers");
-
-        this.parseTriggerJson(ors);
+        this.variants = parseVariants(json.getJSONObject("variants"));
+        this.triggers = parseTriggerJson(json.getJSONArray("triggers"));
 
         if (json.has("actions")) {
             actions = new ArrayList<>();
@@ -66,9 +68,31 @@ class OSInAppMessage {
         }
     }
 
-    public void parseTriggerJson(JSONArray triggersJson) throws JSONException {
+    // TODO: Ask Josh if there is an easier/cleaner way to do this in Java
+    static HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {
+        HashMap<String, HashMap<String, String>> variantTypes = new HashMap<>();
+
+        Iterator<String> keyIterator = json.keys();
+        while (keyIterator.hasNext()) {
+            String variantType = keyIterator.next();
+            JSONObject variant = json.getJSONObject(variantType);
+            HashMap<String, String> variantMap = new HashMap<>();
+
+            Iterator<String> variantIterator = variant.keys();
+            while (variantIterator.hasNext()) {
+                String languageType = variantIterator.next();
+                variantMap.put(languageType, variant.getString(languageType));
+            }
+
+            variantTypes.put(variantType, variantMap);
+        }
+
+        return variantTypes;
+    }
+
+    ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
         // initialize triggers
-        this.triggers = new ArrayList<>();
+        ArrayList<ArrayList<OSTrigger>> parsedTriggers = new ArrayList<>();
 
         for (int i = 0; i < triggersJson.length(); i++) {
             JSONArray ands = triggersJson.getJSONArray(i);
@@ -78,17 +102,19 @@ class OSInAppMessage {
             for (int j = 0; j < ands.length(); j++)
                 converted.add(new OSTrigger(ands.getJSONObject(j)));
 
-            this.triggers.add(converted);
+            parsedTriggers.add(converted);
         }
+
+        return parsedTriggers;
     }
 
-    public JSONObject toJSONObject() {
+    JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {
             json.put("id", this.messageId);
 
-            json.put("content_id", this.contentId);
+            json.put("variants", this.variants);
 
             json.put("max_display_time", this.maxDisplayTime);
 
