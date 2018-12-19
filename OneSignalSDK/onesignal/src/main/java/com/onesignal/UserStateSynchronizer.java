@@ -386,6 +386,9 @@ abstract class UserStateSynchronizer {
                         getUserStateForModification().dependValues.put("session", false);
                         getUserStateForModification().persistState();
 
+                        if (jsonResponse.has("in_app_messages"))
+                            OSInAppMessageController.getController().receivedInAppMessageJson(jsonResponse.getJSONArray("in_app_messages"));
+
                         onSuccessfulSync(jsonBody);
 
                         if (jsonResponse.getJSONArray("messages") != null) {
