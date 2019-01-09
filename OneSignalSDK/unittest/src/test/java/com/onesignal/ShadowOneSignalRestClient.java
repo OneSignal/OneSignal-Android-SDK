@@ -128,6 +128,18 @@ public class ShadowOneSignalRestClient {
       }
    }
 
+   public static void setNextSuccessfulJSONResponse(JSONObject response) throws JSONException {
+      nextSuccessResponse = response.toString(1);
+   }
+
+   public static void setNextFailureJSONResponse(JSONObject response) throws JSONException {
+      failResponse = response.toString(1);
+   }
+
+   public static void setNextSuccessfulGETJSONResponse(JSONObject response) throws JSONException {
+      nextSuccessfulGETResponse = response.toString(1);
+   }
+
    private static void freezeSyncCall() {
       if (!freezeResponses)
          return;
