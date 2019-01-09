@@ -470,7 +470,10 @@ public class MainOneSignalClassRunner {
    @Test
    public void testNullProjectNumberSetsErrorType() throws Exception {
       // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
-      ShadowOneSignalRestClient.nextSuccessResponse = "{\"awl_list\": {}}";
+      ShadowOneSignalRestClient.setNextSuccessfulJSONResponse(new JSONObject() {{
+         put("awl_list", new JSONObject());
+      }});
+
       // Don't fire the mock callback, it will be done from the real class.
       ShadowPushRegistratorGCM.skipComplete = true;
 
@@ -488,7 +491,7 @@ public class MainOneSignalClassRunner {
       JSONObject androidParams = testHelper.createBasicChannelListPayload();
       androidParams.put("awl_list", new JSONObject());
       // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
-      ShadowOneSignalRestClient.nextSuccessResponse = androidParams.toString();
+      ShadowOneSignalRestClient.setNextSuccessfulJSONResponse(androidParams);
 
       // Don't fire the mock callback, it will be done from the real class.
 //      ShadowPushRegistratorGCM.skipComplete = true;
@@ -910,7 +913,11 @@ public class MainOneSignalClassRunner {
       // Developer deletes user, cold boots apps should resend all fields
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.failNext = true;
-      ShadowOneSignalRestClient.failResponse = "{\"errors\":[\"Device type  is not a valid device_type. Valid options are: 0 = iOS, 1 = Android, 2 = Amazon, 3 = WindowsPhone(MPNS), 4 = ChromeApp, 5 = ChromeWebsite, 6 = WindowsPhone(WNS), 7 = Safari(APNS), 8 = Firefox\"]}";
+      ShadowOneSignalRestClient.setNextFailureJSONResponse(new JSONObject() {{
+         put("errors", new JSONArray() {{
+            put("Device type  is not a valid device_type. Valid options are: 0 = iOS, 1 = Android, 2 = Amazon, 3 = WindowsPhone(MPNS), 4 = ChromeApp, 5 = ChromeWebsite, 6 = WindowsPhone(WNS), 7 = Safari(APNS), 8 = Firefox");
+         }});
+      }});
       OneSignalInit();
       threadAndTaskWait();
 
@@ -920,7 +927,11 @@ public class MainOneSignalClassRunner {
       // Developer deletes users again from dashboard while app is running.
       ShadowOneSignalRestClient.lastPost = null;
       ShadowOneSignalRestClient.failNext = true;
-      ShadowOneSignalRestClient.failResponse = "{\"errors\":[\"No user with this id found\"]}";
+      ShadowOneSignalRestClient.setNextFailureJSONResponse(new JSONObject() {{
+         put("errors", new JSONArray() {{
+            put("No user with this id found");
+         }});
+      }});
       OneSignal.sendTag("key1", "value1");
       threadAndTaskWait();
 
@@ -2242,7 +2253,13 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\"}}";
+      ShadowOneSignalRestClient.setNextSuccessfulGETJSONResponse(new JSONObject() {{
+         put("tags", new JSONObject() {{
+            put("test1", "value1");
+            put("test2", "value2");
+         }});
+      }});
+
       GetTags();
       threadAndTaskWait();
 
@@ -2271,7 +2288,14 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.failNextPut = true;
       OneSignal.deleteTag("test2");
       OneSignal.sendTag("test4", "value4");
-      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\", \"test2\": \"value2\",\"test3\": \"ShouldOverride\",\"test4\": \"RemoteShouldNotOverwriteLocalPending\"}}";
+      ShadowOneSignalRestClient.setNextSuccessfulGETJSONResponse(new JSONObject() {{
+         put("tags", new JSONObject() {{
+            put("test1", "value1");
+            put("test2", "value2");
+            put("test3", "ShouldOverride");
+            put("test4", "RemoteShouldNotOverwriteLocalPending");
+         }});
+      }});
       GetTags();
       threadAndTaskWait();
       assertEquals("value1", lastGetTags.getString("test1"));
@@ -2287,7 +2311,11 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void getTagsDelayedAfterRegistering() throws Exception {
-      ShadowOneSignalRestClient.nextSuccessfulGETResponse = "{\"tags\": {\"test1\": \"value1\"}}";
+      ShadowOneSignalRestClient.setNextSuccessfulGETJSONResponse(new JSONObject() {{
+         put("tags", new JSONObject() {{
+            put("test1", "value1");
+         }});
+      }});
 
       OneSignalInit();
       GetTags();
@@ -2866,8 +2894,14 @@ public class MainOneSignalClassRunner {
       assertNull(postNotificationFailure);
       postNotificationSuccess = postNotificationFailure = null;
 
+      ShadowOneSignalRestClient.setNextSuccessfulJSONResponse(new JSONObject() {{
+         put("id", "");
+         put("recipients", 0);
+         put("errors", new JSONArray() {{
+            put("All included players are not subscribed");
+         }});
+      }});
 
-      ShadowOneSignalRestClient.nextSuccessResponse = "{\"id\":\"\",\"recipients\":0,\"errors\":[\"All included players are not subscribed\"]}";
       OneSignal.postNotification("{}", handler);
       assertNull(postNotificationSuccess);
       assertNotNull(postNotificationFailure);
