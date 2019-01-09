@@ -3,6 +3,8 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.onesignal.BuildConfig;
@@ -43,6 +45,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 
+import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static junit.framework.Assert.*;
 
 @Config(packageName = "com.onesignal.example",
@@ -101,6 +104,8 @@ public class InAppMessagingTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
 
+        TestHelpers.beforeTestInitAndCleanup();
+
         OneSignalInit();
     }
 
@@ -109,6 +114,8 @@ public class InAppMessagingTests {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
+
+        TestHelpers.afterTestCleanup();
     }
 
     // Convenience method that wraps an object in a JSON Array
@@ -410,6 +417,22 @@ public class InAppMessagingTests {
         assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
 
         assertFalse(ShadowDynamicTimer.hasScheduledTimer);
+    }
+
+    @Test
+    public void testDisableInAppMessaging() throws JSONException {
+        OneSignal.startInit(blankActivity).init();
+
+        assertTrue(OneSignal.isInAppMessagingEnabled());
+
+        OneSignal.setInAppMessagingEnabled(false);
+
+        // check to make sure that this setting is persisted to shared prefs
+        flushBufferedSharedPrefs();
+        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+
+        assertFalse(OneSignal.isInAppMessagingEnabled());
+        assertFalse(prefs.getBoolean("ONESIGNAL_MESSAGING_ENABLED", true));
     }
 
     private boolean roughlyEqualTimerValues(double desired, double actual) {

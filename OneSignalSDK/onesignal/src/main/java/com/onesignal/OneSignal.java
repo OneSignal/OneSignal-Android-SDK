@@ -2752,6 +2752,11 @@ public class OneSignal {
    }
 
    /** In-App Message Triggers */
+
+   /**
+    * Allows you to set multiple trigger key/value pairs simultaneously
+    * Triggers are used for targeting in-app messages.
+    */
    public static void addTriggers(Map<String, Object> triggers) {
 
       //if applicable, check if the user provided privacy consent
@@ -2761,6 +2766,9 @@ public class OneSignal {
       OSInAppMessageController.getController().triggerController.addTriggers(triggers);
    }
 
+   /**
+    * Allows you to set an individual trigger key/value pair for in-app message targeting
+    */
    public static void addTrigger(String key, Object object) {
 
       //if applicable, check if the user provided privacy consent
@@ -2773,6 +2781,7 @@ public class OneSignal {
       OSInAppMessageController.getController().addTriggers(triggerMap);
    }
 
+   /** Removes a list/collection of triggers from their keys  */
    public static void removeTriggersForKeys(Collection<String> keys) {
 
       //if applicable, check if the user provided privacy consent
@@ -2782,6 +2791,7 @@ public class OneSignal {
       OSInAppMessageController.getController().removeTriggersForKeys(keys);
    }
 
+   /** Removes a single trigger for the given key */
    public static void removeTriggerforKey(String key) {
 
       //if applicable, check if the user provided privacy consent
@@ -2794,6 +2804,7 @@ public class OneSignal {
       OSInAppMessageController.getController().removeTriggersForKeys(triggerKeys);
    }
 
+   /** Returns a single trigger value for the given key (if it exists, otherwise returns null) */
    @Nullable
    public static Object getTriggerValueForKey(String key) {
 
@@ -2804,7 +2815,23 @@ public class OneSignal {
       return OSInAppMessageController.getController().getTriggerValue(key);
    }
 
+   /**
+    * A local boolean indicating if in-app messaging is enabled on this device.
+    * This value is true by default. Call setInAppMessagingEnabled(false) to disable
+    * in-app messaging for this device.
+    */
+   public static boolean isInAppMessagingEnabled() {
+      return OSInAppMessageController.getController().inAppMessagingEnabled;
+   }
 
+   /***
+    * Can enable or disable in-app messaging on this device.
+    * 
+    * @param inAppMessagingEnabled The boolean that disables/enables in-app messaging
+    */
+   public static void setInAppMessagingEnabled(boolean inAppMessagingEnabled) {
+      OSInAppMessageController.getController().setInAppMessagingEnabled(inAppMessagingEnabled);
+   }
 
    static long GetUnsentActiveTime() {
       if (unSentActiveTime == -1 && appContext != null) {
