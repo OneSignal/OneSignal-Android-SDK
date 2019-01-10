@@ -112,10 +112,9 @@ public class InAppMessagingUnitTests {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
-
         TestHelpers.afterTestCleanup();
 
-        OneSignal.setInAppMessagingEnabled(true);
+        InAppMessagingHelpers.clearTestState();
     }
 
     private static void setLocalTriggerValue(String key, Object localValue) {

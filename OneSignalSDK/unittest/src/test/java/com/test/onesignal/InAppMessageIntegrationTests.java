@@ -105,7 +105,7 @@ public class InAppMessageIntegrationTests {
 
         TestHelpers.afterTestCleanup();
 
-        OneSignal.setInAppMessagingEnabled(true);
+        InAppMessagingHelpers.clearTestState();
     }
 
     @Test
@@ -142,8 +142,39 @@ public class InAppMessageIntegrationTests {
         // We will set the trigger. However, since messaging is disabled, the message should not be shown
         OneSignal.addTrigger("test_key", 3);
 
-        assertEquals(ShadowOSInAppMessageController.displayedMessages.size(), 0);
+        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
     }
+
+    /**
+     * Since it is possible for multiple in-app messages to be valid at the same time, we've implemented
+     * a queue so that the SDK does not try to display both messages at the same time.
+     */
+    @Test
+    public void testMultipleMessagesDoNotBothDisplay() throws Exception {
+        final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_1", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 3);
+        final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_2", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 2);
+
+        setMockRegistrationResponseWithMessages(new ArrayList() {{
+            add(testFirstMessage);
+            add(testSecondMessage);
+        }});
+
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OneSignal.addTriggers(new HashMap<String, Object>() {{
+            put("test_1", 3);
+            put("test_2", 2);
+        }});
+
+        threadAndTaskWait();
+
+        //both messages should now be valid but only one should display
+        //which one displays first is undefined and doesn't really matter
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
+
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
         final JSONArray jsonMessages = new JSONArray();
