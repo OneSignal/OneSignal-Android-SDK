@@ -1,7 +1,6 @@
 package com.onesignal;
 
 import com.onesignal.OSTriggerController.OSDynamicTriggerType;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -29,6 +28,12 @@ public class InAppMessagingHelpers {
 
     public static void resetSessionLaunchTime() {
         OSDynamicTriggerController.sessionLaunchTime = new Date();
+    }
+
+    public static void clearTestState() {
+        OneSignal.setInAppMessagingEnabled(true);
+
+        ShadowOSInAppMessageController.displayedMessages.clear();
     }
 
     // Convenience method that wraps an object in a JSON Array
