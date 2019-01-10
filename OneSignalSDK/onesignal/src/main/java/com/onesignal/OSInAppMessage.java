@@ -114,7 +114,20 @@ class OSInAppMessage {
         try {
             json.put("id", this.messageId);
 
-            json.put("variants", this.variants);
+            JSONObject variants = new JSONObject();
+
+            for (String key : this.variants.keySet()) {
+                HashMap<String, String> variant = this.variants.get(key);
+                JSONObject converted = new JSONObject();
+
+                for (String variantKey : variant.keySet()) {
+                    converted.put(variantKey, variant.get(variantKey));
+                }
+
+                variants.put(key, converted);
+            }
+
+            json.put("variants", variants);
 
             json.put("max_display_time", this.maxDisplayTime);
 
