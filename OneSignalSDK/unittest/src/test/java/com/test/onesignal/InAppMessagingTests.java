@@ -16,6 +16,7 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowOSInAppMessageController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
@@ -45,7 +46,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 
+
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
 
 @Config(packageName = "com.onesignal.example",
@@ -58,7 +61,8 @@ import static junit.framework.Assert.*;
                 ShadowCustomTabsSession.class,
                 ShadowNotificationManagerCompat.class,
                 ShadowJobService.class,
-                ShadowDynamicTimer.class
+                ShadowDynamicTimer.class,
+                ShadowOSInAppMessageController.class
         },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
@@ -68,12 +72,6 @@ public class InAppMessagingTests {
 
     private static final double REQUIRED_TIMER_ACCURACY = 1.25;
     private static OSTestInAppMessage message;
-    private static final String testMessageId = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
-    private static final String testContentId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
-    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
-
-    private static final String testSpanishAndroidVariantId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
-    private static final String testEnglishAndroidVariantId = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc";
 
 
     @SuppressLint("StaticFieldLeak")
@@ -85,7 +83,7 @@ public class InAppMessagingTests {
         ShadowLog.stream = System.out;
 
         try {
-            message = buildTestMessageWithSingleTrigger("os_session_duration", OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO.toString(), 3);
+            message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("os_session_duration", OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO.toString(), 3);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -116,92 +114,8 @@ public class InAppMessagingTests {
         ShadowDynamicTimer.hasScheduledTimer = false;
 
         TestHelpers.afterTestCleanup();
-    }
 
-    // Convenience method that wraps an object in a JSON Array
-    private static JSONArray wrap(final Object object) {
-        return new JSONArray() {{
-            put(object);
-        }};
-    }
-
-    // Most tests build a test message using only one trigger.
-    // This convenience method makes it easy to build such a message
-    private static OSTestInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
-        JSONObject triggerJson = new JSONObject() {{
-            put("property", key);
-            put("operator", operator);
-            put("value", value);
-            put("id", UUID.randomUUID().toString());
-        }};
-
-        JSONArray triggersJson = wrap(wrap(triggerJson));
-
-        return buildTestMessage(triggersJson);
-    }
-
-    private static OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
-        // builds a test message to test JSON parsing constructor of OSInAppMessage
-        JSONObject json = new JSONObject() {{
-            put("id", testMessageId);
-            put("variants", new JSONObject() {{
-                put("android", new JSONObject() {{
-                    put("es", testSpanishAndroidVariantId);
-                    put("en", testEnglishAndroidVariantId);
-                }});
-            }});
-            put("max_display_time", 30);
-            put("triggers", triggerJson);
-            put("actions", new JSONArray() {{
-                put(buildTestActionJson());
-            }});
-        }};
-
-        return new OSTestInAppMessage(json);
-    }
-
-    private static OSTestInAppMessage buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OSTestTrigger>> triggers) throws JSONException {
-        JSONArray ors = new JSONArray();
-
-        for (ArrayList<OSTestTrigger> andBlock : triggers) {
-            JSONArray ands = new JSONArray();
-
-            for (final OSTestTrigger trigger : andBlock) {
-                ands.put(new JSONObject() {{
-                    put("property", trigger.property);
-                    put("operator", trigger.operatorType.toString());
-                    put("value", trigger.value);
-                    put("id", UUID.randomUUID().toString());
-                }});
-            }
-
-            ors.put(ands);
-        }
-
-        return buildTestMessage(ors);
-    }
-
-    private static OSTestTrigger buildTrigger(final String key, final String operator, final Object value) throws JSONException {
-        JSONObject triggerJson = new JSONObject() {{
-            put("property", key);
-            put("operator", operator);
-            put("value", value);
-            put("id", UUID.randomUUID().toString());
-        }};
-
-        return new OSTestTrigger(triggerJson);
-    }
-
-    private static JSONObject buildTestActionJson() throws JSONException {
-        return new JSONObject() {{
-            put("action_id", "Test_action_id");
-            put("url", "https://www.onesignal.com");
-            put("url_target", "webview");
-            put("close", true);
-            put("data", new JSONObject() {{
-                put("test", "value");
-            }});
-        }};
+        OneSignal.setInAppMessagingEnabled(true);
     }
 
     private static void setLocalTriggerValue(String key, Object localValue) {
@@ -224,14 +138,14 @@ public class InAppMessagingTests {
     private boolean comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType operator, Object triggerValue, Object localValue) throws JSONException {
         setLocalTriggerValue("test_property", localValue);
 
-        OSTestInAppMessage testMessage = buildTestMessageWithSingleTrigger("test_property", operator.toString(), triggerValue);
+        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_property", operator.toString(), triggerValue);
 
         return InAppMessagingHelpers.evaluateMessage(testMessage);
     }
 
     @Test
     public void testBuiltMessage() {
-        assertEquals(message.messageId, testMessageId);
+        assertEquals(message.messageId, InAppMessagingHelpers.testMessageId);
         assertNotNull(message.variants);
         assertEquals(message.maxDisplayTime, 30.0);
         assertEquals(message.actions.size(), 1);
@@ -239,8 +153,8 @@ public class InAppMessagingTests {
 
     @Test
     public void testBuiltMessageVariants() {
-        assertEquals(message.variants.get("android").get("es"), testSpanishAndroidVariantId);
-        assertEquals(message.variants.get("android").get("en"), testEnglishAndroidVariantId);
+        assertEquals(message.variants.get("android").get("es"), InAppMessagingHelpers.testSpanishAndroidVariantId);
+        assertEquals(message.variants.get("android").get("en"), InAppMessagingHelpers.testEnglishAndroidVariantId);
     }
 
     @Test
@@ -254,7 +168,7 @@ public class InAppMessagingTests {
 
     @Test
     public void testParsesMessageActions() throws JSONException {
-        OSTestInAppMessageAction action = new OSTestInAppMessageAction(buildTestActionJson());
+        OSTestInAppMessageAction action = new OSTestInAppMessageAction(InAppMessagingHelpers.buildTestActionJson());
 
         assertEquals(action.actionId, "Test_action_id");
         assertEquals(action.actionUrl.toString(), "https://www.onesignal.com");
@@ -346,12 +260,12 @@ public class InAppMessagingTests {
 
     @Test
     public void testMessageSchedulesSessionDurationTimer() throws JSONException {
-        OSTestTrigger trigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 10);
+        OSTestTrigger trigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 10);
 
         InAppMessagingHelpers.resetSessionLaunchTime();
 
         // this evaluates the message and should schedule a timer for 10 seconds into the session
-        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, testMessageId));
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, InAppMessagingHelpers.testMessageId));
 
         // verify that the timer was scheduled ~10 seconds
         assertTrue(roughlyEqualTimerValues(10.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
@@ -359,12 +273,12 @@ public class InAppMessagingTests {
 
     @Test
     public void testMessageSchedulesExactTimeTimer() throws JSONException {
-        OSTestTrigger trigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
+        OSTestTrigger trigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
                 OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), (((double)(new Date()).getTime() / 1000.0f) + 13));
 
         InAppMessagingHelpers.resetSessionLaunchTime();
 
-        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, testMessageId));
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, InAppMessagingHelpers.testMessageId));
 
         assertTrue(roughlyEqualTimerValues(13.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
     }
@@ -373,8 +287,8 @@ public class InAppMessagingTests {
     // triggers evaluate to true and will set up a timer if needed
     @Test
     public void testMixedTriggersScheduleTimer() throws JSONException {
-        final OSTestTrigger timeBasedTrigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
-        final OSTestTrigger normalTrigger = buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
+        final OSTestTrigger timeBasedTrigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
+        final OSTestTrigger normalTrigger = InAppMessagingHelpers.buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
 
         // the time based trigger will be false (but should schedule a timer)
         // while the normal trigger should evaluate to true
@@ -387,7 +301,7 @@ public class InAppMessagingTests {
             }});
         }};
 
-        OSTestInAppMessage testMessage = buildTestMessageWithMultipleTriggers(triggers);
+        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
 
         assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
 
@@ -400,8 +314,8 @@ public class InAppMessagingTests {
     // be considered (and no timers should be scheduled as a result)
     @Test
     public void testShouldNotConsiderTimeBasedTrigger() throws JSONException {
-        final OSTestTrigger timeBasedTrigger = buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
-        final OSTestTrigger normalTrigger = buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
+        final OSTestTrigger timeBasedTrigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
+        final OSTestTrigger normalTrigger = InAppMessagingHelpers.buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
 
         setLocalTriggerValue("prop1", 4);
 
@@ -412,27 +326,11 @@ public class InAppMessagingTests {
             }});
         }};
 
-        OSTestInAppMessage testMessage = buildTestMessageWithMultipleTriggers(triggers);
+        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
 
         assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
 
         assertFalse(ShadowDynamicTimer.hasScheduledTimer);
-    }
-
-    @Test
-    public void testDisableInAppMessaging() throws JSONException {
-        OneSignal.startInit(blankActivity).init();
-
-        assertTrue(OneSignal.isInAppMessagingEnabled());
-
-        OneSignal.setInAppMessagingEnabled(false);
-
-        // check to make sure that this setting is persisted to shared prefs
-        flushBufferedSharedPrefs();
-        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-
-        assertFalse(OneSignal.isInAppMessagingEnabled());
-        assertFalse(prefs.getBoolean("ONESIGNAL_MESSAGING_ENABLED", true));
     }
 
     private boolean roughlyEqualTimerValues(double desired, double actual) {
@@ -442,7 +340,7 @@ public class InAppMessagingTests {
     private void OneSignalInit() {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
-        OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+        OneSignal.init(blankActivity, "123456789", InAppMessagingHelpers.ONESIGNAL_APP_ID);
         blankActivityController.resume();
     }
 }
