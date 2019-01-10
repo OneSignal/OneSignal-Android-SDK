@@ -260,4 +260,8 @@ public class OneSignalPackagePrivateHelper {
          super(json);
       }
    }
+
+   public static void dismissCurrentMessage() {
+      OSInAppMessageController.getController().messageWasDismissed(OSInAppMessageController.getController().getCurrentDisplayedInAppMessage());
+   }
 }

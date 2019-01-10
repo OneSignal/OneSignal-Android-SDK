@@ -11,6 +11,7 @@ import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
@@ -93,8 +94,6 @@ public class InAppMessageIntegrationTests {
         blankActivity = blankActivityController.get();
 
         TestHelpers.beforeTestInitAndCleanup();
-
-        OneSignalInit();
     }
 
     @After
@@ -151,6 +150,28 @@ public class InAppMessageIntegrationTests {
      */
     @Test
     public void testMultipleMessagesDoNotBothDisplay() throws Exception {
+        initializeSdkWithMultiplePendingMessages();
+
+        OneSignal.addTriggers(new HashMap<String, Object>() {{
+            put("test_1", 3);
+            put("test_2", 2);
+        }});
+        threadAndTaskWait();
+
+        //both messages should now be valid but only one should display
+        //which one displays first is undefined and doesn't really matter
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+
+        // dismiss the message
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+
+        // the second in app message should now be displayed
+        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
+    // initializes the SDK with multiple mock in-app messages and sets triggers so that
+    // both in-app messages become valid and can be displayed
+    private void initializeSdkWithMultiplePendingMessages() throws Exception {
         final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_1", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 3);
         final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_2", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 2);
 
@@ -161,20 +182,7 @@ public class InAppMessageIntegrationTests {
 
         OneSignalInit();
         threadAndTaskWait();
-
-        OneSignal.addTriggers(new HashMap<String, Object>() {{
-            put("test_1", 3);
-            put("test_2", 2);
-        }});
-
-        threadAndTaskWait();
-
-        //both messages should now be valid but only one should display
-        //which one displays first is undefined and doesn't really matter
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
     }
-
-
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
         final JSONArray jsonMessages = new JSONArray();
