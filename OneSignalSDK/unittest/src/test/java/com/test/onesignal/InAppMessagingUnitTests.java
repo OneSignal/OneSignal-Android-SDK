@@ -68,7 +68,7 @@ import static junit.framework.Assert.*;
         constants = BuildConfig.class,
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
-public class InAppMessagingTests {
+public class InAppMessagingUnitTests {
 
     private static final double REQUIRED_TIMER_ACCURACY = 1.25;
     private static OSTestInAppMessage message;
