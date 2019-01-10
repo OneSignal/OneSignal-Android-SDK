@@ -2763,7 +2763,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTriggers()"))
          return;
 
-      OSInAppMessageController.getController().triggerController.addTriggers(triggers);
+      OSInAppMessageController.getController().addTriggers(triggers);
    }
 
    /**
