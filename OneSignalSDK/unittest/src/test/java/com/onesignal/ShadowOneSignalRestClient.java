@@ -76,13 +76,13 @@ public class ShadowOneSignalRestClient {
    public static String lastUrl;
    public static boolean failNext, failNextPut, failAll, failPosts, failGetParams;
    public static int failHttpCode;
-   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse;
+   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse;
    public static int networkCallCount;
 
    public static String pushUserId, emailUserId;
 
    public static JSONObject paramExtras;
-
+   
    // Pauses any network callbacks from firing.
    // Also blocks any sync network calls.
    public static boolean freezeResponses;
@@ -99,6 +99,7 @@ public class ShadowOneSignalRestClient {
       nextSuccessfulGETResponse = null;
 
       failResponse = "{}";
+      nextSuccessfulRegistrationResponse = null;
       nextSuccessResponse = null;
       failNext = false;
       failNextPut = false;
@@ -138,6 +139,10 @@ public class ShadowOneSignalRestClient {
 
    public static void setNextSuccessfulGETJSONResponse(JSONObject response) throws JSONException {
       nextSuccessfulGETResponse = response.toString(1);
+   }
+
+   public static void setNextSuccessfulRegistrationResponse(JSONObject response) throws JSONException {
+      nextSuccessfulRegistrationResponse = response.toString(1);
    }
 
    private static void freezeSyncCall() {
@@ -207,8 +212,13 @@ public class ShadowOneSignalRestClient {
          retJson = "{}";
       else {
          int device_type = jsonBody.optInt("device_type", 0);
-         String id = device_type == 11 ? emailUserId : pushUserId;
-         retJson = "{\"id\": \"" + id + "\"}";
+         if (nextSuccessfulRegistrationResponse != null) {
+            retJson = nextSuccessfulRegistrationResponse;
+            nextSuccessfulRegistrationResponse = null;
+         } else {
+            String id = device_type == 11 ? emailUserId : pushUserId;
+            retJson = "{\"id\": \"" + id + "\"}";
+         }
       }
 
       if (nextSuccessResponse != null) {

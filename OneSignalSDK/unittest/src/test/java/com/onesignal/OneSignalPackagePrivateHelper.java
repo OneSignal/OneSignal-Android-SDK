@@ -239,6 +239,10 @@ public class OneSignalPackagePrivateHelper {
 
          return parsedTriggers;
       }
+
+      public JSONObject toJSONObject() {
+         return super.toJSONObject();
+      }
    }
 
    public static class OSTestTrigger extends com.onesignal.OSTrigger {
