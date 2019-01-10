@@ -190,6 +190,27 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         }
     }
 
+    @Nullable
+    OSInAppMessage getCurrentDisplayedInAppMessage() {
+        return messageDisplayQueue.size() > 0 ? messageDisplayQueue.get(0) : null;
+    }
+
+    // TODO: Call this method when the UI for an in-app message is dismissed, ie.
+    // when the user taps CLOSE or the time expires
+    void messageWasDismissed(OSInAppMessage message) {
+        synchronized (messageDisplayQueue) {
+            if (!messageDisplayQueue.remove(message)) { //something really bad happened.
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "An in-app message was removed from the display queue before it was finished displaying.");
+                return;
+            }
+
+            if (messageDisplayQueue.size() > 0) {
+                //display the next message in the queue
+                displayMessage(messageDisplayQueue.get(0));
+            }
+        }
+    }
+
     private void displayMessage(OSInAppMessage message) {
         onMessageWasShown(message);
 
