@@ -27,6 +27,7 @@ import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,14 +39,16 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadow.api.Shadow;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+import org.awaitility.Awaitility;
+import org.awaitility.Duration;
 
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -184,12 +187,41 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
     }
 
+    @Test
+    public void testTimedMessageIsDisplayed() throws Exception {
+        ShadowDynamicTimer.shouldScheduleTimers = true;
+
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 0.05);
+
+        setMockRegistrationResponseWithMessages(new ArrayList() {{
+            add(message);
+        }});
+
+        // the SDK should read the message from registration JSON, set up a timer, and once
+        // the timer fires the message should get shown.
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // wait until the timer fires after 50ms and make sure the message gets displayed
+        // we already have tests to make sure that the timer is actually being scheduled
+        // for the correct amount of time, so all we are doing here is checking to
+        // make sure the message actually gets displayed once the timer fires
+        Awaitility.await()
+                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .until(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                return ShadowOSInAppMessageController.displayedMessages.size() == 1;
+            }
+        });
+    }
+
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
         final JSONArray jsonMessages = new JSONArray();
 
-        for (OSTestInAppMessage message : messages) {
+        for (OSTestInAppMessage message : messages)
             jsonMessages.put(message.toJSONObject());
-        }
 
         ShadowOneSignalRestClient.setNextSuccessfulRegistrationResponse(new JSONObject() {{
             put("id", "df8f05be55ba-b2f7f966-d8cc-11e4-bed1");
