@@ -21,7 +21,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     OSTriggerController triggerController;
     private ArrayList<OSInAppMessage> messages;
-    private final ArrayList<OSInAppMessage> messageDisplayQueue;
+    final ArrayList<OSInAppMessage> messageDisplayQueue;
 
     boolean inAppMessagingEnabled = true;
 

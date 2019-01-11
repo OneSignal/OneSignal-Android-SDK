@@ -34,6 +34,8 @@ public class InAppMessagingHelpers {
         OneSignal.setInAppMessagingEnabled(true);
 
         ShadowOSInAppMessageController.displayedMessages.clear();
+
+        OSInAppMessageController.getController().messageDisplayQueue.clear();
     }
 
     // Convenience method that wraps an object in a JSON Array
