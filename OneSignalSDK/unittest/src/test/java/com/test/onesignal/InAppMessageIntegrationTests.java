@@ -9,7 +9,6 @@ import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
-import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -41,6 +40,8 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
+
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -93,6 +94,8 @@ public class InAppMessageIntegrationTests {
 
     @Before
     public void beforeEachTest() throws Exception {
+        ShadowDynamicTimer.shouldScheduleTimers = true;
+
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
 
@@ -189,8 +192,6 @@ public class InAppMessageIntegrationTests {
 
     @Test
     public void testTimedMessageIsDisplayed() throws Exception {
-        ShadowDynamicTimer.shouldScheduleTimers = true;
-
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 0.05);
 
         setMockRegistrationResponseWithMessages(new ArrayList() {{
@@ -215,6 +216,51 @@ public class InAppMessageIntegrationTests {
                 return ShadowOSInAppMessageController.displayedMessages.size() == 1;
             }
         });
+    }
+
+    /**
+     * If an in-app message should only be shown if (A) session_duration is > 30 seconds and
+     * (B) a key/value trigger is set, and it should not set up a timer until all of the non-timer
+     * based triggers for that message evaluate to true
+     *
+     * For this test, a timer should never be scheduled because the key/value 'test_key' trigger
+     * will not be set until the session duration has already exceeded the minimum (0.05 seconds)
+     */
+    @Test
+    public void testTimedMessageDisplayedAfterAllTriggersValid() throws Exception {
+        ArrayList<ArrayList<OSTestTrigger>> triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
+            add(new ArrayList<OSTestTrigger>() {{
+                add(InAppMessagingHelpers.buildTrigger("test_key", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), "squirrel"));
+                add(InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 0.01));
+            }});
+        }};
+
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // no timer should be scheduled since 'test_key' != 'squirrel'
+        assertFalse(ShadowDynamicTimer.hasScheduledTimer);
+        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
+
+        // since we are not actually waiting on any logic to finish, sleeping here is fine
+        Thread.sleep(20);
+
+        // the message still should not be displayed
+        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
+
+        // after setting this trigger the message should be displayed immediately
+        OneSignal.addTrigger("test_key", "squirrel");
+        threadAndTaskWait();
+
+        // the message should now have been displayed
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertFalse(ShadowDynamicTimer.hasScheduledTimer);
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
