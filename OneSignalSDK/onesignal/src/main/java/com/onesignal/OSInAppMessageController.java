@@ -197,6 +197,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     // TODO: Call this method when the UI for an in-app message is dismissed, ie.
     // when the user taps CLOSE or the time expires
+    // NOTE: Do NOT call this method until any pending animation (ie. a dismiss
+    // animation) is completely finished
     void messageWasDismissed(OSInAppMessage message) {
         synchronized (messageDisplayQueue) {
             if (!messageDisplayQueue.remove(message)) { //something really bad happened.

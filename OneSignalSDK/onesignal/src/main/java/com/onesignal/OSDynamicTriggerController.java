@@ -38,10 +38,6 @@ class OSDynamicTriggerController {
             if (!(trigger.value instanceof Number))
                 return false;
 
-            // prevents us from re-evaluating triggers we've already evaluated
-            if (scheduledMessages.contains(trigger.triggerId))
-                return false;
-
             long requiredTimeInterval = (long)(((Number)trigger.value).doubleValue() * 1000);
 
             long offset = 0;
@@ -64,6 +60,10 @@ class OSDynamicTriggerController {
             }
 
             if (offset <= 0.0f)
+                return false;
+
+            // prevents us from re-scheduling timers for messages that we're already waiting on
+            if (scheduledMessages.contains(trigger.triggerId))
                 return false;
 
             OSDynamicTriggerTimer.scheduleTrigger(new TimerTask() {
