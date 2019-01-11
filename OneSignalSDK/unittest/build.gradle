@@ -52,4 +52,5 @@ dependencies {
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.robolectric:robolectric:3.8'
+    testCompile 'org.awaitility:awaitility:3.1.5'
 }
