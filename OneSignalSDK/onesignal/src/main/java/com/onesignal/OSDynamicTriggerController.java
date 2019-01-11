@@ -42,7 +42,7 @@ class OSDynamicTriggerController {
             if (scheduledMessages.contains(trigger.triggerId))
                 return false;
 
-            long requiredTimeInterval = ((Number)trigger.value).longValue() * 1000;
+            long requiredTimeInterval = (long)(((Number)trigger.value).doubleValue() * 1000);
 
             long offset = 0;
 
