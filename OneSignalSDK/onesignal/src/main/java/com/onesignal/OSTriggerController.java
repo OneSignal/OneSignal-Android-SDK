@@ -29,15 +29,15 @@ class OSTriggerController {
     */
     boolean evaluateMessageTriggers(OSInAppMessage message) {
 
+        // only evaluate dynamic triggers after we've evaluated all others
+        ArrayList<OSTrigger> dynamicTriggers = new ArrayList<>();
+
+        // will be set to false if any non-time-based trigger evaluates to false
+        // This way we don't bother scheduling timers if the message can't be shown anyways
+        boolean continueToEvaluateDynamicTriggers = true;
+
         // the outer loop represents OR conditions
         for (ArrayList<OSTrigger> conditions : message.triggers) {
-
-            // only evaluate dynamic triggers after we've evaluated all others
-            ArrayList<OSTrigger> dynamicTriggers = new ArrayList<>();
-
-            // will be set to false if any non-time-based trigger evaluates to false
-            // This way we don't bother scheduling timers if the message can't be shown anyways
-            boolean continueToEvaluateDynamicTriggers = true;
 
             // the inner loop represents AND conditions
             for (int i = 0; i < conditions.size(); i++) {
@@ -75,6 +75,9 @@ class OSTriggerController {
                     }
                 }
             }
+
+            // if we reach this point, the full AND block evaluated to true for this message
+            return true;
         }
 
         return false;
