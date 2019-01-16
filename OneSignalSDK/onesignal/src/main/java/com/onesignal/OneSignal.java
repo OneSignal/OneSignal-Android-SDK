@@ -382,7 +382,7 @@ public class OneSignal {
    private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
 
-   private static GetTagsHandler pendingGetTagsHandler;
+   private static ArrayList<GetTagsHandler> pendingGetTagsHandlers = new ArrayList<>();
    private static boolean getTagsCall;
 
    private static boolean waitingToPostStateSync;
@@ -1661,7 +1661,13 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTags()"))
          return;
 
-      pendingGetTagsHandler = getTagsHandler;
+      synchronized (pendingGetTagsHandlers) {
+         pendingGetTagsHandlers.add(getTagsHandler);
+
+         // if there is an existing in-flight request, we should return
+         // since there's no point in making a duplicate runnable
+         if (pendingGetTagsHandlers.size() > 1) return;
+      }
 
       Runnable getTagsRunnable = new Runnable() {
          @Override
@@ -1674,7 +1680,8 @@ public class OneSignal {
             if (getUserId() == null) {
                return;
             }
-            internalFireGetTagsCallback(pendingGetTagsHandler);
+
+            internalFireGetTagsCallbacks();
          }
       };
 
@@ -1688,18 +1695,27 @@ public class OneSignal {
       getTagsRunnable.run();
    }
 
-   private static void internalFireGetTagsCallback(final GetTagsHandler getTagsHandler) {
-      if (getTagsHandler == null) return;
+   private static void internalFireGetTagsCallbacks() {
+      synchronized (pendingGetTagsHandlers) {
+         if (pendingGetTagsHandlers.size() == 0) return;
+      }
 
       new Thread(new Runnable() {
          @Override
          public void run() {
             final UserStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
             if (tags.serverSuccess) getTagsCall = true;
-            if (tags.result == null || tags.toString().equals("{}"))
-               getTagsHandler.tagsAvailable(null);
-            else
-               getTagsHandler.tagsAvailable(tags.result);
+
+            synchronized (pendingGetTagsHandlers) {
+               for (GetTagsHandler handler : pendingGetTagsHandlers) {
+                  if (tags.result == null || tags.toString().equals("{}"))
+                     handler.tagsAvailable(null);
+                  else
+                     handler.tagsAvailable(tags.result);
+               }
+
+               pendingGetTagsHandlers.clear();
+            }
          }
       }, "OS_GETTAGS_CALLBACK").start();
    }
@@ -2135,7 +2151,7 @@ public class OneSignal {
    static void updateUserIdDependents(String userId) {
       saveUserId(userId);
       fireIdsAvailableCallback();
-      internalFireGetTagsCallback(pendingGetTagsHandler);
+      internalFireGetTagsCallbacks();
    
       getCurrentSubscriptionState(appContext).setUserId(userId);
       
