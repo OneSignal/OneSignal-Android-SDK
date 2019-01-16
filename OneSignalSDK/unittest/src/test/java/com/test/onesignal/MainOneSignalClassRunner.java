@@ -3338,6 +3338,36 @@ public class MainOneSignalClassRunner {
       assertEquals(externalIdRequests, 2);
    }
 
+   @Test
+   public void testGetTagsQueuesCallbacks() throws Exception {
+
+      // Allows us to validate that both handlers get executed independently
+      class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
+         boolean executed = false;
+
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            executed = true;
+         }
+      }
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.sendTag("test", "value");
+      threadAndTaskWait();
+
+      DebugGetTagsHandler first = new DebugGetTagsHandler();
+      DebugGetTagsHandler second = new DebugGetTagsHandler();
+
+      OneSignal.getTags(first);
+      OneSignal.getTags(second);
+      threadAndTaskWait();
+
+      assertTrue(first.executed);
+      assertTrue(second.executed);
+   }
+
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
