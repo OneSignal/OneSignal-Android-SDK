@@ -86,14 +86,14 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
          consentButton.setText("Revoke Consent");
 
          this.addObservers();
+
+         OSPermissionSubscriptionState state = OneSignal.getPermissionSubscriptionState();
+
+         this.didGetEmailStatus(state.getEmailSubscriptionStatus().getSubscribed());
       }
 
       this.debugTextView = this.findViewById(R.id.debugTextView);
       this.emailTextView = this.findViewById(R.id.emailTextView);
-
-      OSPermissionSubscriptionState state = OneSignal.getPermissionSubscriptionState();
-
-      this.didGetEmailStatus(state.getEmailSubscriptionStatus().getSubscribed());
 
       // compute your public key and store it in base64EncodedPublicKey
       mHelper = new IabHelper(this, "sdafsfds");
