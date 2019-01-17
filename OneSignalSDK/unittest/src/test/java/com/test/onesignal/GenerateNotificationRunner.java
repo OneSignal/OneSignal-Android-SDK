@@ -155,6 +155,7 @@ public class GenerateNotificationRunner {
 
       NotificationManager notificationManager = (NotificationManager) blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       notificationManager.cancelAll();
+      NotificationRestorer.restored = false;
    }
    
    @AfterClass
@@ -191,14 +192,12 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
-      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       
       // Should allow title from GCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       assertEquals("title123", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
-      assertEquals(2, ShadowBadgeCountUpdater.lastCount);
    }
    
    @Test
@@ -435,6 +434,25 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
+
+   @Test
+   public void shouldSetBadgesWhenRestoringNotifications() throws Exception {
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      ShadowBadgeCountUpdater.lastCount = 0;
+
+      NotificationRestorer.restore(blankActivity);
+
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+   }
+
+   @Test public void shouldNotRestoreNotificationsIfPermissionIsDisabled() {
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+
+      ShadowNotificationManagerCompat.enabled = false;
+      NotificationRestorer.restore(blankActivity);
+
+      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+   }
    
    @Test
    public void shouldNotShowNotificationWhenAlertIsBlankOrNull() throws Exception {
@@ -547,10 +565,9 @@ public class GenerateNotificationRunner {
       bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
-      cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "android_notification_id", "created_time" }, null, null, null, null, null);
+      cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { }, null, null, null, null, null);
 
       assertEquals(1, cursor.getCount());
-      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       cursor.close();
    }
@@ -572,6 +589,19 @@ public class GenerateNotificationRunner {
       // Restorer should not fire service since the notification is over 1 week old.
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
       assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+   }
+
+   @Test
+   public void badgeCountShouldNotIncludeOldNotifications() {
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+
+      // Go forward 1 week
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604_801L * 1_000L);
+
+      // Should not count as a badge
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      OneSignalPackagePrivateHelper.BadgeCountUpdater.update(readableDb, blankActivity);
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test

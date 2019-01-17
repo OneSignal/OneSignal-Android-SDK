@@ -54,5 +54,15 @@ class OneSignalDbContract {
       public static final String INDEX_CREATE_GROUP_ID = "CREATE INDEX notification_group_id_idx ON notification(group_id); ";
       public static final String INDEX_CREATE_COLLAPSE_ID = "CREATE INDEX notification_collapse_id_idx ON notification(collapse_id); ";
       public static final String INDEX_CREATE_CREATED_TIME = "CREATE INDEX notification_created_time_idx ON notification(created_time); ";
+
+      static StringBuilder recentUninteractedWithNotificationsWhere() {
+         long createdAtCutoff = (System.currentTimeMillis() / 1_000L) - 604_800L; // 1 Week back
+         return new StringBuilder(
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + createdAtCutoff + " AND " +
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 "
+         );
+      }
    }
 }

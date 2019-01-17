@@ -36,6 +36,10 @@ import android.os.Bundle;
 
 import com.onesignal.shortcutbadger.ShortcutBadger;
 
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import static com.onesignal.NotificationRestorer.MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE;
+
 class BadgeCountUpdater {
 
    // Cache for manifest setting.
@@ -71,15 +75,14 @@ class BadgeCountUpdater {
          return;
 
       Cursor cursor = readableDb.query(
-          OneSignalDbContract.NotificationTable.TABLE_NAME,
+          NotificationTable.TABLE_NAME,
           null,
-          OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +  // Where String
-             OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-             OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 ",
+          NotificationTable.recentUninteractedWithNotificationsWhere().toString(),
           null,                                                    // Where args
           null,                                                    // group by
           null,                                                    // filter by row groups
-          null                                                     // sort order, new to old
+          null,                                                     // sort order, new to old
+          MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE
       );
 
       updateCount(cursor.getCount(), context);
