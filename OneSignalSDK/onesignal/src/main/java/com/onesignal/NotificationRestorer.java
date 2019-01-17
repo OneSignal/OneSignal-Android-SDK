@@ -85,12 +85,12 @@ class NotificationRestorer {
    private static final int DELAY_BETWEEN_NOTIFICATION_RESTORES_MS = 200;
 
    // Android does not allow a package to have more than 49 total notifications being shown.
-   //   This prevents the following error;
+   //   This limit prevents the following error;
    // E/NotificationService: Package has already posted 50 notifications.
    //                        Not showing more.  package=####
    // Even though it says 50 in the error it is really a limit of 49.
-   // See NotificationManagerService.java in the ASOP source
-   private static final String MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE = "49";
+   // See NotificationManagerService.java in the AOSP source
+   static final String MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE = "49";
    
    // Notifications will never be force removed when the app's process is running,
    //   so we only need to restore at most once per cold start of the app.
@@ -108,6 +108,9 @@ class NotificationRestorer {
 
    @WorkerThread
    public static void restore(Context context) {
+      if (!OSUtils.areNotificationsEnabled(context))
+         return;
+
       if (restored)
          return;
       restored = true;
@@ -115,11 +118,19 @@ class NotificationRestorer {
       OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Restoring notifications");
 
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
+      deleteOldNotificationsFromDb(dbHelper);
+
+      StringBuilder dbQuerySelection = NotificationTable.recentUninteractedWithNotificationsWhere();
+      skipVisibleNotifications(context, dbQuerySelection);
+
+      queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection);
+   }
+
+   private static void deleteOldNotificationsFromDb(OneSignalDbHelper dbHelper) {
       SQLiteDatabase writableDb = null;
-      
+
       try {
          writableDb = dbHelper.getWritableDbWithRetries();
-         
          writableDb.beginTransaction();
          NotificationBundleProcessor.deleteOldNotifications(writableDb);
          writableDb.setTransactionSuccessful();
@@ -134,36 +145,30 @@ class NotificationRestorer {
             }
          }
       }
+   }
 
-      long created_at_cutoff = (System.currentTimeMillis() / 1_000L) - 604_800L; // 1 Week back
-      StringBuilder dbQuerySelection = new StringBuilder(
-        NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + created_at_cutoff + " AND " +
-        NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-        NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-        NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
-      );
-
-      skipVisibleNotifications(context, dbQuerySelection);
-
+   private static void queryAndRestoreNotificationsAndBadgeCount(
+      Context context,
+      OneSignalDbHelper dbHelper,
+      StringBuilder dbQuerySelection) {
       OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
-              "Querying DB for notifs to restore: " + dbQuerySelection.toString());
+         "Querying DB for notifs to restore: " + dbQuerySelection.toString());
 
       Cursor cursor = null;
       try {
          SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
          cursor = readableDb.query(
-             NotificationTable.TABLE_NAME,
-             COLUMNS_FOR_RESTORE,
-             dbQuerySelection.toString(),
+            NotificationTable.TABLE_NAME,
+            COLUMNS_FOR_RESTORE,
+            dbQuerySelection.toString(),
             null,
             null, // group by
             null, // filter by row groups
             NotificationTable._ID + " DESC", // sort order, new to old
             MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE // limit
          );
-
-         showNotifications(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
-         
+         showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
+         BadgeCountUpdater.update(readableDb, context);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
       } finally {
@@ -212,7 +217,7 @@ class NotificationRestorer {
     * @param cursor - Source cursor to generate notifications from
     * @param delay - Delay to slow down process to ensure we don't spike CPU and I/O on the device.
     */
-   static void showNotifications(Context context, Cursor cursor, int delay) {
+   static void showNotificationsFromCursor(Context context, Cursor cursor, int delay) {
       if (!cursor.moveToFirst())
          return;
 

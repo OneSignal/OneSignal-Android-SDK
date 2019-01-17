@@ -29,8 +29,6 @@ package com.onesignal;
 
 import android.content.Context;
 
-import com.onesignal.shortcutbadger.ShortcutBadger;
-
 import org.robolectric.annotation.Implements;
 
 @Implements(BadgeCountUpdater.class)

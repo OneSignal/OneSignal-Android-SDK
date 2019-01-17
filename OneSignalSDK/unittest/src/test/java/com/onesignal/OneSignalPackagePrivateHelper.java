@@ -183,4 +183,10 @@ public class OneSignalPackagePrivateHelper {
 
 
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
+
+   static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
+      public static void update(SQLiteDatabase readableDb, Context context) {
+         com.onesignal.BadgeCountUpdater.update(readableDb, context);
+      }
+   }
 }
