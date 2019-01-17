@@ -517,7 +517,12 @@ public class OneSignal {
    // Sets the global shared ApplicationContext for OneSignal
    // This is set from all OneSignal entry points
    //   - BroadcastReceivers, Services, and Activities
-   static void setAppContext(Context context) {
+   public static void setAppContext(@NonNull Context context) {
+      if (context == null) {
+         Log(LOG_LEVEL.WARN, "setAppContext(null) is not valid, ignoring!");
+         return;
+      }
+
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
 
