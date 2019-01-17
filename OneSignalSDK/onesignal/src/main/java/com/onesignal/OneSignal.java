@@ -2390,11 +2390,6 @@ public class OneSignal {
     * your app is restarted.
     */
    public static void clearOneSignalNotifications() {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("clearOneSignalNotifications()"))
-         return;
-
       Runnable runClearOneSignalNotifications = new Runnable() {
          @Override
          public void run() {
@@ -2477,11 +2472,6 @@ public class OneSignal {
     * @param id
     */
    public static void cancelNotification(final int id) {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("cancelNotification()"))
-         return;
-
       Runnable runCancelNotification = new Runnable() {
          @Override
          public void run() {
@@ -2516,6 +2506,9 @@ public class OneSignal {
                   }
                }
             }
+
+            NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.cancel(id);
          }
       };
 
@@ -2529,9 +2522,6 @@ public class OneSignal {
       }
 
       runCancelNotification.run();
-
-      NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
-      notificationManager.cancel(id);
    }
    
    

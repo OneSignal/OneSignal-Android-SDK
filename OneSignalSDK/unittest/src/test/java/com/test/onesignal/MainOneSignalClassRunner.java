@@ -2932,7 +2932,7 @@ public class MainOneSignalClassRunner {
    public void shouldClearBadgesWhenPermissionIsDisabled() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      ShadowBadgeCountUpdater.updateCount(1, blankActivity);
+      ShadowBadgeCountUpdater.lastCount = 1;
    
       blankActivityController.pause();
       threadAndTaskWait();

@@ -189,4 +189,14 @@ public class OneSignalPackagePrivateHelper {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);
       }
    }
+
+   static public class NotificationLimitManager extends com.onesignal.NotificationLimitManager {
+      public static void clearOldestOverLimitFallback(Context context, int notifsToMakeRoomFor) {
+         com.onesignal.NotificationLimitManager.clearOldestOverLimitFallback(context, notifsToMakeRoomFor);
+      }
+
+      public static void clearOldestOverLimitStandard(Context context, int notifsToMakeRoomFor) throws Throwable {
+         com.onesignal.NotificationLimitManager.clearOldestOverLimitStandard(context, notifsToMakeRoomFor);
+      }
+   }
 }
