@@ -345,7 +345,12 @@ class GenerateNotification {
       // Keeps notification from playing sound + vibrating again
       if (notifJob.restoring)
          removeNotifyOptions(notifBuilder);
-   
+
+      int makeRoomFor = 1;
+      if (group != null)
+         makeRoomFor = 2;
+      NotificationLimitManager.clearOldestOverLimit(currentContext, makeRoomFor);
+
       Notification notification;
 
       if (group != null) {

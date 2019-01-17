@@ -27,18 +27,22 @@
 
 package com.onesignal;
 
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.os.Bundle;
+import android.service.notification.StatusBarNotification;
+import android.support.annotation.RequiresApi;
 
 import com.onesignal.shortcutbadger.ShortcutBadger;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
-import static com.onesignal.NotificationRestorer.MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE;
+import static com.onesignal.NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR;
 
 class BadgeCountUpdater {
 
@@ -74,19 +78,43 @@ class BadgeCountUpdater {
       if (!areBadgesEnabled(context))
          return;
 
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+         updateStandard(context);
+      else
+         updateFallback(readableDb, context);
+   }
+
+   @RequiresApi(api = Build.VERSION_CODES.M)
+   private static void updateStandard(Context context) {
+      NotificationManager notifManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
+
+      int runningCount = 0;
+      for (StatusBarNotification activeNotif : activeNotifs) {
+         if (NotificationLimitManager.isGroupSummary(activeNotif))
+            continue;
+         runningCount++;
+      }
+
+      updateCount(runningCount, context);
+   }
+
+   private static void updateFallback(SQLiteDatabase readableDb, Context context) {
       Cursor cursor = readableDb.query(
-          NotificationTable.TABLE_NAME,
-          null,
-          NotificationTable.recentUninteractedWithNotificationsWhere().toString(),
-          null,                                                    // Where args
-          null,                                                    // group by
-          null,                                                    // filter by row groups
-          null,                                                     // sort order, new to old
-          MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE
+         NotificationTable.TABLE_NAME,
+         null,
+         NotificationTable.recentUninteractedWithNotificationsWhere().toString(),
+         null,                                                    // Where args
+         null,                                                    // group by
+         null,                                                    // filter by row groups
+         null,                                                     // sort order, new to old
+         MAX_NUMBER_OF_NOTIFICATIONS_STR
       );
 
-      updateCount(cursor.getCount(), context);
+      int notificationCount = cursor.getCount();
       cursor.close();
+
+      updateCount(notificationCount, context);
    }
 
    static void updateCount(int count, Context context) {

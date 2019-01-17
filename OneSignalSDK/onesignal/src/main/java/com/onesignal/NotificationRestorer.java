@@ -84,14 +84,6 @@ class NotificationRestorer {
    // E/NotificationService: Package enqueue rate is 10.56985. Shedding events. package=####
    private static final int DELAY_BETWEEN_NOTIFICATION_RESTORES_MS = 200;
 
-   // Android does not allow a package to have more than 49 total notifications being shown.
-   //   This limit prevents the following error;
-   // E/NotificationService: Package has already posted 50 notifications.
-   //                        Not showing more.  package=####
-   // Even though it says 50 in the error it is really a limit of 49.
-   // See NotificationManagerService.java in the AOSP source
-   static final String MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE = "49";
-   
    // Notifications will never be force removed when the app's process is running,
    //   so we only need to restore at most once per cold start of the app.
    public static boolean restored;
@@ -165,7 +157,7 @@ class NotificationRestorer {
             null, // group by
             null, // filter by row groups
             NotificationTable._ID + " DESC", // sort order, new to old
-            MAX_NUMBER_OF_NOTIFICATIONS_TO_RESTORE // limit
+            NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
          );
          showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
          BadgeCountUpdater.update(readableDb, context);
@@ -187,8 +179,6 @@ class NotificationRestorer {
          return;
 
       NotificationManager notifManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-      if (notifManager == null)
-         return;
 
       try {
          StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
