@@ -28,4 +28,4 @@ For account issues and support please contact OneSignal support from the [OneSig
 To make things easier, we have published demo projects in the `/Examples` folder of this repository.
 
 #### Supports:
-* Tested from Android 4.0.3 (API level 15) to Android 8.1 (27)
+* Tested from Android 4.0.3 (API level 15) to Android 9.0 (28)
