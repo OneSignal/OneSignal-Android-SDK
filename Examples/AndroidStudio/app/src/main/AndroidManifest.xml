@@ -40,6 +40,8 @@
                 <action android:name="com.onesignal.NotificationExtender" />
             </intent-filter>
         </service>
+
+        <receiver android:name=".SummaryNotificationReceiver" />
     </application>
 
 </manifest>

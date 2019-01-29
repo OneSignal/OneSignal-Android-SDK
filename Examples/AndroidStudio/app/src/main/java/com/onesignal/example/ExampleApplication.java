@@ -1,6 +1,7 @@
 package com.onesignal.example;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
@@ -13,9 +14,13 @@ import org.json.JSONObject;
 
 public class ExampleApplication extends Application {
 
+   public static Context applicationContext;
+
    @Override
    public void onCreate() {
       super.onCreate();
+
+      applicationContext = this;
 
       // Logging set to help debug issues, remove before releasing your app.
       //OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.WARN);
@@ -64,6 +69,9 @@ public class ExampleApplication extends Application {
       // This fires when a notification is opened by tapping on it.
       @Override
       public void notificationOpened(OSNotificationOpenResult result) {
+         NotificationUtils.cancelSummaryNotificationIfNoChildren(applicationContext);
+
+
          OSNotificationAction.ActionType actionType = result.action.type;
          JSONObject data = result.notification.payload.additionalData;
          String launchUrl = result.notification.payload.launchURL; // update docs launchUrl
