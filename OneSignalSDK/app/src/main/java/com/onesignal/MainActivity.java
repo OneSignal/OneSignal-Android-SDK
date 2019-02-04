@@ -37,6 +37,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.TextView;
 import android.os.Handler;
@@ -106,8 +108,6 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
             // Hooray, IAB is fully set up!
          }
       });
-
-
    }
 
    private void updateTextView(final String newText) {
@@ -265,6 +265,10 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
             updateTextView("Failed to logout of email with error: " + error.getMessage());
          }
       });
+   }
+
+   public void onFullScreenClicked(View v) {
+      OneSignal.showInAppFullscreen();
    }
 
    @Override

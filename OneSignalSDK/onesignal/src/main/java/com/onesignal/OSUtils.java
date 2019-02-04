@@ -358,4 +358,8 @@ class OSUtils {
          e.printStackTrace();
       }
    }
+
+   static int dpToPx(int dp) {
+      return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
+   }
 }
