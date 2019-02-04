@@ -2983,4 +2983,14 @@ public class OneSignal {
          emailUpdateHandler = null;
       }
    }
+
+   // TODO: Remove later, just for debugging
+   public static void showInAppFullscreen() {
+      // TODO: Switch to use ActivityLifecycleHandler.setActivityAvailableListener
+      Activity activity = ActivityLifecycleHandler.curActivity;
+
+      Intent intent = new Intent(activity, WebViewActivity.class);
+      intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+      activity.startActivity(intent);
+   }
 }
