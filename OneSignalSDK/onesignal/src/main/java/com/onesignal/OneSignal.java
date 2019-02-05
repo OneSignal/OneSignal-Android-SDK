@@ -1016,7 +1016,7 @@ public class OneSignal {
       return OneSignal.LOG_LEVEL.VERBOSE;
    }
 
-   private static boolean atLogLevel(LOG_LEVEL level) {
+   static boolean atLogLevel(LOG_LEVEL level) {
       return level.compareTo(visualLogLevel) < 1 || level.compareTo(logCatLevel) < 1;
    }
 
@@ -2987,10 +2987,6 @@ public class OneSignal {
    // TODO: Remove later, just for debugging
    public static void showInAppFullscreen() {
       // TODO: Switch to use ActivityLifecycleHandler.setActivityAvailableListener
-      Activity activity = ActivityLifecycleHandler.curActivity;
-
-      Intent intent = new Intent(activity, WebViewActivity.class);
-      intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-      activity.startActivity(intent);
+      WebViewManager.showWebView();
    }
 }
