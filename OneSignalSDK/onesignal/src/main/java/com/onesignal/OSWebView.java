@@ -22,7 +22,7 @@ public class OSWebView extends WebView {
       super.onSizeChanged(newWidth, newHeight, oldWidth, oldHeight);
       width = newWidth;
       height = newHeight;
-      radius = OSUtils.dpToPx(7);
+      radius = OSUtils.dpToPx(8);
    }
 
    @Override protected void onDraw(Canvas canvas) {

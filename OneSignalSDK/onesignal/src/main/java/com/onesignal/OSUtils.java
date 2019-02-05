@@ -281,6 +281,11 @@ class OSUtils {
          handler.post(runnable);
       }
    }
+
+   static void runOnMainThreadDelayed(Runnable runnable, int delay) {
+      Handler handler = new Handler(Looper.getMainLooper());
+      handler.postDelayed(runnable, delay);
+   }
    
    static int getTargetSdkVersion(Context context) {
       String packageName = context.getPackageName();
