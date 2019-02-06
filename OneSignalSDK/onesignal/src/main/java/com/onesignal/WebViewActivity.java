@@ -76,6 +76,16 @@ public class WebViewActivity extends Activity {
       addLayoutAndView();
    }
 
+   static int getWebViewXSize() {
+      return Resources.getSystem().getDisplayMetrics().widthPixels - (MARGIN_PX_SIZE * 2);
+   }
+
+   static int getWebViewYSize() {
+      // 24dp is a best estimate of the status bar.
+      // Getting the size correct will prevent a redraw of the WebView
+      return Resources.getSystem().getDisplayMetrics().heightPixels - (MARGIN_PX_SIZE * 2) - OSUtils.dpToPx(24);
+   }
+
    @Override
    protected void onPause() {
       super.onPause();

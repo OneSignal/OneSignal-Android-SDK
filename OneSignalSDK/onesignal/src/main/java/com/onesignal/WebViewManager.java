@@ -55,11 +55,14 @@ class WebViewManager {
 
       webView.addJavascriptInterface(new JavaScriptInterface(), "OSAndroid");
 
-      Log.e("HERE", "dpToPx 1 = " + OSUtils.dpToPx(1));
+      // Setting size before adding to Activity to prevent a resize event.
+      webView.setLeft(0);
+      webView.setRight(WebViewActivity.getWebViewXSize());
+      webView.setTop(0);
+      webView.setBottom(WebViewActivity.getWebViewYSize());
 
       // Can use webView.loadData()
       webView.loadUrl("http://192.168.2.165:3000/iam_fullscreen_test.html");
-//      webView.loadUrl("http://10.0.0.17:3000/iam_fullscreen_test.html");
 
       return webView;
    }
