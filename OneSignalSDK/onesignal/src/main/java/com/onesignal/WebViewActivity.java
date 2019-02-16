@@ -9,28 +9,39 @@ import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 
+// TODO: Fix bug where the WebView disappears after resuming the Activity
 public class WebViewActivity extends Activity {
 
-   static int DISMISSING_Y_POS;
-   static int OFF_SCREEN_SCROLL_Y_POS;
-   static final int DISMISSING_Y_VEL = OSUtils.dpToPx(333);
-   static final int MARGIN_PX_SIZE = OSUtils.dpToPx(24);
+   static final String PAGE_HEIGHT_INTENT_KEY = "pageHeight";
+
+   private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#77000000");
+
+   private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
+
+   private static int DISMISSING_Y_POS;
+   private static int OFF_SCREEN_SCROLL_Y_POS;
+   private static final int DISMISSING_Y_VEL = OSUtils.dpToPx(333);
+   private static final int MARGIN_PX_SIZE = OSUtils.dpToPx(24);
 
    static WebViewActivity instance;
 
    boolean dismissing;
    WebView webView;
-   DraggableConstraintLayout constraintLayout;
+   DraggableRelativeLayout draggableRelativeLayout;
 
-   class DraggableConstraintLayout extends ConstraintLayout {
+   class DraggableRelativeLayout extends RelativeLayout {
 
       ViewDragHelper mDragHelper;
 
-      public DraggableConstraintLayout(Context context) {
+      public DraggableRelativeLayout(Context context) {
          super(context);
       }
 
@@ -42,8 +53,7 @@ public class WebViewActivity extends Activity {
 
       @Override
       public boolean onTouchEvent(MotionEvent event) {
-         // Forward touch event to WebView so onClick works
-         webView.onTouchEvent(event);
+         webView.onTouchEvent(event); // Forward touch event to webView so JS's onClick works
          mDragHelper.processTouchEvent(event);
          return true;
       }
@@ -69,11 +79,79 @@ public class WebViewActivity extends Activity {
       OFF_SCREEN_SCROLL_Y_POS = Resources.getSystem().getDisplayMetrics().heightPixels;
       DISMISSING_Y_POS = OFF_SCREEN_SCROLL_Y_POS / 2;
 
-      getWindow().getDecorView().setBackgroundColor(Color.parseColor("#77000000"));
+      getWindow().getDecorView().setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
 
       webView = WebViewManager.webView;
 
       addLayoutAndView();
+   }
+
+   void addLayoutAndView() {
+      draggableRelativeLayout = new DraggableRelativeLayout(this);
+
+      // Use pageHeight if we have it, otherwise use use full height of the Activity
+      Bundle extra = getIntent().getExtras();
+      int pageHeight = extra.getInt(PAGE_HEIGHT_INTENT_KEY, ConstraintLayout.LayoutParams.MATCH_PARENT);
+      if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT)
+         pageHeight += (MARGIN_PX_SIZE * 2);
+
+      // TODO: Check iOS on how we calculate the width when in landscape
+      FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(
+         ConstraintLayout.LayoutParams.MATCH_PARENT,
+         pageHeight
+      );
+      frameLayoutParams.gravity = Gravity.CENTER_VERTICAL;
+      setContentView(draggableRelativeLayout, frameLayoutParams);
+
+      // Set NoClip - For Dialog and Banners when dragging
+      ((ViewGroup) draggableRelativeLayout.getParent()).setClipChildren(false);
+
+      RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(
+         ConstraintLayout.LayoutParams.MATCH_PARENT,
+         ConstraintLayout.LayoutParams.MATCH_PARENT
+      );
+      relativeLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
+      relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+      webView.setLayoutParams(relativeLayoutParams);
+
+      draggableRelativeLayout.mDragHelper = ViewDragHelper.create(draggableRelativeLayout, 1.0f, new ViewDragHelper.Callback() {
+         private int lastYPos;
+
+         @Override
+         public boolean tryCaptureView(@NonNull View child, int pointerId) {
+            return true;
+         }
+
+         @Override
+         public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
+            lastYPos = top;
+            if (top < MARGIN_PX_SIZE)
+               return MARGIN_PX_SIZE;
+            return top;
+         }
+
+         @Override
+         public int clampViewPositionHorizontal(@NonNull View child, int right, int dy) {
+            return MARGIN_PX_SIZE;
+         }
+
+         // Base on position and scroll speed decide if we need to dismiss
+         @Override
+         public void onViewReleased(@NonNull View releasedChild, float xvel, float yvel) {
+            int settleDestY;
+            if (!dismissing && lastYPos < DISMISSING_Y_POS && yvel < DISMISSING_Y_VEL)
+               settleDestY = MARGIN_PX_SIZE;
+            else {
+               settleDestY = OFF_SCREEN_SCROLL_Y_POS;
+               dismissing = true;
+            }
+
+            if (draggableRelativeLayout.mDragHelper.settleCapturedViewAt(MARGIN_PX_SIZE, settleDestY))
+               ViewCompat.postInvalidateOnAnimation(draggableRelativeLayout);
+         }
+      });
+
+      draggableRelativeLayout.addView(webView);
    }
 
    static int getWebViewXSize() {
@@ -96,68 +174,13 @@ public class WebViewActivity extends Activity {
    protected void onStop() {
       super.onStop();
       instance = null;
-      constraintLayout.removeAllViews();
-   }
-
-   void addLayoutAndView() {
-      constraintLayout = new DraggableConstraintLayout(this);
-
-      ConstraintLayout.LayoutParams rlp = new ConstraintLayout.LayoutParams(
-         ConstraintLayout.LayoutParams.MATCH_PARENT,
-         ConstraintLayout.LayoutParams.MATCH_PARENT
-      );
-      setContentView(constraintLayout, rlp);
-
-      ConstraintLayout.LayoutParams relativeParams = new ConstraintLayout.LayoutParams(
-         ConstraintLayout.LayoutParams.MATCH_PARENT,
-         ConstraintLayout.LayoutParams.MATCH_PARENT
-      );
-      relativeParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
-      webView.setLayoutParams(relativeParams);
-
-      constraintLayout.mDragHelper = ViewDragHelper.create(constraintLayout, 1.0f, new ViewDragHelper.Callback() {
-         private int lastYPos;
-
-         @Override
-         public boolean tryCaptureView(@NonNull View child, int pointerId) {
-            return true;
-         }
-
-         @Override
-         public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
-            lastYPos = top;
-            if (top < MARGIN_PX_SIZE)
-               return MARGIN_PX_SIZE;
-            return top;
-         }
-
-         @Override
-         public int clampViewPositionHorizontal(@NonNull View child, int right, int dy) {
-            return MARGIN_PX_SIZE;
-         }
-
-         @Override
-         public void onViewReleased(@NonNull View releasedChild, float xvel, float yvel) {
-            int settleDestY;
-            if (!dismissing && lastYPos < DISMISSING_Y_POS && yvel < DISMISSING_Y_VEL)
-               settleDestY = MARGIN_PX_SIZE;
-            else {
-               settleDestY = OFF_SCREEN_SCROLL_Y_POS;
-               dismissing = true;
-            }
-
-            if (constraintLayout.mDragHelper.settleCapturedViewAt(MARGIN_PX_SIZE, settleDestY))
-               ViewCompat.postInvalidateOnAnimation(constraintLayout);
-         }
-      });
-
-      constraintLayout.addView(webView);
+      draggableRelativeLayout.removeAllViews();
    }
 
    void dismiss() {
       dismissing = true;
-      constraintLayout.mDragHelper.smoothSlideViewTo(constraintLayout, 0, OFF_SCREEN_SCROLL_Y_POS);
-      ViewCompat.postInvalidateOnAnimation(constraintLayout);
+      draggableRelativeLayout.mDragHelper.smoothSlideViewTo(draggableRelativeLayout, 0, OFF_SCREEN_SCROLL_Y_POS);
+      ViewCompat.postInvalidateOnAnimation(draggableRelativeLayout);
       finishAfterDelay();
    }
 
@@ -169,6 +192,6 @@ public class WebViewActivity extends Activity {
          public void run() {
             finish();
          }
-      }, 600);
+      }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
    }
 }

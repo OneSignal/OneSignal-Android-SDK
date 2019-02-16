@@ -270,6 +270,9 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    public void onFullScreenClicked(View v) {
       OneSignal.showInAppFullscreen();
    }
+   public void onModalClicked(View v) {
+      OneSignal.showInAppModal();
+   }
 
    @Override
    public boolean onCreateOptionsMenu(Menu menu) {
