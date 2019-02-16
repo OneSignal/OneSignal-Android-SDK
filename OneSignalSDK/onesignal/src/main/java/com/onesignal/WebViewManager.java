@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -12,7 +13,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 // Flow for Displaying WebView
-// 1. showWebView - Creates WebView and loads page.
+// 1. showFullscreenWebView - Creates WebView and loads page.
 // 2. Wait for JavaScriptInterface.postMessage to fire with "rendering_complete"
 // 3. Start WebViewActivity
 // 4. WebViewActivity.webView will attach WebViewManager.webView to it's layout
@@ -20,32 +21,61 @@ import org.json.JSONObject;
 class WebViewManager {
    static WebView webView;
 
-   static class JavaScriptInterface {
+   // TODO: Remove before merging
+   private static final String TEST_PAGE_HOST = "http://192.168.2.165:3000";
+
+   // Lets JS from the page send JSON payloads to this class
+   static class OSJavaScriptInterface {
+      static String JS_OBJ_NAME = "OSAndroid";
+
       @JavascriptInterface
       public void postMessage(String message) {
          Log.e("OneSignal", "Message received from WebView: " + message);
          try {
             JSONObject jsonObject = new JSONObject(message);
+            String messageType = jsonObject.getString("type");
 
-            if (jsonObject.getString("type").equals("rendering_complete")) {
-               showActivity();
-               return;
-            }
+            if (messageType.equals("rendering_complete"))
+               handleRenderComplete(jsonObject);
+            else if (messageType.equals("action_taken"))
+               handleActionTaken(jsonObject);
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+      }
 
-            jsonObject = jsonObject.getJSONObject("body");
-            boolean close = jsonObject.getBoolean("close");
+      private static void handleRenderComplete(JSONObject jsonObject) {
+         try {
+            JSONObject pageRect = jsonObject.getJSONObject("pageMetaData").getJSONObject("rect");
+            int pageHeight = pageRect.getInt("height");
+            pageHeight = OSUtils.dpToPx(pageHeight);
+            Log.e("OneSignal", "pageMetaData: " + pageRect);
+            showActivity(pageHeight);
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+      }
+
+      private static void handleActionTaken(JSONObject jsonObject) {
+         try {
+            JSONObject body = jsonObject.getJSONObject("body");
+            boolean close = body.getBoolean("close");
             if (close)
                dismiss();
-         } catch (JSONException e) {
+         } catch (Exception e) {
             e.printStackTrace();
          }
       }
    }
 
+   // TODO: Reuse last WebView if one exists
    static WebView showWebViewForPage(String page) {
       enableWebViewRemoteDebugging();
 
       WebView webView = new OSWebView(OneSignal.appContext);
+
+      webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+      webView.setVerticalScrollBarEnabled(false);
 
       webView.getSettings().setJavaScriptEnabled(true);
       // Disable cache, it's more than what the browser cache setting from HTTP headers
@@ -53,35 +83,46 @@ class WebViewManager {
       webView.getSettings().setAppCacheEnabled(false);
       webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 
-      webView.addJavascriptInterface(new JavaScriptInterface(), "OSAndroid");
+      webView.addJavascriptInterface(
+         new OSJavaScriptInterface(),
+         OSJavaScriptInterface.JS_OBJ_NAME
+      );
 
       // Setting size before adding to Activity to prevent a resize event.
       webView.setLeft(0);
       webView.setRight(WebViewActivity.getWebViewXSize());
+      // TODO: When shrinking image based on WebView port height setBottom may need to be tweaked
+      // NOTE: If setTop and / or setBottom are NOT set on Android 5.0 (Chrome 72) it calcs width as 0 somehow...
       webView.setTop(0);
       webView.setBottom(WebViewActivity.getWebViewYSize());
 
-      // Can use webView.loadData()
-      webView.loadUrl("http://192.168.2.165:3000/iam_fullscreen_test.html");
+      // TODO: Use webView.loadData(page) when loading the HTML data from as a String instead of a file
+      webView.loadUrl(page);
 
       return webView;
    }
 
+   // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
    private static void enableWebViewRemoteDebugging() {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
          && OneSignal.atLogLevel(OneSignal.LOG_LEVEL.DEBUG))
          WebView.setWebContentsDebuggingEnabled(true);
    }
 
-   static void showWebView() {
-      webView = showWebViewForPage("");
+   static void showFullscreenWebView() {
+      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_fullscreen_test.html");
    }
 
-   private static void showActivity() {
+   static void showModalWebView() {
+      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_modal_test.html");
+   }
+
+   private static void showActivity(int pageHeight) {
       Activity activity = ActivityLifecycleHandler.curActivity;
 
       Intent intent = new Intent(activity, WebViewActivity.class);
       intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+      intent.putExtra(WebViewActivity.PAGE_HEIGHT_INTENT_KEY, pageHeight);
       activity.startActivity(intent);
    }
 

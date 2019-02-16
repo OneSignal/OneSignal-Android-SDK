@@ -2984,9 +2984,13 @@ public class OneSignal {
       }
    }
 
-   // TODO: Remove later, just for debugging
+   // TODO: Remove showInApp* methods before merging
    public static void showInAppFullscreen() {
       // TODO: Switch to use ActivityLifecycleHandler.setActivityAvailableListener
-      WebViewManager.showWebView();
+      WebViewManager.showFullscreenWebView();
+   }
+
+   public static void showInAppModal() {
+      WebViewManager.showModalWebView();
    }
 }
