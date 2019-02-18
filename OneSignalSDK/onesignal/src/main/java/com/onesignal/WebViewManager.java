@@ -6,7 +6,6 @@ import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import org.json.JSONException;
@@ -46,13 +45,20 @@ class WebViewManager {
 
       private static void handleRenderComplete(JSONObject jsonObject) {
          try {
-            JSONObject pageRect = jsonObject.getJSONObject("pageMetaData").getJSONObject("rect");
-            int pageHeight = pageRect.getInt("height");
-            pageHeight = OSUtils.dpToPx(pageHeight);
-            Log.e("OneSignal", "pageMetaData: " + pageRect);
+            int pageHeight = getPageHeightData(jsonObject);
+            if (pageHeight != -1)
+               pageHeight = OSUtils.dpToPx(pageHeight);
             showActivity(pageHeight);
          } catch (Exception e) {
             e.printStackTrace();
+         }
+      }
+
+      private static int getPageHeightData(JSONObject jsonObject) {
+         try {
+            return jsonObject.getJSONObject("pageMetaData").getJSONObject("rect").getInt("height");
+         } catch (Exception e) {
+            return -1;
          }
       }
 
@@ -69,7 +75,8 @@ class WebViewManager {
    }
 
    // TODO: Reuse last WebView if one exists
-   static WebView showWebViewForPage(String page) {
+   // TODO: Test with chrome://crash
+   private static WebView showWebViewForPage(String page) {
       enableWebViewRemoteDebugging();
 
       WebView webView = new OSWebView(OneSignal.appContext);
@@ -78,10 +85,9 @@ class WebViewManager {
       webView.setVerticalScrollBarEnabled(false);
 
       webView.getSettings().setJavaScriptEnabled(true);
-      // Disable cache, it's more than what the browser cache setting from HTTP headers
-      // TODO: Find setting to respect client HTTP cache setting.
-      webView.getSettings().setAppCacheEnabled(false);
-      webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+// TODO: Had to disable cache before, seems fine on Android 8.0 Chrome 72 though
+//      webView.getSettings().setAppCacheEnabled(false); // Default is false
+//      webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT); // LOAD_NO_CACHE
 
       webView.addJavascriptInterface(
          new OSJavaScriptInterface(),
@@ -96,7 +102,11 @@ class WebViewManager {
       webView.setTop(0);
       webView.setBottom(WebViewActivity.getWebViewYSize());
 
-      // TODO: Use webView.loadData(page) when loading the HTML data from as a String instead of a file
+      // TODO: Try these setting to see if web view will shrink if it does not fit
+      // 500 seems close to the default scale
+      // webView.setInitialScale(500);
+
+      // TODO: Look into using scale if WebView does not fit
       webView.loadUrl(page);
 
       return webView;
