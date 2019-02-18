@@ -18,6 +18,7 @@ import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
 // TODO: Fix bug where the WebView disappears after resuming the Activity
+// TODO: Fix bug where rotation isn't recalculating the image size correctly
 public class WebViewActivity extends Activity {
 
    static final String PAGE_HEIGHT_INTENT_KEY = "pageHeight";
@@ -88,6 +89,7 @@ public class WebViewActivity extends Activity {
 
    void addLayoutAndView() {
       draggableRelativeLayout = new DraggableRelativeLayout(this);
+      draggableRelativeLayout.setClipChildren(false);
 
       // Use pageHeight if we have it, otherwise use use full height of the Activity
       Bundle extra = getIntent().getExtras();
