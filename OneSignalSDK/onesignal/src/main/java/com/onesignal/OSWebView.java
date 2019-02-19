@@ -6,6 +6,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.webkit.WebView;
 
+// Custom WebView to round corners
 public class OSWebView extends WebView {
 
    private int width;

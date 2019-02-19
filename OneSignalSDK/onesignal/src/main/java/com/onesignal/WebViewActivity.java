@@ -87,22 +87,31 @@ public class WebViewActivity extends Activity {
       addLayoutAndView();
    }
 
+   // TODO: Test layout with a fullscreen app (without status bar or buttons)
+   // TODO: Edge case: Modal in portrait is to tall when using split screen mode
    void addLayoutAndView() {
       draggableRelativeLayout = new DraggableRelativeLayout(this);
       draggableRelativeLayout.setClipChildren(false);
 
       // Use pageHeight if we have it, otherwise use use full height of the Activity
       Bundle extra = getIntent().getExtras();
+      int pageWidth = ConstraintLayout.LayoutParams.MATCH_PARENT;
       int pageHeight = extra.getInt(PAGE_HEIGHT_INTENT_KEY, ConstraintLayout.LayoutParams.MATCH_PARENT);
-      if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT)
+      // If we have a height constraint; (Modal or Banner)
+      //   1. Ensure we don't set a height higher than the screen height.
+      //   2. Limit the width to either screen width or the height of the screen.
+      //      - This is to make the modal width the same for landscape and portrait modes.
+      if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT) {
          pageHeight += (MARGIN_PX_SIZE * 2);
+         pageHeight = Math.min(pageHeight, getWebViewYSize() + (MARGIN_PX_SIZE * 2));
+         pageWidth = Math.min(getWebViewXSize() + (MARGIN_PX_SIZE * 2), getWebViewYSize() + (MARGIN_PX_SIZE * 3));
+      }
 
-      // TODO: Check iOS on how we calculate the width when in landscape
       FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(
-         ConstraintLayout.LayoutParams.MATCH_PARENT,
+         pageWidth,
          pageHeight
       );
-      frameLayoutParams.gravity = Gravity.CENTER_VERTICAL;
+      frameLayoutParams.gravity = Gravity.CENTER;
       setContentView(draggableRelativeLayout, frameLayoutParams);
 
       // Set NoClip - For Dialog and Banners when dragging
@@ -156,6 +165,9 @@ public class WebViewActivity extends Activity {
       draggableRelativeLayout.addView(webView);
    }
 
+
+// Another possible way to get the size. Should include the status bar...
+// getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
    static int getWebViewXSize() {
       return Resources.getSystem().getDisplayMetrics().widthPixels - (MARGIN_PX_SIZE * 2);
    }
@@ -179,6 +191,7 @@ public class WebViewActivity extends Activity {
       draggableRelativeLayout.removeAllViews();
    }
 
+   // TODO: Modal in landscape mode transitions bottom left instead of center bottom
    void dismiss() {
       dismissing = true;
       draggableRelativeLayout.mDragHelper.smoothSlideViewTo(draggableRelativeLayout, 0, OFF_SCREEN_SCROLL_Y_POS);
