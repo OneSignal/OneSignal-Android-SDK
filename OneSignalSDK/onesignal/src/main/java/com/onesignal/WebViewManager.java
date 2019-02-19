@@ -89,24 +89,27 @@ class WebViewManager {
 //      webView.getSettings().setAppCacheEnabled(false); // Default is false
 //      webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT); // LOAD_NO_CACHE
 
+      // Setup receiver for page events / data from JS
       webView.addJavascriptInterface(
          new OSJavaScriptInterface(),
          OSJavaScriptInterface.JS_OBJ_NAME
       );
 
       // Setting size before adding to Activity to prevent a resize event.
+      // Also setting up sizes so JS can give us the correct content height for modals and banners
+      //   Min on width and max on height is used to give us a consistent height from JS.
+      //   The Activity will shrink the height if needed when rotating.
       webView.setLeft(0);
-      webView.setRight(WebViewActivity.getWebViewXSize());
+      webView.setRight(Math.min(WebViewActivity.getWebViewYSize(), WebViewActivity.getWebViewXSize()));
       // TODO: When shrinking image based on WebView port height setBottom may need to be tweaked
       // NOTE: If setTop and / or setBottom are NOT set on Android 5.0 (Chrome 72) it calcs width as 0 somehow...
       webView.setTop(0);
-      webView.setBottom(WebViewActivity.getWebViewYSize());
+      webView.setBottom(Math.max(WebViewActivity.getWebViewYSize(), WebViewActivity.getWebViewXSize()));
 
-      // TODO: Try these setting to see if web view will shrink if it does not fit
-      // 500 seems close to the default scale
+      // TODO: Look into using setInitialScale if WebView does not fit
+      //       500 seems close to the default scale
       // webView.setInitialScale(500);
 
-      // TODO: Look into using scale if WebView does not fit
       webView.loadUrl(page);
 
       return webView;
