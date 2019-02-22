@@ -3368,6 +3368,33 @@ public class MainOneSignalClassRunner {
       assertTrue(second.executed);
    }
 
+   @Test
+   public void testNestedGetTags() throws Exception {
+
+      // Validates that nested getTags calls won't throw a ConcurrentModificationException
+      class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
+         boolean executed = false;
+
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+
+            OneSignal.getTags(new OneSignal.GetTagsHandler() {
+               @Override
+               public void tagsAvailable(JSONObject tags) {
+
+               }
+            });
+            executed = true;
+         }
+      }
+
+      OneSignalInit();
+      threadAndTaskWait();
+      DebugGetTagsHandler first = new DebugGetTagsHandler();
+      OneSignal.getTags(first);
+      threadAndTaskWait();
+   }
+
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
