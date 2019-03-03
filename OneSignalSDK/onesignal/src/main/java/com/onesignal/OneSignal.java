@@ -2982,4 +2982,12 @@ public class OneSignal {
    public static void showInAppModal() {
       WebViewManager.showModalWebView();
    }
+
+   public static void showInAppBannerTop() {
+      WebViewManager.showBannerTopWebView();
+   }
+
+   public static void showInAppBannerBottom() {
+      WebViewManager.showBannerBottomWebView();
+   }
 }

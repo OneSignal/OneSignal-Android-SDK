@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -18,9 +19,12 @@ import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
 // TODO: Fix bug where the WebView disappears after resuming the Activity
-// TODO: Fix bug where rotation isn't recalculating the image size correctly
+
+// TODO: Image is slightly smaller if the modal is first displayed in landscape then
+//         rotated into portrait than displaying in portrait first.
 public class WebViewActivity extends Activity {
 
+   static final String DISPLAY_LOCATION_INTENT_KEY = "displayLocation";
    static final String PAGE_HEIGHT_INTENT_KEY = "pageHeight";
 
    private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#77000000");
@@ -29,7 +33,7 @@ public class WebViewActivity extends Activity {
 
    private static int DISMISSING_Y_POS;
    private static int OFF_SCREEN_SCROLL_Y_POS;
-   private static final int DISMISSING_Y_VEL = OSUtils.dpToPx(333);
+   private static final int DISMISSING_Y_VEL = OSUtils.dpToPx(3000);
    private static final int MARGIN_PX_SIZE = OSUtils.dpToPx(24);
 
    static WebViewActivity instance;
@@ -54,7 +58,10 @@ public class WebViewActivity extends Activity {
 
       @Override
       public boolean onTouchEvent(MotionEvent event) {
-         webView.onTouchEvent(event); // Forward touch event to webView so JS's onClick works
+         // Don't forward ACTION_MOVE to prevent scrolling in the WebView.
+         //  - Only an issue when content is larger then the view itself.
+         if (event.getAction() != MotionEvent.ACTION_MOVE)
+           webView.onTouchEvent(event); // Forward touch event to webView so JS's onClick works
          mDragHelper.processTouchEvent(event);
          return true;
       }
@@ -107,11 +114,16 @@ public class WebViewActivity extends Activity {
          pageWidth = Math.min(getWebViewXSize() + (MARGIN_PX_SIZE * 2), getWebViewYSize() + (MARGIN_PX_SIZE * 3));
       }
 
-      FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(
-         pageWidth,
-         pageHeight
-      );
-      frameLayoutParams.gravity = Gravity.CENTER;
+      FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, pageHeight);
+
+      String displayLocation = extra.getString(DISPLAY_LOCATION_INTENT_KEY);
+      if ("top".equals(displayLocation))
+         frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+      else if ("bottom".equals(displayLocation))
+         frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+      else
+         frameLayoutParams.gravity = Gravity.CENTER;
+
       setContentView(draggableRelativeLayout, frameLayoutParams);
 
       // Set NoClip - For Dialog and Banners when dragging
@@ -122,7 +134,9 @@ public class WebViewActivity extends Activity {
          ConstraintLayout.LayoutParams.MATCH_PARENT
       );
       relativeLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
+
       relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+
       webView.setLayoutParams(relativeLayoutParams);
 
       draggableRelativeLayout.mDragHelper = ViewDragHelper.create(draggableRelativeLayout, 1.0f, new ViewDragHelper.Callback() {
@@ -149,12 +163,13 @@ public class WebViewActivity extends Activity {
          // Base on position and scroll speed decide if we need to dismiss
          @Override
          public void onViewReleased(@NonNull View releasedChild, float xvel, float yvel) {
-            int settleDestY;
-            if (!dismissing && lastYPos < DISMISSING_Y_POS && yvel < DISMISSING_Y_VEL)
-               settleDestY = MARGIN_PX_SIZE;
-            else {
-               settleDestY = OFF_SCREEN_SCROLL_Y_POS;
-               dismissing = true;
+            int settleDestY = MARGIN_PX_SIZE;
+            if (!dismissing) {
+               if (lastYPos > DISMISSING_Y_POS || yvel > DISMISSING_Y_VEL) {
+                  settleDestY = OFF_SCREEN_SCROLL_Y_POS;
+                  dismissing = true;
+                  Log.e("OneSignal", "Dismissing: DISMISSING_Y_POS=" + DISMISSING_Y_POS + ", lastYPos=" + lastYPos +", yvel=" + yvel + ", DISMISSING_Y_VEL=" + DISMISSING_Y_VEL);
+               }
             }
 
             if (draggableRelativeLayout.mDragHelper.settleCapturedViewAt(MARGIN_PX_SIZE, settleDestY))

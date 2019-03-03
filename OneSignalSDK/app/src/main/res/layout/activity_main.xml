@@ -18,6 +18,38 @@
             android:orientation="vertical" >
 
             <Button
+                android:id="@+id/show_fullscreen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="onFullScreenClicked"
+                android:text="IAM - Show Fullscreen" />
+
+            <Button
+                android:id="@+id/show_modal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="onModalClicked"
+                android:text="IAM - Show Modal" />
+
+            <Button
+                android:id="@+id/show_banner_top"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="onBannerTopClicked"
+                android:text="IAM - Show Banner Top" />
+
+            <Button
+                android:id="@+id/show_banner_bottom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="onBannerBottomClicked"
+                android:text="IAM - Show Banner Bottom" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="30dp" />
+
+            <Button
                 android:id="@+id/subscribe"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -73,21 +105,6 @@
                 android:onClick="onConsentButtonClicked"
                 android:text="Provide Consent" />
 
-            <EditText
-                android:id="@+id/emailTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentRight="true"
-                android:layout_below="@+id/consentButton"
-                android:layout_toEndOf="@+id/textView"
-                android:layout_toRightOf="@+id/textView"
-                android:ems="10"
-                android:hint="Set Email"
-                android:inputType="textPersonName"
-                android:selectAllOnFocus="false"
-                android:textAlignment="center" />
-
             <Button
                 android:id="@+id/logoutEmail"
                 android:layout_width="match_parent"
@@ -100,36 +117,10 @@
                 android:onClick="onLogoutEmailClicked"
                 android:text="Logout Email" />
 
-            <Button
-                android:id="@+id/setEmail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentRight="true"
-                android:layout_below="@+id/emailTextView"
-                android:layout_toEndOf="@+id/textView"
-                android:layout_toRightOf="@+id/textView"
-                android:onClick="onSetEmailClicked"
-                android:text="Set Email" />
-
             <TextView
                 android:id="@+id/debugTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
-
-            <Button
-                android:id="@+id/show_fullscreen"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:onClick="onFullScreenClicked"
-                android:text="Show Fullscreen" />
-
-            <Button
-                android:id="@+id/show_fullscreen2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:onClick="onModalClicked"
-                android:text="Show Modal" />
 
         </LinearLayout>
 
