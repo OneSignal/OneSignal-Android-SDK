@@ -2,6 +2,7 @@ package com.onesignal;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.os.Build;
 import android.util.Log;
 import android.view.View;
@@ -21,7 +22,9 @@ class WebViewManager {
    static WebView webView;
 
    // TODO: Remove before merging
-   private static final String TEST_PAGE_HOST = "http://192.168.2.165:3000";
+//   private static final String TEST_PAGE_HOST = "http://10.0.1.8:3000";
+   private static final String TEST_PAGE_HOST = "http://10.0.0.17:3000";
+//   private static final String TEST_PAGE_HOST = "http://192.168.2.165:3000";
 
    // Lets JS from the page send JSON payloads to this class
    static class OSJavaScriptInterface {
@@ -48,7 +51,7 @@ class WebViewManager {
             int pageHeight = getPageHeightData(jsonObject);
             if (pageHeight != -1)
                pageHeight = OSUtils.dpToPx(pageHeight);
-            showActivity(pageHeight);
+            showActivity(pageHeight, getDisplayLocation(jsonObject));
          } catch (Exception e) {
             e.printStackTrace();
          }
@@ -60,6 +63,10 @@ class WebViewManager {
          } catch (Exception e) {
             return -1;
          }
+      }
+
+      private static String getDisplayLocation(JSONObject jsonObject) {
+         return jsonObject.optString("displayLocation", "");
       }
 
       private static void handleActionTaken(JSONObject jsonObject) {
@@ -86,6 +93,7 @@ class WebViewManager {
 
       webView.getSettings().setJavaScriptEnabled(true);
 // TODO: Had to disable cache before, seems fine on Android 8.0 Chrome 72 though
+//          Seen some issues NOT clearing on Android 4.4
 //      webView.getSettings().setAppCacheEnabled(false); // Default is false
 //      webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT); // LOAD_NO_CACHE
 
@@ -110,6 +118,10 @@ class WebViewManager {
       //       500 seems close to the default scale
       // webView.setInitialScale(500);
 
+      Log.e("OneSignal", "Resources.getSystem().getDisplayMetrics().density: " + Resources.getSystem().getDisplayMetrics().density);
+      Log.e("OneSignal", "getScale(): " + webView.getScale());
+//      webView.setInitialScale(350);
+
       webView.loadUrl(page);
 
       return webView;
@@ -130,12 +142,21 @@ class WebViewManager {
       webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_modal_test.html");
    }
 
-   private static void showActivity(int pageHeight) {
+   static void showBannerTopWebView() {
+      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_top_banner_test.html");
+   }
+
+   static void showBannerBottomWebView() {
+      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_bottom_banner_test.html");
+   }
+
+   private static void showActivity(int pageHeight, String displayLocation) {
       Activity activity = ActivityLifecycleHandler.curActivity;
 
       Intent intent = new Intent(activity, WebViewActivity.class);
       intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
       intent.putExtra(WebViewActivity.PAGE_HEIGHT_INTENT_KEY, pageHeight);
+      intent.putExtra(WebViewActivity.DISPLAY_LOCATION_INTENT_KEY, displayLocation);
       activity.startActivity(intent);
    }
 

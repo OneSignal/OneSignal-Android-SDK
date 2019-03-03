@@ -25,10 +25,9 @@
  * THE SOFTWARE.
  */
 
-package com.onesignal.example;
+package com.onesignal;
 
 import android.app.Activity;
-import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.os.Bundle;
@@ -37,30 +36,25 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.TextView;
 import android.os.Handler;
 
-import com.onesignal.*;
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 
+import com.onesignal.example.R;
 import com.onesignal.example.iap.IabHelper;
 import com.onesignal.example.iap.IabResult;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Locale;
-import java.util.ArrayList;
-
 
 public class MainActivity extends Activity implements OSEmailSubscriptionObserver, OSPermissionObserver, OSSubscriptionObserver, NotificationOpenedHandler, OneSignal.NotificationReceivedHandler {
 
    IabHelper mHelper;
 
-   private int[] interactiveViewIds = new int[] {R.id.subscribe, R.id.unsubscribe, R.id.sendTags, R.id.getTags, R.id.logoutEmail, R.id.setEmail, R.id.emailTextView};
+   private int[] interactiveViewIds = new int[] {com.onesignal.example.R.id.subscribe, com.onesignal.example.R.id.unsubscribe, com.onesignal.example.R.id.sendTags, com.onesignal.example.R.id.getTags, com.onesignal.example.R.id.setEmail};
 
    private TextView debugTextView;
    private TextView emailTextView;
@@ -74,11 +68,11 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
-      setContentView(R.layout.activity_main);
+      setContentView(com.onesignal.example.R.layout.activity_main);
 
-      this.consentButton = (Button)this.findViewById(R.id.consentButton);
-      this.setEmailButton = (Button)this.findViewById(R.id.setEmail);
-      this.logoutEmailButton = (Button)this.findViewById(R.id.logoutEmail);
+      this.consentButton = (Button)this.findViewById(com.onesignal.example.R.id.consentButton);
+      this.setEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.setEmail);
+      this.logoutEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.logoutEmail);
 
       if (OneSignal.requiresUserPrivacyConsent()) {
          //disable all interactive views except consent button
@@ -94,8 +88,11 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
          this.didGetEmailStatus(state.getEmailSubscriptionStatus().getSubscribed());
       }
 
-      this.debugTextView = this.findViewById(R.id.debugTextView);
-      this.emailTextView = this.findViewById(R.id.emailTextView);
+      this.debugTextView = this.findViewById(com.onesignal.example.R.id.debugTextView);
+
+//      OSPermissionSubscriptionState state = OneSignal.getPermissionSubscriptionState();
+//
+//      this.didGetEmailStatus(state.getEmailSubscriptionStatus().getSubscribed());
 
       // compute your public key and store it in base64EncodedPublicKey
       mHelper = new IabHelper(this, "sdafsfds");
@@ -180,7 +177,9 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
    private void changeInteractiveViewsEnabled(boolean enabled) {
       for (int viewId : this.interactiveViewIds) {
-         this.findViewById(viewId).setEnabled(enabled);
+         View view = this.findViewById(viewId);
+         if (view != null)
+            this.findViewById(viewId).setEnabled(enabled);
       }
    }
 
@@ -273,11 +272,17 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    public void onModalClicked(View v) {
       OneSignal.showInAppModal();
    }
+   public void onBannerTopClicked(View v) {
+      OneSignal.showInAppBannerTop();
+   }
+   public void onBannerBottomClicked(View v) {
+      OneSignal.showInAppBannerBottom();
+   }
 
    @Override
    public boolean onCreateOptionsMenu(Menu menu) {
       // Inflate the menu; this adds items to the action bar if it is present.
-      getMenuInflater().inflate(R.menu.menu_main, menu);
+      getMenuInflater().inflate(com.onesignal.example.R.menu.menu_main, menu);
       return true;
    }
 
