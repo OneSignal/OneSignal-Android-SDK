@@ -1,18 +1,11 @@
 package com.onesignal;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.widget.ViewDragHelper;
-import android.util.Log;
 import android.view.Gravity;
-import android.view.MotionEvent;
-import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
@@ -31,61 +24,18 @@ public class WebViewActivity extends Activity {
 
    private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
 
-   private static int DISMISSING_Y_POS;
-   private static int OFF_SCREEN_SCROLL_Y_POS;
-   private static final int DISMISSING_Y_VEL = OSUtils.dpToPx(3000);
    private static final int MARGIN_PX_SIZE = OSUtils.dpToPx(24);
 
    static WebViewActivity instance;
 
-   boolean dismissing;
    WebView webView;
    DraggableRelativeLayout draggableRelativeLayout;
-
-   class DraggableRelativeLayout extends RelativeLayout {
-
-      ViewDragHelper mDragHelper;
-
-      public DraggableRelativeLayout(Context context) {
-         super(context);
-      }
-
-      @Override
-      public boolean onInterceptTouchEvent(MotionEvent event) {
-         mDragHelper.shouldInterceptTouchEvent(event);
-         return true;
-      }
-
-      @Override
-      public boolean onTouchEvent(MotionEvent event) {
-         // Don't forward ACTION_MOVE to prevent scrolling in the WebView.
-         //  - Only an issue when content is larger then the view itself.
-         if (event.getAction() != MotionEvent.ACTION_MOVE)
-           webView.onTouchEvent(event); // Forward touch event to webView so JS's onClick works
-         mDragHelper.processTouchEvent(event);
-         return true;
-      }
-
-      @Override
-      public void computeScroll() {
-         super.computeScroll();
-         // Required for settleCapturedViewAt
-         boolean settling = mDragHelper.continueSettling(true);
-
-         if (settling)
-            ViewCompat.postInvalidateOnAnimation(this);
-         else if (dismissing)
-            finish();
-      }
-   }
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       instance = this;
 
-      OFF_SCREEN_SCROLL_Y_POS = Resources.getSystem().getDisplayMetrics().heightPixels;
-      DISMISSING_Y_POS = OFF_SCREEN_SCROLL_Y_POS / 2;
 
       getWindow().getDecorView().setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
 
@@ -94,12 +44,22 @@ public class WebViewActivity extends Activity {
       addLayoutAndView();
    }
 
+   void setupDraggableLayout(int pageHeight, String displayLocation) {
+      DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
+      draggableParams.context = this;
+      draggableParams.viewToForwardClicks = webView;
+      draggableParams.maxXPos = MARGIN_PX_SIZE;
+      draggableParams.maxYPos = MARGIN_PX_SIZE;
+      draggableParams.height = pageHeight;
+      draggableParams.dragDirection = "top".equals(displayLocation) ?
+         DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_UP :
+         DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_DOWN;
+      draggableRelativeLayout = new DraggableRelativeLayout(draggableParams);
+   }
+
    // TODO: Test layout with a fullscreen app (without status bar or buttons)
    // TODO: Edge case: Modal in portrait is to tall when using split screen mode
    void addLayoutAndView() {
-      draggableRelativeLayout = new DraggableRelativeLayout(this);
-      draggableRelativeLayout.setClipChildren(false);
-
       // Use pageHeight if we have it, otherwise use use full height of the Activity
       Bundle extra = getIntent().getExtras();
       int pageWidth = ConstraintLayout.LayoutParams.MATCH_PARENT;
@@ -124,6 +84,8 @@ public class WebViewActivity extends Activity {
       else
          frameLayoutParams.gravity = Gravity.CENTER;
 
+      setupDraggableLayout(pageHeight, displayLocation);
+
       setContentView(draggableRelativeLayout, frameLayoutParams);
 
       // Set NoClip - For Dialog and Banners when dragging
@@ -138,44 +100,6 @@ public class WebViewActivity extends Activity {
       relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
       webView.setLayoutParams(relativeLayoutParams);
-
-      draggableRelativeLayout.mDragHelper = ViewDragHelper.create(draggableRelativeLayout, 1.0f, new ViewDragHelper.Callback() {
-         private int lastYPos;
-
-         @Override
-         public boolean tryCaptureView(@NonNull View child, int pointerId) {
-            return true;
-         }
-
-         @Override
-         public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
-            lastYPos = top;
-            if (top < MARGIN_PX_SIZE)
-               return MARGIN_PX_SIZE;
-            return top;
-         }
-
-         @Override
-         public int clampViewPositionHorizontal(@NonNull View child, int right, int dy) {
-            return MARGIN_PX_SIZE;
-         }
-
-         // Base on position and scroll speed decide if we need to dismiss
-         @Override
-         public void onViewReleased(@NonNull View releasedChild, float xvel, float yvel) {
-            int settleDestY = MARGIN_PX_SIZE;
-            if (!dismissing) {
-               if (lastYPos > DISMISSING_Y_POS || yvel > DISMISSING_Y_VEL) {
-                  settleDestY = OFF_SCREEN_SCROLL_Y_POS;
-                  dismissing = true;
-                  Log.e("OneSignal", "Dismissing: DISMISSING_Y_POS=" + DISMISSING_Y_POS + ", lastYPos=" + lastYPos +", yvel=" + yvel + ", DISMISSING_Y_VEL=" + DISMISSING_Y_VEL);
-               }
-            }
-
-            if (draggableRelativeLayout.mDragHelper.settleCapturedViewAt(MARGIN_PX_SIZE, settleDestY))
-               ViewCompat.postInvalidateOnAnimation(draggableRelativeLayout);
-         }
-      });
 
       draggableRelativeLayout.addView(webView);
    }
@@ -206,11 +130,8 @@ public class WebViewActivity extends Activity {
       draggableRelativeLayout.removeAllViews();
    }
 
-   // TODO: Modal in landscape mode transitions bottom left instead of center bottom
    void dismiss() {
-      dismissing = true;
-      draggableRelativeLayout.mDragHelper.smoothSlideViewTo(draggableRelativeLayout, 0, OFF_SCREEN_SCROLL_Y_POS);
-      ViewCompat.postInvalidateOnAnimation(draggableRelativeLayout);
+      draggableRelativeLayout.dismiss();
       finishAfterDelay();
    }
 
