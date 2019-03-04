@@ -109,28 +109,14 @@ class DraggableRelativeLayout extends RelativeLayout {
 
    @Override
    public boolean onInterceptTouchEvent(MotionEvent event) {
-      mDragHelper.shouldInterceptTouchEvent(event);
-      return true;
-   }
-
-   @Override
-   public boolean onTouchEvent(MotionEvent event) {
-      super.onTouchEvent(event);
-      // Can prevent WebView panning by NOT forwarding the ACTION_MOVE action.
-      //   - Only an issue when content is larger then the view itself.
-      // Code on how to filter: if (event.getAction() != MotionEvent.ACTION_MOVE) { ... }
-      // NOTE: However this has a side effect of dragging causing JS clicks.
-      //       This happen when starting the drag outside of the click area then lifting on the clickable
-
-
-      // Ignore touch events if in dismissing state
+      // Prevent any possible extra clicks or stopping the dismissing animation
       if (dismissing)
          return true;
 
-      // Forwarding touch event to webView so JS's onClick works
-      params.viewToForwardClicks.onTouchEvent(event);
       mDragHelper.processTouchEvent(event);
-      return true;
+
+      // Let child views get all touch events;
+      return false;
    }
 
    @Override
@@ -155,5 +141,4 @@ class DraggableRelativeLayout extends RelativeLayout {
       mDragHelper.smoothSlideViewTo(this, getLeft(), params.offScreenYPos);
       ViewCompat.postInvalidateOnAnimation(this);
    }
-
 }
