@@ -7,6 +7,7 @@ import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import org.json.JSONException;
@@ -92,10 +93,12 @@ class WebViewManager {
       webView.setVerticalScrollBarEnabled(false);
 
       webView.getSettings().setJavaScriptEnabled(true);
-// TODO: Had to disable cache before, seems fine on Android 8.0 Chrome 72 though
-//          Seen some issues NOT clearing on Android 4.4
-//      webView.getSettings().setAppCacheEnabled(false); // Default is false
-//      webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT); // LOAD_NO_CACHE
+//    TODO: Sometimes device just keeps using cache even those the server doesn't return any
+//          cache HTTP header. Try testing on staging to see if it expires correctly.
+//    webView.getSettings().setAppCacheEnabled(false); // Default is false
+//    webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT); // LOAD_NO_CACHE
+      // TODO: Remove after testing
+      webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 
       // Setup receiver for page events / data from JS
       webView.addJavascriptInterface(
