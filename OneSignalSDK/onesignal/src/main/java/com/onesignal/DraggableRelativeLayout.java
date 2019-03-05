@@ -20,8 +20,7 @@ class DraggableRelativeLayout extends RelativeLayout {
       static final int DRAGGABLE_DIRECTION_UP = 0;
       static final int DRAGGABLE_DIRECTION_DOWN = 1;
 
-      Context context;
-      View viewToForwardClicks;
+      int posY;
       int maxYPos;
       int maxXPos;
       int height;
@@ -34,22 +33,26 @@ class DraggableRelativeLayout extends RelativeLayout {
 
    private Params params;
 
-   public DraggableRelativeLayout(Params params) {
-      super(params.context);
+   public DraggableRelativeLayout(Context context) {
+      super(context);
+
+      setClipChildren(false);
+      createDragHelper();
+   }
+
+   void setParams(Params params) {
       this.params = params;
 
-      params.offScreenYPos = Resources.getSystem().getDisplayMetrics().heightPixels;
+      params.offScreenYPos = params.height + params.posY + (Resources.getSystem().getDisplayMetrics().heightPixels - params.height - params.posY);
       params.dismissingYVelocity = OSUtils.dpToPx(3_000);
 
       if (params.dragDirection == Params.DRAGGABLE_DIRECTION_UP) {
          params.offScreenYPos = -params.height;
          params.dismissingYVelocity = -params.dismissingYVelocity;
+         params.dismissingYPos = params.offScreenYPos / 3;
       }
-
-      params.dismissingYPos = params.offScreenYPos / 2;
-
-      setClipChildren(false);
-      createDragHelper();
+      else
+         params.dismissingYPos = (params.height / 3) + (params.maxYPos * 2);
    }
 
    private void createDragHelper() {

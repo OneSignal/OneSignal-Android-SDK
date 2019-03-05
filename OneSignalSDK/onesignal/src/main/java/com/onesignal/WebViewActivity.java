@@ -20,7 +20,7 @@ public class WebViewActivity extends Activity {
    static final String DISPLAY_LOCATION_INTENT_KEY = "displayLocation";
    static final String PAGE_HEIGHT_INTENT_KEY = "pageHeight";
 
-   private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#77000000");
+   private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#BB000000");
 
    private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
 
@@ -42,19 +42,6 @@ public class WebViewActivity extends Activity {
       webView = WebViewManager.webView;
 
       addLayoutAndView();
-   }
-
-   void setupDraggableLayout(int pageHeight, String displayLocation) {
-      DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-      draggableParams.context = this;
-      draggableParams.viewToForwardClicks = webView;
-      draggableParams.maxXPos = MARGIN_PX_SIZE;
-      draggableParams.maxYPos = MARGIN_PX_SIZE;
-      draggableParams.height = pageHeight;
-      draggableParams.dragDirection = "top".equals(displayLocation) ?
-         DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_UP :
-         DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_DOWN;
-      draggableRelativeLayout = new DraggableRelativeLayout(draggableParams);
    }
 
    // TODO: Test layout with a fullscreen app (without status bar or buttons)
@@ -84,8 +71,8 @@ public class WebViewActivity extends Activity {
       else
          frameLayoutParams.gravity = Gravity.CENTER;
 
-      setupDraggableLayout(pageHeight, displayLocation);
 
+      draggableRelativeLayout = new DraggableRelativeLayout(this);
       setContentView(draggableRelativeLayout, frameLayoutParams);
 
       // Set NoClip - For Dialog and Banners when dragging
@@ -100,12 +87,33 @@ public class WebViewActivity extends Activity {
       relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
       webView.setLayoutParams(relativeLayoutParams);
-
       draggableRelativeLayout.addView(webView);
+
+      setupDraggableLayout(pageHeight, displayLocation);
    }
 
+   void setupDraggableLayout(int pageHeight, String displayLocation) {
+      DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
+      draggableParams.maxXPos = MARGIN_PX_SIZE;
+      draggableParams.maxYPos = MARGIN_PX_SIZE;
+      // TODO: Look into using positions from view's.
+      //    Tried getLocationInWindow but it was always returning 0;
+      draggableParams.height = pageHeight;
+      if (pageHeight == -1)
+         draggableParams.height = pageHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
 
-// Another possible way to get the size. Should include the status bar...
+      if ("bottom".equals(displayLocation))
+         draggableParams.posY = Resources.getSystem().getDisplayMetrics().heightPixels - pageHeight;
+      else if (!"top".equals(displayLocation)) // Center
+         draggableParams.posY = (Resources.getSystem().getDisplayMetrics().heightPixels / 2) - (pageHeight / 2);
+
+      draggableParams.dragDirection = "top".equals(displayLocation) ?
+         DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_UP :
+         DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_DOWN;
+      draggableRelativeLayout.setParams(draggableParams);
+   }
+
+   // Another possible way to get the size. Should include the status bar...
 // getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
    static int getWebViewXSize() {
       return Resources.getSystem().getDisplayMetrics().widthPixels - (MARGIN_PX_SIZE * 2);
