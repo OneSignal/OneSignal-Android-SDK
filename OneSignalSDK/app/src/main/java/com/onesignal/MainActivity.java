@@ -30,6 +30,7 @@ package com.onesignal;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
@@ -64,6 +65,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
    private int sendTagsCounter = 1;
    private boolean addedObservers = false;
+   private TextView iamHost;
+   private String SHARDPRES_KEY_IAM_HOST = "SHARDPRES_KEY_IAM_HOST";
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +76,12 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.consentButton = (Button)this.findViewById(com.onesignal.example.R.id.consentButton);
       this.setEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.setEmail);
       this.logoutEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.logoutEmail);
+      this.iamHost = this.findViewById(R.id.iamHost);
+
+      SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+      String lastIamHost = sharedPref.getString(SHARDPRES_KEY_IAM_HOST, null);
+      this.iamHost.setText(lastIamHost);
+      OneSignal.setInAppDebugHost(lastIamHost);
 
       if (OneSignal.requiresUserPrivacyConsent()) {
          //disable all interactive views except consent button
@@ -105,6 +114,15 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
             // Hooray, IAB is fully set up!
          }
       });
+   }
+
+   private void updateIamhost() {
+      SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+      SharedPreferences.Editor editor = sharedPref.edit();
+      String host = this.iamHost.getText().toString();
+      editor.putString(SHARDPRES_KEY_IAM_HOST, host);
+      editor.commit();
+      OneSignal.setInAppDebugHost(host);
    }
 
    private void updateTextView(final String newText) {
@@ -267,15 +285,19 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    public void onFullScreenClicked(View v) {
+      updateIamhost();
       OneSignal.showInAppFullscreen();
    }
    public void onModalClicked(View v) {
+      updateIamhost();
       OneSignal.showInAppModal();
    }
    public void onBannerTopClicked(View v) {
+      updateIamhost();
       OneSignal.showInAppBannerTop();
    }
    public void onBannerBottomClicked(View v) {
+      updateIamhost();
       OneSignal.showInAppBannerBottom();
    }
 
