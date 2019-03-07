@@ -45,6 +45,14 @@
                 android:onClick="onBannerBottomClicked"
                 android:text="IAM - Show Banner Bottom" />
 
+            <EditText
+                android:id="@+id/iamHost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="textPersonName"
+                android:text="YOUR_PC_IP_HERE" />
+
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="30dp" />

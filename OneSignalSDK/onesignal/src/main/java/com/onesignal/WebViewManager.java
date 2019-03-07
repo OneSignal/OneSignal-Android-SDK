@@ -24,8 +24,13 @@ class WebViewManager {
 
    // TODO: Remove before merging
 //   private static final String TEST_PAGE_HOST = "http://10.0.1.8:3000";
-   private static final String TEST_PAGE_HOST = "http://10.0.0.17:3000";
-//   private static final String TEST_PAGE_HOST = "http://192.168.2.165:3000";
+//   private static final String TEST_PAGE_HOST = "http://10.0.0.17:3000";
+   private static String TEST_PAGE_HOST = "http://192.168.2.165:3000";
+
+
+   static void setHost(String host) {
+      TEST_PAGE_HOST = "http://" + host + ":3000";
+   }
 
    // Lets JS from the page send JSON payloads to this class
    static class OSJavaScriptInterface {
@@ -138,7 +143,7 @@ class WebViewManager {
    }
 
    static void showFullscreenWebView() {
-      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_fullscreen_test.html");
+      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_full_screen_test.html");
    }
 
    static void showModalWebView() {

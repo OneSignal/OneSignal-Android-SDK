@@ -2990,4 +2990,8 @@ public class OneSignal {
    public static void showInAppBannerBottom() {
       WebViewManager.showBannerBottomWebView();
    }
+
+   public static void setInAppDebugHost(String host) {
+      WebViewManager.setHost(host);
+   }
 }
