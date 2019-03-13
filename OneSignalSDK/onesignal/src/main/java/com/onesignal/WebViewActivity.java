@@ -13,7 +13,7 @@ import android.widget.RelativeLayout;
 
 // TODO: Fix bug where the WebView disappears after resuming the Activity
 
-// TODO: Image is slightly smaller if the modal is first displayed in landscape then
+// TODO: Small bug: Image is slightly smaller if the modal is first displayed in landscape then
 //         rotated into portrait than displaying in portrait first.
 public class WebViewActivity extends Activity {
 
@@ -35,7 +35,6 @@ public class WebViewActivity extends Activity {
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       instance = this;
-
 
       getWindow().getDecorView().setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
 
