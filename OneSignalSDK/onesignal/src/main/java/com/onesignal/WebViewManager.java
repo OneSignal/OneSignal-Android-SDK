@@ -147,7 +147,7 @@ class WebViewManager {
    }
 
    static void showModalWebView() {
-      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_modal_test.html");
+      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_center_modal_test.html");
    }
 
    static void showBannerTopWebView() {
@@ -159,8 +159,21 @@ class WebViewManager {
    }
 
    private static void showActivity(int pageHeight, String displayLocation) {
-      Activity activity = ActivityLifecycleHandler.curActivity;
+// NOTE: It is possible to add a view to the app's window to prevent Activity pauses.
+//       This implementation would be good for top / bottom banners, especially for games.
+//      OSUtils.runOnMainUIThread(new Runnable() {
+//         @Override
+//         public void run() {
+//            WindowManager.LayoutParams windowLayoutParams = new WindowManager.LayoutParams(WindowManager.LayoutParams.TYPE_APPLICATION, 0);
+//            ActivityLifecycleHandler.curActivity.getWindowManager().addView(webView, new WindowManager.LayoutParams(
+//               WindowManager.LayoutParams.TYPE_APPLICATION,
+//               0));
+//         }});
 
+
+      // TODO: This seems to be null if the location prompt is shown
+      // TODO: Also null if consent was provided and another Activity focus event did not happen yet.
+      Activity activity = ActivityLifecycleHandler.curActivity;
       Intent intent = new Intent(activity, WebViewActivity.class);
       intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
       intent.putExtra(WebViewActivity.PAGE_HEIGHT_INTENT_KEY, pageHeight);
