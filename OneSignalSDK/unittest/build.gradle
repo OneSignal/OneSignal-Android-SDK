@@ -31,6 +31,14 @@ android {
     }
 }
 
+tasks.withType(Test) {
+    testLogging {
+        exceptionFormat "full"
+        events "started", "skipped", "passed", "failed"
+        showStandardStreams false // Enable to have logging print
+    }
+}
+
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 

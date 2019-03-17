@@ -152,13 +152,18 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().refresh();
    }
 
-   static void setSyncAsNewSession() {
-      getPushStateSynchronizer().setSyncAsNewSession();
-      getEmailStateSynchronizer().setSyncAsNewSession();
+   static void setNewSession() {
+      getPushStateSynchronizer().setNewSession();
+      getEmailStateSynchronizer().setNewSession();
    }
 
-   static void setSyncAsNewSessionForEmail() {
-      getEmailStateSynchronizer().setSyncAsNewSession();
+   static boolean getSyncAsNewSession() {
+      return getPushStateSynchronizer().getSyncAsNewSession() ||
+             getEmailStateSynchronizer().getSyncAsNewSession();
+   }
+
+   static void setNewSessionForEmail() {
+      getEmailStateSynchronizer().setNewSession();
    }
 
    static void logoutEmail() {
@@ -169,5 +174,13 @@ class OneSignalStateSynchronizer {
    static void setExternalUserId(String externalId) throws JSONException {
       getPushStateSynchronizer().setExternalUserId(externalId);
       getEmailStateSynchronizer().setExternalUserId(externalId);
+   }
+
+   // This is to indicate that StateSynchronizer can start making REST API calls
+   // We do this to roll up as many field updates in a single create / on_session call to
+   //   optimize the number of api calls that are made
+   static void readyToUpdate(boolean canMakeUpdates) {
+      getPushStateSynchronizer().readyToUpdate(canMakeUpdates);
+      getEmailStateSynchronizer().readyToUpdate(canMakeUpdates);
    }
 }

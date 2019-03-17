@@ -21,7 +21,7 @@ before_install:
 before_script:
     - chmod +x gradlew
 script:
-    - ./gradlew unittest:testReleaseUnitTest
+    - ./gradlew unittest:testReleaseUnitTest --console=plain
 after_failure:
     - cat build/reports/lint-results.xml
     - cat build/outputs/lint-results-debug.xml

@@ -1,5 +1,6 @@
 package com.test.onesignal;
 
+import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.ShadowCustomTabsClient;
@@ -13,6 +14,7 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.util.Scheduler;
 
 import java.util.Set;
@@ -24,6 +26,7 @@ class TestHelpers {
    static Exception lastException;
 
    static void beforeTestInitAndCleanup() {
+      stopAllOSThreads();
 
       StaticResetHelper.restSetStaticFields();
 
@@ -44,13 +47,6 @@ class TestHelpers {
 
       ShadowGoogleApiClientCompatProxy.restSetStaticFields();
 
-      // DB seems to be cleaned up on it's own.
-      /*
-      SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
-      writableDb.delete(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, null, null);
-      writableDb.close();
-      */
-
       lastException = null;
 
       OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
@@ -62,9 +58,11 @@ class TestHelpers {
       } catch (Exception e) {
          e.printStackTrace();
       }
+
+      OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase().close();
    }
 
-   static void stopAllOSThreads() throws Exception {
+   static void stopAllOSThreads() {
       boolean joinedAThread;
       do {
          joinedAThread = false;
@@ -114,6 +112,14 @@ class TestHelpers {
       return createdNewThread;
    }
 
+   static Thread getThreadByName(String threadName) {
+      for (Thread t : Thread.getAllStackTraces().keySet()) {
+         if (t.getName().equals(threadName))
+            return t;
+      }
+      return null;
+   }
+
    // Run any OneSignal background threads including any pending runnables
    static void threadAndTaskWait() throws Exception {
       boolean createdNewThread;
@@ -153,6 +159,7 @@ class TestHelpers {
    }
 
    static void fastAppRestart() {
+      stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
    }

@@ -8,10 +8,14 @@ import android.support.v4.app.NotificationManagerCompat;
 import com.onesignal.BuildConfig;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
+import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowNotificationLimitManager;
+import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -24,13 +28,19 @@ import org.robolectric.shadows.ShadowLog;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
    constants = BuildConfig.class,
    instrumentedPackages = { "com.onesignal" },
-   shadows = { ShadowNotificationLimitManager.class },
+   shadows = {
+      ShadowNotificationLimitManager.class,
+      ShadowPushRegistratorGCM.class,
+      ShadowOSUtils.class,
+      ShadowAdvertisingIdProviderGPS.class
+   },
    sdk = 26)
 @RunWith(RobolectricTestRunner.class)
 public class NotificationLimitManagerRunner {
@@ -55,6 +65,11 @@ public class NotificationLimitManagerRunner {
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       threadAndTaskWait();
+   }
+
+   @After
+   public void afterEachTest() {
+      afterTestCleanup();
    }
 
    @Test

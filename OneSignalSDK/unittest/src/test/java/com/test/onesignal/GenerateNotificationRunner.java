@@ -134,14 +134,14 @@ public class GenerateNotificationRunner {
    private static final String notifMessage = "Robo test message";
    
    @BeforeClass // Runs only once, before any tests
-   public static void setUpClass() throws Exception {
+   public static void setUpClass() {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
       StaticResetHelper.saveStaticValues();
    }
    
    @Before // Before each test
-   public void beforeEachTest() throws Exception {
+   public void beforeEachTest() {
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
    
