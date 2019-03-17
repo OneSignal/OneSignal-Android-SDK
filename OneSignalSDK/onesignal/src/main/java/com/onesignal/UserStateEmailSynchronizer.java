@@ -64,8 +64,9 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         }
 
         String existingEmail = syncValues.optString("identifier", null);
+
         if (existingEmail == null)
-            setSyncAsNewSession();
+            setNewSession();
 
         try {
             JSONObject emailJSON = new JSONObject();
@@ -78,7 +79,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
                 if (existingEmail != null && !existingEmail.equals(email)) {
                     OneSignal.saveEmailId("");
                     resetCurrentState();
-                    setSyncAsNewSession();
+                    setNewSession();
                 }
             }
 

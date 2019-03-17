@@ -386,7 +386,6 @@ public class OneSignal {
    private static boolean getTagsCall;
 
    private static boolean waitingToPostStateSync;
-   private static boolean sendAsSession;
 
    private static JSONObject awl;
    static boolean mEnterp;
@@ -657,7 +656,8 @@ public class OneSignal {
       OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
       if (foreground || getUserId() == null) {
-         sendAsSession = isPastOnSessionTime();
+         if (isPastOnSessionTime())
+            OneSignalStateSynchronizer.setNewSession();
          setLastSessionTime(System.currentTimeMillis());
          startRegistrationOrOnSession();
       }
@@ -752,17 +752,15 @@ public class OneSignal {
    private static void startRegistrationOrOnSession() {
       if (waitingToPostStateSync)
          return;
-
       waitingToPostStateSync = true;
 
-      registerForPushFired = false;
-      if (sendAsSession)
+      if (OneSignalStateSynchronizer.getSyncAsNewSession())
          locationFired = false;
 
       startLocationUpdate();
-      makeAndroidParamsRequest();
 
-      promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
+      registerForPushFired = false;
+      makeAndroidParamsRequest();
    }
 
    private static void startLocationUpdate() {
@@ -779,6 +777,9 @@ public class OneSignal {
          }
       };
       boolean doPrompt = mInitBuilder.mPromptLocation && !promptedLocation;
+      // Prompted so we don't ask for permissions more than once
+      promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
+
       LocationGMS.getLocation(appContext, doPrompt, locationHandler);
    }
 
@@ -1064,6 +1065,7 @@ public class OneSignal {
    static boolean onAppLostFocus() {
       foreground = false;
 
+      setLastSessionTime(System.currentTimeMillis());
       LocationGMS.onFocusChange();
 
       if (!initDone) return false;
@@ -1085,8 +1087,6 @@ public class OneSignal {
       }
 
       boolean scheduleSyncService = scheduleSyncService();
-
-      setLastSessionTime(System.currentTimeMillis());
 
       long unSentActiveTime = GetUnsentActiveTime();
       long totalTimeActive = unSentActiveTime + time_elapsed;
@@ -1161,7 +1161,8 @@ public class OneSignal {
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
-      sendAsSession = isPastOnSessionTime();
+      if (isPastOnSessionTime())
+         OneSignalStateSynchronizer.setNewSession();
       setLastSessionTime(System.currentTimeMillis());
 
       startRegistrationOrOnSession();
@@ -1269,8 +1270,7 @@ public class OneSignal {
       if (shareLocation && lastLocationPoint != null)
          OneSignalStateSynchronizer.updateLocation(lastLocationPoint);
 
-      if (sendAsSession)
-         OneSignalStateSynchronizer.setSyncAsNewSession();
+      OneSignalStateSynchronizer.readyToUpdate(true);
 
       waitingToPostStateSync = false;
    }
@@ -2858,16 +2858,8 @@ public class OneSignal {
       return initDone && isForeground();
    }
 
-   static void updateOnSessionDependents() {
-      sendAsSession = false;
-      setLastSessionTime(System.currentTimeMillis());
-   }
-
    private static boolean isPastOnSessionTime() {
-      if (sendAsSession)
-         return true;
-
-      return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1000 >= MIN_ON_SESSION_TIME;
+      return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1_000 >= MIN_ON_SESSION_TIME;
    }
    
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
