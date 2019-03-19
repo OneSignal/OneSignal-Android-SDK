@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2018 OneSignal
+ * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -175,6 +175,10 @@ class NotificationBundleProcessor {
                values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
             if (notifiJob.getBody() != null)
                values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
+
+            int ttl = jsonPayload.optInt("google.ttl", 259_200);
+            long expireTime = (System.currentTimeMillis() / 1_000L) + ttl;
+            values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
 
             values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 

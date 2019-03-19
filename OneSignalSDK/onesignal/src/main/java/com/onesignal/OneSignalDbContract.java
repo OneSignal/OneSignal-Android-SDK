@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,24 +44,27 @@ class OneSignalDbContract {
       public static final String COLUMN_NAME_TITLE = "title";
       public static final String COLUMN_NAME_MESSAGE = "message";
       public static final String COLUMN_NAME_CREATED_TIME = "created_time";
+      public static final String COLUMN_NAME_EXPIRE_TIME = "expire_time"; // created_time + TTL
 
       // JSON formatted string of the full GCM bundle
       public static final String COLUMN_NAME_FULL_DATA = "full_data";
-
 
       public static final String INDEX_CREATE_NOTIFICATION_ID = "CREATE INDEX notification_notification_id_idx ON notification(notification_id); ";
       public static final String INDEX_CREATE_ANDROID_NOTIFICATION_ID = "CREATE INDEX notification_android_notification_id_idx ON notification(android_notification_id); ";
       public static final String INDEX_CREATE_GROUP_ID = "CREATE INDEX notification_group_id_idx ON notification(group_id); ";
       public static final String INDEX_CREATE_COLLAPSE_ID = "CREATE INDEX notification_collapse_id_idx ON notification(collapse_id); ";
       public static final String INDEX_CREATE_CREATED_TIME = "CREATE INDEX notification_created_time_idx ON notification(created_time); ";
+      public static final String INDEX_CREATE_EXPIRE_TIME = "CREATE INDEX notification_expire_time_idx ON notification(expire_time); ";
 
       static StringBuilder recentUninteractedWithNotificationsWhere() {
-         long createdAtCutoff = (System.currentTimeMillis() / 1_000L) - 604_800L; // 1 Week back
+         long currentTimeSec = System.currentTimeMillis() / 1_000L;
+         long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back
          return new StringBuilder(
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + createdAtCutoff + " AND " +
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0 "
+            NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + createdAtCutoff + " AND " +
+            NotificationTable.COLUMN_NAME_DISMISSED    + " = 0 AND " +
+            NotificationTable.COLUMN_NAME_OPENED       + " = 0 AND " +
+            NotificationTable.COLUMN_NAME_IS_SUMMARY   + " = 0 AND " +
+            NotificationTable.COLUMN_NAME_EXPIRE_TIME  + " > " + currentTimeSec
          );
       }
    }

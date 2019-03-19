@@ -199,4 +199,6 @@ public class OneSignalPackagePrivateHelper {
          com.onesignal.NotificationLimitManager.clearOldestOverLimitStandard(context, notifsToMakeRoomFor);
       }
    }
+
+   public class OneSignalDbContract extends com.onesignal.OneSignalDbContract {}
 }
