@@ -40,7 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OneSignalDbHelper extends SQLiteOpenHelper {
-   private static final int DATABASE_VERSION = 2;
+   static final int DATABASE_VERSION = 3;
    private static final String DATABASE_NAME = "OneSignal.db";
 
    private static final String TEXT_TYPE = " TEXT";
@@ -63,19 +63,27 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
            NotificationTable.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
            NotificationTable.COLUMN_NAME_MESSAGE + TEXT_TYPE + COMMA_SEP +
            NotificationTable.COLUMN_NAME_FULL_DATA + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_CREATED_TIME + " TIMESTAMP DEFAULT (strftime('%s', 'now'))" +
-           ");";
+           NotificationTable.COLUMN_NAME_CREATED_TIME + " TIMESTAMP DEFAULT (strftime('%s', 'now'))" + COMMA_SEP +
+           NotificationTable.COLUMN_NAME_EXPIRE_TIME + " TIMESTAMP" +
+       ");";
 
-   private static final String[] SQL_INDEX_ENTRIES = { NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
-           NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,
-           NotificationTable.INDEX_CREATE_GROUP_ID,
-           NotificationTable.INDEX_CREATE_COLLAPSE_ID,
-           NotificationTable.INDEX_CREATE_CREATED_TIME };
+   private static final String[] SQL_INDEX_ENTRIES = {
+      NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
+      NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,
+      NotificationTable.INDEX_CREATE_GROUP_ID,
+      NotificationTable.INDEX_CREATE_COLLAPSE_ID,
+      NotificationTable.INDEX_CREATE_CREATED_TIME,
+      NotificationTable.INDEX_CREATE_EXPIRE_TIME
+   };
 
    private static OneSignalDbHelper sInstance;
 
-   private OneSignalDbHelper(Context context) {
-      super(context, DATABASE_NAME, null, DATABASE_VERSION);
+   private static int getDbVersion() {
+      return DATABASE_VERSION;
+   }
+
+   OneSignalDbHelper(Context context) {
+      super(context, DATABASE_NAME, null, getDbVersion());
    }
 
    public static synchronized OneSignalDbHelper getInstance(Context context) {
@@ -132,11 +140,45 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    }
    
    private static void internalOnUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-      // Upgrading from v1
-      if (oldVersion < 2) {
-         db.execSQL("ALTER TABLE " + NotificationTable.TABLE_NAME + " " +
-             "ADD COLUMN " + NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + ";");
-         db.execSQL(NotificationTable.INDEX_CREATE_GROUP_ID);
+      if (oldVersion < 2)
+         upgradeFromV1ToV2(db);
+
+      if (oldVersion < 3)
+         upgradeFromV2ToV3(db);
+   }
+
+   // Add collapse_id field and index
+   private static void upgradeFromV1ToV2(SQLiteDatabase db) {
+      safeExecSQL(db,
+         "ALTER TABLE " + NotificationTable.TABLE_NAME + " " +
+            "ADD COLUMN " + NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + ";"
+      );
+      safeExecSQL(db, NotificationTable.INDEX_CREATE_GROUP_ID);
+   }
+
+   // Add expire_time field and index.
+   // Also backfills expire_time to create_time + 72 hours
+   private static void upgradeFromV2ToV3(SQLiteDatabase db) {
+      safeExecSQL(db,
+         "ALTER TABLE " + NotificationTable.TABLE_NAME + " " +
+            "ADD COLUMN " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " TIMESTAMP" + ";"
+      );
+
+      long setExpireTime = 259_200; // = 72 hours
+      safeExecSQL(db,
+         "UPDATE " + NotificationTable.TABLE_NAME + " " +
+            "SET " + NotificationTable.COLUMN_NAME_EXPIRE_TIME +  " = "
+                     + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + setExpireTime + ";"
+      );
+
+      safeExecSQL(db, NotificationTable.INDEX_CREATE_EXPIRE_TIME);
+   }
+
+   private static void safeExecSQL(SQLiteDatabase db, String sql) {
+      try {
+         db.execSQL(sql);
+      } catch (SQLiteException e) {
+         e.printStackTrace();
       }
    }
    

@@ -10,6 +10,7 @@ import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
@@ -46,6 +47,7 @@ class TestHelpers {
       ShadowFirebaseAnalytics.resetStatics();
 
       ShadowGoogleApiClientCompatProxy.restSetStaticFields();
+      ShadowOneSignalDbHelper.restSetStaticFields();
 
       lastException = null;
 
