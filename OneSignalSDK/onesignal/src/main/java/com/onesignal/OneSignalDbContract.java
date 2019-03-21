@@ -55,17 +55,5 @@ class OneSignalDbContract {
       public static final String INDEX_CREATE_COLLAPSE_ID = "CREATE INDEX notification_collapse_id_idx ON notification(collapse_id); ";
       public static final String INDEX_CREATE_CREATED_TIME = "CREATE INDEX notification_created_time_idx ON notification(created_time); ";
       public static final String INDEX_CREATE_EXPIRE_TIME = "CREATE INDEX notification_expire_time_idx ON notification(expire_time); ";
-
-      static StringBuilder recentUninteractedWithNotificationsWhere() {
-         long currentTimeSec = System.currentTimeMillis() / 1_000L;
-         long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back
-         return new StringBuilder(
-            NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + createdAtCutoff + " AND " +
-            NotificationTable.COLUMN_NAME_DISMISSED    + " = 0 AND " +
-            NotificationTable.COLUMN_NAME_OPENED       + " = 0 AND " +
-            NotificationTable.COLUMN_NAME_IS_SUMMARY   + " = 0 AND " +
-            NotificationTable.COLUMN_NAME_EXPIRE_TIME  + " > " + currentTimeSec
-         );
-      }
    }
 }

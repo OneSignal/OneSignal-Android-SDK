@@ -40,6 +40,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -176,8 +177,10 @@ class NotificationBundleProcessor {
             if (notifiJob.getBody() != null)
                values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
 
-            int ttl = jsonPayload.optInt("google.ttl", 259_200);
-            long expireTime = (System.currentTimeMillis() / 1_000L) + ttl;
+            // Set expire_time
+            long sentTime = jsonPayload.optLong("google.sent_time", SystemClock.currentThreadTimeMillis()) / 1_000L;
+            int ttl = jsonPayload.optInt("google.ttl", NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+            long expireTime = sentTime + ttl;
             values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
 
             values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());

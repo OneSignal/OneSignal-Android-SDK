@@ -90,7 +90,7 @@ class NotificationLimitManager {
          cursor = readableDb.query(
             NotificationTable.TABLE_NAME,
             new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID },
-            NotificationTable.recentUninteractedWithNotificationsWhere().toString(),
+            OneSignalDbHelper.recentUninteractedWithNotificationsWhere().toString(),
             null,
             null,
             null,

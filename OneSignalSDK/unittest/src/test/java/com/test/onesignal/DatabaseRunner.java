@@ -1,7 +1,6 @@
 package com.test.onesignal;
 
 import android.content.ContentValues;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.onesignal.BuildConfig;
@@ -21,6 +20,9 @@ import org.robolectric.shadows.ShadowLog;
 
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 
+import java.util.HashMap;
+
+import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
 import static junit.framework.Assert.assertEquals;
 
 @Config(
@@ -66,29 +68,11 @@ public class DatabaseRunner {
       ShadowOneSignalDbHelper.restSetStaticFields();
       ShadowOneSignalDbHelper.igngoreDuplicatedFieldsOnUpgrade = true;
 
-
       // 3. Opening the DB will auto trigger the update.
-      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      HashMap<String, Object> notif = getAllNotificationRecords().get(0);
 
-      // 4. Check to make sure the new expire_time value is the created_at time + 72 hours as a default
-      String[] selectColumns = {
-         NotificationTable.COLUMN_NAME_CREATED_TIME,
-         NotificationTable.COLUMN_NAME_EXPIRE_TIME
-      };
-      Cursor cursor = readableDatabase.query(
-         NotificationTable.TABLE_NAME,
-         selectColumns,
-         null,
-         null,
-         null, // group by
-         null, // filter by row groups
-         null, // sort order, new to old
-         null // limit
-      );
-      cursor.moveToFirst();
-
-      long createdTime = Long.parseLong(cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME)));
-      long expireTime = Long.parseLong(cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_EXPIRE_TIME)));
+      long createdTime = (Long)notif.get(NotificationTable.COLUMN_NAME_CREATED_TIME);
+      long expireTime = (Long)notif.get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
       assertEquals(createdTime + (72L * (60 * 60)), expireTime);
    }
 }

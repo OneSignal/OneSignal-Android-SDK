@@ -84,6 +84,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
    OneSignalDbHelper(Context context) {
       super(context, DATABASE_NAME, null, getDbVersion());
+
    }
 
    public static synchronized OneSignalDbHelper getInstance(Context context) {
@@ -131,7 +132,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    @Override
    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
       try {
-         internalOnUpgrade(db, oldVersion, newVersion);
+         internalOnUpgrade(db, oldVersion);
       } catch (SQLiteException e) {
          // This could throw if rolling back then forward again.
          //   However this shouldn't happen as we clearing the database on onDowngrade
@@ -139,7 +140,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       }
    }
    
-   private static void internalOnUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+   private static void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
       if (oldVersion < 2)
          upgradeFromV1ToV2(db);
 
@@ -164,11 +165,10 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
             "ADD COLUMN " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " TIMESTAMP" + ";"
       );
 
-      long setExpireTime = 259_200; // = 72 hours
       safeExecSQL(db,
          "UPDATE " + NotificationTable.TABLE_NAME + " " +
             "SET " + NotificationTable.COLUMN_NAME_EXPIRE_TIME +  " = "
-                     + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + setExpireTime + ";"
+                     + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD + ";"
       );
 
       safeExecSQL(db, NotificationTable.INDEX_CREATE_EXPIRE_TIME);
@@ -213,4 +213,22 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       db.enableWriteAheadLogging();
    }
    */
+
+   static StringBuilder recentUninteractedWithNotificationsWhere() {
+      long currentTimeSec = System.currentTimeMillis() / 1_000L;
+      long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back
+
+      StringBuilder where = new StringBuilder(
+         NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + createdAtCutoff + " AND " +
+         NotificationTable.COLUMN_NAME_DISMISSED    + " = 0 AND " +
+         NotificationTable.COLUMN_NAME_OPENED       + " = 0 AND " +
+         NotificationTable.COLUMN_NAME_IS_SUMMARY   + " = 0"
+      );
+
+      boolean useTtl = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,true);
+      if (useTtl)
+         where.append(" AND " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec);
+
+      return where;
+   }
 }

@@ -103,7 +103,7 @@ class BadgeCountUpdater {
       Cursor cursor = readableDb.query(
          NotificationTable.TABLE_NAME,
          null,
-         NotificationTable.recentUninteractedWithNotificationsWhere().toString(),
+         OneSignalDbHelper.recentUninteractedWithNotificationsWhere().toString(),
          null,                                                    // Where args
          null,                                                    // group by
          null,                                                    // filter by row groups
