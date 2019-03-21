@@ -867,14 +867,22 @@ public class OneSignal {
                }
                
                mEnterp = responseJson.optBoolean("enterp", false);
-
                useEmailAuth = responseJson.optBoolean("use_email_auth", false);
-               
                awl = responseJson.getJSONObject("awl_list");
    
                boolean firebaseAnalytics = responseJson.optBoolean("fba", false);
-               OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
-                   OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED, firebaseAnalytics);
+               OneSignalPrefs.saveBool(
+                  OneSignalPrefs.PREFS_ONESIGNAL,
+                  OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED,
+                  firebaseAnalytics
+               );
+
+               boolean restoreTTLFilter = responseJson.optBoolean("restore_ttl_filter", true);
+               OneSignalPrefs.saveBool(
+                  OneSignalPrefs.PREFS_ONESIGNAL,
+                  OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,
+                  restoreTTLFilter
+               );
    
                NotificationChannelManager.processChannelList(appContext, responseJson);
             } catch (Throwable t) {

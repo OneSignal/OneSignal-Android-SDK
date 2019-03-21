@@ -42,6 +42,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Button;
@@ -72,6 +73,8 @@ import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 
+import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+
 import org.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -91,6 +94,7 @@ import org.robolectric.android.controller.ServiceController;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -100,6 +104,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 
+import static com.test.onesignal.TestHelpers.advanceTimeByMs;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 import static junit.framework.Assert.assertEquals;
@@ -591,6 +596,49 @@ public class GenerateNotificationRunner {
       assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
    }
 
+   private void assertRestoreRan() {
+      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
+      assertEquals(RestoreJobService.class.getName(), intent.getComponent().getClassName());
+   }
+   private void assertRestoreDidNotRun() {
+      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+   }
+
+   private void restoreNotifications() {
+      NotificationRestorer.restored = false;
+      NotificationRestorer.restore(blankActivity);
+   }
+
+   private void helperShouldRestoreNotificationsPastExpireTime(boolean should) {
+      long ttl = 60L;
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putLong("google.sent_time", System.currentTimeMillis());
+      bundle.putLong("google.ttl", ttl);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+
+      restoreNotifications();
+      assertRestoreRan();
+
+      // Go forward just past the TTL of the notification
+      advanceTimeByMs((ttl + 1) * 1_000L);
+      restoreNotifications();
+      if (should)
+         assertRestoreRan();
+      else
+         assertRestoreDidNotRun();
+   }
+
+   @Test
+   public void doNotRestoreNotificationsPastExpireTime() throws Exception {
+      helperShouldRestoreNotificationsPastExpireTime(false);
+   }
+
+   @Test
+   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() throws Exception {
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
+      helperShouldRestoreNotificationsPastExpireTime(true);
+   }
+
    @Test
    public void badgeCountShouldNotIncludeOldNotifications() {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
@@ -840,6 +888,30 @@ public class GenerateNotificationRunner {
       
       assertEquals(Activity.RESULT_OK, (int)ShadowGcmBroadcastReceiver.lastResultCode);
       assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
+   }
+
+
+   @Test
+   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() {
+      long sentTime = 1_553_035_338_000L;
+      long ttl = 60L;
+
+      Bundle bundle = getBaseNotifBundle();
+      bundle.putLong("google.sent_time", sentTime);
+      bundle.putLong("google.ttl", ttl);
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+
+      HashMap<String, Object> notification = TestHelpers.getAllNotificationRecords().get(0);
+      long expireTime = (Long)notification.get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
+      assertEquals(sentTime + (ttl * 1_000), expireTime * 1_000);
+   }
+
+   @Test
+   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() {
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+
+      long expireTime = (Long)TestHelpers.getAllNotificationRecords().get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
+      assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);
    }
    
    @Test

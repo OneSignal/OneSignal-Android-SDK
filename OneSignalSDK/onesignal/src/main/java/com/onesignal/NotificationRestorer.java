@@ -59,15 +59,25 @@ import java.util.ArrayList;
 //   3. Device is rebooted.
 // Restoring is done to ensure notifications are not missed by the user.
 //
-// Restoring cutoff:
-// Notifications received older than 7 days are not restored.
+// Restoring cutoffs:
+//   1. Notifications received more than 7 days ago are NOT restored.
+//   2. Notifications past their TTL are NOT restored. (default on, server side param)
 //
 // Notes:
-// Android 8+ Oreo - Restored notifications will be generated under a "Restored" channel.
-//                   The channel has a low priority so the user is not interrupted again.
-// Android 6+ Marshmallow - We check the notification shade if the notification is already there
-//                            we skip generating it again.
-// Up to the most recent 50 notifications will be restored.
+//   - Android 8+ Oreo - Restored notifications will be generated under a "Restored" channel.
+//                        The channel has a low priority so the user is not interrupted again.
+//   - Android 6+ Marshmallow - We check the notification shade if the notification is already there
+//                              and skip generating it again.
+//   - Up to the most recent 50 notifications will be restored.
+
+// TTL Cutoff Notes:
+//   - Filtering restores when paste TTL cutoff time creates an inconsistency
+//        in visible lifetime of a notification as the visibility of notification is affected
+//        by the state of the app.
+//   - FUTURE: To fix this inconsistency a job could be scheduled to dismiss
+//                the notification when the ttl is hit.
+//      - Might want to introduce a display TTL in the notif payload, since TTL might
+//         be to short as a visibility lifetime.
 
 class NotificationRestorer {
 
@@ -83,6 +93,8 @@ class NotificationRestorer {
    //    This prevents the following error;
    // E/NotificationService: Package enqueue rate is 10.56985. Shedding events. package=####
    private static final int DELAY_BETWEEN_NOTIFICATION_RESTORES_MS = 200;
+
+   static final int DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200;
 
    // Notifications will never be force removed when the app's process is running,
    //   so we only need to restore at most once per cold start of the app.
@@ -112,7 +124,7 @@ class NotificationRestorer {
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       deleteOldNotificationsFromDb(dbHelper);
 
-      StringBuilder dbQuerySelection = NotificationTable.recentUninteractedWithNotificationsWhere();
+      StringBuilder dbQuerySelection = OneSignalDbHelper.recentUninteractedWithNotificationsWhere();
       skipVisibleNotifications(context, dbQuerySelection);
 
       queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection);
