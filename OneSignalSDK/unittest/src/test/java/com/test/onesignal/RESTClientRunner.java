@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2018 OneSignal
+ * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,8 +28,9 @@
 package com.test.onesignal;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.MockHttpURLConnection;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.ShadowOneSignalRestClientForTimeouts;
+import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -38,15 +39,14 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowSystemClock;
 
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
     constants = BuildConfig.class,
     instrumentedPackages = {"com.onesignal"},
-    shadows = { ShadowOneSignalRestClientForTimeouts.class },
-    sdk = 21)
+    shadows = { ShadowOneSignalRestClientWithMockConnection.class },
+    sdk = 26)
 @RunWith(RobolectricTestRunner.class)
 public class RESTClientRunner {
    
@@ -58,15 +58,17 @@ public class RESTClientRunner {
    
    @Before // Before each test
    public void beforeEachTest() throws Exception {
-      ShadowOneSignalRestClientForTimeouts.threadInterrupted = false;
    }
    
    @Test
    public void testRESTClientFallbackTimeout() throws Exception {
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         mockThreadHang = true;
+      }};
+
       OneSignalPackagePrivateHelper.OneSignalRestClientPublic_getSync("URL", null);
-      ShadowSystemClock.setCurrentTimeMillis(120000);
       TestHelpers.threadAndTaskWait();
-      assertTrue(ShadowOneSignalRestClientForTimeouts.threadInterrupted);
+
+      assertTrue(ShadowOneSignalRestClientWithMockConnection.lastConnection.getDidInterruptMockHang());
    }
-   
 }

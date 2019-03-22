@@ -15,6 +15,7 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 
@@ -54,6 +55,7 @@ class TestHelpers {
 
       ShadowGoogleApiClientCompatProxy.restSetStaticFields();
       ShadowOneSignalDbHelper.restSetStaticFields();
+      ShadowOneSignalRestClientWithMockConnection.resetStatics();
 
       lastException = null;
 

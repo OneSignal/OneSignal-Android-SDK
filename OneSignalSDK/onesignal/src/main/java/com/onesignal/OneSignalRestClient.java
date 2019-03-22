@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -117,15 +118,16 @@ class OneSignalRestClient {
       HttpURLConnection con = null;
       int httpResponse = -1;
       String json = null;
-      Thread callbackThread = null;
+      Thread callbackThread;
    
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
-         con = (HttpURLConnection)new URL(BASE_URL + url).openConnection();
+         con = newHttpURLConnection(url);
          
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
+         con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.VERSION);
          
          if (jsonBody != null)
             con.setDoInput(true);
@@ -225,5 +227,9 @@ class OneSignalRestClient {
       thread.start();
       
       return thread;
+   }
+
+   private static HttpURLConnection newHttpURLConnection(String url) throws IOException {
+      return (HttpURLConnection)new URL(BASE_URL + url).openConnection();
    }
 }
