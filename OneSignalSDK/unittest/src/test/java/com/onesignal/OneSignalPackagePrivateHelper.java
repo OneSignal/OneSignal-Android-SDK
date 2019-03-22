@@ -146,6 +146,8 @@ public class OneSignalPackagePrivateHelper {
 
    public static class PushRegistratorGCM extends com.onesignal.PushRegistratorGCM {}
 
+   public class OneSignalRestClient extends com.onesignal.OneSignalRestClient {}
+
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = payload;
@@ -155,11 +157,6 @@ public class OneSignalPackagePrivateHelper {
    public static void NotificationChannelManager_processChannelList(Context context, JSONObject jsonObject) {
       NotificationChannelManager.processChannelList(context, jsonObject);
    }
-   
-   public static void OneSignalRestClientPublic_getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
-      OneSignalRestClient.getSync(url, responseHandler);
-   }
-   
    
    public static void NotificationOpenedProcessor_processFromContext(Context context, Intent intent) {
       NotificationOpenedProcessor.processFromContext(context, intent);

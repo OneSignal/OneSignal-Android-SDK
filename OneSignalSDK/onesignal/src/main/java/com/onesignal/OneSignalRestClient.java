@@ -50,7 +50,7 @@ class OneSignalRestClient {
       return timeout + 5000;
    }
 
-   static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
+   public static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
 
       new Thread(new Runnable() {
          public void run() {
@@ -59,7 +59,7 @@ class OneSignalRestClient {
       }).start();
    }
 
-   static void post(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
+   public static void post(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
       new Thread(new Runnable() {
          public void run() {
             makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT);
@@ -67,7 +67,7 @@ class OneSignalRestClient {
       }).start();
    }
 
-   static void get(final String url, final ResponseHandler responseHandler) {
+   public static void get(final String url, final ResponseHandler responseHandler) {
       new Thread(new Runnable() {
          public void run() {
             makeRequest(url, null, null, responseHandler, GET_TIMEOUT);
@@ -75,15 +75,15 @@ class OneSignalRestClient {
       }).start();
    }
 
-   static void getSync(final String url, final ResponseHandler responseHandler) {
+   public static void getSync(final String url, final ResponseHandler responseHandler) {
       makeRequest(url, null, null, responseHandler, GET_TIMEOUT);
    }
 
-   static void putSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
+   public static void putSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
       makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT);
    }
 
-   static void postSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
+   public static void postSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
       makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT);
    }
    

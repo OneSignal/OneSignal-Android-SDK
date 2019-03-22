@@ -79,7 +79,6 @@ public class MockHttpURLConnection extends HttpURLConnection {
             throw new IOException("Successfully interrupted stuck thread!");
          }
       }
-      System.out.println("getResponseCode");
 
       return mockResponse.status;
    }
