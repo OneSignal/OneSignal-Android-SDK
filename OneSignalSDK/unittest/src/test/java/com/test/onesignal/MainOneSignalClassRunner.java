@@ -3453,9 +3453,19 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit();
       threadAndTaskWait();
-      DebugGetTagsHandler first = new DebugGetTagsHandler();
-      OneSignal.getTags(first);
+
+      OneSignal.sendTag("test", "value");
       threadAndTaskWait();
+
+      DebugGetTagsHandler first = new DebugGetTagsHandler();
+      DebugGetTagsHandler second = new DebugGetTagsHandler();
+
+      OneSignal.getTags(first);
+      OneSignal.getTags(second);
+      threadAndTaskWait();
+
+      assertTrue(first.executed);
+      assertTrue(second.executed);
    }
 
    // ####### Unit test helper methods ########
