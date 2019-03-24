@@ -167,7 +167,7 @@ public class NotificationChannelManagerRunner {
       createChannel("local_existing_id");
       createChannel("OS_existing_id");
    
-      NotificationChannelManager_processChannelList(blankActivity, new JSONObject());
+      NotificationChannelManager_processChannelList(blankActivity, null);
       
       assertNotNull(getChannel("local_existing_id"));
       assertNotNull(getChannel("OS_existing_id"));
@@ -185,10 +185,8 @@ public class NotificationChannelManagerRunner {
       channelItem.put("chnl", channelItemChnl);
    
       channelList.put(channelItem);
-      JSONObject payload = new JSONObject();
-      payload.put("chnl_lst", channelList);
       
-      NotificationChannelManager_processChannelList(blankActivity, payload);
+      NotificationChannelManager_processChannelList(blankActivity, channelList);
       
       assertNotNull(getChannel("local_existing_id"));
       assertNotNull(getChannel("OS_id1"));
@@ -196,7 +194,7 @@ public class NotificationChannelManagerRunner {
    
    @Test
    public void processPayloadDeletingOldChannel() throws Exception {
-      NotificationChannelManager_processChannelList(blankActivity, createBasicChannelListPayload());
+      NotificationChannelManager_processChannelList(blankActivity, createBasicChannelListPayload().optJSONArray("chnl_lst"));
       assertChannelsForBasicChannelList();
    }
    
@@ -221,7 +219,7 @@ public class NotificationChannelManagerRunner {
       
       channelProperties.put("grp_id", "grp_id1");
    
-      NotificationChannelManager_processChannelList(blankActivity, payload);
+      NotificationChannelManager_processChannelList(blankActivity, payload.optJSONArray("chnl_lst"));
       
       NotificationChannel channel = getChannel("OS_id1");
       assertEquals("en_nm", channel.getName());

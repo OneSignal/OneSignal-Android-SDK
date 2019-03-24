@@ -240,7 +240,7 @@ public class ShadowOneSignalRestClient {
       responseHandler.onSuccess("{}");
    }
 
-   public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) {
       trackRequest(REST_METHOD.GET, null, url);
    
       if (nextSuccessResponse != null) {
@@ -267,7 +267,7 @@ public class ShadowOneSignalRestClient {
       }
    }
 
-   public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) {
       trackRequest(REST_METHOD.GET, null, url);
 
       if (doFail(responseHandler)) return;

@@ -48,7 +48,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
                         e.printStackTrace();
                     }
                 }
-            });
+            }, OneSignalRestClient.CACHE_KEY_GET_TAGS);
         }
 
         synchronized(syncLock) {

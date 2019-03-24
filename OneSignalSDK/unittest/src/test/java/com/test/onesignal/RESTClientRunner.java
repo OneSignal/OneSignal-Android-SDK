@@ -44,6 +44,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
@@ -63,6 +64,7 @@ public class RESTClientRunner {
 
    @Before // Before each test
    public void beforeEachTest() {
+      firstResponse = secondResponse = null;
       TestHelpers.beforeTestInitAndCleanup();
    }
 
@@ -77,7 +79,7 @@ public class RESTClientRunner {
          mockThreadHang = true;
       }};
 
-      OneSignalRestClient.getSync("URL", null);
+      OneSignalRestClient.getSync("URL", null,"");
       TestHelpers.threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClientWithMockConnection.lastConnection.getDidInterruptMockHang());
@@ -87,7 +89,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInGetCalls() throws Exception {
-      OneSignalRestClient.getSync("URL", null);
+      OneSignalRestClient.getSync("URL", null, null);
       TestHelpers.threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
@@ -107,6 +109,46 @@ public class RESTClientRunner {
       TestHelpers.threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
+   }
+
+   private final static String MOCK_CACHE_KEY = "MOCK_CACHE_KEY";
+   private final static String MOCK_ETAG_VALUE = "MOCK_ETAG_VALUE";
+
+   private String firstResponse, secondResponse;
+   @Test
+   public void testReusesCache() throws Exception {
+      // 1. Do first request to save response
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         status = 200;
+         responseBody = "{\"key1\": \"value1\"}";
+         mockProps.put("etag", MOCK_ETAG_VALUE);
+      }};
+      OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
+         @Override
+         public void onSuccess(String response) {
+            System.out.println("testReusesCache:::onSuccess");
+            firstResponse = response;
+         }
+      }, MOCK_CACHE_KEY);
+      TestHelpers.threadAndTaskWait();
+
+      // 2. Make 2nd request and make sure we send the ETag and use the cached response
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         status = 304;
+         // This won't be the real response body for a 304 but making sure we get the cached response back.
+         responseBody = "{}";
+      }};
+      OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
+         @Override
+         public void onSuccess(String response) {
+            secondResponse = response;
+         }
+      }, MOCK_CACHE_KEY);
+      TestHelpers.threadAndTaskWait();
+
+      assertNotNull(firstResponse);
+      assertEquals(firstResponse, secondResponse);
+      assertEquals(MOCK_ETAG_VALUE, getLastHTTPHeaderProp("if-none-match"));
    }
 
    private static String getLastHTTPHeaderProp(String prop) {

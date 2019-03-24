@@ -45,8 +45,8 @@ class OneSignalChromeTab {
    static void setup(Context context, String appId, String userId, String adId) {
       if (opened)
          return;
-      
-      if (OneSignal.mEnterp)
+
+      if (OneSignal.remoteParams.enterprise)
          return;
       
       if (userId == null)
