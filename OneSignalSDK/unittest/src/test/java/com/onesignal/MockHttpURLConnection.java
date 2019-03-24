@@ -33,6 +33,8 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MockHttpURLConnection extends HttpURLConnection {
    private boolean didInterruptMockHang;
@@ -45,6 +47,7 @@ public class MockHttpURLConnection extends HttpURLConnection {
       public String responseBody;
       public boolean mockThreadHang;
       public int status;
+      public Map<String, String> mockProps = new HashMap<>();
    }
 
    private MockResponse mockResponse;
@@ -67,6 +70,11 @@ public class MockHttpURLConnection extends HttpURLConnection {
    @Override
    public void connect() throws IOException {
 
+   }
+
+   @Override
+   public String getHeaderField(String name) {
+      return mockResponse.mockProps.get(name);
    }
 
    @Override

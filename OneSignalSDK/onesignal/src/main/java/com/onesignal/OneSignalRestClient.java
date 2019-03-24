@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * 
- * Copyright 2017 OneSignal
+ * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,9 @@
 
 package com.onesignal;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -37,24 +40,27 @@ import java.util.Scanner;
 import org.json.JSONObject;
 
 class OneSignalRestClient {
-   static class ResponseHandler {
+   static abstract class ResponseHandler {
       void onSuccess(String response) {}
       void onFailure(int statusCode, String response, Throwable throwable) {}
    }
 
+   static final String CACHE_KEY_GET_TAGS = "CACHE_KEY_GET_TAGS";
+   static final String CACHE_KEY_REMOTE_PARAMS = "CACHE_KEY_REMOTE_PARAMS";
+
    private static final String BASE_URL = "https://onesignal.com/api/v1/";
-   private static final int TIMEOUT = 120000;
-   private static final int GET_TIMEOUT = 60000;
+   private static final int TIMEOUT = 120_000;
+   private static final int GET_TIMEOUT = 60_000;
    
    private static int getThreadTimeout(int timeout) {
-      return timeout + 5000;
+      return timeout + 5_000;
    }
 
    public static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
 
       new Thread(new Runnable() {
          public void run() {
-            makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT);
+            makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT, null);
          }
       }).start();
    }
@@ -62,41 +68,40 @@ class OneSignalRestClient {
    public static void post(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
       new Thread(new Runnable() {
          public void run() {
-            makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT);
+            makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT, null);
          }
       }).start();
    }
 
-   public static void get(final String url, final ResponseHandler responseHandler) {
+   public static void get(final String url, final ResponseHandler responseHandler, @NonNull final String cacheKey) {
       new Thread(new Runnable() {
          public void run() {
-            makeRequest(url, null, null, responseHandler, GET_TIMEOUT);
+            makeRequest(url, null, null, responseHandler, GET_TIMEOUT, cacheKey);
          }
       }).start();
    }
 
-   public static void getSync(final String url, final ResponseHandler responseHandler) {
-      makeRequest(url, null, null, responseHandler, GET_TIMEOUT);
+   public static void getSync(final String url, final ResponseHandler responseHandler, @NonNull String cacheKey) {
+      makeRequest(url, null, null, responseHandler, GET_TIMEOUT, cacheKey);
    }
 
    public static void putSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
-      makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT);
+      makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT, null);
    }
 
    public static void postSync(String url, JSONObject jsonBody, ResponseHandler responseHandler) {
-      makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT);
+      makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT, null);
    }
    
-   private static void makeRequest(final String url, final String method, final JSONObject jsonBody, final ResponseHandler responseHandler, final int timeout) {
-
-      //if not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
+   private static void makeRequest(final String url, final String method, final JSONObject jsonBody, final ResponseHandler responseHandler, final int timeout, final String cacheKey) {
+      // If not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
       if (method != null && OneSignal.shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
          return;
    
       final Thread[] callbackThread = new Thread[1];
       Thread connectionThread = new Thread(new Runnable() {
          public void run() {
-            callbackThread[0] = startHTTPConnection(url, method, jsonBody, responseHandler, timeout);
+            callbackThread[0] = startHTTPConnection(url, method, jsonBody, responseHandler, timeout, cacheKey);
          }
       }, "OS_HTTPConnection");
       
@@ -114,10 +119,9 @@ class OneSignalRestClient {
       }
    }
    
-   private static Thread startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout) {
-      HttpURLConnection con = null;
+   private static Thread startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout, @Nullable String cacheKey) {
       int httpResponse = -1;
-      String json = null;
+      HttpURLConnection con = null;
       Thread callbackThread;
    
       try {
@@ -148,39 +152,77 @@ class OneSignalRestClient {
             OutputStream outputStream = con.getOutputStream();
             outputStream.write(sendBytes);
          }
-      
+
+         if (cacheKey != null) {
+            String eTag = OneSignalPrefs.getString(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_ETAG_PREFIX + cacheKey,
+               null
+            );
+            if (eTag != null) {
+               con.setRequestProperty("if-none-match", eTag);
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Adding header if-none-match: " + eTag);
+            }
+         }
+
+         // Network request is made from getResponseCode()
          httpResponse = con.getResponseCode();
-         OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OneSignalRestClient: After con.getResponseCode  to: " + BASE_URL + url);
-      
-         InputStream inputStream;
-         Scanner scanner;
-         if (httpResponse == HttpURLConnection.HTTP_OK) {
+
+         OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OneSignalRestClient: After con.getResponseCode to: " + BASE_URL + url);
+
+         if (httpResponse == HttpURLConnection.HTTP_NOT_MODIFIED) {
+            String cachedResponse = OneSignalPrefs.getString(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+               null
+            );
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " - Using Cached response due to 304: " + cachedResponse);
+            callbackThread = callResponseHandlerOnSuccess(responseHandler, cachedResponse);
+         }
+         else if (httpResponse == HttpURLConnection.HTTP_OK) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Successfully finished request to: " + BASE_URL + url);
-         
-            inputStream = con.getInputStream();
-            scanner = new Scanner(inputStream, "UTF-8");
-            json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+
+            InputStream inputStream = con.getInputStream();
+            Scanner scanner = new Scanner(inputStream, "UTF-8");
+            String json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
             scanner.close();
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, method + " RECEIVED JSON: " + json);
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " RECEIVED JSON: " + json);
+
+            if (cacheKey != null) {
+               String eTag = con.getHeaderField("etag");
+               if (eTag != null) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Response has etag of " + eTag + " so caching the response.");
+                  OneSignalPrefs.saveString(
+                     OneSignalPrefs.PREFS_ONESIGNAL,
+                     OneSignalPrefs.PREFS_OS_ETAG_PREFIX + cacheKey,
+                     eTag
+                  );
+                  OneSignalPrefs.saveString(
+                     OneSignalPrefs.PREFS_ONESIGNAL,
+                     OneSignalPrefs.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                     json
+                  );
+               }
+            }
    
             callbackThread = callResponseHandlerOnSuccess(responseHandler, json);
          }
          else {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Failed request to: " + BASE_URL + url);
-            inputStream = con.getErrorStream();
+            InputStream inputStream = con.getErrorStream();
             if (inputStream == null)
                inputStream = con.getInputStream();
          
             if (inputStream != null) {
-               scanner = new Scanner(inputStream, "UTF-8");
-               json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+               Scanner scanner = new Scanner(inputStream, "UTF-8");
+               String json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
                scanner.close();
                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " RECEIVED JSON: " + json);
             }
             else
                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " HTTP Code: " + httpResponse + " No response body!");
    
-            callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, json, null);
+            callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, null, null);
          }
       } catch (Throwable t) {
          if (t instanceof java.net.ConnectException || t instanceof java.net.UnknownHostException)
