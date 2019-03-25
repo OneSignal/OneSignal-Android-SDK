@@ -93,6 +93,6 @@ public class MockHttpURLConnection extends HttpURLConnection {
 
    @Override
    public InputStream getInputStream() throws IOException {
-      return new ByteArrayInputStream(StandardCharsets.UTF_16.encode(mockResponse.responseBody).array());
+      return new ByteArrayInputStream(StandardCharsets.UTF_8.encode(mockResponse.responseBody).array());
    }
 }
