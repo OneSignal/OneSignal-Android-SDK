@@ -127,28 +127,28 @@ class OneSignalRestClient {
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
          con = newHttpURLConnection(url);
-         
+
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
          con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.VERSION);
-         
+
          if (jsonBody != null)
             con.setDoInput(true);
-      
+
          if (method != null) {
             con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             con.setRequestMethod(method);
             con.setDoOutput(true);
          }
-      
+
          if (jsonBody != null) {
             String strJsonBody = jsonBody.toString();
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + method + " SEND JSON: " + strJsonBody);
-         
+
             byte[] sendBytes = strJsonBody.getBytes("UTF-8");
             con.setFixedLengthStreamingMode(sendBytes.length);
-         
+
             OutputStream outputStream = con.getOutputStream();
             outputStream.write(sendBytes);
          }
@@ -170,59 +170,60 @@ class OneSignalRestClient {
 
          OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OneSignalRestClient: After con.getResponseCode to: " + BASE_URL + url);
 
-         if (httpResponse == HttpURLConnection.HTTP_NOT_MODIFIED) {
-            String cachedResponse = OneSignalPrefs.getString(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
-               null
-            );
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " - Using Cached response due to 304: " + cachedResponse);
-            callbackThread = callResponseHandlerOnSuccess(responseHandler, cachedResponse);
-         }
-         else if (httpResponse == HttpURLConnection.HTTP_OK) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Successfully finished request to: " + BASE_URL + url);
+         switch (httpResponse) {
+           case HttpURLConnection.HTTP_NOT_MODIFIED: // 304
+               String cachedResponse = OneSignalPrefs.getString(
+                  OneSignalPrefs.PREFS_ONESIGNAL,
+                  OneSignalPrefs.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                  null
+               );
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " - Using Cached response due to 304: " + cachedResponse);
+               callbackThread = callResponseHandlerOnSuccess(responseHandler, cachedResponse);
+            break;
+            case HttpURLConnection.HTTP_OK: // 200
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Successfully finished request to: " + BASE_URL + url);
 
-            InputStream inputStream = con.getInputStream();
-            Scanner scanner = new Scanner(inputStream, "UTF-8");
-            String json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
-            scanner.close();
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " RECEIVED JSON: " + json);
-
-            if (cacheKey != null) {
-               String eTag = con.getHeaderField("etag");
-               if (eTag != null) {
-                  OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Response has etag of " + eTag + " so caching the response.");
-                  OneSignalPrefs.saveString(
-                     OneSignalPrefs.PREFS_ONESIGNAL,
-                     OneSignalPrefs.PREFS_OS_ETAG_PREFIX + cacheKey,
-                     eTag
-                  );
-                  OneSignalPrefs.saveString(
-                     OneSignalPrefs.PREFS_ONESIGNAL,
-                     OneSignalPrefs.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
-                     json
-                  );
-               }
-            }
-   
-            callbackThread = callResponseHandlerOnSuccess(responseHandler, json);
-         }
-         else {
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Failed request to: " + BASE_URL + url);
-            InputStream inputStream = con.getErrorStream();
-            if (inputStream == null)
-               inputStream = con.getInputStream();
-         
-            if (inputStream != null) {
+               InputStream inputStream = con.getInputStream();
                Scanner scanner = new Scanner(inputStream, "UTF-8");
                String json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
                scanner.close();
-               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " RECEIVED JSON: " + json);
-            }
-            else
-               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " HTTP Code: " + httpResponse + " No response body!");
-   
-            callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, null, null);
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " RECEIVED JSON: " + json);
+
+               if (cacheKey != null) {
+                  String eTag = con.getHeaderField("etag");
+                  if (eTag != null) {
+                     OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Response has etag of " + eTag + " so caching the response.");
+                     OneSignalPrefs.saveString(
+                        OneSignalPrefs.PREFS_ONESIGNAL,
+                        OneSignalPrefs.PREFS_OS_ETAG_PREFIX + cacheKey,
+                        eTag
+                     );
+                     OneSignalPrefs.saveString(
+                        OneSignalPrefs.PREFS_ONESIGNAL,
+                        OneSignalPrefs.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                        json
+                     );
+                  }
+               }
+
+               callbackThread = callResponseHandlerOnSuccess(responseHandler, json);
+               break;
+            default: // Request failed
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Failed request to: " + BASE_URL + url);
+               inputStream = con.getErrorStream();
+               if (inputStream == null)
+                  inputStream = con.getInputStream();
+
+               if (inputStream != null) {
+                  scanner = new Scanner(inputStream, "UTF-8");
+                  json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+                  scanner.close();
+                  OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " RECEIVED JSON: " + json);
+               }
+               else
+                  OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " HTTP Code: " + httpResponse + " No response body!");
+
+               callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, null, null);
          }
       } catch (Throwable t) {
          if (t instanceof java.net.ConnectException || t instanceof java.net.UnknownHostException)
