@@ -39,8 +39,6 @@ class NotificationLimitManager {
    // Used to cancel the oldest notifications to make room for new notifications we are about to display
    // If we don't make this room users will NOT be alerted of new notifications for the app.
    static void clearOldestOverLimit(Context context, int notifsToMakeRoomFor) {
-      System.out.println("getMaxNumberOfNotificationsInt(): " + getMaxNumberOfNotificationsInt());
-
       try {
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             clearOldestOverLimitStandard(context, notifsToMakeRoomFor);
