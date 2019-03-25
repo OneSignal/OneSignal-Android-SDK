@@ -6,6 +6,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.HttpURLConnection;
+
 class OneSignalRemoteParams {
 
    static class Params {
@@ -32,6 +34,11 @@ class OneSignalRemoteParams {
       OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
          @Override
          void onFailure(int statusCode, String response, Throwable throwable) {
+            if (statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "403 error getting OneSignal params, omitting further retries!");
+               return;
+            }
+
             new Thread(new Runnable() {
                public void run() {
                   int sleepTime = MIN_WAIT_BETWEEN_RETRIES + androidParamsReties * INCREASE_BETWEEN_RETRIES;

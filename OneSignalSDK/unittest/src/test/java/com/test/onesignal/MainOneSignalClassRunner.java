@@ -41,7 +41,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSEmailSubscriptionObserver;
@@ -1997,6 +1996,30 @@ public class MainOneSignalClassRunner {
       assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(3));
    }
 
+   @Test
+   public void ensureNoRetriesForAndroidParamsOn403() throws Exception {
+      ShadowOneSignalRestClient.failGetParams = true;
+      ShadowOneSignalRestClient.failHttpCode = 403;
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(1, ShadowOneSignalRestClient.requests.size());
+   }
+
+   @Test
+   public void ensureNoRetriesForPlayerUpdatesOn403() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.failAll = true;
+      ShadowOneSignalRestClient.failHttpCode = 403;
+      OneSignal.sendTag("key", "value");
+      threadAndTaskWait();
+
+      // 1. Android Param success. 2. player create success. 3. On call to update which fails without retrying.
+      assertEquals(3, ShadowOneSignalRestClient.requests.size());
+   }
 
    @Test
    @Config(sdk = 26)
