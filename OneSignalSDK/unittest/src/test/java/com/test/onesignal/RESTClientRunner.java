@@ -115,6 +115,7 @@ public class RESTClientRunner {
    private final static String MOCK_ETAG_VALUE = "MOCK_ETAG_VALUE";
 
    private String firstResponse, secondResponse;
+
    @Test
    public void testReusesCache() throws Exception {
       // 1. Do first request to save response
@@ -126,7 +127,6 @@ public class RESTClientRunner {
       OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
-            System.out.println("testReusesCache:::onSuccess");
             firstResponse = response;
          }
       }, MOCK_CACHE_KEY);
@@ -135,9 +135,8 @@ public class RESTClientRunner {
       // 2. Make 2nd request and make sure we send the ETag and use the cached response
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
          status = 304;
-         // This won't be the real response body for a 304 but making sure we get the cached response back.
-         responseBody = "{}";
       }};
+
       OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
@@ -149,6 +148,36 @@ public class RESTClientRunner {
       assertNotNull(firstResponse);
       assertEquals(firstResponse, secondResponse);
       assertEquals(MOCK_ETAG_VALUE, getLastHTTPHeaderProp("if-none-match"));
+   }
+
+   @Test
+   public void testReplacesCacheOn200() throws Exception {
+      testReusesCache();
+      firstResponse = secondResponse = null;
+      final String newMockResponse = "{\"key2\": \"value2\"}";
+
+      // 3. Make 3rd request and make sure we send the ETag and use the cached response
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         status = 200;
+         responseBody = newMockResponse;
+         mockProps.put("etag", "MOCK_ETAG_VALUE2");
+      }};
+      OneSignalRestClient.getSync("URL", null, MOCK_CACHE_KEY);
+      TestHelpers.threadAndTaskWait();
+
+      // 4. Make 4th request and make sure we get the new cached value
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         status = 304;
+      }};
+      OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
+         @Override
+         public void onSuccess(String response) {
+            secondResponse = response.replace("\u0000", "");
+         }
+      }, MOCK_CACHE_KEY);
+      TestHelpers.threadAndTaskWait();
+
+      assertEquals(newMockResponse, secondResponse);
    }
 
    private static String getLastHTTPHeaderProp(String prop) {
