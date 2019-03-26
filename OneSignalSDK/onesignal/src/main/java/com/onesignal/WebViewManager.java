@@ -22,14 +22,10 @@ import org.json.JSONObject;
 class WebViewManager {
    static WebView webView;
 
-   // TODO: Remove before merging
-//   private static final String TEST_PAGE_HOST = "http://10.0.1.8:3000";
-//   private static final String TEST_PAGE_HOST = "http://10.0.0.17:3000";
-   private static String TEST_PAGE_HOST = "http://192.168.2.165:3000";
-
+   private static String testPageHost;
 
    static void setHost(String host) {
-      TEST_PAGE_HOST = "http://" + host + ":3000";
+      testPageHost = "http://" + host + ":3000";
    }
 
    // Lets JS from the page send JSON payloads to this class
@@ -143,19 +139,19 @@ class WebViewManager {
    }
 
    static void showFullscreenWebView() {
-      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_full_screen_test.html");
+      webView = showWebViewForPage(testPageHost + "/iam_full_screen_test.html");
    }
 
    static void showModalWebView() {
-      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_center_modal_test.html");
+      webView = showWebViewForPage(testPageHost + "/iam_center_modal_test.html");
    }
 
    static void showBannerTopWebView() {
-      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_top_banner_test.html");
+      webView = showWebViewForPage(testPageHost + "/iam_top_banner_test.html");
    }
 
    static void showBannerBottomWebView() {
-      webView = showWebViewForPage(TEST_PAGE_HOST + "/iam_bottom_banner_test.html");
+      webView = showWebViewForPage(testPageHost + "/iam_bottom_banner_test.html");
    }
 
    private static void showActivity(int pageHeight, String displayLocation) {
