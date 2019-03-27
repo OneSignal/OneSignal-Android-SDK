@@ -210,9 +210,6 @@ public class OneSignalPackagePrivateHelper {
 
    /** In-App Messaging Helpers */
 
-   public static boolean evaluateMessage(OSInAppMessage message) {
-      return OSTriggerController.getController().evaluateMessageTriggers(message);
-
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
       public OSTestInAppMessage(JSONObject json) throws JSONException {

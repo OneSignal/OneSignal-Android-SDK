@@ -8,7 +8,6 @@ import java.util.TimerTask;
 class OSDynamicTriggerTimer {
     static void scheduleTrigger(TimerTask task, String triggerId, long delay) {
         Timer timer = new Timer("trigger_timer:" + triggerId);
-
         timer.schedule(task, delay);
     }
 }

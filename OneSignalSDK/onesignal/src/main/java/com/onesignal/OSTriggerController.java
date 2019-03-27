@@ -1,12 +1,15 @@
 package com.onesignal;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
+import static com.onesignal.OSTrigger.OSTriggerOperatorType;
 
 class OSTriggerController {
 
@@ -28,104 +31,63 @@ class OSTriggerController {
      * message should be shown and the function returns true.
     */
     boolean evaluateMessageTriggers(OSInAppMessage message) {
-
-        // only evaluate dynamic triggers after we've evaluated all others
-        ArrayList<OSTrigger> dynamicTriggers = new ArrayList<>();
-
-        // will be set to false if any non-time-based trigger evaluates to false
-        // This way we don't bother scheduling timers if the message can't be shown anyways
-        boolean continueToEvaluateDynamicTriggers = true;
-
-        // the outer loop represents OR conditions
-        for (ArrayList<OSTrigger> conditions : message.triggers) {
-
-            // the inner loop represents AND conditions
-            for (int i = 0; i < conditions.size(); i++) {
-                OSTrigger trigger = conditions.get(i);
-
-                // If it's a dynamic trigger, these are only processed if all other
-                // triggers for this message evaluate to true, so add it to the array
-                if (OSDynamicTriggerType.fromString(trigger.property) != null) {
-                    dynamicTriggers.add(trigger);
-                    continue;
-                } else if (!this.evaluateTrigger(trigger, message)) {
-                    continueToEvaluateDynamicTriggers = false;
-                    break;
-                }
-            }
-
-            if (continueToEvaluateDynamicTriggers && dynamicTriggers.size() == 0)
+        // Outer loop represents OR conditions
+        for (ArrayList<OSTrigger> andConditions : message.triggers) {
+            if (evaluateAndTriggers(andConditions))
                 return true;
-            else if (!continueToEvaluateDynamicTriggers)
-                break;
-
-            // check dynamic (time-based) triggers.
-            if (dynamicTriggers.size() > 0) {
-                for (OSTrigger trigger : dynamicTriggers) {
-
-                    /**
-                     * This method call may schedule a timer if, for example, the trigger is
-                     * 'session_duration > 30' and the user just launched the app. The timer
-                     * would be scheduled for 30 seconds from now. At that time, the triggers
-                     * for this message will be re-evaluated.
-                     */
-
-                    if (!dynamicTriggerController.dynamicTriggerShouldFire(trigger, message.messageId)) {
-                        return false;
-                    }
-                }
-            }
-
-            // if we reach this point, the full AND block evaluated to true for this message
-            return true;
         }
 
         return false;
     }
 
-    private boolean evaluateTrigger(OSTrigger trigger, OSInAppMessage message) {
-        if (triggers.get(trigger.property) == null) {
-
-            // if we don't have a local value for this trigger, it can only
-            // ever evaluate to true if using the NOT_EXISTS operator
-            if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EXISTS ||
-                    (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EQUAL_TO && trigger.value != null)) {
-                return true;
-            }
-
-            return false;
-        } else if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.EXISTS) {
-            return true;
-        } else if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.NOT_EXISTS) {
-            // the trigger value exists if we reach this point, so it's false and we should break
-            return false;
-        }
-
-        Object realValue = triggers.get(trigger.property);
-
-        // CONTAINS operates on arrays, we check every element of the array
-        // to see if it contains the trigger value.
-        if (trigger.operatorType == OSTrigger.OSTriggerOperatorType.CONTAINS) {
-            if (!(realValue instanceof ArrayList) || !((Collection)realValue).contains(trigger.value)) {
+    private boolean evaluateAndTriggers(@NonNull ArrayList<OSTrigger> andConditions) {
+        for (OSTrigger trigger : andConditions) {
+            if (!this.evaluateTrigger(trigger))
                 return false;
-            }
-            // We are only checking to see if the trigger is FALSE. If a trigger evaluates
-            // to false, we immediately break the inner AND loop to proceed to the next OR loop
-        } else if (realValue instanceof String && trigger.value instanceof String && !triggerMatchesStringValue((String)trigger.value, (String)realValue, trigger.operatorType)) {
-            return false;
-            // In Java, we cannot use instanceof since we want to be able to compare floats to ints and so on
-            // Checking Double instanceof Number appears to return false, so we must use isAssignableTo()
-        } else if (trigger.value instanceof Number && realValue instanceof Number
-                && !triggerMatchesNumericValue((Number)trigger.value, (Number)realValue, trigger.operatorType)) {
-            return false;
-        } else if (!(trigger.value instanceof Number) && trigger.value != null && trigger.value.getClass() != realValue.getClass()) {
-            return false;
         }
-
         return true;
     }
 
-    private boolean triggerMatchesStringValue(String triggerValue, String savedValue, OSTrigger.OSTriggerOperatorType operator) {
+    private boolean evaluateTrigger(OSTrigger trigger) {
+        if (OSDynamicTriggerType.fromString(trigger.property) != null)
+            return dynamicTriggerController.dynamicTriggerShouldFire(trigger);
+
+        final OSTriggerOperatorType operatorType = trigger.operatorType;
+        final Object deviceValue = triggers.get(trigger.property);
+
+        if (deviceValue == null) {
+            // If we don't have a local value for this trigger, can only be true in two cases;
+            // 1. If operator is Not Exists
+            if (operatorType == OSTriggerOperatorType.NOT_EXISTS)
+                return true;
+
+            // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
+            return operatorType == OSTriggerOperatorType.NOT_EQUAL_TO && trigger.value != null;
+        }
+
+       // We have local value at this point, we can evaluate existence checks
+       if (operatorType == OSTriggerOperatorType.EXISTS)
+          return true;
+       if (operatorType == OSTriggerOperatorType.NOT_EXISTS)
+          return false;
+
+        if (operatorType == OSTriggerOperatorType.CONTAINS)
+            return deviceValue instanceof Collection && ((Collection)deviceValue).contains(trigger.value);
+
+        if (deviceValue instanceof String &&
+           trigger.value instanceof String &&
+           triggerMatchesStringValue((String)trigger.value, (String)deviceValue, operatorType))
+            return true;
+        if (trigger.value instanceof Number &&
+            deviceValue instanceof Number &&
+            triggerMatchesNumericValue((Number)trigger.value, (Number)deviceValue, operatorType))
+            return true;
+
+        // Evaluate to false as a fallback
+        return false;
+    }
+
+    private boolean triggerMatchesStringValue(String triggerValue, String savedValue, OSTriggerOperatorType operator) {
         switch (operator) {
             case EQUAL_TO:
                 return triggerValue.equals(savedValue);
@@ -137,7 +99,7 @@ class OSTriggerController {
         }
     }
 
-    private boolean triggerMatchesNumericValue(Number triggerValue, Number savedValue, OSTrigger.OSTriggerOperatorType operator) {
+    private boolean triggerMatchesNumericValue(Number triggerValue, Number savedValue, OSTriggerOperatorType operator) {
         switch (operator) {
             case EXISTS:
             case CONTAINS:
@@ -178,9 +140,8 @@ class OSTriggerController {
 
         public static OSDynamicTriggerType fromString(String text) {
             for (OSDynamicTriggerType type : OSDynamicTriggerType.values()) {
-                if (type.text.equalsIgnoreCase(text)) {
+                if (type.text.equalsIgnoreCase(text))
                     return type;
-                }
             }
 
             return null;
@@ -192,23 +153,17 @@ class OSTriggerController {
         synchronized (triggers) {
             for (String key : newTriggers.keySet()) {
                 Object value = newTriggers.get(key);
-
                 triggers.put(key, value);
             }
 
-            /*
-                TODO: Refactor so that we don't have to re-write all trigger key/value
-                pairs to disk every single time we save a trigger
-            */
             OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, triggers);
         }
     }
 
     void removeTriggersForKeys(Collection<String> keys) {
         synchronized (triggers) {
-            for (String key : keys) {
+            for (String key : keys)
                 triggers.remove(key);
-            }
 
             OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, triggers);
         }

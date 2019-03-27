@@ -10,16 +10,15 @@ import com.onesignal.OSTriggerController.OSDynamicTriggerType;
 class OSDynamicTriggerController {
 
     interface OSDynamicTriggerControllerObserver {
-
-        //alerts the observer that a trigger timer has fired
+        // Alerts the observer that a trigger timer has fired
         void messageTriggerConditionChanged();
     }
 
-    final OSDynamicTriggerControllerObserver observer;
+    private final OSDynamicTriggerControllerObserver observer;
 
     private static final double REQUIRED_ACCURACY = 0.3;
 
-    private ArrayList<String> scheduledMessages;
+    private final ArrayList<String> scheduledMessages;
 
     static Date sessionLaunchTime = new Date();
 
@@ -28,22 +27,19 @@ class OSDynamicTriggerController {
         observer = triggerObserver;
     }
 
-    boolean dynamicTriggerShouldFire(OSTrigger trigger, String messageId) {
+    boolean dynamicTriggerShouldFire(OSTrigger trigger) {
         if (trigger.value == null)
             return false;
 
         synchronized (scheduledMessages) {
-
             // All time-based trigger values should be numbers (either timestamps or offsets)
             if (!(trigger.value instanceof Number))
                 return false;
 
-            long requiredTimeInterval = (long)(((Number)trigger.value).doubleValue() * 1000);
-
+            long requiredTimeInterval = (long)(((Number)trigger.value).doubleValue() * 1_000);
             long offset = 0;
 
             if (OSDynamicTriggerType.SESSION_DURATION.toString().equals(trigger.property)) {
-
                 long currentDuration = (new Date()).getTime() - sessionLaunchTime.getTime();
 
                 if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentDuration, trigger.operatorType))
@@ -62,7 +58,7 @@ class OSDynamicTriggerController {
             if (offset <= 0.0f)
                 return false;
 
-            // prevents us from re-scheduling timers for messages that we're already waiting on
+            // Prevents re-scheduling timers for messages that we're already waiting on
             if (scheduledMessages.contains(trigger.triggerId))
                 return false;
 
@@ -79,7 +75,7 @@ class OSDynamicTriggerController {
         return false;
     }
 
-    boolean evaluateTimeIntervalWithOperator(double timeInterval, double currentTimeInterval, OSTriggerOperatorType operator) {
+    private static boolean evaluateTimeIntervalWithOperator(double timeInterval, double currentTimeInterval, OSTriggerOperatorType operator) {
         switch (operator) {
             case LESS_THAN:
                 return currentTimeInterval < timeInterval;
@@ -99,7 +95,7 @@ class OSDynamicTriggerController {
         }
     }
 
-    boolean roughlyEqual(double left, double right) {
+    private static boolean roughlyEqual(double left, double right) {
         return Math.abs(left - right) < REQUIRED_ACCURACY;
     }
 }

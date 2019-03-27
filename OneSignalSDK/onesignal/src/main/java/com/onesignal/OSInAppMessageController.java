@@ -9,11 +9,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
 import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 import com.onesignal.OneSignalRestClient.ResponseHandler;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
-    private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList() {{
+    private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android"); add("app"); add("all");
     }};
 
@@ -23,17 +24,16 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     private ArrayList<OSInAppMessage> messages;
     final ArrayList<OSInAppMessage> messageDisplayQueue;
 
-    boolean inAppMessagingEnabled = true;
+    boolean inAppMessagingEnabled;
 
     static OSInAppMessageController getController() {
-        if (sharedInstance == null) {
+        if (sharedInstance == null)
             sharedInstance = new OSInAppMessageController();
-        }
 
         return sharedInstance;
     }
 
-    OSInAppMessageController() {
+    private OSInAppMessageController() {
         messages = new ArrayList<>();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
@@ -47,7 +47,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         try {
             for (int i = 0; i < json.length(); i++) {
                 JSONObject messageJson = json.getJSONObject(i);
-
                 newMessages.add(new OSInAppMessage(messageJson));
             }
         } catch (JSONException e) {
@@ -65,9 +64,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
         for (int i = 0; i < json.length(); i++) {
             JSONObject messageJson = json.getJSONObject(i);
-
             OSInAppMessage message = new OSInAppMessage(messageJson);
-
             newMessages.add(message);
         }
 
@@ -79,32 +76,30 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     private void evaluateInAppMessages() {
         for (OSInAppMessage message : messages) {
             if (triggerController.evaluateMessageTriggers(message)) {
-
                 // message should be shown
                 messageCanBeDisplayed(message);
             }
         }
     }
 
-    String variantIdForMessage(OSInAppMessage message) {
+    private String variantIdForMessage(OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
             if (message.variants.containsKey(variant)) {
                 HashMap<String, String> variantMap = message.variants.get(variant);
 
-                if (variantMap.containsKey(languageIdentifier)) {
+                if (variantMap.containsKey(languageIdentifier))
                     return variantMap.get(languageIdentifier);
-                } else if (variantMap.containsKey("default")) {
+                else if (variantMap.containsKey("default"))
                     return variantMap.get("default");
-                }
             }
         }
 
         return null;
     }
 
-    String htmlPathForMessage(OSInAppMessage message) {
+    private String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 
         if (variantId == null) {
@@ -172,8 +167,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     }
 
     private void messageCanBeDisplayed(OSInAppMessage message) {
-
-        // return early if the app disables in-app messages
         if (!inAppMessagingEnabled)
             return;
 
@@ -222,7 +215,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     @Override
     public void messageTriggerConditionChanged() {
-
         // This method is called when a time-based trigger timer fires, meaning the message can
         // probably be shown now. So the current message conditions should be re-evaluated
         evaluateInAppMessages();
