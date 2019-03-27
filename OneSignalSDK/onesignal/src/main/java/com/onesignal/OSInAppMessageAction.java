@@ -8,7 +8,6 @@ import org.json.JSONObject;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
 
 public class OSInAppMessageAction {
 
@@ -24,16 +23,13 @@ public class OSInAppMessageAction {
     @Nullable
     public OSInAppMessageActionUrlType urlTarget;
 
-    @NonNull
     boolean closesMessage;
 
     /** Contains additional metadata for each action, currently not implemented */
     @Nullable
     public JSONObject additionalData;
 
-    public OSInAppMessageAction() {}
-
-    public OSInAppMessageAction(JSONObject json) throws JSONException {
+    OSInAppMessageAction(JSONObject json) throws JSONException {
         actionId = json.getString("action_id");
 
         if (json.has("url")) {
@@ -82,9 +78,8 @@ public class OSInAppMessageAction {
 
         public static OSInAppMessageActionUrlType fromString(String text) {
             for (OSInAppMessageActionUrlType type : OSInAppMessageActionUrlType.values()) {
-                if (type.text.equalsIgnoreCase(text)) {
+                if (type.text.equalsIgnoreCase(text))
                     return type;
-                }
             }
 
             return null;

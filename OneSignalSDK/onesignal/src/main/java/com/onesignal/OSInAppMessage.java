@@ -7,7 +7,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -36,16 +35,12 @@ class OSInAppMessage {
     @NonNull
     public ArrayList<ArrayList<OSTrigger>> triggers;
 
-
-    @Nullable
     public double maxDisplayTime;
 
     @Nullable
     public ArrayList<OSInAppMessageAction> actions;
 
-    public OSInAppMessage() { }
-
-    public OSInAppMessage(JSONObject json) throws JSONException {
+    OSInAppMessage(JSONObject json) throws JSONException {
 
         // initialize simple root properties
         this.messageId = json.getString("id");
@@ -60,16 +55,13 @@ class OSInAppMessage {
 
             for (int i = 0; i < jsonActions.length(); i++) {
                 JSONObject actionJson = jsonActions.getJSONObject(i);
-
                 OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-
                 actions.add(action);
             }
         }
     }
 
-    // TODO: Ask Josh if there is an easier/cleaner way to do this in Java
-    static HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {
+    private static HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {
         HashMap<String, HashMap<String, String>> variantTypes = new HashMap<>();
 
         Iterator<String> keyIterator = json.keys();
@@ -96,9 +88,7 @@ class OSInAppMessage {
 
         for (int i = 0; i < triggersJson.length(); i++) {
             JSONArray ands = triggersJson.getJSONArray(i);
-
-            ArrayList<OSTrigger> converted = new ArrayList();
-
+            ArrayList<OSTrigger> converted = new ArrayList<>();
             for (int j = 0; j < ands.length(); j++)
                 converted.add(new OSTrigger(ands.getJSONObject(j)));
 
@@ -115,24 +105,20 @@ class OSInAppMessage {
             json.put("id", this.messageId);
 
             JSONObject variants = new JSONObject();
-
             for (String key : this.variants.keySet()) {
                 HashMap<String, String> variant = this.variants.get(key);
                 JSONObject converted = new JSONObject();
 
-                for (String variantKey : variant.keySet()) {
+                for (String variantKey : variant.keySet())
                     converted.put(variantKey, variant.get(variantKey));
-                }
 
                 variants.put(key, converted);
             }
 
             json.put("variants", variants);
-
             json.put("max_display_time", this.maxDisplayTime);
 
             JSONArray orConditions = new JSONArray();
-
             for (ArrayList<OSTrigger> andArray : this.triggers) {
                 JSONArray andConditions = new JSONArray();
 

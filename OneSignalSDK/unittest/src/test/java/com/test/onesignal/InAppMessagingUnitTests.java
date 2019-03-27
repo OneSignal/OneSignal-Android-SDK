@@ -1,11 +1,7 @@
 package com.test.onesignal;
 
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -26,9 +22,10 @@ import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
-import org.json.JSONArray;
+
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperatorType;
+
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -37,36 +34,33 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadow.api.Shadow;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.UUID;
 
-
-import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
-import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
 
-@Config(packageName = "com.onesignal.example",
-        shadows = {
-                ShadowOneSignalRestClient.class,
-                ShadowPushRegistratorGCM.class,
-                ShadowOSUtils.class,
-                ShadowAdvertisingIdProviderGPS.class,
-                ShadowCustomTabsClient.class,
-                ShadowCustomTabsSession.class,
-                ShadowNotificationManagerCompat.class,
-                ShadowJobService.class,
-                ShadowDynamicTimer.class,
-                ShadowOSInAppMessageController.class
-        },
-        instrumentedPackages = {"com.onesignal"},
-        constants = BuildConfig.class,
-        sdk = 21)
+@Config(
+   packageName = "com.onesignal.example",
+    shadows = {
+        ShadowOneSignalRestClient.class,
+        ShadowPushRegistratorGCM.class,
+        ShadowOSUtils.class,
+        ShadowAdvertisingIdProviderGPS.class,
+        ShadowCustomTabsClient.class,
+        ShadowCustomTabsSession.class,
+        ShadowNotificationManagerCompat.class,
+        ShadowJobService.class,
+        ShadowDynamicTimer.class,
+        ShadowOSInAppMessageController.class
+    },
+    instrumentedPackages = { "com.onesignal" },
+    constants = BuildConfig.class,
+    sdk = 26
+)
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingUnitTests {
 
@@ -83,7 +77,7 @@ public class InAppMessagingUnitTests {
         ShadowLog.stream = System.out;
 
         try {
-            message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("os_session_duration", OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO.toString(), 3);
+            message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("os_session_duration", OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO.toString(), 3);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -134,17 +128,15 @@ public class InAppMessagingUnitTests {
      * test to make sure that if a message has a trigger value of 2 and an operator > that it
      * returns true when evaluated, because 3 > 2
      */
-    private boolean comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType operator, Object triggerValue, Object localValue) throws JSONException {
+    private static boolean comparativeOperatorTest(OSTriggerOperatorType operator, Object triggerValue, Object localValue) throws JSONException {
         setLocalTriggerValue("test_property", localValue);
-
         OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_property", operator.toString(), triggerValue);
-
         return InAppMessagingHelpers.evaluateMessage(testMessage);
     }
 
     @Test
     public void testBuiltMessage() {
-        assertEquals(message.messageId, InAppMessagingHelpers.testMessageId);
+        assertEquals(message.messageId, InAppMessagingHelpers.TEST_MESSAGE_ID);
         assertNotNull(message.variants);
         assertEquals(message.maxDisplayTime, 30.0);
         assertEquals(message.actions.size(), 1);
@@ -152,15 +144,15 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageVariants() {
-        assertEquals(message.variants.get("android").get("es"), InAppMessagingHelpers.testSpanishAndroidVariantId);
-        assertEquals(message.variants.get("android").get("en"), InAppMessagingHelpers.testEnglishAndroidVariantId);
+        assertEquals(message.variants.get("android").get("es"), InAppMessagingHelpers.TEST_SPANISH_ANDROID_VARIANT_ID);
+        assertEquals(message.variants.get("android").get("en"), InAppMessagingHelpers.TEST_ENGLISH_ANDROID_VARIANT_ID);
     }
 
     @Test
     public void testBuiltMessageTrigger() {
         OSTestTrigger trigger = (OSTestTrigger)message.triggers.get(0).get(0);
 
-        assertEquals(trigger.operatorType, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO);
+        assertEquals(trigger.operatorType, OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO);
         assertEquals(trigger.property, "os_session_duration");
         assertEquals(trigger.value, 3);
     }
@@ -171,7 +163,7 @@ public class InAppMessagingUnitTests {
 
         assertEquals(action.actionId, "Test_action_id");
         assertEquals(action.actionUrl.toString(), "https://www.onesignal.com");
-        assertEquals(action.closes(), true);
+        assertTrue(action.closes());
         assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
         assertEquals(action.additionalData.getString("test"), "value");
     }
@@ -191,48 +183,46 @@ public class InAppMessagingUnitTests {
     @Test
     public void testDeleteSavedTriggerValue() {
         OneSignal.addTrigger("test1", "value1");
-
         assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
 
         OneSignal.removeTriggerforKey("test1");
-
         assertNull(OneSignal.getTriggerValueForKey("test1"));
     }
 
     @Test
     public void testGreaterThanOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.GREATER_THAN, 1, 2));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.GREATER_THAN, 5, 3));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN, 1, 2));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN, 5, 3));
     }
 
     @Test
     public void testGreaterThanOrEqualToOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 2, 2.9));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 4, 3));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 2, 2.9));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 4, 3));
     }
 
     @Test
     public void testLessThanOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.LESS_THAN, 32, 2));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.LESS_THAN, 2, 3));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 32, 2));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, 3));
     }
 
     @Test
     public void testLessThanOrEqualToOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 5, 4));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 3, 4));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 5, 4));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 3, 4));
     }
 
     @Test
     public void testEqualityOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.EQUAL_TO, 0.1, 0.1));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.EQUAL_TO, 0.0, 2));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 0.1, 0.1));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 0.0, 2));
     }
 
     @Test
     public void testNotEqualOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.NOT_EQUAL_TO, 3, 3.01));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.NOT_EQUAL_TO, 3.1, 3.1));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.NOT_EQUAL_TO, 3, 3.01));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EQUAL_TO, 3.1, 3.1));
     }
 
     @Test
@@ -241,59 +231,69 @@ public class InAppMessagingUnitTests {
             add("test string 1");
         }};
 
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.CONTAINS, "test string 1", localValue));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.CONTAINS, "test string 2", localValue));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.CONTAINS, "test string 1", localValue));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.CONTAINS, "test string 2", localValue));
     }
 
     @Test
     public void testExistsOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.EXISTS, null, "test"));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.EXISTS, null, null));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, "test"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EXISTS, null, null));
     }
 
     @Test
     public void testNotExistsOperator() throws JSONException {
-        assertTrue(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.NOT_EXISTS, null, null));
-        assertFalse(comparativeOperatorTest(OSTestTrigger.OSTriggerOperatorType.NOT_EXISTS, null, "test"));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, null));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.NOT_EXISTS, null, "test"));
     }
 
     @Test
     public void testMessageSchedulesSessionDurationTimer() throws JSONException {
-        OSTestTrigger trigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 10);
+        OSTestTrigger trigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTriggerOperatorType.EQUAL_TO.toString(), 10);
 
         InAppMessagingHelpers.resetSessionLaunchTime();
 
         // this evaluates the message and should schedule a timer for 10 seconds into the session
-        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, InAppMessagingHelpers.testMessageId));
-
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger));
         // verify that the timer was scheduled ~10 seconds
         assertTrue(roughlyEqualTimerValues(10.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
     }
 
     @Test
     public void testMessageSchedulesExactTimeTimer() throws JSONException {
-        OSTestTrigger trigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
-                OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), (((double)(new Date()).getTime() / 1000.0f) + 13));
+        OSTestTrigger trigger = InAppMessagingHelpers.buildTrigger(
+           InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
+           OSTriggerOperatorType.GREATER_THAN.toString(), (((double)(new Date()).getTime() / 1_000.0f) + 13)
+        );
 
         InAppMessagingHelpers.resetSessionLaunchTime();
-
-        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger, InAppMessagingHelpers.testMessageId));
-
+        assertFalse(InAppMessagingHelpers.dynamicTriggerShouldFire(trigger));
         assertTrue(roughlyEqualTimerValues(13.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
+    }
+
+    @Test
+    public void testMessageTriggersWithExactTimeTimerTypeWhenPastTime() throws JSONException {
+        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+           InAppMessagingHelpers.DYNAMIC_TRIGGER_EXACT_TIME,
+           OSTriggerOperatorType.GREATER_THAN.toString(),
+           (((double)(new Date()).getTime() / 1_000.0f) - 10)
+        );
+
+        assertTrue(InAppMessagingHelpers.evaluateMessage(testMessage));
     }
 
     // This test makes sure that time-based triggers are considered once all non-time-based
     // triggers evaluate to true and will set up a timer if needed
     @Test
     public void testMixedTriggersScheduleTimer() throws JSONException {
-        final OSTestTrigger timeBasedTrigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
-        final OSTestTrigger normalTrigger = InAppMessagingHelpers.buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
+        final OSTestTrigger timeBasedTrigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
+        final OSTestTrigger normalTrigger = InAppMessagingHelpers.buildTrigger("prop1", OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
 
         // the time based trigger will be false (but should schedule a timer)
         // while the normal trigger should evaluate to true
         setLocalTriggerValue("prop1", 3);
 
-        ArrayList triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
+        ArrayList<ArrayList<OSTestTrigger>> triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
             add(new ArrayList<OSTestTrigger>() {{
                 add(timeBasedTrigger);
                 add(normalTrigger);
@@ -301,35 +301,29 @@ public class InAppMessagingUnitTests {
         }};
 
         OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
-
         assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
-
         assertTrue(ShadowDynamicTimer.hasScheduledTimer);
-
         assertTrue(roughlyEqualTimerValues(5.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
     }
 
-    // When a normal (non-time-based) trigger is false, the time-based triggers should not even
-    // be considered (and no timers should be scheduled as a result)
     @Test
-    public void testShouldNotConsiderTimeBasedTrigger() throws JSONException {
-        final OSTestTrigger timeBasedTrigger = InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 5.0);
-        final OSTestTrigger normalTrigger = InAppMessagingHelpers.buildTrigger("prop1", OSTestTrigger.OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO.toString(), 3);
+    public void testShouldTriggerWhen1OutOf3OrsAreMeet() throws JSONException {
+        setLocalTriggerValue("prop1", 3);
 
-        setLocalTriggerValue("prop1", 4);
-
-        ArrayList triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
+        ArrayList<ArrayList<OSTestTrigger>> triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
             add(new ArrayList<OSTestTrigger>() {{
-                add(timeBasedTrigger);
-                add(normalTrigger);
+                add(InAppMessagingHelpers.buildTrigger("prop1", OSTriggerOperatorType.EQUAL_TO.toString(), 1));
+            }});
+            add(new ArrayList<OSTestTrigger>() {{
+                add(InAppMessagingHelpers.buildTrigger("prop1", OSTriggerOperatorType.EQUAL_TO.toString(), 2));
+            }});
+            add(new ArrayList<OSTestTrigger>() {{
+                add(InAppMessagingHelpers.buildTrigger("prop1", OSTriggerOperatorType.EQUAL_TO.toString(), 3));
             }});
         }};
 
         OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
-
-        assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
-
-        assertFalse(ShadowDynamicTimer.hasScheduledTimer);
+        assertTrue(InAppMessagingHelpers.evaluateMessage(testMessage));
     }
 
     private boolean roughlyEqualTimerValues(double desired, double actual) {

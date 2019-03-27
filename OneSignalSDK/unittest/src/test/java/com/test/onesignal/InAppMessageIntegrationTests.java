@@ -1,11 +1,9 @@
 package com.test.onesignal;
 
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -24,7 +22,6 @@ import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 
 import org.json.JSONArray;
@@ -41,7 +38,6 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.android.controller.ActivityController;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -133,7 +129,7 @@ public class InAppMessageIntegrationTests {
     public void testDisableInAppMessagingPreventsMessageDisplay() throws Exception {
         final OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_key", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 3);
 
-        setMockRegistrationResponseWithMessages(new ArrayList() {{
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(testMessage);
         }});
 
@@ -194,7 +190,7 @@ public class InAppMessageIntegrationTests {
     public void testTimedMessageIsDisplayed() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 0.05);
 
-        setMockRegistrationResponseWithMessages(new ArrayList() {{
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
         }});
 

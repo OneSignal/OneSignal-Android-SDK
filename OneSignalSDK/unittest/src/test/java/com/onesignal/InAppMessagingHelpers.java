@@ -9,21 +9,24 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
 
-public class InAppMessagingHelpers {
-    public static String DYNAMIC_TRIGGER_SESSION_DURATION = OSDynamicTriggerType.SESSION_DURATION.toString();
-    public static String DYNAMIC_TRIGGER_EXACT_TIME = OSDynamicTriggerType.TIME.toString();
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 
-    public static final String testSpanishAndroidVariantId = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
-    public static final String testEnglishAndroidVariantId = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc";
-    public static final String testMessageId = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
+public class InAppMessagingHelpers {
+    public static final String DYNAMIC_TRIGGER_SESSION_DURATION = OSDynamicTriggerType.SESSION_DURATION.toString();
+    public static final String DYNAMIC_TRIGGER_EXACT_TIME = OSDynamicTriggerType.TIME.toString();
+
+    public static final String TEST_SPANISH_ANDROID_VARIANT_ID = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
+    public static final String TEST_ENGLISH_ANDROID_VARIANT_ID = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc";
+    public static final String TEST_MESSAGE_ID = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
     public static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
 
     public static boolean evaluateMessage(OSInAppMessage message) {
         return OSInAppMessageController.getController().triggerController.evaluateMessageTriggers(message);
     }
 
-    public static boolean dynamicTriggerShouldFire(OSTrigger trigger, String messageId) {
-        return OSInAppMessageController.getController().triggerController.dynamicTriggerController.dynamicTriggerShouldFire(trigger, messageId);
+    public static boolean dynamicTriggerShouldFire(OSTrigger trigger) {
+        return OSInAppMessageController.getController().triggerController.dynamicTriggerController.dynamicTriggerShouldFire(trigger);
     }
 
     public static void resetSessionLaunchTime() {
@@ -32,22 +35,18 @@ public class InAppMessagingHelpers {
 
     public static void clearTestState() {
         OneSignal.setInAppMessagingEnabled(true);
-
         ShadowOSInAppMessageController.displayedMessages.clear();
-
         OSInAppMessageController.getController().messageDisplayQueue.clear();
     }
 
     // Convenience method that wraps an object in a JSON Array
     public static JSONArray wrap(final Object object) {
-        return new JSONArray() {{
-            put(object);
-        }};
+        return new JSONArray() {{ put(object); }};
     }
 
     // Most tests build a test message using only one trigger.
     // This convenience method makes it easy to build such a message
-    public static OneSignalPackagePrivateHelper.OSTestInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
+    public static OSTestInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
         JSONObject triggerJson = new JSONObject() {{
             put("property", key);
             put("operator", operator);
@@ -60,14 +59,14 @@ public class InAppMessagingHelpers {
         return buildTestMessage(triggersJson);
     }
 
-    public static OneSignalPackagePrivateHelper.OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
+    public static OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
         // builds a test message to test JSON parsing constructor of OSInAppMessage
         JSONObject json = new JSONObject() {{
-            put("id", testMessageId);
+            put("id", TEST_MESSAGE_ID);
             put("variants", new JSONObject() {{
                 put("android", new JSONObject() {{
-                    put("es", testSpanishAndroidVariantId);
-                    put("en", testEnglishAndroidVariantId);
+                    put("es", TEST_SPANISH_ANDROID_VARIANT_ID);
+                    put("en", TEST_ENGLISH_ANDROID_VARIANT_ID);
                 }});
             }});
             put("max_display_time", 30);
@@ -77,16 +76,16 @@ public class InAppMessagingHelpers {
             }});
         }};
 
-        return new OneSignalPackagePrivateHelper.OSTestInAppMessage(json);
+        return new OSTestInAppMessage(json);
     }
 
-    public static OneSignalPackagePrivateHelper.OSTestInAppMessage buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OneSignalPackagePrivateHelper.OSTestTrigger>> triggers) throws JSONException {
+    public static OSTestInAppMessage buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OSTestTrigger>> triggers) throws JSONException {
         JSONArray ors = new JSONArray();
 
-        for (ArrayList<OneSignalPackagePrivateHelper.OSTestTrigger> andBlock : triggers) {
+        for (ArrayList<OSTestTrigger> andBlock : triggers) {
             JSONArray ands = new JSONArray();
 
-            for (final OneSignalPackagePrivateHelper.OSTestTrigger trigger : andBlock) {
+            for (final OSTestTrigger trigger : andBlock) {
                 ands.put(new JSONObject() {{
                     put("property", trigger.property);
                     put("operator", trigger.operatorType.toString());
@@ -101,7 +100,7 @@ public class InAppMessagingHelpers {
         return buildTestMessage(ors);
     }
 
-    public static OneSignalPackagePrivateHelper.OSTestTrigger buildTrigger(final String key, final String operator, final Object value) throws JSONException {
+    public static OSTestTrigger buildTrigger(final String key, final String operator, final Object value) throws JSONException {
         JSONObject triggerJson = new JSONObject() {{
             put("property", key);
             put("operator", operator);
@@ -109,7 +108,7 @@ public class InAppMessagingHelpers {
             put("id", UUID.randomUUID().toString());
         }};
 
-        return new OneSignalPackagePrivateHelper.OSTestTrigger(triggerJson);
+        return new OSTestTrigger(triggerJson);
     }
 
     public static JSONObject buildTestActionJson() throws JSONException {
