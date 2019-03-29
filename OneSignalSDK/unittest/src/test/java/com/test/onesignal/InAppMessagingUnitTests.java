@@ -115,7 +115,7 @@ public class InAppMessagingUnitTests {
         if (localValue != null)
             OneSignal.addTrigger(key, localValue);
         else
-            OneSignal.removeTriggerforKey(key);
+            OneSignal.removeTriggerForKey(key);
     }
 
     /**
@@ -185,7 +185,7 @@ public class InAppMessagingUnitTests {
         OneSignal.addTrigger("test1", "value1");
         assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
 
-        OneSignal.removeTriggerforKey("test1");
+        OneSignal.removeTriggerForKey("test1");
         assertNull(OneSignal.getTriggerValueForKey("test1"));
     }
 

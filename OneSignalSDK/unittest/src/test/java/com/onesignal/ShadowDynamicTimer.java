@@ -23,9 +23,7 @@ public class ShadowDynamicTimer {
 
         if (shouldScheduleTimers) {
             hasScheduledTimer = true;
-
             Timer timer = new Timer("trigger_test:" + triggerId);
-
             timer.schedule(task, delay);
         }
     }

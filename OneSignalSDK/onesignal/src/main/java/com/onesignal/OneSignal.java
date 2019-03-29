@@ -2758,8 +2758,6 @@ public class OneSignal {
     * Triggers are used for targeting in-app messages.
     */
    public static void addTriggers(Map<String, Object> triggers) {
-
-      //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTriggers()"))
          return;
 
@@ -2770,8 +2768,6 @@ public class OneSignal {
     * Allows you to set an individual trigger key/value pair for in-app message targeting
     */
    public static void addTrigger(String key, Object object) {
-
-      //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTrigger()"))
          return;
 
@@ -2783,8 +2779,6 @@ public class OneSignal {
 
    /** Removes a list/collection of triggers from their keys  */
    public static void removeTriggersForKeys(Collection<String> keys) {
-
-      //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
          return;
 
@@ -2792,9 +2786,7 @@ public class OneSignal {
    }
 
    /** Removes a single trigger for the given key */
-   public static void removeTriggerforKey(String key) {
-
-      //if applicable, check if the user provided privacy consent
+   public static void removeTriggerForKey(String key) {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
          return;
 
@@ -2807,8 +2799,6 @@ public class OneSignal {
    /** Returns a single trigger value for the given key (if it exists, otherwise returns null) */
    @Nullable
    public static Object getTriggerValueForKey(String key) {
-
-      //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTriggerValueForKey()"))
          return null;
 
