@@ -40,25 +40,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         inAppMessagingEnabled = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_MESSAGING_ENABLED, true);
     }
 
-    // Called when messages are received after registration/on_session
-    void onSessionReceivedMessageJSON(JSONArray json) {
-        ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
-
-        try {
-            for (int i = 0; i < json.length(); i++) {
-                JSONObject messageJson = json.getJSONObject(i);
-                newMessages.add(new OSInAppMessage(messageJson));
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        messages = newMessages;
-
-        evaluateInAppMessages();
-    }
-
-    // Called after the user is registered from UserStateSynchronizer
+    // Called after the device is registered from UserStateSynchronizer
+    //    which is the REST call to create the player record on_session
     void receivedInAppMessageJson(JSONArray json) throws JSONException {
         ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
 
@@ -75,14 +58,12 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     private void evaluateInAppMessages() {
         for (OSInAppMessage message : messages) {
-            if (triggerController.evaluateMessageTriggers(message)) {
-                // message should be shown
+            if (triggerController.evaluateMessageTriggers(message))
                 messageCanBeDisplayed(message);
-            }
         }
     }
 
-    private String variantIdForMessage(OSInAppMessage message) {
+    private static String variantIdForMessage(OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
@@ -110,13 +91,12 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html";
     }
 
-    private void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
+    private static void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + String.valueOf(statusCode) + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
-    private void onMessageWasShown(OSInAppMessage message) {
+    private static void onMessageWasShown(OSInAppMessage message) {
         final String variantId = variantIdForMessage(message);
-
         if (variantId == null)
             return;
 
@@ -142,7 +122,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     // TODO: When a message action occurs, call this method
     private void onMessageActionOccurredOnMessage(final OSInAppMessage message, final OSInAppMessageAction action) {
         final String variantId = variantIdForMessage(message);
-
         if (variantId == null)
             return;
 
@@ -154,7 +133,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                 put("variant_id", variantId);
             }};
 
-            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/engagement/" + action.actionId, json, new ResponseHandler() {
+            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/engagement", json, new ResponseHandler() {
                 @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("engagement", statusCode, response);
@@ -229,19 +208,16 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
      */
     void addTriggers(Map<String, Object> newTriggers) {
         triggerController.addTriggers(newTriggers);
-
         evaluateInAppMessages();
     }
 
     void removeTriggersForKeys(Collection<String> keys) {
         triggerController.removeTriggersForKeys(keys);
-
         evaluateInAppMessages();
     }
 
     void setInAppMessagingEnabled(boolean enabled) {
         inAppMessagingEnabled = enabled;
-
         OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_MESSAGING_ENABLED, enabled);
     }
 

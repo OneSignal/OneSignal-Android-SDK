@@ -55,7 +55,7 @@ class OSDynamicTriggerController {
                 offset = requiredTimeInterval - currentTimestamp;
             }
 
-            if (offset <= 0.0f)
+            if (offset <= 0L)
                 return false;
 
             // Prevents re-scheduling timers for messages that we're already waiting on
