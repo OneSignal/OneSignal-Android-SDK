@@ -116,6 +116,10 @@ public class RESTClientRunner {
 
    private String firstResponse, secondResponse;
 
+   // Note Thread.sleep in the following two tests are used since we can't wait on threads
+   //    created from callResponseHandlerOnSuccess due deadlock limitations with Scheduler
+   //    in the Robolectric unit test library.
+   // https://github.com/robolectric/robolectric/issues/3819
    @Test
    public void testReusesCache() throws Exception {
       // 1. Do first request to save response
@@ -131,6 +135,7 @@ public class RESTClientRunner {
          }
       }, MOCK_CACHE_KEY);
       TestHelpers.threadAndTaskWait();
+      Thread.sleep(200);
 
       // 2. Make 2nd request and make sure we send the ETag and use the cached response
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
@@ -144,6 +149,7 @@ public class RESTClientRunner {
          }
       }, MOCK_CACHE_KEY);
       TestHelpers.threadAndTaskWait();
+      Thread.sleep(200);
 
       assertNotNull(firstResponse);
       assertEquals(firstResponse, secondResponse);
@@ -164,6 +170,7 @@ public class RESTClientRunner {
       }};
       OneSignalRestClient.getSync("URL", null, MOCK_CACHE_KEY);
       TestHelpers.threadAndTaskWait();
+      Thread.sleep(200);
 
       // 4. Make 4th request and make sure we get the new cached value
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
@@ -176,6 +183,7 @@ public class RESTClientRunner {
          }
       }, MOCK_CACHE_KEY);
       TestHelpers.threadAndTaskWait();
+      Thread.sleep(200);
 
       assertEquals(newMockResponse, secondResponse);
    }
