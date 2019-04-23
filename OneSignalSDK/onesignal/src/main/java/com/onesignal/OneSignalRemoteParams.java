@@ -73,7 +73,7 @@ class OneSignalRemoteParams {
       try {
          responseJson = new JSONObject(json);
       }
-      catch (JSONException t) {
+      catch (NullPointerException | JSONException t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Error parsing android_params!: ", t);
          OneSignal.Log(OneSignal.LOG_LEVEL.FATAL, "Response that errored from android_params!: " + json);
          return;
