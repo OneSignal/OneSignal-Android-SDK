@@ -1225,7 +1225,7 @@ public class OneSignal {
          public void run() {
             try {
                registerUserTask();
-               OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+               OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue());
             } catch(JSONException t) {
                Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
             }
@@ -1902,13 +1902,10 @@ public class OneSignal {
 
             if (customJSON.has("u")) {
                String url = customJSON.optString("u", null);
-               if (!url.contains("://"))
-                  url = "http://" + url;
-
-               Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url.trim()));
-               intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-               context.startActivity(intent);
-               urlOpened = true;
+               if (url != null) {
+                  OSUtils.openURLInBrowser(url);
+                  urlOpened = true;
+               }
             }
          } catch (Throwable t) {
             Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for launching a web URL.", t);
@@ -2166,8 +2163,8 @@ public class OneSignal {
       }
 
       OneSignalStateSynchronizer.refreshEmailState();
-      
-      OneSignalChromeTab.setup(appContext, appId, userId, AdvertisingIdProviderGPS.getLastValue());
+
+      OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue());
    }
 
    static void updateEmailIdDependents(String emailId) {

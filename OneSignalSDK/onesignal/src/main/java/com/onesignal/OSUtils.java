@@ -29,6 +29,7 @@ package com.onesignal;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -39,6 +40,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
@@ -46,10 +48,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.Locale;
-import java.util.Scanner;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -366,5 +366,24 @@ class OSUtils {
 
    static int dpToPx(int dp) {
       return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
+   }
+
+   static void openURLInBrowser(@NonNull String url) {
+      if (!url.contains("://"))
+         url = "http://" + url;
+
+      openURLInBrowser(Uri.parse(url.trim()));
+   }
+
+   private static void openURLInBrowser(@NonNull Uri uri) {
+      Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+      intent.addFlags(
+         Intent.FLAG_ACTIVITY_NO_HISTORY |
+            Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
+            Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
+            Intent.FLAG_ACTIVITY_NEW_TASK
+      );
+
+      OneSignal.appContext.startActivity(intent);
    }
 }

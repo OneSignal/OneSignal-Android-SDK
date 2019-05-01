@@ -125,6 +125,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         if (variantId == null)
             return;
 
+        final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
+
+        if (action.actionUrl != null) {
+            if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
+                OSUtils.openURLInBrowser(action.actionUrl);
+            else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
+                OneSignalChromeTab.open(action.actionUrl, true);
+        }
         try {
             JSONObject json = new JSONObject() {{
                 put("app_id", OneSignal.appId);
