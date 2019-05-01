@@ -10,6 +10,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 class OSInAppMessage {
 
@@ -38,7 +39,9 @@ class OSInAppMessage {
     public double maxDisplayTime;
 
     @Nullable
-    public ArrayList<OSInAppMessageAction> actions;
+    public Map<String, OSInAppMessageAction> actions;
+
+    private boolean actionTaken;
 
     OSInAppMessage(JSONObject json) throws JSONException {
 
@@ -47,18 +50,6 @@ class OSInAppMessage {
         this.maxDisplayTime = json.optDouble("max_display_time");
         this.variants = parseVariants(json.getJSONObject("variants"));
         this.triggers = parseTriggerJson(json.getJSONArray("triggers"));
-
-        if (json.has("actions")) {
-            actions = new ArrayList<>();
-
-            JSONArray jsonActions = json.getJSONArray("actions");
-
-            for (int i = 0; i < jsonActions.length(); i++) {
-                JSONObject actionJson = jsonActions.getJSONObject(i);
-                OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-                actions.add(action);
-            }
-        }
     }
 
     private static HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {

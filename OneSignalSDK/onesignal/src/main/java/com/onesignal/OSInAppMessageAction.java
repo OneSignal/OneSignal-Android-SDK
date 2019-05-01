@@ -3,11 +3,7 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.net.MalformedURLException;
-import java.net.URL;
 
 public class OSInAppMessageAction {
 
@@ -17,7 +13,7 @@ public class OSInAppMessageAction {
 
     /** An optional URL that opens when the action takes place */
     @Nullable
-    public URL actionUrl;
+    public String actionUrl;
 
     /** Determines where the URL is opened, ie. Safari */
     @Nullable
@@ -29,26 +25,15 @@ public class OSInAppMessageAction {
     @Nullable
     public JSONObject additionalData;
 
-    OSInAppMessageAction(JSONObject json) throws JSONException {
-        actionId = json.getString("action_id");
-
-        if (json.has("url")) {
-            try {
-                actionUrl = new URL(json.getString("url"));
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (json.has("url_target"))
-            urlTarget = OSInAppMessageActionUrlType.fromString(json.getString("url_target"));
-        else //default should be webview
+    OSInAppMessageAction(@NonNull JSONObject json) {
+        actionId = json.optString("action_id", null);
+        actionUrl = json.optString("url", null);
+        urlTarget = OSInAppMessageActionUrlType.fromString(json.optString("url_target", null));
+        if (urlTarget == null)
             urlTarget = OSInAppMessageActionUrlType.IN_APP_WEBVIEW;
 
-        closesMessage = json.getBoolean("close");
-
-        if (json.has("data"))
-            additionalData = json.getJSONObject("data");
+        closesMessage = json.optBoolean("close", true);
+        additionalData = json.optJSONObject("data");
     }
 
     /**

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,53 +28,41 @@
 package com.onesignal;
 
 import android.content.ComponentName;
-import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
-import android.os.Bundle;
-import android.support.customtabs.CustomTabsCallback;
+import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.customtabs.CustomTabsClient;
+import android.support.customtabs.CustomTabsIntent;
 import android.support.customtabs.CustomTabsServiceConnection;
 import android.support.customtabs.CustomTabsSession;
 
-import java.security.SecureRandom;
-
 class OneSignalChromeTab {
-   
-   private static boolean opened;
-   
-   static void setup(Context context, String appId, String userId, String adId) {
-      if (opened)
-         return;
 
-      if (OneSignal.remoteParams.enterprise)
-         return;
-      
-      if (userId == null)
-         return;
-      
+   private static boolean hasChromeTabLibrary() {
       try {
-         Class.forName("android.support.customtabs.CustomTabsServiceConnection");
-      } catch (ClassNotFoundException e) {
-         return;
+         // noinspection ConstantConditions
+         return android.support.customtabs.CustomTabsServiceConnection.class != null;
+      } catch (Throwable e) {
+         return false;
       }
-   
-      String params = "?app_id=" + appId + "&user_id=" + userId;
-      if (adId != null)
-         params += "&ad_id=" + adId;
-      params += "&cbs_id=" + new SecureRandom().nextInt(Integer.MAX_VALUE);
-      
-      CustomTabsServiceConnection connection = new OneSignalCustomTabsServiceConnection(context, params);
-      opened = CustomTabsClient.bindCustomTabsService(context, "com.android.chrome", connection);
+   }
+
+   protected static boolean open(String url, boolean openActivity) {
+      if (!hasChromeTabLibrary())
+         return false;
+
+      CustomTabsServiceConnection connection = new OneSignalCustomTabsServiceConnection(url, openActivity);
+      return CustomTabsClient.bindCustomTabsService(OneSignal.appContext, "com.android.chrome", connection);
    }
    
    private static class OneSignalCustomTabsServiceConnection extends CustomTabsServiceConnection {
-   
-      private Context mContext;
-      private String mParams;
+      private String url;
+      private boolean openActivity;
       
-      OneSignalCustomTabsServiceConnection(Context context, String params) {
-         mContext = context;
-         mParams = params;
+      OneSignalCustomTabsServiceConnection(@NonNull String url, boolean openActivity) {
+         this.url = url;
+         this.openActivity = openActivity;
       }
       
       @Override
@@ -84,30 +72,24 @@ class OneSignalChromeTab {
 
          customTabsClient.warmup(0);
 
-         CustomTabsSession session = customTabsClient.newSession(new CustomTabsCallback()  {
-            public void onNavigationEvent(int navigationEvent, Bundle extras) {
-               super.onNavigationEvent(navigationEvent, extras);
-            }
-
-            public void extraCallback(String callbackName, Bundle args) {
-               super.extraCallback(callbackName, args);
-            }
-         });
-
+         CustomTabsSession session = customTabsClient.newSession(null);
          if (session == null)
             return;
 
-         Uri uri = Uri.parse("https://onesignal.com/android_frame.html" + mParams);
+         Uri uri = Uri.parse(url);
          session.mayLaunchUrl(uri, null, null);
 
          // Shows tab as it's own Activity
-         /*
-         CustomTabsIntent.Builder mBuilder = new CustomTabsIntent.Builder(session);
-         CustomTabsIntent customTabsIntent = mBuilder.build();
-         customTabsIntent.intent.setData(uri);
-         customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-         mContext.startActivity(customTabsIntent.intent, customTabsIntent.startAnimationBundle);
-         */
+         if (openActivity) {
+            CustomTabsIntent.Builder mBuilder = new CustomTabsIntent.Builder(session);
+            CustomTabsIntent customTabsIntent = mBuilder.build();
+            customTabsIntent.intent.setData(uri);
+            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)
+               OneSignal.appContext.startActivity(customTabsIntent.intent, customTabsIntent.startAnimationBundle);
+            else
+               OneSignal.appContext.startActivity(customTabsIntent.intent);
+         }
       }
    
       @Override
