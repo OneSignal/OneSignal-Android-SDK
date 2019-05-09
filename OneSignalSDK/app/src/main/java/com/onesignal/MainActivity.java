@@ -43,6 +43,7 @@ import android.os.Handler;
 
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 
+import com.onesignal.example.OneSignalExampleApp;
 import com.onesignal.example.R;
 import com.onesignal.example.iap.IabHelper;
 import com.onesignal.example.iap.IabResult;
@@ -66,6 +67,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    private int sendTagsCounter = 1;
    private boolean addedObservers = false;
    private TextView iamHost;
+   private TextView triggerKeyTextView;
+   private TextView triggerValueTextView;
    private String SHARDPRES_KEY_IAM_HOST = "SHARDPRES_KEY_IAM_HOST";
 
    @Override
@@ -77,11 +80,11 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.setEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.setEmail);
       this.logoutEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.logoutEmail);
       this.iamHost = this.findViewById(R.id.iamHost);
+      this.triggerKeyTextView = this.findViewById(R.id.triggerKey);
+      this.triggerValueTextView = this.findViewById(R.id.triggerValue);
+      this.iamHost.setText(OneSignalExampleApp.getOneSignalAppId(this));
 
-      SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-      String lastIamHost = sharedPref.getString(SHARDPRES_KEY_IAM_HOST, null);
-      this.iamHost.setText(lastIamHost);
-      OneSignal.setInAppDebugHost(lastIamHost);
+      // OneSignal.setInAppDebugHost(lastIamHost);
 
       if (OneSignal.requiresUserPrivacyConsent()) {
          //disable all interactive views except consent button
@@ -117,12 +120,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    private void updateIamhost() {
-      SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-      SharedPreferences.Editor editor = sharedPref.edit();
-      String host = this.iamHost.getText().toString();
-      editor.putString(SHARDPRES_KEY_IAM_HOST, host);
-      editor.commit();
-      OneSignal.setInAppDebugHost(host);
+      String appId = this.iamHost.getText().toString();
+      OneSignalExampleApp.setOneSignalAppId(this, appId);
    }
 
    private void updateTextView(final String newText) {
@@ -133,7 +132,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       Runnable runnable = new Runnable() {
          @Override
          public void run() {
-            debugTextView.setText(newText);
+            if (debugTextView != null)
+               debugTextView.setText(newText);
          }
       };
 
@@ -180,8 +180,10 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    public void didGetEmailStatus(boolean hasEmailUserId) {
-      this.setEmailButton.setEnabled(!hasEmailUserId);
-      this.logoutEmailButton.setEnabled(hasEmailUserId);
+      if (setEmailButton != null) {
+         this.setEmailButton.setEnabled(!hasEmailUserId);
+         this.logoutEmailButton.setEnabled(hasEmailUserId);
+      }
    }
 
    public void onSubscribeClicked(View v) {
@@ -191,6 +193,12 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       String ns = Context.NOTIFICATION_SERVICE;
       NotificationManager nMgr = (NotificationManager) getApplicationContext().getSystemService(ns);
       nMgr.cancelAll();
+   }
+
+   public void onSetTrigger(View v) {
+      String triggerKey = this.triggerKeyTextView.getText().toString();
+      String triggerValue = this.triggerValueTextView.getText().toString();
+      OneSignal.addTrigger(triggerKey, triggerValue);
    }
 
    private void changeInteractiveViewsEnabled(boolean enabled) {

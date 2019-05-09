@@ -22,40 +22,51 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:onClick="onFullScreenClicked"
-                android:text="IAM - Show Fullscreen" />
-
-            <Button
-                android:id="@+id/show_modal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:onClick="onModalClicked"
-                android:text="IAM - Show Modal" />
-
-            <Button
-                android:id="@+id/show_banner_top"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:onClick="onBannerTopClicked"
-                android:text="IAM - Show Banner Top" />
-
-            <Button
-                android:id="@+id/show_banner_bottom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:onClick="onBannerBottomClicked"
-                android:text="IAM - Show Banner Bottom" />
+                android:text="Update App ID" />
 
             <EditText
                 android:id="@+id/iamHost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ems="10"
-                android:inputType="textPersonName"
-                android:text="YOUR_PC_IP_HERE" />
+                android:hint="YOUR_APP_ID_HERE"
+                android:inputType="textPersonName" />
 
-            <Space
+            <Button
+                android:id="@+id/setTrigger"
                 android:layout_width="match_parent"
-                android:layout_height="30dp" />
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/unsubscribe"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_toEndOf="@+id/textView"
+                android:layout_toRightOf="@+id/textView"
+                android:onClick="onSetTrigger"
+                android:text="Set Trigger" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/triggerKey"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ems="10"
+                    android:hint="Trigger Key"
+                    android:inputType="textPersonName" />
+
+                <EditText
+                    android:id="@+id/triggerValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ems="10"
+                    android:hint="Trigger Value"
+                    android:inputType="textPersonName" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/subscribe"
@@ -86,9 +97,9 @@
                 android:id="@+id/sendTags"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_below="@+id/unsubscribe"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentRight="true"
-                android:layout_below="@+id/unsubscribe"
                 android:layout_toEndOf="@+id/textView"
                 android:layout_toRightOf="@+id/textView"
                 android:onClick="onSendTagsClicked"
@@ -128,7 +139,7 @@
             <TextView
                 android:id="@+id/debugTextView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="80dp" />
 
         </LinearLayout>
 
