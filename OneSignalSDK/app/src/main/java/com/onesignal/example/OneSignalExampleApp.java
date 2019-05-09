@@ -28,7 +28,11 @@
 package com.onesignal.example;
 
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.StrictMode;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.onesignal.OSNotification;
@@ -37,6 +41,8 @@ import com.onesignal.OneSignal;
 
 public class OneSignalExampleApp extends Application {
 
+   private static final String SHARED_PREFS_OS_APP_ID = "SHARED_PREFS_OS_APP_ID";
+
    @Override
    public void onCreate() {
       super.onCreate();
@@ -44,14 +50,41 @@ public class OneSignalExampleApp extends Application {
       StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().build());
       StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().build());
 
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-      OneSignal.startInit(this)
-          .autoPromptLocation(true)
-          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
-          .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
-          .init();
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.ERROR);
+//      OneSignal.startInit(this)
+//          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
+//          .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
+//          .init();
+
+      String currentAppId = getOneSignalAppId(this);
+      if (currentAppId == null)
+         setOneSignalAppId(this, "0ba9731b-33bd-43f4-8b59-61172e27447d");
+//      setOneSignalAppId(this, "7451b741-ab9b-43f7-aa21-5f4ffb22af17");
+
+      OneSignal.init(
+         this,
+         "1234567",
+         getOneSignalAppId(this),
+         new ExampleNotificationOpenedHandler(),
+         new ExampleNotificationReceivedHandler()
+      );
 
       OneSignal.sendTag("test1", "test1");
+   }
+
+   public static void setOneSignalAppId(@NonNull Context context, @NonNull String id) {
+      SharedPreferences sharedPref = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE);
+      SharedPreferences.Editor editor = sharedPref.edit();
+      editor.putString(SHARED_PREFS_OS_APP_ID, id);
+      editor.commit();
+
+      OneSignal.init(context, null, id);
+   }
+
+   @Nullable
+   public static String getOneSignalAppId(@NonNull Context context) {
+      SharedPreferences sharedPref = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE);
+      return sharedPref.getString(SHARED_PREFS_OS_APP_ID, null);
    }
 
    private class ExampleNotificationReceivedHandler implements OneSignal.NotificationReceivedHandler {
