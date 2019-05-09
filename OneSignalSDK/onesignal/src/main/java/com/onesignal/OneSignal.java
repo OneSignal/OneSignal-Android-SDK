@@ -2974,22 +2974,22 @@ public class OneSignal {
    // TODO: Remove showInApp* methods before merging
    public static void showInAppFullscreen() {
       // TODO: Switch to use ActivityLifecycleHandler.setActivityAvailableListener
-      WebViewManager.showFullscreenWebView();
+//      WebViewManager.showFullscreenWebView();
    }
 
    public static void showInAppModal() {
-      WebViewManager.showModalWebView();
+//      WebViewManager.showModalWebView();
    }
 
    public static void showInAppBannerTop() {
-      WebViewManager.showBannerTopWebView();
+//      WebViewManager.showBannerTopWebView();
    }
 
    public static void showInAppBannerBottom() {
-      WebViewManager.showBannerBottomWebView();
+//      WebViewManager.showBannerBottomWebView();
    }
 
    public static void setInAppDebugHost(String host) {
-      WebViewManager.setHost(host);
+//      WebViewManager.setHost(host);
    }
 }

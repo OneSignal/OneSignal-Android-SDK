@@ -30,7 +30,11 @@ class OSTriggerController {
      * AND conditions. If all of the triggers in an inner array evaluate to true, it means the
      * message should be shown and the function returns true.
     */
-    boolean evaluateMessageTriggers(OSInAppMessage message) {
+    boolean evaluateMessageTriggers(@NonNull OSInAppMessage message) {
+        // If there are no triggers then we display the In-App when a new session is triggered
+        if (message.triggers.size() == 0)
+            return true;
+
         // Outer loop represents OR conditions
         for (ArrayList<OSTrigger> andConditions : message.triggers) {
             if (evaluateAndTriggers(andConditions))

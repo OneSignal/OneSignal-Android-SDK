@@ -2,39 +2,60 @@ package com.onesignal;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.res.Resources;
 import android.os.Build;
-import android.util.Log;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+// Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
+//   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.
+
 // Flow for Displaying WebView
-// 1. showFullscreenWebView - Creates WebView and loads page.
+// 1. showHTMLString - Creates WebView and loads page.
 // 2. Wait for JavaScriptInterface.postMessage to fire with "rendering_complete"
-// 3. Start WebViewActivity
-// 4. WebViewActivity.webView will attach WebViewManager.webView to it's layout
+// 3. This calls showActivity which starts a new WebView
+// 4. WebViewActivity will call WebViewManager.instanceFromIam(...) to get this instance and
+//       add it's prepared WebView add add it to the Activity.
 
 class WebViewManager {
-   static WebView webView;
+   private static Map<String, WebViewManager> instances = new ConcurrentHashMap<>();
 
-   private static String testPageHost;
-
-   static void setHost(String host) {
-      testPageHost = "http://" + host + ":3000";
+   private WebViewManager(@NonNull OSInAppMessage message) {
+      this.message = message;
+      instances.put(message.messageId, this);
    }
 
+   private OSInAppMessage message;
+
+   private WebView webView;
+   @Nullable
+   WebView getWebView() {
+      return webView;
+   }
+
+   @Nullable
+   static WebViewManager instanceFromIam(@Nullable String iamId) {
+      return instances.get(iamId);
+   }
+
+   private WebViewActivity hostingActivity;
+
    // Lets JS from the page send JSON payloads to this class
-   static class OSJavaScriptInterface {
-      static String JS_OBJ_NAME = "OSAndroid";
+   private class OSJavaScriptInterface {
+      private static final String JS_OBJ_NAME = "OSAndroid";
 
       @JavascriptInterface
       public void postMessage(String message) {
-         Log.e("OneSignal", "Message received from WebView: " + message);
          try {
             JSONObject jsonObject = new JSONObject(message);
             String messageType = jsonObject.getString("type");
@@ -48,64 +69,51 @@ class WebViewManager {
          }
       }
 
-      private static void handleRenderComplete(JSONObject jsonObject) {
-         try {
-            int pageHeight = getPageHeightData(jsonObject);
-            if (pageHeight != -1)
-               pageHeight = OSUtils.dpToPx(pageHeight);
-            showActivity(pageHeight, getDisplayLocation(jsonObject));
-         } catch (Exception e) {
-            e.printStackTrace();
-         }
+      private void handleRenderComplete(JSONObject jsonObject) {
+         int pageHeight = getPageHeightData(jsonObject);
+         if (pageHeight != -1)
+            pageHeight = OSUtils.dpToPx(pageHeight);
+
+         showActivity(pageHeight, getDisplayLocation(jsonObject));
       }
 
-      private static int getPageHeightData(JSONObject jsonObject) {
+      private int getPageHeightData(JSONObject jsonObject) {
          try {
             return jsonObject.getJSONObject("pageMetaData").getJSONObject("rect").getInt("height");
-         } catch (Exception e) {
+         } catch (JSONException e) {
             return -1;
          }
       }
 
-      private static String getDisplayLocation(JSONObject jsonObject) {
+      private String getDisplayLocation(JSONObject jsonObject) {
          return jsonObject.optString("displayLocation", "");
       }
 
-      private static void handleActionTaken(JSONObject jsonObject) {
-         try {
-            JSONObject body = jsonObject.getJSONObject("body");
-            boolean close = body.getBoolean("close");
-            if (close)
-               dismiss();
-         } catch (Exception e) {
-            e.printStackTrace();
-         }
+      private void handleActionTaken(JSONObject jsonObject) throws JSONException {
+         JSONObject body = jsonObject.getJSONObject("body");
+         String id = body.optString("id", null);
+         if (id != null)
+            OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, body);
+
+         boolean close = body.getBoolean("close");
+         if (close)
+            dismiss();
       }
    }
 
-   // TODO: Reuse last WebView if one exists
    // TODO: Test with chrome://crash
-   private static WebView showWebViewForPage(String page) {
+   private void setupWebView() {
       enableWebViewRemoteDebugging();
 
-      WebView webView = new OSWebView(OneSignal.appContext);
+      webView = new OSWebView(OneSignal.appContext);
 
       webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
       webView.setVerticalScrollBarEnabled(false);
 
       webView.getSettings().setJavaScriptEnabled(true);
-//    TODO: Sometimes device just keeps using cache even those the server doesn't return any
-//          cache HTTP header. Try testing on staging to see if it expires correctly.
-//    webView.getSettings().setAppCacheEnabled(false); // Default is false
-//    webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT); // LOAD_NO_CACHE
-      // TODO: Remove after testing
-      webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 
       // Setup receiver for page events / data from JS
-      webView.addJavascriptInterface(
-         new OSJavaScriptInterface(),
-         OSJavaScriptInterface.JS_OBJ_NAME
-      );
+      webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
 
       // Setting size before adding to Activity to prevent a resize event.
       // Also setting up sizes so JS can give us the correct content height for modals and banners
@@ -119,44 +127,51 @@ class WebViewManager {
       webView.setBottom(Math.max(WebViewActivity.getWebViewYSize(), WebViewActivity.getWebViewXSize()));
 
       // TODO: Look into using setInitialScale if WebView does not fit
-      //       500 seems close to the default scale
-      // webView.setInitialScale(500);
-
-      Log.e("OneSignal", "Resources.getSystem().getDisplayMetrics().density: " + Resources.getSystem().getDisplayMetrics().density);
-      Log.e("OneSignal", "getScale(): " + webView.getScale());
-//      webView.setInitialScale(350);
-
-      webView.loadUrl(page);
-
-      return webView;
+      //       Default size is dp * 100
+      // webView.setInitialScale(350);
    }
 
    // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
    private static void enableWebViewRemoteDebugging() {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
-         && OneSignal.atLogLevel(OneSignal.LOG_LEVEL.DEBUG))
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT &&
+          OneSignal.atLogLevel(OneSignal.LOG_LEVEL.DEBUG))
          WebView.setWebContentsDebuggingEnabled(true);
    }
 
-   static void showFullscreenWebView() {
-      webView = showWebViewForPage(testPageHost + "/iam_full_screen_test.html");
+   // Creates a new WebView
+   static void showHTMLString(OSInAppMessage message, final String htmlStr) {
+      if (instances.containsKey(message.messageId)) {
+         OneSignal.Log(
+            OneSignal.LOG_LEVEL.ERROR,
+            "In-App message with id '" +
+               message.messageId +
+               "' already displayed or is already preparing to be display!");
+         return;
+      }
+
+      final WebViewManager webViewManager = new WebViewManager(message);
+
+      // Web view must be created on the main thread.
+      try {
+         final String base64Str = Base64.encodeToString(
+            htmlStr.getBytes("UTF-8"),
+            Base64.DEFAULT
+         );
+
+         OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+               webViewManager.setupWebView();
+               webViewManager.webView.loadData(base64Str, "text/html; charset=utf-8", "base64");
+            }
+         });
+      } catch (UnsupportedEncodingException e) {
+         e.printStackTrace();
+      }
    }
 
-   static void showModalWebView() {
-      webView = showWebViewForPage(testPageHost + "/iam_center_modal_test.html");
-   }
-
-   static void showBannerTopWebView() {
-      webView = showWebViewForPage(testPageHost + "/iam_top_banner_test.html");
-   }
-
-   static void showBannerBottomWebView() {
-      webView = showWebViewForPage(testPageHost + "/iam_bottom_banner_test.html");
-   }
-
-   private static void showActivity(int pageHeight, String displayLocation) {
-// NOTE: It is possible to add a view to the app's window to prevent Activity pauses.
-//       This implementation would be good for top / bottom banners, especially for games.
+   private void showActivity(int pageHeight, String displayLocation) {
+// TODO: Add a view to the app's window to prevent Activity pauses for top / bottom banners
 //      OSUtils.runOnMainUIThread(new Runnable() {
 //         @Override
 //         public void run() {
@@ -167,19 +182,45 @@ class WebViewManager {
 //         }});
 
 
-      // TODO: This seems to be null if the location prompt is shown
-      // TODO: Also null if consent was provided and another Activity focus event did not happen yet.
+      // TODO: Handle curActivity NULL cases
+      //   TODO:1: This seems to be null if the location prompt is shown
+      //   TODO:2: Also null if consent was provided and another Activity focus event did not happen yet.
+      //   TODO:3: Can also be null when just switching to the next in-app message
+      // TODO: Setup ActivityAvailableListener, changing it to an observable instead.
       Activity activity = ActivityLifecycleHandler.curActivity;
+
       Intent intent = new Intent(activity, WebViewActivity.class);
       intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-      intent.putExtra(WebViewActivity.PAGE_HEIGHT_INTENT_KEY, pageHeight);
-      intent.putExtra(WebViewActivity.DISPLAY_LOCATION_INTENT_KEY, displayLocation);
+
+      intent.putExtra(WebViewActivity.INTENT_KEY_PAGE_HEIGHT, pageHeight);
+      intent.putExtra(WebViewActivity.INTENT_KEY_DISPLAY_LOCATION, displayLocation);
+      intent.putExtra(WebViewActivity.INTENT_KEY_IAM_ID, message.messageId);
+
       activity.startActivity(intent);
    }
 
-   private static void dismiss() {
-      if (WebViewActivity.instance != null)
-         WebViewActivity.instance.dismiss();
+   void presenterShown(WebViewActivity activity) {
+      hostingActivity = activity;
+      OSInAppMessageController.onMessageWasShown(message);
+   }
+
+   // Will be called through OSJavaScriptInterface.
+   // If so let the presenter (Activity) know to start it's dismiss animation.
+   private void dismiss() {
+      if (hostingActivity == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
+         markAsDismissed();
+         return;
+      }
+
+      hostingActivity.dismiss();
+   }
+
+   // Called from presenter when it is no longer visible. (Animation is done)
+   void markAsDismissed() {
+      // Dereference so this can be cleaned up in the next GC
       webView = null;
+      hostingActivity = null;
+      OSInAppMessageController.getController().messageWasDismissed(message);
    }
 }
