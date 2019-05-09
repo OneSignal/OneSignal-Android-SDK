@@ -138,7 +138,6 @@ public class InAppMessagingUnitTests {
     public void testBuiltMessage() {
         assertEquals(message.messageId, InAppMessagingHelpers.TEST_MESSAGE_ID);
         assertNotNull(message.variants);
-        assertEquals(message.maxDisplayTime, 30.0);
         assertEquals(message.actions.size(), 1);
     }
 

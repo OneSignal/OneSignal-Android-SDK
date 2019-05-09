@@ -36,7 +36,7 @@ class OSInAppMessage {
     @NonNull
     public ArrayList<ArrayList<OSTrigger>> triggers;
 
-    public double maxDisplayTime;
+    public double displayDuration;
 
     @Nullable
     public Map<String, OSInAppMessageAction> actions;
@@ -47,7 +47,6 @@ class OSInAppMessage {
 
         // initialize simple root properties
         this.messageId = json.getString("id");
-        this.maxDisplayTime = json.optDouble("max_display_time");
         this.variants = parseVariants(json.getJSONObject("variants"));
         this.triggers = parseTriggerJson(json.getJSONArray("triggers"));
     }
@@ -107,7 +106,7 @@ class OSInAppMessage {
             }
 
             json.put("variants", variants);
-            json.put("max_display_time", this.maxDisplayTime);
+            json.put("display_duration", this.displayDuration);
 
             JSONArray orConditions = new JSONArray();
             for (ArrayList<OSTrigger> andArray : this.triggers) {
@@ -126,5 +125,15 @@ class OSInAppMessage {
         }
 
         return json;
+    }
+
+    /**
+     * Called when an action is taken to track uniqueness
+     * @return true if action taken was unique
+     */
+    boolean takeActionAsUnique() {
+        if (actionTaken)
+            return false;
+        return actionTaken = true;
     }
 }

@@ -1,10 +1,13 @@
 package com.onesignal;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -63,24 +66,23 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         }
     }
 
-    private static String variantIdForMessage(OSInAppMessage message) {
+    private static String variantIdForMessage(@NonNull OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
-            if (message.variants.containsKey(variant)) {
-                HashMap<String, String> variantMap = message.variants.get(variant);
+            if (!message.variants.containsKey(variant))
+                continue;
 
-                if (variantMap.containsKey(languageIdentifier))
-                    return variantMap.get(languageIdentifier);
-                else if (variantMap.containsKey("default"))
-                    return variantMap.get("default");
-            }
+            HashMap<String, String> variantMap = message.variants.get(variant);
+            if (variantMap.containsKey(languageIdentifier))
+                return variantMap.get(languageIdentifier);
+            return variantMap.get("default");
         }
 
         return null;
     }
 
-    private String htmlPathForMessage(OSInAppMessage message) {
+    private static String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 
         if (variantId == null) {
@@ -88,39 +90,40 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
             return null;
         }
 
-        return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html";
+        return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
     }
 
     private static void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + String.valueOf(statusCode) + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
-    private static void onMessageWasShown(OSInAppMessage message) {
+    static void onMessageWasShown(@NonNull OSInAppMessage message) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
 
-        try {
-            JSONObject json = new JSONObject() {{
-                put("app_id", OneSignal.appId);
-                put("player_id", OneSignal.getUserId());
-                put("variant_id", variantId);
-            }};
+        // TODO: Make impression calls when view is rendered.
 
-            OneSignalRestClient.post("in_app_messages/impression/" + message.messageId, json, new ResponseHandler() {
-                @Override
-                void onFailure(int statusCode, String response, Throwable throwable) {
-                    printHttpErrorForInAppMessageRequest("impression", statusCode, response);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
-        }
+//        try {
+//            JSONObject json = new JSONObject() {{
+//                put("app_id", OneSignal.appId);
+//                put("player_id", OneSignal.getUserId());
+//                put("variant_id", variantId);
+//            }};
+//
+//            OneSignalRestClient.post("in_app_messages/impression/" + message.messageId, json, new ResponseHandler() {
+//                @Override
+//                void onFailure(int statusCode, String response, Throwable throwable) {
+//                    printHttpErrorForInAppMessageRequest("impression", statusCode, response);
+//                }
+//            });
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
+//        }
     }
 
-    // TODO: When a message action occurs, call this method
-    private void onMessageActionOccurredOnMessage(final OSInAppMessage message, final OSInAppMessageAction action) {
+    void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
@@ -133,12 +136,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
             else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
                 OneSignalChromeTab.open(action.actionUrl, true);
         }
+
+        final boolean unique = message.takeActionAsUnique();
         try {
             JSONObject json = new JSONObject() {{
                 put("app_id", OneSignal.appId);
+                put("device_type", new OSUtils().getDeviceType());
                 put("player_id", OneSignal.getUserId());
                 put("action_id", action.actionId);
                 put("variant_id", variantId);
+                if (unique)
+                    put("unique", true);
             }};
 
             OneSignalRestClient.post("in_app_messages/" + message.messageId + "/engagement", json, new ResponseHandler() {
@@ -175,29 +183,44 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         return messageDisplayQueue.size() > 0 ? messageDisplayQueue.get(0) : null;
     }
 
-    // TODO: Call this method when the UI for an in-app message is dismissed, ie.
-    // when the user taps CLOSE or the time expires
-    // NOTE: Do NOT call this method until any pending animation (ie. a dismiss
-    // animation) is completely finished
-    void messageWasDismissed(OSInAppMessage message) {
+    // Called after an In-App message is closed and it's dismiss animation has completed
+    void messageWasDismissed(@NonNull OSInAppMessage message) {
         synchronized (messageDisplayQueue) {
-            if (!messageDisplayQueue.remove(message)) { //something really bad happened.
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "An in-app message was removed from the display queue before it was finished displaying.");
+            if (!messageDisplayQueue.remove(message)) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "An in-app message was removed from the display queue before it was finished displaying.");
                 return;
             }
 
-            if (messageDisplayQueue.size() > 0) {
-                //display the next message in the queue
+            // Display the next message in the queue, if any
+            if (messageDisplayQueue.size() > 0)
                 displayMessage(messageDisplayQueue.get(0));
-            }
         }
     }
 
-    private void displayMessage(OSInAppMessage message) {
-        onMessageWasShown(message);
-
-        // TODO: UI presentation logic
+    private void displayMessage(final OSInAppMessage message) {
         String htmlPath = htmlPathForMessage(message);
+        OneSignalRestClient.getSync(htmlPath, new ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                printHttpErrorForInAppMessageRequest("html", statusCode, response);
+            }
+
+            @Override
+            void onSuccess(String response) {
+                try {
+                    JSONObject jsonResponse = new JSONObject(response);
+                    String htmlStr = jsonResponse.getString("html");
+
+                    double displayDuration = jsonResponse.optDouble("display_duration");
+                    if (displayDuration != Double.NaN)
+                        message.displayDuration = displayDuration;
+
+                    WebViewManager.showHTMLString(message, htmlStr);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, null);
     }
 
     @Override

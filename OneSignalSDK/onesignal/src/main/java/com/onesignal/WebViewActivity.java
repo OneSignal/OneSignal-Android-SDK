@@ -11,45 +11,70 @@ import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
+import static com.onesignal.OSUtils.dpToPx;
+
+// TODO: In Android an app process can directly start an Activity.
+//       This happens if the app is kicked out of RAM but user resumes the app from the recent app list.
+//       There are a few things to consider on how we should handle this;
+//         1. We won't have a background, so it will just be black.
+//         2. Need to recover by creating a new WebView
+
 // TODO: Fix bug where the WebView disappears after resuming the Activity
 
 // TODO: Small bug: Image is slightly smaller if the modal is first displayed in landscape then
 //         rotated into portrait than displaying in portrait first.
 public class WebViewActivity extends Activity {
-
-   static final String DISPLAY_LOCATION_INTENT_KEY = "displayLocation";
-   static final String PAGE_HEIGHT_INTENT_KEY = "pageHeight";
+   static final String INTENT_KEY_IAM_ID = "iamId";
+   static final String INTENT_KEY_DISPLAY_LOCATION = "displayLocation";
+   static final String INTENT_KEY_PAGE_HEIGHT = "pageHeight";
 
    private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#BB000000");
-
    private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
+   private static final int MARGIN_PX_SIZE = dpToPx(24);
 
-   private static final int MARGIN_PX_SIZE = OSUtils.dpToPx(24);
-
-   static WebViewActivity instance;
-
+   WebViewManager webViewManager;
    WebView webView;
    DraggableRelativeLayout draggableRelativeLayout;
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
-      instance = this;
+      OneSignal.setAppContext(this);
+
+      if (!attachViewWeb()) {
+         OneSignal.Log(
+            OneSignal.LOG_LEVEL.WARN,
+            "OneSignal does not support starting the In-App Message Activity directly!"
+         );
+         return;
+      }
+
+      webViewManager.presenterShown(this);
 
       getWindow().getDecorView().setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
-
-      webView = WebViewManager.webView;
-
       addLayoutAndView();
    }
 
-   // TODO: Test layout with a fullscreen app (without status bar or buttons)
+   private boolean attachViewWeb() {
+      Bundle extra = getIntent().getExtras();
+      if (extra != null) {
+         String iamId = extra.getString(INTENT_KEY_IAM_ID);
+         webViewManager = WebViewManager.instanceFromIam(iamId);
+         if (webViewManager == null)
+            return false;
+         webView = webViewManager.getWebView();
+         return webView != null;
+      }
+      return false;
+   }
+
+   // TODO: Modal in portrait is to tall when using split screen mode
    // TODO: Edge case: Modal in portrait is to tall when using split screen mode
    void addLayoutAndView() {
       // Use pageHeight if we have it, otherwise use use full height of the Activity
       Bundle extra = getIntent().getExtras();
       int pageWidth = ConstraintLayout.LayoutParams.MATCH_PARENT;
-      int pageHeight = extra.getInt(PAGE_HEIGHT_INTENT_KEY, ConstraintLayout.LayoutParams.MATCH_PARENT);
+      int pageHeight = extra.getInt(INTENT_KEY_PAGE_HEIGHT, ConstraintLayout.LayoutParams.MATCH_PARENT);
       // If we have a height constraint; (Modal or Banner)
       //   1. Ensure we don't set a height higher than the screen height.
       //   2. Limit the width to either screen width or the height of the screen.
@@ -62,7 +87,7 @@ public class WebViewActivity extends Activity {
 
       FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, pageHeight);
 
-      String displayLocation = extra.getString(DISPLAY_LOCATION_INTENT_KEY);
+      String displayLocation = extra.getString(INTENT_KEY_DISPLAY_LOCATION);
       if ("top".equals(displayLocation))
          frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
       else if ("bottom".equals(displayLocation))
@@ -121,7 +146,7 @@ public class WebViewActivity extends Activity {
    static int getWebViewYSize() {
       // 24dp is a best estimate of the status bar.
       // Getting the size correct will prevent a redraw of the WebView
-      return Resources.getSystem().getDisplayMetrics().heightPixels - (MARGIN_PX_SIZE * 2) - OSUtils.dpToPx(24);
+      return Resources.getSystem().getDisplayMetrics().heightPixels - (MARGIN_PX_SIZE * 2) - dpToPx(24);
    }
 
    @Override
@@ -133,13 +158,28 @@ public class WebViewActivity extends Activity {
    @Override
    protected void onStop() {
       super.onStop();
-      instance = null;
       draggableRelativeLayout.removeAllViews();
+      clearReference();
+   }
+
+   @Override
+   protected void onDestroy() {
+      super.onDestroy();
+      clearReference();
    }
 
    void dismiss() {
+      // Play the draggable's dismiss animation.
       draggableRelativeLayout.dismiss();
       finishAfterDelay();
+   }
+
+   @Override
+   public void finish() {
+      super.finish();
+      if (webViewManager != null)
+         webViewManager.markAsDismissed();
+      clearReference();
    }
 
    void finishAfterDelay() {
@@ -151,5 +191,10 @@ public class WebViewActivity extends Activity {
             finish();
          }
       }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
+   }
+
+   private void clearReference() {
+      webViewManager = null;
+      webView = null;
    }
 }

@@ -562,13 +562,13 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOpeningLaunchUrl() throws Exception {
+      OneSignal.setAppContext(blankActivity);
       // Removes app launch
       shadowOf(blankActivity).getNextStartedActivity();
 
       // No OneSignal init here to test case where it is located in an Activity.
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
-
       Intent intent = shadowOf(blankActivity).getNextStartedActivity();
       assertEquals("android.intent.action.VIEW", intent.getAction());
       assertEquals("http://google.com", intent.getData().toString());
