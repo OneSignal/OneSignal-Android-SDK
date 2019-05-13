@@ -51,19 +51,14 @@ public class OneSignalExampleApp extends Application {
       StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().build());
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.ERROR);
-//      OneSignal.startInit(this)
-//          .setNotificationOpenedHandler(new ExampleNotificationOpenedHandler())
-//          .setNotificationReceivedHandler(new ExampleNotificationReceivedHandler())
-//          .init();
 
       String currentAppId = getOneSignalAppId(this);
       if (currentAppId == null)
          setOneSignalAppId(this, "0ba9731b-33bd-43f4-8b59-61172e27447d");
-//      setOneSignalAppId(this, "7451b741-ab9b-43f7-aa21-5f4ffb22af17");
 
       OneSignal.init(
          this,
-         "1234567",
+         "1234567", // This is ignored, dashboard value will be used.
          getOneSignalAppId(this),
          new ExampleNotificationOpenedHandler(),
          new ExampleNotificationReceivedHandler()

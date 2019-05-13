@@ -2,7 +2,6 @@ package com.onesignal;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -29,14 +28,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     boolean inAppMessagingEnabled;
 
-    static OSInAppMessageController getController() {
+    public static OSInAppMessageController getController() {
         if (sharedInstance == null)
             sharedInstance = new OSInAppMessageController();
 
         return sharedInstance;
     }
 
-    private OSInAppMessageController() {
+    protected OSInAppMessageController() {
         messages = new ArrayList<>();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
@@ -107,9 +106,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                 put("app_id", OneSignal.appId);
                 put("player_id", OneSignal.getUserId());
                 put("variant_id", variantId);
+                put("device_type",  new OSUtils().getDeviceType());
+                put("first_impression", true);
             }};
 
-            OneSignalRestClient.post("in_app_messages/impression/" + message.messageId, json, new ResponseHandler() {
+            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/impression", json, new ResponseHandler() {
                 @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("impression", statusCode, response);
@@ -141,11 +142,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                 put("app_id", OneSignal.appId);
                 put("device_type", new OSUtils().getDeviceType());
                 put("player_id", OneSignal.getUserId());
-                put("click_type", action.clickType);
+                put("click_type", action.clickType.toString());
                 put("click_id", action.clickId);
                 put("variant_id", variantId);
                 if (unique)
-                    put("unique", true);
+                    put("first_click", true);
             }};
 
             OneSignalRestClient.post("in_app_messages/" + message.messageId + "/click", json, new ResponseHandler() {

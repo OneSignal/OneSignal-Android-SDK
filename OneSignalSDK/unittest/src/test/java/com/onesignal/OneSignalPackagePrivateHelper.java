@@ -261,4 +261,28 @@ public class OneSignalPackagePrivateHelper {
    public static void dismissCurrentMessage() {
       OSInAppMessageController.getController().messageWasDismissed(OSInAppMessageController.getController().getCurrentDisplayedInAppMessage());
    }
+
+   public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {
+      private static OSInAppMessageController sharedInstance;
+
+      public static OSInAppMessageController getController() {
+         if (sharedInstance == null)
+            sharedInstance = new OSInAppMessageController();
+
+         return sharedInstance;
+      }
+      public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
+         super.onMessageActionOccurredOnMessage(message, actionJson);
+      }
+
+      public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+         com.onesignal.OSInAppMessageController.onMessageWasShown(message);
+      }
+   }
+
+   public static class OSInAppMessage extends com.onesignal.OSInAppMessage {
+      public OSInAppMessage(JSONObject json) throws JSONException {
+         super(json);
+      }
+   }
 }
