@@ -66,7 +66,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         }
     }
 
-    private static String variantIdForMessage(@NonNull OSInAppMessage message) {
+    private static @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
@@ -94,7 +94,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     }
 
     private static void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + String.valueOf(statusCode) + " error while attempting in-app message " + requestType + " request: " + response);
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
     static void onMessageWasShown(@NonNull OSInAppMessage message) {
@@ -102,25 +102,23 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         if (variantId == null)
             return;
 
-        // TODO: Make impression calls when view is rendered.
+        try {
+            JSONObject json = new JSONObject() {{
+                put("app_id", OneSignal.appId);
+                put("player_id", OneSignal.getUserId());
+                put("variant_id", variantId);
+            }};
 
-//        try {
-//            JSONObject json = new JSONObject() {{
-//                put("app_id", OneSignal.appId);
-//                put("player_id", OneSignal.getUserId());
-//                put("variant_id", variantId);
-//            }};
-//
-//            OneSignalRestClient.post("in_app_messages/impression/" + message.messageId, json, new ResponseHandler() {
-//                @Override
-//                void onFailure(int statusCode, String response, Throwable throwable) {
-//                    printHttpErrorForInAppMessageRequest("impression", statusCode, response);
-//                }
-//            });
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
-//        }
+            OneSignalRestClient.post("in_app_messages/impression/" + message.messageId, json, new ResponseHandler() {
+                @Override
+                void onFailure(int statusCode, String response, Throwable throwable) {
+                    printHttpErrorForInAppMessageRequest("impression", statusCode, response);
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
+        }
     }
 
     void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) {
@@ -143,13 +141,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                 put("app_id", OneSignal.appId);
                 put("device_type", new OSUtils().getDeviceType());
                 put("player_id", OneSignal.getUserId());
-                put("action_id", action.actionId);
+                put("click_type", action.clickType);
+                put("click_id", action.clickId);
                 put("variant_id", variantId);
                 if (unique)
                     put("unique", true);
             }};
 
-            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/engagement", json, new ResponseHandler() {
+            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/click", json, new ResponseHandler() {
                 @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("engagement", statusCode, response);

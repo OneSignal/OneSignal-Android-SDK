@@ -138,7 +138,6 @@ public class InAppMessagingUnitTests {
     public void testBuiltMessage() {
         assertEquals(message.messageId, InAppMessagingHelpers.TEST_MESSAGE_ID);
         assertNotNull(message.variants);
-        assertEquals(message.actions.size(), 1);
     }
 
     @Test
@@ -160,8 +159,9 @@ public class InAppMessagingUnitTests {
     public void testParsesMessageActions() throws JSONException {
         OSTestInAppMessageAction action = new OSTestInAppMessageAction(InAppMessagingHelpers.buildTestActionJson());
 
-        assertEquals(action.actionId, "Test_action_id");
-        assertEquals(action.actionUrl.toString(), "https://www.onesignal.com");
+        assertEquals(action.clickType, OSInAppMessageAction.ClickType.BUTTON);
+        assertEquals(action.clickId, "Test_click_id");
+        assertEquals(action.actionUrl, "https://www.onesignal.com");
         assertTrue(action.closes());
         assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
         assertEquals(action.additionalData.getString("test"), "value");

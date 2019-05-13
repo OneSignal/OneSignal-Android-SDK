@@ -7,9 +7,35 @@ import org.json.JSONObject;
 
 public class OSInAppMessageAction {
 
+    public enum ClickType {
+        BUTTON("button"), IMAGE("image");
+
+        private String text;
+
+        ClickType(String text) {
+            this.text = text;
+        }
+
+        @Override
+        public String toString() {
+            return this.text;
+        }
+
+        public static @Nullable ClickType fromString(String text) {
+            for (ClickType type : ClickType.values()) {
+                if (type.text.equalsIgnoreCase(text))
+                    return type;
+            }
+            return null;
+        }
+    }
+
+    @NonNull
+    public ClickType clickType;
+
     /** The unique identifier for this action */
     @NonNull
-    public String actionId;
+    public String clickId;
 
     /** An optional URL that opens when the action takes place */
     @Nullable
@@ -26,7 +52,8 @@ public class OSInAppMessageAction {
     public JSONObject additionalData;
 
     OSInAppMessageAction(@NonNull JSONObject json) {
-        actionId = json.optString("action_id", null);
+        clickType = ClickType.fromString(json.optString("click_type"));
+        clickId = json.optString("click_id", null);
         actionUrl = json.optString("url", null);
         urlTarget = OSInAppMessageActionUrlType.fromString(json.optString("url_target", null));
         if (urlTarget == null)
