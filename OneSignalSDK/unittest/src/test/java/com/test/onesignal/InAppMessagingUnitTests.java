@@ -6,6 +6,7 @@ import android.app.Activity;
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OSInAppMessageAction;
+import com.onesignal.OneSignalPackagePrivateHelper.OSInAppMessageController;
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
@@ -26,6 +27,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperatorType;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
 
 @Config(
@@ -334,5 +337,43 @@ public class InAppMessagingUnitTests {
         ShadowOSUtils.subscribableStatus = 1;
         OneSignal.init(blankActivity, "123456789", InAppMessagingHelpers.ONESIGNAL_APP_ID);
         blankActivityController.resume();
+    }
+
+    @Test
+    public void testOnMessageActionOccurredOnMessage() throws Exception {
+        threadAndTaskWait();
+
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message,
+           new JSONObject() {{
+                put("click_type", "button");
+                put("click_id", "button_id_123");
+            }}
+        );
+
+        ShadowOneSignalRestClient.Request iamClickRequest = ShadowOneSignalRestClient.requests.get(2);
+
+        assertEquals("in_app_messages/" + message.messageId + "/click", iamClickRequest.url);
+        assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamClickRequest.payload.get("app_id"));
+        assertEquals(1, iamClickRequest.payload.get("device_type"));
+        assertEquals(message.variants.get("android").get("en"), iamClickRequest.payload.get("variant_id"));
+        assertEquals(ShadowOneSignalRestClient.pushUserId, iamClickRequest.payload.get("player_id"));
+        assertEquals(true, iamClickRequest.payload.get("first_click"));
+        assertEquals("button", iamClickRequest.payload.get("click_type"));
+        assertEquals("button_id_123", iamClickRequest.payload.get("click_id"));
+    }
+
+    @Test
+    public void testOnMessageWasShown() throws Exception {
+       threadAndTaskWait();
+
+        OSInAppMessageController.onMessageWasShown(message);
+
+        ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
+
+        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamImpressionRequest.payload.get("app_id"));
+        assertEquals(ShadowOneSignalRestClient.pushUserId, iamImpressionRequest.payload.get("player_id"));
+        assertEquals(1, iamImpressionRequest.payload.get("device_type"));
+        assertEquals(true, iamImpressionRequest.payload.get("first_impression"));
     }
 }
