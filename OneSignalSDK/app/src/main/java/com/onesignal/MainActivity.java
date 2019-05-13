@@ -84,8 +84,6 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.triggerValueTextView = this.findViewById(R.id.triggerValue);
       this.iamHost.setText(OneSignalExampleApp.getOneSignalAppId(this));
 
-      // OneSignal.setInAppDebugHost(lastIamHost);
-
       if (OneSignal.requiresUserPrivacyConsent()) {
          //disable all interactive views except consent button
          this.changeInteractiveViewsEnabled(false);
@@ -294,19 +292,6 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
    public void onFullScreenClicked(View v) {
       updateIamhost();
-      OneSignal.showInAppFullscreen();
-   }
-   public void onModalClicked(View v) {
-      updateIamhost();
-      OneSignal.showInAppModal();
-   }
-   public void onBannerTopClicked(View v) {
-      updateIamhost();
-      OneSignal.showInAppBannerTop();
-   }
-   public void onBannerBottomClicked(View v) {
-      updateIamhost();
-      OneSignal.showInAppBannerBottom();
    }
 
    @Override

@@ -2970,26 +2970,4 @@ public class OneSignal {
          emailUpdateHandler = null;
       }
    }
-
-   // TODO: Remove showInApp* methods before merging
-   public static void showInAppFullscreen() {
-      // TODO: Switch to use ActivityLifecycleHandler.setActivityAvailableListener
-//      WebViewManager.showFullscreenWebView();
-   }
-
-   public static void showInAppModal() {
-//      WebViewManager.showModalWebView();
-   }
-
-   public static void showInAppBannerTop() {
-//      WebViewManager.showBannerTopWebView();
-   }
-
-   public static void showInAppBannerBottom() {
-//      WebViewManager.showBannerBottomWebView();
-   }
-
-   public static void setInAppDebugHost(String host) {
-//      WebViewManager.setHost(host);
-   }
 }

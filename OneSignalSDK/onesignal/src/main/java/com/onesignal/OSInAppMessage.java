@@ -1,7 +1,6 @@
 package com.onesignal;
 
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -10,7 +9,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 class OSInAppMessage {
 
@@ -37,9 +35,6 @@ class OSInAppMessage {
     public ArrayList<ArrayList<OSTrigger>> triggers;
 
     public double displayDuration;
-
-    @Nullable
-    public Map<String, OSInAppMessageAction> actions;
 
     private boolean actionTaken;
 
