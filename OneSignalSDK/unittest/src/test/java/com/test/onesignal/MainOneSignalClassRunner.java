@@ -107,6 +107,10 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
@@ -3452,6 +3456,50 @@ public class MainOneSignalClassRunner {
 
       assertTrue(first.executed);
       assertTrue(second.executed);
+   }
+
+   @Test
+   public void testNestedGetTags() throws Exception {
+
+      ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+      final Callable<Boolean> callable = new Callable<Boolean>() {
+         @Override
+         public Boolean call() {
+            return true;
+         }
+      };
+
+      // Validates that nested getTags calls won't throw a ConcurrentModificationException
+      class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
+
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            OneSignal.getTags(new OneSignal.GetTagsHandler() {
+               @Override
+               public void tagsAvailable(JSONObject tags) {
+                  try {
+                     callable.call();
+                  } catch (Exception e) {
+                     e.printStackTrace();
+                  }
+               }
+            });
+         }
+      }
+
+      Future<Boolean> future = executorService.submit(callable);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.sendTag("test", "value");
+      threadAndTaskWait();
+
+      DebugGetTagsHandler first = new DebugGetTagsHandler();
+      OneSignal.getTags(first);
+
+      assertTrue(future.get());
    }
 
    // ####### Unit test helper methods ########

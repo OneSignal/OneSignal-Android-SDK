@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -390,7 +391,7 @@ public class OneSignal {
    static DelayedConsentInitializationParameters delayedInitParams;
 
    static OneSignalRemoteParams.Params remoteParams;
-   
+
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
    private static OSPermissionState getCurrentPermissionState(Context context) {
@@ -1629,44 +1630,45 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTags()"))
          return;
 
-      synchronized (pendingGetTagsHandlers) {
-         pendingGetTagsHandlers.add(getTagsHandler);
-
-         // if there is an existing in-flight request, we should return
-         // since there's no point in making a duplicate runnable
-         if (pendingGetTagsHandlers.size() > 1) return;
-      }
-
-      Runnable getTagsRunnable = new Runnable() {
-         @Override
-         public void run() {
-            if (getTagsHandler == null) {
-               Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
-               return;
-            }
-
-            if (getUserId() == null) {
-               return;
-            }
-
-            internalFireGetTagsCallbacks();
-         }
-      };
-
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
-                 "Moving this tag operation to a pending queue.");
-         taskQueueWaitingForInit.add(getTagsRunnable);
+      if (getTagsHandler == null) {
+         Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
          return;
       }
 
-      getTagsRunnable.run();
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            pendingGetTagsHandlers.add(getTagsHandler);
+            // if there is an existing in-flight request, we should return
+            // since there's no point in making a duplicate runnable
+            if (pendingGetTagsHandlers.size() > 1) return;
+
+            if (appContext == null) {
+               Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
+                       "Moving this tag operation to a pending queue.");
+               taskQueueWaitingForInit.add(new Runnable() {
+                  @Override
+                  public void run() {
+                     runGetTags();
+                  }
+               });
+               return;
+            }
+            runGetTags();
+         }
+      }, "OS_GETTAGS").start();
+   }
+
+   private static void runGetTags() {
+      if (getUserId() == null) {
+         return;
+      }
+
+      internalFireGetTagsCallbacks();
    }
 
    private static void internalFireGetTagsCallbacks() {
-      synchronized (pendingGetTagsHandlers) {
-         if (pendingGetTagsHandlers.size() == 0) return;
-      }
+      if (pendingGetTagsHandlers.size() == 0) return;
 
       new Thread(new Runnable() {
          @Override
@@ -1674,16 +1676,10 @@ public class OneSignal {
             final UserStateSynchronizer.GetTagsResult tags = OneSignalStateSynchronizer.getTags(!getTagsCall);
             if (tags.serverSuccess) getTagsCall = true;
 
-            synchronized (pendingGetTagsHandlers) {
-               for (GetTagsHandler handler : pendingGetTagsHandlers) {
-                  if (tags.result == null || tags.toString().equals("{}"))
-                     handler.tagsAvailable(null);
-                  else
-                     handler.tagsAvailable(tags.result);
-               }
-
-               pendingGetTagsHandlers.clear();
+            for (final GetTagsHandler handler : pendingGetTagsHandlers) {
+               handler.tagsAvailable(tags.result == null || tags.toString().equals("{}") ? null : tags.result);
             }
+            pendingGetTagsHandlers.clear();
          }
       }, "OS_GETTAGS_CALLBACK").start();
    }
