@@ -3432,14 +3432,61 @@ public class MainOneSignalClassRunner {
    public void testGetTagsQueuesCallbacks() throws Exception {
 
       // Allows us to validate that both handlers get executed independently
+      ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+      final Callable<Boolean> callable = new Callable<Boolean>() {
+         @Override
+         public Boolean call() {
+            return true;
+         }
+      };
+
+      // Validates that nested getTags calls won't throw a ConcurrentModificationException
       class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
-         boolean executed = false;
 
          @Override
          public void tagsAvailable(JSONObject tags) {
-            executed = true;
+            OneSignal.getTags(new OneSignal.GetTagsHandler() {
+               @Override
+               public void tagsAvailable(JSONObject tags) {
+                  try {
+                     callable.call();
+                  } catch (Exception e) {
+                     e.printStackTrace();
+                  }
+               }
+            });
          }
       }
+
+      ExecutorService secondExecutorService = Executors.newSingleThreadExecutor();
+
+      final Callable<Boolean> secondCallable = new Callable<Boolean>() {
+         @Override
+         public Boolean call() {
+            return true;
+         }
+      };
+
+      class SecondDebugGetTagsHandler implements OneSignal.GetTagsHandler {
+
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            OneSignal.getTags(new OneSignal.GetTagsHandler() {
+               @Override
+               public void tagsAvailable(JSONObject tags) {
+                  try {
+                     callable.call();
+                  } catch (Exception e) {
+                     e.printStackTrace();
+                  }
+               }
+            });
+         }
+      }
+
+      Future<Boolean> future = executorService.submit(callable);
+      Future<Boolean> secondFuture = secondExecutorService.submit(secondCallable);
 
       OneSignalInit();
       threadAndTaskWait();
@@ -3448,14 +3495,14 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       DebugGetTagsHandler first = new DebugGetTagsHandler();
-      DebugGetTagsHandler second = new DebugGetTagsHandler();
+      SecondDebugGetTagsHandler second = new SecondDebugGetTagsHandler();
 
       OneSignal.getTags(first);
       OneSignal.getTags(second);
       threadAndTaskWait();
 
-      assertTrue(first.executed);
-      assertTrue(second.executed);
+      assertTrue(future.get());
+      assertTrue(secondFuture.get());
    }
 
    @Test
