@@ -382,7 +382,7 @@ public class OneSignal {
    private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
 
-   private static ArrayList<GetTagsHandler> pendingGetTagsHandlers = new ArrayList<>();
+   private static Vector<GetTagsHandler> pendingGetTagsHandlers = new Vector<>();
    private static boolean getTagsCall;
 
    private static boolean waitingToPostStateSync;
