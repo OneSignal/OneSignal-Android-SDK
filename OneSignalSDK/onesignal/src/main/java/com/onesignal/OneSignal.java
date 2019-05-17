@@ -1629,38 +1629,45 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTags()"))
          return;
 
-      synchronized (pendingGetTagsHandlers) {
-         pendingGetTagsHandlers.add(getTagsHandler);
-
-         // if there is an existing in-flight request, we should return
-         // since there's no point in making a duplicate runnable
-         if (pendingGetTagsHandlers.size() > 1) return;
-      }
-
-      Runnable getTagsRunnable = new Runnable() {
-         @Override
-         public void run() {
-            if (getTagsHandler == null) {
-               Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
-               return;
-            }
-
-            if (getUserId() == null) {
-               return;
-            }
-
-            internalFireGetTagsCallbacks();
-         }
-      };
-
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
-                 "Moving this tag operation to a pending queue.");
-         taskQueueWaitingForInit.add(getTagsRunnable);
+      if (getTagsHandler == null) {
+         Log(LOG_LEVEL.ERROR, "getTagsHandler is null!");
          return;
       }
 
-      getTagsRunnable.run();
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            synchronized (pendingGetTagsHandlers) {
+               pendingGetTagsHandlers.add(getTagsHandler);
+
+               // if there is an existing in-flight request, we should return
+               // since there's no point in making a duplicate runnable
+               if (pendingGetTagsHandlers.size() > 1) return;
+            }
+
+            if (appContext == null) {
+               Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
+                       "Moving this tag operation to a pending queue.");
+               taskQueueWaitingForInit.add(new Runnable() {
+                  @Override
+                  public void run() {
+                     runGetTags();
+                  }
+               });
+               return;
+            }
+
+            runGetTags();
+         }
+      }, "OS_GETTAGS").start();
+   }
+
+   private static void runGetTags() {
+      if (getUserId() == null) {
+         return;
+      }
+
+      internalFireGetTagsCallbacks();
    }
 
    private static void internalFireGetTagsCallbacks() {
@@ -1676,10 +1683,7 @@ public class OneSignal {
 
             synchronized (pendingGetTagsHandlers) {
                for (GetTagsHandler handler : pendingGetTagsHandlers) {
-                  if (tags.result == null || tags.toString().equals("{}"))
-                     handler.tagsAvailable(null);
-                  else
-                     handler.tagsAvailable(tags.result);
+                  handler.tagsAvailable(tags.result == null || tags.toString().equals("{}") ? null : tags.result);
                }
 
                pendingGetTagsHandlers.clear();

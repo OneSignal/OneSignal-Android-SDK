@@ -8,11 +8,9 @@ import android.os.Looper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.robolectric.shadows.ShadowMessageQueue;
 import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 

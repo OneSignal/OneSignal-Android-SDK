@@ -3437,14 +3437,49 @@ public class MainOneSignalClassRunner {
          }
       }
 
+      DebugGetTagsHandler first = new DebugGetTagsHandler();
+      DebugGetTagsHandler second = new DebugGetTagsHandler();
+
       OneSignalInit();
       threadAndTaskWait();
 
       OneSignal.sendTag("test", "value");
       threadAndTaskWait();
 
+      OneSignal.getTags(first);
+      OneSignal.getTags(second);
+      threadAndTaskWait();
+
+      assertTrue(first.executed);
+      assertTrue(second.executed);
+   }
+
+   @Test
+   public void testNestedGetTags() throws Exception {
+
+      // Validates that nested getTags calls won't throw a ConcurrentModificationException
+      class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
+         boolean executed = false;
+
+         @Override
+         public void tagsAvailable(JSONObject tags) {
+            OneSignal.getTags(new OneSignal.GetTagsHandler() {
+               @Override
+               public void tagsAvailable(JSONObject tags) {
+                  executed = true;
+               }
+            });
+         }
+      }
+
       DebugGetTagsHandler first = new DebugGetTagsHandler();
       DebugGetTagsHandler second = new DebugGetTagsHandler();
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.sendTag("test", "value");
+      threadAndTaskWait();
 
       OneSignal.getTags(first);
       OneSignal.getTags(second);
