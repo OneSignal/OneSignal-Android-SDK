@@ -1546,7 +1546,7 @@ public class MainOneSignalClassRunner {
       OneSignal.syncHashedEmail("test@test.com");
 
       for(int a = 0; a < 500; a++) {
-         OneSignal.sendTag("a"+a,String.valueOf(a));
+         OneSignal.sendTag("a" + a, String.valueOf(a));
       }
 
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
@@ -1555,7 +1555,7 @@ public class MainOneSignalClassRunner {
             //assert that the first 10 tags sent were available
             try {
                for(int a = 0; a < 10; a++) {
-                  assertEquals(String.valueOf(a),tags.get("a"+a));
+                  assertEquals(String.valueOf(a), tags.get("a" + a));
                }
             }
             catch (Exception e) {
@@ -1563,6 +1563,7 @@ public class MainOneSignalClassRunner {
             }
          }
       });
+      threadAndTaskWait();
 
       final AtomicBoolean callbackFired = new AtomicBoolean(false);
       OneSignal.IdsAvailableHandler idsAvailableHandler = new OneSignal.IdsAvailableHandler() {
