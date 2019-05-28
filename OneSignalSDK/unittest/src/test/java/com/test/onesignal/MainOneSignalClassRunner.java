@@ -454,7 +454,6 @@ public class MainOneSignalClassRunner {
    @Config(shadows = {ShadowRoboNotificationManager.class}, sdk = 26)
    public void testNotificationChannelListPayload() throws Exception {
       NotificationChannelManagerRunner testHelper = new NotificationChannelManagerRunner().setContext(blankActivity);
-      JSONObject payloadList = testHelper.createBasicChannelListPayload();
    
       JSONObject androidParams = testHelper.createBasicChannelListPayload();
       androidParams.put("awl_list", new JSONObject());
@@ -2775,50 +2774,6 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(3);
       assertEquals(REST_METHOD.POST, request.method);
       assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_session", request.url);
-   }
-
-   @Test
-   public void testAppl() throws Exception {
-      shadowOf(blankActivity.getPackageManager()).addPackage("org.robolectric.default");
-
-      OneSignalInit();
-      threadAndTaskWait();
-      String baseKey = "pkgs";
-      assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
-
-      flushBufferedSharedPrefs();
-      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-      JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
-      assertFalse(syncValues.has(baseKey + "_a"));
-      assertEquals(1, syncValues.getJSONArray(baseKey).length());
-
-      JSONObject toSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_TOSYNC_STATE", null));
-      assertFalse(toSyncValues.has(baseKey + "_a"));
-      assertEquals(1, toSyncValues.getJSONArray(baseKey).length());
-
-      restartAppAndElapseTimeToNextSession();
-      ShadowOneSignalRestClient.lastPost = null;
-      shadowOf(blankActivity.getPackageManager()).addPackage("org.test.app2");
-      OneSignalInit();
-      threadAndTaskWait();
-      assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_a").length());
-
-      restartAppAndElapseTimeToNextSession();
-      ShadowOneSignalRestClient.lastPost = null;
-      shadowOf(blankActivity.getPackageManager()).removePackage("org.test.app2");
-      OneSignalInit();
-      threadAndTaskWait();
-      assertEquals(1, ShadowOneSignalRestClient.lastPost.getJSONArray(baseKey + "_d").length());
-
-      restartAppAndElapseTimeToNextSession();
-      ShadowOneSignalRestClient.lastPost = null;
-      OneSignalInit();
-      threadAndTaskWait();
-
-      System.out.println("ShadowOneSignalRestClient.lastPost: " + ShadowOneSignalRestClient.lastPost);
-
-      assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_d"));
-      assertFalse(ShadowOneSignalRestClient.lastPost.has(baseKey + "_a"));
    }
 
    // ####### Unit test postNotification #####
