@@ -14,7 +14,6 @@ class OneSignalRemoteParams {
       String googleProjectNumber;
       boolean enterprise;
       boolean useEmailAuth;
-      JSONObject awl;
       JSONArray notificationChannels;
       boolean firebaseAnalytics;
       boolean restoreTTLFilter;
@@ -59,13 +58,13 @@ class OneSignalRemoteParams {
          }
       };
 
-      String awl_url = "apps/" + OneSignal.appId + "/android_params.js";
+      String params_url = "apps/" + OneSignal.appId + "/android_params.js";
       String userId = OneSignal.getUserId();
       if (userId != null)
-         awl_url += "?player_id=" + userId;
+         params_url += "?player_id=" + userId;
 
       OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting request to get Android parameters.");
-      OneSignalRestClient.get(awl_url, responseHandler, OneSignalRestClient.CACHE_KEY_REMOTE_PARAMS);
+      OneSignalRestClient.get(params_url, responseHandler, OneSignalRestClient.CACHE_KEY_REMOTE_PARAMS);
    }
 
    static private void processJson(String json, final @NonNull CallBack callBack) {
@@ -82,7 +81,6 @@ class OneSignalRemoteParams {
       Params params = new Params() {{
          enterprise = responseJson.optBoolean("enterp", false);
          useEmailAuth = responseJson.optBoolean("use_email_auth", false);
-         awl = responseJson.optJSONObject("awl_list");
          notificationChannels = responseJson.optJSONArray("chnl_lst");
          firebaseAnalytics = responseJson.optBoolean("fba", false);
          restoreTTLFilter = responseJson.optBoolean("restore_ttl_filter", true);

@@ -1209,19 +1209,6 @@ public class OneSignal {
          deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
       } catch (PackageManager.NameNotFoundException e) {}
 
-      try {
-         List<PackageInfo> packList = packageManager.getInstalledPackages(0);
-         JSONArray pkgs = new JSONArray();
-         MessageDigest md = MessageDigest.getInstance("SHA-256");
-         for (int i = 0; i < packList.size(); i++) {
-            md.update(packList.get(i).packageName.getBytes());
-            String pck = Base64.encodeToString(md.digest(), Base64.NO_WRAP);
-            if (remoteParams.awl.has(pck))
-               pkgs.put(pck);
-         }
-         deviceInfo.put("pkgs", pkgs);
-      } catch (Throwable t) {}
-
       deviceInfo.put("net_type", osUtils.getNetType());
       deviceInfo.put("carrier", osUtils.getCarrierName());
       deviceInfo.put("rooted", RootToolsInternalMethods.isRooted());
