@@ -191,39 +191,11 @@ abstract class UserState {
 
     void persistState() {
         synchronized(syncLock) {
-            modifySyncValuesJsonArray("pkgs");
-
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ + persistKey, syncValues.toString());
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_ + persistKey, dependValues.toString());
         }
-    }
-
-    private void modifySyncValuesJsonArray(String baseKey) {
-        try {
-            JSONArray orgArray = syncValues.has(baseKey) ? syncValues.getJSONArray(baseKey) : new JSONArray();
-            JSONArray tempArray = new JSONArray();
-
-            if (syncValues.has(baseKey + "_d")) {
-                String remArrayStr = JSONUtils.toStringNE(syncValues.getJSONArray(baseKey + "_d"));
-                for (int i = 0; i < orgArray.length(); i++)
-                    if (!remArrayStr.contains(orgArray.getString(i)))
-                        tempArray.put(orgArray.get(i));
-            }
-            else
-                tempArray = orgArray;
-
-            if (syncValues.has(baseKey + "_a")) {
-                JSONArray newArray = syncValues.getJSONArray(baseKey + "_a");
-                for (int i = 0; i < newArray.length(); i++)
-                    tempArray.put(newArray.get(i));
-            }
-
-            syncValues.put(baseKey, tempArray);
-            syncValues.remove(baseKey + "_a");
-            syncValues.remove(baseKey + "_d");
-        } catch (Throwable t) {}
     }
 
     void persistStateAfterSync(JSONObject inDependValues, JSONObject inSyncValues) {
