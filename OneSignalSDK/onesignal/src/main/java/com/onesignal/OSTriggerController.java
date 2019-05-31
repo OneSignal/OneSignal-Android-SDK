@@ -17,8 +17,6 @@ class OSTriggerController {
 
     private final ConcurrentHashMap<String, Object> triggers;
 
-    private static final String TRIGGERS_KEY = "os_triggers";
-
     OSTriggerController(OSDynamicTriggerControllerObserver dynamicTriggerObserver) {
         triggers = new ConcurrentHashMap<>();
         dynamicTriggerController = new OSDynamicTriggerController(dynamicTriggerObserver);
@@ -52,7 +50,7 @@ class OSTriggerController {
         return true;
     }
 
-    private boolean evaluateTrigger(OSTrigger trigger) {
+    private boolean evaluateTrigger(@NonNull OSTrigger trigger) {
         if (OSDynamicTriggerType.fromString(trigger.property) != null)
             return dynamicTriggerController.dynamicTriggerShouldFire(trigger);
 
@@ -159,8 +157,6 @@ class OSTriggerController {
                 Object value = newTriggers.get(key);
                 triggers.put(key, value);
             }
-
-            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, triggers);
         }
     }
 
@@ -168,8 +164,6 @@ class OSTriggerController {
         synchronized (triggers) {
             for (String key : keys)
                 triggers.remove(key);
-
-            OneSignalPrefs.saveObject(OneSignalPrefs.PREFS_TRIGGERS, TRIGGERS_KEY, triggers);
         }
     }
 

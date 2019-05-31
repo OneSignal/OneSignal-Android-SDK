@@ -2766,9 +2766,6 @@ public class OneSignal {
     * Triggers are used for targeting in-app messages.
     */
    public static void addTriggers(Map<String, Object> triggers) {
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTriggers()"))
-         return;
-
       OSInAppMessageController.getController().addTriggers(triggers);
    }
 
@@ -2776,9 +2773,6 @@ public class OneSignal {
     * Allows you to set an individual trigger key/value pair for in-app message targeting
     */
    public static void addTrigger(String key, Object object) {
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("addTrigger()"))
-         return;
-
       HashMap<String, Object> triggerMap = new HashMap<>();
       triggerMap.put(key, object);
 
@@ -2787,17 +2781,11 @@ public class OneSignal {
 
    /** Removes a list/collection of triggers from their keys  */
    public static void removeTriggersForKeys(Collection<String> keys) {
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
-         return;
-
       OSInAppMessageController.getController().removeTriggersForKeys(keys);
    }
 
    /** Removes a single trigger for the given key */
    public static void removeTriggerForKey(String key) {
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeTriggersForKeys()"))
-         return;
-
       ArrayList<String> triggerKeys = new ArrayList<>();
       triggerKeys.add(key);
 
@@ -2807,28 +2795,17 @@ public class OneSignal {
    /** Returns a single trigger value for the given key (if it exists, otherwise returns null) */
    @Nullable
    public static Object getTriggerValueForKey(String key) {
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getTriggerValueForKey()"))
-         return null;
-
       return OSInAppMessageController.getController().getTriggerValue(key);
    }
 
-   /**
-    * A local boolean indicating if in-app messaging is enabled on this device.
-    * This value is true by default. Call setInAppMessagingEnabled(false) to disable
-    * in-app messaging for this device.
-    */
-   public static boolean isInAppMessagingEnabled() {
-      return OSInAppMessageController.getController().inAppMessagingEnabled;
-   }
-
    /***
-    * Can enable or disable in-app messaging on this device.
-    * 
-    * @param inAppMessagingEnabled The boolean that disables/enables in-app messaging
+    * Can temporarily pause in-app messaging on this device.
+    * Useful if you don't want to interrupt a user while playing a match in a game.
+    *
+    * @param pause The boolean that pauses/resumes in-app messages
     */
-   public static void setInAppMessagingEnabled(boolean inAppMessagingEnabled) {
-      OSInAppMessageController.getController().setInAppMessagingEnabled(inAppMessagingEnabled);
+   public static void pauseInAppMessages(boolean pause) {
+      OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
    }
 
    static long GetUnsentActiveTime() {

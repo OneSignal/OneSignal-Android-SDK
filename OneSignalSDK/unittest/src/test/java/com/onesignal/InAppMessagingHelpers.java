@@ -34,7 +34,7 @@ public class InAppMessagingHelpers {
     }
 
     public static void clearTestState() {
-        OneSignal.setInAppMessagingEnabled(true);
+        OneSignal.pauseInAppMessages(false);
         ShadowOSInAppMessageController.displayedMessages.clear();
         OSInAppMessageController.getController().messageDisplayQueue.clear();
     }
