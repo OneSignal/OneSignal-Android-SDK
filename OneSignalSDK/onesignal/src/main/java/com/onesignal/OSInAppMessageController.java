@@ -26,7 +26,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     private ArrayList<OSInAppMessage> messages;
     final ArrayList<OSInAppMessage> messageDisplayQueue;
 
-    boolean inAppMessagingEnabled;
+    boolean inAppMessagingEnabled = true;
 
     public static OSInAppMessageController getController() {
         if (sharedInstance == null)
@@ -39,7 +39,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         messages = new ArrayList<>();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
-        inAppMessagingEnabled = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_MESSAGING_ENABLED, true);
     }
 
     // Called after the device is registered from UserStateSynchronizer
@@ -249,7 +248,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     void setInAppMessagingEnabled(boolean enabled) {
         inAppMessagingEnabled = enabled;
-        OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_MESSAGING_ENABLED, enabled);
+        if (enabled)
+            evaluateInAppMessages();
     }
 
     @Nullable

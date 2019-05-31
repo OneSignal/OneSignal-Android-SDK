@@ -70,7 +70,6 @@ class OneSignalPrefs {
     public static final String PREFS_ONESIGNAL_USER_PROVIDED_CONSENT = "ONESIGNAL_USER_PROVIDED_CONSENT";
     public static final String PREFS_OS_ETAG_PREFIX = "PREFS_OS_ETAG_PREFIX_";
     public static final String PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_";
-    public static final String PREFS_ONESIGNAL_MESSAGING_ENABLED = "ONESIGNAL_MESSAGING_ENABLED";
 
     // PLAYER PURCHASE KEYS
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";

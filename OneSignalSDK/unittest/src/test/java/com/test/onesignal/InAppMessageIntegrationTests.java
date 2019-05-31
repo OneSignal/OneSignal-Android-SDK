@@ -110,22 +110,6 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
-    public void testDisableInAppMessagingPersisted() throws JSONException {
-        OneSignal.startInit(blankActivity).init();
-
-        assertTrue(OneSignal.isInAppMessagingEnabled());
-
-        OneSignal.setInAppMessagingEnabled(false);
-
-        // check to make sure that this setting is persisted to shared prefs
-        flushBufferedSharedPrefs();
-        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
-
-        assertFalse(OneSignal.isInAppMessagingEnabled());
-        assertFalse(prefs.getBoolean("ONESIGNAL_MESSAGING_ENABLED", true));
-    }
-
-    @Test
     public void testDisableInAppMessagingPreventsMessageDisplay() throws Exception {
         final OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_key", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 3);
 
@@ -138,7 +122,7 @@ public class InAppMessageIntegrationTests {
 
         // the SDK now has the in app message but it cannot be shown yet since the trigger is not valid
         // we will now disable in-app messages
-        OneSignal.setInAppMessagingEnabled(false);
+        OneSignal.pauseInAppMessages(true);
 
         // We will set the trigger. However, since messaging is disabled, the message should not be shown
         OneSignal.addTrigger("test_key", 3);
