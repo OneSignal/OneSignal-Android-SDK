@@ -2386,12 +2386,11 @@ public class MainOneSignalClassRunner {
    public void testSessionTimeTrackingOnPrivacyConsent() throws Exception {
       OneSignal.setRequiresUserPrivacyConsent(true);
       OneSignalInit();
-      OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
       threadAndTaskWait();
 
       // Now we trigger the LocationGMS but providing consent to OneSignal SDK
-      ShadowSystemClock.setCurrentTimeMillis(120_000);
       OneSignal.provideUserConsent(true);
+      ShadowSystemClock.setCurrentTimeMillis(120_000);
       blankActivityController.pause();
       threadAndTaskWait();
 
