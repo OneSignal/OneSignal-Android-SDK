@@ -41,6 +41,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSEmailSubscriptionObserver;
@@ -57,6 +58,7 @@ import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.PermissionsActivity;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
@@ -85,6 +87,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -104,6 +107,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -129,6 +134,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
 
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 
 import static org.robolectric.Shadows.shadowOf;
@@ -159,6 +165,7 @@ public class MainOneSignalClassRunner {
    private static Activity blankActivity;
    private static String callBackUseId, getCallBackRegId;
    private static String notificationOpenedMessage;
+   private static String notificationReceivedMessage;
    private static JSONObject lastGetTags;
    private static ActivityController<BlankActivity> blankActivityController;
    
@@ -177,6 +184,15 @@ public class MainOneSignalClassRunner {
          @Override
          public void notificationOpened(OSNotificationOpenResult openedResult) {
             notificationOpenedMessage = openedResult.notification.payload.body;
+         }
+      };
+   }
+
+   private static OneSignal.NotificationReceivedHandler getNotificationReceivedHandler() {
+      return new OneSignal.NotificationReceivedHandler() {
+         @Override
+         public void notificationReceived(OSNotification notification) {
+            notificationReceivedMessage = notification.payload.body;
          }
       };
    }
@@ -250,6 +266,39 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       assertNotNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   /**
+    * 1. User opens app to MainActivity
+    * 2. Comparison of MainActivity to dummy PermissionsActivity (1st Test Case)
+    * 3. User gives privacy consent and LocationGMS prompt is shown with PermissionsActivity
+    * 4. Comparison of PermissionsActivity to dummy PermissionsActivity (2nd Test Case)
+    */
+   @Test
+   @Config(sdk = 26)
+   public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
+      OneSignalInit();
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
+      threadAndTaskWait();
+
+      // Create a dummy PermissionsActivity to compare in the test cases
+      Intent expectedActivity = new Intent(RuntimeEnvironment.application, PermissionsActivity.class);
+
+      /* Without showing the LocationGMS prompt we check to see that the current
+       * activity is not equal to PermissionsActivity since it is not showing yet */
+      Intent actualActivity = shadowOf(blankActivity).getNextStartedActivity();
+      // Assert false that the current activity is equal to the dummy PermissionsActivity
+      assertFalse(actualActivity.filterEquals(expectedActivity));
+
+      // Now we trigger the LocationGMS but providing consent to OneSignal SDK
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+
+      // Now the PermissionsActivity should be the next on the stack
+      actualActivity = shadowOf(blankActivity).getNextStartedActivity();
+      // Assert true that the current activity is equal to the dummy PermissionsActivity
+      assertTrue(actualActivity.filterEquals(expectedActivity));
    }
 
    @Test
@@ -2328,6 +2377,27 @@ public class MainOneSignalClassRunner {
       assertEquals(60, postEmail.payload.getInt("active_time"));
    }
 
+   /**
+    * Similar workflow to testLocationPermissionPromptWithPrivacyConsent()
+    * We want to provide consent but make sure that session time tracking works properly
+    */
+   @Test
+   @Config(sdk = 26)
+   public void testSessionTimeTrackingOnPrivacyConsent() throws Exception {
+      OneSignalInit();
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
+      threadAndTaskWait();
+
+      // Now we trigger the LocationGMS but providing consent to OneSignal SDK
+      OneSignal.provideUserConsent(true);
+      ShadowSystemClock.setCurrentTimeMillis(120_000);
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(2));
+   }
+
    @Test
    public void gdprUserConsent() throws Exception {
       OneSignal.setRequiresUserPrivacyConsent(true);
@@ -2430,13 +2500,13 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      assertTrue(OneSignal.userProvidedPrivacyConsent());
+      assertTrue(OneSignal.hasUserProvidedPrivacyConsent());
 
       fastAppRestart();
       OneSignalInit();
       threadAndTaskWait();
 
-      assertTrue(OneSignal.userProvidedPrivacyConsent());
+      assertTrue(OneSignal.hasUserProvidedPrivacyConsent());
    }
 
 
