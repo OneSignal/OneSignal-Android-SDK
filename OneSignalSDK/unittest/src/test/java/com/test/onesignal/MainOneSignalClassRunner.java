@@ -41,7 +41,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.OSEmailSubscriptionObserver;
@@ -57,16 +56,18 @@ import com.onesignal.OSPermissionSubscriptionState;
 import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.PermissionsActivity;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
+import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
-import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowLocationUpdateListener;
@@ -74,20 +75,17 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
-import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -95,20 +93,18 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
-import org.robolectric.android.controller.ActivityController;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -118,8 +114,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
+import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
-
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastAppRestart;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
@@ -129,17 +125,11 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
-
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
-
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
-
 import static org.robolectric.Shadows.shadowOf;
-
-import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -268,38 +258,38 @@ public class MainOneSignalClassRunner {
       assertNotNull(ShadowOneSignalRestClient.lastPost);
    }
 
-    /**
-     * 1. User opens app to MainActivity
-     * 2. Comparison of MainActivity to dummy PermissionsActivity (1st Test Case)
-     * 3. User gives privacy consent and LocationGMS prompt is shown with PermissionsActivity
-     * 4. Comparison of PermissionsActivity to dummy PermissionsActivity (2nd Test Case)
-     */
-    @Test
-    @Config(sdk = 26)
-    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
-        OneSignal.setRequiresUserPrivacyConsent(true);
-        OneSignalInit();
-        OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
-        threadAndTaskWait();
+   /**
+    * 1. User opens app to MainActivity
+    * 2. Comparison of MainActivity to dummy PermissionsActivity (1st Test Case)
+    * 3. User gives privacy consent and LocationGMS prompt is shown with PermissionsActivity
+    * 4. Comparison of PermissionsActivity to dummy PermissionsActivity (2nd Test Case)
+    */
+   @Test
+   @Config(manifest = "AndroidManifestLocationPrivacyConsent.xml", sdk = 26)
+   public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignalInit();
+      OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
+      threadAndTaskWait();
 
-        // Create a dummy PermissionsActivity to compare in the test cases
-        Intent expectedActivity = new Intent(RuntimeEnvironment.application, PermissionsActivity.class);
+      // Create a dummy PermissionsActivity to compare in the test cases
+      Intent expectedActivity = new Intent(RuntimeEnvironment.application, PermissionsActivity.class);
 
-        /* Without showing the LocationGMS prompt we check to see that the current
-         * activity is not equal to PermissionsActivity since it is not showing yet */
-        Intent actualActivity = shadowOf(blankActivity).getNextStartedActivity();
-        // Assert false that the current activity is equal to the dummy PermissionsActivity
-        assertFalse(actualActivity.filterEquals(expectedActivity));
+      /* Without showing the LocationGMS prompt we check to see that the current
+       * activity is not equal to PermissionsActivity since it is not showing yet */
+      Intent actualActivity = shadowOf(blankActivity).getNextStartedActivity();
+      // Assert false that the current activity is equal to the dummy PermissionsActivity
+      assertFalse(actualActivity.filterEquals(expectedActivity));
 
-        // Now we trigger the LocationGMS but providing consent to OneSignal SDK
-        OneSignal.provideUserConsent(true);
-        threadAndTaskWait();
+      // Now we trigger the LocationGMS but providing consent to OneSignal SDK
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
 
-        // Now the PermissionsActivity should be the next on the stack
-        actualActivity = shadowOf(blankActivity).getNextStartedActivity();
-        // Assert true that the current activity is equal to the dummy PermissionsActivity
-        assertTrue(actualActivity.filterEquals(expectedActivity));
-    }
+      // Now the PermissionsActivity should be the next on the stack
+      actualActivity = shadowOf(blankActivity).getNextStartedActivity();
+      // Assert true that the current activity is equal to the dummy PermissionsActivity
+      assertTrue(actualActivity.filterEquals(expectedActivity));
+   }
 
    @Test
    public void testOnSessionCalledOnlyOncePer30Sec() throws Exception {
@@ -2499,13 +2489,13 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      assertTrue(OneSignal.hasUserProvidedPrivacyConsent());
+      assertTrue(OneSignal.userProvidedPrivacyConsent());
 
       fastAppRestart();
       OneSignalInit();
       threadAndTaskWait();
 
-      assertTrue(OneSignal.hasUserProvidedPrivacyConsent());
+      assertTrue(OneSignal.userProvidedPrivacyConsent());
    }
 
 
