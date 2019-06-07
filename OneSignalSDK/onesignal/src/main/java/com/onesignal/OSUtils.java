@@ -57,6 +57,28 @@ class OSUtils {
 
    static final int UNINITIALIZABLE_STATUS = -999;
 
+   public enum SchemaType {
+      DATA("data"),
+      HTTPS("https"),
+      HTTP("http"),
+      ;
+
+      private final String text;
+
+      SchemaType(final String text) {
+         this.text = text;
+      }
+
+      public static SchemaType fromString(String text) {
+         for (SchemaType type : SchemaType.values()) {
+            if (type.text.equalsIgnoreCase(text)) {
+               return type;
+            }
+         }
+         return null;
+      }
+   }
+
    int initializationChecker(Context context, int deviceType, String oneSignalAppId) {
       int subscribableStatus = 1;
 
@@ -261,7 +283,7 @@ class OSUtils {
       Pattern pattern = Pattern.compile(emRegex);
       return pattern.matcher(email).matches();
    }
-   
+
    // Get the app's permission which will be false if the user disabled notifications for the app
    //   from Settings > Apps or by long pressing the notifications and selecting block.
    //   - Detection works on Android 4.4+, requires Android Support v4 Library 24.0.0+
@@ -269,10 +291,10 @@ class OSUtils {
       try {
          return NotificationManagerCompat.from(OneSignal.appContext).areNotificationsEnabled();
       } catch (Throwable t) {}
-      
+
       return true;
    }
-   
+
    static void runOnMainUIThread(Runnable runnable) {
       if (Looper.getMainLooper().getThread() == Thread.currentThread())
          runnable.run();
@@ -286,7 +308,7 @@ class OSUtils {
       Handler handler = new Handler(Looper.getMainLooper());
       handler.postDelayed(runnable, delay);
    }
-   
+
    static int getTargetSdkVersion(Context context) {
       String packageName = context.getPackageName();
       PackageManager packageManager = context.getPackageManager();
@@ -296,32 +318,32 @@ class OSUtils {
       } catch (PackageManager.NameNotFoundException e) {
          e.printStackTrace();
       }
-      
+
       return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
    }
-   
+
    static boolean isValidResourceName(String name) {
       return (name != null && !name.matches("^[0-9]"));
    }
-   
+
    static Uri getSoundUri(Context context, String sound) {
       Resources resources = context.getResources();
       String packageName = context.getPackageName();
       int soundId;
-      
+
       if (isValidResourceName(sound)) {
          soundId = resources.getIdentifier(sound, "raw", packageName);
          if (soundId != 0)
             return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
       }
-      
+
       soundId = resources.getIdentifier("onesignal_default_sound", "raw", packageName);
       if (soundId != 0)
          return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId);
-      
+
       return null;
    }
-   
+
    static long[] parseVibrationPattern(JSONObject gcmBundle) {
       try {
          Object patternObj = gcmBundle.opt("vib_pt");
@@ -330,14 +352,14 @@ class OSUtils {
             jsonVibArray = new JSONArray((String)patternObj);
          else
             jsonVibArray = (JSONArray)patternObj;
-         
+
          long[] longArray = new long[jsonVibArray.length()];
          for (int i = 0; i < jsonVibArray.length(); i++)
             longArray[i] = jsonVibArray.optLong(i);
-         
+
          return longArray;
       } catch (JSONException e) {}
-      
+
       return null;
    }
 
@@ -369,21 +391,34 @@ class OSUtils {
    }
 
    static void openURLInBrowser(@NonNull String url) {
-      if (!url.contains("://"))
-         url = "http://" + url;
-
       openURLInBrowser(Uri.parse(url.trim()));
    }
 
    private static void openURLInBrowser(@NonNull Uri uri) {
-      Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+      SchemaType type = uri.getScheme() != null ? SchemaType.fromString(uri.getScheme()) : null;
+      if (type == null) {
+          type = SchemaType.HTTP;
+          if (!uri.toString().contains("://")) {
+            uri = Uri.parse("http://" + uri.toString());
+         }
+      }
+      Intent intent;
+      switch (type) {
+         case DATA:
+            intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER);
+            intent.setData(uri);
+            break;
+         case HTTPS:
+         case HTTP:
+         default:
+            intent = new Intent(Intent.ACTION_VIEW, uri);
+            break;
+      }
       intent.addFlags(
-         Intent.FLAG_ACTIVITY_NO_HISTORY |
-            Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
-            Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-            Intent.FLAG_ACTIVITY_NEW_TASK
-      );
-
+              Intent.FLAG_ACTIVITY_NO_HISTORY |
+                      Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
+                      Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
+                      Intent.FLAG_ACTIVITY_NEW_TASK);
       OneSignal.appContext.startActivity(intent);
    }
 }
