@@ -515,7 +515,6 @@ public class OneSignal {
          return;
       }
 
-      // Before setting appContext store the previous state for future use
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
 
@@ -675,7 +674,7 @@ public class OneSignal {
       }
    }
 
-   public static boolean hasUserProvidedPrivacyConsent() {
+   public static boolean userProvidedPrivacyConsent() {
       return getSavedUserConsentStatus();
    }
 
@@ -915,7 +914,7 @@ public class OneSignal {
    }
 
    public static void provideUserConsent(boolean consent) {
-      boolean previousConsentStatus = hasUserProvidedPrivacyConsent();
+      boolean previousConsentStatus = userProvidedPrivacyConsent();
 
       saveUserConsentStatus(consent);
 
@@ -939,13 +938,13 @@ public class OneSignal {
     * Indicates if the SDK is still waiting for the user to provide consent
     */
    public static boolean requiresUserPrivacyConsent() {
-      return requiresUserPrivacyConsent && !hasUserProvidedPrivacyConsent();
+      return requiresUserPrivacyConsent && !userProvidedPrivacyConsent();
    }
 
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
       if (requiresUserPrivacyConsent()) {
          if (methodName != null)
-            OneSignal.Log(LOG_LEVEL.WARN, "Method " + methodName + " was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.hasUserProvidedPrivacyConsent()");
+            OneSignal.Log(LOG_LEVEL.WARN, "Method " + methodName + " was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.userProvidedPrivacyConsent()");
          return true;
       }
 
