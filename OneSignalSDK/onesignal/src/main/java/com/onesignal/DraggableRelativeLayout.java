@@ -1,6 +1,5 @@
 package com.onesignal;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.support.annotation.NonNull;
@@ -13,7 +12,12 @@ import android.widget.RelativeLayout;
 
 class DraggableRelativeLayout extends RelativeLayout {
 
-   ViewDragHelper mDragHelper;
+   static abstract class DraggableListener {
+      void onDismiss() {}
+   }
+
+   private DraggableListener mListener;
+   private ViewDragHelper mDragHelper;
    private boolean dismissing;
 
    static class Params {
@@ -38,6 +42,10 @@ class DraggableRelativeLayout extends RelativeLayout {
 
       setClipChildren(false);
       createDragHelper();
+   }
+
+   void setListener(DraggableListener listener) {
+      this.mListener = listener;
    }
 
    void setParams(Params params) {
@@ -92,6 +100,7 @@ class DraggableRelativeLayout extends RelativeLayout {
                   if (lastYPos > params.dismissingYPos || yvel > params.dismissingYVelocity) {
                      settleDestY = params.offScreenYPos;
                      dismissing = true;
+                     if (mListener != null) { mListener.onDismiss(); }
                      Log.e("OneSignal", "Dismissing: params.dismissingYPos=" + params.dismissingYPos + ", lastYPos=" + lastYPos + ", yvel=" + yvel + ", params.dismissingYPos=" + params.dismissingYPos);
                   }
                }
@@ -99,6 +108,7 @@ class DraggableRelativeLayout extends RelativeLayout {
                   if (lastYPos < params.dismissingYPos || yvel < params.dismissingYVelocity) {
                      settleDestY = params.offScreenYPos;
                      dismissing = true;
+                     if (mListener != null) { mListener.onDismiss(); }
                      Log.e("OneSignal", "Dismissing: params.dismissingYPos=" + params.dismissingYPos + ", lastYPos=" + lastYPos +", yvel=" + yvel + ", params.dismissingYPos=" + params.dismissingYPos);
                   }
                }
@@ -130,13 +140,6 @@ class DraggableRelativeLayout extends RelativeLayout {
 
       if (settling)
          ViewCompat.postInvalidateOnAnimation(this);
-      else if (dismissing)
-         finishParentActivity();
-   }
-
-   private void finishParentActivity() {
-      Activity host = (Activity)getContext();
-      host.finish();
    }
 
    public void dismiss() {

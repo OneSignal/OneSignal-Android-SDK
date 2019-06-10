@@ -210,8 +210,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");
 
-                    double displayDuration = jsonResponse.optDouble("display_duration");
-                    if (displayDuration != Double.NaN)
+                    Double displayDuration = jsonResponse.optDouble("display_duration");
+                    if (displayDuration.isNaN())
                         message.displayDuration = displayDuration;
 
                     WebViewManager.showHTMLString(message, htmlStr);
