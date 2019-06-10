@@ -3,12 +3,13 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 import static com.onesignal.OSTrigger.OSTriggerOperatorType;
 
 class OSTriggerController {
@@ -27,7 +28,7 @@ class OSTriggerController {
      * a 2D array where the outer array represents OR conditions and the inner array represents
      * AND conditions. If all of the triggers in an inner array evaluate to true, it means the
      * message should be shown and the function returns true.
-    */
+     */
     boolean evaluateMessageTriggers(@NonNull OSInAppMessage message) {
         // If there are no triggers then we display the In-App when a new session is triggered
         if (message.triggers.size() == 0)
@@ -67,22 +68,22 @@ class OSTriggerController {
             return operatorType == OSTriggerOperatorType.NOT_EQUAL_TO && trigger.value != null;
         }
 
-       // We have local value at this point, we can evaluate existence checks
-       if (operatorType == OSTriggerOperatorType.EXISTS)
-          return true;
-       if (operatorType == OSTriggerOperatorType.NOT_EXISTS)
-          return false;
+        // We have local value at this point, we can evaluate existence checks
+        if (operatorType == OSTriggerOperatorType.EXISTS)
+            return true;
+        if (operatorType == OSTriggerOperatorType.NOT_EXISTS)
+            return false;
 
         if (operatorType == OSTriggerOperatorType.CONTAINS)
-            return deviceValue instanceof Collection && ((Collection)deviceValue).contains(trigger.value);
+            return deviceValue instanceof Collection && ((Collection) deviceValue).contains(trigger.value);
 
         if (deviceValue instanceof String &&
-           trigger.value instanceof String &&
-           triggerMatchesStringValue((String)trigger.value, (String)deviceValue, operatorType))
+                trigger.value instanceof String &&
+                triggerMatchesStringValue((String) trigger.value, (String) deviceValue, operatorType))
             return true;
         if (trigger.value instanceof Number &&
-            deviceValue instanceof Number &&
-            triggerMatchesNumericValue((Number)trigger.value, (Number)deviceValue, operatorType))
+                deviceValue instanceof Number &&
+                triggerMatchesNumericValue((Number) trigger.value, (Number) deviceValue, operatorType))
             return true;
 
         // Evaluate to false as a fallback
@@ -151,7 +152,9 @@ class OSTriggerController {
         }
     }
 
-    /** Trigger Set/Delete/Persist Logic */
+    /**
+     * Trigger Set/Delete/Persist Logic
+     */
     void addTriggers(Map<String, Object> newTriggers) {
         synchronized (triggers) {
             for (String key : newTriggers.keySet()) {

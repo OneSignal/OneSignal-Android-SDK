@@ -64,8 +64,10 @@ class InAppMessageView {
 
     void destroyView(WeakReference<Activity> weakReference) {
         if (weakReference.get() != null) {
-            draggableRelativeLayout.removeAllViews();
-            frameLayout.removeAllViews();
+            if (draggableRelativeLayout != null)
+                draggableRelativeLayout.removeAllViews();
+            if (frameLayout != null)
+                frameLayout.removeAllViews();
         }
         frameLayout = null;
         draggableRelativeLayout = null;
@@ -125,7 +127,6 @@ class InAppMessageView {
         showDraggableView(createDefaultRelativeLayout(), frameLayoutParams,
                 createDraggableLayout(pageHeight, displayLocation), createWindowLayout());
     }
-
 
     private int getDisplayXSize() {
         return Resources.getSystem().getDisplayMetrics().widthPixels;

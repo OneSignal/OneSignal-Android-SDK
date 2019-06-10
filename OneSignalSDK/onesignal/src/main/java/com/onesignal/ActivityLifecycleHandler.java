@@ -1,21 +1,21 @@
 /**
  * Modified MIT License
- *
+ * <p>
  * Copyright 2017 OneSignal
- *
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p>
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p>
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,11 +27,14 @@
 
 package com.onesignal;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.view.ViewTreeObserver;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -39,145 +42,203 @@ import java.util.concurrent.ConcurrentHashMap;
 
 class ActivityLifecycleHandler {
 
-   static boolean nextResumeIsFirstActivity;
+    static boolean nextResumeIsFirstActivity;
 
-   abstract static class ActivityAvailableListener {
-      void available(@NonNull Activity activity) {}
-      void destroyed(WeakReference<Activity> reference) {}
-   }
+    abstract static class ActivityAvailableListener {
+        void available(@NonNull Activity activity) {
+        }
 
-   private static Map<String, ActivityAvailableListener> sActivityAvailableListeners = new ConcurrentHashMap<>();
-   static Activity curActivity;
-   static FocusHandlerThread focusHandlerThread = new FocusHandlerThread();
+        void destroyed(WeakReference<Activity> reference) {
+        }
+    }
 
-   static void setActivityAvailableListener(String key, ActivityAvailableListener activityAvailableListener) {
-      if (curActivity != null) {
-         activityAvailableListener.available(curActivity);
-      }
-      sActivityAvailableListeners.put(key, activityAvailableListener);
-   }
+    private static Map<String, ActivityAvailableListener> sActivityAvailableListeners = new ConcurrentHashMap<>();
+    private static Map<String, OSSystemConditionController.OSSystemConditionObserver> sSystemConditionObservers = new ConcurrentHashMap<>();
+    private static Map<String, KeyboardListener> sKeyboardListeners = new ConcurrentHashMap<>();
+    static FocusHandlerThread focusHandlerThread = new FocusHandlerThread();
+    @SuppressLint("StaticFieldLeak")
+    static Activity curActivity;
 
-   static void removeActivityAvailableListener(String key) {
-      sActivityAvailableListeners.remove(key);
-   }
+    static void setSystemConditionObserver(String key, OSSystemConditionController.OSSystemConditionObserver systemConditionObserver) {
+        if (curActivity != null) {
+            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+            KeyboardListener keyboardListener = new KeyboardListener(systemConditionObserver, key);
+            treeObserver.addOnGlobalLayoutListener(keyboardListener);
+            sKeyboardListeners.put(key, keyboardListener);
+        }
+        sSystemConditionObservers.put(key, systemConditionObserver);
+    }
 
-   private static void setCurActivity(Activity activity) {
-      curActivity = activity;
-      for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-         entry.getValue().available(curActivity);
-      }
-   }
+    static void setActivityAvailableListener(String key, ActivityAvailableListener activityAvailableListener) {
+        if (curActivity != null) {
+            activityAvailableListener.available(curActivity);
+        }
+        sActivityAvailableListeners.put(key, activityAvailableListener);
+    }
 
-   static void onActivityCreated(Activity activity) {
-   }
-   static void onActivityStarted(Activity activity) {}
+    static void removeSystemConditionObserver(String key) {
+        sKeyboardListeners.remove(key);
+        sSystemConditionObservers.remove(key);
+    }
 
-   static void onActivityResumed(Activity activity) {
-      setCurActivity(activity);
-      logCurActivity();
-      handleFocus();
-   }
+    static void removeActivityAvailableListener(String key) {
+        sActivityAvailableListeners.remove(key);
+    }
 
-   static void onActivityPaused(Activity activity) {
-      if (activity == curActivity) {
-         curActivity = null;
-         handleLostFocus();
-      }
+    private static void setCurActivity(Activity activity) {
+        curActivity = activity;
+        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+            entry.getValue().available(curActivity);
+        }
 
-      logCurActivity();
-   }
+        ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+        for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
+            KeyboardListener keyboardListener = new KeyboardListener(entry.getValue(), entry.getKey());
+            treeObserver.addOnGlobalLayoutListener(keyboardListener);
+            sKeyboardListeners.put(entry.getKey(), keyboardListener);
+        }
+    }
 
-   static void onActivityStopped(Activity activity) {
-      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity.getClass().getName());
+    static void onActivityCreated(Activity activity) {
+    }
 
-      if (activity == curActivity) {
-         curActivity = null;
-         handleLostFocus();
-      }
+    static void onActivityStarted(Activity activity) {
+    }
 
-      logCurActivity();
-   }
+    static void onActivityResumed(Activity activity) {
+        setCurActivity(activity);
+        logCurActivity();
+        handleFocus();
+    }
 
-   static void onActivityDestroyed(Activity activity) {
-      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityDestroyed: " + activity.getClass().getName());
+    static void onActivityPaused(Activity activity) {
+        if (activity == curActivity) {
+            curActivity = null;
+            handleLostFocus();
+        }
 
-      if (activity == curActivity) {
-         curActivity = null;
-         handleLostFocus();
-      }
+        logCurActivity();
+    }
 
-      for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-         entry.getValue().destroyed(new WeakReference<>(activity));
-      }
+    static void onActivityStopped(Activity activity) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity.getClass().getName());
 
-      logCurActivity();
-   }
+        if (activity == curActivity) {
+            curActivity = null;
+            handleLostFocus();
+        }
 
-   static private void logCurActivity() {
-      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? "" + curActivity.getClass().getName() + ":" + curActivity : "null"));
-   }
+        logCurActivity();
+    }
 
-   static private void handleLostFocus() {
-      focusHandlerThread.runRunnable(new AppFocusRunnable());
-   }
+    static void onActivityDestroyed(Activity activity) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityDestroyed: " + activity.getClass().getName());
+        sKeyboardListeners.clear();
 
-   static private void handleFocus() {
-      if (focusHandlerThread.hasBackgrounded() || nextResumeIsFirstActivity) {
-         nextResumeIsFirstActivity = false;
-         focusHandlerThread.resetBackgroundState();
-         OneSignal.onAppFocus();
-      }
-      else
-         focusHandlerThread.stopScheduledRunnable();
-   }
+        if (activity == curActivity) {
+            curActivity = null;
+            handleLostFocus();
+        }
 
-   static class FocusHandlerThread extends HandlerThread {
-      Handler mHandler = null;
-      private AppFocusRunnable appFocusRunnable;
+        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+            entry.getValue().destroyed(new WeakReference<>(activity));
+        }
 
-      FocusHandlerThread() {
-         super("FocusHandlerThread");
-         start();
-         mHandler = new Handler(getLooper());
-      }
+        logCurActivity();
+    }
 
-      Looper getHandlerLooper() {
-         return  mHandler.getLooper();
-      }
+    static private void logCurActivity() {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? "" + curActivity.getClass().getName() + ":" + curActivity : "null"));
+    }
 
-      void resetBackgroundState() {
-         if (appFocusRunnable != null)
-            appFocusRunnable.backgrounded = false;
-      }
+    static private void handleLostFocus() {
+        focusHandlerThread.runRunnable(new AppFocusRunnable());
+    }
 
-      void stopScheduledRunnable() {
-         mHandler.removeCallbacksAndMessages(null);
-      }
+    static private void handleFocus() {
+        if (focusHandlerThread.hasBackgrounded() || nextResumeIsFirstActivity) {
+            nextResumeIsFirstActivity = false;
+            focusHandlerThread.resetBackgroundState();
+            OneSignal.onAppFocus();
+        } else
+            focusHandlerThread.stopScheduledRunnable();
+    }
 
-      void runRunnable(AppFocusRunnable runnable) {
-         if (appFocusRunnable != null && appFocusRunnable.backgrounded && !appFocusRunnable.completed)
-            return;
+    static class FocusHandlerThread extends HandlerThread {
+        Handler mHandler;
+        private AppFocusRunnable appFocusRunnable;
 
-         appFocusRunnable = runnable;
-         mHandler.removeCallbacksAndMessages(null);
-         mHandler.postDelayed(runnable, 2000);
-      }
+        FocusHandlerThread() {
+            super("FocusHandlerThread");
+            start();
+            mHandler = new Handler(getLooper());
+        }
 
-      boolean hasBackgrounded() {
-         return appFocusRunnable != null && appFocusRunnable.backgrounded;
-      }
-   }
+        Looper getHandlerLooper() {
+            return mHandler.getLooper();
+        }
 
-   static private class AppFocusRunnable implements Runnable {
-      private boolean backgrounded, completed;
+        void resetBackgroundState() {
+            if (appFocusRunnable != null)
+                appFocusRunnable.backgrounded = false;
+        }
 
-      public void run() {
-         if (curActivity != null)
-            return;
+        void stopScheduledRunnable() {
+            mHandler.removeCallbacksAndMessages(null);
+        }
 
-         backgrounded = true;
-         OneSignal.onAppLostFocus();
-         completed = true;
-      }
-   }
+        void runRunnable(AppFocusRunnable runnable) {
+            if (appFocusRunnable != null && appFocusRunnable.backgrounded && !appFocusRunnable.completed)
+                return;
+
+            appFocusRunnable = runnable;
+            mHandler.removeCallbacksAndMessages(null);
+            mHandler.postDelayed(runnable, 2000);
+        }
+
+        boolean hasBackgrounded() {
+            return appFocusRunnable != null && appFocusRunnable.backgrounded;
+        }
+    }
+
+    private static class AppFocusRunnable implements Runnable {
+        private boolean backgrounded, completed;
+
+        public void run() {
+            if (curActivity != null)
+                return;
+
+            backgrounded = true;
+            OneSignal.onAppLostFocus();
+            completed = true;
+        }
+    }
+
+    private static class KeyboardListener implements ViewTreeObserver.OnGlobalLayoutListener {
+
+        private final OSSystemConditionController.OSSystemConditionObserver observer;
+        private final String key;
+
+        private KeyboardListener(OSSystemConditionController.OSSystemConditionObserver observer, String key) {
+            this.observer = observer;
+            this.key = key;
+        }
+
+        @Override
+        public void onGlobalLayout() {
+            boolean keyboardUp = OSViewUtils.isKeyboardUp(new WeakReference<>(ActivityLifecycleHandler.curActivity));
+            if (!keyboardUp) {
+                if (curActivity != null) {
+                    ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+                        treeObserver.removeGlobalOnLayoutListener(KeyboardListener.this);
+                    } else {
+                        treeObserver.removeOnGlobalLayoutListener(KeyboardListener.this);
+                    }
+                }
+                ActivityLifecycleHandler.removeSystemConditionObserver(key);
+                observer.messageTriggerConditionChanged();
+            }
+        }
+    }
 }
