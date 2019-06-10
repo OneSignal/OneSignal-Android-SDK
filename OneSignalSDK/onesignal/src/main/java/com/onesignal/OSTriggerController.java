@@ -126,6 +126,7 @@ class OSTriggerController {
     }
 
     public enum OSDynamicTriggerType {
+        PLAYTIME("playtime"),
         SESSION_DURATION("os_session_duration"),
         TIME("os_time");
 

@@ -1,10 +1,10 @@
 package com.onesignal;
 
-import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimerTask;
 
+import com.onesignal.OSTrigger.OSTriggerOperatorType;
 import com.onesignal.OSTriggerController.OSDynamicTriggerType;
 
 class OSDynamicTriggerController {
@@ -35,25 +35,27 @@ class OSDynamicTriggerController {
             // All time-based trigger values should be numbers (either timestamps or offsets)
             if (!(trigger.value instanceof Number))
                 return false;
+            long requiredTimeInterval = (long) (((Number) trigger.value).doubleValue() * 1_000);
+            long offset;
 
-            long requiredTimeInterval = (long)(((Number)trigger.value).doubleValue() * 1_000);
-            long offset = 0;
+            OSDynamicTriggerType property = OSDynamicTriggerType.fromString(trigger.property);
 
-            if (OSDynamicTriggerType.SESSION_DURATION.toString().equals(trigger.property)) {
-                long currentDuration = (new Date()).getTime() - sessionLaunchTime.getTime();
+            long currentTimeInterval = 0;
 
-                if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentDuration, trigger.operatorType))
-                    return true;
-
-                offset = requiredTimeInterval - currentDuration;
-            } else if (OSDynamicTriggerType.TIME.toString().equals(trigger.property)) {
-                long currentTimestamp = new Date().getTime();
-
-                if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimestamp, trigger.operatorType))
-                    return true;
-
-                offset = requiredTimeInterval - currentTimestamp;
+            switch (property) {
+                case SESSION_DURATION:
+                case PLAYTIME:
+                    currentTimeInterval = new Date().getTime() - sessionLaunchTime.getTime();
+                    break;
+                case TIME:
+                    currentTimeInterval = new Date().getTime();
+                    break;
             }
+
+            if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimeInterval, trigger.operatorType))
+                return true;
+
+            offset = requiredTimeInterval - currentTimeInterval;
 
             if (offset <= 0L)
                 return false;
