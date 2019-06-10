@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
+import android.support.v4.util.Pair;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.WindowManager;
@@ -93,34 +94,9 @@ class InAppMessageView {
     // TODO: Modal in portrait is to tall when using split screen mode
     // TODO: Edge case: Modal in portrait is to tall when using split screen mode
     void showInAppMessageView() {
-        // Use pageHeight if we have it, otherwise use use full height of the Activity
-        int pageWidth = this.pageWidth;
-        int pageHeight = this.pageHeight;
-        // If we have a height constraint; (Modal or Banner)
-        //   1. Ensure we don't set a height higher than the screen height.
-        //   2. Limit the width to either screen width or the height of the screen.
-        //      - This is to make the modal width the same for landscape and portrait modes.
-        Activity currentActivity = ActivityLifecycleHandler.curActivity;
-        if (currentActivity != null) {
-            DisplayMetrics metrics = new DisplayMetrics();
-            currentActivity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-            int usableHeight = metrics.heightPixels;
-            int usableWidth = metrics.widthPixels;
-
-            if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT) {
-                pageHeight += (MARGIN_PX_SIZE * 2);
-                pageHeight = Math.min(pageHeight, usableHeight -
-                        ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && currentActivity.isInMultiWindowMode()) ?
-                                0 : MARGIN_PX_SIZE));
-                pageWidth = Math.min(getDisplayXSize(), getDisplayYSize());
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && currentActivity.isInMultiWindowMode()) {
-                    if (pageWidth > usableWidth) {
-                        pageWidth = usableWidth;
-                    }
-                }
-            }
-        }
+        Pair<Integer, Integer> pair = getWidthHeight();
+        int pageWidth = pair.first;
+        int pageHeight = pair.second;
 
         RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(
                 ConstraintLayout.LayoutParams.MATCH_PARENT,
@@ -129,19 +105,12 @@ class InAppMessageView {
         relativeLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
         relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
+
         boolean hasBackground = shouldHaveBackground();
         FrameLayout.LayoutParams frameLayoutParams = hasBackground ? createFrameLayout() : null;
 
         showDraggableView(relativeLayoutParams, frameLayoutParams,
                 createDraggableLayout(pageHeight, displayLocation), createWindowLayout(pageWidth, pageHeight, hasBackground));
-    }
-
-    private int getDisplayXSize() {
-        return Resources.getSystem().getDisplayMetrics().widthPixels;
-    }
-
-    private int getDisplayYSize() {
-        return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
     private FrameLayout.LayoutParams createFrameLayout() {
@@ -158,7 +127,53 @@ class InAppMessageView {
             case DISPLAY:
                 frameLayoutParams.gravity = Gravity.CENTER;
         }
+
         return frameLayoutParams;
+    }
+
+    /**
+     * If we have a height constraint; (Modal or Banner)
+     * 1. Ensure we don't set a height higher than the screen height.
+     * 2. Limit the width to either screen width or the height of the screen.
+     * - This is to make the modal width the same for landscape and portrait modes.
+     * 3. Use Available width for cases when the height of the view is bigger than the usable height
+     * 4. Limit usable width and height for split mode
+     */
+    private Pair<Integer, Integer> getWidthHeight() {
+        int pageWidth = this.pageWidth;
+        int pageHeight = this.pageHeight;
+
+        Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        if (currentActivity != null) {
+            if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT) {
+                DisplayMetrics metrics = new DisplayMetrics();
+                currentActivity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+                int usableHeight = metrics.heightPixels;
+                int usableWidth = metrics.widthPixels;
+
+                pageHeight += (MARGIN_PX_SIZE * 2);
+                pageWidth = Math.min(getDisplayXSize(), getDisplayYSize());
+
+                if (pageHeight > usableHeight ||
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+                                currentActivity.isInMultiWindowMode() && pageWidth > usableWidth) {
+                    pageWidth = usableWidth;
+                }
+
+                pageHeight = Math.min(pageHeight, usableHeight -
+                        ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && currentActivity.isInMultiWindowMode()) ?
+                                0 : MARGIN_PX_SIZE));
+            }
+        }
+        return new Pair(pageWidth, pageHeight);
+    }
+
+    private int getDisplayXSize() {
+        return Resources.getSystem().getDisplayMetrics().widthPixels;
+    }
+
+    private int getDisplayYSize() {
+        return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
     private DraggableRelativeLayout.Params createDraggableLayout(int pageHeight, WebViewManager.Position displayLocation) {
@@ -323,8 +338,6 @@ class InAppMessageView {
         }, ACTIVITY_INIT_DELAY);
     }
 
-    // Will be called through OSJavaScriptInterface.
-    // If so let the presenter (Activity) know to start it's dismiss animation.
     void dismiss() {
         if (draggableRelativeLayout == null) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
