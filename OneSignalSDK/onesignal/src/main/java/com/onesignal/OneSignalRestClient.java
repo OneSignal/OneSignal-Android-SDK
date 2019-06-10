@@ -49,9 +49,9 @@ class OneSignalRestClient {
 
    static final String CACHE_KEY_GET_TAGS = "CACHE_KEY_GET_TAGS";
    static final String CACHE_KEY_REMOTE_PARAMS = "CACHE_KEY_REMOTE_PARAMS";
-
+   
    private static final String BASE_URL = "https://onesignal.com/api/v1/";
-
+   
    private static final int THREAD_ID = 10000;
    private static final int TIMEOUT = 120_000;
    private static final int GET_TIMEOUT = 60_000;
