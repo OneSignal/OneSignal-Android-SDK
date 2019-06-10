@@ -12,10 +12,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -259,7 +257,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void dismissCurrentMessage() {
-      OSInAppMessageController.getController().messageWasDismissed(OSInAppMessageController.getController().getCurrentDisplayedInAppMessage());
+      com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage();
+      com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
    }
 
    public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {

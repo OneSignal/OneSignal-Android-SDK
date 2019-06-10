@@ -140,7 +140,7 @@ public class InAppMessageIntegrationTests {
 
         OneSignal.addTriggers(new HashMap<String, Object>() {{
             put("test_1", 3);
-            put("test_2", 2);
+            put("test_2", 2); 
         }});
         threadAndTaskWait();
 

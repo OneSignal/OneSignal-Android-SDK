@@ -131,4 +131,15 @@ class OSInAppMessage {
             return false;
         return actionTaken = true;
     }
+
+    @Override
+    public String toString() {
+        return "OSInAppMessage{" +
+                "messageId='" + messageId + '\'' +
+                ", variants=" + variants +
+                ", triggers=" + triggers +
+                ", displayDuration=" + displayDuration +
+                ", actionTaken=" + actionTaken +
+                '}';
+    }
 }
