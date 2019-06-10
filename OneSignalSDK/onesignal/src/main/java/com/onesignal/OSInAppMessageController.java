@@ -3,6 +3,9 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
+import com.onesignal.OneSignalRestClient.ResponseHandler;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,21 +15,21 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
-import com.onesignal.OneSignalRestClient.ResponseHandler;
-
-class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
+class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
-        add("android"); add("app"); add("all");
+        add("android");
+        add("app");
+        add("all");
     }};
 
     private static OSInAppMessageController sharedInstance;
 
     OSTriggerController triggerController;
+    private OSSystemConditionController systemConditionController;
     private ArrayList<OSInAppMessage> messages;
     final ArrayList<OSInAppMessage> messageDisplayQueue;
 
-    boolean inAppMessagingEnabled = true;
+    boolean inAppMessagingEnabled;
 
     public static OSInAppMessageController getController() {
         if (sharedInstance == null)
@@ -39,6 +42,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         messages = new ArrayList<>();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
+        inAppMessagingEnabled = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_MESSAGING_ENABLED, true);
+        systemConditionController = new OSSystemConditionController(this);
     }
 
     // Called after the device is registered from UserStateSynchronizer
@@ -58,9 +63,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     }
 
     private void evaluateInAppMessages() {
-        for (OSInAppMessage message : messages) {
-            if (triggerController.evaluateMessageTriggers(message))
-                messageCanBeDisplayed(message);
+        if (systemConditionController.systemConditionsAvailable()) {
+            for (OSInAppMessage message : messages) {
+                if (triggerController.evaluateMessageTriggers(message))
+                    messageCanBeDisplayed(message);
+            }
         }
     }
 
@@ -280,7 +287,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
 
     /**
      * Trigger logic
-     *
+     * <p>
      * These methods mostly pass data to the Trigger Controller, but also cause the SDK to
      * re-evaluate messages to see if we should display a message now that the trigger
      * conditions have changed.
