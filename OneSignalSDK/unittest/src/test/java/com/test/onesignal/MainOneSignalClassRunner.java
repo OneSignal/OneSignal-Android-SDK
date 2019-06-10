@@ -88,6 +88,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -155,7 +156,6 @@ public class MainOneSignalClassRunner {
    private static Activity blankActivity;
    private static String callBackUseId, getCallBackRegId;
    private static String notificationOpenedMessage;
-   private static String notificationReceivedMessage;
    private static JSONObject lastGetTags;
    private static ActivityController<BlankActivity> blankActivityController;
 
@@ -174,15 +174,6 @@ public class MainOneSignalClassRunner {
          @Override
          public void notificationOpened(OSNotificationOpenResult openedResult) {
             notificationOpenedMessage = openedResult.notification.payload.body;
-         }
-      };
-   }
-
-   private static OneSignal.NotificationReceivedHandler getNotificationReceivedHandler() {
-      return new OneSignal.NotificationReceivedHandler() {
-         @Override
-         public void notificationReceived(OSNotification notification) {
-            notificationReceivedMessage = notification.payload.body;
          }
       };
    }
@@ -268,8 +259,8 @@ public class MainOneSignalClassRunner {
    @Config(manifest = "AndroidManifestLocationPrivacyConsent.xml", sdk = 26)
    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
       OneSignal.setRequiresUserPrivacyConsent(true);
-      OneSignalInit();
       OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
+      OneSignalInit();
       threadAndTaskWait();
 
       // Create a dummy PermissionsActivity to compare in the test cases
@@ -1979,6 +1970,7 @@ public class MainOneSignalClassRunner {
       // 3. Put app in background
       blankActivityController.pause();
       OneSignalPackagePrivateHelper.runFocusRunnables();
+//      threadAndTaskWait();
    }
 
    @Test
@@ -1989,6 +1981,11 @@ public class MainOneSignalClassRunner {
       // A future job should be scheduled to finish the sync.
       JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
       assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+
+      // FIXME: Cleanup for upcoming unit test
+      //  This is a one off scenario where a unit test fails after this one is run
+      blankActivityController.resume();
+      threadAndTaskWait();
    }
 
    private static void assertSuccessfulOnFocus(ShadowOneSignalRestClient.Request request) {
@@ -2033,6 +2030,11 @@ public class MainOneSignalClassRunner {
 
       assertEquals(4, ShadowOneSignalRestClient.requests.size());
       assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(3));
+
+      // FIXME: Cleanup for upcoming unit test
+      //  This is a one off scenario where a unit test fails after this one is run
+      blankActivityController.resume();
+      threadAndTaskWait();
    }
 
    @Test
@@ -2378,12 +2380,14 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      // Now we trigger the LocationGMS but providing consent to OneSignal SDK
+      // Provide consent to OneSignal SDK amd forward time 2 minutes
       OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
       ShadowSystemClock.setCurrentTimeMillis(120_000);
       blankActivityController.pause();
       threadAndTaskWait();
 
+      // Check that time is tracked successfully by validating the "on_focus" endpoint
       assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(2));
    }
 
