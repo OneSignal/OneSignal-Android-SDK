@@ -226,6 +226,21 @@ public class NotificationChannelManagerRunner {
       assertEquals("en_dscr", channel.getDescription());
       assertEquals("en_grp_nm", ShadowRoboNotificationManager.lastChannelGroup.getName());
    }
+
+   @Test(expected = IllegalArgumentException.class)
+   public void handleInvalidColorCode() throws Exception {
+      JSONObject payload = new JSONObject();
+      JSONObject chnl = new JSONObject();
+
+      chnl.put("id", "test_id");
+      chnl.put("nm", "Test Name");
+
+      payload.put("ledc", "FFFF00000");
+      payload.put("chnl", chnl.toString());
+
+      NotificationChannelManager_createNotificationChannel(blankActivity, payload);
+
+   }
    
    // Starting helper methods
    

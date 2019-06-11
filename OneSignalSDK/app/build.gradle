@@ -67,7 +67,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:12.0.0'
 
     // For Chrome tabs
-    compile 'com.android.support:customtabs:27.1.0'
+    implementation 'com.android.support:customtabs:27.1.0'
 }
 
 //apply plugin: 'com.google.gms.google-services'
