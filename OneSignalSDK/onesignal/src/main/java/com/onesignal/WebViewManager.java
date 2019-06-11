@@ -3,25 +3,18 @@ package com.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.res.Resources;
-import android.graphics.Color;
-import android.graphics.PixelFormat;
 import android.os.Build;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.constraint.ConstraintLayout;
 import android.util.Base64;
-import android.view.Gravity;
 import android.view.View;
-import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
-import android.widget.FrameLayout;
-import android.widget.RelativeLayout;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,16 +30,16 @@ import static com.onesignal.OSUtils.dpToPx;
 // 4. WebViewActivity will call WebViewManager.instanceFromIam(...) to get this instance and
 //       add it's prepared WebView add add it to the Activity.
 
-class WebViewManager {
+class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener {
 
-    private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#BB000000");
-    private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
+    private static final String TAG = WebViewManager.class.getCanonicalName();
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
     private static Map<String, WebViewManager> instances = new ConcurrentHashMap<>();
 
-    private WebViewManager(@NonNull OSInAppMessage message) {
+    private WebViewManager(@NonNull OSInAppMessage message, String base64Message) {
         this.message = message;
+        this.base64Message = base64Message;
         instances.put(message.messageId, this);
     }
 
@@ -60,12 +53,40 @@ class WebViewManager {
 
     private WebView webView;
     private OSInAppMessage message;
-    private FrameLayout frameLayout;
-    private DraggableRelativeLayout draggableRelativeLayout;
+    private String base64Message;
+    private InAppMessageView messageView;
+    private int screenOrientation = -1;
 
-    @Nullable
-    static WebViewManager instanceFromIam(@Nullable String iamId) {
-        return instances.get(iamId);
+    // Creates a new WebView
+    static void showHTMLString(OSInAppMessage message, final String htmlStr) {
+        if (instances.containsKey(message.messageId)) {
+            OneSignal.Log(
+                    OneSignal.LOG_LEVEL.ERROR,
+                    "In-App message with id '" +
+                            message.messageId +
+                            "' already displayed or is already preparing to be display!");
+            return;
+        }
+
+        // Web view must be created on the main thread.
+        try {
+            final String base64Str = Base64.encodeToString(
+                    htmlStr.getBytes("UTF-8"),
+                    Base64.DEFAULT
+            );
+
+            final WebViewManager webViewManager = new WebViewManager(message, base64Str);
+
+            OSUtils.runOnMainUIThread(new Runnable() {
+                @Override
+                public void run() {
+                    webViewManager.setupWebView();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // Lets JS from the page send JSON payloads to this class
@@ -93,7 +114,7 @@ class WebViewManager {
             if (pageHeight != -1) {
                 pageHeight = OSUtils.dpToPx(pageHeight);
             }
-            addLayoutAndView(pageHeight, getDisplayLocation(jsonObject));
+            showMessageView(pageHeight, getDisplayLocation(jsonObject));
         }
 
         private int getPageHeightData(JSONObject jsonObject) {
@@ -119,6 +140,25 @@ class WebViewManager {
             if (close) {
                 dismiss();
             }
+        }
+    }
+
+    @Override
+    void available(@NonNull Activity activity) {
+        if (OSViewUtils.isScreenRotated(activity, screenOrientation)) {
+            if (messageView != null) {
+                messageView.setWebView(webView);
+                messageView.showView(activity);
+            }
+        }
+
+        screenOrientation = activity.getResources().getConfiguration().orientation;
+    }
+
+    @Override
+    void destroyed(WeakReference<Activity> reference) {
+        if (messageView != null) {
+            messageView.destroyView(reference);
         }
     }
 
@@ -153,155 +193,35 @@ class WebViewManager {
         // TODO: Look into using setInitialScale if WebView does not fit
         //       Default size is dp * 100
         // webView.setInitialScale(350);
+
+        webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
     }
 
-    // Creates a new WebView
-    static void showHTMLString(OSInAppMessage message, final String htmlStr) {
-        if (instances.containsKey(message.messageId)) {
-            OneSignal.Log(
-                    OneSignal.LOG_LEVEL.ERROR,
-                    "In-App message with id '" +
-                            message.messageId +
-                            "' already displayed or is already preparing to be display!");
-            return;
-        }
-
-        final WebViewManager webViewManager = new WebViewManager(message);
-
-        // Web view must be created on the main thread.
-        try {
-            final String base64Str = Base64.encodeToString(
-                    htmlStr.getBytes("UTF-8"),
-                    Base64.DEFAULT
-            );
-
-            OSUtils.runOnMainUIThread(new Runnable() {
-                @Override
-                public void run() {
-                    webViewManager.setupWebView();
-                    webViewManager.webView.loadData(base64Str, "text/html; charset=utf-8", "base64");
-                }
-            });
-        } catch (UnsupportedEncodingException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    // TODO: Modal in portrait is to tall when using split screen mode
-    // TODO: Edge case: Modal in portrait is to tall when using split screen mode
-    private void addLayoutAndView(int pageHeight, Position displayLocation) {
-        // Use pageHeight if we have it, otherwise use use full height of the Activity
-        int pageWidth = ConstraintLayout.LayoutParams.MATCH_PARENT;
-        // If we have a height constraint; (Modal or Banner)
-        //   1. Ensure we don't set a height higher than the screen height.
-        //   2. Limit the width to either screen width or the height of the screen.
-        //      - This is to make the modal width the same for landscape and portrait modes.
-        if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT) {
-            pageHeight += (MARGIN_PX_SIZE * 2);
-            pageHeight = Math.min(pageHeight, getWebViewYSize() + (MARGIN_PX_SIZE * 2));
-            pageWidth = Math.min(getWebViewXSize() + (MARGIN_PX_SIZE * 2), getWebViewYSize() + (MARGIN_PX_SIZE * 3));
-        }
-
-        final RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT
-        );
-        relativeLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
-        relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
-
-        FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, pageHeight);
-
-        switch (displayLocation) {
-            case TOP:
-                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
-                break;
-            case BOTTOM:
-                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-                break;
-            case CENTER:
-            case DISPLAY:
-                frameLayoutParams.gravity = Gravity.CENTER;
-        }
-
-        showDraggableView(relativeLayoutParams, frameLayoutParams,
-                createDraggableLayout(pageHeight, displayLocation), createWindowLayout());
-    }
-
-    private DraggableRelativeLayout.Params createDraggableLayout(int pageHeight, Position displayLocation) {
-        DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-        draggableParams.maxXPos = MARGIN_PX_SIZE;
-        draggableParams.maxYPos = MARGIN_PX_SIZE;
-        // TODO: Look into using positions from view's.
-        //       Tried getLocationInWindow but it was always returning 0;
-        draggableParams.height = pageHeight;
-        if (pageHeight == -1) {
-            draggableParams.height = pageHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
-        }
-
-        switch (displayLocation) {
-            case BOTTOM:
-                draggableParams.posY = Resources.getSystem().getDisplayMetrics().heightPixels - pageHeight;
-                break;
-            case CENTER:
-            case DISPLAY:
-                draggableParams.posY = (Resources.getSystem().getDisplayMetrics().heightPixels / 2) - (pageHeight / 2);
-        }
-
-        draggableParams.dragDirection = displayLocation == Position.TOP ?
-                DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_UP :
-                DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_DOWN;
-
-        return draggableParams;
-    }
-
-    private WindowManager.LayoutParams createWindowLayout() {
-        WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                // Display it on top of other application windows
-                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
-                // Don't let it grab the input focus
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT);
-        return layoutParams;
-    }
-
-    private void showDraggableView(final RelativeLayout.LayoutParams relativeLayoutParams,
-                                   final FrameLayout.LayoutParams frameParams,
-                                   final DraggableRelativeLayout.Params draggableParams,
-                                   final WindowManager.LayoutParams layoutParams) {
-        OSUtils.runOnMainUIThread(new Runnable() {
+    private void showMessageView(int pageHeight, Position displayLocation) {
+        messageView = new InAppMessageView(webView, displayLocation, pageHeight);
+        messageView.setMessageController(new InAppMessageView.InAppMessageController() {
             @Override
-            public void run() {
-                webView.setLayoutParams(relativeLayoutParams);
-                draggableRelativeLayout = new DraggableRelativeLayout(OneSignal.appContext);
-                draggableRelativeLayout.setLayoutParams(frameParams);
-                draggableRelativeLayout.setParams(draggableParams);
-                draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
-                    @Override
-                    void onDismiss() {
-                        finish();
-                    }
-                });
-                draggableRelativeLayout.addView(webView);
+            void onMessageWasShown() {
+                OSInAppMessageController.onMessageWasShown(message);
+            }
 
-                // TODO: Handle curActivity NULL cases
-                //   TODO:1: This seems to be null if the location prompt is shown
-                //   TODO:2: Also null if consent was provided and another Activity focus event did not happen yet.
-                //   TODO:3: Can also be null when just switching to the next in-app message
-                // TODO: Setup ActivityAvailableListener, changing it to an observable instead.
-                Activity currentActivity = ActivityLifecycleHandler.curActivity;
-                if (currentActivity != null) {
-                    frameLayout = new FrameLayout(currentActivity);
-                    frameLayout.addView(draggableRelativeLayout);
-                    frameLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
-                    frameLayout.setClipChildren(false);
-                    currentActivity.getWindowManager().addView(frameLayout, layoutParams);
-                    OSInAppMessageController.onMessageWasShown(message);
-                }
+            @Override
+            void onMessageWasDismissed() {
+                OSInAppMessageController.getController().messageWasDismissed(message);
+                ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
+                webView = null;
             }
         });
+        messageView.showInAppMessageView();
+        ActivityLifecycleHandler.setActivityAvailableListener(TAG + message.messageId, this);
+    }
+
+    // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
+    private static void enableWebViewRemoteDebugging() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT &&
+                OneSignal.atLogLevel(OneSignal.LOG_LEVEL.DEBUG)) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
     }
 
     // Another possible way to get the size. Should include the status bar...
@@ -316,60 +236,10 @@ class WebViewManager {
         return Resources.getSystem().getDisplayMetrics().heightPixels - (MARGIN_PX_SIZE * 2) - dpToPx(24);
     }
 
-    // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
-    private static void enableWebViewRemoteDebugging() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT &&
-                OneSignal.atLogLevel(OneSignal.LOG_LEVEL.DEBUG)) {
-            WebView.setWebContentsDebuggingEnabled(true);
-        }
-    }
-
-    // Will be called through OSJavaScriptInterface.
-    // If so let the presenter (Activity) know to start it's dismiss animation.
     private void dismiss() {
-        if (draggableRelativeLayout == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
-            markAsDismissed();
-            return;
+        if (messageView != null) {
+            messageView.dismiss();
+            messageView = null;
         }
-
-        draggableRelativeLayout.dismiss();
-        finishAfterDelay();
-    }
-
-    // Finishing on a timer as continueSettling does not return false
-    // when using smoothSlideViewTo on Android 4.4
-    private void finishAfterDelay() {
-        OSUtils.runOnMainThreadDelayed(new Runnable() {
-            @Override
-            public void run() {
-                dismissLayout();
-            }
-        }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
-    }
-
-    private void finish() {
-        OSUtils.runOnMainThreadDelayed(new Runnable() {
-            @Override
-            public void run() {
-                dismissLayout();
-            }
-        }, 0);
-    }
-
-    private void dismissLayout() {
-        if (frameLayout != null) {
-            ActivityLifecycleHandler.curActivity.getWindowManager().removeView(frameLayout);
-        }
-        markAsDismissed();
-    }
-
-    // Called from presenter when it is no longer visible. (Animation is done)
-    private void markAsDismissed() {
-        // Dereference so this can be cleaned up in the next GC
-        webView = null;
-        frameLayout = null;
-        draggableRelativeLayout = null;
-        OSInAppMessageController.getController().messageWasDismissed(message);
     }
 }

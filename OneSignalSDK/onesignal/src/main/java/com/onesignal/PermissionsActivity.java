@@ -38,6 +38,7 @@ import com.onesignal.AndroidSupportV4Compat.ActivityCompat;
 
 public class PermissionsActivity extends Activity {
 
+   private static final String TAG = PermissionsActivity.class.getCanonicalName();
    private static final int REQUEST_LOCATION = 2;
 
    static boolean waiting, answered;
@@ -93,7 +94,7 @@ public class PermissionsActivity extends Activity {
             LocationGMS.fireFailedComplete();
       }
 
-      ActivityLifecycleHandler.removeActivityAvailableListener(activityAvailableListener);
+      ActivityLifecycleHandler.removeActivityAvailableListener(TAG);
       finish();
    }
 
@@ -104,7 +105,7 @@ public class PermissionsActivity extends Activity {
 
       activityAvailableListener = new ActivityLifecycleHandler.ActivityAvailableListener() {
          @Override
-         public void available(Activity activity) {
+         public void available(@NonNull Activity activity) {
             if (!activity.getClass().equals(PermissionsActivity.class)) {
                Intent intent = new Intent(activity, PermissionsActivity.class);
                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -113,6 +114,6 @@ public class PermissionsActivity extends Activity {
          }
       };
 
-      ActivityLifecycleHandler.setActivityAvailableListener(activityAvailableListener);
+      ActivityLifecycleHandler.setActivityAvailableListener(TAG, activityAvailableListener);
    }
 }

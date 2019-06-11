@@ -1,6 +1,5 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     package="com.onesignal">
 
     <!-- OneSignal SDK has runtime checks Android version. -->
@@ -82,9 +81,6 @@
                   android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service android:name="com.onesignal.NotificationRestoreService" />
-        <activity
-            android:name=".WebViewActivity"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <receiver android:name="com.onesignal.BootUpReceiver">
             <intent-filter>
