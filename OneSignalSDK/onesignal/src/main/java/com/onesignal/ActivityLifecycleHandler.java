@@ -31,45 +31,49 @@ import android.app.Activity;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.support.annotation.NonNull;
+
+import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 class ActivityLifecycleHandler {
 
    static boolean nextResumeIsFirstActivity;
 
-   interface ActivityAvailableListener {
-      void available(Activity activity);
+   abstract static class ActivityAvailableListener {
+      void available(@NonNull Activity activity) {}
+      void destroyed(WeakReference<Activity> reference) {}
    }
 
+   private static Map<String, ActivityAvailableListener> sActivityAvailableListeners = new ConcurrentHashMap<>();
    static Activity curActivity;
-   private static ActivityAvailableListener mActivityAvailableListener;
    static FocusHandlerThread focusHandlerThread = new FocusHandlerThread();
 
-   // Note: Only supports one callback, create a list when this needs to be used by more than the permissions dialog.
-   static void setActivityAvailableListener(ActivityAvailableListener activityAvailableListener) {
+   static void setActivityAvailableListener(String key, ActivityAvailableListener activityAvailableListener) {
       if (curActivity != null) {
          activityAvailableListener.available(curActivity);
-         mActivityAvailableListener = activityAvailableListener;
       }
-      else
-         mActivityAvailableListener = activityAvailableListener;
+      sActivityAvailableListeners.put(key, activityAvailableListener);
    }
 
-   public static void removeActivityAvailableListener(ActivityAvailableListener activityAvailableListener) {
-      mActivityAvailableListener = null;
+   static void removeActivityAvailableListener(String key) {
+      sActivityAvailableListeners.remove(key);
    }
 
    private static void setCurActivity(Activity activity) {
       curActivity = activity;
-      if (mActivityAvailableListener != null)
-         mActivityAvailableListener.available(curActivity);
+      for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+         entry.getValue().available(curActivity);
+      }
    }
 
-   static void onActivityCreated(Activity activity) {}
+   static void onActivityCreated(Activity activity) {
+   }
    static void onActivityStarted(Activity activity) {}
 
    static void onActivityResumed(Activity activity) {
       setCurActivity(activity);
-
       logCurActivity();
       handleFocus();
    }
@@ -100,6 +104,10 @@ class ActivityLifecycleHandler {
       if (activity == curActivity) {
          curActivity = null;
          handleLostFocus();
+      }
+
+      for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+         entry.getValue().destroyed(new WeakReference<>(activity));
       }
 
       logCurActivity();
