@@ -129,8 +129,16 @@ class NotificationChannelManager {
          channel.setGroup(group_id);
       }
 
-      if (payload.has("ledc")) {
-         BigInteger ledColor = new BigInteger(payload.optString("ledc"), 16);
+      if (payload.has("ledc")){
+         String ledc = payload.optString("ledc");
+         BigInteger ledColor = new BigInteger("FFFFFFFF", 16);
+
+         // validate string
+         try {
+            ledColor = new BigInteger(ledc, 16);
+         } catch (Throwable t){
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ARGB Hex value incorrect format (E.g: FF9900FF", t);
+         }
          channel.setLightColor(ledColor.intValue());
       }
       channel.enableLights(payload.optInt("led", 1) == 1);
