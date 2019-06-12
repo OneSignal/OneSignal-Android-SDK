@@ -268,8 +268,12 @@ public class ShadowOneSignalRestClient {
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) {
       trackRequest(REST_METHOD.GET, null, url);
       if (failGetParams && doFail(responseHandler, true)) return;
-   
-      if (nextSuccessResponse != null) {
+
+      if (nextSuccessfulGETResponse != null) {
+         responseHandler.onSuccess(nextSuccessfulGETResponse);
+         nextSuccessfulGETResponse = null;
+      }
+      else if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
       }

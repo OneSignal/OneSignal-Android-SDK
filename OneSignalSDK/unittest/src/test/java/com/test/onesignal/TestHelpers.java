@@ -14,6 +14,7 @@ import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
@@ -32,7 +33,7 @@ import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
-class TestHelpers {
+public class TestHelpers {
 
    static Exception lastException;
 
@@ -59,6 +60,8 @@ class TestHelpers {
       ShadowGoogleApiClientCompatProxy.restSetStaticFields();
       ShadowOneSignalDbHelper.restSetStaticFields();
       ShadowOneSignalRestClientWithMockConnection.resetStatics();
+
+      ShadowOSWebView.resetStatics();
 
       lastException = null;
 
@@ -221,7 +224,7 @@ class TestHelpers {
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() +  advanceBy);
    }
 
-   static void assertMainThread() {
+   public static void assertMainThread() {
       if (!Looper.getMainLooper().getThread().equals(Thread.currentThread()))
          Assert.fail("assertMainThread - Not running on main thread when expected to!");
    }

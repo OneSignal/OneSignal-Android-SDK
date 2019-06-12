@@ -73,7 +73,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         try {
             final String base64Str = Base64.encodeToString(
                     htmlStr.getBytes("UTF-8"),
-                    Base64.DEFAULT
+                    Base64.NO_WRAP
             );
 
             final WebViewManager webViewManager = new WebViewManager(message, base64Str);

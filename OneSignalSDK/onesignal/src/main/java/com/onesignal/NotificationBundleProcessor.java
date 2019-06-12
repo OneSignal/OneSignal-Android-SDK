@@ -73,8 +73,11 @@ class NotificationBundleProcessor {
          notifJob.restoring = bundle.getBoolean("restoring", false);
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
          notifJob.jsonPayload = new JSONObject(jsonStrPayload);
+         notifJob.isInAppPreviewPush = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
          
-         if (!notifJob.restoring && OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
+         if (!notifJob.restoring &&
+             !notifJob.isInAppPreviewPush &&
+             OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
             return;
 
          if (bundle.containsKey("android_notif_id")) {
@@ -100,14 +103,13 @@ class NotificationBundleProcessor {
       processCollapseKey(notifJob);
 
       boolean doDisplay =
-         notifJob.hasExtender()
-         || shouldDisplay(notifJob.jsonPayload.optString("alert"));
-
-
+         notifJob.hasExtender() ||
+         shouldDisplay(notifJob.jsonPayload.optString("alert")) ||
+         notifJob.isInAppPreviewPush;
       if (doDisplay)
          GenerateNotification.fromJsonPayload(notifJob);
 
-      if (!notifJob.restoring) {
+      if (!notifJob.restoring && !notifJob.isInAppPreviewPush) {
          saveNotification(notifJob, false);
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
@@ -483,7 +485,7 @@ class NotificationBundleProcessor {
       return result;
    }
 
-   private static @Nullable String inAppPreviewPushUUID(JSONObject payload) {
+   static @Nullable String inAppPreviewPushUUID(JSONObject payload) {
       JSONObject osCustom;
       try {
          osCustom = getCustomJSONObject(payload);
