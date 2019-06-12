@@ -47,6 +47,8 @@ import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 class NotificationChannelManager {
    
@@ -56,6 +58,7 @@ class NotificationChannelManager {
 
    private static final String DEFAULT_CHANNEL_ID = "fcm_fallback_notification_channel";
    private static final String RESTORE_CHANNEL_ID = "restored_OS_notifications";
+   private static final String HEX_PATTERN = "^([A-Fa-f0-9]{8})$";
    
    static String createNotificationChannel(NotificationGenerationJob notifJob) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
@@ -130,16 +133,23 @@ class NotificationChannelManager {
       }
 
       if (payload.has("ledc")){
-         String ledc = payload.optString("ledc");
-         BigInteger ledColor = new BigInteger("FFFFFFFF", 16);
+         Pattern pattern = Pattern.compile(HEX_PATTERN);
 
-         // validate string
+         String ledc = payload.optString("ledc");
+         Matcher matcher = pattern.matcher(ledc);
+         BigInteger ledColor;
+
+         if ( !matcher.matches() ) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "ARGB Hex value incorrect format (E.g: FF9900FF)");
+            ledc = "FFFFFFFF";
+         }
+
          try {
             ledColor = new BigInteger(ledc, 16);
+            channel.setLightColor(ledColor.intValue());
          } catch (Throwable t){
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ARGB Hex value incorrect format (E.g: FF9900FF", t);
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Couldn't convert ARGB Hex value to BigInteger:", t);
          }
-         channel.setLightColor(ledColor.intValue());
       }
       channel.enableLights(payload.optInt("led", 1) == 1);
 

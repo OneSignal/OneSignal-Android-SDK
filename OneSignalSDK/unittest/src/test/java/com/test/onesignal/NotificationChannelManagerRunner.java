@@ -7,8 +7,11 @@ import android.app.NotificationManager;
 import android.content.Context;
 
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.example.BlankActivity;
+
+import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,6 +25,8 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
+
+import java.math.BigInteger;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_createNotificationChannel;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_processChannelList;
@@ -227,19 +232,24 @@ public class NotificationChannelManagerRunner {
       assertEquals("en_grp_nm", ShadowRoboNotificationManager.lastChannelGroup.getName());
    }
 
-   @Test(expected = IllegalArgumentException.class)
+   @Test
+   @Config(shadows = {ShadowOneSignal.class})
    public void handleInvalidColorCode() throws Exception {
       JSONObject payload = new JSONObject();
       JSONObject chnl = new JSONObject();
 
       chnl.put("id", "test_id");
       chnl.put("nm", "Test Name");
-
-      payload.put("ledc", "FFFF00000");
+      payload.put("ledc", "FFFFFFFFY");
       payload.put("chnl", chnl.toString());
 
       NotificationChannelManager_createNotificationChannel(blankActivity, payload);
 
+      // check default to white
+      NotificationChannel channel = ShadowRoboNotificationManager.lastChannel;
+      BigInteger ledColor = new BigInteger("FFFFFFFF", 16);
+      assertEquals(ledColor.intValue(), channel.getLightColor());
+      assertTrue(ShadowOneSignal.messages.contains("ARGB Hex value incorrect format (E.g: FF9900FF)"));
    }
    
    // Starting helper methods
