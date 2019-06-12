@@ -58,7 +58,7 @@ class NotificationChannelManager {
 
    private static final String DEFAULT_CHANNEL_ID = "fcm_fallback_notification_channel";
    private static final String RESTORE_CHANNEL_ID = "restored_OS_notifications";
-   private static final Pattern pattern = Pattern.compile("^([A-Fa-f0-9]{8})$");
+   private static final Pattern hexPattern = Pattern.compile("^([A-Fa-f0-9]{8})$");
    
    static String createNotificationChannel(NotificationGenerationJob notifJob) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
@@ -132,13 +132,13 @@ class NotificationChannelManager {
          channel.setGroup(group_id);
       }
 
-      if (payload.has("ledc")){
+      if (payload.has("ledc")) {
          String ledc = payload.optString("ledc");
-         Matcher matcher = pattern.matcher(ledc);
+         Matcher matcher = hexPattern.matcher(ledc);
          BigInteger ledColor;
 
          if (!matcher.matches()) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "ARGB Hex value incorrect format (E.g: FF9900FF)");
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignal LED Color Settings: ARGB Hex value incorrect format (E.g: FF9900FF)");
             ledc = "FFFFFFFF";
          }
 

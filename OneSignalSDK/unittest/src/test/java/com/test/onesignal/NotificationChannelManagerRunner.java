@@ -249,7 +249,7 @@ public class NotificationChannelManagerRunner {
       NotificationChannel channel = ShadowRoboNotificationManager.lastChannel;
       BigInteger ledColor = new BigInteger("FFFFFFFF", 16);
       assertEquals(ledColor.intValue(), channel.getLightColor());
-      assertTrue(ShadowOneSignal.messages.contains("ARGB Hex value incorrect format (E.g: FF9900FF)"));
+      assertTrue(ShadowOneSignal.messages.contains("OneSignal LED Color Settings: ARGB Hex value incorrect format (E.g: FF9900FF)"));
    }
    
    // Starting helper methods
