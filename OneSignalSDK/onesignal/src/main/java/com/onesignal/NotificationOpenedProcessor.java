@@ -32,6 +32,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationManagerCompat;
 
 import org.json.JSONArray;
@@ -74,6 +75,10 @@ class NotificationOpenedProcessor {
       if (!dismissed) {
          try {
             JSONObject jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
+
+            if (handleIAMPreviewOpen(context, jsonData))
+               return;
+
             jsonData.put("notificationId", intent.getIntExtra("notificationId", 0));
             intent.putExtra("onesignal_data", jsonData.toString());
             dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
@@ -116,6 +121,16 @@ class NotificationOpenedProcessor {
 
       if (!dismissed)
          OneSignal.handleNotificationOpen(context, dataArray, intent.getBooleanExtra("from_alert", false));
+   }
+
+   private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {
+      String previewUUID = NotificationBundleProcessor.inAppPreviewPushUUID(jsonData);
+      if (previewUUID == null)
+         return false;
+
+      OneSignal.startOrResumeApp(context);
+      OSInAppMessageController.getController().displayPreviewMessage(previewUUID);
+      return true;
    }
 
    private static void addChildNotifications(JSONArray dataArray, String summaryGroup, SQLiteDatabase writableDb) {

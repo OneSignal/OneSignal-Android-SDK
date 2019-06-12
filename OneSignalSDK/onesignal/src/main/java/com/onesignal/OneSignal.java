@@ -2041,15 +2041,10 @@ public class OneSignal {
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
-         fireIntentFromNotificationOpen(inContext);
+         startOrResumeApp(inContext);
    }
 
-   private static void fireIntentFromNotificationOpen(Context inContext) {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
-         return;
-
+   static void startOrResumeApp(Context inContext) {
       Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
       // Make sure we have a launcher intent.
       if (launchIntent != null) {

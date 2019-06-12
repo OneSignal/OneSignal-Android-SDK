@@ -39,6 +39,7 @@ class NotificationGenerationJob {
    Context context;
    JSONObject jsonPayload;
    boolean restoring;
+   boolean isInAppPreviewPush;
    
    boolean showAsAlert;
    
