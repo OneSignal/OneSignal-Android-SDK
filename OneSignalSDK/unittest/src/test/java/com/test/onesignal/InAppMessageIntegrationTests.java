@@ -99,7 +99,7 @@ public class InAppMessageIntegrationTests {
     }
 
     @After
-    public void afterEachTest() {
+    public void afterEachTest() throws Exception {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;

@@ -58,7 +58,6 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -104,6 +103,21 @@ public class OneSignal {
        */
       void notificationOpened(OSNotificationOpenResult result);
    }
+
+   /**
+    * An interface used to process a OneSignal In-App Message the user just tapped on.
+    * <br/>
+    * Set this during OneSignal init in
+    * {@link OneSignal.Builder#setInAppMessageClickHandler(InAppMessageClickHandler)}
+    */
+   public interface InAppMessageClickHandler {
+      /**
+       * Fires when a user taps on a clickable element in the notification such as a button or image
+       * @param result a {@link OSInAppMessageAction}
+       **/
+      void inAppMessageClicked(OSInAppMessageAction result);
+   }
+
 
    /**
     * An interface used to handle notifications that are received.
@@ -203,6 +217,7 @@ public class OneSignal {
       Context mContext;
       NotificationOpenedHandler mNotificationOpenedHandler;
       NotificationReceivedHandler mNotificationReceivedHandler;
+      InAppMessageClickHandler mInAppMessageClickHandler;
       boolean mPromptLocation;
       boolean mDisableGmsMissingPrompt;
       // Default true in 4.0.0 release.
@@ -258,6 +273,16 @@ public class OneSignal {
        */
       public Builder setNotificationReceivedHandler(NotificationReceivedHandler handler) {
          mNotificationReceivedHandler = handler;
+         return this;
+      }
+
+      /**
+       * Sets In-App message click handler that will fire when an action is taken.
+       * @param handler Instance of a class implementing the {@link InAppMessageClickHandler} interface
+       * @return the builder on which you called this method
+       */
+      public Builder setInAppMessageClickHandler(InAppMessageClickHandler handler) {
+         mInAppMessageClickHandler = handler;
          return this;
       }
 
@@ -2616,6 +2641,10 @@ public class OneSignal {
 
    public static void removeNotificationOpenedHandler() {
       getCurrentOrNewInitBuilder().mNotificationOpenedHandler = null;
+   }
+
+   public static void removeInAppMessageClickHandler() {
+      getCurrentOrNewInitBuilder().mInAppMessageClickHandler = null;
    }
 
    public static void removeNotificationReceivedHandler() {

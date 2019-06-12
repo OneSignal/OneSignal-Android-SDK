@@ -20,6 +20,7 @@ public class InAppMessagingHelpers {
     public static final String TEST_ENGLISH_ANDROID_VARIANT_ID = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc";
     public static final String TEST_MESSAGE_ID = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
     public static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+    public static final String IAM_CLICK_ID = "12345678-1234-1234-1234-123456789012";
 
     public static boolean evaluateMessage(OSInAppMessage message) {
         return OSInAppMessageController.getController().triggerController.evaluateMessageTriggers(message);
@@ -114,7 +115,8 @@ public class InAppMessagingHelpers {
     public static JSONObject buildTestActionJson() throws JSONException {
         return new JSONObject() {{
             put("click_type", "button");
-            put("click_id", "Test_click_id");
+            put("click_id", IAM_CLICK_ID);
+            put("click_name", "click_name");
             put("url", "https://www.onesignal.com");
             put("url_target", "webview");
             put("close", true);

@@ -2,6 +2,7 @@ package com.test.onesignal;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Looper;
 
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -18,6 +19,8 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
+
+import junit.framework.Assert;
 
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowSystemClock;
@@ -62,12 +65,15 @@ class TestHelpers {
       OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
    }
 
-   static void afterTestCleanup() {
+   static void afterTestCleanup() throws Exception {
       try {
          stopAllOSThreads();
       } catch (Exception e) {
          e.printStackTrace();
       }
+
+      if (lastException != null)
+         throw lastException;
 
       OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase().close();
    }
@@ -152,6 +158,8 @@ class TestHelpers {
       if (ranBeforeTestSuite)
          return;
 
+      Looper.prepareMainLooper();
+
       beforeTestInitAndCleanup();
 
       System.out.println("beforeTestSuite!!!!!!");
@@ -211,5 +219,10 @@ class TestHelpers {
 
    static void advanceTimeByMs(long advanceBy) {
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() +  advanceBy);
+   }
+
+   static void assertMainThread() {
+      if (!Looper.getMainLooper().getThread().equals(Thread.currentThread()))
+         Assert.fail("assertMainThread - Not running on main thread when expected to!");
    }
 }

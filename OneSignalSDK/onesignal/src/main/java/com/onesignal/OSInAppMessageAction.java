@@ -30,37 +30,43 @@ public class OSInAppMessageAction {
         }
     }
 
+    /** The type of element that was click, can be a button or image. */
     @NonNull
     public ClickType clickType;
 
-    /** The unique identifier for this action */
+    /** UUID assigned by OneSignal for internal use.
+     * Package-private to track which element was tapped to report to the OneSignal dashboard. */
     @NonNull
-    public String clickId;
+    String clickId;
+
+    /** An optional click name entered defined by the app developer when creating the IAM */
+    @Nullable
+    public String clickName;
 
     /** An optional URL that opens when the action takes place */
     @Nullable
-    public String actionUrl;
+    public String clickUrl;
 
-    /** Determines where the URL is opened, ie. Safari */
+    /** Determines if this was the first action taken on the in app message */
+    public boolean firstClick;
+
+    /** Determines where the URL is opened, ie. Default browser. */
     @Nullable
     public OSInAppMessageActionUrlType urlTarget;
 
-    boolean closesMessage;
-
-    /** Contains additional metadata for each action, currently not implemented */
-    @Nullable
-    public JSONObject additionalData;
+    /** Determines if tapping on the element should close the In-App Message. */
+    public boolean closesMessage;
 
     OSInAppMessageAction(@NonNull JSONObject json) {
         clickType = ClickType.fromString(json.optString("click_type"));
         clickId = json.optString("click_id", null);
-        actionUrl = json.optString("url", null);
+        clickName = json.optString("click_name", null);
+        clickUrl = json.optString("url", null);
         urlTarget = OSInAppMessageActionUrlType.fromString(json.optString("url_target", null));
         if (urlTarget == null)
             urlTarget = OSInAppMessageActionUrlType.IN_APP_WEBVIEW;
 
         closesMessage = json.optBoolean("close", true);
-        additionalData = json.optJSONObject("data");
     }
 
     /**
