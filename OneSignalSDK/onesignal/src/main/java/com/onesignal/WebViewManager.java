@@ -40,7 +40,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private WebViewManager(@NonNull OSInAppMessage message, String base64Message) {
         this.message = message;
         this.base64Message = base64Message;
-        instances.put(message.messageId, this);
+        if (!message.isPreview)
+            instances.put(message.messageId, this);
     }
 
     enum Position {
@@ -59,7 +60,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     // Creates a new WebView
     static void showHTMLString(OSInAppMessage message, final String htmlStr) {
-        if (instances.containsKey(message.messageId)) {
+        if (!message.isPreview && instances.containsKey(message.messageId)) {
             OneSignal.Log(
                     OneSignal.LOG_LEVEL.ERROR,
                     "In-App message with id '" +

@@ -41,14 +41,24 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
 import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
+/** Processes the Bundle received from a push.
+ * This class handles both processing bundles from a BroadcastReceiver or from a Service
+ *   - Entry points are processBundleFromReceiver or ProcessFromGCMIntentService respectively
+ * NOTE: Could split up this class since it does a number of different things
+ * */
 class NotificationBundleProcessor {
 
+   private static final String PUSH_ADDITIONAL_DATE_KEY = "a";
+   private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
    static final String DEFAULT_ACTION = "__DEFAULT__";
+
 
    static void ProcessFromGCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       OneSignal.setAppContext(context);
@@ -136,7 +146,7 @@ class NotificationBundleProcessor {
       JSONObject jsonPayload = notifiJob.jsonPayload;
       
       try {
-         JSONObject customJSON = new JSONObject(notifiJob.jsonPayload.optString("custom"));
+         JSONObject customJSON = getCustomJSONObject(notifiJob.jsonPayload);
    
          OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
          SQLiteDatabase writableDb = null;
@@ -247,7 +257,7 @@ class NotificationBundleProcessor {
           null);
    }
 
-   static JSONObject bundleAsJSONObject(Bundle bundle) {
+   static @NonNull JSONObject bundleAsJSONObject(Bundle bundle) {
       JSONObject json = new JSONObject();
       Set<String> keys = bundle.keySet();
 
@@ -271,8 +281,8 @@ class NotificationBundleProcessor {
          JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
          JSONObject additionalDataJSON;
 
-         if (customJSON.has("a"))
-            additionalDataJSON = customJSON.getJSONObject("a");
+         if (customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
+            additionalDataJSON = customJSON.getJSONObject(PUSH_ADDITIONAL_DATE_KEY);
          else
             additionalDataJSON = new JSONObject();
 
@@ -301,8 +311,8 @@ class NotificationBundleProcessor {
 
          additionalDataJSON.put("actionButtons", buttons);
          additionalDataJSON.put("actionSelected", DEFAULT_ACTION);
-         if (!customJSON.has("a"))
-            customJSON.put("a", additionalDataJSON);
+         if (!customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
+            customJSON.put(PUSH_ADDITIONAL_DATE_KEY, additionalDataJSON);
 
          gcmBundle.putString("custom", customJSON.toString());
       } catch (JSONException e) {
@@ -313,12 +323,12 @@ class NotificationBundleProcessor {
    static OSNotificationPayload OSNotificationPayloadFrom(JSONObject currentJsonPayload) {
       OSNotificationPayload notification = new OSNotificationPayload();
       try {
-         JSONObject customJson = new JSONObject(currentJsonPayload.optString("custom"));
+         JSONObject customJson = getCustomJSONObject(currentJsonPayload);
          notification.notificationID = customJson.optString("i");
          notification.templateId = customJson.optString("ti");
          notification.templateName = customJson.optString("tn");
          notification.rawPayload = currentJsonPayload.toString();
-         notification.additionalData = customJson.optJSONObject("a");
+         notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATE_KEY);
          notification.launchURL = customJson.optString("u", null);
 
          notification.body = currentJsonPayload.optString("alert", null);
@@ -424,7 +434,7 @@ class NotificationBundleProcessor {
    }
 
    //  Process bundle passed from gcm / adm broadcast receiver.
-   static ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
+   static @NonNull ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
       ProcessedBundleResult result = new ProcessedBundleResult();
       
       // Not a OneSignal GCM message
@@ -434,10 +444,25 @@ class NotificationBundleProcessor {
 
       unMinifyBundle(bundle);
 
-      if (startExtenderService(context, bundle, result)) return result;
+      JSONObject pushPayloadJson = bundleAsJSONObject(bundle);
+
+      // Show In-App message preview it is in the payload & the app is in focus
+      String previewUUID = inAppPreviewPushUUID(pushPayloadJson);
+      if (previewUUID != null) {
+         // If app is in focus display the IAMs preview now
+         if (OneSignal.isAppActive()) {
+            result.inAppPreviewShown = true;
+            OSInAppMessageController.getController().displayPreviewMessage(previewUUID);
+         }
+         // Return early, we don't want the extender service or etc. to fire for IAM previews
+         return result;
+      }
+
+      if (startExtenderService(context, bundle, result))
+         return result;
 
       // We already ran a getNotificationIdFromGCMBundle == null check above so this will only be true for dups
-      result.isDup = OneSignal.notValidOrDuplicated(context, bundleAsJSONObject(bundle));
+      result.isDup = OneSignal.notValidOrDuplicated(context, pushPayloadJson);
       if (result.isDup)
          return result;
 
@@ -458,10 +483,28 @@ class NotificationBundleProcessor {
       return result;
    }
 
+   private static @Nullable String inAppPreviewPushUUID(JSONObject payload) {
+      JSONObject osCustom;
+      try {
+         osCustom = getCustomJSONObject(payload);
+      } catch (JSONException e) {
+         return null;
+      }
+
+      if (!osCustom.has(PUSH_ADDITIONAL_DATE_KEY))
+         return null;
+
+      JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+      if (additionalData.has(IAM_PREVIEW_KEY))
+         return additionalData.optString(IAM_PREVIEW_KEY);
+      return null;
+   }
+
    // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
    private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
       Intent intent = NotificationExtenderService.getIntent(context);
-      if (intent == null) return false;
+      if (intent == null)
+         return false;
 
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
@@ -493,10 +536,12 @@ class NotificationBundleProcessor {
               || !isActive);
    }
 
-   static JSONArray newJsonArray(JSONObject jsonObject) {
-      JSONArray jsonArray = new JSONArray();
-      jsonArray.put(jsonObject);
-      return jsonArray;
+   static @NonNull JSONArray newJsonArray(JSONObject jsonObject) {
+      return new JSONArray().put(jsonObject);
+   }
+
+   static JSONObject getCustomJSONObject(JSONObject jsonObject) throws JSONException {
+      return new JSONObject(jsonObject.optString("custom"));
    }
    
    static boolean hasRemoteResource(Bundle bundle) {
@@ -514,9 +559,10 @@ class NotificationBundleProcessor {
       boolean isOneSignalPayload;
       boolean hasExtenderService;
       boolean isDup;
+      boolean inAppPreviewShown;
       
       boolean processed() {
-         return !isOneSignalPayload || hasExtenderService || isDup;
+         return !isOneSignalPayload || hasExtenderService || isDup || inAppPreviewShown;
       }
    }
 }
