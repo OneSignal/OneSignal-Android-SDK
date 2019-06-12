@@ -56,15 +56,18 @@ import com.onesignal.OSPermissionSubscriptionState;
 import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.PermissionsActivity;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
+import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
-import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowLocationGMS;
 import com.onesignal.ShadowLocationUpdateListener;
@@ -72,14 +75,12 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
-import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -87,18 +88,19 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
-import org.robolectric.android.controller.ActivityController;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -113,8 +115,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
+import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
-
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastAppRestart;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
@@ -124,16 +126,11 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
-
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
-
 import static org.junit.Assert.assertThat;
-
 import static org.robolectric.Shadows.shadowOf;
-
-import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -161,7 +158,7 @@ public class MainOneSignalClassRunner {
    private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
    private static ActivityController<BlankActivity> blankActivityController;
-   
+
    private static void GetIdsAvailable() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
          @Override
@@ -250,6 +247,39 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       assertNotNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   /**
+    * 1. User opens app to MainActivity
+    * 2. Comparison of MainActivity to dummy PermissionsActivity (1st Test Case)
+    * 3. User gives privacy consent and LocationGMS prompt is shown with PermissionsActivity
+    * 4. Comparison of PermissionsActivity to dummy PermissionsActivity (2nd Test Case)
+    */
+   @Test
+   @Config(manifest = "AndroidManifestLocationPrivacyConsent.xml", sdk = 26)
+   public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Create a dummy PermissionsActivity to compare in the test cases
+      Intent expectedActivity = new Intent(RuntimeEnvironment.application, PermissionsActivity.class);
+
+      /* Without showing the LocationGMS prompt we check to see that the current
+       * activity is not equal to PermissionsActivity since it is not showing yet */
+      Intent actualActivity = shadowOf(blankActivity).getNextStartedActivity();
+      // Assert false that the current activity is equal to the dummy PermissionsActivity
+      assertFalse(actualActivity.filterEquals(expectedActivity));
+
+      // Now we trigger the LocationGMS but providing consent to OneSignal SDK
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+
+      // Now the PermissionsActivity should be the next on the stack
+      actualActivity = shadowOf(blankActivity).getNextStartedActivity();
+      // Assert true that the current activity is equal to the dummy PermissionsActivity
+      assertTrue(actualActivity.filterEquals(expectedActivity));
    }
 
    @Test
@@ -436,36 +466,36 @@ public class MainOneSignalClassRunner {
 
       assertThat(ShadowPushRegistratorGCM.lastProjectNumber, not("123456789"));
    }
-   
+
    @Test
    public void testNullProjectNumberSetsErrorType() throws Exception {
       // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
       ShadowOneSignalRestClient.nextSuccessResponse = "{\"awl_list\": {}}";
       // Don't fire the mock callback, it will be done from the real class.
       ShadowPushRegistratorGCM.skipComplete = true;
-      
+
       OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
       threadAndTaskWait();
-      
+
       assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
-   
+
    @Test
    @Config(shadows = {ShadowRoboNotificationManager.class}, sdk = 26)
    public void testNotificationChannelListPayload() throws Exception {
       NotificationChannelManagerRunner testHelper = new NotificationChannelManagerRunner().setContext(blankActivity);
-   
+
       JSONObject androidParams = testHelper.createBasicChannelListPayload();
       androidParams.put("awl_list", new JSONObject());
       // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
       ShadowOneSignalRestClient.nextSuccessResponse = androidParams.toString();
-      
+
       // Don't fire the mock callback, it will be done from the real class.
 //      ShadowPushRegistratorGCM.skipComplete = true;
-      
+
       OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
       threadAndTaskWait();
-   
+
       testHelper.assertChannelsForBasicChannelList();
    }
 
@@ -1765,7 +1795,7 @@ public class MainOneSignalClassRunner {
    public void shouldSaveToSyncIfKilledAndSyncOnNextAppStart() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       OneSignal.sendTag("key", "value");
       // Pause Activity and trigger delayed runnable that will trigger out of focus logic
       blankActivityController.pause();
@@ -1788,23 +1818,23 @@ public class MainOneSignalClassRunner {
    public void shouldSyncPendingChangesFromSyncService() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       OneSignal.sendTag("key", "value");
-   
+
       // App is swiped away
       blankActivityController.pause();
       OneSignalPackagePrivateHelper.runFocusRunnables();
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       fastAppRestart();
       threadAndTaskWait();
-   
+
       // Tags did not get synced so SyncService should be scheduled
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
       assertEquals(1, shadowAlarmManager.getScheduledAlarms().size());
       assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
       shadowAlarmManager.getScheduledAlarms().clear();
-   
+
       // Test running the service
       Robolectric.buildService(SyncService.class).startCommand(0, 0);
       threadAndTaskWait();
@@ -1814,7 +1844,7 @@ public class MainOneSignalClassRunner {
       // Test starting app
       OneSignalInit();
       threadAndTaskWait();
-      
+
       // No new changes, don't schedule another restart.
       // App is swiped away
       blankActivityController.pause();
@@ -1940,6 +1970,7 @@ public class MainOneSignalClassRunner {
       // 3. Put app in background
       blankActivityController.pause();
       OneSignalPackagePrivateHelper.runFocusRunnables();
+//      threadAndTaskWait();
    }
 
    @Test
@@ -1950,6 +1981,11 @@ public class MainOneSignalClassRunner {
       // A future job should be scheduled to finish the sync.
       JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
       assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+
+      // FIXME: Cleanup for upcoming unit test
+      //  This is a one off scenario where a unit test fails after this one is run
+      blankActivityController.resume();
+      threadAndTaskWait();
    }
 
    private static void assertSuccessfulOnFocus(ShadowOneSignalRestClient.Request request) {
@@ -1994,6 +2030,11 @@ public class MainOneSignalClassRunner {
 
       assertEquals(4, ShadowOneSignalRestClient.requests.size());
       assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(3));
+
+      // FIXME: Cleanup for upcoming unit test
+      //  This is a one off scenario where a unit test fails after this one is run
+      blankActivityController.resume();
+      threadAndTaskWait();
    }
 
    @Test
@@ -2096,7 +2137,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.deleteTag("int");
    }
-   
+
    @Test
    public void testDeleteTags() throws Exception {
       OneSignalInit();
@@ -2169,10 +2210,10 @@ public class MainOneSignalClassRunner {
    public void testGetTagsWithNoTagsShouldBeNull() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       GetTags();
       threadAndTaskWait();
-      
+
       assertNull(lastGetTags);
       String lastUrl = ShadowOneSignalRestClient.lastUrl;
       assertEquals("?app_id=" + ONESIGNAL_APP_ID, lastUrl.substring(lastUrl.lastIndexOf("?")));
@@ -2326,6 +2367,28 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
       assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_focus", postEmail.url);
       assertEquals(60, postEmail.payload.getInt("active_time"));
+   }
+
+   /**
+    * Similar workflow to testLocationPermissionPromptWithPrivacyConsent()
+    * We want to provide consent but make sure that session time tracking works properly
+    */
+   @Test
+   @Config(sdk = 26)
+   public void testSessionTimeTrackingOnPrivacyConsent() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Provide consent to OneSignal SDK amd forward time 2 minutes
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(120_000);
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // Check that time is tracked successfully by validating the "on_focus" endpoint
+      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(2));
    }
 
    @Test
@@ -2611,7 +2674,7 @@ public class MainOneSignalClassRunner {
 
       assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
    }
-   
+
    @Test
    @Config(shadows = {
             ShadowGoogleApiClientBuilder.class,
@@ -2631,7 +2694,7 @@ public class MainOneSignalClassRunner {
       assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
       assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
       assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-   
+
       // Checking make sure an update is scheduled.
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
@@ -2651,10 +2714,10 @@ public class MainOneSignalClassRunner {
       assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
       assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
       assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
-      
+
       assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
       assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
-   
+
       // Testing loc_bg
       blankActivityController.pause();
       threadAndTaskWait();
@@ -2669,7 +2732,7 @@ public class MainOneSignalClassRunner {
       assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
       assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
    }
-   
+
    @Test
    @Config(shadows = {
             ShadowGoogleApiClientBuilder.class,
@@ -2707,7 +2770,7 @@ public class MainOneSignalClassRunner {
       assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
       assertEquals(12345L, ShadowOneSignalRestClient.lastPost.optInt("loc_time_stamp"));
       assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-   
+
       // Checking make sure an update is scheduled.
       alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
@@ -2763,7 +2826,7 @@ public class MainOneSignalClassRunner {
       restartAppAndElapseTimeToNextSession();
       ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
       OneSignalInit();
-      
+
       SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
       syncJobService.onStartJob(null);
       TestHelpers.getThreadByName("OS_SYNCSRV_BG_SYNC").join();
@@ -2872,32 +2935,32 @@ public class MainOneSignalClassRunner {
 
       JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("payload").optJSONObject("additionalData");
       assertEquals("bar", additionalData.optString("foo"));
-      
+
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
       assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
    }
-   
+
    @Test
    public void testNotificationOpenedProcessorHandlesEmptyIntent() {
       NotificationOpenedProcessor_processFromContext(blankActivity, new Intent());
    }
-   
+
    @Test
    public void shouldOpenChromeTab() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
       assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b2f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
    }
-   
+
    @Test
    public void shouldHandleChromeNullNewSession() throws Exception {
       ShadowCustomTabsClient.nullNewSession = true;
       OneSignalInit();
       threadAndTaskWait();
    }
-   
+
    private OSPermissionStateChanges lastPermissionStateChanges;
    private boolean currentPermission;
    // Firing right away to match iOS behavior for wrapper SDKs.
@@ -2905,7 +2968,7 @@ public class MainOneSignalClassRunner {
    public void shouldFirePermissionObserverOnFirstAdd() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       OSPermissionObserver permissionObserver = new OSPermissionObserver() {
          @Override
          public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
@@ -2914,18 +2977,18 @@ public class MainOneSignalClassRunner {
          }
       };
       OneSignal.addPermissionObserver(permissionObserver);
-      
+
       assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
       assertTrue(lastPermissionStateChanges.getTo().getEnabled());
       // Test to make sure object was correct at the time of firing.
       assertTrue(currentPermission);
    }
-   
+
    @Test
    public void shouldFirePermissionObserverWhenUserDisablesNotifications() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       OSPermissionObserver permissionObserver = new OSPermissionObserver() {
          @Override
          public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
@@ -2937,13 +3000,13 @@ public class MainOneSignalClassRunner {
       lastPermissionStateChanges = null;
       // Make sure garbage collection doesn't nuke any observers.
       Runtime.getRuntime().gc();
-      
+
       blankActivityController.pause();
       threadAndTaskWait();
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
       threadAndTaskWait();
-      
+
       assertTrue(lastPermissionStateChanges.getFrom().getEnabled());
       assertFalse(lastPermissionStateChanges.getTo().getEnabled());
       // Test to make sure object was correct at the time of firing.
@@ -2951,16 +3014,16 @@ public class MainOneSignalClassRunner {
       // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
       assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
-   
+
    @Test
    public void shouldSetNotificationTypesToZeroWhenUnsubscribeWhenNotificationsAreDisabledIsEnabled() throws Exception {
       ShadowNotificationManagerCompat.enabled = false;
       OneSignal.startInit(blankActivity).unsubscribeWhenNotificationsAreDisabled(true).init();
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
-      
+
       assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
-      
+
       blankActivityController.pause();
       threadAndTaskWait();
       ShadowNotificationManagerCompat.enabled = true;
@@ -2968,31 +3031,31 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
    }
-   
+
    @Test
    @Config(shadows = {ShadowBadgeCountUpdater.class})
    public void shouldClearBadgesWhenPermissionIsDisabled() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
       ShadowBadgeCountUpdater.lastCount = 1;
-   
+
       blankActivityController.pause();
       threadAndTaskWait();
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
       threadAndTaskWait();
-      
+
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
-   
-   
+
+
    private OSSubscriptionStateChanges lastSubscriptionStateChanges;
    private boolean currentSubscription;
    @Test
    public void shouldFireSubscriptionObserverOnFirstAdd() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      
+
       OSSubscriptionObserver permissionObserver = new OSSubscriptionObserver() {
          @Override
          public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
@@ -3001,18 +3064,18 @@ public class MainOneSignalClassRunner {
          }
       };
       OneSignal.addSubscriptionObserver(permissionObserver);
-      
+
       assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
       assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
       // Test to make sure object was correct at the time of firing.
       assertTrue(currentSubscription);
    }
-   
+
    @Test
    public void shouldFireSubscriptionObserverWhenUserDisablesNotifications() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-   
+
       OSSubscriptionObserver subscriptionObserver = new OSSubscriptionObserver() {
          @Override
          public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
@@ -3024,13 +3087,13 @@ public class MainOneSignalClassRunner {
       lastSubscriptionStateChanges = null;
       // Make sure garbage collection doesn't nuke any observers.
       Runtime.getRuntime().gc();
-      
+
       blankActivityController.pause();
       threadAndTaskWait();
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
       threadAndTaskWait();
-      
+
       assertTrue(lastSubscriptionStateChanges.getFrom().getSubscribed());
       assertFalse(lastSubscriptionStateChanges.getTo().getSubscribed());
       // Test to make sure object was correct at the time of firing.
@@ -3038,7 +3101,7 @@ public class MainOneSignalClassRunner {
       // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
       assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
-   
+
    @Test
    public void shouldFireSubscriptionObserverWhenChangesHappen() throws Exception {
       OneSignalInit();
@@ -3051,7 +3114,7 @@ public class MainOneSignalClassRunner {
       };
       OneSignal.addSubscriptionObserver(permissionObserver);
       threadAndTaskWait();
-      
+
       assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
       assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
       // Test to make sure object was correct at the time of firing.
@@ -3060,7 +3123,7 @@ public class MainOneSignalClassRunner {
       assertEquals(ShadowPushRegistratorGCM.regId, lastSubscriptionStateChanges.getTo().getPushToken());
       assertEquals(ShadowOneSignalRestClient.pushUserId, lastSubscriptionStateChanges.getTo().getUserId());
    }
-   
+
    @Test
    public void shouldNotFireSubscriptionObserverWhenChangesHappenIfRemoved() throws Exception {
       OneSignalInit();
@@ -3075,7 +3138,7 @@ public class MainOneSignalClassRunner {
       lastSubscriptionStateChanges = null;
       OneSignal.removeSubscriptionObserver(permissionObserver);
       threadAndTaskWait();
-      
+
       assertFalse(currentSubscription);
       assertNull(lastSubscriptionStateChanges);
    }
@@ -3183,7 +3246,7 @@ public class MainOneSignalClassRunner {
       assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
       assertNotNull(emailSubscriptionState.getEmailUserId());
    }
-   
+
    @Test
    public void shouldReturnCorrectGetPermissionSubscriptionState() throws Exception {
       OneSignalInit();

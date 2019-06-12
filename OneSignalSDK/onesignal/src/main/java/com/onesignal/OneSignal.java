@@ -29,14 +29,12 @@ package com.onesignal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -54,7 +52,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -65,7 +62,6 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
-import android.util.Base64;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -522,7 +518,11 @@ public class OneSignal {
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
 
-      // Prefs require a context to save, kick off write in-case it was waiting.
+      // Register the lifecycle listener of the app for state changes in activities with proper context
+      ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
+
+      // Prefs require a context to save
+      // If the previous state of appContext was null, kick off write in-case it was waiting
       if (wasAppContextNull)
          OneSignalPrefs.startDelayedWrite();
    }
@@ -585,27 +585,21 @@ public class OneSignal {
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
       OneSignal.setAppContext(context);
 
-      if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
+      if (requiresUserPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
          delayedInitParams = new DelayedConsentInitializationParameters(context, googleProjectNumber, oneSignalAppId, notificationOpenedHandler, notificationReceivedHandler);
          return;
       }
 
-      mInitBuilder = getCurrentOrNewInitBuilder();
-      mInitBuilder.mDisplayOptionCarryOver = false;
-      mInitBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
-      mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
+      mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
 
-      boolean isGoogleProjectNumberRemote =
-         remoteParams != null &&
-         remoteParams.googleProjectNumber != null;
-      if (!isGoogleProjectNumberRemote)
+      if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
       osUtils = new OSUtils();
       deviceType = osUtils.getDeviceType();
       subscribableStatus = osUtils.initializationChecker(context, deviceType, oneSignalAppId);
-      if (subscribableStatus == OSUtils.UNINITIALIZABLE_STATUS)
+      if (isSubscriptionStatusUninitializable())
          return;
 
       if (initDone) {
@@ -615,53 +609,29 @@ public class OneSignal {
          return;
       }
 
-      boolean contextIsActivity = (context instanceof Activity);
-
-      foreground = contextIsActivity;
       appId = oneSignalAppId;
-   
+
       saveFilterOtherGCMReceivers(mInitBuilder.mFilterOtherGCMReceivers);
 
-      if (contextIsActivity) {
-         ActivityLifecycleHandler.curActivity = (Activity) context;
-         NotificationRestorer.asyncRestore(appContext);
-      }
-      else
-         ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
+      // NOTE: This must be called here, something above conflicts with the handlers internals
+      //  causing a crash at OneSignal.deepClone()
+      handleActivityLifecycleHandler(context);
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
       OneSignalStateSynchronizer.initUserState();
-      
-      ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
 
-      try {
-         Class.forName("com.amazon.device.iap.PurchasingListener");
-         trackAmazonPurchase = new TrackAmazonPurchase(appContext);
-      } catch (ClassNotFoundException e) {}
+      // Verify the session is an Amazon purchase and track it
+      handleAmazonPurchase();
 
-      // Re-register user if the app id changed, this might happen when a dev is testing.
-      String oldAppId = getSavedAppId();
-      if (oldAppId != null) {
-         if (!oldAppId.equals(appId)) {
-            Log(LOG_LEVEL.DEBUG, "APP ID changed, clearing user id as it is no longer valid.");
-            SaveAppId(appId);
-            OneSignalStateSynchronizer.resetCurrentState();
-         }
-      }
-      else {
-         BadgeCountUpdater.updateCount(0, appContext);
-         SaveAppId(appId);
-      }
+      // Check and handle app id change of the current session
+      handleAppIdChange();
    
       OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
-      if (foreground || getUserId() == null) {
-         if (isPastOnSessionTime())
-            OneSignalStateSynchronizer.setNewSession();
-         setLastSessionTime(System.currentTimeMillis());
-         startRegistrationOrOnSession();
-      }
+      // When the session reaches timeout threshold, start new session
+      // This is where the LocationGMS prompt is triggered and shown to the user
+      handleSessionTimeRegistration();
 
       if (mInitBuilder.mNotificationOpenedHandler != null)
          fireCallbackForOpenedNotifications();
@@ -676,8 +646,75 @@ public class OneSignal {
       
       initDone = true;
 
-      //clean up any pending tasks that were queued up before initialization
+      // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
+   }
+
+   private static Builder createInitBuilder(NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      OneSignal.Builder initBuilder = getCurrentOrNewInitBuilder();
+      initBuilder.mDisplayOptionCarryOver = false;
+      initBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
+      initBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
+      return initBuilder;
+   }
+
+   private static void handleAppIdChange() {
+      // Re-register user if the app id changed, this might happen when a dev is testing.
+      String oldAppId = getSavedAppId();
+      if (oldAppId != null) {
+         if (!oldAppId.equals(appId)) {
+            Log(LOG_LEVEL.DEBUG, "APP ID changed, clearing user id as it is no longer valid.");
+            SaveAppId(appId);
+            OneSignalStateSynchronizer.resetCurrentState();
+         }
+      }
+      else {
+         BadgeCountUpdater.updateCount(0, appContext);
+         SaveAppId(appId);
+      }
+   }
+
+   public static boolean userProvidedPrivacyConsent() {
+      return getSavedUserConsentStatus();
+   }
+
+   private static boolean isGoogleProjectNumberRemote() {
+      return remoteParams != null &&
+              remoteParams.googleProjectNumber != null;
+   }
+
+   private static boolean isSubscriptionStatusUninitializable() {
+      return subscribableStatus == OSUtils.UNINITIALIZABLE_STATUS;
+   }
+
+   private static void handleActivityLifecycleHandler(Context context) {
+      foreground = isContextActivity(context);
+      if (foreground) {
+         ActivityLifecycleHandler.curActivity = (Activity) context;
+         NotificationRestorer.asyncRestore(appContext);
+      }
+      else
+         ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
+   }
+
+   private static void handleAmazonPurchase() {
+      try {
+         Class.forName("com.amazon.device.iap.PurchasingListener");
+         trackAmazonPurchase = new TrackAmazonPurchase(appContext);
+      } catch (ClassNotFoundException e) {}
+   }
+
+   private static void handleSessionTimeRegistration() {
+      if (foreground || getUserId() == null) {
+         if (isPastOnSessionTime())
+            OneSignalStateSynchronizer.setNewSession();
+         setLastSessionTime(System.currentTimeMillis());
+         startRegistrationOrOnSession();
+      }
+   }
+
+   private static boolean isContextActivity(Context context) {
+      return context instanceof Activity;
    }
 
    private static void onTaskRan(long taskId) {
@@ -686,20 +723,20 @@ public class OneSignal {
          pendingTaskExecutor.shutdown();
       }
    }
-
    private static class PendingTaskRunnable implements Runnable {
       private Runnable innerTask;
+
       private long taskId;
 
       PendingTaskRunnable(Runnable innerTask) {
          this.innerTask = innerTask;
       }
-
       @Override
       public void run() {
          innerTask.run();
          onTaskRan(taskId);
       }
+
    }
 
    private static void startPendingTasks() {
@@ -783,8 +820,8 @@ public class OneSignal {
 
       LocationGMS.getLocation(appContext, doPrompt, locationHandler);
    }
-
    private static PushRegistrator mPushRegistrator;
+
    private static PushRegistrator getPushRegistrator() {
       if (mPushRegistrator != null)
          return mPushRegistrator;
@@ -861,23 +898,19 @@ public class OneSignal {
       });
 
    }
-
    private static void fireCallbackForOpenedNotifications() {
       for(JSONArray dataArray : unprocessedOpenedNotifis)
          runNotificationOpenedCallback(dataArray, true, false);
 
       unprocessedOpenedNotifis.clear();
    }
+
    /**
     * Please do not use this method for logging, it is meant solely to be
     * used by our wrapper SDK's.
     */
    public static void onesignalLog(LOG_LEVEL level, String message) {
       OneSignal.Log(level, message);
-   }
-
-   public static boolean userProvidedPrivacyConsent() {
-      return getSavedUserConsentStatus();
    }
 
    public static void provideUserConsent(boolean consent) {
@@ -909,7 +942,7 @@ public class OneSignal {
    }
 
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
-      if (requiresUserPrivacyConsent && !userProvidedPrivacyConsent()) {
+      if (requiresUserPrivacyConsent()) {
          if (methodName != null)
             OneSignal.Log(LOG_LEVEL.WARN, "Method " + methodName + " was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.userProvidedPrivacyConsent()");
          return true;
@@ -2044,7 +2077,6 @@ public class OneSignal {
    }
 
    static void saveUserConsentStatus(boolean consent) {
-      
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT, consent);
    }
 

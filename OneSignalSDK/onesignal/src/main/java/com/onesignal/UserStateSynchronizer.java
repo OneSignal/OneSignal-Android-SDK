@@ -126,6 +126,15 @@ abstract class UserStateSynchronizer {
         }
     }
 
+    protected UserState getCurrentUserState() {
+        synchronized (syncLock) {
+            if (currentUserState == null)
+                currentUserState = newUserState("CURRENT_STATE", true);
+        }
+
+        return currentUserState;
+    }
+
     protected UserState getToSyncUserState() {
         synchronized (syncLock) {
             if (toSyncUserState == null)
@@ -439,7 +448,7 @@ abstract class UserStateSynchronizer {
     //   If there are differences a network call with the changes to made
     protected UserState getUserStateForModification() {
         if (toSyncUserState == null)
-            toSyncUserState = currentUserState.deepClone("TOSYNC_STATE");
+            toSyncUserState = getCurrentUserState().deepClone("TOSYNC_STATE");
 
         scheduleSyncToServer();
 
