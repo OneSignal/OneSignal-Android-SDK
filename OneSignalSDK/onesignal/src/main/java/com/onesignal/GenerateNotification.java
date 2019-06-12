@@ -35,12 +35,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.security.SecureRandom;
+import java.util.Random;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.R.drawable;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
@@ -57,6 +59,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
+import android.service.notification.StatusBarNotification;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.text.SpannableString;
@@ -219,7 +223,8 @@ class GenerateNotification {
       }
       
       String message = gcmBundle.optString("alert", null);
-      
+
+
       notifBuilder
          .setAutoCancel(true)
          .setSmallIcon(getSmallIconId(gcmBundle))
@@ -322,12 +327,20 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
+   @TargetApi(Build.VERSION_CODES.N)
    private static void showNotification(NotificationGenerationJob notifJob) {
-      SecureRandom random = new SecureRandom();
-
       int notificationId = notifJob.getAndroidId();
       JSONObject gcmBundle = notifJob.jsonPayload;
       String group = gcmBundle.optString("grp", null);
+
+      /* Android 7.0 auto groups 4 or more notifications so we find these groupless active
+       * notifications and add a generic group to them */
+      ArrayList<StatusBarNotification> grouplessNotifs = OneSignalNotificationManager.getActiveGrouplessNotifications(currentContext);
+      // If the null this makes the 4th notification and we want to check that 3 or more active groupless exist
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && group == null && grouplessNotifs.size() >= 3) {
+         group = OneSignalNotificationManager.GROUPLESS_SUMMARY_KEY;
+         OneSignalNotificationManager.assignGrouplessNotifications(currentContext, grouplessNotifs, group);
+      }
 
       OneSignalNotificationBuilder oneSignalNotificationBuilder = getBaseOneSignalNotificationBuilder(notifJob);
       NotificationCompat.Builder notifBuilder = oneSignalNotificationBuilder.compatBuilder;
@@ -352,31 +365,18 @@ class GenerateNotification {
       NotificationLimitManager.clearOldestOverLimit(currentContext, makeRoomFor);
 
       Notification notification;
-
       if (group != null) {
-         PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group));
-         notifBuilder.setContentIntent(contentIntent);
-         PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
-         notifBuilder.setDeleteIntent(deleteIntent);
-         notifBuilder.setGroup(group);
-
-         try {
-            notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
-         }
-         catch (Throwable t) {
-            //do nothing in this case...Android support lib 26 isn't in the project
-         }
-
+         createGenericPendingIntentsForGroup(notifBuilder, gcmBundle, group, notificationId);
          notification = createSingleNotificationBeforeSummaryBuilder(notifJob, notifBuilder);
-         
-         createSummaryNotification(notifJob, oneSignalNotificationBuilder);
+
+         // Create PendingIntents for notifications in a groupless or defined summary
+         if (group.equals(OneSignalNotificationManager.GROUPLESS_SUMMARY_KEY))
+            createGrouplessSummaryNotification(notifJob, oneSignalNotificationBuilder, grouplessNotifs.size() + 1);
+         else
+            createSummaryNotification(notifJob, oneSignalNotificationBuilder);
       }
       else {
-         PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()));
-         notifBuilder.setContentIntent(contentIntent);
-         PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId));
-         notifBuilder.setDeleteIntent(deleteIntent);
-         notification = notifBuilder.build();
+         notification = createGenericPendingIntentsForNotif(notifBuilder, gcmBundle, notificationId);
       }
 
       // NotificationManagerCompat does not auto omit the individual notification on the device when using
@@ -388,6 +388,31 @@ class GenerateNotification {
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
          NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
+      }
+   }
+
+   private static Notification createGenericPendingIntentsForNotif(NotificationCompat.Builder notifBuilder, JSONObject gcmBundle, int notificationId) {
+      Random random = new SecureRandom();
+      PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()));
+      notifBuilder.setContentIntent(contentIntent);
+      PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId));
+      notifBuilder.setDeleteIntent(deleteIntent);
+      return notifBuilder.build();
+   }
+
+   private static void createGenericPendingIntentsForGroup(NotificationCompat.Builder notifBuilder, JSONObject gcmBundle, String group, int notificationId) {
+      Random random = new SecureRandom();
+      PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra("onesignal_data", gcmBundle.toString()).putExtra("grp", group));
+      notifBuilder.setContentIntent(contentIntent);
+      PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
+      notifBuilder.setDeleteIntent(deleteIntent);
+      notifBuilder.setGroup(group);
+
+      try {
+         notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+      }
+      catch (Throwable t) {
+         //do nothing in this case...Android support lib 26 isn't in the project
       }
    }
 
@@ -674,6 +699,45 @@ class GenerateNotification {
          addXiaomiSettings(notifBuilder, summaryNotification);
       }
 
+      NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
+   }
+
+   @RequiresApi(api = Build.VERSION_CODES.M)
+   private static void createGrouplessSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder, int grouplessNotifCount) {
+      boolean updateSummary = notifJob.restoring;
+      JSONObject gcmBundle = notifJob.jsonPayload;
+
+      SecureRandom random = new SecureRandom();
+      String group = OneSignalNotificationManager.GROUPLESS_SUMMARY_KEY;
+      String summaryMessage = grouplessNotifCount + " new messages";
+      int summaryNotificationId = OneSignalNotificationManager.GROUPLESS_SUMMARY_ID;
+
+      PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, gcmBundle, group));
+      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
+
+      NotificationCompat.Builder summaryBuilder = notifBuilder.compatBuilder;
+      // The summary is designed to fit all notifications.
+      //   Default small and large icons are used instead of the payload options to enforce this.
+      summaryBuilder.setContentIntent(summaryContentIntent)
+              .setDeleteIntent(summaryDeleteIntent)
+              .setContentTitle(currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo()))
+              .setContentText(summaryMessage)
+              .setNumber(grouplessNotifCount)
+              .setSmallIcon(getDefaultSmallIconId())
+              .setLargeIcon(getDefaultLargeIcon())
+              .setOnlyAlertOnce(updateSummary)
+              .setGroup(group)
+              .setGroupSummary(true);
+
+      try {
+         summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+      }
+      catch (Throwable t) {
+         //do nothing in this case...Android support lib 26 isn't in the project
+      }
+
+
+      Notification summaryNotification = summaryBuilder.build();
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
    
