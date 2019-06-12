@@ -37,6 +37,11 @@ class OSInAppMessage {
     public double displayDuration;
 
     private boolean actionTaken;
+    boolean isPreview;
+
+    OSInAppMessage(boolean isPreview) {
+        this.isPreview = isPreview;
+    }
 
     OSInAppMessage(JSONObject json) throws JSONException {
 

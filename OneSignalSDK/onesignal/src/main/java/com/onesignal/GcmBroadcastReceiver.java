@@ -37,6 +37,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.support.annotation.Nullable;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
@@ -118,7 +119,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       }
    }
    
-   private static ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
+   private static @Nullable ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
       if (!isGcmMessage(intent))
          return null;
       

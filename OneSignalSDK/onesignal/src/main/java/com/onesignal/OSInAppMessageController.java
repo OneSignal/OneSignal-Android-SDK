@@ -80,22 +80,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
         return null;
     }
 
-    private static String htmlPathForMessage(OSInAppMessage message) {
-        String variantId = variantIdForMessage(message);
-
-        if (variantId == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to find a variant for in-app message " + message.messageId);
-            return null;
-        }
-
-        return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
-    }
-
     private static void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
     static void onMessageWasShown(@NonNull OSInAppMessage message) {
+        if (message.isPreview)
+            return;
+
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
@@ -203,7 +195,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     void messageWasDismissed(@NonNull OSInAppMessage message) {
         synchronized (messageDisplayQueue) {
             if (!messageDisplayQueue.remove(message)) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "An in-app message was removed from the display queue before it was finished displaying.");
+                if (!message.isPreview)
+                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "An in-app message was removed from the display queue before it was finished displaying.");
                 return;
             }
 
@@ -211,6 +204,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
             if (messageDisplayQueue.size() > 0)
                 displayMessage(messageDisplayQueue.get(0));
         }
+    }
+
+    private static @Nullable String htmlPathForMessage(OSInAppMessage message) {
+        String variantId = variantIdForMessage(message);
+
+        if (variantId == null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to find a variant for in-app message " + message.messageId);
+            return null;
+        }
+
+        return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
     }
 
     private void displayMessage(final OSInAppMessage message) {
@@ -226,6 +230,34 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");
+
+                    Double displayDuration = jsonResponse.optDouble("display_duration");
+                    if (displayDuration.isNaN())
+                        message.displayDuration = displayDuration;
+
+                    WebViewManager.showHTMLString(message, htmlStr);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, null);
+    }
+
+    void displayPreviewMessage(@NonNull String previewUUID) {
+       String htmlPath =  "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + OneSignal.appId;
+        OneSignalRestClient.get(htmlPath, new ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                printHttpErrorForInAppMessageRequest("html", statusCode, response);
+            }
+
+            @Override
+            void onSuccess(String response) {
+                try {
+                    JSONObject jsonResponse = new JSONObject(response);
+                    String htmlStr = jsonResponse.getString("html");
+
+                    OSInAppMessage message = new OSInAppMessage(true);
 
                     Double displayDuration = jsonResponse.optDouble("display_duration");
                     if (displayDuration.isNaN())
