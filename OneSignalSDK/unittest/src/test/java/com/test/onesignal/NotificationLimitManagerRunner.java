@@ -11,6 +11,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowNotificationLimitManager;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
@@ -39,7 +40,8 @@ import static junit.framework.Assert.assertEquals;
       ShadowNotificationLimitManager.class,
       ShadowPushRegistratorGCM.class,
       ShadowOSUtils.class,
-      ShadowAdvertisingIdProviderGPS.class
+      ShadowAdvertisingIdProviderGPS.class,
+      ShadowOneSignalRestClient.class
    },
    sdk = 26)
 @RunWith(RobolectricTestRunner.class)
@@ -68,7 +70,7 @@ public class NotificationLimitManagerRunner {
    }
 
    @After
-   public void afterEachTest() {
+   public void afterEachTest() throws Exception {
       afterTestCleanup();
    }
 

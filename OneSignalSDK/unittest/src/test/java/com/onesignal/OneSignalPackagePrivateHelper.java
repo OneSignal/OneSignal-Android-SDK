@@ -250,6 +250,7 @@ public class OneSignalPackagePrivateHelper {
       public boolean closes() {
          return closesMessage;
       }
+      public String getClickId() { return clickId; }
 
       public OSTestInAppMessageAction(JSONObject json) throws JSONException {
          super(json);

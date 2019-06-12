@@ -122,20 +122,36 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
     }
 
     void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) {
+        final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
+        action.firstClick = message.takeActionAsUnique();
+
+        firePublicClickHandler(action);
+        fireRESTCallForClick(message, action);
+    }
+
+    private void firePublicClickHandler(@NonNull final OSInAppMessageAction action) {
+        if (OneSignal.mInitBuilder.mInAppMessageClickHandler == null)
+            return;
+        OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+                OneSignal.mInitBuilder.mInAppMessageClickHandler.inAppMessageClicked(action);
+            }
+        });
+    }
+
+    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
 
-        final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-
-        if (action.actionUrl != null) {
+        if (action.clickUrl != null) {
             if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
-                OSUtils.openURLInBrowser(action.actionUrl);
+                OSUtils.openURLInBrowser(action.clickUrl);
             else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
-                OneSignalChromeTab.open(action.actionUrl, true);
+                OneSignalChromeTab.open(action.clickUrl, true);
         }
 
-        final boolean unique = message.takeActionAsUnique();
         try {
             JSONObject json = new JSONObject() {{
                 put("app_id", OneSignal.appId);
@@ -143,8 +159,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver {
                 put("player_id", OneSignal.getUserId());
                 put("click_type", action.clickType.toString());
                 put("click_id", action.clickId);
+                put("click_name", action.clickName);
                 put("variant_id", variantId);
-                if (unique)
+                if (action.firstClick)
                     put("first_click", true);
             }};
 

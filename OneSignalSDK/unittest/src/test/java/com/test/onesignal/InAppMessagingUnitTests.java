@@ -2,6 +2,7 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.support.annotation.Nullable;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
+import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
 
@@ -98,6 +100,7 @@ public class InAppMessagingUnitTests {
     public void beforeEachTest() throws Exception {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
+        lastAction = null;
 
         TestHelpers.beforeTestInitAndCleanup();
 
@@ -105,7 +108,7 @@ public class InAppMessagingUnitTests {
     }
 
     @After
-    public void afterEachTest() {
+    public void afterEachTest() throws Exception {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
@@ -163,11 +166,11 @@ public class InAppMessagingUnitTests {
         OSTestInAppMessageAction action = new OSTestInAppMessageAction(InAppMessagingHelpers.buildTestActionJson());
 
         assertEquals(action.clickType, OSInAppMessageAction.ClickType.BUTTON);
-        assertEquals(action.clickId, "Test_click_id");
-        assertEquals(action.actionUrl, "https://www.onesignal.com");
+        assertEquals(action.getClickId(), InAppMessagingHelpers.IAM_CLICK_ID);
+        assertEquals(action.clickName, "click_name");
+        assertEquals(action.clickUrl, "https://www.onesignal.com");
         assertTrue(action.closes());
         assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
-        assertEquals(action.additionalData.getString("test"), "value");
     }
 
     @Test
@@ -339,19 +342,31 @@ public class InAppMessagingUnitTests {
         blankActivityController.resume();
     }
 
+
+    private static @Nullable OSInAppMessageAction lastAction;
     @Test
     public void testOnMessageActionOccurredOnMessage() throws Exception {
+        OneSignal.getCurrentOrNewInitBuilder().setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+            @Override
+            public void inAppMessageClicked(OSInAppMessageAction result) {
+                lastAction = result;
+                // Ensure we are on the main thread when running the callback, since the app developer
+                //   will most likely need to update UI.
+                assertMainThread();
+            }
+        });
         threadAndTaskWait();
 
         OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message,
            new JSONObject() {{
                 put("click_type", "button");
                 put("click_id", "button_id_123");
+                put("click_name", "my_click_name");
             }}
         );
 
+        // Ensure we make REST call to OneSignal to report click.
         ShadowOneSignalRestClient.Request iamClickRequest = ShadowOneSignalRestClient.requests.get(2);
-
         assertEquals("in_app_messages/" + message.messageId + "/click", iamClickRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamClickRequest.payload.get("app_id"));
         assertEquals(1, iamClickRequest.payload.get("device_type"));
@@ -360,6 +375,9 @@ public class InAppMessagingUnitTests {
         assertEquals(true, iamClickRequest.payload.get("first_click"));
         assertEquals("button", iamClickRequest.payload.get("click_type"));
         assertEquals("button_id_123", iamClickRequest.payload.get("click_id"));
+
+        // Ensure we fire public callback that In-App was clicked.
+        assertEquals(lastAction.clickName, "my_click_name");
     }
 
     @Test
