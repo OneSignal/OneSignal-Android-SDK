@@ -34,7 +34,7 @@ class OSInAppMessage {
     @NonNull
     public ArrayList<ArrayList<OSTrigger>> triggers;
 
-    public double displayDuration;
+    private double displayDuration;
 
     private boolean actionTaken;
     boolean isPreview;
@@ -135,6 +135,14 @@ class OSInAppMessage {
         if (actionTaken)
             return false;
         return actionTaken = true;
+    }
+
+    public double getDisplayDuration() {
+        return displayDuration;
+    }
+
+    public void setDisplayDuration(double displayDuration) {
+        this.displayDuration = displayDuration;
     }
 
     @Override

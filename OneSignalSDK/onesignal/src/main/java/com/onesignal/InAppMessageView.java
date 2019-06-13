@@ -25,7 +25,6 @@ class InAppMessageView {
     private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#BB000000");
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
-
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
     static abstract class InAppMessageController {
@@ -36,23 +35,28 @@ class InAppMessageView {
         }
     }
 
+    private final Handler handler = new Handler();
     private int pageWidth;
     private int pageHeight;
+    private double dismissDuration;
+    private boolean shouldDismissWhenActive = false;
     private WebViewManager.Position displayLocation;
     private WebView webView;
     private FrameLayout frameLayout;
     private DraggableRelativeLayout draggableRelativeLayout;
     private InAppMessageController messageController;
+    private Runnable dismissSchedule;
 
-    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight) {
-        this(webView, displayLocation, pageHeight, ConstraintLayout.LayoutParams.MATCH_PARENT);
+    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, double dismissDuration) {
+        this(webView, displayLocation, pageHeight, ConstraintLayout.LayoutParams.MATCH_PARENT, dismissDuration);
     }
 
-    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, int pageWidth) {
+    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, int pageWidth, double dismissDuration) {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
         this.pageWidth = pageWidth;
+        this.dismissDuration = dismissDuration;
     }
 
     void setWebView(WebView webView) {
@@ -77,6 +81,13 @@ class InAppMessageView {
 
     void showView(@NonNull Activity activity) {
         delayShowUntilAvailable(activity);
+    }
+
+    void checkIfShouldDismiss() {
+        if (shouldDismissWhenActive) {
+            finishAfterDelay();
+            shouldDismissWhenActive = false;
+        }
     }
 
     // TODO: Modal in portrait is to tall when using split screen mode
@@ -237,6 +248,7 @@ class InAppMessageView {
                     if (messageController != null) {
                         messageController.onMessageWasShown();
                     }
+                    initDismissIfNeeded();
                 }
             }
         });
@@ -276,8 +288,26 @@ class InAppMessageView {
         return background;
     }
 
-    private void delayShowUntilAvailable(@NonNull Activity activity) {
-        if (activity.getWindow().getDecorView().getApplicationWindowToken() != null) {
+    private void initDismissIfNeeded() {
+        if (dismissDuration > 0 && dismissSchedule == null) {
+            dismissSchedule = new Runnable() {
+                public void run() {
+                    if (ActivityLifecycleHandler.curActivity != null) {
+                        dismiss();
+                        dismissSchedule = null;
+                    } else {
+                        //for cases when the app is on background and the dismiss is triggered
+                        shouldDismissWhenActive = true;
+                    }
+                }
+            };
+
+            handler.postDelayed(dismissSchedule, (long) dismissDuration * 1_000);
+        }
+    }
+
+    private void delayShowUntilAvailable(@NonNull Activity currentActivity) {
+        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null) {
             showInAppMessageView();
             return;
         }
@@ -327,11 +357,19 @@ class InAppMessageView {
     }
 
     private void dismissLayout() {
+        if (dismissSchedule != null) {
+            //dismissed before the dismiss delay
+            handler.removeCallbacks(dismissSchedule);
+            dismissSchedule = null;
+        }
         if (draggableRelativeLayout != null) {
             draggableRelativeLayout.removeView(webView);
         }
         if (frameLayout != null && ActivityLifecycleHandler.curActivity != null) {
             ActivityLifecycleHandler.curActivity.getWindowManager().removeView(frameLayout);
+        }
+        if (messageController != null) {
+            messageController.onMessageWasDismissed();
         }
         markAsDismissed();
     }
@@ -341,8 +379,5 @@ class InAppMessageView {
         // Dereference so this can be cleaned up in the next GC
         frameLayout = null;
         draggableRelativeLayout = null;
-        if (messageController != null) {
-            messageController.onMessageWasDismissed();
-        }
     }
 }
