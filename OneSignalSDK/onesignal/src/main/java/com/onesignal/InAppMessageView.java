@@ -7,6 +7,7 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -110,6 +111,29 @@ class InAppMessageView {
             }
         }
 
+        RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+        );
+        relativeLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
+        relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+
+        boolean hasBackground = shouldHaveBackground();
+        FrameLayout.LayoutParams frameLayoutParams = hasBackground ? createFrameLayout() : null;
+
+        showDraggableView(relativeLayoutParams, frameLayoutParams,
+                createDraggableLayout(pageHeight, displayLocation), createWindowLayout(pageWidth, pageHeight, hasBackground));
+    }
+
+    private int getDisplayXSize() {
+        return Resources.getSystem().getDisplayMetrics().widthPixels;
+    }
+
+    private int getDisplayYSize() {
+        return Resources.getSystem().getDisplayMetrics().heightPixels;
+    }
+
+    private FrameLayout.LayoutParams createFrameLayout() {
         FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, pageHeight);
 
         switch (displayLocation) {
@@ -123,27 +147,7 @@ class InAppMessageView {
             case DISPLAY:
                 frameLayoutParams.gravity = Gravity.CENTER;
         }
-
-        showDraggableView(createDefaultRelativeLayout(), frameLayoutParams,
-                createDraggableLayout(pageHeight, displayLocation), createWindowLayout());
-    }
-
-    private int getDisplayXSize() {
-        return Resources.getSystem().getDisplayMetrics().widthPixels;
-    }
-
-    private int getDisplayYSize() {
-        return Resources.getSystem().getDisplayMetrics().heightPixels;
-    }
-
-    private RelativeLayout.LayoutParams createDefaultRelativeLayout() {
-        RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT
-        );
-        relativeLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
-        relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
-        return relativeLayoutParams;
+        return frameLayoutParams;
     }
 
     private DraggableRelativeLayout.Params createDraggableLayout(int pageHeight, WebViewManager.Position displayLocation) {
@@ -173,10 +177,10 @@ class InAppMessageView {
         return draggableParams;
     }
 
-    private WindowManager.LayoutParams createWindowLayout() {
+    private WindowManager.LayoutParams createWindowLayout(int pageWidth, int pageHeight, boolean hasBackground) {
         WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageHeight,
                 // Display it on top of other application windows
                 WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
                 // Don't let it grab the input focus
@@ -189,11 +193,21 @@ class InAppMessageView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             layoutParams.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_CROSSFADE;
         }
+        if (!hasBackground) {
+            switch (displayLocation) {
+                case TOP:
+                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                    break;
+                case BOTTOM:
+                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                    break;
+            }
+        }
         return layoutParams;
     }
 
     private void showDraggableView(final RelativeLayout.LayoutParams relativeLayoutParams,
-                                   final FrameLayout.LayoutParams frameParams,
+                                   @Nullable final FrameLayout.LayoutParams frameParams,
                                    final DraggableRelativeLayout.Params draggableParams,
                                    final WindowManager.LayoutParams layoutParams) {
         OSUtils.runOnMainUIThread(new Runnable() {
@@ -210,22 +224,16 @@ class InAppMessageView {
                 //Do not create view if app is not in focus
                 Activity currentActivity = ActivityLifecycleHandler.curActivity;
                 if (currentActivity != null) {
-                    draggableRelativeLayout = new DraggableRelativeLayout(currentActivity);
-                    draggableRelativeLayout.setLayoutParams(frameParams);
-                    draggableRelativeLayout.setParams(draggableParams);
-                    draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
-                        @Override
-                        void onDismiss() {
-                            finish();
-                        }
-                    });
-                    draggableRelativeLayout.addView(webView);
+                    boolean hasBackground = shouldHaveBackground();
+                    setUpDraggableLayout(currentActivity, frameParams, draggableParams);
 
-                    frameLayout = new FrameLayout(currentActivity);
-                    frameLayout.addView(draggableRelativeLayout);
-                    frameLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
-                    frameLayout.setClipChildren(false);
-                    currentActivity.getWindowManager().addView(frameLayout, layoutParams);
+                    if (hasBackground) {
+                        setUpFrameLayout(currentActivity);
+                        currentActivity.getWindowManager().addView(frameLayout, layoutParams);
+                    } else {
+                        currentActivity.getWindowManager().addView(draggableRelativeLayout, layoutParams);
+                    }
+
                     if (messageController != null) {
                         messageController.onMessageWasShown();
                     }
@@ -234,8 +242,42 @@ class InAppMessageView {
         });
     }
 
-    private void delayShowUntilAvailable(@NonNull Activity currentActivity) {
-        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null) {
+    private void setUpFrameLayout(@NonNull Activity activity) {
+        frameLayout = new FrameLayout(activity);
+        frameLayout.addView(draggableRelativeLayout);
+        frameLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
+        frameLayout.setClipChildren(false);
+    }
+
+    private void setUpDraggableLayout(@NonNull Activity activity,
+                                      @Nullable FrameLayout.LayoutParams frameParams,
+                                      DraggableRelativeLayout.Params draggableParams) {
+        draggableRelativeLayout = new DraggableRelativeLayout(activity);
+        if (frameParams != null) {
+            draggableRelativeLayout.setLayoutParams(frameParams);
+        }
+        draggableRelativeLayout.setParams(draggableParams);
+        draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
+            @Override
+            void onDismiss() {
+                finish();
+            }
+        });
+        draggableRelativeLayout.addView(webView);
+    }
+
+    private boolean shouldHaveBackground() {
+        boolean background = true;
+        switch (displayLocation) {
+            case TOP:
+            case BOTTOM:
+                background = false;
+        }
+        return background;
+    }
+
+    private void delayShowUntilAvailable(@NonNull Activity activity) {
+        if (activity.getWindow().getDecorView().getApplicationWindowToken() != null) {
             showInAppMessageView();
             return;
         }

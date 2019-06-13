@@ -29,7 +29,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private ArrayList<OSInAppMessage> messages;
     final ArrayList<OSInAppMessage> messageDisplayQueue;
 
-    boolean inAppMessagingEnabled;
+    boolean inAppMessagingEnabled = true;
 
     public static OSInAppMessageController getController() {
         if (sharedInstance == null)
@@ -42,7 +42,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         messages = new ArrayList<>();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
-        inAppMessagingEnabled = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_MESSAGING_ENABLED, true);
         systemConditionController = new OSSystemConditionController(this);
     }
 
