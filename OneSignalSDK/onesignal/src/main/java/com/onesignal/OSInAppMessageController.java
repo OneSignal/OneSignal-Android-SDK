@@ -70,7 +70,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private static @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
+    private static @Nullable
+    String variantIdForMessage(@NonNull OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
@@ -103,7 +104,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 put("app_id", OneSignal.appId);
                 put("player_id", OneSignal.getUserId());
                 put("variant_id", variantId);
-                put("device_type",  new OSUtils().getDeviceType());
+                put("device_type", new OSUtils().getDeviceType());
                 put("first_impression", true);
             }};
 
@@ -212,7 +213,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private static @Nullable String htmlPathForMessage(OSInAppMessage message) {
+    private static @Nullable
+    String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 
         if (variantId == null) {
@@ -237,9 +239,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");
 
-                    Double displayDuration = jsonResponse.optDouble("display_duration");
-                    if (displayDuration.isNaN())
-                        message.displayDuration = displayDuration;
+                    double displayDuration = jsonResponse.optDouble("display_duration");
+                    message.setDisplayDuration(displayDuration);
 
                     WebViewManager.showHTMLString(message, htmlStr);
                 } catch (JSONException e) {
@@ -250,7 +251,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     void displayPreviewMessage(@NonNull String previewUUID) {
-       String htmlPath =  "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + OneSignal.appId;
+        String htmlPath = "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + OneSignal.appId;
         OneSignalRestClient.get(htmlPath, new ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
@@ -265,9 +266,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
                     OSInAppMessage message = new OSInAppMessage(true);
 
-                    Double displayDuration = jsonResponse.optDouble("display_duration");
-                    if (displayDuration.isNaN())
-                        message.displayDuration = displayDuration;
+                    double displayDuration = jsonResponse.optDouble("display_duration");
+                    message.setDisplayDuration(displayDuration);
 
                     WebViewManager.showHTMLString(message, htmlStr);
                 } catch (JSONException e) {

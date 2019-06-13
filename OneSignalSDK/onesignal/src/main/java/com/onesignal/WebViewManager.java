@@ -154,6 +154,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         screenOrientation = activity.getResources().getConfiguration().orientation;
+        messageView.checkIfShouldDismiss();
     }
 
     @Override
@@ -199,7 +200,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void showMessageView(int pageHeight, Position displayLocation) {
-        messageView = new InAppMessageView(webView, displayLocation, pageHeight);
+        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
         messageView.setMessageController(new InAppMessageView.InAppMessageController() {
             @Override
             void onMessageWasShown() {
