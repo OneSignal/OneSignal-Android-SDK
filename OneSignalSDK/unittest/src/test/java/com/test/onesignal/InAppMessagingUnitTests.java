@@ -373,7 +373,6 @@ public class InAppMessagingUnitTests {
         assertEquals(message.variants.get("android").get("en"), iamClickRequest.payload.get("variant_id"));
         assertEquals(ShadowOneSignalRestClient.pushUserId, iamClickRequest.payload.get("player_id"));
         assertEquals(true, iamClickRequest.payload.get("first_click"));
-        assertEquals("button", iamClickRequest.payload.get("click_type"));
         assertEquals("button_id_123", iamClickRequest.payload.get("click_id"));
 
         // Ensure we fire public callback that In-App was clicked.
