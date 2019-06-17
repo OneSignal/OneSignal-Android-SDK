@@ -67,8 +67,7 @@ class NotificationChannelManager {
       Context context = notifJob.context;
       JSONObject jsonPayload = notifJob.jsonPayload;
 
-      NotificationManager notificationManager =
-            (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
 
       if (notifJob.restoring)
          return createRestoreChannel(notificationManager);
@@ -210,8 +209,7 @@ class NotificationChannelManager {
       if (list == null)
          return;
 
-      NotificationManager notificationManager =
-         (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
       
       Set<String> syncedChannelSet = new HashSet<>();
       int jsonArraySize = list.length();
