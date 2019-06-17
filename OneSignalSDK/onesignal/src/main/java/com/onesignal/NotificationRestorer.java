@@ -190,7 +190,7 @@ class NotificationRestorer {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
          return;
 
-      NotificationManager notifManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      NotificationManager notifManager = OneSignalNotificationManager.getNotificationManager(context);
 
       try {
          StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
