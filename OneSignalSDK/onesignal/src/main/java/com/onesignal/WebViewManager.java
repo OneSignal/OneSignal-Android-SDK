@@ -173,7 +173,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setVerticalScrollBarEnabled(false);
-        webView.getSettings().setLoadWithOverviewMode(true);
+
         webView.getSettings().setJavaScriptEnabled(true);
 
         // Setup receiver for page events / data from JS
@@ -192,7 +192,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         webView.setTop(0);
         webView.setBottom(Math.max(ySize, xSize));
 
-        webView.setInitialScale(OSViewUtils.getScale(ActivityLifecycleHandler.curActivity, webView.getWidth()));
+        // TODO: Look into using setInitialScale if WebView does not fit
+        //       Default size is dp * 100
+        // webView.setInitialScale(350);
+
         webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
     }
 
