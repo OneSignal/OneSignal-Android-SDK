@@ -47,6 +47,7 @@ class OneSignalPrefs {
     public static final String PREFS_OS_LAST_SESSION_TIME = "OS_LAST_SESSION_TIME";
     public static final String PREFS_GT_VIBRATE_ENABLED = "GT_VIBRATE_ENABLED";
     public static final String PREFS_GT_FIREBASE_TRACKING_ENABLED = "GT_FIREBASE_TRACKING_ENABLED";
+    public static final String PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK = "OS_CLEAR_GROUP_SUMMARY_CLICK";
     public static final String PREFS_OS_RESTORE_TTL_FILTER = "OS_RESTORE_TTL_FILTER";
     public static final String PREFS_OS_FILTER_OTHER_GCM_RECEIVERS = "OS_FILTER_OTHER_GCM_RECEIVERS";
     public static final String PREFS_GT_APP_ID = "GT_APP_ID";
