@@ -9,6 +9,7 @@ import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import android.support.annotation.RequiresApi;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
