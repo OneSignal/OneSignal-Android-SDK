@@ -44,6 +44,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Button;
 
@@ -321,8 +322,81 @@ public class GenerateNotificationRunner {
       OneSignal.cancelGroupedNotifications("test1");
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());
    }
-   
-   
+
+   @Test
+   @RequiresApi(23)
+   public void testGetMostRecentNotifIdFromGroup() throws Exception {
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      // Add a few notifications and grab the most recent timestamped notification from grouped and groupless cases
+
+      // Assert that at the time the notification returned it is the most recent from the active notifs
+   }
+
+   @Test
+   @RequiresApi(23)
+   public void testNotifDismissAllAndDismissRecentOnSummaryClick() throws Exception {
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      /* Add a enough grouped notifications (2 or more) to create a summary and test that
+       * when clearGroupOnSummaryClick is true and the summary is clicked, all are removed
+       * from the group */
+
+
+      // Validate SQL DB has only removed all grouped notifs
+
+
+      // Reset environment
+
+
+      /* Add a enough grouped notifications (2 or more) to create a summary and test that
+       * when clearGroupOnSummaryClick is false and the summary is clicked, only the most recent
+       * is notification is removed from the group summary */
+
+
+      // Validate SQL DB has only removed the most recent grouped notif
+
+
+      // Reset environment
+
+
+      /* Add a enough groupless notifications (4 or more) to create a groupless summary and test that
+       * when clearGroupOnSummaryClick is true and the summary is clicked, all are removed
+       * from the group */
+
+
+      // Validate SQL DB has only removed all groupless notifs
+
+
+      // Reset environment
+
+
+      /* Add a enough groupless notifications (4 or more) to create a groupless summary and test that
+       * when clearGroupOnSummaryClick is false and the summary is clicked, only the most recent
+       * is notification is removed from the groupless summary */
+
+
+      // Validate SQL DB has only removed the most recent groupless notif
+
+   }
+
+   @Test
+   @RequiresApi(23)
+   public void testGrouplessSummaryKeyReassignmentAtFourOrMoreNotification() throws Exception {
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      // Add 4 or more groupless notifications and make sure they are added into a groupless summary
+
+
+      // Assert that a runtime active groupless summary has been created
+
+
+      // Validate no DB changes occurred and this is only a runtime change to the groupless notifs
+
+   }
    
    @Test
    public void shouldCancelNotificationAndUpdateSummary() throws Exception {
@@ -718,6 +792,19 @@ public class GenerateNotificationRunner {
       postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
+
+      Cursor cursor1 = readableDb.query(NotificationTable.TABLE_NAME,
+              null,
+              NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                       NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                       NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1",
+              null,
+              null,
+              null,
+              null);
+
+      cursor1.moveToFirst();
+
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       // 2 open calls should fire.
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
@@ -1021,7 +1108,7 @@ public class GenerateNotificationRunner {
       assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
       assertNull(notification.notif.sound);
    }
-   
+
    // Test to make sure changed bodies and titles are used for the summary notification.
    private void testNotificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
       Bundle bundle = getBaseNotifBundle("UUID1");
