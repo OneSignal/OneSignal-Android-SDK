@@ -13,7 +13,7 @@ import android.support.v4.app.NotificationManagerCompat;
 
 import java.util.ArrayList;
 
-class OneSignalNotificationManager {
+public class OneSignalNotificationManager {
 
     private static final String GROUPLESS_SUMMARY_KEY = "os_group_undefined";
     private static final int GROUPLESS_SUMMARY_ID = -718463522;
@@ -88,11 +88,15 @@ class OneSignalNotificationManager {
     /**
      * All groupless notifications are assigned the GROUPLESS_SUMMARY_KEY and notify() is called
      */
-    @RequiresApi(api = Build.VERSION_CODES.N)
+    @RequiresApi(api = Build.VERSION_CODES.M)
     static void assignGrouplessNotifications(Context context, ArrayList<StatusBarNotification> grouplessNotifs) {
         for (StatusBarNotification grouplessNotif : grouplessNotifs) {
-            Notification.Builder grouplessNotifBuilder =
-                    Notification.Builder.recoverBuilder(context, grouplessNotif.getNotification());
+            Notification.Builder grouplessNotifBuilder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                grouplessNotifBuilder = Notification.Builder.recoverBuilder(context, grouplessNotif.getNotification());
+            } else {
+                grouplessNotifBuilder = new Notification.Builder(context);
+            }
 
             // Recreate the notification but with the groupless key instead
             Notification notif = grouplessNotifBuilder
