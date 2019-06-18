@@ -2178,9 +2178,6 @@ public class OneSignal {
    }
 
    static boolean getClearGroupSummaryClick() {
-      // TEST: Make sure a unit test is written for handling false case
-      //  Currently this preference will always be true because the setting does not exist on dashboard yet
-      // return false;
       return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,true);
    }

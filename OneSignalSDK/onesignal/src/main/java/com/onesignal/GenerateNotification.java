@@ -333,7 +333,7 @@ class GenerateNotification {
       String group = gcmBundle.optString("grp", null);
 
       ArrayList<StatusBarNotification> grouplessNotifs = new ArrayList<>();
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
          /* Android 7.0 auto groups 4 or more notifications so we find these groupless active
           * notifications and add a generic group to them */
          grouplessNotifs = OneSignalNotificationManager.getActiveGrouplessNotifications(currentContext);
@@ -686,7 +686,6 @@ class GenerateNotification {
 
          summaryBuilder.setContentIntent(summaryContentIntent)
                        .setDeleteIntent(summaryDeleteIntent)
-                       .setContentTitle("SUMMARY")
                        .setOnlyAlertOnce(updateSummary)
                        .setAutoCancel(false)
                        .setGroup(group)

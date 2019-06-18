@@ -218,7 +218,7 @@ class NotificationSummaryManager {
                notificationManager.cancel(groupId);
          } else {
             // Clear the most recent notification from the status bar summary
-            notificationManager.cancel(mostRecentId);
+            OneSignal.cancelNotification(mostRecentId);
          }
       }
    }
