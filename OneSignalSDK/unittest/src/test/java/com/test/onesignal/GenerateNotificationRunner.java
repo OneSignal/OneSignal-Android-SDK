@@ -44,7 +44,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Button;
 
@@ -59,6 +58,7 @@ import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalNotificationManagerPackageHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -159,7 +159,9 @@ public class GenerateNotificationRunner {
       
       TestHelpers.beforeTestInitAndCleanup();
 
-      NotificationManager notificationManager = (NotificationManager) blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
+      setClearGroupSummaryClick(true);
+
+      NotificationManager notificationManager = OneSignalNotificationManagerPackageHelper.getNotificationManager(blankActivity);
       notificationManager.cancelAll();
       NotificationRestorer.restored = false;
    }
@@ -323,81 +325,248 @@ public class GenerateNotificationRunner {
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());
    }
 
+
    @Test
-   @RequiresApi(23)
+   @Config(sdk = Build.VERSION_CODES.M)
    public void testGetMostRecentNotifIdFromGroup() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       threadAndTaskWait();
 
-      // Add a few notifications and grab the most recent timestamped notification from grouped and groupless cases
+      // Add 4 grouped notifications
+      postNotificationWithOptionalGroup(4, "test1");
 
-      // Assert that at the time the notification returned it is the most recent from the active notifs
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      // Grab the most recent timestamped notification from local DB
+      Integer mostRecentId = OneSignalNotificationManagerPackageHelper.getMostRecentNotifIdFromGroup(readableDb, "test1", false);
+
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      // Iterator is ordered by notification post (0 index is most recent)
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      // First notification is the summary so we skip it and move on to the first normal notif
+      postedNotifsIterator.next();
+      Integer expectedId = postedNotifsIterator.next().getKey();
+
+      // Assert our id equals the first real notif id (most recent posted)
+      assertEquals(expectedId, mostRecentId);
    }
 
    @Test
-   @RequiresApi(23)
-   public void testNotifDismissAllAndDismissRecentOnSummaryClick() throws Exception {
+   @Config(sdk = Build.VERSION_CODES.M)
+   public void testGetMostRecentNotifIdFromGroupless() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       threadAndTaskWait();
 
-      /* Add a enough grouped notifications (2 or more) to create a summary and test that
-       * when clearGroupOnSummaryClick is true and the summary is clicked, all are removed
-       * from the group */
+      // Add 4 groupless notifications
+      postNotificationWithOptionalGroup(4, null);
 
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      // Grab the most recent timestamped notification from local DB
+      Integer mostRecentId = OneSignalNotificationManagerPackageHelper.getMostRecentNotifIdFromGroup(readableDb, null, true);
 
-      // Validate SQL DB has only removed all grouped notifs
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      // Iterator is ordered by notification post (0 index is most recent)
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      // Grab first active notification since groupless won't have a summary
+      Integer expectedId = postedNotifsIterator.next().getKey();
 
+      // Assert our id equals the first real notif id (most recent posted)
+      assertEquals(expectedId, mostRecentId);
+   }
 
-      // Reset environment
+    @Test
+    @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
+    public void testNotifDismissAllOnGroupSummaryClickForAndroidUnderM() throws Exception {
+        OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+        OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+        threadAndTaskWait();
 
+        SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
 
-      /* Add a enough grouped notifications (2 or more) to create a summary and test that
-       * when clearGroupOnSummaryClick is false and the summary is clicked, only the most recent
-       * is notification is removed from the group summary */
+        postNotificationsAndSimulateSummaryClick(true, "test1");
 
+        // Validate SQL DB has removed all grouped notifs
+        int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, "test1", true);
+        assertEquals(0, activeGroupNotifCount);
+    }
 
-      // Validate SQL DB has only removed the most recent grouped notif
+    @Test
+    @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
+    public void testNotifDismissRecentOnGroupSummaryClickForAndroidUnderM() throws Exception {
+        OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+        OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+        threadAndTaskWait();
 
+        SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
 
-      // Reset environment
+        postNotificationsAndSimulateSummaryClick(false, "test1");
 
+        // Validate SQL DB has removed most recent grouped notif
+        int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, "test1", true);
+        assertEquals(3, activeGroupNotifCount);
+    }
 
-      /* Add a enough groupless notifications (4 or more) to create a groupless summary and test that
-       * when clearGroupOnSummaryClick is true and the summary is clicked, all are removed
-       * from the group */
+   @Test
+   @Config(sdk = Build.VERSION_CODES.M)
+   public void testNotifDismissAllOnGroupSummaryClick() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
 
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
 
-      // Validate SQL DB has only removed all groupless notifs
+      postNotificationsAndSimulateSummaryClick(true, "test1");
 
-
-      // Reset environment
-
-
-      /* Add a enough groupless notifications (4 or more) to create a groupless summary and test that
-       * when clearGroupOnSummaryClick is false and the summary is clicked, only the most recent
-       * is notification is removed from the groupless summary */
-
-
-      // Validate SQL DB has only removed the most recent groupless notif
-
+      // Validate SQL DB has removed all grouped notifs
+      int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, "test1", true);
+      assertEquals(0, activeGroupNotifCount);
    }
 
    @Test
-   @RequiresApi(23)
+   @Config(sdk = Build.VERSION_CODES.M)
+   public void testNotifDismissRecentOnGroupSummaryClick() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+
+      postNotificationsAndSimulateSummaryClick(false, "test1");
+
+      // Validate SQL DB has removed most recent grouped notif
+      int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, "test1", true);
+      assertEquals(3, activeGroupNotifCount);
+   }
+
+   @Test
+   @Config(sdk = Build.VERSION_CODES.M)
+   public void testNotifDismissAllOnGrouplessSummaryClick() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+
+      postNotificationsAndSimulateSummaryClick(true, null);
+
+      // Validate SQL DB has removed all groupless notifs
+      int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, null, true);
+      assertEquals(0, activeGroupNotifCount);
+   }
+
+   @Test
+   @Config(sdk = Build.VERSION_CODES.M)
+   public void testNotifDismissRecentOnGrouplessSummaryClick() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+
+      postNotificationsAndSimulateSummaryClick(false, null);
+
+      // Validate SQL DB has removed most recent groupless notif
+      int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, null, true);
+      assertEquals(3, activeGroupNotifCount);
+   }
+
+   private void postNotificationsAndSimulateSummaryClick(boolean shouldDismissAll, String group) {
+      // Add 4 notifications
+      Bundle bundle = postNotificationWithOptionalGroup(4, group);
+      setClearGroupSummaryClick(shouldDismissAll);
+
+      // Obtain the summary id
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+
+      // Simulate summary click
+      String groupKey = group != null ?
+              group :
+              OneSignalNotificationManagerPackageHelper.getGrouplessSummaryKey();
+
+      Intent intent = createOpenIntent(postedSummaryNotification.id, bundle).putExtra("summary", groupKey);
+      NotificationOpenedProcessor_processFromContext(blankActivity, intent);
+   }
+
+   private void setClearGroupSummaryClick(boolean shouldDismissAll) {
+      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK, shouldDismissAll);
+   }
+
+
+   @Test
+   @Config(sdk = Build.VERSION_CODES.M)
    public void testGrouplessSummaryKeyReassignmentAtFourOrMoreNotification() throws Exception {
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       threadAndTaskWait();
 
-      // Add 4 or more groupless notifications and make sure they are added into a groupless summary
+      // Add 3 groupless notifications
+      postNotificationWithOptionalGroup(3, null);
 
+      // Assert before 4, no notif summary is created
+      int count = OneSignalNotificationManagerPackageHelper.getActiveNotifications(blankActivity).length;
+      assertEquals(3, count);
 
-      // Assert that a runtime active groupless summary has been created
+      // Add 4 groupless notifications
+      postNotificationWithOptionalGroup(4, null);
 
+      // Assert after 4, a notif summary is created
+      count = OneSignalNotificationManagerPackageHelper.getActiveNotifications(blankActivity).length;
+      assertEquals(5, count);
 
+      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       // Validate no DB changes occurred and this is only a runtime change to the groupless notifs
+      // Check for 4 null group id notifs
+      int nullGroupCount = queryNotificationCountFromGroup(readableDb, null, true);
+      assertEquals(4, nullGroupCount);
 
+      // Check for 0 os_group_undefined group id notifs
+      int groupCount = queryNotificationCountFromGroup(readableDb, OneSignalNotificationManagerPackageHelper.getGrouplessSummaryKey(), true);
+      assertEquals(0, groupCount);
    }
-   
+
+    public Bundle postNotificationWithOptionalGroup(int notifCount, String group) {
+       Bundle bundle = null;
+       for (int i = 0; i < notifCount; i++) {
+          bundle = getBaseNotifBundle("UUID" + i);
+
+          if (group != null)
+             bundle.putString("grp", group);
+
+          NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+       }
+       return bundle;
+    }
+
+   public int queryNotificationCountFromGroup(SQLiteDatabase db, String group, boolean activeNotifs) {
+      boolean isGroupless = group == null;
+
+      String whereStr = isGroupless ?
+              NotificationTable.COLUMN_NAME_GROUP_ID + " IS NULL" :
+              NotificationTable.COLUMN_NAME_GROUP_ID + " = ?";
+      whereStr += " AND " + NotificationTable.COLUMN_NAME_DISMISSED + " = ? AND " +
+              NotificationTable.COLUMN_NAME_OPENED + " = ? AND " +
+              NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0";
+
+      String active = activeNotifs ? "0" : "1";
+      String[] whereArgs = isGroupless ?
+              new String[]{ active, active } :
+              new String[]{ group, active, active };
+
+      Cursor cursor = db.query(NotificationTable.TABLE_NAME,
+              null,
+              whereStr,
+              whereArgs,
+              null,
+              null,
+              null);
+      cursor.moveToFirst();
+
+      return cursor.getCount();
+   }
+
    @Test
    public void shouldCancelNotificationAndUpdateSummary() throws Exception {
       // Setup - Init
@@ -792,18 +961,6 @@ public class GenerateNotificationRunner {
       postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
-
-      Cursor cursor1 = readableDb.query(NotificationTable.TABLE_NAME,
-              null,
-              NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                       NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                       NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1",
-              null,
-              null,
-              null,
-              null);
-
-      cursor1.moveToFirst();
 
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       // 2 open calls should fire.
