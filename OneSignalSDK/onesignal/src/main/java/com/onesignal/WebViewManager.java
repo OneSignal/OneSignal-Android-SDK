@@ -102,6 +102,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
                 if (messageType.equals("rendering_complete")) {
                     handleRenderComplete(jsonObject);
+                } else if (messageType.equals("resize")) {
+                    handleResize(jsonObject);
                 } else if (messageType.equals("action_taken")) {
                     handleActionTaken(jsonObject);
                 }
@@ -110,17 +112,28 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             }
         }
 
-        private void handleRenderComplete(JSONObject jsonObject) {
+        private void handleResize(JSONObject jsonObject) {
+            if (messageView == null)
+                return;
+
             int pageHeight = getPageHeightData(jsonObject);
-            if (pageHeight != -1) {
-                pageHeight = OSUtils.dpToPx(pageHeight);
-            }
-            showMessageView(pageHeight, getDisplayLocation(jsonObject));
+            if (pageHeight == -1)
+                return;
+
+            messageView.updateHeight(pageHeight);
+        }
+
+        private void handleRenderComplete(JSONObject jsonObject) {
+            showMessageView(
+               getPageHeightData(jsonObject),
+               getDisplayLocation(jsonObject)
+            );
         }
 
         private int getPageHeightData(JSONObject jsonObject) {
             try {
-                return jsonObject.getJSONObject("pageMetaData").getJSONObject("rect").getInt("height");
+                int height = jsonObject.getJSONObject("pageMetaData").getJSONObject("rect").getInt("height");
+                return OSUtils.dpToPx(height);
             } catch (JSONException e) {
                 return -1;
             }
@@ -173,28 +186,21 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setVerticalScrollBarEnabled(false);
-
+        webView.setHorizontalScrollBarEnabled(false);
         webView.getSettings().setJavaScriptEnabled(true);
 
         // Setup receiver for page events / data from JS
         webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
 
-        // Setting size before adding to Activity to prevent a resize event.
-        // Also setting up sizes so JS can give us the correct content height for modals and banners
-        //   Min on width and max on height is used to give us a consistent height from JS.
-        //   The Activity will shrink the height if needed when rotating.
-        int xSize = getWebViewXSize();
-        int ySize = getWebViewYSize();
+        // This sets the WebView view port sizes to the max screen sizes so the initialize
+        //   max content height can be calculated.
+        // A render complete event will fire from JS to tell Java it's height and will then display
+        //  it via this SDK's InAppMessageView class. If smaller than the screen it will correctly
+        //  set it's height to match.
         webView.setLeft(0);
-        webView.setRight(Math.min(ySize, xSize));
-        // TODO: When shrinking image based on WebView port height setBottom may need to be tweaked
-        // NOTE: If setTop and / or setBottom are NOT set on Android 5.0 (Chrome 72) it calcs width as 0 somehow...
+        webView.setRight(getWebViewXSize());
         webView.setTop(0);
-        webView.setBottom(Math.max(ySize, xSize));
-
-        // TODO: Look into using setInitialScale if WebView does not fit
-        //       Default size is dp * 100
-        // webView.setInitialScale(350);
+        webView.setBottom(getWebViewYSize());
 
         webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
     }
