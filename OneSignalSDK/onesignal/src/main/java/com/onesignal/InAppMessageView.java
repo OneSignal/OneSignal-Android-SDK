@@ -12,10 +12,12 @@ import android.support.constraint.ConstraintLayout;
 import android.support.v4.util.Pair;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import java.lang.ref.WeakReference;
@@ -25,27 +27,27 @@ import static com.onesignal.OSUtils.dpToPx;
 /**
  * Layout Documentation
  * ### Modals & Banners ###
- *    - WebView
- *       - width  = MATCH_PARENT
- *       - height = PX height provided via a JS event for the content
- *    - Parent Layouts
- *       - width  = MATCH_PARENT
- *       - height = WRAP_CONTENT - Since the WebView is providing the height.
- *  ### Fullscreen ###
  *  - WebView
- *       - width  = MATCH_PARENT
- *       - height = MATCH_PARENT
- *    - Parent Layouts
- *       - width  = MATCH_PARENT
- *       - height = MATCH_PARENT
+ *      - width  = MATCH_PARENT
+ *      - height = PX height provided via a JS event for the content
+ *  - Parent Layouts
+ *      - width  = MATCH_PARENT
+ *      - height = WRAP_CONTENT - Since the WebView is providing the height.
+ * ### Fullscreen ###
+ *  - WebView
+ *      - width  = MATCH_PARENT
+ *      - height = MATCH_PARENT
+ *  - Parent Layouts
+ *      - width  = MATCH_PARENT
+ *      - height = MATCH_PARENT
  */
-
 class InAppMessageView {
 
     private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#BB000000");
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
     private static final int MARGIN_PX_SIZE = dpToPx(24);
+    private static final int SMALL_MARGIN_PX_SIZE = dpToPx(6);
 
     static abstract class InAppMessageController {
         void onMessageWasShown() {
@@ -59,6 +61,7 @@ class InAppMessageView {
     private int pageWidth;
     private int pageHeight;
     private double dismissDuration;
+    private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
     private WebViewManager.Position displayLocation;
     private WebView webView;
@@ -77,6 +80,7 @@ class InAppMessageView {
         this.pageHeight = pageHeight;
         this.pageWidth = pageWidth;
         this.dismissDuration = dismissDuration;
+        this.hasBackground = isBanner();
     }
 
     void setWebView(WebView webView) {
@@ -110,44 +114,44 @@ class InAppMessageView {
         }
     }
 
+    /**
+     * This will fired when the device is rotated for example with a new provided height for the WebView
+     * Called to shrink or grow the WebView when it receives a JS resize event with a new height.
+     *
+     * @param pageHeight the provided height
+     */
+    void updateHeight(final int pageHeight) {
+        OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+                ViewGroup.LayoutParams layoutParams = webView.getLayoutParams();
+                layoutParams.height = pageHeight;
+                // We only need to update the WebView size since it's parent layouts are set to
+                //   WRAP_CONTENT to always match the height of the WebView. (Expect for fullscreen)
+                webView.setLayoutParams(layoutParams);
+            }
+        });
+    }
+
     void showInAppMessageView() {
         Pair<Integer, Integer> pair = getWidthHeight();
         int pageWidth = pair.first;
         int pageHeight = pair.second;
 
         RelativeLayout.LayoutParams webViewLayoutParams = new RelativeLayout.LayoutParams(
-           ConstraintLayout.LayoutParams.MATCH_PARENT,
-           pageHeight
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                pageHeight
         );
-        webViewLayoutParams.setMargins(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
         webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
-        FrameLayout.LayoutParams frameLayoutParams = shouldHaveBackground() ? createFrameLayout() : null;
+        FrameLayout.LayoutParams frameLayoutParams = hasBackground ? createFrameLayout() : null;
 
         showDraggableView(
-            webViewLayoutParams,
-            frameLayoutParams,
-            createDraggableLayout(pageHeight, displayLocation),
-            createWindowLayout(pageWidth, pageHeight, shouldHaveBackground())
+                webViewLayoutParams,
+                frameLayoutParams,
+                createDraggableLayout(pageHeight, displayLocation),
+                createWindowLayout(pageWidth)
         );
-    }
-
-    private FrameLayout.LayoutParams createFrameLayout() {
-        FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, FrameLayout.LayoutParams.WRAP_CONTENT);
-
-        switch (displayLocation) {
-            case TOP:
-                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
-                break;
-            case BOTTOM:
-                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-                break;
-            case CENTER:
-            case DISPLAY:
-                frameLayoutParams.gravity = Gravity.CENTER;
-        }
-
-        return frameLayoutParams;
     }
 
     /**
@@ -195,11 +199,30 @@ class InAppMessageView {
         return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
+    private FrameLayout.LayoutParams createFrameLayout() {
+        FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, FrameLayout.LayoutParams.WRAP_CONTENT);
+
+        switch (displayLocation) {
+            case TOP:
+                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                break;
+            case BOTTOM:
+                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                break;
+            case CENTER:
+            case DISPLAY:
+                frameLayoutParams.gravity = Gravity.CENTER;
+        }
+
+        return frameLayoutParams;
+    }
+
     private DraggableRelativeLayout.Params createDraggableLayout(int pageHeight, WebViewManager.Position displayLocation) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-        draggableParams.maxXPos = MARGIN_PX_SIZE;
-        draggableParams.maxYPos = MARGIN_PX_SIZE;
+        draggableParams.maxXPos = hasBackground ? MARGIN_PX_SIZE : MARGIN_PX_SIZE - SMALL_MARGIN_PX_SIZE;
+        draggableParams.maxYPos = hasBackground ? MARGIN_PX_SIZE : MARGIN_PX_SIZE - SMALL_MARGIN_PX_SIZE;
         draggableParams.height = pageHeight;
+
         if (pageHeight == -1) {
             draggableParams.height = pageHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
         }
@@ -220,7 +243,7 @@ class InAppMessageView {
         return draggableParams;
     }
 
-    private WindowManager.LayoutParams createWindowLayout(int pageWidth, int pageHeight, boolean hasBackground) {
+    private WindowManager.LayoutParams createWindowLayout(int pageWidth) {
         WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
                 hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
                 hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
@@ -261,7 +284,7 @@ class InAppMessageView {
                 //Do not create view if app is not in focus
                 Activity currentActivity = ActivityLifecycleHandler.curActivity;
                 if (currentActivity != null) {
-                    boolean hasBackground = shouldHaveBackground();
+                    webView.setLayoutParams(relativeLayoutParams);
                     setUpDraggableLayout(currentActivity, frameParams, draggableParams);
 
                     if (hasBackground) {
@@ -276,21 +299,6 @@ class InAppMessageView {
                     }
                     initDismissIfNeeded();
                 }
-            }
-        });
-    }
-
-    // This will fired when the device is rotated for example with a new provided height for the WebView
-    // Called to shrink or grow the WebView when it receives a JS resize event with a new height.
-    void updateHeight(final int pageHeight) {
-        OSUtils.runOnMainUIThread(new Runnable() {
-            @Override
-            public void run() {
-                ViewGroup.LayoutParams layoutParams = webView.getLayoutParams();
-                layoutParams.height = pageHeight;
-                // We only need to update the WebView size since it's parent layouts are set to
-                //   WRAP_CONTENT to always match the height of the WebView. (Expect for fullscreen)
-                webView.setLayoutParams(layoutParams);
             }
         });
     }
@@ -316,18 +324,41 @@ class InAppMessageView {
                 finish();
             }
         });
-        draggableRelativeLayout.addView(webView);
-    }
 
-    private boolean shouldHaveBackground() {
-        switch (displayLocation) {
-            case TOP:
-            case BOTTOM:
-               return false;
+        View childView = webView;
+        int padding = MARGIN_PX_SIZE;
+
+        if (!hasBackground) {
+            LinearLayout linearLayout = createLinearLayout(activity);
+            linearLayout.addView(webView);
+            padding = padding - SMALL_MARGIN_PX_SIZE;
+            childView = linearLayout;
         }
-        return true;
+
+        draggableRelativeLayout.setPadding(padding, padding, padding, padding);
+        draggableRelativeLayout.setClipToPadding(false);
+        draggableRelativeLayout.addView(childView);
     }
 
+    /**
+     * To show drop shadow on WebView
+     * Layout container for WebView is needed
+     */
+    private LinearLayout createLinearLayout(@NonNull Activity activity) {
+        LinearLayout linearLayout = new LinearLayout(activity);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+        );
+        linearLayout.setBackgroundResource(android.R.drawable.dialog_holo_light_frame);
+        linearLayout.setLayoutParams(params);
+        linearLayout.setPadding(SMALL_MARGIN_PX_SIZE, SMALL_MARGIN_PX_SIZE, SMALL_MARGIN_PX_SIZE, SMALL_MARGIN_PX_SIZE);
+        return linearLayout;
+    }
+
+    /**
+     * Schedule dismiss behavior
+     */
     private void initDismissIfNeeded() {
         if (dismissDuration > 0 && dismissSchedule == null) {
             dismissSchedule = new Runnable() {
@@ -346,6 +377,10 @@ class InAppMessageView {
         }
     }
 
+    /**
+     * Do not add view until activity is ready
+     * To check if activity is ready, token must not be null
+     */
     private void delayShowUntilAvailable(@NonNull Activity currentActivity) {
         if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null) {
             showInAppMessageView();
@@ -417,5 +452,17 @@ class InAppMessageView {
         // Dereference so this can be cleaned up in the next GC
         frameLayout = null;
         draggableRelativeLayout = null;
+    }
+
+    /**
+     * TOP and BOTTOM display location are for banner cases
+     */
+    private boolean isBanner() {
+        switch (displayLocation) {
+            case TOP:
+            case BOTTOM:
+                return false;
+        }
+        return true;
     }
 }

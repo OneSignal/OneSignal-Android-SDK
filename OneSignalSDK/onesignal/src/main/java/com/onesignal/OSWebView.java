@@ -9,9 +9,9 @@ import android.webkit.WebView;
 // Custom WebView to round corners
 public class OSWebView extends WebView {
 
-   private int width;
-   private int height;
-   private int radius;
+   public static final int RADIUS = OSUtils.dpToPx(8);
+   private Path clipPath = new Path();
+   private RectF rectF;
 
    public OSWebView(Context context) {
       super(context);
@@ -22,17 +22,14 @@ public class OSWebView extends WebView {
    @Override
    protected void onSizeChanged(int newWidth, int newHeight, int oldWidth, int oldHeight) {
       super.onSizeChanged(newWidth, newHeight, oldWidth, oldHeight);
-      width = newWidth;
-      height = newHeight;
-      radius = OSUtils.dpToPx(8);
+      rectF = new RectF(0, 0, newWidth, newHeight);
    }
 
    // Round off the edges of the WebView
    // No effect on Android 4.4 and lower
    @Override
    protected void onDraw(Canvas canvas) {
-      Path clipPath = new Path();
-      clipPath.addRoundRect(new RectF(0, 0, width, height), radius, radius, Path.Direction.CW);
+      clipPath.addRoundRect(rectF, RADIUS, RADIUS, Path.Direction.CW);
       canvas.clipPath(clipPath);
       super.onDraw(canvas);
    }
