@@ -15,7 +15,8 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
-import java.util.Map;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.onesignal.OSUtils.dpToPx;
@@ -35,13 +36,16 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static final String TAG = WebViewManager.class.getCanonicalName();
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
-    private static Map<String, WebViewManager> instances = new ConcurrentHashMap<>();
+    private static Set<String> messages = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Object LOCK = new Object();
+    @SuppressLint("StaticFieldLeak")
+    private static WebViewManager lastInstance = null;
 
     private WebViewManager(@NonNull OSInAppMessage message, String base64Message) {
         this.message = message;
         this.base64Message = base64Message;
         if (!message.isPreview)
-            instances.put(message.messageId, this);
+            messages.add(message.messageId);
     }
 
     enum Position {
@@ -58,9 +62,15 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private InAppMessageView messageView;
     private int screenOrientation = -1;
 
-    // Creates a new WebView
+    /**
+     * Creates a new WebView
+     * Dismiss WebView if already showing one and the new one is a Preview
+     *
+     * @param message the message to show
+     * @param htmlStr the html to display on the WebView
+     */
     static void showHTMLString(OSInAppMessage message, final String htmlStr) {
-        if (!message.isPreview && instances.containsKey(message.messageId)) {
+        if (!message.isPreview && messages.contains(message.messageId)) {
             OneSignal.Log(
                     OneSignal.LOG_LEVEL.ERROR,
                     "In-App message with id '" +
@@ -68,25 +78,32 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                             "' already displayed or is already preparing to be display!");
             return;
         }
+        synchronized (LOCK) {
+            if (lastInstance != null && message.isPreview) {
+                lastInstance.dismiss();
+                lastInstance = null;
+            }
 
-        // Web view must be created on the main thread.
-        try {
-            final String base64Str = Base64.encodeToString(
-                    htmlStr.getBytes("UTF-8"),
-                    Base64.NO_WRAP
-            );
+            try {
+                final String base64Str = Base64.encodeToString(
+                        htmlStr.getBytes("UTF-8"),
+                        Base64.NO_WRAP
+                );
 
-            final WebViewManager webViewManager = new WebViewManager(message, base64Str);
+                final WebViewManager webViewManager = new WebViewManager(message, base64Str);
+                lastInstance = webViewManager;
 
-            OSUtils.runOnMainUIThread(new Runnable() {
-                @Override
-                public void run() {
-                    webViewManager.setupWebView();
-                }
-            });
-        } catch (UnsupportedEncodingException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
-            e.printStackTrace();
+                // Web view must be created on the main thread.
+                OSUtils.runOnMainUIThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        webViewManager.setupWebView();
+                    }
+                });
+            } catch (UnsupportedEncodingException e) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
@@ -218,6 +235,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 OSInAppMessageController.getController().messageWasDismissed(message);
                 ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
                 webView = null;
+                synchronized (LOCK) {
+                    //noinspection ConstantConditions
+                    if (lastInstance != null &&
+                            lastInstance.message.messageId != null &&
+                            lastInstance.message.messageId.equals(message.messageId))
+                        lastInstance = null;
+                }
             }
         });
         messageView.showInAppMessageView();
