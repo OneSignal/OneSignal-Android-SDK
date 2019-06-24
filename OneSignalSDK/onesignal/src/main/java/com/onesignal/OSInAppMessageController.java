@@ -128,6 +128,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         fireRESTCallForClick(message, action);
     }
 
+    void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) {
+        final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
+        action.firstClick = message.takeActionAsUnique();
+
+        fireClickAction(action);
+    }
+
     private void firePublicClickHandler(@NonNull final OSInAppMessageAction action) {
         if (OneSignal.mInitBuilder.mInAppMessageClickHandler == null)
             return;
@@ -139,17 +146,21 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         });
     }
 
-    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
-        final String variantId = variantIdForMessage(message);
-        if (variantId == null)
-            return;
-
+    private void fireClickAction(@NonNull final OSInAppMessageAction action) {
         if (action.clickUrl != null) {
             if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
                 OSUtils.openURLInBrowser(action.clickUrl);
             else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
                 OneSignalChromeTab.open(action.clickUrl, true);
         }
+    }
+
+    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
+        final String variantId = variantIdForMessage(message);
+        if (variantId == null)
+            return;
+
+        fireClickAction(action);
 
         try {
             JSONObject json = new JSONObject() {{

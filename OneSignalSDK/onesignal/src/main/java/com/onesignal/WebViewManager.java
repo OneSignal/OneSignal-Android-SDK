@@ -142,8 +142,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         private void handleRenderComplete(JSONObject jsonObject) {
             showMessageView(
-               getPageHeightData(jsonObject),
-               getDisplayLocation(jsonObject)
+                    getPageHeightData(jsonObject),
+                    getDisplayLocation(jsonObject)
             );
         }
 
@@ -163,7 +163,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private void handleActionTaken(JSONObject jsonObject) throws JSONException {
             JSONObject body = jsonObject.getJSONObject("body");
             String id = body.optString("id", null);
-            if (id != null) {
+            if (message.isPreview) {
+                OSInAppMessageController.getController().onMessageActionOccurredOnPreview(message, body);
+            } else if (id != null) {
                 OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, body);
             }
 
