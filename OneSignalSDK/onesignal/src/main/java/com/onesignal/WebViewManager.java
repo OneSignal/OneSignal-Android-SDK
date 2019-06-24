@@ -61,6 +61,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private String base64Message;
     private InAppMessageView messageView;
     private int screenOrientation = -1;
+    private boolean firstInit = true;
 
     /**
      * Creates a new WebView
@@ -178,11 +179,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     @Override
     void available(@NonNull Activity activity) {
-        if (OSViewUtils.isScreenRotated(activity, screenOrientation)) {
-            if (messageView != null) {
-                messageView.setWebView(webView);
-                messageView.showView(activity);
-            }
+        if ((OSViewUtils.isScreenRotated(activity, screenOrientation) || !firstInit) && messageView != null) {
+            messageView.setWebView(webView);
+            messageView.showView(activity);
         }
 
         screenOrientation = activity.getResources().getConfiguration().orientation;
@@ -190,7 +189,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     @Override
-    void destroyed(WeakReference<Activity> reference) {
+    void stopped(WeakReference<Activity> reference) {
         if (messageView != null) {
             messageView.destroyView(reference);
         }
@@ -229,6 +228,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         messageView.setMessageController(new InAppMessageView.InAppMessageController() {
             @Override
             void onMessageWasShown() {
+                firstInit = false;
                 OSInAppMessageController.onMessageWasShown(message);
             }
 
@@ -270,6 +270,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         return Resources.getSystem().getDisplayMetrics().heightPixels - (MARGIN_PX_SIZE * 2) - dpToPx(24);
     }
 
+    /**
+     * Trigger the {@link #messageView} dismiss animation flow
+     */
     private void dismiss() {
         if (messageView != null) {
             messageView.dismiss();
