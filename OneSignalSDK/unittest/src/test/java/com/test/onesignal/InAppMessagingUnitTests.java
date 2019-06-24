@@ -396,7 +396,7 @@ public class InAppMessagingUnitTests {
         OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message,
            new JSONObject() {{
                 put("click_type", "button");
-                put("click_id", "button_id_123");
+                put("id", "button_id_123");
                 put("click_name", "my_click_name");
             }}
         );
