@@ -201,6 +201,12 @@ public class InAppMessagingUnitTests {
     }
 
     @Test
+    public void testGreaterThanOperatorWithString() throws JSONException {
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN, 1, "2"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN, 5, "3"));
+    }
+
+    @Test
     public void testGreaterThanOrEqualToOperator() throws JSONException {
         assertTrue(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 2, 2.9));
         assertFalse(comparativeOperatorTest(OSTriggerOperatorType.GREATER_THAN_OR_EQUAL_TO, 4, 3));
@@ -213,6 +219,21 @@ public class InAppMessagingUnitTests {
     }
 
     @Test
+    public void testLessThanOperatorWithInvalidStrings() throws JSONException {
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, ""));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, "a1"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, "a"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, "0x01"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, null));
+    }
+
+    @Test
+    public void testLessThanOperatorWithString() throws JSONException {
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 32, "2"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN, 2, "3"));
+    }
+
+    @Test
     public void testLessThanOrEqualToOperator() throws JSONException {
         assertTrue(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 5, 4));
         assertFalse(comparativeOperatorTest(OSTriggerOperatorType.LESS_THAN_OR_EQUAL_TO, 3, 4));
@@ -222,6 +243,21 @@ public class InAppMessagingUnitTests {
     public void testEqualityOperator() throws JSONException {
         assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 0.1, 0.1));
         assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 0.0, 2));
+        // Test mixed Number types (Integer & Double)
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 1, 1.0));
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, 1.0, 1));
+    }
+
+    @Test
+    public void testEqualityOperatorWithStrings() throws JSONException {
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, "a", "a"));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, "a", "b"));
+    }
+
+    @Test
+    public void testEqualityOperatorWithTriggerStringAndValueNumber() throws JSONException {
+        assertTrue(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, "1", 1));
+        assertFalse(comparativeOperatorTest(OSTriggerOperatorType.EQUAL_TO, "2", 1));
     }
 
     @Test
