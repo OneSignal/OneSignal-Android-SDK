@@ -59,7 +59,7 @@ public class OSInAppMessageAction {
 
     OSInAppMessageAction(@NonNull JSONObject json) {
         clickType = ClickType.fromString(json.optString("click_type"));
-        clickId = json.optString("click_id", null);
+        clickId = json.optString("id", null);
         clickName = json.optString("click_name", null);
         clickUrl = json.optString("url", null);
         urlTarget = OSInAppMessageActionUrlType.fromString(json.optString("url_target", null));

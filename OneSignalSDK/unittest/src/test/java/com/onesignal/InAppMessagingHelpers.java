@@ -115,7 +115,7 @@ public class InAppMessagingHelpers {
     public static JSONObject buildTestActionJson() throws JSONException {
         return new JSONObject() {{
             put("click_type", "button");
-            put("click_id", IAM_CLICK_ID);
+            put("id", IAM_CLICK_ID);
             put("click_name", "click_name");
             put("url", "https://www.onesignal.com");
             put("url_target", "webview");
