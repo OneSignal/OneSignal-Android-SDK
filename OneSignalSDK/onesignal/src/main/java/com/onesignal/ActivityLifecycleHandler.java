@@ -48,7 +48,7 @@ class ActivityLifecycleHandler {
         void available(@NonNull Activity activity) {
         }
 
-        void destroyed(WeakReference<Activity> reference) {
+        void stopped(WeakReference<Activity> reference) {
         }
     }
 
@@ -128,6 +128,10 @@ class ActivityLifecycleHandler {
             handleLostFocus();
         }
 
+        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+            entry.getValue().stopped(new WeakReference<>(activity));
+        }
+
         logCurActivity();
     }
 
@@ -138,10 +142,6 @@ class ActivityLifecycleHandler {
         if (activity == curActivity) {
             curActivity = null;
             handleLostFocus();
-        }
-
-        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-            entry.getValue().destroyed(new WeakReference<>(activity));
         }
 
         logCurActivity();
