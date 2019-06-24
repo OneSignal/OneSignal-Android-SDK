@@ -81,46 +81,82 @@ class OSTriggerController {
                 trigger.value instanceof String &&
                 triggerMatchesStringValue((String) trigger.value, (String) deviceValue, operatorType))
             return true;
+
         if (trigger.value instanceof Number &&
                 deviceValue instanceof Number &&
                 triggerMatchesNumericValue((Number) trigger.value, (Number) deviceValue, operatorType))
             return true;
 
-        // Evaluate to false as a fallback
+        if (triggerMatchesFlex(trigger.value, deviceValue, operatorType))
+            return true;
+
+        // No matches, evaluate to false
         return false;
     }
 
-    private boolean triggerMatchesStringValue(String triggerValue, String savedValue, OSTriggerOperatorType operator) {
+    private boolean triggerMatchesStringValue(@NonNull String triggerValue, @NonNull String deviceValue, @NonNull OSTriggerOperatorType operator) {
         switch (operator) {
             case EQUAL_TO:
-                return triggerValue.equals(savedValue);
+                return triggerValue.equals(deviceValue);
             case NOT_EQUAL_TO:
-                return !triggerValue.equals(savedValue);
+                return !triggerValue.equals(deviceValue);
             default:
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Attempted to use an invalid operator for a string trigger comparison: " + operator.toString());
                 return false;
         }
     }
 
-    private boolean triggerMatchesNumericValue(Number triggerValue, Number savedValue, OSTriggerOperatorType operator) {
+    // Allow converting of deviceValues to other types to allow triggers to be more forgiving.
+    private boolean triggerMatchesFlex(@Nullable Object triggerValue, @NonNull Object deviceValue, @NonNull OSTriggerOperatorType operator) {
+        if (triggerValue == null)
+            return false;
+
+        // If operator is equal or not equals ignore type by comparing on toString values
+        if (operator.checksEquality())
+            return triggerMatchesStringValue(triggerValue.toString(), deviceValue.toString(), operator);
+
+        if (deviceValue instanceof String &&
+            triggerValue instanceof Number)
+            return triggerMatchesNumericValueFlex((Number) triggerValue, (String) deviceValue, operator);
+        return false;
+    }
+
+    private boolean triggerMatchesNumericValueFlex(@NonNull Number triggerValue, @NonNull String deviceValue, @NonNull OSTriggerOperatorType operator) {
+        double deviceDoubleValue;
+        try {
+            deviceDoubleValue = Double.parseDouble(deviceValue);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        return triggerMatchesNumericValue(triggerValue.doubleValue(), deviceDoubleValue, operator);
+    }
+
+    private boolean triggerMatchesNumericValue(@NonNull Number triggerValue, @NonNull Number deviceValue, @NonNull OSTriggerOperatorType operator) {
+        double triggerDoubleValue = triggerValue.doubleValue();
+        double deviceDoubleValue = deviceValue.doubleValue();
+
         switch (operator) {
             case EXISTS:
             case CONTAINS:
             case NOT_EXISTS:
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Attempted to use an invalid operator on numeric values: " + operator.toString());
+                OneSignal.onesignalLog(
+                   OneSignal.LOG_LEVEL.ERROR,
+                   "Attempted to use an invalid operator with a numeric value: " + operator.toString()
+                );
                 return false;
             case EQUAL_TO:
-                return savedValue.equals(triggerValue);
-            case LESS_THAN:
-                return savedValue.doubleValue() < triggerValue.doubleValue();
-            case GREATER_THAN:
-                return savedValue.doubleValue() > triggerValue.doubleValue();
+                return deviceDoubleValue == triggerDoubleValue;
             case NOT_EQUAL_TO:
-                return !savedValue.equals(triggerValue);
+                return deviceDoubleValue != triggerDoubleValue;
+            case LESS_THAN:
+                return deviceDoubleValue < triggerDoubleValue;
+            case GREATER_THAN:
+                return deviceDoubleValue > triggerDoubleValue;
             case LESS_THAN_OR_EQUAL_TO:
-                return savedValue.doubleValue() < triggerValue.doubleValue() || savedValue.equals(triggerValue);
+                return deviceDoubleValue < triggerDoubleValue || deviceDoubleValue == triggerDoubleValue;
             case GREATER_THAN_OR_EQUAL_TO:
-                return savedValue.doubleValue() > triggerValue.doubleValue() || savedValue.equals(triggerValue);
+                return deviceDoubleValue > triggerDoubleValue || deviceDoubleValue == triggerDoubleValue;
             default:
                 return false;
         }
@@ -142,7 +178,7 @@ class OSTriggerController {
             return this.text;
         }
 
-        public static OSDynamicTriggerType fromString(String text) {
+        public static @Nullable OSDynamicTriggerType fromString(String text) {
             for (OSDynamicTriggerType type : OSDynamicTriggerType.values()) {
                 if (type.text.equalsIgnoreCase(text))
                     return type;

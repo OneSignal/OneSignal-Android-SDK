@@ -33,13 +33,17 @@ class OSTrigger {
             return this.text;
         }
 
-        public static OSTriggerOperatorType fromString(String text) {
+        public static @NonNull OSTriggerOperatorType fromString(String text) {
             for (OSTriggerOperatorType type : OSTriggerOperatorType.values()) {
                 if (type.text.equalsIgnoreCase(text))
                     return type;
             }
 
-            return null;
+            return EQUAL_TO;
+        }
+
+        public boolean checksEquality() {
+            return this == EQUAL_TO || this == NOT_EQUAL_TO;
         }
     }
 
@@ -60,7 +64,7 @@ class OSTrigger {
      * The type of operator used to perform the logical equivalence/comparison on,
      * such as > or <=
      */
-    @Nullable
+    @NonNull
     public OSTriggerOperatorType operatorType;
 
     /**
@@ -83,8 +87,7 @@ class OSTrigger {
         try {
             json.put("id", this.triggerId);
             json.put("property", this.property);
-            if (this.operatorType != null)
-                json.put("operator", this.operatorType.toString());
+            json.put("operator", this.operatorType.toString());
             json.put("value", this.value);
 
         } catch (JSONException exception) {
