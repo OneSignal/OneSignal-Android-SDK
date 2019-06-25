@@ -1,5 +1,8 @@
 package com.onesignal;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
@@ -8,16 +11,16 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.util.Pair;
+import android.support.v7.widget.CardView;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.Animation;
 import android.webkit.WebView;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
@@ -44,11 +47,16 @@ import static com.onesignal.OSUtils.dpToPx;
  */
 class InAppMessageView {
 
-    private static final int ACTIVITY_BACKGROUND_COLOR = Color.parseColor("#BB000000");
+    private static final int ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.parseColor("#00000000");
+    private static final int ACTIVITY_BACKGROUND_COLOR_FULL = Color.parseColor("#BB000000");
+
+    private static final int IN_APP_BANNER_ANIMATION_DURATION_MS = 1000;
+    private static final int IN_APP_CENTER_ANIMATION_DURATION_MS = 1000;
+    private static final int IN_APP_BACKGROUND_ANIMATION_DURATION_MS = 400;
+
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
     private static final int MARGIN_PX_SIZE = dpToPx(24);
-    private static final int SMALL_MARGIN_PX_SIZE = dpToPx(6);
 
     static abstract class InAppMessageController {
         void onMessageWasShown() {
@@ -66,8 +74,7 @@ class InAppMessageView {
     private boolean shouldDismissWhenActive = false;
     private WebViewManager.Position displayLocation;
     private WebView webView;
-    private LinearLayout shadowLinearLayout;
-    private FrameLayout backgroundFrameLayout;
+    private LinearLayout parentLinearLayout;
     private DraggableRelativeLayout draggableRelativeLayout;
     private InAppMessageController messageController;
     private Runnable dismissSchedule;
@@ -95,20 +102,17 @@ class InAppMessageView {
 
     void destroyView(WeakReference<Activity> weakReference) {
         if (weakReference.get() != null) {
-            if (shadowLinearLayout != null)
-                shadowLinearLayout.removeAllViews();
             if (draggableRelativeLayout != null)
                 draggableRelativeLayout.removeAllViews();
-            if (backgroundFrameLayout != null)
-                backgroundFrameLayout.removeAllViews();
+            if (parentLinearLayout != null)
+                parentLinearLayout.removeAllViews();
         }
-        shadowLinearLayout = null;
-        backgroundFrameLayout = null;
+        parentLinearLayout = null;
         draggableRelativeLayout = null;
         webView = null;
     }
 
-    void showView(@NonNull Activity activity) {
+    void showView(Activity activity) {
         delayShowUntilAvailable(activity);
     }
 
@@ -117,6 +121,10 @@ class InAppMessageView {
             finishAfterDelay();
             shouldDismissWhenActive = false;
         }
+    }
+
+    private Activity getCurrentActivity() {
+        return ActivityLifecycleHandler.curActivity;
     }
 
     /**
@@ -140,20 +148,31 @@ class InAppMessageView {
 
     void showInAppMessageView() {
         Pair<Integer, Integer> pair = getWidthHeight();
-        int pageWidth = pair.first;
-        int pageHeight = pair.second;
+        int pageWidth;
+        int pageHeight;
 
-        RelativeLayout.LayoutParams webViewLayoutParams = new RelativeLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
+        if (pair.first != null)
+            pageWidth = pair.first;
+        else
+            return;
+
+        if (pair.second != null)
+            pageHeight = pair.second;
+        else
+            return;
+
+        DraggableRelativeLayout.LayoutParams webViewLayoutParams = new DraggableRelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 pageHeight
         );
         webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
-        FrameLayout.LayoutParams frameLayoutParams = hasBackground ? createBackgroundLayout() : null;
+        LinearLayout.LayoutParams linearLayoutParams = hasBackground ? createParentLinearLayoutParams() : null;
 
         showDraggableView(
+                displayLocation,
                 webViewLayoutParams,
-                frameLayoutParams,
+                linearLayoutParams,
                 createDraggableLayout(pageHeight, displayLocation),
                 createWindowLayout(pageWidth)
         );
@@ -171,7 +190,7 @@ class InAppMessageView {
         int pageWidth = this.pageWidth;
         int pageHeight = this.pageHeight;
 
-        Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        Activity currentActivity = getCurrentActivity();
         if (currentActivity != null) {
             if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT) {
                 DisplayMetrics metrics = new DisplayMetrics();
@@ -204,41 +223,47 @@ class InAppMessageView {
         return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
-    private FrameLayout.LayoutParams createBackgroundLayout() {
-        FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(pageWidth, FrameLayout.LayoutParams.WRAP_CONTENT);
+    private LinearLayout.LayoutParams createParentLinearLayoutParams() {
+        LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(pageWidth, LinearLayout.LayoutParams.MATCH_PARENT);
 
         switch (displayLocation) {
             case TOP:
-                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
                 break;
             case BOTTOM:
-                frameLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
                 break;
             case CENTER:
             case DISPLAY:
-                frameLayoutParams.gravity = Gravity.CENTER;
+                linearLayoutParams.gravity = Gravity.CENTER;
         }
 
-        return frameLayoutParams;
+        return linearLayoutParams;
     }
 
     private DraggableRelativeLayout.Params createDraggableLayout(int pageHeight, WebViewManager.Position displayLocation) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-        draggableParams.maxXPos = hasBackground ? MARGIN_PX_SIZE : MARGIN_PX_SIZE - SMALL_MARGIN_PX_SIZE;
-        draggableParams.maxYPos = hasBackground ? MARGIN_PX_SIZE : MARGIN_PX_SIZE - SMALL_MARGIN_PX_SIZE;
-        draggableParams.height = pageHeight;
+        draggableParams.maxXPos = MARGIN_PX_SIZE;
+        draggableParams.maxYPos = MARGIN_PX_SIZE;
 
-        if (pageHeight == -1) {
-            draggableParams.height = pageHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
-        }
+        draggableParams.messageHeight = pageHeight;
+        draggableParams.height = getDisplayYSize();
+
+        if (pageHeight == -1)
+            draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
 
         switch (displayLocation) {
             case BOTTOM:
-                draggableParams.posY = Resources.getSystem().getDisplayMetrics().heightPixels - pageHeight;
+                draggableParams.posY = getDisplayYSize() - pageHeight;
                 break;
             case CENTER:
             case DISPLAY:
-                draggableParams.posY = (Resources.getSystem().getDisplayMetrics().heightPixels / 2) - (pageHeight / 2);
+                // Page height at -1 is a fullscreen message
+                // When center modal, set the maxYPos as the top of the message height
+                if (pageHeight != -1)
+                    draggableParams.maxYPos = (getDisplayYSize() / 2) - (pageHeight / 2);
+
+                draggableParams.posY = (getDisplayYSize() / 2) - (pageHeight / 2);
         }
 
         draggableParams.dragDirection = displayLocation == WebViewManager.Position.TOP ?
@@ -257,7 +282,7 @@ class InAppMessageView {
                 // Don't let it grab the input focus
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
-        Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        Activity currentActivity = getCurrentActivity();
         if (currentActivity != null) {
             layoutParams.token = currentActivity.getWindow().getDecorView().getApplicationWindowToken();
         }
@@ -272,32 +297,35 @@ class InAppMessageView {
                 case BOTTOM:
                     layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
                     break;
+//                case CENTER:
+//                case DISPLAY:
+//                    layoutParams.gravity = Gravity.CENTER;
+//                    break;
             }
         }
         return layoutParams;
     }
 
-    private void showDraggableView(final RelativeLayout.LayoutParams webViewLayoutParams,
-                                   @Nullable final FrameLayout.LayoutParams backgroundLayoutParams,
-                                   final DraggableRelativeLayout.Params draggableLayoutParams,
-                                   final WindowManager.LayoutParams layoutParams) {
+    private void showDraggableView(final WebViewManager.Position displayLocation,
+                                   final RelativeLayout.LayoutParams relativeLayoutParams,
+                                   final LinearLayout.LayoutParams linearLayoutParams,
+                                   final DraggableRelativeLayout.Params webViewLayoutParams,
+                                   final WindowManager.LayoutParams parentLinearLayoutParams) {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
                 //Do not create view if app is not in focus
-                Activity currentActivity = ActivityLifecycleHandler.curActivity;
+                Activity currentActivity = getCurrentActivity();
                 if (currentActivity != null) {
-                    webView.setLayoutParams(webViewLayoutParams);
-                    draggableRelativeLayout = createDraggableLayout(currentActivity, backgroundLayoutParams, draggableLayoutParams);
+                    webView.setLayoutParams(relativeLayoutParams);
 
-                    if (hasBackground) {
-                        backgroundFrameLayout = createBackgroundLayout(currentActivity);
-                        currentActivity.getWindowManager().addView(backgroundFrameLayout, layoutParams);
-                    } else {
-                        currentActivity.getWindowManager().addView(draggableRelativeLayout, layoutParams);
-                    }
+                    setUpDraggableLayout(linearLayoutParams, webViewLayoutParams);
+                    setUpParentLinearLayout();
+
+                    currentActivity.getWindowManager().addView(parentLinearLayout, parentLinearLayoutParams);
 
                     if (messageController != null) {
+                        animateInAppMessage(displayLocation, draggableRelativeLayout, parentLinearLayout);
                         messageController.onMessageWasShown();
                     }
                     initDismissIfNeeded();
@@ -306,40 +334,25 @@ class InAppMessageView {
         });
     }
 
-    /**
-     * Creates the background layout
-     * <p>
-     * {@link #draggableRelativeLayout} must be setup before this method is call
-     *
-     * @param context the FrameLayout context
-     * @return the background frame layout
-     */
-    private FrameLayout createBackgroundLayout(@NonNull Context context) {
-        FrameLayout frameLayout = new FrameLayout(context);
-        frameLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR);
-        frameLayout.addView(draggableRelativeLayout);
-        frameLayout.setClipChildren(false);
-        return frameLayout;
+    private void setUpParentLinearLayout() {
+        parentLinearLayout = new LinearLayout(getCurrentActivity());
+        parentLinearLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR_EMPTY);
+        parentLinearLayout.setClipChildren(false);
+        parentLinearLayout.setClipToPadding(false);
+        parentLinearLayout.addView(draggableRelativeLayout);
     }
 
-    /**
-     * Creates the draggable layout with the corresponding child to be set
-     *
-     * @param context the DraggableRelativeLayout context
-     * @return the draggable layout
-     */
-    private DraggableRelativeLayout createDraggableLayout(@NonNull Context context,
-                                                          @Nullable FrameLayout.LayoutParams frameParams,
-                                                          DraggableRelativeLayout.Params draggableParams) {
-        DraggableRelativeLayout draggableRelativeLayout = new DraggableRelativeLayout(context);
-        if (frameParams != null) {
-            draggableRelativeLayout.setLayoutParams(frameParams);
+    private void setUpDraggableLayout(LinearLayout.LayoutParams linearLayoutParams,
+                                      DraggableRelativeLayout.Params draggableParams) {
+        draggableRelativeLayout = new DraggableRelativeLayout(getCurrentActivity());
+        if (linearLayoutParams != null) {
+            draggableRelativeLayout.setLayoutParams(linearLayoutParams);
         }
         draggableRelativeLayout.setParams(draggableParams);
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
             void onDismiss() {
-                finish();
+                finishAfterDelay();
             }
         });
 
@@ -348,38 +361,33 @@ class InAppMessageView {
             ((ViewGroup) webView.getParent()).removeAllViews();
         }
 
-        View childView = webView;
-        int padding = MARGIN_PX_SIZE;
+        CardView cardView = createCardView();
+        cardView.addView(webView);
 
-        if (!hasBackground) {
-            LinearLayout linearLayout = createLinearLayout(context);
-            linearLayout.addView(webView);
-            padding = padding - SMALL_MARGIN_PX_SIZE;
-            childView = shadowLinearLayout = linearLayout;
-        }
-
-        draggableRelativeLayout.setPadding(padding, padding, padding, padding);
+        draggableRelativeLayout.setPadding(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
+        draggableRelativeLayout.setClipChildren(false);
         draggableRelativeLayout.setClipToPadding(false);
-        draggableRelativeLayout.addView(childView);
-        return draggableRelativeLayout;
+        draggableRelativeLayout.addView(cardView);
     }
 
     /**
      * To show drop shadow on WebView
      * Layout container for WebView is needed
-     *
-     * @param context the LinearLayout context
      */
-    private LinearLayout createLinearLayout(@NonNull Context context) {
-        LinearLayout linearLayout = new LinearLayout(context);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.WRAP_CONTENT
-        );
-        linearLayout.setBackgroundResource(android.R.drawable.dialog_holo_light_frame);
-        linearLayout.setLayoutParams(params);
-        linearLayout.setPadding(SMALL_MARGIN_PX_SIZE, SMALL_MARGIN_PX_SIZE, SMALL_MARGIN_PX_SIZE, SMALL_MARGIN_PX_SIZE);
-        return linearLayout;
+    private CardView createCardView() {
+        CardView cardView = new CardView(getCurrentActivity());
+
+        RelativeLayout.LayoutParams cardViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pageHeight);
+        cardViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+        cardView.setLayoutParams(cardViewLayoutParams);
+
+        cardView.setRadius(dpToPx(8));
+        cardView.setCardElevation(dpToPx(5));
+
+        cardView.setClipChildren(false);
+        cardView.setClipToPadding(false);
+        cardView.setPreventCornerOverlap(false);
+        return cardView;
     }
 
     /**
@@ -389,7 +397,7 @@ class InAppMessageView {
         if (dismissDuration > 0 && dismissSchedule == null) {
             dismissSchedule = new Runnable() {
                 public void run() {
-                    if (ActivityLifecycleHandler.curActivity != null) {
+                    if (getCurrentActivity() != null) {
                         dismiss();
                         dismissSchedule = null;
                     } else {
@@ -409,7 +417,7 @@ class InAppMessageView {
      *
      * @param currentActivity the activity where to show the view
      */
-    private void delayShowUntilAvailable(@NonNull Activity currentActivity) {
+    private void delayShowUntilAvailable(final Activity currentActivity) {
         if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null) {
             showInAppMessageView();
             return;
@@ -418,10 +426,7 @@ class InAppMessageView {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                Activity currentActivity = ActivityLifecycleHandler.curActivity;
-                if (currentActivity != null) {
-                    delayShowUntilAvailable(currentActivity);
-                }
+                delayShowUntilAvailable(currentActivity);
             }
         }, ACTIVITY_INIT_DELAY);
     }
@@ -448,7 +453,11 @@ class InAppMessageView {
         OSUtils.runOnMainThreadDelayed(new Runnable() {
             @Override
             public void run() {
-                removeViews();
+                if (hasBackground) {
+                    animateAndDismissLayout();
+                } else {
+                    removeViews();
+                }
             }
         }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
     }
@@ -471,20 +480,12 @@ class InAppMessageView {
             handler.removeCallbacks(dismissSchedule);
             dismissSchedule = null;
         }
-        if (shadowLinearLayout != null) {
-            shadowLinearLayout.removeAllViews();
-        }
         if (draggableRelativeLayout != null) {
-            if (backgroundFrameLayout == null && ActivityLifecycleHandler.curActivity != null) {
-                ActivityLifecycleHandler.curActivity.getWindowManager().removeView(draggableRelativeLayout);
-            }
             draggableRelativeLayout.removeAllViews();
         }
-        if (backgroundFrameLayout != null) {
-            if (ActivityLifecycleHandler.curActivity != null) {
-                ActivityLifecycleHandler.curActivity.getWindowManager().removeView(backgroundFrameLayout);
-            }
-            backgroundFrameLayout.removeAllViews();
+        if (parentLinearLayout != null && getCurrentActivity() != null) {
+            parentLinearLayout.setVisibility(View.INVISIBLE);
+            getCurrentActivity().getWindowManager().removeView(parentLinearLayout);
         }
         if (messageController != null) {
             messageController.onMessageWasDismissed();
@@ -496,8 +497,8 @@ class InAppMessageView {
      * Cleans all layout references so this can be cleaned up in the next GC
      */
     private void markAsDismissed() {
-        shadowLinearLayout = null;
-        backgroundFrameLayout = null;
+        // Dereference so this can be cleaned up in the next GC
+        parentLinearLayout = null;
         draggableRelativeLayout = null;
         webView = null;
     }
@@ -512,5 +513,94 @@ class InAppMessageView {
                 return false;
         }
         return true;
+    }
+
+    private void animateInAppMessage(WebViewManager.Position displayLocation, View messageView, View backgroundView) {
+        // Based on the location of the in app message apply and animation to match
+        switch (displayLocation) {
+            case TOP:
+                View topBannerMessageViewChild = ((ViewGroup) messageView).getChildAt(0);
+                animateTop(topBannerMessageViewChild, webView.getHeight());
+                break;
+            case BOTTOM:
+                View bottomBannerMessageViewChild = ((ViewGroup) messageView).getChildAt(0);
+                animateBottom(bottomBannerMessageViewChild, webView.getHeight());
+                break;
+            case CENTER:
+            case DISPLAY:
+                animateCenter(messageView, backgroundView);
+                break;
+        }
+    }
+
+    private void animateTop(View messageView, int height) {
+        // Animate the message view from above the screen downward to the top
+        OneSignalAnimate.animateViewByTranslation(
+                messageView,
+                -height - MARGIN_PX_SIZE,
+                0f,
+                IN_APP_BANNER_ANIMATION_DURATION_MS,
+                new OneSignalBounceInterpolator(0.1, 8.0),
+                null)
+                .start();
+    }
+
+    private void animateBottom(View messageView, int height) {
+        // Animate the message view from under the screen upward to the bottom
+        OneSignalAnimate.animateViewByTranslation(
+                messageView,
+                height + MARGIN_PX_SIZE,
+                0f,
+                IN_APP_BANNER_ANIMATION_DURATION_MS,
+                new OneSignalBounceInterpolator(0.1, 8.0),
+                null)
+                .start();
+    }
+
+    private void animateCenter(View messageView, final View backgroundView) {
+        // Animate the message view by scale since it settles at the center of the screen
+        Animation messageAnimation = OneSignalAnimate.animateViewSmallToLarge(
+                messageView,
+                IN_APP_CENTER_ANIMATION_DURATION_MS,
+                new OneSignalBounceInterpolator(0.1, 8.0),
+                null);
+
+        // Animate background behind the message so it doesn't just show the dark transparency
+        ValueAnimator backgroundAnimation = animateBackgroundColor(
+                backgroundView,
+                IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
+                ACTIVITY_BACKGROUND_COLOR_EMPTY,
+                ACTIVITY_BACKGROUND_COLOR_FULL,
+                null);
+
+        messageAnimation.start();
+        backgroundAnimation.start();
+    }
+
+    private void animateAndDismissLayout() {
+        Animator.AnimatorListener animCallback = new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                removeViews();
+            }
+        };
+
+        // Animate background behind the message so it hides before being removed from the view
+        animateBackgroundColor(
+                parentLinearLayout,
+                IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
+                ACTIVITY_BACKGROUND_COLOR_FULL,
+                ACTIVITY_BACKGROUND_COLOR_EMPTY,
+                animCallback)
+                .start();
+    }
+
+    private ValueAnimator animateBackgroundColor(View backgroundView, int duration, int startColor, int endColor, Animator.AnimatorListener animCallback) {
+        return OneSignalAnimate.animateViewColor(
+                backgroundView,
+                duration,
+                startColor,
+                endColor,
+                animCallback);
     }
 }
