@@ -10,7 +10,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.RelativeLayout;
 
+import static com.onesignal.OSUtils.dpToPx;
+
 class DraggableRelativeLayout extends RelativeLayout {
+
+   private static final int MARGIN_PX_SIZE = dpToPx(28);
 
    static abstract class DraggableListener {
       void onDismiss() {}
@@ -28,6 +32,7 @@ class DraggableRelativeLayout extends RelativeLayout {
       int maxYPos;
       int maxXPos;
       int height;
+      int messageHeight;
       int dragDirection;
 
       private int dismissingYVelocity;
@@ -51,16 +56,16 @@ class DraggableRelativeLayout extends RelativeLayout {
    void setParams(Params params) {
       this.params = params;
 
-      params.offScreenYPos = params.height + params.posY + (Resources.getSystem().getDisplayMetrics().heightPixels - params.height - params.posY);
+      params.offScreenYPos = params.messageHeight + params.posY + (Resources.getSystem().getDisplayMetrics().heightPixels - params.messageHeight - params.posY);
       params.dismissingYVelocity = OSUtils.dpToPx(3_000);
 
       if (params.dragDirection == Params.DRAGGABLE_DIRECTION_UP) {
-         params.offScreenYPos = -params.height;
+         params.offScreenYPos = -params.messageHeight - MARGIN_PX_SIZE;
          params.dismissingYVelocity = -params.dismissingYVelocity;
          params.dismissingYPos = params.offScreenYPos / 3;
       }
       else
-         params.dismissingYPos = (params.height / 3) + (params.maxYPos * 2);
+         params.dismissingYPos = (params.messageHeight / 3) + (params.maxYPos * 2);
    }
 
    private void createDragHelper() {

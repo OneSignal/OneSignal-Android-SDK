@@ -158,7 +158,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private Position getDisplayLocation(JSONObject jsonObject) {
-            return Position.valueOf(jsonObject.optString("displayLocation", "display").toUpperCase());
+            Position displayLocation = Position.valueOf("display".toUpperCase());
+            try {
+                if (jsonObject.has("displayLocation") && !jsonObject.get("displayLocation").equals(""))
+                    displayLocation = Position.valueOf(jsonObject.optString("displayLocation", "display").toUpperCase());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return displayLocation;
         }
 
         private void handleActionTaken(JSONObject jsonObject) throws JSONException {
