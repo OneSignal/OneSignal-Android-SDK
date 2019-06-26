@@ -4,7 +4,6 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
@@ -227,14 +226,14 @@ class InAppMessageView {
         LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(pageWidth, LinearLayout.LayoutParams.MATCH_PARENT);
 
         switch (displayLocation) {
-            case TOP:
+            case TOP_BANNER:
                 linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
                 break;
-            case BOTTOM:
+            case BOTTOM_BANNER:
                 linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
                 break;
-            case CENTER:
-            case DISPLAY:
+            case CENTER_MODAL:
+            case FULL_SCREEN:
                 linearLayoutParams.gravity = Gravity.CENTER;
         }
 
@@ -249,24 +248,21 @@ class InAppMessageView {
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
-        if (pageHeight == -1)
+        if (displayLocation == WebViewManager.Position.FULL_SCREEN)
             draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
 
         switch (displayLocation) {
-            case BOTTOM:
+            case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
                 break;
-            case CENTER:
-            case DISPLAY:
-                // Page height at -1 is a fullscreen message
-                // When center modal, set the maxYPos as the top of the message height
-                if (pageHeight != -1)
-                    draggableParams.maxYPos = (getDisplayYSize() / 2) - (pageHeight / 2);
-
+            case CENTER_MODAL:
+            case FULL_SCREEN:
+                draggableParams.maxYPos = (getDisplayYSize() / 2) - (pageHeight / 2);
                 draggableParams.posY = (getDisplayYSize() / 2) - (pageHeight / 2);
+                break;
         }
 
-        draggableParams.dragDirection = displayLocation == WebViewManager.Position.TOP ?
+        draggableParams.dragDirection = displayLocation == WebViewManager.Position.TOP_BANNER ?
                 DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_UP :
                 DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_DOWN;
 
@@ -291,16 +287,12 @@ class InAppMessageView {
         }
         if (!hasBackground) {
             switch (displayLocation) {
-                case TOP:
+                case TOP_BANNER:
                     layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
                     break;
-                case BOTTOM:
+                case BOTTOM_BANNER:
                     layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
                     break;
-//                case CENTER:
-//                case DISPLAY:
-//                    layoutParams.gravity = Gravity.CENTER;
-//                    break;
             }
         }
         return layoutParams;
@@ -508,8 +500,8 @@ class InAppMessageView {
      */
     private boolean isBanner() {
         switch (displayLocation) {
-            case TOP:
-            case BOTTOM:
+            case TOP_BANNER:
+            case BOTTOM_BANNER:
                 return false;
         }
         return true;
@@ -518,16 +510,16 @@ class InAppMessageView {
     private void animateInAppMessage(WebViewManager.Position displayLocation, View messageView, View backgroundView) {
         // Based on the location of the in app message apply and animation to match
         switch (displayLocation) {
-            case TOP:
+            case TOP_BANNER:
                 View topBannerMessageViewChild = ((ViewGroup) messageView).getChildAt(0);
                 animateTop(topBannerMessageViewChild, webView.getHeight());
                 break;
-            case BOTTOM:
+            case BOTTOM_BANNER:
                 View bottomBannerMessageViewChild = ((ViewGroup) messageView).getChildAt(0);
                 animateBottom(bottomBannerMessageViewChild, webView.getHeight());
                 break;
-            case CENTER:
-            case DISPLAY:
+            case CENTER_MODAL:
+            case FULL_SCREEN:
                 animateCenter(messageView, backgroundView);
                 break;
         }

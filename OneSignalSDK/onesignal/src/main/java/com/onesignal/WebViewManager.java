@@ -49,10 +49,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     enum Position {
-        TOP,
-        BOTTOM,
-        CENTER,
-        DISPLAY,
+        TOP_BANNER,
+        BOTTOM_BANNER,
+        CENTER_MODAL,
+        FULL_SCREEN,
         ;
     }
 
@@ -158,10 +158,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private Position getDisplayLocation(JSONObject jsonObject) {
-            Position displayLocation = Position.valueOf("display".toUpperCase());
+            Position displayLocation = Position.FULL_SCREEN;
             try {
                 if (jsonObject.has("displayLocation") && !jsonObject.get("displayLocation").equals(""))
-                    displayLocation = Position.valueOf(jsonObject.optString("displayLocation", "display").toUpperCase());
+                    displayLocation = Position.valueOf(jsonObject.optString("displayLocation", "FULL_SCREEN").toUpperCase());
             } catch (JSONException e) {
                 e.printStackTrace();
             }
