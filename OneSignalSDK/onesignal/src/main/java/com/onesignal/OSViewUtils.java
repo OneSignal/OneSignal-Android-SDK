@@ -2,6 +2,7 @@ package com.onesignal;
 
 import android.app.Activity;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Rect;
 import android.support.annotation.NonNull;
 import android.util.DisplayMetrics;
@@ -12,7 +13,7 @@ import java.lang.ref.WeakReference;
 
 class OSViewUtils {
 
-    private static final int MARGIN_ERROR_PX_SIZE = OSUtils.dpToPx(24);
+    private static final int MARGIN_ERROR_PX_SIZE = dpToPx(24);
 
     /**
      * Check if the keyboard is currently being shown.
@@ -43,5 +44,16 @@ class OSViewUtils {
         int currentOrientation = activity.getResources().getConfiguration().orientation;
         return previousOrientation == Configuration.ORIENTATION_LANDSCAPE && currentOrientation == Configuration.ORIENTATION_PORTRAIT ||
                 previousOrientation == Configuration.ORIENTATION_PORTRAIT && currentOrientation == Configuration.ORIENTATION_LANDSCAPE;
+    }
+
+    static @NonNull Rect getUsableWindowRect() {
+       Rect rect = new Rect();
+       Activity currentActivity = ActivityLifecycleHandler.curActivity;
+       currentActivity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
+       return rect;
+    }
+
+    static int dpToPx(int dp) {
+       return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
     }
 }

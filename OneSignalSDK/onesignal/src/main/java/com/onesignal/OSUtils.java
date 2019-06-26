@@ -386,10 +386,6 @@ class OSUtils {
       }
    }
 
-   static int dpToPx(int dp) {
-      return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
-   }
-
    static void openURLInBrowser(@NonNull String url) {
       openURLInBrowser(Uri.parse(url.trim()));
    }

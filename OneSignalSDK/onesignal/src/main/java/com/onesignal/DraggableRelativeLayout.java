@@ -10,7 +10,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.RelativeLayout;
 
-import static com.onesignal.OSUtils.dpToPx;
+import static com.onesignal.OSViewUtils.dpToPx;
 
 class DraggableRelativeLayout extends RelativeLayout {
 
@@ -57,7 +57,7 @@ class DraggableRelativeLayout extends RelativeLayout {
       this.params = params;
 
       params.offScreenYPos = params.messageHeight + params.posY + (Resources.getSystem().getDisplayMetrics().heightPixels - params.messageHeight - params.posY);
-      params.dismissingYVelocity = OSUtils.dpToPx(3_000);
+      params.dismissingYVelocity = OSViewUtils.dpToPx(3_000);
 
       if (params.dragDirection == Params.DRAGGABLE_DIRECTION_UP) {
          params.offScreenYPos = -params.messageHeight - MARGIN_PX_SIZE;
