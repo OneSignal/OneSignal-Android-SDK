@@ -2,7 +2,6 @@ package com.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.res.Resources;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.util.Base64;
@@ -19,7 +18,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.onesignal.OSUtils.dpToPx;
+import static com.onesignal.OSViewUtils.dpToPx;
 
 // Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
 //   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.
@@ -115,6 +114,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         @JavascriptInterface
         public void postMessage(String message) {
             try {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSJavaScriptInterface:postMessage: " + message);
+
                 JSONObject jsonObject = new JSONObject(message);
                 String messageType = jsonObject.getString("type");
 
@@ -151,7 +152,15 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private int getPageHeightData(JSONObject jsonObject) {
             try {
                 int height = jsonObject.getJSONObject("pageMetaData").getJSONObject("rect").getInt("height");
-                return OSUtils.dpToPx(height);
+                int pxHeight = OSViewUtils.dpToPx(height);
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight: " + pxHeight);
+
+                if (pxHeight > getWebViewYSize()) {
+                    pxHeight = getWebViewYSize();
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + getWebViewYSize());
+                }
+
+                return pxHeight;
             } catch (JSONException e) {
                 return -1;
             }
@@ -187,6 +196,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Override
     void available(@NonNull Activity activity) {
         if ((OSViewUtils.isScreenRotated(activity, screenOrientation) || !firstInit) && messageView != null) {
+            OneSignal.onesignalLog(
+               OneSignal.LOG_LEVEL.DEBUG,
+               "WebViewManager:isScreenRotated " + getWebViewXSize() + ", " + getWebViewYSize()
+            );
+
+            // Important to grow the WebView to the max size so the image does not stay small
+            //   when rotating from landscape to portrait. Or vice versa
+            setWebViewToMaxSize();
             messageView.setWebView(webView);
             messageView.showView(activity);
         }
@@ -217,17 +234,23 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         // Setup receiver for page events / data from JS
         webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
 
-        // This sets the WebView view port sizes to the max screen sizes so the initialize
-        //   max content height can be calculated.
-        // A render complete event will fire from JS to tell Java it's height and will then display
-        //  it via this SDK's InAppMessageView class. If smaller than the screen it will correctly
-        //  set it's height to match.
+        setWebViewToMaxSize();
+
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getWebViewSize: " + getWebViewXSize()  + ", " + getWebViewYSize());
+
+        webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
+    }
+
+    // This sets the WebView view port sizes to the max screen sizes so the initialize
+    //   max content height can be calculated.
+    // A render complete or resize event will fire from JS to tell Java it's height and will then display
+    //  it via this SDK's InAppMessageView class. If smaller than the screen it will correctly
+    //  set it's height to match.
+    private void setWebViewToMaxSize() {
         webView.setLeft(0);
         webView.setRight(getWebViewXSize());
         webView.setTop(0);
         webView.setBottom(getWebViewYSize());
-
-        webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
     }
 
     private void showMessageView(int pageHeight, Position displayLocation) {
@@ -265,16 +288,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    // Another possible way to get the size. Should include the status bar...
-    // getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
     private int getWebViewXSize() {
-        return Resources.getSystem().getDisplayMetrics().widthPixels - (MARGIN_PX_SIZE * 2);
+        return OSViewUtils.getUsableWindowRect().width() - (MARGIN_PX_SIZE * 2);
     }
 
     private int getWebViewYSize() {
-        // 24dp is a best estimate of the status bar.
-        // Getting the size correct will prevent a redraw of the WebView
-        return Resources.getSystem().getDisplayMetrics().heightPixels - (MARGIN_PX_SIZE * 2) - dpToPx(24);
+        return OSViewUtils.getUsableWindowRect().height() - (MARGIN_PX_SIZE * 2);
     }
 
     /**

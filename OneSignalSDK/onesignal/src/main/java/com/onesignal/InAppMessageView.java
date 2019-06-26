@@ -4,16 +4,13 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
-import android.support.v4.util.Pair;
 import android.support.v7.widget.CardView;
-import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,7 +22,7 @@ import android.widget.RelativeLayout;
 
 import java.lang.ref.WeakReference;
 
-import static com.onesignal.OSUtils.dpToPx;
+import static com.onesignal.OSViewUtils.dpToPx;
 
 /**
  * Layout Documentation
@@ -141,25 +138,12 @@ class InAppMessageView {
                 // We only need to update the WebView size since it's parent layouts are set to
                 //   WRAP_CONTENT to always match the height of the WebView. (Expect for fullscreen)
                 webView.setLayoutParams(layoutParams);
+                draggableRelativeLayout.setParams(createDraggableLayoutParams(pageHeight, displayLocation));
             }
         });
     }
 
     void showInAppMessageView() {
-        Pair<Integer, Integer> pair = getWidthHeight();
-        int pageWidth;
-        int pageHeight;
-
-        if (pair.first != null)
-            pageWidth = pair.first;
-        else
-            return;
-
-        if (pair.second != null)
-            pageHeight = pair.second;
-        else
-            return;
-
         DraggableRelativeLayout.LayoutParams webViewLayoutParams = new DraggableRelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 pageHeight
@@ -172,54 +156,13 @@ class InAppMessageView {
                 displayLocation,
                 webViewLayoutParams,
                 linearLayoutParams,
-                createDraggableLayout(pageHeight, displayLocation),
+                createDraggableLayoutParams(pageHeight, displayLocation),
                 createWindowLayout(pageWidth)
         );
     }
 
-    /**
-     * If we have a height constraint; (Modal or Banner)
-     * 1. Ensure we don't set a height higher than the screen height.
-     * 2. Limit the width to either screen width or the height of the screen.
-     * - This is to make the modal width the same for landscape and portrait modes.
-     * 3. Use Available width for cases when the height of the view is bigger than the usable height
-     * 4. Limit usable width and height for split mode
-     */
-    private Pair<Integer, Integer> getWidthHeight() {
-        int pageWidth = this.pageWidth;
-        int pageHeight = this.pageHeight;
-
-        Activity currentActivity = getCurrentActivity();
-        if (currentActivity != null) {
-            if (pageHeight != ConstraintLayout.LayoutParams.MATCH_PARENT) {
-                DisplayMetrics metrics = new DisplayMetrics();
-                currentActivity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-                int usableHeight = metrics.heightPixels;
-                int usableWidth = metrics.widthPixels;
-
-                pageHeight += (MARGIN_PX_SIZE * 2);
-                pageWidth = Math.min(getDisplayXSize(), getDisplayYSize());
-
-                if (pageHeight > usableHeight ||
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
-                                currentActivity.isInMultiWindowMode() && pageWidth > usableWidth) {
-                    pageWidth = usableWidth;
-                }
-
-                pageHeight = Math.min(pageHeight, usableHeight -
-                        ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && currentActivity.isInMultiWindowMode()) ?
-                                0 : MARGIN_PX_SIZE));
-            }
-        }
-        return new Pair<>(pageWidth, pageHeight);
-    }
-
-    private int getDisplayXSize() {
-        return Resources.getSystem().getDisplayMetrics().widthPixels;
-    }
-
     private int getDisplayYSize() {
-        return Resources.getSystem().getDisplayMetrics().heightPixels;
+        return OSViewUtils.getUsableWindowRect().height();
     }
 
     private LinearLayout.LayoutParams createParentLinearLayoutParams() {
@@ -240,7 +183,7 @@ class InAppMessageView {
         return linearLayoutParams;
     }
 
-    private DraggableRelativeLayout.Params createDraggableLayout(int pageHeight, WebViewManager.Position displayLocation) {
+    private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
         draggableParams.maxXPos = MARGIN_PX_SIZE;
         draggableParams.maxYPos = MARGIN_PX_SIZE;
@@ -369,7 +312,13 @@ class InAppMessageView {
     private CardView createCardView() {
         CardView cardView = new CardView(getCurrentActivity());
 
-        RelativeLayout.LayoutParams cardViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pageHeight);
+        int height = displayLocation == WebViewManager.Position.FULL_SCREEN ?
+           ViewGroup.LayoutParams.MATCH_PARENT :
+           ViewGroup.LayoutParams.WRAP_CONTENT;
+        RelativeLayout.LayoutParams cardViewLayoutParams = new RelativeLayout.LayoutParams(
+           ViewGroup.LayoutParams.MATCH_PARENT,
+           height
+        );
         cardViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         cardView.setLayoutParams(cardViewLayoutParams);
 
