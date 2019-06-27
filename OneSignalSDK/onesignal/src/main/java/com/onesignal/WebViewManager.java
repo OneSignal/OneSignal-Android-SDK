@@ -35,7 +35,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static final String TAG = WebViewManager.class.getCanonicalName();
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
-    private static Set<String> messages = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private static final Object LOCK = new Object();
     @SuppressLint("StaticFieldLeak")
     private static WebViewManager lastInstance = null;
@@ -43,8 +42,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private WebViewManager(@NonNull OSInAppMessage message, String base64Message) {
         this.message = message;
         this.base64Message = base64Message;
-        if (!message.isPreview)
-            messages.add(message.messageId);
     }
 
     enum Position {
@@ -70,14 +67,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param htmlStr the html to display on the WebView
      */
     static void showHTMLString(OSInAppMessage message, final String htmlStr) {
-        if (!message.isPreview && messages.contains(message.messageId)) {
-            OneSignal.Log(
-                    OneSignal.LOG_LEVEL.ERROR,
-                    "In-App message with id '" +
-                            message.messageId +
-                            "' already displayed or is already preparing to be display!");
-            return;
-        }
         synchronized (LOCK) {
             if (lastInstance != null && message.isPreview) {
                 lastInstance.dismiss();

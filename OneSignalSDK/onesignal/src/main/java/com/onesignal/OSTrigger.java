@@ -11,7 +11,7 @@ class OSTrigger {
     /**
      * An enumeration of the operators triggers can use
      */
-    public enum OSTriggerOperatorType {
+    public enum OSTriggerOperator {
         GREATER_THAN("greater"),
         LESS_THAN("less"),
         EQUAL_TO("equal"),
@@ -24,7 +24,7 @@ class OSTrigger {
 
         private String text;
 
-        OSTriggerOperatorType(String text) {
+        OSTriggerOperator(String text) {
             this.text = text;
         }
 
@@ -33,8 +33,8 @@ class OSTrigger {
             return this.text;
         }
 
-        public static @NonNull OSTriggerOperatorType fromString(String text) {
-            for (OSTriggerOperatorType type : OSTriggerOperatorType.values()) {
+        public static @NonNull OSTriggerOperator fromString(String text) {
+            for (OSTriggerOperator type : OSTriggerOperator.values()) {
                 if (type.text.equalsIgnoreCase(text))
                     return type;
             }
@@ -47,25 +47,57 @@ class OSTrigger {
         }
     }
 
+    public enum OSTriggerKind {
+        TIME_SINCE_LAST_IN_APP("min_time_since"),
+        SESSION_TIME("session_time"),
+        CUSTOM("custom"),
+        UNKNOWN("unknown");
+
+        private String value;
+
+        OSTriggerKind(String value) {
+            this.value = value;
+        }
+
+        public String toString() {
+            return this.value;
+        }
+
+        public static @NonNull OSTriggerKind fromString(String value) {
+            for (OSTriggerKind type : OSTriggerKind.values()) {
+                if (type.value.equalsIgnoreCase(value))
+                    return type;
+            }
+            return UNKNOWN;
+        }
+    }
+
+    // Position.valueOf(jsonObject.optString("displayLocation", "FULL_SCREEN").toUpperCase());
+
     /**
      * The unique identifier for this trigger, to help avoid scheduling duplicate timers and so on
      */
     @NonNull
-    public String triggerId;
+    String triggerId;
+
+    /**
+     * Kind of trigger; session time, time since last in app, or custom.
+     */
+    @NonNull
+    public OSTriggerKind kind;
 
     /**
      * The property that this trigger operates on, such as 'game_score'
      */
-    @NonNull
+    @Nullable
     public String property;
-
 
     /**
      * The type of operator used to perform the logical equivalence/comparison on,
      * such as > or <=
      */
     @NonNull
-    public OSTriggerOperatorType operatorType;
+    public OSTriggerOperator operatorType;
 
     /**
      * Most comparison-based operators have a value to allow for triggers
@@ -76,8 +108,9 @@ class OSTrigger {
 
     OSTrigger(JSONObject json) throws JSONException {
         this.triggerId = json.getString("id");
-        this.property = json.getString("property");
-        this.operatorType = OSTriggerOperatorType.fromString(json.getString("operator"));
+        this.kind = OSTriggerKind.fromString(json.getString("kind"));
+        this.property = json.optString("property", null);
+        this.operatorType = OSTriggerOperator.fromString(json.getString("operator"));
         this.value = json.opt("value");
     }
 
@@ -86,6 +119,7 @@ class OSTrigger {
 
         try {
             json.put("id", this.triggerId);
+            json.put("kind", this.kind);
             json.put("property", this.property);
             json.put("operator", this.operatorType.toString());
             json.put("value", this.value);

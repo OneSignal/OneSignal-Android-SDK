@@ -6,10 +6,10 @@ import java.util.ArrayList;
 
 @Implements(OSInAppMessageController.class)
 public class ShadowOSInAppMessageController {
-    public static ArrayList<OSInAppMessage> displayedMessages = new ArrayList<>();
+    public static ArrayList<String> displayedMessages = new ArrayList<>();
 
     @Implementation
     protected void displayMessage(OSInAppMessage message) {
-        displayedMessages.add(message);
+        displayedMessages.add(message.messageId);
     }
 }

@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.onesignal.OSTrigger.OSTriggerOperatorType;
+import static com.onesignal.OSTrigger.OSTriggerOperator;
 
 class OSTriggerController {
 
@@ -52,29 +52,33 @@ class OSTriggerController {
     }
 
     private boolean evaluateTrigger(@NonNull OSTrigger trigger) {
-        if (OSDynamicTriggerType.fromString(trigger.property) != null)
+        // Assume all unknown trigger kinds to be false to be safe.
+        if (trigger.kind == OSTrigger.OSTriggerKind.UNKNOWN)
+            return false;
+
+        if (trigger.kind != OSTrigger.OSTriggerKind.CUSTOM)
             return dynamicTriggerController.dynamicTriggerShouldFire(trigger);
 
-        final OSTriggerOperatorType operatorType = trigger.operatorType;
+        final OSTriggerOperator operatorType = trigger.operatorType;
         final Object deviceValue = triggers.get(trigger.property);
 
         if (deviceValue == null) {
             // If we don't have a local value for this trigger, can only be true in two cases;
             // 1. If operator is Not Exists
-            if (operatorType == OSTriggerOperatorType.NOT_EXISTS)
+            if (operatorType == OSTriggerOperator.NOT_EXISTS)
                 return true;
 
             // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
-            return operatorType == OSTriggerOperatorType.NOT_EQUAL_TO && trigger.value != null;
+            return operatorType == OSTriggerOperator.NOT_EQUAL_TO && trigger.value != null;
         }
 
         // We have local value at this point, we can evaluate existence checks
-        if (operatorType == OSTriggerOperatorType.EXISTS)
+        if (operatorType == OSTriggerOperator.EXISTS)
             return true;
-        if (operatorType == OSTriggerOperatorType.NOT_EXISTS)
+        if (operatorType == OSTriggerOperator.NOT_EXISTS)
             return false;
 
-        if (operatorType == OSTriggerOperatorType.CONTAINS)
+        if (operatorType == OSTriggerOperator.CONTAINS)
             return deviceValue instanceof Collection && ((Collection) deviceValue).contains(trigger.value);
 
         if (deviceValue instanceof String &&
@@ -94,7 +98,7 @@ class OSTriggerController {
         return false;
     }
 
-    private boolean triggerMatchesStringValue(@NonNull String triggerValue, @NonNull String deviceValue, @NonNull OSTriggerOperatorType operator) {
+    private boolean triggerMatchesStringValue(@NonNull String triggerValue, @NonNull String deviceValue, @NonNull OSTriggerOperator operator) {
         switch (operator) {
             case EQUAL_TO:
                 return triggerValue.equals(deviceValue);
@@ -107,7 +111,7 @@ class OSTriggerController {
     }
 
     // Allow converting of deviceValues to other types to allow triggers to be more forgiving.
-    private boolean triggerMatchesFlex(@Nullable Object triggerValue, @NonNull Object deviceValue, @NonNull OSTriggerOperatorType operator) {
+    private boolean triggerMatchesFlex(@Nullable Object triggerValue, @NonNull Object deviceValue, @NonNull OSTriggerOperator operator) {
         if (triggerValue == null)
             return false;
 
@@ -121,7 +125,7 @@ class OSTriggerController {
         return false;
     }
 
-    private boolean triggerMatchesNumericValueFlex(@NonNull Number triggerValue, @NonNull String deviceValue, @NonNull OSTriggerOperatorType operator) {
+    private boolean triggerMatchesNumericValueFlex(@NonNull Number triggerValue, @NonNull String deviceValue, @NonNull OSTriggerOperator operator) {
         double deviceDoubleValue;
         try {
             deviceDoubleValue = Double.parseDouble(deviceValue);
@@ -132,7 +136,7 @@ class OSTriggerController {
         return triggerMatchesNumericValue(triggerValue.doubleValue(), deviceDoubleValue, operator);
     }
 
-    private boolean triggerMatchesNumericValue(@NonNull Number triggerValue, @NonNull Number deviceValue, @NonNull OSTriggerOperatorType operator) {
+    private boolean triggerMatchesNumericValue(@NonNull Number triggerValue, @NonNull Number deviceValue, @NonNull OSTriggerOperator operator) {
         double triggerDoubleValue = triggerValue.doubleValue();
         double deviceDoubleValue = deviceValue.doubleValue();
 
@@ -159,32 +163,6 @@ class OSTriggerController {
                 return deviceDoubleValue > triggerDoubleValue || deviceDoubleValue == triggerDoubleValue;
             default:
                 return false;
-        }
-    }
-
-    public enum OSDynamicTriggerType {
-        PLAYTIME("playtime"),
-        SESSION_DURATION("os_session_duration"),
-        TIME("os_time");
-
-        private String text;
-
-        OSDynamicTriggerType(String type) {
-            this.text = type;
-        }
-
-        @Override
-        public String toString() {
-            return this.text;
-        }
-
-        public static @Nullable OSDynamicTriggerType fromString(String text) {
-            for (OSDynamicTriggerType type : OSDynamicTriggerType.values()) {
-                if (type.text.equalsIgnoreCase(text))
-                    return type;
-            }
-
-            return null;
         }
     }
 

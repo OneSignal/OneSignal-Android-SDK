@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimerTask;
 
-import com.onesignal.OSTrigger.OSTriggerOperatorType;
-import com.onesignal.OSTriggerController.OSDynamicTriggerType;
+import com.onesignal.OSTrigger.OSTriggerOperator;
 
 class OSDynamicTriggerController {
 
@@ -17,6 +16,8 @@ class OSDynamicTriggerController {
     private final OSDynamicTriggerControllerObserver observer;
 
     private static final double REQUIRED_ACCURACY = 0.3;
+    // Assume last time an In-App Message was displayed a very very long time ago.
+    private static final long DEFAULT_LAST_IN_APP_TIME_AGO = 999_999;
 
     private final ArrayList<String> scheduledMessages;
 
@@ -27,7 +28,7 @@ class OSDynamicTriggerController {
         observer = triggerObserver;
     }
 
-    boolean dynamicTriggerShouldFire(OSTrigger trigger) {
+    boolean dynamicTriggerShouldFire(final OSTrigger trigger) {
         if (trigger.value == null)
             return false;
 
@@ -35,28 +36,28 @@ class OSDynamicTriggerController {
             // All time-based trigger values should be numbers (either timestamps or offsets)
             if (!(trigger.value instanceof Number))
                 return false;
-            long requiredTimeInterval = (long) (((Number) trigger.value).doubleValue() * 1_000);
-            long offset;
-
-            OSDynamicTriggerType property = OSDynamicTriggerType.fromString(trigger.property);
 
             long currentTimeInterval = 0;
-
-            switch (property) {
-                case SESSION_DURATION:
-                case PLAYTIME:
+            switch (trigger.kind) {
+                case SESSION_TIME:
                     currentTimeInterval = new Date().getTime() - sessionLaunchTime.getTime();
                     break;
-                case TIME:
-                    currentTimeInterval = new Date().getTime();
+                case TIME_SINCE_LAST_IN_APP:
+                    if (OSInAppMessageController.getController().isDisplayingInApp())
+                        return false;
+                    Date lastTimeAppDismissed = OSInAppMessageController.getController().lastTimeInAppDismissed;
+                    if (lastTimeAppDismissed == null)
+                        currentTimeInterval = DEFAULT_LAST_IN_APP_TIME_AGO;
+                    else
+                        currentTimeInterval = new Date().getTime() - lastTimeAppDismissed.getTime();
                     break;
             }
 
+            long requiredTimeInterval = (long) (((Number) trigger.value).doubleValue() * 1_000);
             if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimeInterval, trigger.operatorType))
                 return true;
 
-            offset = requiredTimeInterval - currentTimeInterval;
-
+            long offset = requiredTimeInterval - currentTimeInterval;
             if (offset <= 0L)
                 return false;
 
@@ -67,6 +68,7 @@ class OSDynamicTriggerController {
             OSDynamicTriggerTimer.scheduleTrigger(new TimerTask() {
                 @Override
                 public void run() {
+                    scheduledMessages.remove(trigger.triggerId);
                     observer.messageTriggerConditionChanged();
                 }
             }, trigger.triggerId, offset);
@@ -77,7 +79,7 @@ class OSDynamicTriggerController {
         return false;
     }
 
-    private static boolean evaluateTimeIntervalWithOperator(double timeInterval, double currentTimeInterval, OSTriggerOperatorType operator) {
+    private static boolean evaluateTimeIntervalWithOperator(double timeInterval, double currentTimeInterval, OSTriggerOperator operator) {
         switch (operator) {
             case LESS_THAN:
                 return currentTimeInterval < timeInterval;

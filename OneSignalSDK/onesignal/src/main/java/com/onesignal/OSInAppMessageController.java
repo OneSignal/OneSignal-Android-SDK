@@ -12,8 +12,12 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
@@ -26,10 +30,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     OSTriggerController triggerController;
     private OSSystemConditionController systemConditionController;
+
     private ArrayList<OSInAppMessage> messages;
+    // Messages that have had their triggered evaluated to true already;
+    //   This mean they hav been added to the queue to display, or have already displayed
+    private Set<String> triggeredMessages = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    // Messages queued to display, includes the message currently displaying, if any.
     final ArrayList<OSInAppMessage> messageDisplayQueue;
 
-    boolean inAppMessagingEnabled = true;
+    private boolean inAppMessagingEnabled = true;
+
+    @Nullable Date lastTimeInAppDismissed;
 
     public static OSInAppMessageController getController() {
         if (sharedInstance == null)
@@ -186,12 +197,30 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void messageCanBeDisplayed(OSInAppMessage message) {
+    private void messageCanBeDisplayed(@NonNull OSInAppMessage message) {
         if (!inAppMessagingEnabled)
             return;
 
+        if (triggeredMessages.contains(message.messageId) &&
+            !message.isPreview) {
+            OneSignal.Log(
+               OneSignal.LOG_LEVEL.ERROR,
+               "In-App message with id '" +
+                  message.messageId +
+                  "' already displayed or is already preparing to be display!");
+            return;
+        }
+
+        queueMessageForDisplay(message);
+    }
+
+    // Message has passed triggers and de-duplication logic.
+    // Display message now or add it to the queue to be displayed.
+    private void queueMessageForDisplay(@NonNull OSInAppMessage message) {
         synchronized (messageDisplayQueue) {
             messageDisplayQueue.add(message);
+            if (!message.isPreview)
+                triggeredMessages.add(message.messageId);
 
             if (messageDisplayQueue.size() > 1) {
                 // means we are already displaying a message
@@ -203,9 +232,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
+    boolean isDisplayingInApp() {
+        return messageDisplayQueue.size() > 0;
+    }
+
     @Nullable
     OSInAppMessage getCurrentDisplayedInAppMessage() {
-        return messageDisplayQueue.size() > 0 ? messageDisplayQueue.get(0) : null;
+        return isDisplayingInApp() ? messageDisplayQueue.get(0) : null;
     }
 
     // Called after an In-App message is closed and it's dismiss animation has completed
@@ -220,6 +253,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             // Display the next message in the queue, if any
             if (messageDisplayQueue.size() > 0)
                 displayMessage(messageDisplayQueue.get(0));
+            else {
+                lastTimeInAppDismissed = new Date();
+                evaluateInAppMessages();
+            }
         }
     }
 

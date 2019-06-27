@@ -1,6 +1,5 @@
 package com.onesignal;
 
-import com.onesignal.OSTriggerController.OSDynamicTriggerType;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -11,14 +10,11 @@ import java.util.UUID;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 
 public class InAppMessagingHelpers {
-    public static final String DYNAMIC_TRIGGER_SESSION_DURATION = OSDynamicTriggerType.SESSION_DURATION.toString();
-    public static final String DYNAMIC_TRIGGER_EXACT_TIME = OSDynamicTriggerType.TIME.toString();
-
     public static final String TEST_SPANISH_ANDROID_VARIANT_ID = "d8cc-11e4-bed1-df8f05be55ba-a4b3gj7f";
     public static final String TEST_ENGLISH_ANDROID_VARIANT_ID = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc";
-    public static final String TEST_MESSAGE_ID = "a4b3gj7f-d8cc-11e4-bed1-df8f05be55ba";
     public static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
     public static final String IAM_CLICK_ID = "12345678-1234-1234-1234-123456789012";
 
@@ -47,12 +43,13 @@ public class InAppMessagingHelpers {
 
     // Most tests build a test message using only one trigger.
     // This convenience method makes it easy to build such a message
-    public static OSTestInAppMessage buildTestMessageWithSingleTrigger(final String key, final String operator, final Object value) throws JSONException {
+    public static OSTestInAppMessage buildTestMessageWithSingleTrigger(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
         JSONObject triggerJson = new JSONObject() {{
+            put("id", UUID.randomUUID().toString());
+            put("kind", kind.toString());
             put("property", key);
             put("operator", operator);
             put("value", value);
-            put("id", UUID.randomUUID().toString());
         }};
 
         JSONArray triggersJson = wrap(wrap(triggerJson));
@@ -63,7 +60,7 @@ public class InAppMessagingHelpers {
     public static OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
         // builds a test message to test JSON parsing constructor of OSInAppMessage
         JSONObject json = new JSONObject() {{
-            put("id", TEST_MESSAGE_ID);
+            put("id", UUID.randomUUID().toString());
             put("variants", new JSONObject() {{
                 put("android", new JSONObject() {{
                     put("es", TEST_SPANISH_ANDROID_VARIANT_ID);
@@ -88,10 +85,11 @@ public class InAppMessagingHelpers {
 
             for (final OSTestTrigger trigger : andBlock) {
                 ands.put(new JSONObject() {{
+                    put("id", UUID.randomUUID().toString());
+                    put("kind", trigger.kind.toString());
                     put("property", trigger.property);
                     put("operator", trigger.operatorType.toString());
                     put("value", trigger.value);
-                    put("id", UUID.randomUUID().toString());
                 }});
             }
 
@@ -101,12 +99,13 @@ public class InAppMessagingHelpers {
         return buildTestMessage(ors);
     }
 
-    public static OSTestTrigger buildTrigger(final String key, final String operator, final Object value) throws JSONException {
+    public static OSTestTrigger buildTrigger(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
         JSONObject triggerJson = new JSONObject() {{
+            put("id", UUID.randomUUID().toString());
+            put("kind", kind.toString());
             put("property", key);
             put("operator", operator);
             put("value", value);
-            put("id", UUID.randomUUID().toString());
         }};
 
         return new OSTestTrigger(triggerJson);

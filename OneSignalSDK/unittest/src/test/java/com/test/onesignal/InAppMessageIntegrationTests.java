@@ -2,8 +2,6 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -23,7 +21,9 @@ import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 
+import org.awaitility.core.ThrowingRunnable;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,7 +47,6 @@ import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 
-import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
 
@@ -111,7 +110,7 @@ public class InAppMessageIntegrationTests {
 
     @Test
     public void testDisableInAppMessagingPreventsMessageDisplay() throws Exception {
-        final OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_key", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 3);
+        final OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(testMessage);
@@ -158,10 +157,10 @@ public class InAppMessageIntegrationTests {
     // initializes the SDK with multiple mock in-app messages and sets triggers so that
     // both in-app messages become valid and can be displayed
     private void initializeSdkWithMultiplePendingMessages() throws Exception {
-        final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_1", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 3);
-        final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger("test_2", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), 2);
+        final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
+        final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2);
 
-        setMockRegistrationResponseWithMessages(new ArrayList() {{
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(testFirstMessage);
             add(testSecondMessage);
         }});
@@ -172,7 +171,7 @@ public class InAppMessageIntegrationTests {
 
     @Test
     public void testTimedMessageIsDisplayed() throws Exception {
-        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 0.05);
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.SESSION_TIME, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -198,6 +197,64 @@ public class InAppMessageIntegrationTests {
         });
     }
 
+
+    @Test
+    public void testAfterLastInAppTimeIsDisplayed() throws Exception {
+        final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+           OSTriggerKind.SESSION_TIME,
+           null,
+           OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(),
+           0.05
+        );
+
+        ArrayList<ArrayList<OSTestTrigger>> triggers2 = new ArrayList<ArrayList<OSTestTrigger>>() {{
+            add(new ArrayList<OSTestTrigger>() {{
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.SESSION_TIME,null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.1));
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.TIME_SINCE_LAST_IN_APP, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05));
+            }});
+        }};
+        final OSTestInAppMessage message2 = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers2);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message1);
+            add(message2);
+        }});
+
+        // the SDK should read the message from registration JSON, set up a timer, and once
+        // the timer fires the message should get shown.
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // wait until the timer fires after 50ms and make sure the message gets displayed
+        // we already have tests to make sure that the timer is actually being scheduled
+        // for the correct amount of time, so all we are doing here is checking to
+        // make sure the message actually gets displayed once the timer fires
+        Awaitility.await()
+           .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+           .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+           .untilAsserted(new ThrowingRunnable() {
+               @Override
+               public void run() {
+                   assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+                   assertEquals(message1.messageId, ShadowOSInAppMessageController.displayedMessages.get(0));
+               }
+           });
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+
+        // Second in app should now display
+        Awaitility.await()
+          .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+          .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+          .untilAsserted(new ThrowingRunnable() {
+              @Override
+              public void run() {
+                  assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+                  assertEquals(message2.messageId, ShadowOSInAppMessageController.displayedMessages.get(1));
+              }
+          });
+    }
+
     /**
      * If an in-app message should only be shown if (A) session_duration is > 30 seconds and
      * (B) a key/value trigger is set, and it should not set up a timer until all of the non-timer
@@ -210,8 +267,8 @@ public class InAppMessageIntegrationTests {
     public void testTimedMessageDisplayedAfterAllTriggersValid() throws Exception {
         ArrayList<ArrayList<OSTestTrigger>> triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
             add(new ArrayList<OSTestTrigger>() {{
-                add(InAppMessagingHelpers.buildTrigger("test_key", OSTestTrigger.OSTriggerOperatorType.EQUAL_TO.toString(), "squirrel"));
-                add(InAppMessagingHelpers.buildTrigger(InAppMessagingHelpers.DYNAMIC_TRIGGER_SESSION_DURATION, OSTestTrigger.OSTriggerOperatorType.GREATER_THAN.toString(), 0.01));
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.CUSTOM,"test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), "squirrel"));
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.SESSION_TIME, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.01));
             }});
         }};
 
