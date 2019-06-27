@@ -35,7 +35,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static final String TAG = WebViewManager.class.getCanonicalName();
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
-    private static final Object LOCK = new Object();
+    private static Set<String> messages = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     @SuppressLint("StaticFieldLeak")
     private static WebViewManager lastInstance = null;
