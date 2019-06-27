@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
@@ -97,12 +98,18 @@ class InAppMessageView {
     }
 
     void destroyView(WeakReference<Activity> weakReference) {
-        if (weakReference.get() != null) {
-            if (draggableRelativeLayout != null)
+        if (weakReference.get() != null && parentLinearLayout != null) {
+            parentLinearLayout.removeAllViews();
+
+            if (draggableRelativeLayout != null) {
                 draggableRelativeLayout.removeAllViews();
-            if (parentLinearLayout != null)
-                parentLinearLayout.removeAllViews();
+            }
+            if (webView != null) {
+                webView.removeAllViews();
+            }
+            System.out.println();
         }
+
         parentLinearLayout = null;
         draggableRelativeLayout = null;
         webView = null;
@@ -114,13 +121,9 @@ class InAppMessageView {
 
     void checkIfShouldDismiss() {
         if (shouldDismissWhenActive) {
-            finishAfterDelay();
             shouldDismissWhenActive = false;
+            finishAfterDelay(null);
         }
-    }
-
-    private Activity getCurrentActivity() {
-        return ActivityLifecycleHandler.curActivity;
     }
 
     /**
@@ -162,7 +165,8 @@ class InAppMessageView {
     }
 
     private int getDisplayYSize() {
-        return OSViewUtils.getUsableWindowRect(getCurrentActivity()).height();
+        Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        return OSViewUtils.getUsableWindowRect(currentActivity).height();
     }
 
     private LinearLayout.LayoutParams createParentLinearLayoutParams() {
@@ -221,7 +225,7 @@ class InAppMessageView {
                 // Don't let it grab the input focus
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
-        Activity currentActivity = getCurrentActivity();
+        Activity currentActivity = ActivityLifecycleHandler.curActivity;
         if (currentActivity != null) {
             layoutParams.token = currentActivity.getWindow().getDecorView().getApplicationWindowToken();
         }
@@ -249,37 +253,42 @@ class InAppMessageView {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
-                //Do not create view if app is not in focus
-                Activity currentActivity = getCurrentActivity();
-                if (currentActivity != null) {
+                Activity currentActivity = ActivityLifecycleHandler.curActivity;
+                if (currentActivity != null && webView != null) {
                     webView.setLayoutParams(relativeLayoutParams);
 
-                    setUpDraggableLayout(linearLayoutParams, webViewLayoutParams);
-                    setUpParentLinearLayout();
+                    Context context = currentActivity.getApplicationContext();
+                    setUpDraggableLayout(context, linearLayoutParams, webViewLayoutParams);
+                    setUpParentLinearLayout(context);
 
-                    currentActivity.getWindowManager().addView(parentLinearLayout, parentLinearLayoutParams);
+                    WindowManager windowManager = currentActivity.getWindowManager();
+                    if (windowManager != null && parentLinearLayout != null && parentLinearLayout.getWindowToken() == null) {
+                        windowManager.addView(parentLinearLayout, parentLinearLayoutParams);
 
-                    if (messageController != null) {
-                        animateInAppMessage(displayLocation, draggableRelativeLayout, parentLinearLayout);
-                        messageController.onMessageWasShown();
+                        if (messageController != null) {
+                            messageController.onMessageWasShown();
+                            animateInAppMessage(displayLocation, draggableRelativeLayout, parentLinearLayout);
+                        }
+
+                        initDismissIfNeeded();
                     }
-                    initDismissIfNeeded();
                 }
             }
         });
     }
 
-    private void setUpParentLinearLayout() {
-        parentLinearLayout = new LinearLayout(getCurrentActivity());
+    private void setUpParentLinearLayout(Context context) {
+        parentLinearLayout = new LinearLayout(context);
         parentLinearLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR_EMPTY);
         parentLinearLayout.setClipChildren(false);
         parentLinearLayout.setClipToPadding(false);
         parentLinearLayout.addView(draggableRelativeLayout);
     }
 
-    private void setUpDraggableLayout(LinearLayout.LayoutParams linearLayoutParams,
+    private void setUpDraggableLayout(Context context,
+                                      LinearLayout.LayoutParams linearLayoutParams,
                                       DraggableRelativeLayout.Params draggableParams) {
-        draggableRelativeLayout = new DraggableRelativeLayout(getCurrentActivity());
+        draggableRelativeLayout = new DraggableRelativeLayout(context);
         if (linearLayoutParams != null) {
             draggableRelativeLayout.setLayoutParams(linearLayoutParams);
         }
@@ -287,16 +296,15 @@ class InAppMessageView {
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
             void onDismiss() {
-                finishAfterDelay();
+                finishAfterDelay(null);
             }
         });
 
-        //If webView has parent remove it before adding a new parent
         if (webView.getParent() != null) {
             ((ViewGroup) webView.getParent()).removeAllViews();
         }
 
-        CardView cardView = createCardView();
+        CardView cardView = createCardView(context);
         cardView.addView(webView);
 
         draggableRelativeLayout.setPadding(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
@@ -309,8 +317,8 @@ class InAppMessageView {
      * To show drop shadow on WebView
      * Layout container for WebView is needed
      */
-    private CardView createCardView() {
-        CardView cardView = new CardView(getCurrentActivity());
+    private CardView createCardView(Context context) {
+        CardView cardView = new CardView(context);
 
         int height = displayLocation == WebViewManager.Position.FULL_SCREEN ?
            ViewGroup.LayoutParams.MATCH_PARENT :
@@ -338,7 +346,8 @@ class InAppMessageView {
         if (dismissDuration > 0 && dismissSchedule == null) {
             dismissSchedule = new Runnable() {
                 public void run() {
-                    if (getCurrentActivity() != null) {
+                    Activity currentActivity = ActivityLifecycleHandler.curActivity;
+                    if (currentActivity != null) {
                         dismiss();
                         dismissSchedule = null;
                     } else {
@@ -359,9 +368,8 @@ class InAppMessageView {
      * @param currentActivity the activity where to show the view
      */
     private void delayShowUntilAvailable(final Activity currentActivity) {
-        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null) {
+        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null && parentLinearLayout == null) {
             showInAppMessageView();
-            return;
         }
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
@@ -370,6 +378,18 @@ class InAppMessageView {
                 delayShowUntilAvailable(currentActivity);
             }
         }, ACTIVITY_INIT_DELAY);
+    }
+
+    void dismissAndAwaitNextMessage(WebViewManager.OneSignalGenericCallback callback) {
+        if (draggableRelativeLayout == null) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
+            markAsDismissed();
+            callback.onComplete();
+            return;
+        }
+
+        draggableRelativeLayout.dismiss();
+        finishAfterDelay(callback);
     }
 
     /**
@@ -383,21 +403,21 @@ class InAppMessageView {
         }
 
         draggableRelativeLayout.dismiss();
-        finishAfterDelay();
+        finishAfterDelay(null);
     }
 
     /**
      * Finishing on a timer as continueSettling does not return false
      * when using smoothSlideViewTo on Android 4.4
      */
-    private void finishAfterDelay() {
+    private void finishAfterDelay(final WebViewManager.OneSignalGenericCallback callback) {
         OSUtils.runOnMainThreadDelayed(new Runnable() {
             @Override
             public void run() {
-                if (hasBackground) {
-                    animateAndDismissLayout();
+                if (hasBackground && parentLinearLayout != null) {
+                    animateAndDismissLayout(parentLinearLayout, callback);
                 } else {
-                    removeViews();
+                    removeViews(callback);
                 }
             }
         }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
@@ -407,15 +427,20 @@ class InAppMessageView {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
-                removeViews();
+                if (hasBackground && parentLinearLayout != null) {
+                    animateAndDismissLayout(parentLinearLayout,null);
+                } else {
+                    removeViews(null);
+                }
             }
         });
     }
 
     /**
      * Remove references from the views
+     * @param callback
      */
-    private void removeViews() {
+    private void removeViews(WebViewManager.OneSignalGenericCallback callback) {
         if (dismissSchedule != null) {
             //dismissed before the dismiss delay
             handler.removeCallbacks(dismissSchedule);
@@ -424,14 +449,21 @@ class InAppMessageView {
         if (draggableRelativeLayout != null) {
             draggableRelativeLayout.removeAllViews();
         }
-        if (parentLinearLayout != null && getCurrentActivity() != null) {
-            parentLinearLayout.setVisibility(View.INVISIBLE);
-            getCurrentActivity().getWindowManager().removeView(parentLinearLayout);
+        Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        if (currentActivity != null) {
+            WindowManager windowManager = currentActivity.getWindowManager();
+            if (parentLinearLayout != null && windowManager != null) {
+                parentLinearLayout.setVisibility(View.INVISIBLE);
+                windowManager.removeView(parentLinearLayout);
+            }
         }
         if (messageController != null) {
             messageController.onMessageWasDismissed();
         }
         markAsDismissed();
+
+        if (callback != null)
+            callback.onComplete();
     }
 
     /**
@@ -518,17 +550,17 @@ class InAppMessageView {
         backgroundAnimation.start();
     }
 
-    private void animateAndDismissLayout() {
+    private void animateAndDismissLayout(View backgroundView, final WebViewManager.OneSignalGenericCallback callback) {
         Animator.AnimatorListener animCallback = new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                removeViews();
+                removeViews(callback);
             }
         };
 
         // Animate background behind the message so it hides before being removed from the view
         animateBackgroundColor(
-                parentLinearLayout,
+                backgroundView,
                 IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
                 ACTIVITY_BACKGROUND_COLOR_FULL,
                 ACTIVITY_BACKGROUND_COLOR_EMPTY,

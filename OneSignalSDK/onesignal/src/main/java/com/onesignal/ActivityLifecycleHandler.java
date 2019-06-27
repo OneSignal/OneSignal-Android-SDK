@@ -35,6 +35,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.view.ViewTreeObserver;
+import android.view.WindowManager;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;

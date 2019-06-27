@@ -6,15 +6,13 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.webkit.WebView;
 
-// Custom WebView to round corners
+// Custom WebView to lock scrolling
 public class OSWebView extends WebView {
 
    public OSWebView(Context context) {
       super(context);
    }
 
-   // Round off the edges of the WebView
-   // No effect on Android 4.4 and lower
    @Override
    protected void onDraw(Canvas canvas) {
       invalidate();

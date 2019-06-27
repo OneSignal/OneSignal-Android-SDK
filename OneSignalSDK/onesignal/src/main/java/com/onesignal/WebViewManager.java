@@ -36,8 +36,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
     private static final Object LOCK = new Object();
+
     @SuppressLint("StaticFieldLeak")
     private static WebViewManager lastInstance = null;
+
+    interface OneSignalGenericCallback {
+        void onComplete();
+    }
 
     private WebViewManager(@NonNull OSInAppMessage message, String base64Message) {
         this.message = message;
@@ -66,33 +71,42 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param message the message to show
      * @param htmlStr the html to display on the WebView
      */
-    static void showHTMLString(OSInAppMessage message, final String htmlStr) {
-        synchronized (LOCK) {
-            if (lastInstance != null && message.isPreview) {
-                lastInstance.dismiss();
-                lastInstance = null;
-            }
+    static void showHTMLString(final OSInAppMessage message, final String htmlStr) {
+        if (lastInstance != null && message.isPreview) {
 
-            try {
-                final String base64Str = Base64.encodeToString(
-                        htmlStr.getBytes("UTF-8"),
-                        Base64.NO_WRAP
-                );
+            lastInstance.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
+                @Override
+                public void onComplete() {
+                    lastInstance = null;
+                    initInAppMessage(message, htmlStr);
+                }
+            });
+        } else {
 
-                final WebViewManager webViewManager = new WebViewManager(message, base64Str);
-                lastInstance = webViewManager;
+            initInAppMessage(message, htmlStr);
+        }
+    }
 
-                // Web view must be created on the main thread.
-                OSUtils.runOnMainUIThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        webViewManager.setupWebView();
-                    }
-                });
-            } catch (UnsupportedEncodingException e) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
-                e.printStackTrace();
-            }
+    private static void initInAppMessage(OSInAppMessage message, String htmlStr) {
+        try {
+            final String base64Str = Base64.encodeToString(
+                    htmlStr.getBytes("UTF-8"),
+                    Base64.NO_WRAP
+            );
+
+            final WebViewManager webViewManager = new WebViewManager(message, base64Str);
+            lastInstance = webViewManager;
+
+            // Web view must be created on the main thread.
+            OSUtils.runOnMainUIThread(new Runnable() {
+                @Override
+                public void run() {
+                    webViewManager.setupWebView();
+                }
+            });
+        } catch (UnsupportedEncodingException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -255,14 +269,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             void onMessageWasDismissed() {
                 OSInAppMessageController.getController().messageWasDismissed(message);
                 ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
-                webView = null;
-                synchronized (LOCK) {
-                    //noinspection ConstantConditions
-                    if (lastInstance != null &&
-                            lastInstance.message.messageId != null &&
-                            lastInstance.message.messageId.equals(message.messageId))
-                        lastInstance = null;
-                }
+                if (lastInstance != null &&
+                        lastInstance.message.messageId != null &&
+                        lastInstance.message.messageId.equals(message.messageId))
+                    lastInstance = null;
             }
         });
         messageView.showInAppMessageView();
@@ -283,6 +293,21 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     private int getWebViewYSize() {
         return OSViewUtils.getUsableWindowRect(ActivityLifecycleHandler.curActivity).height() - (MARGIN_PX_SIZE * 2);
+    }
+
+    /**
+     * Trigger the {@link #messageView} dismiss animation flow
+     */
+    private void dismissAndAwaitNextMessage(final OneSignalGenericCallback callback) {
+        if (messageView != null) {
+            messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
+                @Override
+                public void onComplete() {
+                    messageView = null;
+                    callback.onComplete();
+                }
+            });
+        }
     }
 
     /**
