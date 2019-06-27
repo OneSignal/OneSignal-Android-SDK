@@ -289,11 +289,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private int getWebViewXSize() {
-        return OSViewUtils.getUsableWindowRect().width() - (MARGIN_PX_SIZE * 2);
+        return OSViewUtils.getUsableWindowRect(ActivityLifecycleHandler.curActivity).width() - (MARGIN_PX_SIZE * 2);
     }
 
     private int getWebViewYSize() {
-        return OSViewUtils.getUsableWindowRect().height() - (MARGIN_PX_SIZE * 2);
+        return OSViewUtils.getUsableWindowRect(ActivityLifecycleHandler.curActivity).height() - (MARGIN_PX_SIZE * 2);
     }
 
     /**
