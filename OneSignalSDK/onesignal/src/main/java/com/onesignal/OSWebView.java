@@ -13,12 +13,6 @@ public class OSWebView extends WebView {
       super(context);
    }
 
-   @Override
-   protected void onDraw(Canvas canvas) {
-      invalidate();
-      super.onDraw(canvas);
-   }
-
    // The method overrides below; overScrollBy, scrollTo, and computeScroll prevent page scrolling
    @Override
    public boolean overScrollBy(int deltaX, int deltaY, int scrollX, int scrollY,

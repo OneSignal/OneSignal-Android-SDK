@@ -98,21 +98,20 @@ class InAppMessageView {
     }
 
     void destroyView(WeakReference<Activity> weakReference) {
-        if (weakReference.get() != null && parentLinearLayout != null) {
-            parentLinearLayout.removeAllViews();
-
-            if (draggableRelativeLayout != null) {
-                draggableRelativeLayout.removeAllViews();
-            }
+        // WeakReference is the Activity when onStop is called
+        if (weakReference.get() != null) {
             if (webView != null) {
                 webView.removeAllViews();
             }
-            System.out.println();
+            if (draggableRelativeLayout != null) {
+                draggableRelativeLayout.removeAllViews();
+            }
+            if (parentLinearLayout != null) {
+                removeParentLinearLayout(weakReference.get());
+                parentLinearLayout.removeAllViews();
+            }
         }
-
-        parentLinearLayout = null;
-        draggableRelativeLayout = null;
-        webView = null;
+        markAsDismissed();
     }
 
     void showView(Activity activity) {
@@ -266,12 +265,13 @@ class InAppMessageView {
                         windowManager.addView(parentLinearLayout, parentLinearLayoutParams);
 
                         if (messageController != null) {
-                            messageController.onMessageWasShown();
                             animateInAppMessage(displayLocation, draggableRelativeLayout, parentLinearLayout);
+                            messageController.onMessageWasShown();
                         }
 
-                        initDismissIfNeeded();
                     }
+
+                    initDismissIfNeeded();
                 }
             }
         });
@@ -427,11 +427,7 @@ class InAppMessageView {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
-                if (hasBackground && parentLinearLayout != null) {
-                    animateAndDismissLayout(parentLinearLayout,null);
-                } else {
-                    removeViews(null);
-                }
+                removeViews(null);
             }
         });
     }
@@ -449,14 +445,10 @@ class InAppMessageView {
         if (draggableRelativeLayout != null) {
             draggableRelativeLayout.removeAllViews();
         }
+
         Activity currentActivity = ActivityLifecycleHandler.curActivity;
-        if (currentActivity != null) {
-            WindowManager windowManager = currentActivity.getWindowManager();
-            if (parentLinearLayout != null && windowManager != null) {
-                parentLinearLayout.setVisibility(View.INVISIBLE);
-                windowManager.removeView(parentLinearLayout);
-            }
-        }
+        removeParentLinearLayout(currentActivity);
+
         if (messageController != null) {
             messageController.onMessageWasDismissed();
         }
@@ -464,6 +456,16 @@ class InAppMessageView {
 
         if (callback != null)
             callback.onComplete();
+    }
+
+    private void removeParentLinearLayout(Activity currentActivity) {
+        if (currentActivity != null) {
+            WindowManager windowManager = currentActivity.getWindowManager();
+            if (parentLinearLayout != null && windowManager != null) {
+                parentLinearLayout.setVisibility(View.INVISIBLE);
+                windowManager.removeView(parentLinearLayout);
+            }
+        }
     }
 
     /**

@@ -209,10 +209,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             setWebViewToMaxSize();
             messageView.setWebView(webView);
             messageView.showView(activity);
+            messageView.checkIfShouldDismiss();
         }
 
         screenOrientation = activity.getResources().getConfiguration().orientation;
-        messageView.checkIfShouldDismiss();
     }
 
     @Override
@@ -271,12 +271,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
                 if (lastInstance != null &&
                         lastInstance.message.messageId != null &&
-                        lastInstance.message.messageId.equals(message.messageId))
+                        lastInstance.message.messageId.equals(message.messageId)) {
                     lastInstance = null;
+                }
             }
         });
-        messageView.showInAppMessageView();
         ActivityLifecycleHandler.setActivityAvailableListener(TAG + message.messageId, this);
+        messageView.showInAppMessageView();
     }
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
