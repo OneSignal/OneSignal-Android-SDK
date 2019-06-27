@@ -46,10 +46,9 @@ class OSViewUtils {
                 previousOrientation == Configuration.ORIENTATION_PORTRAIT && currentOrientation == Configuration.ORIENTATION_LANDSCAPE;
     }
 
-    static @NonNull Rect getUsableWindowRect() {
+    static @NonNull Rect getUsableWindowRect(@NonNull Activity activity) {
        Rect rect = new Rect();
-       Activity currentActivity = ActivityLifecycleHandler.curActivity;
-       currentActivity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
+       activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
        return rect;
     }
 
