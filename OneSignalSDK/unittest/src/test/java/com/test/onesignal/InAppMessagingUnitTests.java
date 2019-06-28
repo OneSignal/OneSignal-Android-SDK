@@ -28,6 +28,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.After;

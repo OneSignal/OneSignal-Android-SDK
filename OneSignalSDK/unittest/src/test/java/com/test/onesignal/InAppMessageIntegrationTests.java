@@ -5,6 +5,7 @@ import android.app.Activity;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
+import com.onesignal.OneSignalPackagePrivateHelper.OSInAppMessageController;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -47,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 
+import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
 
@@ -300,6 +302,21 @@ public class InAppMessageIntegrationTests {
         assertFalse(ShadowDynamicTimer.hasScheduledTimer);
     }
 
+    @Test
+    public void useCachedInAppListOnQuickColdRestart() throws Exception {
+        // 1. Start app
+        initializeSdkWithMultiplePendingMessages();
+        // 2. Swipe away app
+        fastColdRestartApp();
+        // 3. Cold Start app
+        initializeSdkWithMultiplePendingMessages();
+
+        // Should used cached triggers since we won't be making an on_session call.
+        //   Testing for this by trying to add a trigger that should display an IAM
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
         final JSONArray jsonMessages = new JSONArray();
 
@@ -309,7 +326,7 @@ public class InAppMessageIntegrationTests {
         ShadowOneSignalRestClient.setNextSuccessfulRegistrationResponse(new JSONObject() {{
             put("id", "df8f05be55ba-b2f7f966-d8cc-11e4-bed1");
             put("success", 1);
-            put("in_app_messages", jsonMessages);
+            put(OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY, jsonMessages);
         }});
     }
 

@@ -70,6 +70,7 @@ class OneSignalPrefs {
     public static final String PREFS_ONESIGNAL_USER_PROVIDED_CONSENT = "ONESIGNAL_USER_PROVIDED_CONSENT";
     public static final String PREFS_OS_ETAG_PREFIX = "PREFS_OS_ETAG_PREFIX_";
     public static final String PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_";
+    public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
 
     // PLAYER PURCHASE KEYS
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
@@ -203,7 +204,7 @@ class OneSignalPrefs {
         return (Long)get(prefsName, key, Long.class, defValue);
     }
 
-    static Object getObject(String prefsName, String key, long defValue) {
+    static Object getObject(String prefsName, String key, Object defValue) {
         return get(prefsName, key, Object.class, defValue);
     }
 

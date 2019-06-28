@@ -747,6 +747,8 @@ public class OneSignal {
       if (foreground || getUserId() == null) {
          if (isPastOnSessionTime())
             OneSignalStateSynchronizer.setNewSession();
+         else
+            OSInAppMessageController.getController().initWithCachedInAppMessages();
          setLastSessionTime(System.currentTimeMillis());
          startRegistrationOrOnSession();
       }

@@ -88,7 +88,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -118,8 +117,9 @@ import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
-import static com.test.onesignal.TestHelpers.fastAppRestart;
+import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
+import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
 import static com.test.onesignal.TestHelpers.stopAllOSThreads;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -301,7 +301,7 @@ public class MainOneSignalClassRunner {
 
       // Or when restarting the app quickly.
       ShadowOneSignalRestClient.lastPost = null;
-      fastAppRestart();
+      fastColdRestartApp();
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -362,7 +362,7 @@ public class MainOneSignalClassRunner {
 
       // Should make PUT call with changes on app restart
       ShadowOneSignalRestClient.lastPost = null;
-      fastAppRestart();
+      fastColdRestartApp();
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -378,7 +378,7 @@ public class MainOneSignalClassRunner {
    public void testCreatesEvenIfAppIsQuicklyForceKilledOnFirstLaunch() throws Exception {
       // 1. App cold restarted before the device has a chance to create a player
       OneSignalInit();
-      fastAppRestart();
+      fastColdRestartApp();
 
       // 2. 2nd cold start of the app.
       OneSignalInit();
@@ -401,7 +401,7 @@ public class MainOneSignalClassRunner {
       // 2. App is restarted before it can make it's on_session call
       OneSignalInit();
       stopAllOSThreads();
-      fastAppRestart();
+      fastColdRestartApp();
 
       // 3. 3rd start of the app, we should make an on_session call since the last one did not go through
       OneSignalInit();
@@ -418,14 +418,14 @@ public class MainOneSignalClassRunner {
    public void testOnSessionFlagIsClearedAfterSuccessfullySynced() throws Exception {
       // 1. App cold restarted before the device has a chance to create a player
       OneSignalInit();
-      fastAppRestart();
+      fastColdRestartApp();
 
       // 2. 2nd cold start of the app, waiting to make sure device gets registered
       OneSignalInit();
       threadAndTaskWait();
 
       // 3. Restart the app without wating.
-      fastAppRestart();
+      fastColdRestartApp();
 
       // 4. 3rd cold start of the app.
       OneSignalInit();
@@ -811,7 +811,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setSubscription(true);
 
       // Restart app - Should send subscribe with on_session call.
-      fastAppRestart();
+      fastColdRestartApp();
       ShadowPushRegistratorGCM.fail = false;
       OneSignalInit();
       threadAndTaskWait();
@@ -894,7 +894,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
-      fastAppRestart();
+      fastColdRestartApp();
       OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
       threadAndTaskWait();
 
@@ -1816,7 +1816,7 @@ public class MainOneSignalClassRunner {
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
 
       // App closed and re-opened.
-      fastAppRestart();
+      fastColdRestartApp();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -1836,7 +1836,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       OneSignalPackagePrivateHelper.runFocusRunnables();
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      fastAppRestart();
+      fastColdRestartApp();
       threadAndTaskWait();
 
       // Tags did not get synced so SyncService should be scheduled
@@ -2279,7 +2279,7 @@ public class MainOneSignalClassRunner {
       // Also ensure only 1 network call is made to just send the new tags only.
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
-      fastAppRestart();
+      fastColdRestartApp();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -2523,7 +2523,7 @@ public class MainOneSignalClassRunner {
 
       assertTrue(OneSignal.userProvidedPrivacyConsent());
 
-      fastAppRestart();
+      fastColdRestartApp();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -2778,7 +2778,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      fastAppRestart();
+      fastColdRestartApp();
       AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
       shadowOf(alarmManager).getScheduledAlarms().clear();
       ShadowOneSignalRestClient.lastPost = null;
@@ -3599,12 +3599,5 @@ public class MainOneSignalClassRunner {
       resolveInfo.activityInfo.name = "MainActivity";
 
       shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(launchIntent, resolveInfo);
-   }
-
-   private static int sessionCountOffset = 1;
-   private static void restartAppAndElapseTimeToNextSession() {
-      flushBufferedSharedPrefs();
-      StaticResetHelper.restSetStaticFields();
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1_000 * 31 * sessionCountOffset++);
    }
 }
