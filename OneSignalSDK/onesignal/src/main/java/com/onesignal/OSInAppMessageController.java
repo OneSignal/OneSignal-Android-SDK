@@ -26,6 +26,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         add("all");
     }};
 
+    public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
+
     private static OSInAppMessageController sharedInstance;
 
     OSTriggerController triggerController;
@@ -56,9 +58,31 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         systemConditionController = new OSSystemConditionController(this);
     }
 
+    // Only used if the app was cold started and we won't be making a on_session call to download
+    //   the latest IAMs
+    void initWithCachedInAppMessages() {
+        String cachedIamsStr = OneSignalPrefs.getString(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_CACHED_IAMS,
+           null
+        );
+        if (cachedIamsStr == null)
+            return;
+
+        try {
+            receivedInAppMessageJson(new JSONArray(cachedIamsStr));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
     // Called after the device is registered from UserStateSynchronizer
     //    which is the REST call to create the player record on_session
     void receivedInAppMessageJson(JSONArray json) throws JSONException {
+        // Cache copy for quick cold starts
+        OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_CACHED_IAMS, json.toString());
+
         ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
 
         for (int i = 0; i < json.length(); i++) {

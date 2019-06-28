@@ -179,10 +179,17 @@ public class TestHelpers {
       ranBeforeTestSuite = true;
    }
 
-   static void fastAppRestart() {
+   static void fastColdRestartApp() {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
+   }
+   private static int sessionCountOffset = 1;
+   static void restartAppAndElapseTimeToNextSession() {
+      stopAllOSThreads();
+      flushBufferedSharedPrefs();
+      StaticResetHelper.restSetStaticFields();
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1_000 * 31 * sessionCountOffset++);
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords() {

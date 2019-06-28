@@ -208,17 +208,17 @@ public class ShadowOneSignalRestClient {
       if (doFail(responseHandler, failPosts)) return;
 
       String retJson;
-      if (url.contains("on_session"))
+
+      if (nextSuccessfulRegistrationResponse != null) {
+         retJson = nextSuccessfulRegistrationResponse;
+         nextSuccessfulRegistrationResponse = null;
+      }
+      else if (url.contains("on_session"))
          retJson = "{}";
       else {
          int device_type = jsonBody.optInt("device_type", 0);
-         if (nextSuccessfulRegistrationResponse != null) {
-            retJson = nextSuccessfulRegistrationResponse;
-            nextSuccessfulRegistrationResponse = null;
-         } else {
-            String id = device_type == 11 ? emailUserId : pushUserId;
-            retJson = "{\"id\": \"" + id + "\"}";
-         }
+         String id = device_type == 11 ? emailUserId : pushUserId;
+         retJson = "{\"id\": \"" + id + "\"}";
       }
 
       if (nextSuccessResponse != null) {

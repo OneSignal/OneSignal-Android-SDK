@@ -41,6 +41,7 @@ public class StaticResetHelper {
       classes.add(new StaticResetHelper().new ClassState(OneSignalChromeTabAndroidFrame.class, null));
       classes.add(new StaticResetHelper().new ClassState(OneSignalDbHelper.class, null));
       classes.add(new StaticResetHelper().new ClassState(LocationGMS.class, null));
+      classes.add(new StaticResetHelper().new ClassState(OSInAppMessageController.class, null));
    }
 
    private interface OtherFieldHandler {
