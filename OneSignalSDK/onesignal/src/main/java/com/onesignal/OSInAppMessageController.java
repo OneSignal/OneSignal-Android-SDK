@@ -70,7 +70,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             return;
 
         try {
-            receivedInAppMessageJson(new JSONArray(cachedIamsStr));
+            processInAppMessageJson(new JSONArray(cachedIamsStr));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -78,19 +78,20 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     // Called after the device is registered from UserStateSynchronizer
     //    which is the REST call to create the player record on_session
-    void receivedInAppMessageJson(JSONArray json) throws JSONException {
+    void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException {
         // Cache copy for quick cold starts
         OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
            OneSignalPrefs.PREFS_OS_CACHED_IAMS, json.toString());
+        processInAppMessageJson(json);
+    }
 
+    private void processInAppMessageJson(@NonNull JSONArray json) throws JSONException {
         ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
-
         for (int i = 0; i < json.length(); i++) {
             JSONObject messageJson = json.getJSONObject(i);
             OSInAppMessage message = new OSInAppMessage(messageJson);
             newMessages.add(message);
         }
-
         messages = newMessages;
 
         evaluateInAppMessages();
