@@ -63,6 +63,7 @@ class InAppMessageView {
         }
     }
 
+    private Activity currentActivity;
     private final Handler handler = new Handler();
     private int pageWidth;
     private int pageHeight;
@@ -71,7 +72,7 @@ class InAppMessageView {
     private boolean shouldDismissWhenActive = false;
     private WebViewManager.Position displayLocation;
     private WebView webView;
-    private LinearLayout parentLinearLayout;
+    private RelativeLayout parentRelativeLayout;
     private DraggableRelativeLayout draggableRelativeLayout;
     private InAppMessageController messageController;
     private Runnable dismissSchedule;
@@ -80,7 +81,7 @@ class InAppMessageView {
         this(webView, displayLocation, pageHeight, ConstraintLayout.LayoutParams.MATCH_PARENT, dismissDuration);
     }
 
-    private InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, int pageWidth, double dismissDuration) {
+    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, int pageWidth, double dismissDuration) {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
@@ -100,15 +101,12 @@ class InAppMessageView {
     void destroyView(WeakReference<Activity> weakReference) {
         // WeakReference is the Activity when onStop is called
         if (weakReference.get() != null) {
-            if (webView != null) {
-                webView.removeAllViews();
-            }
             if (draggableRelativeLayout != null) {
                 draggableRelativeLayout.removeAllViews();
             }
-            if (parentLinearLayout != null) {
+            if (parentRelativeLayout != null) {
                 removeParentLinearLayout(weakReference.get());
-                parentLinearLayout.removeAllViews();
+                parentRelativeLayout.removeAllViews();
             }
         }
         markAsDismissed();
@@ -145,7 +143,11 @@ class InAppMessageView {
         });
     }
 
-    void showInAppMessageView() {
+    void showInAppMessageView(Activity currentActivity) {
+        /* IMPORTANT
+         * The only place where currentActivity should be assigned to InAppMessageView */
+        this.currentActivity = currentActivity;
+
         DraggableRelativeLayout.LayoutParams webViewLayoutParams = new DraggableRelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 pageHeight
@@ -164,7 +166,6 @@ class InAppMessageView {
     }
 
     private int getDisplayYSize() {
-        Activity currentActivity = ActivityLifecycleHandler.curActivity;
         return OSViewUtils.getUsableWindowRect(currentActivity).height();
     }
 
@@ -224,10 +225,9 @@ class InAppMessageView {
                 // Don't let it grab the input focus
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
-        Activity currentActivity = ActivityLifecycleHandler.curActivity;
-        if (currentActivity != null) {
-            layoutParams.token = currentActivity.getWindow().getDecorView().getApplicationWindowToken();
-        }
+
+        layoutParams.token = currentActivity.getWindow().getDecorView().getApplicationWindowToken();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             layoutParams.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_CROSSFADE;
         }
@@ -252,8 +252,7 @@ class InAppMessageView {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
-                Activity currentActivity = ActivityLifecycleHandler.curActivity;
-                if (currentActivity != null && webView != null) {
+                if (webView != null) {
                     webView.setLayoutParams(relativeLayoutParams);
 
                     Context context = currentActivity.getApplicationContext();
@@ -261,14 +260,12 @@ class InAppMessageView {
                     setUpParentLinearLayout(context);
 
                     WindowManager windowManager = currentActivity.getWindowManager();
-                    if (windowManager != null && parentLinearLayout != null && parentLinearLayout.getWindowToken() == null) {
-                        windowManager.addView(parentLinearLayout, parentLinearLayoutParams);
-
-                        if (messageController != null) {
-                            animateInAppMessage(displayLocation, draggableRelativeLayout, parentLinearLayout);
-                            messageController.onMessageWasShown();
-                        }
-
+                    if (windowManager != null && parentRelativeLayout != null) {
+                        windowManager.addView(parentRelativeLayout, parentLinearLayoutParams);
+                    }
+                    if (messageController != null) {
+                        animateInAppMessage(displayLocation, draggableRelativeLayout, parentRelativeLayout);
+                        messageController.onMessageWasShown();
                     }
 
                     initDismissIfNeeded();
@@ -278,11 +275,11 @@ class InAppMessageView {
     }
 
     private void setUpParentLinearLayout(Context context) {
-        parentLinearLayout = new LinearLayout(context);
-        parentLinearLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR_EMPTY);
-        parentLinearLayout.setClipChildren(false);
-        parentLinearLayout.setClipToPadding(false);
-        parentLinearLayout.addView(draggableRelativeLayout);
+        parentRelativeLayout = new RelativeLayout(context);
+        parentRelativeLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR_EMPTY);
+        parentRelativeLayout.setClipChildren(false);
+        parentRelativeLayout.setClipToPadding(false);
+        parentRelativeLayout.addView(draggableRelativeLayout);
     }
 
     private void setUpDraggableLayout(Context context,
@@ -346,7 +343,6 @@ class InAppMessageView {
         if (dismissDuration > 0 && dismissSchedule == null) {
             dismissSchedule = new Runnable() {
                 public void run() {
-                    Activity currentActivity = ActivityLifecycleHandler.curActivity;
                     if (currentActivity != null) {
                         dismiss();
                         dismissSchedule = null;
@@ -364,15 +360,13 @@ class InAppMessageView {
     /**
      * Do not add view until activity is ready
      * To check if activity is ready, token must not be null
-     *
-     * @param currentActivity the activity where to show the view
      */
     private void delayShowUntilAvailable(final Activity currentActivity) {
-        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null && parentLinearLayout == null) {
-            showInAppMessageView();
+        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null && parentRelativeLayout == null) {
+            showInAppMessageView(currentActivity);
+            return;
         }
-        final Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
+        new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 delayShowUntilAvailable(currentActivity);
@@ -414,8 +408,8 @@ class InAppMessageView {
         OSUtils.runOnMainThreadDelayed(new Runnable() {
             @Override
             public void run() {
-                if (hasBackground && parentLinearLayout != null) {
-                    animateAndDismissLayout(parentLinearLayout, callback);
+                if (hasBackground && parentRelativeLayout != null) {
+                    animateAndDismissLayout(parentRelativeLayout, callback);
                 } else {
                     removeViews(callback);
                 }
@@ -434,7 +428,6 @@ class InAppMessageView {
 
     /**
      * Remove references from the views
-     * @param callback
      */
     private void removeViews(WebViewManager.OneSignalGenericCallback callback) {
         if (dismissSchedule != null) {
@@ -446,7 +439,6 @@ class InAppMessageView {
             draggableRelativeLayout.removeAllViews();
         }
 
-        Activity currentActivity = ActivityLifecycleHandler.curActivity;
         removeParentLinearLayout(currentActivity);
 
         if (messageController != null) {
@@ -459,12 +451,10 @@ class InAppMessageView {
     }
 
     private void removeParentLinearLayout(Activity currentActivity) {
-        if (currentActivity != null) {
-            WindowManager windowManager = currentActivity.getWindowManager();
-            if (parentLinearLayout != null && windowManager != null) {
-                parentLinearLayout.setVisibility(View.INVISIBLE);
-                windowManager.removeView(parentLinearLayout);
-            }
+        WindowManager windowManager = currentActivity.getWindowManager();
+        if (parentRelativeLayout != null && windowManager != null) {
+            parentRelativeLayout.setVisibility(View.INVISIBLE);
+            windowManager.removeViewImmediate(parentRelativeLayout);
         }
     }
 
@@ -473,7 +463,7 @@ class InAppMessageView {
      */
     private void markAsDismissed() {
         // Dereference so this can be cleaned up in the next GC
-        parentLinearLayout = null;
+        parentRelativeLayout = null;
         draggableRelativeLayout = null;
         webView = null;
     }
