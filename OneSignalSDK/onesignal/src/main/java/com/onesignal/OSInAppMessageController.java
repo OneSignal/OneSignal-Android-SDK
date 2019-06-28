@@ -12,12 +12,11 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
@@ -28,22 +27,23 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
 
-    private static OSInAppMessageController sharedInstance;
-
     OSTriggerController triggerController;
     private OSSystemConditionController systemConditionController;
 
-    private ArrayList<OSInAppMessage> messages;
-    // Messages that have had their triggered evaluated to true already;
-    //   This mean they hav been added to the queue to display, or have already displayed
-    private Set<String> triggeredMessages = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-    // Messages queued to display, includes the message currently displaying, if any.
-    final ArrayList<OSInAppMessage> messageDisplayQueue;
+    // IAMs loaded remotely from on_session
+    //   If on_session won't be called this will be loaded from cache
+    @NonNull private ArrayList<OSInAppMessage> messages;
+    // IAMs that have had their trigger(s) evaluated to true;
+    //   This mean they have been added to the queue to display, or have already displayed
+    @NonNull final private Set<String> triggeredMessages;
+    // Ordered IAMs queued to display, includes the message currently displaying, if any.
+    @NonNull final ArrayList<OSInAppMessage> messageDisplayQueue;
 
     private boolean inAppMessagingEnabled = true;
 
     @Nullable Date lastTimeInAppDismissed;
 
+    @Nullable private static OSInAppMessageController sharedInstance;
     public static OSInAppMessageController getController() {
         if (sharedInstance == null)
             sharedInstance = new OSInAppMessageController();
@@ -53,13 +53,22 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     protected OSInAppMessageController() {
         messages = new ArrayList<>();
+        triggeredMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
+
+        Set<String> tempTriggeredSet = OneSignalPrefs.getStringSet(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_DISPLAYED_IAMS,
+           null
+        );
+        if (tempTriggeredSet != null)
+            triggeredMessages.addAll(tempTriggeredSet);
     }
 
-    // Only used if the app was cold started and we won't be making a on_session call to download
-    //   the latest IAMs
+    // Normally we wait until on_session call to download the latest IAMs
+    //    however an on session won't happen
     void initWithCachedInAppMessages() {
         String cachedIamsStr = OneSignalPrefs.getString(
            OneSignalPrefs.PREFS_ONESIGNAL,
@@ -275,6 +284,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 return;
             }
 
+            if (!message.isPreview)
+                persistDisplayedIams();
+
             // Display the next message in the queue, if any
             if (messageDisplayQueue.size() > 0)
                 displayMessage(messageDisplayQueue.get(0));
@@ -283,6 +295,26 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 evaluateInAppMessages();
             }
         }
+    }
+
+    private void persistDisplayedIams() {
+        OneSignalPrefs.saveStringSet(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_DISPLAYED_IAMS,
+           // Persisting only ones dismissed / opened in case the user didn't have a chance
+           //  to interact with the message.
+           getAllDismissedIams()
+        );
+    }
+
+    // Calculate all dismissed as triggeredMessages minus any in the display queue
+    private @NonNull Set<String> getAllDismissedIams() {
+        Set<String> dismissedIams = new HashSet<>(triggeredMessages);
+        synchronized (messageDisplayQueue) {
+            for(OSInAppMessage message : messageDisplayQueue)
+                dismissedIams.remove(message.messageId);
+        }
+        return dismissedIams;
     }
 
     private static @Nullable

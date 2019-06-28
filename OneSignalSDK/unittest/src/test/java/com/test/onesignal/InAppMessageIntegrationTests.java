@@ -317,6 +317,40 @@ public class InAppMessageIntegrationTests {
         assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
     }
 
+    @Test
+    public void doNotReshowInAppIfDismissed_evenAfterColdRestart() throws Exception {
+        // 1. Start app
+        initializeSdkWithMultiplePendingMessages();
+        // 2. Trigger showing In App and dismiss it
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        // 3. Swipe away app
+        fastColdRestartApp();
+        // 4. Cold Start app
+        initializeSdkWithMultiplePendingMessages();
+        // 5. Set same trigger, should not display again
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
+    @Test
+    public void reshowInAppIfDisplayedButNeverDismissedAfterColdRestart() throws Exception {
+        // 1. Start app
+        initializeSdkWithMultiplePendingMessages();
+        // 2. Trigger showing In App
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        // 3. Swipe away app
+        fastColdRestartApp();
+        // 4. Cold Start app
+        initializeSdkWithMultiplePendingMessages();
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        // 5. Set same trigger, should now display again, since it was never dismissed
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
         final JSONArray jsonMessages = new JSONArray();
 
