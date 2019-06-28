@@ -49,8 +49,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.security.MessageDigest;
+import java.util.Collections;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 class OSUtils {
@@ -416,5 +419,10 @@ class OSUtils {
                       Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
                       Intent.FLAG_ACTIVITY_NEW_TASK);
       OneSignal.appContext.startActivity(intent);
+   }
+
+   // Creates a new Set<T> that supports reads and writes from more than one thread at a time
+   static <T> Set<T> newConcurrentSet() {
+      return Collections.newSetFromMap(new ConcurrentHashMap<T, Boolean>());
    }
 }
