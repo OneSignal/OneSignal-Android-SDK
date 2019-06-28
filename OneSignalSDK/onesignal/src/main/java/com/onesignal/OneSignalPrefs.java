@@ -32,8 +32,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Set;
 
 class OneSignalPrefs {
 
@@ -137,6 +141,8 @@ class OneSignalPrefs {
                             editor.putInt(key, (Integer)value);
                         else if (value instanceof Long)
                             editor.putLong(key, (Long)value);
+                        else if (value instanceof Set)
+                            editor.putStringSet(key, (Set<String>)value);
                     }
                     prefHash.clear();
                 }
@@ -161,6 +167,10 @@ class OneSignalPrefs {
     }
 
     public static void saveString(final String prefsName, final String key, final String value) {
+        save(prefsName, key, value);
+    }
+
+    public static void saveStringSet(@NonNull final String prefsName, @NonNull final String key, @NonNull final Set<String> value) {
         save(prefsName, key, value);
     }
 
@@ -204,12 +214,16 @@ class OneSignalPrefs {
         return (Long)get(prefsName, key, Long.class, defValue);
     }
 
+    static @Nullable Set<String> getStringSet(@NonNull String prefsName, @NonNull String key, @Nullable Set<String> defValue) {
+        return (Set<String>)get(prefsName, key, Set.class, defValue);
+    }
+
     static Object getObject(String prefsName, String key, Object defValue) {
         return get(prefsName, key, Object.class, defValue);
     }
 
     // If type == Object then this is a contains check
-    private static Object get(String prefsName, String key, Class type, Object defValue) {
+    private static @Nullable Object get(String prefsName, String key, Class type, Object defValue) {
         HashMap<String, Object> pref = prefsToApply.get(prefsName);
 
         synchronized (pref) {
@@ -231,6 +245,8 @@ class OneSignalPrefs {
                 return prefs.getInt(key, (Integer)defValue);
             else if (type.equals(Long.class))
                 return prefs.getLong(key, (Long)defValue);
+            else if (type.equals(Set.class))
+                return prefs.getStringSet(key, (Set<String>)defValue);
             else if (type.equals(Object.class))
                 return prefs.contains(key);
 
