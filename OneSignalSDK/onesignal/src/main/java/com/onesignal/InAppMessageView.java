@@ -10,6 +10,7 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.widget.CardView;
 import android.view.Gravity;
@@ -55,12 +56,9 @@ class InAppMessageView {
     private static final int ACTIVITY_INIT_DELAY = 200;
     private static final int MARGIN_PX_SIZE = dpToPx(24);
 
-    static abstract class InAppMessageController {
-        void onMessageWasShown() {
-        }
-
-        void onMessageWasDismissed() {
-        }
+    interface InAppMessageViewListener {
+        void onMessageWasShown();
+        void onMessageWasDismissed();
     }
 
     private Activity currentActivity;
@@ -74,27 +72,23 @@ class InAppMessageView {
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
     private DraggableRelativeLayout draggableRelativeLayout;
-    private InAppMessageController messageController;
+    private InAppMessageViewListener messageController;
     private Runnable dismissSchedule;
 
     InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, double dismissDuration) {
-        this(webView, displayLocation, pageHeight, ConstraintLayout.LayoutParams.MATCH_PARENT, dismissDuration);
-    }
-
-    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, int pageWidth, double dismissDuration) {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
-        this.pageWidth = pageWidth;
+        this.pageWidth = ConstraintLayout.LayoutParams.MATCH_PARENT;
         this.dismissDuration = dismissDuration;
-        this.hasBackground = isBanner();
+        this.hasBackground = !displayLocation.isBanner();
     }
 
     void setWebView(WebView webView) {
         this.webView = webView;
     }
 
-    void setMessageController(InAppMessageController messageController) {
+    void setMessageController(InAppMessageViewListener messageController) {
         this.messageController = messageController;
     }
 
@@ -218,13 +212,14 @@ class InAppMessageView {
 
     private WindowManager.LayoutParams createWindowLayout(int pageWidth) {
         WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
-                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
-                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
-                // Display it on top of other application windows
-                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
-                // Don't let it grab the input focus
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT);
+            hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
+            hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
+            // Display it on top of other application windows
+            WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
+            // Don't let it grab the input focus
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        );
 
         layoutParams.token = currentActivity.getWindow().getDecorView().getApplicationWindowToken();
 
@@ -344,7 +339,7 @@ class InAppMessageView {
             dismissSchedule = new Runnable() {
                 public void run() {
                     if (currentActivity != null) {
-                        dismiss();
+                        dismissAndAwaitNextMessage(null);
                         dismissSchedule = null;
                     } else {
                         //for cases when the app is on background and the dismiss is triggered
@@ -374,30 +369,20 @@ class InAppMessageView {
         }, ACTIVITY_INIT_DELAY);
     }
 
-    void dismissAndAwaitNextMessage(WebViewManager.OneSignalGenericCallback callback) {
+    /**
+     * Trigger the {@link #draggableRelativeLayout} dismiss animation
+     */
+    void dismissAndAwaitNextMessage(@Nullable WebViewManager.OneSignalGenericCallback callback) {
         if (draggableRelativeLayout == null) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
             markAsDismissed();
-            callback.onComplete();
+            if (callback != null)
+                callback.onComplete();
             return;
         }
 
         draggableRelativeLayout.dismiss();
         finishAfterDelay(callback);
-    }
-
-    /**
-     * Trigger the {@link #draggableRelativeLayout} dismiss animation
-     */
-    void dismiss() {
-        if (draggableRelativeLayout == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
-            markAsDismissed();
-            return;
-        }
-
-        draggableRelativeLayout.dismiss();
-        finishAfterDelay(null);
     }
 
     /**
@@ -415,15 +400,6 @@ class InAppMessageView {
                 }
             }
         }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
-    }
-
-    private void finish() {
-        OSUtils.runOnMainUIThread(new Runnable() {
-            @Override
-            public void run() {
-                removeViews(null);
-            }
-        });
     }
 
     /**
@@ -466,18 +442,6 @@ class InAppMessageView {
         parentRelativeLayout = null;
         draggableRelativeLayout = null;
         webView = null;
-    }
-
-    /**
-     * TOP and BOTTOM display location are for banner cases
-     */
-    private boolean isBanner() {
-        switch (displayLocation) {
-            case TOP_BANNER:
-            case BOTTOM_BANNER:
-                return false;
-        }
-        return true;
     }
 
     private void animateInAppMessage(WebViewManager.Position displayLocation, View messageView, View backgroundView) {

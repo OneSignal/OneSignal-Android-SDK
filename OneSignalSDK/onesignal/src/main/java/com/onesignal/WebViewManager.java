@@ -2,10 +2,12 @@ package com.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
@@ -16,9 +18,6 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.onesignal.OSViewUtils.dpToPx;
 
@@ -38,34 +37,41 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static final int MARGIN_PX_SIZE = dpToPx(24);
     private static final int IN_APP_MESSAGE_INIT_DELAY = 200;
 
-    private static Set<String> messages = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
-
-    @SuppressLint("StaticFieldLeak")
-    private static WebViewManager lastInstance = null;
-
-    interface OneSignalGenericCallback {
-        void onComplete();
-    }
-
-    private WebViewManager(@NonNull OSInAppMessage message, String base64Message) {
-        this.message = message;
-        this.base64Message = base64Message;
-    }
-
     enum Position {
         TOP_BANNER,
         BOTTOM_BANNER,
         CENTER_MODAL,
         FULL_SCREEN,
         ;
+
+        boolean isBanner() {
+            switch (this) {
+                case TOP_BANNER:
+                case BOTTOM_BANNER:
+                    return true;
+            }
+            return false;
+        }
     }
 
-    private WebView webView;
-    private OSInAppMessage message;
-    private String base64Message;
-    private InAppMessageView messageView;
-    private int screenOrientation = -1;
-    private boolean firstInit = true;
+    @Nullable private WebView webView;
+    @Nullable private InAppMessageView messageView;
+    private int screenOrientation = Configuration.ORIENTATION_UNDEFINED;
+
+    @SuppressLint("StaticFieldLeak")
+    private static WebViewManager lastInstance = null;
+
+    @NonNull private Activity activity;
+    @NonNull private OSInAppMessage message;
+
+    interface OneSignalGenericCallback {
+        void onComplete();
+    }
+
+    private WebViewManager(@NonNull OSInAppMessage message, @NonNull Activity activity) {
+        this.message = message;
+        this.activity = activity;
+    }
 
     /**
      * Creates a new WebView
@@ -74,7 +80,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param message the message to show
      * @param htmlStr the html to display on the WebView
      */
-    static void showHTMLString(final OSInAppMessage message, final String htmlStr) {
+    static void showHTMLString(@NonNull final OSInAppMessage message, @NonNull final String htmlStr) {
         final Activity currentActivity = ActivityLifecycleHandler.curActivity;
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
@@ -108,25 +114,25 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }, IN_APP_MESSAGE_INIT_DELAY);
     }
 
-    private static void initInAppMessage(final Activity currentActivity, OSInAppMessage message, String htmlStr) {
+    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessage message, @NonNull String htmlStr) {
         try {
             final String base64Str = Base64.encodeToString(
                     htmlStr.getBytes("UTF-8"),
                     Base64.NO_WRAP
             );
 
-            final WebViewManager webViewManager = new WebViewManager(message, base64Str);
+            final WebViewManager webViewManager = new WebViewManager(message, currentActivity);
             lastInstance = webViewManager;
 
             // Web view must be created on the main thread.
             OSUtils.runOnMainUIThread(new Runnable() {
                 @Override
                 public void run() {
-                    webViewManager.setupWebView(currentActivity);
+                    webViewManager.setupWebView(currentActivity, base64Str);
                 }
             });
         } catch (UnsupportedEncodingException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on  showHTMLString'" + e.getMessage());
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on initInAppMessage: ", e);
             e.printStackTrace();
         }
     }
@@ -135,12 +141,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private class OSJavaScriptInterface {
 
         private static final String JS_OBJ_NAME = "OSAndroid";
-
-        private Activity currentActivity;
-
-        OSJavaScriptInterface(Activity currentActivity) {
-            this.currentActivity = currentActivity;
-        }
 
         @JavascriptInterface
         public void postMessage(String message) {
@@ -174,7 +174,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handleRenderComplete(JSONObject jsonObject) {
-            showMessageView(currentActivity,
+            showMessageView(activity,
                     getPageHeightData(jsonObject),
                     getDisplayLocation(jsonObject)
             );
@@ -186,9 +186,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 int pxHeight = OSViewUtils.dpToPx(height);
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight: " + pxHeight);
 
-                if (pxHeight > getWebViewYSize(currentActivity)) {
-                    pxHeight = getWebViewYSize(currentActivity);
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + getWebViewYSize(currentActivity));
+                if (pxHeight > getWebViewYSize(activity)) {
+                    pxHeight = getWebViewYSize(activity);
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + getWebViewYSize(activity));
                 }
 
                 return pxHeight;
@@ -218,15 +218,15 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             }
 
             boolean close = body.getBoolean("close");
-            if (close) {
-                dismiss();
-            }
+            if (close)
+                dismissAndAwaitNextMessage(null);
         }
     }
 
     @Override
     void available(@NonNull Activity activity) {
-        if ((OSViewUtils.isScreenRotated(activity, screenOrientation) || !firstInit) && messageView != null) {
+        this.activity = activity;
+        if (OSViewUtils.isScreenRotated(activity, screenOrientation) && messageView != null) {
             OneSignal.onesignalLog(
                OneSignal.LOG_LEVEL.DEBUG,
                "WebViewManager:isScreenRotated " + getWebViewXSize(activity) + ", " + getWebViewYSize(activity)
@@ -252,7 +252,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     // TODO: Test with chrome://crash
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    private void setupWebView(final Activity currentActivity) {
+    private void setupWebView(@NonNull final Activity currentActivity, @NonNull String base64Message) {
         enableWebViewRemoteDebugging();
 
         webView = new OSWebView(currentActivity);
@@ -263,7 +263,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         webView.getSettings().setJavaScriptEnabled(true);
 
         // Setup receiver for page events / data from JS
-        webView.addJavascriptInterface(new OSJavaScriptInterface(currentActivity), OSJavaScriptInterface.JS_OBJ_NAME);
+        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
 
         setWebViewToMaxSize(currentActivity);
 
@@ -286,15 +286,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     private void showMessageView(Activity currentActivity, int pageHeight, Position displayLocation) {
         messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
-        messageView.setMessageController(new InAppMessageView.InAppMessageController() {
+        messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
-            void onMessageWasShown() {
-                firstInit = false;
+            public void onMessageWasShown() {
                 OSInAppMessageController.onMessageWasShown(message);
             }
 
             @Override
-            void onMessageWasDismissed() {
+            public void onMessageWasDismissed() {
                 OSInAppMessageController.getController().messageWasDismissed(message);
                 ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
                 lastInstance = null;
@@ -323,25 +322,17 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     /**
      * Trigger the {@link #messageView} dismiss animation flow
      */
-    private void dismissAndAwaitNextMessage(final OneSignalGenericCallback callback) {
-        if (messageView != null) {
-            messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
-                @Override
-                public void onComplete() {
-                    messageView = null;
-                    callback.onComplete();
-                }
-            });
-        }
-    }
+    private void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
+        if (messageView == null)
+            return;
 
-    /**
-     * Trigger the {@link #messageView} dismiss animation flow
-     */
-    private void dismiss() {
-        if (messageView != null) {
-            messageView.dismiss();
-            messageView = null;
-        }
+        messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
+            @Override
+            public void onComplete() {
+                messageView = null;
+                if (callback != null)
+                    callback.onComplete();
+            }
+        });
     }
 }

@@ -256,6 +256,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             if (!message.isPreview)
                 triggeredMessages.add(message.messageId);
 
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "queueMessageForDisplay: " + messageDisplayQueue);
+
             if (messageDisplayQueue.size() > 1) {
                 // means we are already displaying a message
                 // this message will be displayed afterwards

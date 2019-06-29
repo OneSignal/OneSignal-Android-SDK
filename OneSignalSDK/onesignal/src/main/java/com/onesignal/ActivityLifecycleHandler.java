@@ -121,7 +121,7 @@ class ActivityLifecycleHandler {
     }
 
     static void onActivityStopped(Activity activity) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity.getClass().getName());
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity);
 
         if (activity == curActivity) {
             curActivity = null;
@@ -136,7 +136,7 @@ class ActivityLifecycleHandler {
     }
 
     static void onActivityDestroyed(Activity activity) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityDestroyed: " + activity.getClass().getName());
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityDestroyed: " + activity);
         sKeyboardListeners.clear();
 
         if (activity == curActivity) {

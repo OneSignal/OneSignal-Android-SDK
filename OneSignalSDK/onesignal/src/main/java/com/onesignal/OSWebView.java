@@ -1,9 +1,6 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Path;
-import android.graphics.RectF;
 import android.webkit.WebView;
 
 // Custom WebView to lock scrolling
