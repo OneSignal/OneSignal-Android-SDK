@@ -565,9 +565,6 @@ public class OneSignal {
          if (sender_id != null && sender_id.length() > 4)
             sender_id = sender_id.substring(4);
 
-         // Read the current privacy consent setting from AndroidManifest.xml
-         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
-         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
          OneSignal.init(context, sender_id, bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
          t.printStackTrace();
@@ -584,6 +581,7 @@ public class OneSignal {
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
       OneSignal.setAppContext(context);
+      setupPrivacyConsent(context);
 
       if (requiresUserPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
@@ -648,6 +646,19 @@ public class OneSignal {
 
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
+   }
+
+   private static void setupPrivacyConsent(Context context) {
+      try {
+         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+         Bundle bundle = ai.metaData;
+
+         // Read the current privacy consent setting from AndroidManifest.xml
+         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
+         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
    }
 
    private static Builder createInitBuilder(NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
