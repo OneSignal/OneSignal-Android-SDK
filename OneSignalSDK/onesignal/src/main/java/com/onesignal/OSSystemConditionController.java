@@ -1,7 +1,6 @@
 package com.onesignal;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 
 class OSSystemConditionController {
 
@@ -13,10 +12,7 @@ class OSSystemConditionController {
     private static final String TAG = OSSystemConditionController.class.getCanonicalName();
     private final OSSystemConditionObserver systemConditionObserver;
 
-    private final ArrayList<String> scheduledMessages;
-
     OSSystemConditionController(OSSystemConditionObserver systemConditionObserver) {
-        scheduledMessages = new ArrayList<>();
         this.systemConditionObserver = systemConditionObserver;
     }
 
