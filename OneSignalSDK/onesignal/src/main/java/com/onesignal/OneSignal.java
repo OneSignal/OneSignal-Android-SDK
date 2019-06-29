@@ -547,7 +547,7 @@ public class OneSignal {
       appContext = context.getApplicationContext();
 
       // Register the lifecycle listener of the app for state changes in activities with proper context
-      ((Application)appContext).registerActivityLifecycleCallbacks(new ActivityLifecycleListener());
+      ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application)appContext);
 
       // Prefs require a context to save
       // If the previous state of appContext was null, kick off write in-case it was waiting

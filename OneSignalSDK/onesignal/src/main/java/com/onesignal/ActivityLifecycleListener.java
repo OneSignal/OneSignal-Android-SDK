@@ -30,8 +30,18 @@ package com.onesignal;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 class ActivityLifecycleListener implements Application.ActivityLifecycleCallbacks {
+
+   @Nullable private static ActivityLifecycleListener instance;
+   static void registerActivityLifecycleCallbacks(@NonNull Application application) {
+      if (instance != null)
+         return;
+      instance = new ActivityLifecycleListener();
+      application.registerActivityLifecycleCallbacks(instance);
+   }
 
    @Override
    public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
