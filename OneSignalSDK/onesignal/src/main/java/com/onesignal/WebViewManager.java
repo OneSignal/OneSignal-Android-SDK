@@ -186,9 +186,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 int pxHeight = OSViewUtils.dpToPx(height);
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight: " + pxHeight);
 
-                if (pxHeight > getWebViewYSize(activity)) {
-                    pxHeight = getWebViewYSize(activity);
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + getWebViewYSize(activity));
+                int maxPxHeight = getWebViewYSize(activity);
+                if (pxHeight > maxPxHeight) {
+                    pxHeight = maxPxHeight;
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + maxPxHeight);
                 }
 
                 return pxHeight;
