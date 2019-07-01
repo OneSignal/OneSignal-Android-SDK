@@ -268,7 +268,17 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getWebViewSize: " + getWebViewXSize(currentActivity) + ", " + getWebViewYSize(currentActivity));
 
+        blurryRenderingWebViewForKitKatWorkAround(webView);
         webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
+    }
+
+    private void blurryRenderingWebViewForKitKatWorkAround(@NonNull WebView webView) {
+        // Android 4.4 has a rendering bug that cause the whole WebView to by extremely blurry
+        // This is due to a bug with hardware rending so ensure it is disabled.
+        // Tested on other version of Android and it is specific to only Android 4.4
+        //    On both the emulator and real devices.
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT)
+            webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     }
 
     // This sets the WebView view port sizes to the max screen sizes so the initialize
