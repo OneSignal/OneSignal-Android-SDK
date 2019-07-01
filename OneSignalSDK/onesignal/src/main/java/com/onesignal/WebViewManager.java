@@ -227,19 +227,17 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Override
     void available(@NonNull Activity activity) {
         this.activity = activity;
-        if (OSViewUtils.isScreenRotated(activity, screenOrientation) && messageView != null) {
-            OneSignal.onesignalLog(
-               OneSignal.LOG_LEVEL.DEBUG,
-               "WebViewManager:isScreenRotated " + getWebViewXSize(activity) + ", " + getWebViewYSize(activity)
-            );
+        OneSignal.onesignalLog(
+           OneSignal.LOG_LEVEL.DEBUG,
+           "ActivityAvailableListener:available: " + activity
+        );
 
-            // Important to grow the WebView to the max size so the image does not stay small
-            //   when rotating from landscape to portrait. Or vice versa
-            setWebViewToMaxSize(activity);
-            messageView.setWebView(webView);
-            messageView.showView(activity);
-            messageView.checkIfShouldDismiss();
-        }
+        // Important to grow the WebView to the max size so the image does not stay small
+        //   when rotating from landscape to portrait. Or vice versa
+        setWebViewToMaxSize(activity);
+        messageView.setWebView(webView);
+        messageView.showView(activity);
+        messageView.checkIfShouldDismiss();
 
         screenOrientation = activity.getResources().getConfiguration().orientation;
     }
@@ -300,8 +298,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 lastInstance = null;
             }
         });
+
+        // Fires event if available, which will call messageView.showInAppMessageView() for us.
         ActivityLifecycleHandler.setActivityAvailableListener(TAG + message.messageId, this);
-        messageView.showInAppMessageView(currentActivity);
     }
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
