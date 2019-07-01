@@ -132,7 +132,13 @@ class InAppMessageView {
                 // We only need to update the WebView size since it's parent layouts are set to
                 //   WRAP_CONTENT to always match the height of the WebView. (Expect for fullscreen)
                 webView.setLayoutParams(layoutParams);
-                draggableRelativeLayout.setParams(createDraggableLayoutParams(pageHeight, displayLocation));
+
+                // draggableRelativeLayout comes in null here sometimes, this is due to the IAM
+                //  not being ready to be shown yet
+                // When preparing the IAM, the correct height will be set and handle this job, so
+                //  all bases are covered and the draggableRelativeLayout will never have the wrong height
+                if (draggableRelativeLayout != null)
+                    draggableRelativeLayout.setParams(createDraggableLayoutParams(pageHeight, displayLocation));
             }
         });
     }
