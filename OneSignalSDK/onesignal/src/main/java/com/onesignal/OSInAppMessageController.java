@@ -192,7 +192,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void fireClickAction(@NonNull final OSInAppMessageAction action) {
-        if (action.clickUrl != null) {
+        if (action.clickUrl != null && !action.clickUrl.isEmpty()) {
             if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
                 OSUtils.openURLInBrowser(action.clickUrl);
             else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
