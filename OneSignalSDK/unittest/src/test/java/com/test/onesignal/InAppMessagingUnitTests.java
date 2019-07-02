@@ -165,7 +165,6 @@ public class InAppMessagingUnitTests {
     public void testParsesMessageActions() throws JSONException {
         OSTestInAppMessageAction action = new OSTestInAppMessageAction(InAppMessagingHelpers.buildTestActionJson());
 
-        assertEquals(action.clickType, OSInAppMessageAction.ClickType.BUTTON);
         assertEquals(action.getClickId(), InAppMessagingHelpers.IAM_CLICK_ID);
         assertEquals(action.clickName, "click_name");
         assertEquals(action.clickUrl, "https://www.onesignal.com");

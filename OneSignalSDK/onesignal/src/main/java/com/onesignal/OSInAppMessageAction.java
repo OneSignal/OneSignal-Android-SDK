@@ -6,34 +6,6 @@ import android.support.annotation.Nullable;
 import org.json.JSONObject;
 
 public class OSInAppMessageAction {
-
-    public enum ClickType {
-        BUTTON("button"), IMAGE("image");
-
-        private String text;
-
-        ClickType(String text) {
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return this.text;
-        }
-
-        public static @Nullable ClickType fromString(String text) {
-            for (ClickType type : ClickType.values()) {
-                if (type.text.equalsIgnoreCase(text))
-                    return type;
-            }
-            return null;
-        }
-    }
-
-    /** The type of element that was click, can be a button or image. */
-    @NonNull
-    public ClickType clickType;
-
     /** UUID assigned by OneSignal for internal use.
      * Package-private to track which element was tapped to report to the OneSignal dashboard. */
     @NonNull
@@ -43,6 +15,10 @@ public class OSInAppMessageAction {
     @Nullable
     public String clickName;
 
+    /** Determines where the URL is opened, ie. Default browser. */
+    @Nullable
+    public OSInAppMessageActionUrlType urlTarget;
+
     /** An optional URL that opens when the action takes place */
     @Nullable
     public String clickUrl;
@@ -50,15 +26,10 @@ public class OSInAppMessageAction {
     /** Determines if this was the first action taken on the in app message */
     public boolean firstClick;
 
-    /** Determines where the URL is opened, ie. Default browser. */
-    @Nullable
-    public OSInAppMessageActionUrlType urlTarget;
-
     /** Determines if tapping on the element should close the In-App Message. */
     public boolean closesMessage;
 
     OSInAppMessageAction(@NonNull JSONObject json) {
-        clickType = ClickType.fromString(json.optString("click_type"));
         clickId = json.optString("id", null);
         clickName = json.optString("click_name", null);
         clickUrl = json.optString("url", null);
