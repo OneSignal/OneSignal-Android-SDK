@@ -102,14 +102,8 @@ class NotificationBundleProcessor {
       notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
       processCollapseKey(notifJob);
 
-      boolean doDisplay =
-         notifJob.hasExtender() ||
-         shouldDisplay(notifJob.jsonPayload.optString("alert"));
+      boolean doDisplay = shouldDisplayNotif(notifJob);
       if (doDisplay)
-         // If the notification is not a preview push show it, otherwise check that
-         //    the Android version is above API18 (Android 4.3) before sending
-         if (!notifJob.isInAppPreviewPush ||
-                 Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2)
             GenerateNotification.fromJsonPayload(notifJob);
 
       if (!notifJob.restoring && !notifJob.isInAppPreviewPush) {
@@ -122,6 +116,17 @@ class NotificationBundleProcessor {
       }
 
       return notifJob.getAndroidId();
+   }
+
+   private static boolean shouldDisplayNotif(NotificationGenerationJob notifJob) {
+      // Validate that the current Android device is Android 4.4 or higher and the current job is a
+      //    preview push
+      if (notifJob.isInAppPreviewPush && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
+         return false;
+
+      // Otherwise, this is a normal notification and should be shown
+      return notifJob.hasExtender() ||
+              shouldDisplay(notifJob.jsonPayload.optString("alert"));
    }
 
    private static JSONArray bundleAsJsonArray(Bundle bundle) {
