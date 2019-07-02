@@ -67,14 +67,14 @@ class InAppMessageView {
     private double dismissDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
-    private WebViewManager.Position displayLocation;
+    @NonNull private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
     private DraggableRelativeLayout draggableRelativeLayout;
     private InAppMessageViewListener messageController;
     private Runnable dismissSchedule;
 
-    InAppMessageView(@NonNull WebView webView, WebViewManager.Position displayLocation, int pageHeight, double dismissDuration) {
+    InAppMessageView(@NonNull WebView webView, @NonNull WebViewManager.Position displayLocation, int pageHeight, double dismissDuration) {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
@@ -89,6 +89,10 @@ class InAppMessageView {
 
     void setMessageController(InAppMessageViewListener messageController) {
         this.messageController = messageController;
+    }
+
+    @NonNull WebViewManager.Position getDisplayPosition() {
+        return displayLocation;
     }
 
     void destroyView(WeakReference<Activity> weakReference) {
@@ -123,9 +127,17 @@ class InAppMessageView {
      * @param pageHeight the provided height
      */
     void updateHeight(final int pageHeight) {
+        this.pageHeight = pageHeight;
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
+                if (webView == null) {
+                    OneSignal.onesignalLog(
+                       OneSignal.LOG_LEVEL.WARN,
+                       "WebView height update skipped, new height will be used once it is displayed.");
+                    return;
+                }
+
                 ViewGroup.LayoutParams layoutParams = webView.getLayoutParams();
                 layoutParams.height = pageHeight;
                 // We only need to update the WebView size since it's parent layouts are set to
@@ -433,10 +445,8 @@ class InAppMessageView {
 
     private void removeParentLinearLayout(Activity currentActivity) {
         WindowManager windowManager = currentActivity.getWindowManager();
-        if (parentRelativeLayout != null && windowManager != null) {
-            parentRelativeLayout.setVisibility(View.INVISIBLE);
+        if (parentRelativeLayout != null && windowManager != null)
             windowManager.removeViewImmediate(parentRelativeLayout);
-        }
     }
 
     /**

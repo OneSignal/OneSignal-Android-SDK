@@ -1,8 +1,8 @@
 package com.onesignal;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
-import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -11,6 +11,7 @@ import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebView;
 
 import org.json.JSONException;
@@ -31,6 +32,7 @@ import static com.onesignal.OSViewUtils.dpToPx;
 // 4. WebViewActivity will call WebViewManager.instanceFromIam(...) to get this instance and
 //       add it's prepared WebView add add it to the Activity.
 
+@TargetApi(Build.VERSION_CODES.KITKAT)
 class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener {
 
     private static final String TAG = WebViewManager.class.getCanonicalName();
@@ -54,15 +56,16 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    @Nullable private WebView webView;
+    @Nullable private OSWebView webView;
     @Nullable private InAppMessageView messageView;
-    private int screenOrientation = Configuration.ORIENTATION_UNDEFINED;
 
     @SuppressLint("StaticFieldLeak")
     private static WebViewManager lastInstance = null;
 
     @NonNull private Activity activity;
     @NonNull private OSInAppMessage message;
+
+    private boolean firstShow = true;
 
     interface OneSignalGenericCallback {
         void onComplete();
@@ -141,6 +144,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private class OSJavaScriptInterface {
 
         private static final String JS_OBJ_NAME = "OSAndroid";
+        static final String GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()";
 
         @JavascriptInterface
         public void postMessage(String message) {
@@ -165,6 +169,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private void handleResize(JSONObject jsonObject) {
             if (messageView == null)
                 return;
+            // Ignore resize events for fullscreen, Android's layout controls the size.
+            if (messageView.getDisplayPosition() == Position.FULL_SCREEN)
+                return;
 
             int pageHeight = getPageHeightData(jsonObject);
             if (pageHeight == -1)
@@ -174,31 +181,20 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handleRenderComplete(JSONObject jsonObject) {
-            showMessageView(activity,
-                    getPageHeightData(jsonObject),
-                    getDisplayLocation(jsonObject)
-            );
+            Position displayType = getDisplayLocation(jsonObject);
+            int pageHeight = displayType == Position.FULL_SCREEN ? -1 : getPageHeightData(jsonObject);
+            createNewInAppMessageView(displayType, pageHeight);
         }
 
         private int getPageHeightData(JSONObject jsonObject) {
             try {
-                int height = jsonObject.getJSONObject("pageMetaData").getJSONObject("rect").getInt("height");
-                int pxHeight = OSViewUtils.dpToPx(height);
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight: " + pxHeight);
-
-                int maxPxHeight = getWebViewYSize(activity);
-                if (pxHeight > maxPxHeight) {
-                    pxHeight = maxPxHeight;
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + maxPxHeight);
-                }
-
-                return pxHeight;
+                return WebViewManager.pageRectToViewHeight(activity, jsonObject.getJSONObject("pageMetaData"));
             } catch (JSONException e) {
                 return -1;
             }
         }
 
-        private Position getDisplayLocation(JSONObject jsonObject) {
+        private @NonNull Position getDisplayLocation(JSONObject jsonObject) {
             Position displayLocation = Position.FULL_SCREEN;
             try {
                 if (jsonObject.has("displayLocation") && !jsonObject.get("displayLocation").equals(""))
@@ -224,29 +220,72 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    @Override
-    void available(@NonNull Activity activity) {
-        this.activity = activity;
-        OneSignal.onesignalLog(
-           OneSignal.LOG_LEVEL.DEBUG,
-           "ActivityAvailableListener:available: " + activity
-        );
+    private static int pageRectToViewHeight(@NonNull Activity activity, @NonNull JSONObject jsonObject) {
+        try {
+            int pageHeight = jsonObject.getJSONObject("rect").getInt("height");
+            int pxHeight = OSViewUtils.dpToPx(pageHeight);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight: " + pxHeight);
 
-        // Important to grow the WebView to the max size so the image does not stay small
-        //   when rotating from landscape to portrait. Or vice versa
+            int maxPxHeight = getWebViewYSize(activity);
+            if (pxHeight > maxPxHeight) {
+                pxHeight = maxPxHeight;
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + maxPxHeight);
+            }
+
+            return pxHeight;
+        } catch (JSONException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "pageRectToViewHeight could not get page height", e);
+            return -1;
+        }
+    }
+
+    // Every time an Activity is shown we update the height of the WebView since the available
+    //   screen size may have changed. (Expect for Fullscreen)
+    private void calculateHeightAndShowWebViewAfterNewActivity() {
+        // Don't need a CSS / HTML height update for fullscreen
+        if (messageView.getDisplayPosition() == Position.FULL_SCREEN) {
+            showMessageView(null);
+            return;
+        }
+
+        // At time point the webView isn't attached to a view, so the JS resize event does not fire.
+        // Set the webview to the max screen size then run JS to evaluate the height instead.
         setWebViewToMaxSize(activity);
-        messageView.setWebView(webView);
-        messageView.showView(activity);
-        messageView.checkIfShouldDismiss();
+        webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String value) {
+                try {
+                    int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
+                    showMessageView(pagePxHeight);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
 
-        screenOrientation = activity.getResources().getConfiguration().orientation;
+    @Override
+    void available(final @NonNull Activity activity) {
+        this.activity = activity;
+        if (firstShow)
+            showMessageView(null);
+        else
+            calculateHeightAndShowWebViewAfterNewActivity();
     }
 
     @Override
     void stopped(WeakReference<Activity> reference) {
-        if (messageView != null) {
+        if (messageView != null)
             messageView.destroyView(reference);
-        }
+    }
+
+    private void showMessageView(@Nullable Integer newHeight) {
+        messageView.setWebView(webView);
+        if (newHeight != null)
+            messageView.updateHeight(newHeight);
+        messageView.showView(activity);
+        messageView.checkIfShouldDismiss();
+        firstShow = false;
     }
 
     // TODO: Test with chrome://crash
@@ -287,13 +326,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     //  it via this SDK's InAppMessageView class. If smaller than the screen it will correctly
     //  set it's height to match.
     private void setWebViewToMaxSize(Activity activity) {
-        webView.setLeft(0);
-        webView.setRight(getWebViewXSize(activity));
-        webView.setTop(0);
-        webView.setBottom(getWebViewYSize(activity));
+        webView.layout(0,0, getWebViewXSize(activity), getWebViewYSize(activity));
     }
 
-    private void showMessageView(Activity currentActivity, int pageHeight, Position displayLocation) {
+    private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight) {
         messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
@@ -321,11 +357,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private int getWebViewXSize(Activity activity) {
+    private static int getWebViewXSize(Activity activity) {
         return OSViewUtils.getUsableWindowRect(activity).width() - (MARGIN_PX_SIZE * 2);
     }
 
-    private int getWebViewYSize(Activity activity) {
+    private static int getWebViewYSize(Activity activity) {
         return OSViewUtils.getUsableWindowRect(activity).height() - (MARGIN_PX_SIZE * 2);
     }
 
