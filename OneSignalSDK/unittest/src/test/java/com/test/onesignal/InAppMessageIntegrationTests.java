@@ -361,10 +361,6 @@ public class InAppMessageIntegrationTests {
     public void testMessageNotShownForAndroidApi18Lower() throws Exception {
         initializeSdkWithMultiplePendingMessages();
 
-        // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
-
         // Send a new IAM
         OneSignal.addTriggers(new HashMap<String, Object>() {{
             put("test_1", 3);
