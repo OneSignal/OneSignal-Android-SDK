@@ -2,6 +2,8 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.content.Context;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -22,6 +24,8 @@ import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
+
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 
 import org.awaitility.core.ThrowingRunnable;
@@ -48,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 
+import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
@@ -349,6 +354,25 @@ public class InAppMessageIntegrationTests {
         // 5. Set same trigger, should now display again, since it was never dismissed
         OneSignal.addTrigger("test_2", 2);
         assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
+    @Test
+    @Config(sdk = 18)
+    public void testMessageNotShownForAndroidApi18Lower() throws Exception {
+        initializeSdkWithMultiplePendingMessages();
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Send a new IAM
+        OneSignal.addTriggers(new HashMap<String, Object>() {{
+            put("test_1", 3);
+        }});
+        threadAndTaskWait();
+
+        // Check no messages exist
+        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {

@@ -74,7 +74,7 @@ class NotificationBundleProcessor {
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
          notifJob.jsonPayload = new JSONObject(jsonStrPayload);
          notifJob.isInAppPreviewPush = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
-         
+
          if (!notifJob.restoring &&
              !notifJob.isInAppPreviewPush &&
              OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
@@ -104,10 +104,13 @@ class NotificationBundleProcessor {
 
       boolean doDisplay =
          notifJob.hasExtender() ||
-         shouldDisplay(notifJob.jsonPayload.optString("alert")) ||
-         notifJob.isInAppPreviewPush;
+         shouldDisplay(notifJob.jsonPayload.optString("alert"));
       if (doDisplay)
-         GenerateNotification.fromJsonPayload(notifJob);
+         // If the notification is not a preview push show it, otherwise check that
+         //    the Android version is above API18 (Android 4.3) before sending
+         if (!notifJob.isInAppPreviewPush ||
+                 Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2)
+            GenerateNotification.fromJsonPayload(notifJob);
 
       if (!notifJob.restoring && !notifJob.isInAppPreviewPush) {
          saveNotification(notifJob, false);
