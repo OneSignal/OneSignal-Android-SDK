@@ -11,7 +11,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.constraint.ConstraintLayout;
 import android.support.v7.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
@@ -79,7 +78,7 @@ class InAppMessageView {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
-        this.pageWidth = ConstraintLayout.LayoutParams.MATCH_PARENT;
+        this.pageWidth = ViewGroup.LayoutParams.MATCH_PARENT;
         this.dismissDuration = dismissDuration;
         this.hasBackground = !displayLocation.isBanner();
     }
