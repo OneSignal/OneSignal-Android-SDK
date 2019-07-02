@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -45,6 +46,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     @Nullable private static OSInAppMessageController sharedInstance;
     public static OSInAppMessageController getController() {
+        // Make sure only Android 4.4 devices and higher can use IAMs
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            sharedInstance = new OSInAppMessageDummyController();
+        }
+
         if (sharedInstance == null)
             sharedInstance = new OSInAppMessageController();
 
@@ -59,9 +65,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         systemConditionController = new OSSystemConditionController(this);
 
         Set<String> tempTriggeredSet = OneSignalPrefs.getStringSet(
-           OneSignalPrefs.PREFS_ONESIGNAL,
-           OneSignalPrefs.PREFS_OS_DISPLAYED_IAMS,
-           null
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_DISPLAYED_IAMS,
+                null
         );
         if (tempTriggeredSet != null)
             triggeredMessages.addAll(tempTriggeredSet);
