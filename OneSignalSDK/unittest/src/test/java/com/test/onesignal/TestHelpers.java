@@ -8,6 +8,7 @@ import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGcmBroadcastReceiver;
@@ -37,7 +38,11 @@ public class TestHelpers {
 
    static Exception lastException;
 
-   static void beforeTestInitAndCleanup() {
+   static void beforeTestInitAndCleanup() throws Exception {
+      OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
+      if (!ranBeforeTestSuite)
+         return;
+
       stopAllOSThreads();
 
       StaticResetHelper.restSetStaticFields();
@@ -63,9 +68,9 @@ public class TestHelpers {
 
       ShadowOSWebView.resetStatics();
 
-      lastException = null;
+      ShadowDynamicTimer.resetStatics();
 
-      OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
+      lastException = null;
    }
 
    static void afterTestCleanup() throws Exception {
@@ -157,9 +162,11 @@ public class TestHelpers {
    }
 
    private static boolean ranBeforeTestSuite;
-   static void beforeTestSuite() {
+   static void beforeTestSuite() throws Exception {
       if (ranBeforeTestSuite)
          return;
+
+      StaticResetHelper.load();
 
       Looper.prepareMainLooper();
 
@@ -179,13 +186,13 @@ public class TestHelpers {
       ranBeforeTestSuite = true;
    }
 
-   static void fastColdRestartApp() {
+   static void fastColdRestartApp() throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
    }
    private static int sessionCountOffset = 1;
-   static void restartAppAndElapseTimeToNextSession() {
+   static void restartAppAndElapseTimeToNextSession() throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();

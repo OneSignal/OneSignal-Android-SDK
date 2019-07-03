@@ -35,19 +35,19 @@ import static junit.framework.Assert.assertEquals;
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseRunner {
    @BeforeClass // Runs only once, before any tests
-   public static void setUpClass() {
+   public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
       StaticResetHelper.saveStaticValues();
    }
 
    @Before // Before each test
-   public void beforeEachTest() {
+   public void beforeEachTest() throws Exception {
       TestHelpers.beforeTestInitAndCleanup();
    }
 
    @AfterClass
-   public static void afterEverything() {
+   public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
    }
 

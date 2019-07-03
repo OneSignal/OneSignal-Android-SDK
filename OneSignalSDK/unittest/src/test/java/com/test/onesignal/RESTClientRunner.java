@@ -63,13 +63,13 @@ public class RESTClientRunner {
    }
 
    @Before // Before each test
-   public void beforeEachTest() {
+   public void beforeEachTest() throws Exception {
       firstResponse = secondResponse = null;
       TestHelpers.beforeTestInitAndCleanup();
    }
 
    @AfterClass
-   public static void afterEverything() {
+   public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
    }
 

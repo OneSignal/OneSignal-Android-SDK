@@ -34,6 +34,7 @@ import org.robolectric.annotation.Implements;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
@@ -77,6 +78,7 @@ public class ShadowOneSignalRestClient {
    public static boolean failNext, failNextPut, failAll, failPosts, failGetParams;
    public static int failHttpCode;
    public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse;
+   public static Pattern nextSuccessfulGETResponsePattern;
    public static int networkCallCount;
 
    public static String pushUserId, emailUserId;
@@ -97,6 +99,7 @@ public class ShadowOneSignalRestClient {
       networkCallCount = 0;
 
       nextSuccessfulGETResponse = null;
+      nextSuccessfulGETResponsePattern = null;
 
       failResponse = "{}";
       nextSuccessfulRegistrationResponse = null;
@@ -269,11 +272,9 @@ public class ShadowOneSignalRestClient {
       trackRequest(REST_METHOD.GET, null, url);
       if (failGetParams && doFail(responseHandler, true)) return;
 
-      if (nextSuccessfulGETResponse != null) {
-         responseHandler.onSuccess(nextSuccessfulGETResponse);
-         nextSuccessfulGETResponse = null;
-      }
-      else if (nextSuccessResponse != null) {
+      if (doNextSuccessfulGETResponse(url, responseHandler))
+         return;
+      if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
       }
@@ -301,11 +302,19 @@ public class ShadowOneSignalRestClient {
 
       if (doFail(responseHandler)) return;
 
-      if (nextSuccessfulGETResponse != null) {
+      if (doNextSuccessfulGETResponse(url, responseHandler))
+         return;
+
+      responseHandler.onSuccess("{}");
+   }
+
+   private static boolean doNextSuccessfulGETResponse(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      if (nextSuccessfulGETResponse != null &&
+         (nextSuccessfulGETResponsePattern == null || nextSuccessfulGETResponsePattern.matcher(url).matches())) {
          responseHandler.onSuccess(nextSuccessfulGETResponse);
          nextSuccessfulGETResponse = null;
+         return true;
       }
-      else
-         responseHandler.onSuccess("{}");
+      return false;
    }
 }
