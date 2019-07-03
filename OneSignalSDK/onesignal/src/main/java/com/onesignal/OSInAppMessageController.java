@@ -182,6 +182,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
+        fireClickAction(action);
         fireRESTCallForClick(message, action);
     }
 
@@ -189,6 +190,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.firstClick = message.takeActionAsUnique();
 
+        firePublicClickHandler(action);
         fireClickAction(action);
     }
 
@@ -216,8 +218,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
-
-        fireClickAction(action);
 
         try {
             JSONObject json = new JSONObject() {{

@@ -115,7 +115,7 @@ public class InAppMessagingHelpers {
         return new JSONObject() {{
             put("click_type", "button");
             put("id", IAM_CLICK_ID);
-            put("click_name", "click_name");
+            put("name", "click_name");
             put("url", "https://www.onesignal.com");
             put("url_target", "webview");
             put("close", true);

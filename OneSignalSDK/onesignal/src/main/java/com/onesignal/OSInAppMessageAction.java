@@ -31,7 +31,7 @@ public class OSInAppMessageAction {
 
     OSInAppMessageAction(@NonNull JSONObject json) {
         clickId = json.optString("id", null);
-        clickName = json.optString("click_name", null);
+        clickName = json.optString("name", null);
         clickUrl = json.optString("url", null);
         urlTarget = OSInAppMessageActionUrlType.fromString(json.optString("url_target", null));
         if (urlTarget == null)
