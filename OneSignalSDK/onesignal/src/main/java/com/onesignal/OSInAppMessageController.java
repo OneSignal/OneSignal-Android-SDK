@@ -76,11 +76,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // Normally we wait until on_session call to download the latest IAMs
     //    however an on session won't happen
     void initWithCachedInAppMessages() {
+        // Do not reload from cache if already loaded.
+        if (!messages.isEmpty())
+            return;
+
         String cachedIamsStr = OneSignalPrefs.getString(
            OneSignalPrefs.PREFS_ONESIGNAL,
            OneSignalPrefs.PREFS_OS_CACHED_IAMS,
            null
         );
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages: " + cachedIamsStr);
+
         if (cachedIamsStr == null)
             return;
 

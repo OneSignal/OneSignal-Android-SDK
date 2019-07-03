@@ -36,7 +36,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -657,7 +656,7 @@ public class OneSignal {
 
       // When the session reaches timeout threshold, start new session
       // This is where the LocationGMS prompt is triggered and shown to the user
-      handleSessionTimeRegistration();
+      handleSessionTimeRegistrationOnInit();
 
       if (mInitBuilder.mNotificationOpenedHandler != null)
          fireCallbackForOpenedNotifications();
@@ -743,15 +742,20 @@ public class OneSignal {
       } catch (ClassNotFoundException e) {}
    }
 
-   private static void handleSessionTimeRegistration() {
-      if (foreground || getUserId() == null) {
-         if (isPastOnSessionTime())
-            OneSignalStateSynchronizer.setNewSession();
-         else
-            OSInAppMessageController.getController().initWithCachedInAppMessages();
-         setLastSessionTime(System.currentTimeMillis());
-         startRegistrationOrOnSession();
-      }
+   private static void handleSessionTimeRegistrationOnInit() {
+      // If the app is not in the foreground yet do not make an on_session call yet.
+      // If we don't have a OneSignal player_id yet make the call to create it regardless of focus
+      if (foreground || getUserId() == null)
+         doSessionInit();
+   }
+
+   private static void doSessionInit() {
+      if (isPastOnSessionTime())
+         OneSignalStateSynchronizer.setNewSession();
+      else
+         OSInAppMessageController.getController().initWithCachedInAppMessages();
+      setLastSessionTime(System.currentTimeMillis());
+      startRegistrationOrOnSession();
    }
 
    private static boolean isContextActivity(Context context) {
@@ -1203,11 +1207,7 @@ public class OneSignal {
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
 
-      if (isPastOnSessionTime())
-         OneSignalStateSynchronizer.setNewSession();
-      setLastSessionTime(System.currentTimeMillis());
-
-      startRegistrationOrOnSession();
+      doSessionInit();
 
       if (trackGooglePurchase != null)
          trackGooglePurchase.trackIAP();

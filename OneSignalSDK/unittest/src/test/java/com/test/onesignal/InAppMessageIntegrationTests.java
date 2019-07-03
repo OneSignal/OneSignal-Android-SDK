@@ -2,8 +2,6 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.NotificationManager;
-import android.content.Context;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
@@ -25,7 +23,6 @@ import com.onesignal.example.BlankActivity;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 
 import org.awaitility.core.ThrowingRunnable;
@@ -52,7 +49,6 @@ import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 
-import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.*;
@@ -161,9 +157,7 @@ public class InAppMessageIntegrationTests {
         assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
     }
 
-    // initializes the SDK with multiple mock in-app messages and sets triggers so that
-    // both in-app messages become valid and can be displayed
-    private void initializeSdkWithMultiplePendingMessages() throws Exception {
+    private void nextResponseMultiplePendingMessages() throws JSONException {
         final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
         final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2);
 
@@ -171,7 +165,12 @@ public class InAppMessageIntegrationTests {
             add(testFirstMessage);
             add(testSecondMessage);
         }});
+    }
 
+    // initializes the SDK with multiple mock in-app messages and sets triggers so that
+    // both in-app messages become valid and can be displayed
+    private void initializeSdkWithMultiplePendingMessages() throws Exception {
+        nextResponseMultiplePendingMessages();
         OneSignalInit();
         threadAndTaskWait();
     }
@@ -321,6 +320,28 @@ public class InAppMessageIntegrationTests {
         OneSignal.addTrigger("test_2", 2);
         assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
     }
+
+    // TODO: Does not pass if run after other tests that call OneSignal.init
+//    @Test
+//    public void useCachedInAppListOnQuickColdRestartWhenInitFromAppClass() throws Exception {
+//        // 1. Start app
+//        nextResponseMultiplePendingMessages();
+//        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+//        blankActivityController.resume();
+//        threadAndTaskWait();
+//
+//        // 2. Swipe away app
+//        fastColdRestartApp();
+//        // 3. Cold Start app
+//        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+//        blankActivityController.resume();
+//        threadAndTaskWait();
+//
+//        // Should used cached triggers since we won't be making an on_session call.
+//        //   Testing for this by trying to add a trigger that should display an IAM
+//        OneSignal.addTrigger("test_2", 2);
+//        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+//    }
 
     @Test
     public void doNotReshowInAppIfDismissed_evenAfterColdRestart() throws Exception {
