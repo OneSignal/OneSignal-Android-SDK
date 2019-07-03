@@ -143,14 +143,14 @@ public class GenerateNotificationRunner {
    private static final String notifMessage = "Robo test message";
    
    @BeforeClass // Runs only once, before any tests
-   public static void setUpClass() {
+   public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
       StaticResetHelper.saveStaticValues();
    }
    
    @Before // Before each test
-   public void beforeEachTest() {
+   public void beforeEachTest() throws Exception {
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
    
@@ -168,7 +168,7 @@ public class GenerateNotificationRunner {
    }
    
    @AfterClass
-   public static void afterEverything() {
+   public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
    }
    
@@ -969,6 +969,7 @@ public class GenerateNotificationRunner {
       mockNextRESTGetAsBlankHTMLPage();
 
       new GcmBroadcastReceiver().onReceive(blankActivity, intentGcm);
+      threadAndTaskWait();
 
       assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);
    }
@@ -981,7 +982,7 @@ public class GenerateNotificationRunner {
 
       Bundle bundle = new Bundle();
       bundle.putString("custom", new JSONObject() {{
-         put("i", "UUID");
+         put("i", "UUID1");
          put("a", new JSONObject() {{
             put("os_in_app_message_preview_id", "UUID");
          }});
@@ -989,7 +990,7 @@ public class GenerateNotificationRunner {
 
       mockNextRESTGetAsBlankHTMLPage();
 
-      Intent notificationOpenIntent = createOpenIntent(1, inAppPreviewMockPayloadBundle());
+      Intent notificationOpenIntent = createOpenIntent(2, inAppPreviewMockPayloadBundle());
       NotificationOpenedProcessor_processFromContext(blankActivity, notificationOpenIntent);
 
       assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);

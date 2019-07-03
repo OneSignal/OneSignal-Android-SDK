@@ -109,6 +109,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
@@ -187,7 +188,7 @@ public class MainOneSignalClassRunner {
       });
    }
 
-   private static void cleanUp() {
+   private static void cleanUp() throws Exception {
       callBackUseId = getCallBackRegId = null;
 
       notificationOpenedMessage = null;
@@ -223,7 +224,7 @@ public class MainOneSignalClassRunner {
    }
 
    @AfterClass
-   public static void afterEverything() {
+   public static void afterEverything() throws Exception {
       cleanUp();
    }
 
@@ -1981,7 +1982,7 @@ public class MainOneSignalClassRunner {
       // 3. Put app in background
       blankActivityController.pause();
       OneSignalPackagePrivateHelper.runFocusRunnables();
-//      threadAndTaskWait();
+      threadAndTaskWait();
    }
 
    @Test
@@ -2316,6 +2317,7 @@ public class MainOneSignalClassRunner {
             put("test1", "value1");
          }});
       }});
+      ShadowOneSignalRestClient.nextSuccessfulGETResponsePattern = Pattern.compile("players/.*");
 
       OneSignalInit();
       GetTags();
