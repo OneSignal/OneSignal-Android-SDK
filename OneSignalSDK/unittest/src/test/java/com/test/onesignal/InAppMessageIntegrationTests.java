@@ -321,27 +321,26 @@ public class InAppMessageIntegrationTests {
         assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
     }
 
-    // TODO: Does not pass if run after other tests that call OneSignal.init
-//    @Test
-//    public void useCachedInAppListOnQuickColdRestartWhenInitFromAppClass() throws Exception {
-//        // 1. Start app
-//        nextResponseMultiplePendingMessages();
-//        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
-//        blankActivityController.resume();
-//        threadAndTaskWait();
-//
-//        // 2. Swipe away app
-//        fastColdRestartApp();
-//        // 3. Cold Start app
-//        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
-//        blankActivityController.resume();
-//        threadAndTaskWait();
-//
-//        // Should used cached triggers since we won't be making an on_session call.
-//        //   Testing for this by trying to add a trigger that should display an IAM
-//        OneSignal.addTrigger("test_2", 2);
-//        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
-//    }
+    @Test
+    public void useCachedInAppListOnQuickColdRestartWhenInitFromAppClass() throws Exception {
+        // 1. Start app
+        nextResponseMultiplePendingMessages();
+        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // 2. Swipe away app
+        fastColdRestartApp();
+        // 3. Cold Start app
+        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Should used cached triggers since we won't be making an on_session call.
+        //   Testing for this by trying to add a trigger that should display an IAM
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+    }
 
     @Test
     public void doNotReshowInAppIfDismissed_evenAfterColdRestart() throws Exception {
