@@ -285,7 +285,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             messageView.updateHeight(newHeight);
         messageView.showView(activity);
         messageView.checkIfShouldDismiss();
-        firstShow = false;
     }
 
     // TODO: Test with chrome://crash
@@ -334,7 +333,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
             public void onMessageWasShown() {
-                OSInAppMessageController.onMessageWasShown(message);
+                firstShow = false;
+                OSInAppMessageController.getController().onMessageWasShown(message);
             }
 
             @Override
