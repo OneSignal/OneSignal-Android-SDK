@@ -8,6 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,6 +44,16 @@ public class StaticResetHelper {
       classes.add(new ClassState(LocationGMS.class, null));
       classes.add(new ClassState(OSInAppMessageController.class, null));
       classes.add(new ClassState(ActivityLifecycleListener.class, null));
+      classes.add(new ClassState(OSDynamicTriggerController.class, new OtherFieldHandler() {
+         @Override
+         public boolean onOtherField(Field field) throws Exception {
+            if (field.getName().equals("sessionLaunchTime")) {
+               field.set(null, new Date());
+               return true;
+            }
+            return false;
+         }
+      }));
    }
 
    private interface OtherFieldHandler {
