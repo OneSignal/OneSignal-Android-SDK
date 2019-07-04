@@ -216,7 +216,7 @@ class OneSignalPrefs {
         return (Long)get(prefsName, key, Long.class, defValue);
     }
 
-    static @Nullable Set<String> getStringSet(@NonNull String prefsName, @NonNull String key, @Nullable Set<String> defValue) {
+    public static @Nullable Set<String> getStringSet(@NonNull String prefsName, @NonNull String key, @Nullable Set<String> defValue) {
         return (Set<String>)get(prefsName, key, Set.class, defValue);
     }
 
