@@ -82,7 +82,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 null
         );
         if (tempImpressionedSet != null)
-            impressionedMessages.addAll(tempTriggeredSet);
+            impressionedMessages.addAll(tempImpressionedSet);
     }
 
     // Normally we wait until on_session call to download the latest IAMs
