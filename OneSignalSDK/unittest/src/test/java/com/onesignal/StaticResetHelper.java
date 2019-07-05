@@ -54,6 +54,7 @@ public class StaticResetHelper {
             return false;
          }
       }));
+      classes.add(new ClassState(OneSignalPackagePrivateHelper.OSInAppMessageController.class, null));
    }
 
    private interface OtherFieldHandler {

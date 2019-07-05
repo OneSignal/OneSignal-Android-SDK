@@ -72,6 +72,7 @@ import static junit.framework.Assert.assertTrue;
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessageIntegrationTests {
+    private static final String IAM_CLICK_ID = "button_id_123";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
 
     @SuppressLint("StaticFieldLeak")
@@ -378,6 +379,77 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
+    public void testInAppMessageOnlyReceivesClickIdOnce() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+           OSTriggerKind.SESSION_TIME,
+           null,
+           OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+           null
+        );
+
+        // 2. Count IAM as clicked
+        JSONObject action = new JSONObject() {{ put("id", IAM_CLICK_ID); }};
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+
+        // 3. Ensure click is sent
+        ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
+        assertEquals("in_app_messages/" + message.messageId + "/click", iamImpressionRequest.url);
+        assertEquals(3, ShadowOneSignalRestClient.requests.size());
+
+        // 4. Call IAM clicked again, ensure a 2nd network call is not made.
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+        assertEquals(3, ShadowOneSignalRestClient.requests.size());
+
+        // Verify clickId was persisted locally
+        Set<String> testClickedMessages = OneSignalPackagePrivateHelper.OneSignalPrefs.getStringSet(
+           OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+           null
+        );
+        assertEquals(1, testClickedMessages.size());
+    }
+
+    @Test
+    public void testInAppMessageOnlyReceivesOneClick_onColdRestart() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+           OSTriggerKind.SESSION_TIME,
+           null,
+           OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+           null);
+
+        // 2. Count IAM as clicked
+        JSONObject action = new JSONObject() {{ put("id", IAM_CLICK_ID); }};
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+
+        // 3. Cold restart app and re-init OneSignal
+        fastColdRestartApp();
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 4. Click on IAM again
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+
+        // Since the app restart and another message shown callback only 1 more request should exist
+        //  So verify 4 requests exist (3 old and 1 new)
+        ShadowOneSignalRestClient.Request mostRecentRequest = ShadowOneSignalRestClient.requests.get(3);
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+
+        // Now verify the most recent request was not a click request
+        boolean isIamClickUrl = mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/click");
+        assertFalse(isIamClickUrl);
+    }
+
+    @Test
     public void testInAppMessageOnlyReceivesOneImpression() throws Exception {
         // Init OneSignal
         OneSignalInit();
@@ -439,8 +511,8 @@ public class InAppMessageIntegrationTests {
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
 
         // Now verify the most recent request was not a impression request
-        boolean isImpressionUrl = !mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/impression");
-        assertTrue(isImpressionUrl);
+        boolean isImpressionUrl = mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/impression");
+        assertFalse(isImpressionUrl);
     }
 
     @Test
