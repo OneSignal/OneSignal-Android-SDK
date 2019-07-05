@@ -40,6 +40,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // IAMs that have been displayed to the user
     //   This means their impression has been successfully posted to our backend and should not be counted again
     @NonNull final private Set<String> impressionedMessages;
+    // IAM clicks that have been successfully posted to our backend and should not be counted again
+    @NonNull final private Set<String> clickedClickIds;
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
     @NonNull final ArrayList<OSInAppMessage> messageDisplayQueue;
 
@@ -64,6 +66,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         messages = new ArrayList<>();
         triggeredMessages = OSUtils.newConcurrentSet();
         impressionedMessages = OSUtils.newConcurrentSet();
+        clickedClickIds = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
@@ -83,6 +86,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         );
         if (tempImpressionedSet != null)
             impressionedMessages.addAll(tempImpressionedSet);
+
+        Set<String> tempClickedMessageIdsSet = OneSignalPrefs.getStringSet(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+           null
+        );
+        if (tempClickedMessageIdsSet != null)
+            clickedClickIds.addAll(tempClickedMessageIdsSet);
     }
 
     // Normally we wait until on_session call to download the latest IAMs
@@ -253,6 +264,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (variantId == null)
             return;
 
+        // Never count multiple clicks for the same click UUID
+        if (clickedClickIds.contains(action.clickId))
+            return;
+        clickedClickIds.add(action.clickId);
+
         try {
             JSONObject json = new JSONObject() {{
                 put("app_id", OneSignal.appId);
@@ -267,8 +283,20 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
             OneSignalRestClient.post("in_app_messages/" + message.messageId + "/click", json, new ResponseHandler() {
                 @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("engagement", response);
+                    // Persist success click to disk. Id already added to set before making making the network call
+                    OneSignalPrefs.saveStringSet(
+                       OneSignalPrefs.PREFS_ONESIGNAL,
+                       OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                       clickedClickIds
+                    );
+                }
+
+                @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("engagement", statusCode, response);
+                    clickedClickIds.remove(action.clickId);
                 }
             });
         } catch (JSONException e) {
