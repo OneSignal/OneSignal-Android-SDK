@@ -43,7 +43,6 @@ import org.robolectric.shadows.ShadowLog;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +52,7 @@ import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -408,6 +408,39 @@ public class InAppMessageIntegrationTests {
                 null
         );
         assertEquals(1, testImpressionedMessages.size());
+    }
+
+    @Test
+    public void testInAppMessageOnlyReceivesOneImpression_onColdRestart() throws Exception {
+        // Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null);
+
+        // Trigger the impression request and caching of the impressioned messageId
+        OSInAppMessageController.getController().onMessageWasShown(message);
+
+        // Cold restart app and re-init OneSignal
+        fastColdRestartApp();
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OSInAppMessageController.getController().onMessageWasShown(message);
+
+        // Since the app restart and another message shown callback only 1 more request should exist
+        //  So verify 4 requests exist (3 old and 1 new)
+        ShadowOneSignalRestClient.Request mostRecentRequest = ShadowOneSignalRestClient.requests.get(3);
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+
+        // Now verify the most recent request was not a impression request
+        boolean isImpressionUrl = !mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/impression");
+        assertTrue(isImpressionUrl);
     }
 
     @Test
