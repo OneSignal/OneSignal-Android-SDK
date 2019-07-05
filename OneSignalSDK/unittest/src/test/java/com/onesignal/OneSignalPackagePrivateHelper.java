@@ -275,8 +275,8 @@ public class OneSignalPackagePrivateHelper {
          super.onMessageActionOccurredOnMessage(message, actionJson);
       }
 
-      public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
-         com.onesignal.OSInAppMessageController.onMessageWasShown(message);
+      public void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+         com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
       }
    }
 

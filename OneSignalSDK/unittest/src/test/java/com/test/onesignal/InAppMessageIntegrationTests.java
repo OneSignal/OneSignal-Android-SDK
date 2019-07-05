@@ -5,26 +5,26 @@ import android.app.Activity;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
-import com.onesignal.OneSignalPackagePrivateHelper.OSInAppMessageController;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.OSInAppMessageController;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSInAppMessageController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
-import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
-
+import org.awaitility.Awaitility;
+import org.awaitility.Duration;
 import org.awaitility.core.ThrowingRunnable;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -36,22 +36,23 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.android.controller.ActivityController;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-import org.awaitility.Awaitility;
-import org.awaitility.Duration;
-
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
-import static junit.framework.Assert.*;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -374,6 +375,39 @@ public class InAppMessageIntegrationTests {
         // 5. Set same trigger, should now display again, since it was never dismissed
         OneSignal.addTrigger("test_2", 2);
         assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+    }
+
+    @Test
+    public void testInAppMessageOnlyReceivesOneImpression() throws Exception {
+        // Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null);
+
+        // Call message shown callback and verify only 3 requests exist (3rd being the iam impression request)
+        OSInAppMessageController.getController().onMessageWasShown(message);
+
+        ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
+        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals(3, ShadowOneSignalRestClient.requests.size());
+
+        // Call message shown again and make sure no other requests were made, so the impression tracking exists locally
+        OSInAppMessageController.getController().onMessageWasShown(message);
+        assertEquals(3, ShadowOneSignalRestClient.requests.size());
+
+        // Verify impressioned messageId was persisted locally
+        Set<String> testImpressionedMessages = OneSignalPackagePrivateHelper.OneSignalPrefs.getStringSet(
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                null
+        );
+        assertEquals(1, testImpressionedMessages.size());
     }
 
     @Test

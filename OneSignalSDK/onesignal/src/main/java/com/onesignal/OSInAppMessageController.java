@@ -37,6 +37,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // IAMs that have had their trigger(s) evaluated to true;
     //   This mean they have been added to the queue to display, or have already displayed
     @NonNull final private Set<String> triggeredMessages;
+    // IAMs that have been displayed to the user
+    //   This means their impression has been successfully posted to our backend and should not be counted again
+    @NonNull final private Set<String> impressionedMessages;
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
     @NonNull final ArrayList<OSInAppMessage> messageDisplayQueue;
 
@@ -60,6 +63,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     protected OSInAppMessageController() {
         messages = new ArrayList<>();
         triggeredMessages = OSUtils.newConcurrentSet();
+        impressionedMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
@@ -71,6 +75,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         );
         if (tempTriggeredSet != null)
             triggeredMessages.addAll(tempTriggeredSet);
+
+        Set<String> tempImpressionedSet = OneSignalPrefs.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                null
+        );
+        if (tempImpressionedSet != null)
+            impressionedMessages.addAll(tempTriggeredSet);
     }
 
     // Normally we wait until on_session call to download the latest IAMs
@@ -144,13 +156,23 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return null;
     }
 
+    private static void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Successful post for in-app message " + requestType + " request: " + response);
+    }
+
     private static void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
-    static void onMessageWasShown(@NonNull OSInAppMessage message) {
+    void onMessageWasShown(@NonNull final OSInAppMessage message) {
         if (message.isPreview)
             return;
+
+        // Check that the messageId is in impressionedMessages so we return early without a second post being made
+        if (impressionedMessages.contains(message.messageId))
+            return;
+        // Add the messageId to impressionedMessages so no second request is made
+        impressionedMessages.add(message.messageId);
 
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
@@ -167,8 +189,20 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
             OneSignalRestClient.post("in_app_messages/" + message.messageId + "/impression", json, new ResponseHandler() {
                 @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("impression", response);
+                    OneSignalPrefs.saveStringSet(
+                            OneSignalPrefs.PREFS_ONESIGNAL,
+                            OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                            // Post success, store impressioned messageId to disk
+                            impressionedMessages);
+                }
+
+                @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("impression", statusCode, response);
+                    // Post failed, impressionedMessage should be removed and this way another post can be attempted
+                    impressionedMessages.remove(message.messageId);
                 }
             });
         } catch (JSONException e) {
