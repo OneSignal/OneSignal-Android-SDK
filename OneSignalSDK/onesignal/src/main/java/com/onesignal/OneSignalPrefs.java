@@ -76,6 +76,7 @@ class OneSignalPrefs {
     public static final String PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_";
     public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
     public static final String PREFS_OS_DISPLAYED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
+    public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
 
     // PLAYER PURCHASE KEYS
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
@@ -215,7 +216,7 @@ class OneSignalPrefs {
         return (Long)get(prefsName, key, Long.class, defValue);
     }
 
-    static @Nullable Set<String> getStringSet(@NonNull String prefsName, @NonNull String key, @Nullable Set<String> defValue) {
+    public static @Nullable Set<String> getStringSet(@NonNull String prefsName, @NonNull String key, @Nullable Set<String> defValue) {
         return (Set<String>)get(prefsName, key, Set.class, defValue);
     }
 

@@ -391,9 +391,9 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testOnMessageWasShown() throws Exception {
-       threadAndTaskWait();
+        threadAndTaskWait();
 
-        OSInAppMessageController.onMessageWasShown(message);
+        OSInAppMessageController.getController().onMessageWasShown(message);
 
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
 
