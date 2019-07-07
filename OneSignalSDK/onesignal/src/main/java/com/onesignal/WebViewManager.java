@@ -88,7 +88,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
         if (currentActivity != null) {
-
             // Only a preview will be dismissed, this prevents normal messages from being
             // removed when a preview is sent into the app
             if (lastInstance != null && message.isPreview) {
@@ -156,28 +155,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
                 if (messageType.equals("rendering_complete")) {
                     handleRenderComplete(jsonObject);
-                } else if (messageType.equals("resize")) {
-                    handleResize(jsonObject);
                 } else if (messageType.equals("action_taken")) {
                     handleActionTaken(jsonObject);
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        }
-
-        private void handleResize(JSONObject jsonObject) {
-            if (messageView == null)
-                return;
-            // Ignore resize events for fullscreen, Android's layout controls the size.
-            if (messageView.getDisplayPosition() == Position.FULL_SCREEN)
-                return;
-
-            int pageHeight = getPageHeightData(jsonObject);
-            if (pageHeight == -1)
-                return;
-
-            messageView.updateHeight(pageHeight);
         }
 
         private void handleRenderComplete(JSONObject jsonObject) {
@@ -220,13 +203,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static int pageRectToViewHeight(@NonNull Activity activity, @NonNull JSONObject jsonObject) {
+    private static int pageRectToViewHeight(final @NonNull Activity activity, @NonNull JSONObject jsonObject) {
         try {
             int pageHeight = jsonObject.getJSONObject("rect").getInt("height");
             int pxHeight = OSViewUtils.dpToPx(pageHeight);
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight: " + pxHeight);
 
-            int maxPxHeight = getWebViewYSize(activity);
+            int maxPxHeight = getWebViewMaxSizeY(activity);
             if (pxHeight > maxPxHeight) {
                 pxHeight = maxPxHeight;
                 OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "getPageHeightData:pxHeight is over screen max: " + maxPxHeight);
@@ -248,20 +231,27 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             return;
         }
 
-        // At time point the webView isn't attached to a view, so the JS resize event does not fire.
-        // Set the webview to the max screen size then run JS to evaluate the height instead.
-        setWebViewToMaxSize(activity);
-        webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
-            @Override
-            public void onReceiveValue(String value) {
-                try {
-                    int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
-                    showMessageView(pagePxHeight);
-                } catch (JSONException e) {
-                    e.printStackTrace();
+       // Using post to ensure that the status bar inset is already added to the view
+       OSViewUtils.decorViewReady(activity, new Runnable() {
+          @Override
+          public void run() {
+             // At time point the webView isn't attached to a view
+             // Set the WebView to the max screen size then run JS to evaluate the height.
+             setWebViewToMaxSize(activity);
+             webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
+                @Override
+                public void onReceiveValue(final String value) {
+                   System.out.println("2nd pageRectToViewHeight");
+                   try {
+                      int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
+                      showMessageView(pagePxHeight);
+                   } catch (JSONException e) {
+                      e.printStackTrace();
+                   }
                 }
-            }
-        });
+             });
+          }
+       });
     }
 
     @Override
@@ -289,7 +279,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     // TODO: Test with chrome://crash
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    private void setupWebView(@NonNull final Activity currentActivity, @NonNull String base64Message) {
+    private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message) {
         enableWebViewRemoteDebugging();
 
         webView = new OSWebView(currentActivity);
@@ -302,12 +292,15 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         // Setup receiver for page events / data from JS
         webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
 
-        setWebViewToMaxSize(currentActivity);
+       blurryRenderingWebViewForKitKatWorkAround(webView);
 
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "getWebViewSize: " + getWebViewXSize(currentActivity) + ", " + getWebViewYSize(currentActivity));
-
-        blurryRenderingWebViewForKitKatWorkAround(webView);
-        webView.loadData(base64Message, "text/html; charset=utf-8", "base64");
+       OSViewUtils.decorViewReady(activity, new Runnable() {
+          @Override
+          public void run() {
+             setWebViewToMaxSize(currentActivity);
+             webView.loadData(base64Message,"text/html; charset=utf-8","base64");
+          }
+       });
     }
 
     private void blurryRenderingWebViewForKitKatWorkAround(@NonNull WebView webView) {
@@ -325,7 +318,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     //  it via this SDK's InAppMessageView class. If smaller than the screen it will correctly
     //  set it's height to match.
     private void setWebViewToMaxSize(Activity activity) {
-        webView.layout(0,0, getWebViewXSize(activity), getWebViewYSize(activity));
+        webView.layout(0,0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity));
     }
 
     private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight) {
@@ -357,12 +350,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static int getWebViewXSize(Activity activity) {
-        return OSViewUtils.getUsableWindowRect(activity).width() - (MARGIN_PX_SIZE * 2);
+    private static int getWebViewMaxSizeX(Activity activity) {
+        return OSViewUtils.getWindowWidth(activity) - (MARGIN_PX_SIZE * 2);
     }
 
-    private static int getWebViewYSize(Activity activity) {
-        return OSViewUtils.getUsableWindowRect(activity).height() - (MARGIN_PX_SIZE * 2);
+    private static int getWebViewMaxSizeY(Activity activity) {
+       return OSViewUtils.getWindowHeight(activity) - (MARGIN_PX_SIZE * 2);
     }
 
     /**
