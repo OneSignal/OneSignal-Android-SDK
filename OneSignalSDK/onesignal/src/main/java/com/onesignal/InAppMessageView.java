@@ -177,7 +177,7 @@ class InAppMessageView {
     }
 
     private int getDisplayYSize() {
-        return OSViewUtils.getUsableWindowRect(currentActivity).height();
+        return OSViewUtils.getWindowHeight(currentActivity);
     }
 
     private LinearLayout.LayoutParams createParentLinearLayoutParams() {
