@@ -231,8 +231,9 @@ class InAppMessageView {
         WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
             hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
             hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
-            // Display it on top of other application windows
-            WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
+            // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
+            //  cut off in immersive mode.
+           WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG,
             // Don't let it grab the input focus
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
