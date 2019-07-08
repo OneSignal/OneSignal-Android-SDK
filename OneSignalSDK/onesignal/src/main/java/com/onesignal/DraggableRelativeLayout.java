@@ -15,6 +15,7 @@ import static com.onesignal.OSViewUtils.dpToPx;
 class DraggableRelativeLayout extends RelativeLayout {
 
    private static final int MARGIN_PX_SIZE = dpToPx(28);
+   private static final int EXTRA_PX_DISMISS = dpToPx(64);
 
    static abstract class DraggableListener {
       void onDismiss() {}
@@ -56,7 +57,7 @@ class DraggableRelativeLayout extends RelativeLayout {
    void setParams(Params params) {
       this.params = params;
 
-      params.offScreenYPos = params.messageHeight + params.posY + (Resources.getSystem().getDisplayMetrics().heightPixels - params.messageHeight - params.posY);
+      params.offScreenYPos = params.messageHeight + params.posY + (Resources.getSystem().getDisplayMetrics().heightPixels - params.messageHeight - params.posY) + EXTRA_PX_DISMISS;
       params.dismissingYVelocity = OSViewUtils.dpToPx(3_000);
 
       if (params.dragDirection == Params.DRAGGABLE_DIRECTION_UP) {
