@@ -5,7 +5,6 @@ import android.content.res.Resources;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -107,7 +106,6 @@ class DraggableRelativeLayout extends RelativeLayout {
                      settleDestY = params.offScreenYPos;
                      dismissing = true;
                      if (mListener != null) { mListener.onDismiss(); }
-                     Log.e("OneSignal", "Dismissing: params.dismissingYPos=" + params.dismissingYPos + ", lastYPos=" + lastYPos + ", yvel=" + yvel + ", params.dismissingYPos=" + params.dismissingYPos);
                   }
                }
                else {
@@ -115,7 +113,6 @@ class DraggableRelativeLayout extends RelativeLayout {
                      settleDestY = params.offScreenYPos;
                      dismissing = true;
                      if (mListener != null) { mListener.onDismiss(); }
-                     Log.e("OneSignal", "Dismissing: params.dismissingYPos=" + params.dismissingYPos + ", lastYPos=" + lastYPos +", yvel=" + yvel + ", params.dismissingYPos=" + params.dismissingYPos);
                   }
                }
             }
