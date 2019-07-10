@@ -627,6 +627,11 @@ public class OneSignal {
       if (isSubscriptionStatusUninitializable())
          return;
 
+      // Pre-check on app id to make sure init of SDK is performed properly
+      //    Usually when the app id is changed during runtime so that SDK is reinitialized properly
+      if (appId != null && !appId.equals(oneSignalAppId))
+         initDone = false;
+
       if (initDone) {
          if (mInitBuilder.mNotificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
@@ -638,8 +643,6 @@ public class OneSignal {
 
       saveFilterOtherGCMReceivers(mInitBuilder.mFilterOtherGCMReceivers);
 
-      // NOTE: This must be called here, something above conflicts with the handlers internals
-      //  causing a crash at OneSignal.deepClone()
       handleActivityLifecycleHandler(context);
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
@@ -704,6 +707,7 @@ public class OneSignal {
             Log(LOG_LEVEL.DEBUG, "APP ID changed, clearing user id as it is no longer valid.");
             SaveAppId(appId);
             OneSignalStateSynchronizer.resetCurrentState();
+            remoteParams = null;
          }
       }
       else {

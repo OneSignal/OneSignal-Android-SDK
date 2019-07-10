@@ -890,12 +890,28 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testChangeAppId() throws Exception {
+   public void testChangeAppId_fromColdStart() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
       fastColdRestartApp();
+      OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
+      threadAndTaskWait();
+
+      assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
+   }
+
+   /**
+    * Similar to testChangeAppId_fromColdStart test
+    */
+   @Test
+   public void testChangeAppId_duringRuntime() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
+      ShadowOneSignalRestClient.resetStatics();
       OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
       threadAndTaskWait();
 
