@@ -3,6 +3,7 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OSInAppMessageAction {
@@ -40,6 +41,26 @@ public class OSInAppMessageAction {
         closesMessage = json.optBoolean("close", true);
     }
 
+    public JSONObject toJSONObject() {
+        JSONObject mainObj = new JSONObject();
+        try {
+            mainObj.put("click_name", clickName);
+            mainObj.put("click_url", clickUrl);
+            mainObj.put("first_click", firstClick);
+            mainObj.put("closes_message", closesMessage);
+
+            // Omitted for now until necessary
+//            if (urlTarget != null)
+//                mainObj.put("url_target", urlTarget.toJSONObject());
+
+        }
+        catch(JSONException e) {
+            e.printStackTrace();
+        }
+
+        return mainObj;
+    }
+
     /**
      * An enumeration of the possible places action URL's can be loaded,
      * such as an in-app webview
@@ -72,6 +93,17 @@ public class OSInAppMessageAction {
             }
 
             return null;
+        }
+
+        public JSONObject toJSONObject() {
+            JSONObject mainObj = new JSONObject();
+            try {
+                mainObj.put("url_type", text);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            return mainObj;
         }
     }
 }
