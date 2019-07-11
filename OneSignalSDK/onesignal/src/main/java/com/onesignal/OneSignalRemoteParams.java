@@ -23,7 +23,7 @@ class OneSignalRemoteParams {
       void complete(Params params);
    }
 
-   private static int androidParamsReties = 0;
+   private static int androidParamsRetries = 0;
 
    private static final int INCREASE_BETWEEN_RETRIES = 10_000;
    private static final int MIN_WAIT_BETWEEN_RETRIES = 30_000;
@@ -40,13 +40,13 @@ class OneSignalRemoteParams {
 
             new Thread(new Runnable() {
                public void run() {
-                  int sleepTime = MIN_WAIT_BETWEEN_RETRIES + androidParamsReties * INCREASE_BETWEEN_RETRIES;
+                  int sleepTime = MIN_WAIT_BETWEEN_RETRIES + androidParamsRetries * INCREASE_BETWEEN_RETRIES;
                   if (sleepTime > MAX_WAIT_BETWEEN_RETRIES)
                      sleepTime = MAX_WAIT_BETWEEN_RETRIES;
 
                   OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Failed to get Android parameters, trying again in " + (sleepTime / 1_000) +  " seconds.");
                   OSUtils.sleep(sleepTime);
-                  androidParamsReties++;
+                  androidParamsRetries++;
                   makeAndroidParamsRequest(callBack);
                }
             }, "OS_PARAMS_REQUEST").start();
