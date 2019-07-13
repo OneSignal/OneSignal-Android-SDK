@@ -29,6 +29,8 @@ package com.onesignal;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.ComponentCallbacks;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -36,11 +38,29 @@ import android.support.annotation.Nullable;
 class ActivityLifecycleListener implements Application.ActivityLifecycleCallbacks {
 
    @Nullable private static ActivityLifecycleListener instance;
-   static void registerActivityLifecycleCallbacks(@NonNull Application application) {
-      if (instance != null)
-         return;
-      instance = new ActivityLifecycleListener();
-      application.registerActivityLifecycleCallbacks(instance);
+   @Nullable private static ComponentCallbacks configuration;
+   static void registerActivityLifecycleCallbacks(@NonNull final Application application) {
+      // Activity lifecycle listener setup
+      if (instance == null) {
+         instance = new ActivityLifecycleListener();
+         application.registerActivityLifecycleCallbacks(instance);
+      }
+
+      // Configuration change listener setup
+      if (configuration == null) {
+         configuration = new ComponentCallbacks() {
+            @Override
+            public void onConfigurationChanged(Configuration newConfig) {
+               ActivityLifecycleHandler.onConfigurationChanged(newConfig);
+            }
+
+            @Override
+            public void onLowMemory() {
+
+            }
+         };
+         application.registerComponentCallbacks(configuration);
+      }
    }
 
    @Override

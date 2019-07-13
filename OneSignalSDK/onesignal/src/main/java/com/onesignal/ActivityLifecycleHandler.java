@@ -29,6 +29,8 @@ package com.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -99,6 +101,14 @@ class ActivityLifecycleHandler {
         }
     }
 
+    static void onConfigurationChanged(Configuration newConfig) {
+        // If Activity contains the configChanges orientation flag, re-create the view this way
+        if (curActivity != null && OSUtils.hasConfigChangeFlag(curActivity, ActivityInfo.CONFIG_ORIENTATION)) {
+            logOrientationChange(newConfig.orientation);
+            onOrientationChanged();
+        }
+    }
+
     static void onActivityCreated(Activity activity) {
     }
 
@@ -149,6 +159,41 @@ class ActivityLifecycleHandler {
 
     static private void logCurActivity() {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? "" + curActivity.getClass().getName() + ":" + curActivity : "null"));
+    }
+
+    private static void logOrientationChange(int orientation) {
+        // Log device orientation change
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: LANDSCAPE (" + orientation + ")");
+        else if (orientation == Configuration.ORIENTATION_PORTRAIT)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: PORTRAIT (" + orientation + ")");
+    }
+
+    /**
+     * Takes pieces from onActivityResumed and onActivityStopped to recreate the view when the
+     * phones orientation is changed from manual detection using the onConfigurationChanged callback
+     * This fix was originally implemented for In App Messages not being re-shown when orientation
+     * was changed on wrapper SDK apps
+     */
+    private static void onOrientationChanged() {
+        // Remove view
+        handleLostFocus();
+        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+            entry.getValue().stopped(new WeakReference<>(curActivity));
+        }
+
+        // Show view
+        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+            entry.getValue().available(curActivity);
+        }
+
+        ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+        for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
+            KeyboardListener keyboardListener = new KeyboardListener(entry.getValue(), entry.getKey());
+            treeObserver.addOnGlobalLayoutListener(keyboardListener);
+            sKeyboardListeners.put(entry.getKey(), keyboardListener);
+        }
+        handleFocus();
     }
 
     static private void handleLostFocus() {
