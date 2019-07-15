@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
@@ -284,5 +285,9 @@ public class OneSignalPackagePrivateHelper {
       public OSInAppMessage(JSONObject json) throws JSONException {
          super(json);
       }
+   }
+
+   public static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
+      return OSUtils.hasConfigChangeFlag(activity, configChangeFlag);
    }
 }
