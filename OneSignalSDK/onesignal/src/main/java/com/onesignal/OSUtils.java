@@ -429,7 +429,7 @@ class OSUtils {
    }
 
    static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
-      boolean hasFlag = true;
+      boolean hasFlag = false;
       try {
          int configChanges = activity.getPackageManager().getActivityInfo(activity.getComponentName(), 0).configChanges;
          int flagInt = configChanges & configChangeFlag;
