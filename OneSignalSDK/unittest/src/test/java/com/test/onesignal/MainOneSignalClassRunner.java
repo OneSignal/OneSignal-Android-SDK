@@ -81,6 +81,7 @@ import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
+import com.onesignal.example.MainActivity;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -257,7 +258,7 @@ public class MainOneSignalClassRunner {
     * 4. Comparison of PermissionsActivity to dummy PermissionsActivity (2nd Test Case)
     */
    @Test
-   @Config(manifest = "AndroidManifestLocationPrivacyConsent.xml", sdk = 26)
+   @Config(manifest = "AndroidManifest_LocationPrivacyConsent.xml", sdk = 26)
    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
       OneSignal.setRequiresUserPrivacyConsent(true);
       OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
@@ -576,7 +577,7 @@ public class MainOneSignalClassRunner {
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
-   @Config(manifest="AndroidManifestDefaultOpenDisabled.xml")
+   @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
    @Test
    public void testOpeningLaunchUrlWithDisableDefault() throws Exception {
       // Removes app launch
@@ -588,7 +589,7 @@ public class MainOneSignalClassRunner {
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
-   @Config(manifest="AndroidManifestDefaultOpenDisabled.xml")
+   @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
    @Test
    public void testDisableOpeningLauncherActivityOnNotifiOpen() throws Exception {
       // From app launching normally
@@ -3558,6 +3559,29 @@ public class MainOneSignalClassRunner {
 
       assertTrue(first.executed);
       assertTrue(second.executed);
+   }
+
+   /**
+    * Created a AndroidManifest with 2 activities, 1 with the orientation config and 1 without
+    * Using this AndroidManifest setup to test that a config setting is detectable
+    */
+   @Test
+   @Config(manifest = "AndroidManifest_OrientationConfigChange.xml")
+   public void testAndroidManifestConfigChangeFlags_orientationFlag() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Verify BlankActivity has orientation flag
+      boolean blankHasFlag = OneSignalPackagePrivateHelper.hasConfigChangeFlag(blankActivity, ActivityInfo.CONFIG_ORIENTATION);
+      assertTrue(blankHasFlag);
+
+      // Go to MainActivity
+      Intent mainIntent = new Intent(blankActivity, MainActivity.class);
+      Activity mainActivity = Robolectric.buildActivity(MainActivity.class).newIntent(mainIntent).create().get();
+
+      // Verify MainActivity has no orientation flag
+      boolean mainHasFlag = OneSignalPackagePrivateHelper.hasConfigChangeFlag(mainActivity, ActivityInfo.CONFIG_ORIENTATION);
+      assertFalse(mainHasFlag);
    }
 
    // ####### Unit test helper methods ########

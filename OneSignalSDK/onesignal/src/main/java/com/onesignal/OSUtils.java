@@ -27,9 +27,11 @@
 
 package com.onesignal;
 
+import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -424,5 +426,17 @@ class OSUtils {
    // Creates a new Set<T> that supports reads and writes from more than one thread at a time
    static <T> Set<T> newConcurrentSet() {
       return Collections.newSetFromMap(new ConcurrentHashMap<T, Boolean>());
+   }
+
+   static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
+      boolean hasFlag = false;
+      try {
+         int configChanges = activity.getPackageManager().getActivityInfo(activity.getComponentName(), 0).configChanges;
+         int flagInt = configChanges & configChangeFlag;
+         hasFlag = flagInt != 0;
+      } catch (PackageManager.NameNotFoundException e) {
+         e.printStackTrace();
+      }
+      return hasFlag;
    }
 }
