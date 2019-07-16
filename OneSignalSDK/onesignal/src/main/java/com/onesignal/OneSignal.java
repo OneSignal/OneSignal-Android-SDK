@@ -2823,9 +2823,23 @@ public class OneSignal {
    }
 
 
-   /** Removes a list/collection of triggers from their keys  */
+   /** Removes a list/collection of triggers from their keys with a Collection of Strings */
    public static void removeTriggersForKeys(Collection<String> keys) {
       OSInAppMessageController.getController().removeTriggersForKeys(keys);
+   }
+
+   /** Removes a list/collection of triggers from their keys with a JSONArray String.
+    *  Only String types are used, other types in the array will be ignored. */
+   public static void removeTriggersForKeysFromJsonArrayString(@NonNull String keys) {
+      try {
+         JSONArray jsonArray = new JSONArray(keys);
+         Collection<String> keysCollection = OSUtils.extractStringsFromCollection(
+            JSONUtils.jsonArrayToList(jsonArray)
+         );
+         OSInAppMessageController.getController().removeTriggersForKeys(keysCollection);
+      } catch (JSONException e) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "removeTriggersForKeysFromJsonArrayString, invalid json", e);
+      }
    }
 
    /** Removes a single trigger for the given key */

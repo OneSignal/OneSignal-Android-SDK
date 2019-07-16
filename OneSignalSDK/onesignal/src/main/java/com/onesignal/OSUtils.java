@@ -43,6 +43,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
@@ -51,7 +52,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -438,5 +442,17 @@ class OSUtils {
          e.printStackTrace();
       }
       return hasFlag;
+   }
+
+   static @NonNull Collection<String> extractStringsFromCollection(@Nullable Collection<Object> collection) {
+      Collection<String> result = new ArrayList<>();
+      if (collection == null)
+         return result;
+
+      for (Object value : collection) {
+         if (value instanceof String)
+            result.add((String) value);
+      }
+      return result;
    }
 }
