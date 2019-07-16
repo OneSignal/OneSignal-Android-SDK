@@ -265,6 +265,33 @@ public class InAppMessagingUnitTests {
     }
 
     @Test
+    public void testRemoveTriggersForKeysFromJsonArray_SingleKey() {
+        OneSignal.addTrigger("key", "value");
+
+        OneSignal.removeTriggersForKeysFromJsonArrayString(new JSONArray() {{
+            put("key");
+        }}.toString());
+
+        assertNull(OneSignal.getTriggerValueForKey("key"));
+    }
+
+    @Test
+    public void testRemoveTriggersForKeysFromJsonArray_KeysWithNonStringTypes() {
+        OneSignal.addTrigger("key", "value");
+
+        // Ensure NonString types are ignored and does not throw
+        OneSignal.removeTriggersForKeysFromJsonArrayString(new JSONArray() {{
+            put(1);
+            put(false);
+            put(new JSONObject());
+            put(new JSONArray());
+            put("key");
+        }}.toString());
+
+        assertNull(OneSignal.getTriggerValueForKey("key"));
+    }
+
+    @Test
     public void testGreaterThanOperator() throws JSONException {
         assertTrue(comparativeOperatorTest(OSTriggerOperator.GREATER_THAN, 1, 2));
         assertFalse(comparativeOperatorTest(OSTriggerOperator.GREATER_THAN, 5, 3));
