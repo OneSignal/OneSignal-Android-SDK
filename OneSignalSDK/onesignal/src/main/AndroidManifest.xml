@@ -64,8 +64,9 @@
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
         <service android:name="com.onesignal.GcmIntentService" />
-        <service android:name="com.onesignal.GcmIntentJobService"
-                 android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <service android:name="com.onesignal.GcmJobIntentService"
+            android:permission="android.permission.BIND_JOB_SERVICE"/>
 
         <service android:name="com.onesignal.RestoreJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
