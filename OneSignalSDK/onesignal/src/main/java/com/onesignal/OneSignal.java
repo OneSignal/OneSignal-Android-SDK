@@ -2836,6 +2836,9 @@ public class OneSignal {
          Collection<String> keysCollection = OSUtils.extractStringsFromCollection(
             JSONUtils.jsonArrayToList(jsonArray)
          );
+         // Some keys were filtered, log as warning
+         if (jsonArray.length() != keysCollection.size())
+            OneSignal.Log(LOG_LEVEL.WARN, "removeTriggersForKeysFromJsonArrayString: Skipped removing non-String type keys ");
          OSInAppMessageController.getController().removeTriggersForKeys(keysCollection);
       } catch (JSONException e) {
          OneSignal.Log(LOG_LEVEL.ERROR, "removeTriggersForKeysFromJsonArrayString, invalid json", e);
