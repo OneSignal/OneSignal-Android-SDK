@@ -185,6 +185,77 @@ public class InAppMessagingUnitTests {
     }
 
     @Test
+    public void testAddTriggersFromJsonString_StringsTest() throws Exception {
+        JSONObject jsonObject = new JSONObject() {{
+            put("key1", "value1");
+            put("key2", "value2");
+        }};
+
+        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+
+        assertEquals(OneSignal.getTriggerValueForKey("key1"), "value1");
+        assertEquals(OneSignal.getTriggerValueForKey("key2"), "value2");
+    }
+
+    @Test
+    public void testAddTriggersFromJsonString_NullValue() throws Exception {
+        JSONObject jsonObject = new JSONObject() {{
+            put("key", null);
+        }};
+
+        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+
+        assertNull(OneSignal.getTriggerValueForKey("key"));
+    }
+
+    @Test
+    public void testAddTriggersFromJsonString_IntTest() throws Exception {
+        JSONObject jsonObject = new JSONObject() {{
+            put("key", 1);
+        }};
+
+        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+
+        assertEquals(1, OneSignal.getTriggerValueForKey("key"));
+    }
+
+    @Test
+    public void testAddTriggersFromJsonString_NestedJSONArray() throws Exception {
+        JSONObject jsonObject = new JSONObject() {{
+            put("key", new JSONArray() {{
+                put("value");
+            }});
+        }};
+
+        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+
+        assertEquals(
+           new ArrayList<String>() {{
+               add("value");
+           }},
+           OneSignal.getTriggerValueForKey("key")
+        );
+    }
+
+    @Test
+    public void testAddTriggersFromJsonString_NestedJSONObject() throws Exception {
+        JSONObject jsonObject = new JSONObject() {{
+            put("key", new JSONObject() {{
+                put("nestedKey", "value");
+            }});
+        }};
+
+        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+
+        assertEquals(
+           new HashMap<String, Object>() {{
+              put("nestedKey", "value");
+           }},
+           OneSignal.getTriggerValueForKey("key")
+       );
+    }
+
+    @Test
     public void testDeleteSavedTriggerValue() {
         OneSignal.addTrigger("test1", "value1");
         assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
