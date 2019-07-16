@@ -29,20 +29,17 @@ package com.onesignal;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.support.annotation.Nullable;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
-
-import java.security.SecureRandom;
 
 // This is the entry point when a FCM / GCM payload is received from the Google Play services app
 // TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
@@ -168,13 +165,10 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    private static void startGCMServiceWithJobIntentService(Context context, Bundle bundle) {
       BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
 
-      Intent intent = new Intent(context, GcmJobIntentService.class);
-      if (taskExtras.getBundle() instanceof PersistableBundle)
-         intent.putExtra(GcmJobIntentService.BUNDLE_EXTRA, (PersistableBundle) taskExtras.getBundle());
-      else
-         intent.putExtra(GcmJobIntentService.BUNDLE_EXTRA, (Bundle) taskExtras.getBundle());
+      Intent intent = new Intent(context, GcmIntentJobService.class);
+      intent.putExtra(GcmIntentJobService.BUNDLE_EXTRA, (Parcelable) taskExtras.getBundle());
 
-      GcmJobIntentService.enqueueWork(context, intent);
+      GcmIntentJobService.enqueueWork(context, intent);
    }
 
    private static void startGCMServiceWithWakefulService(Context context, Bundle bundle) {

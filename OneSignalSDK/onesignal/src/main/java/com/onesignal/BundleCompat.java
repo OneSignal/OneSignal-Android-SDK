@@ -31,6 +31,7 @@ package com.onesignal;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.support.annotation.RequiresApi;
 
@@ -49,6 +50,8 @@ public interface BundleCompat<T> {
    boolean containsKey(String key);
    
    T getBundle();
+
+   void setBundle(Parcelable bundle);
 }
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP_MR1)
@@ -117,6 +120,11 @@ class BundleCompatPersistableBundle implements BundleCompat<PersistableBundle> {
    public PersistableBundle getBundle() {
       return mBundle;
    }
+
+   @Override
+   public void setBundle(Parcelable bundle) {
+      this.mBundle = (PersistableBundle) bundle;
+   }
 }
 
 class BundleCompatBundle implements BundleCompat<Bundle> {
@@ -183,7 +191,12 @@ class BundleCompatBundle implements BundleCompat<Bundle> {
    public Bundle getBundle() {
       return mBundle;
    }
-   
+
+   @Override
+   public void setBundle(Parcelable bundle) {
+      this.mBundle = (Bundle) bundle;
+   }
+
    @Override
    public boolean getBoolean(String key, boolean value) {
      return mBundle.getBoolean(key, value);
@@ -192,7 +205,7 @@ class BundleCompatBundle implements BundleCompat<Bundle> {
 
 class BundleCompatFactory {
    static BundleCompat getInstance() {
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1)
          return new BundleCompatPersistableBundle();
       return new BundleCompatBundle();
    }
