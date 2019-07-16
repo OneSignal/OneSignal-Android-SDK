@@ -170,8 +170,15 @@ class JSONUtils {
         return map;
     }
 
-    // Converts a JSONArray into a List
-    private static @NonNull List<Object> jsonArrayToList(@NonNull JSONArray array) throws JSONException {
+    // Converts a JSONArray into a List, returns null if a null value is passed in.
+    static @Nullable List<Object> jsonArrayToList(@Nullable JSONArray array) throws JSONException {
+        if (array == null)
+            return null;
+        return jsonArrayToListNonNull(array);
+    }
+
+    // Converts a JSONArray into a List, same as above however does NOT accept null values
+    private static @NonNull List<Object> jsonArrayToListNonNull(@NonNull JSONArray array) throws JSONException {
         List<Object> list = new ArrayList<>();
         for(int i = 0; i < array.length(); i++) {
             Object value = array.get(i);
@@ -186,7 +193,7 @@ class JSONUtils {
         if (value instanceof JSONObject)
             return jsonObjectToMapNonNull((JSONObject)value);
         if (value instanceof JSONArray)
-            return jsonArrayToList((JSONArray)value);
+            return jsonArrayToListNonNull((JSONArray)value);
         return value;
     }
 
