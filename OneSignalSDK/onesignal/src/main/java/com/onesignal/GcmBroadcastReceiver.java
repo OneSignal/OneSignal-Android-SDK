@@ -1,6 +1,6 @@
 /**
  * Modified MIT License
- * 
+ *
  * Copyright 2018 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -9,13 +9,13 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -69,15 +69,15 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
          return;
 
       OneSignal.setAppContext(context);
-      
+
       ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
-      
+
       // Null means this isn't a GCM / FCM message.
       if (processedResult == null) {
          setSuccessfulResultCode();
          return;
       }
-      
+
       // Prevent other GCM receivers from firing if;
       //   This is a duplicated GCM message
       //   OR app developer setup a extender service to handle the notification.
@@ -86,7 +86,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
          setAbort();
          return;
       }
-   
+
       // Prevent other GCM receivers from firing if;
       //   This is a OneSignal payload
       //   AND the setting is enabled to allow filtering in this case.
@@ -118,22 +118,22 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
          setResultCode(Activity.RESULT_OK);
       }
    }
-   
+
    private static @Nullable ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
       if (!isGcmMessage(intent))
          return null;
-      
+
       ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
-   
+
       // Return if the notification will NOT be handled by normal GcmIntentService display flow.
       if (processedResult.processed())
          return processedResult;
-   
+
       startGCMService(context, bundle);
-      
+
       return processedResult;
    }
-   
+
    private static void startGCMService(Context context, Bundle bundle) {
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
@@ -141,10 +141,10 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
          NotificationBundleProcessor.ProcessFromGCMIntentService(context, taskExtras, null);
          return;
       }
-      
+
       boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
       if (!isHighPriority && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-         startGCMServiceWithJobScheduler(context, bundle);
+          startGCMServiceWithJobIntentService(context, bundle);
       else {
          try {
             startGCMServiceWithWakefulService(context, bundle);
@@ -152,31 +152,29 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
             // If the high priority FCM message failed to add this app to the temporary whitelist
             // https://github.com/OneSignal/OneSignal-Android-SDK/issues/498
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-               startGCMServiceWithJobScheduler(context, bundle);
+               startGCMServiceWithJobIntentService(context, bundle);
             else
                throw e;
          }
       }
    }
 
+   /**
+    * This function uses an android.support.v4.app.JobIntentService in order to enqueue the jobs.
+    * Some devices with Api O and upper can't schedule more than 100 distinct jobs,
+    * this will process one notification sequentially like an IntentService.
+    */
    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-   private static void startGCMServiceWithJobScheduler(Context context, Bundle bundle) {
+   private static void startGCMServiceWithJobIntentService(Context context, Bundle bundle) {
       BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
 
-      ComponentName componentName = new ComponentName(context.getPackageName(),
-         GcmIntentJobService.class.getName());
-      SecureRandom random = new SecureRandom();
-      JobInfo jobInfo = new JobInfo.Builder(random.nextInt(), componentName)
-         .setOverrideDeadline(0)
-         .setExtras((PersistableBundle)taskExtras.getBundle())
-         .build();
-      JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      Intent intent = new Intent(context, GcmJobIntentService.class);
+      if (taskExtras.getBundle() instanceof PersistableBundle)
+         intent.putExtra(GcmJobIntentService.BUNDLE_EXTRA, (PersistableBundle) taskExtras.getBundle());
+      else
+         intent.putExtra(GcmJobIntentService.BUNDLE_EXTRA, (Bundle) taskExtras.getBundle());
 
-      // TODO: Might want to use enqueue in the future. This will process one notification
-      //         sequentially like an IntentService
-      //       JobIntentService can be used instead, however app developer would have to use
-      //         Android support library 26+
-      jobScheduler.schedule(jobInfo);
+      GcmJobIntentService.enqueueWork(context, intent);
    }
 
    private static void startGCMServiceWithWakefulService(Context context, Bundle bundle) {
