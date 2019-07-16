@@ -2792,11 +2792,24 @@ public class OneSignal {
    /** In-App Message Triggers */
 
    /**
-    * Allows you to set multiple trigger key/value pairs simultaneously
+    * Allows you to set multiple trigger key/value pairs simultaneously with a Map
     * Triggers are used for targeting in-app messages.
     */
    public static void addTriggers(Map<String, Object> triggers) {
       OSInAppMessageController.getController().addTriggers(triggers);
+   }
+
+   /**
+    * Allows you to set multiple trigger key/value pairs simultaneously with a JSON String
+    * Triggers are used for targeting in-app messages.
+    */
+   public static void addTriggersFromJsonString(String triggersJsonString) {
+      try {
+         JSONObject jsonObject = new JSONObject(triggersJsonString);
+         addTriggers(JSONUtils.jsonObjectToMap(jsonObject));
+      } catch (JSONException e) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "addTriggersFromJsonString, invalid json", e);
+      }
    }
 
    /**
@@ -2808,6 +2821,7 @@ public class OneSignal {
 
       OSInAppMessageController.getController().addTriggers(triggerMap);
    }
+
 
    /** Removes a list/collection of triggers from their keys  */
    public static void removeTriggersForKeys(Collection<String> keys) {
