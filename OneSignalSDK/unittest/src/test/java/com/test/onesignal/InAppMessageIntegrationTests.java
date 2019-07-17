@@ -252,8 +252,8 @@ public class InAppMessageIntegrationTests {
 
         // Second in app should now display
         Awaitility.await()
-          .atMost(new Duration(150, TimeUnit.MILLISECONDS))
-          .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+          .atMost(new Duration(1, TimeUnit.SECONDS))
+          .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
           .untilAsserted(new ThrowingRunnable() {
               @Override
               public void run() {
