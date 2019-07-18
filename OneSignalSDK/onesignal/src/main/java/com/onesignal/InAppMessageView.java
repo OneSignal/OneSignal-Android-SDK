@@ -6,11 +6,12 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.PixelFormat;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.widget.PopupWindowCompat;
 import android.support.v7.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
@@ -19,6 +20,7 @@ import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 
 import java.lang.ref.WeakReference;
@@ -54,6 +56,7 @@ class InAppMessageView {
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
     private static final int MARGIN_PX_SIZE = dpToPx(24);
+    private PopupWindow popupWindow;
 
     interface InAppMessageViewListener {
         void onMessageWasShown();
@@ -168,11 +171,10 @@ class InAppMessageView {
         LinearLayout.LayoutParams linearLayoutParams = hasBackground ? createParentLinearLayoutParams() : null;
 
         showDraggableView(
-                displayLocation,
-                webViewLayoutParams,
-                linearLayoutParams,
-                createDraggableLayoutParams(pageHeight, displayLocation),
-                createWindowLayout(pageWidth)
+            displayLocation,
+            webViewLayoutParams,
+            linearLayoutParams,
+            createDraggableLayoutParams(pageHeight, displayLocation)
         );
     }
 
@@ -227,69 +229,77 @@ class InAppMessageView {
         return draggableParams;
     }
 
-    private WindowManager.LayoutParams createWindowLayout(int pageWidth) {
-        WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams(
-            hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
-            hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
-            // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
-            //  cut off in immersive mode.
-           WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG,
-            // Don't let it grab the input focus
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
-        );
-
-        layoutParams.token = currentActivity.getWindow().getDecorView().getApplicationWindowToken();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            layoutParams.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_CROSSFADE;
-        }
-        if (!hasBackground) {
-            switch (displayLocation) {
-                case TOP_BANNER:
-                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
-                    break;
-                case BOTTOM_BANNER:
-                    layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-                    break;
-            }
-        }
-        return layoutParams;
-    }
-
     private void showDraggableView(final WebViewManager.Position displayLocation,
                                    final RelativeLayout.LayoutParams relativeLayoutParams,
                                    final LinearLayout.LayoutParams linearLayoutParams,
-                                   final DraggableRelativeLayout.Params webViewLayoutParams,
-                                   final WindowManager.LayoutParams parentLinearLayoutParams) {
+                                   final DraggableRelativeLayout.Params webViewLayoutParams) {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
-                if (webView != null) {
-                    webView.setLayoutParams(relativeLayoutParams);
+                if (webView == null)
+                   return;
 
-                    Context context = currentActivity.getApplicationContext();
-                    setUpDraggableLayout(context, linearLayoutParams, webViewLayoutParams);
-                    setUpParentLinearLayout(context);
+                webView.setLayoutParams(relativeLayoutParams);
 
-                    WindowManager windowManager = currentActivity.getWindowManager();
-                    if (windowManager != null && parentRelativeLayout != null) {
-                        windowManager.addView(parentRelativeLayout, parentLinearLayoutParams);
-                    }
-                    if (messageController != null) {
-                        animateInAppMessage(displayLocation, draggableRelativeLayout, parentRelativeLayout);
-                        messageController.onMessageWasShown();
-                    }
+                Context context = currentActivity.getApplicationContext();
+                setUpDraggableLayout(context, linearLayoutParams, webViewLayoutParams);
+                setUpParentLinearLayout(context);
+                createPopupWindow(parentRelativeLayout);
 
-                    initDismissIfNeeded();
+                if (messageController != null) {
+                    animateInAppMessage(displayLocation, draggableRelativeLayout, parentRelativeLayout);
+                    messageController.onMessageWasShown();
                 }
-            }
+
+               initDismissIfNeeded();
+             }
         });
     }
 
-    private void setUpParentLinearLayout(Context context) {
+   /**
+    * Create a new Android PopupWindow that draws over the current Activity
+    *
+    * @param parentRelativeLayout root layout to attach to the pop up window
+    */
+    private void createPopupWindow(@NonNull RelativeLayout parentRelativeLayout) {
+       popupWindow = new PopupWindow(
+          parentRelativeLayout,
+          hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
+          hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT
+       );
+       popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+       popupWindow.setTouchable(true);
+
+       int gravity = 0;
+       if (!hasBackground) {
+          switch (displayLocation) {
+             case TOP_BANNER:
+                gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                break;
+             case BOTTOM_BANNER:
+                gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                break;
+          }
+       }
+
+       // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
+       //  cut off in immersive mode.
+       PopupWindowCompat.setWindowLayoutType(
+          popupWindow,
+          WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+       );
+
+       popupWindow.showAtLocation(
+          currentActivity.getWindow().getDecorView().getRootView(),
+          gravity,
+          0,
+          0
+       );
+   }
+
+   private void setUpParentLinearLayout(Context context) {
         parentRelativeLayout = new RelativeLayout(context);
-        parentRelativeLayout.setBackgroundColor(ACTIVITY_BACKGROUND_COLOR_EMPTY);
+        parentRelativeLayout.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         parentRelativeLayout.setClipChildren(false);
         parentRelativeLayout.setClipToPadding(false);
         parentRelativeLayout.addView(draggableRelativeLayout);
@@ -299,9 +309,8 @@ class InAppMessageView {
                                       LinearLayout.LayoutParams linearLayoutParams,
                                       DraggableRelativeLayout.Params draggableParams) {
         draggableRelativeLayout = new DraggableRelativeLayout(context);
-        if (linearLayoutParams != null) {
+        if (linearLayoutParams != null)
             draggableRelativeLayout.setLayoutParams(linearLayoutParams);
-        }
         draggableRelativeLayout.setParams(draggableParams);
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
@@ -310,9 +319,8 @@ class InAppMessageView {
             }
         });
 
-        if (webView.getParent() != null) {
+        if (webView.getParent() != null)
             ((ViewGroup) webView.getParent()).removeAllViews();
-        }
 
         CardView cardView = createCardView(context);
         cardView.addView(webView);
@@ -445,9 +453,8 @@ class InAppMessageView {
     }
 
     private void removeParentLinearLayout(Activity currentActivity) {
-        WindowManager windowManager = currentActivity.getWindowManager();
-        if (parentRelativeLayout != null && windowManager != null)
-            windowManager.removeViewImmediate(parentRelativeLayout);
+        if (popupWindow != null)
+           popupWindow.dismiss();
     }
 
     /**
