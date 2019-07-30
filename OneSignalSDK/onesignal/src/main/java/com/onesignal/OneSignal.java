@@ -607,6 +607,7 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
       OneSignal.setAppContext(context);
       setupPrivacyConsent(context);
 
@@ -615,8 +616,6 @@ public class OneSignal {
          delayedInitParams = new DelayedConsentInitializationParameters(context, googleProjectNumber, oneSignalAppId, notificationOpenedHandler, notificationReceivedHandler);
          return;
       }
-
-      mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
 
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
@@ -1210,6 +1209,10 @@ public class OneSignal {
       LocationGMS.onFocusChange();
 
       lastTrackedFocusTime = SystemClock.elapsedRealtime();
+
+      // Make sure without privacy consent, onAppFocus returns early
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
+         return;
 
       doSessionInit();
 
