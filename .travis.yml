@@ -29,3 +29,5 @@ after_failure:
     - pwd
     - ls -la $HOME
     - ls -la $HOME/android-sdk
+
+dist: trusty
