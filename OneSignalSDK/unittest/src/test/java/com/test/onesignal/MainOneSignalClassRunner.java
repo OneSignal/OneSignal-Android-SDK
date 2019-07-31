@@ -295,7 +295,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
 
-      OneSignalPackagePrivateHelper.onAppFocus();
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // No requests should be made at this point since privacy consent has not been given
@@ -311,7 +311,7 @@ public class MainOneSignalClassRunner {
       ShadowSystemClock.setCurrentTimeMillis(121 * 60 * 1000);
 
       // Call onAppFocus and check that the last url is a on_session request
-      OneSignalPackagePrivateHelper.onAppFocus();
+      blankActivityController.resume();
       threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
