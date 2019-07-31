@@ -287,6 +287,10 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
+   public static void onAppFocus() {
+      OneSignal.onAppFocus();
+   }
+
    public static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
       return OSUtils.hasConfigChangeFlag(activity, configChangeFlag);
    }
