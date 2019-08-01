@@ -285,6 +285,39 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testAppFocusWithPrivacyConsent() throws Exception {
+      OneSignal.setRequiresUserPrivacyConsent(true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Make sure onAppFocus does not move past privacy consent check and on_session is not called
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // No requests should be made at this point since privacy consent has not been given
+      int requestsCount = ShadowOneSignalRestClient.requests.size();
+      assertEquals(requestsCount, 0);
+
+      // Give privacy consent
+      OneSignal.provideUserConsent(true);
+
+      // Pause app and wait enough time to trigger on_session
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+
+      // Call onAppFocus and check that the last url is a on_session request
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+   }
+
+   @Test
    public void testOnSessionCalledOnlyOncePer30Sec() throws Exception {
       // Will call create
       ShadowSystemClock.setCurrentTimeMillis(60 * 60 * 1000);
