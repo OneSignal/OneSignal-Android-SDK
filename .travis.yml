@@ -1,6 +1,7 @@
 language: android
 sudo: false
 jdk: oraclejdk8
+dist: trusty
 
 android:
   components:
@@ -29,5 +30,3 @@ after_failure:
     - pwd
     - ls -la $HOME
     - ls -la $HOME/android-sdk
-
-dist: trusty
