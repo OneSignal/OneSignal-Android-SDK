@@ -34,7 +34,7 @@ public class OneSignalPrefsRunner {
    private static Activity blankActivity;
 
    @BeforeClass // Runs only once, before any tests
-   public static void setUpClass() {
+   public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
       StaticResetHelper.saveStaticValues();
@@ -48,7 +48,7 @@ public class OneSignalPrefsRunner {
    }
 
    @AfterClass
-   public static void afterEverything() {
+   public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
    }
 

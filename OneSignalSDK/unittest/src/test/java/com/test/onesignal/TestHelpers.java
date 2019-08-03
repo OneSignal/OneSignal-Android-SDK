@@ -2,22 +2,27 @@ package com.test.onesignal;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Looper;
 
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
+
+import junit.framework.Assert;
 
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowSystemClock;
@@ -29,11 +34,15 @@ import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
-class TestHelpers {
+public class TestHelpers {
 
    static Exception lastException;
 
-   static void beforeTestInitAndCleanup() {
+   static void beforeTestInitAndCleanup() throws Exception {
+      OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
+      if (!ranBeforeTestSuite)
+         return;
+
       stopAllOSThreads();
 
       StaticResetHelper.restSetStaticFields();
@@ -57,17 +66,22 @@ class TestHelpers {
       ShadowOneSignalDbHelper.restSetStaticFields();
       ShadowOneSignalRestClientWithMockConnection.resetStatics();
 
-      lastException = null;
+      ShadowOSWebView.resetStatics();
 
-      OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
+      ShadowDynamicTimer.resetStatics();
+
+      lastException = null;
    }
 
-   static void afterTestCleanup() {
+   static void afterTestCleanup() throws Exception {
       try {
          stopAllOSThreads();
       } catch (Exception e) {
          e.printStackTrace();
       }
+
+      if (lastException != null)
+         throw lastException;
 
       OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase().close();
    }
@@ -148,9 +162,13 @@ class TestHelpers {
    }
 
    private static boolean ranBeforeTestSuite;
-   static void beforeTestSuite() {
+   static void beforeTestSuite() throws Exception {
       if (ranBeforeTestSuite)
          return;
+
+      StaticResetHelper.load();
+
+      Looper.prepareMainLooper();
 
       beforeTestInitAndCleanup();
 
@@ -168,10 +186,17 @@ class TestHelpers {
       ranBeforeTestSuite = true;
    }
 
-   static void fastAppRestart() {
+   static void fastColdRestartApp() throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
+   }
+   private static int sessionCountOffset = 1;
+   static void restartAppAndElapseTimeToNextSession() throws Exception {
+      stopAllOSThreads();
+      flushBufferedSharedPrefs();
+      StaticResetHelper.restSetStaticFields();
+      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1_000 * 31 * sessionCountOffset++);
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords() {
@@ -211,5 +236,10 @@ class TestHelpers {
 
    static void advanceTimeByMs(long advanceBy) {
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() +  advanceBy);
+   }
+
+   public static void assertMainThread() {
+      if (!Looper.getMainLooper().getThread().equals(Thread.currentThread()))
+         Assert.fail("assertMainThread - Not running on main thread when expected to!");
    }
 }

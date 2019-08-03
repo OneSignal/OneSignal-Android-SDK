@@ -36,6 +36,8 @@ dependencies {
     // Can be compileOnly in 4.0.0, can't change until then as some projects may rely on this
     implementation 'com.google.android.gms:play-services-location:12.0.1'
 
+    implementation 'com.android.support:cardview-v7:27.1.1'
+
     // Required for GoogleApiAvailability
     implementation 'com.google.android.gms:play-services-base:12.0.1'
 

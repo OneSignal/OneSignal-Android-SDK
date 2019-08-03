@@ -34,6 +34,7 @@ import org.robolectric.annotation.Implements;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
@@ -76,13 +77,14 @@ public class ShadowOneSignalRestClient {
    public static String lastUrl;
    public static boolean failNext, failNextPut, failAll, failPosts, failGetParams;
    public static int failHttpCode;
-   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse;
+   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse;
+   public static Pattern nextSuccessfulGETResponsePattern;
    public static int networkCallCount;
 
    public static String pushUserId, emailUserId;
 
    public static JSONObject paramExtras;
-
+   
    // Pauses any network callbacks from firing.
    // Also blocks any sync network calls.
    public static boolean freezeResponses;
@@ -97,8 +99,10 @@ public class ShadowOneSignalRestClient {
       networkCallCount = 0;
 
       nextSuccessfulGETResponse = null;
+      nextSuccessfulGETResponsePattern = null;
 
       failResponse = "{}";
+      nextSuccessfulRegistrationResponse = null;
       nextSuccessResponse = null;
       failNext = false;
       failNextPut = false;
@@ -126,6 +130,22 @@ public class ShadowOneSignalRestClient {
             System.out.println("End thread notify: " + thread);
          }
       }
+   }
+
+   public static void setNextSuccessfulJSONResponse(JSONObject response) throws JSONException {
+      nextSuccessResponse = response.toString(1);
+   }
+
+   public static void setNextFailureJSONResponse(JSONObject response) throws JSONException {
+      failResponse = response.toString(1);
+   }
+
+   public static void setNextSuccessfulGETJSONResponse(JSONObject response) throws JSONException {
+      nextSuccessfulGETResponse = response.toString(1);
+   }
+
+   public static void setNextSuccessfulRegistrationResponse(JSONObject response) throws JSONException {
+      nextSuccessfulRegistrationResponse = response.toString(1);
    }
 
    private static void freezeSyncCall() {
@@ -191,7 +211,12 @@ public class ShadowOneSignalRestClient {
       if (doFail(responseHandler, failPosts)) return;
 
       String retJson;
-      if (url.contains("on_session"))
+
+      if (nextSuccessfulRegistrationResponse != null) {
+         retJson = nextSuccessfulRegistrationResponse;
+         nextSuccessfulRegistrationResponse = null;
+      }
+      else if (url.contains("on_session"))
          retJson = "{}";
       else {
          int device_type = jsonBody.optInt("device_type", 0);
@@ -246,7 +271,9 @@ public class ShadowOneSignalRestClient {
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) {
       trackRequest(REST_METHOD.GET, null, url);
       if (failGetParams && doFail(responseHandler, true)) return;
-   
+
+      if (doNextSuccessfulGETResponse(url, responseHandler))
+         return;
       if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
@@ -275,11 +302,19 @@ public class ShadowOneSignalRestClient {
 
       if (doFail(responseHandler)) return;
 
-      if (nextSuccessfulGETResponse != null) {
+      if (doNextSuccessfulGETResponse(url, responseHandler))
+         return;
+
+      responseHandler.onSuccess("{}");
+   }
+
+   private static boolean doNextSuccessfulGETResponse(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      if (nextSuccessfulGETResponse != null &&
+         (nextSuccessfulGETResponsePattern == null || nextSuccessfulGETResponsePattern.matcher(url).matches())) {
          responseHandler.onSuccess(nextSuccessfulGETResponse);
          nextSuccessfulGETResponse = null;
+         return true;
       }
-      else
-         responseHandler.onSuccess("{}");
+      return false;
    }
 }

@@ -29,6 +29,7 @@ package com.onesignal;
 
 import android.app.Activity;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.onesignal.OneSignal.NotificationOpenedHandler;
@@ -36,8 +37,15 @@ import com.onesignal.OneSignal.NotificationReceivedHandler;
 import com.onesignal.OneSignal.GetTagsHandler;
 import com.onesignal.OneSignal.IdsAvailableHandler;
 import com.onesignal.OneSignal.PostNotificationResponseHandler;
+import com.onesignal.OneSignal.InAppMessageClickHandler;
 
-public class OneSignalUnityProxy implements NotificationOpenedHandler, NotificationReceivedHandler, OSPermissionObserver, OSSubscriptionObserver, OSEmailSubscriptionObserver {
+public class OneSignalUnityProxy implements
+   NotificationOpenedHandler,
+   NotificationReceivedHandler,
+   OSPermissionObserver,
+   OSSubscriptionObserver,
+   OSEmailSubscriptionObserver,
+   InAppMessageClickHandler {
 
    private static String unityListenerName;
    private static java.lang.reflect.Method unitySendMessage;
@@ -60,6 +68,8 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
          OneSignal.Builder builder = OneSignal.getCurrentOrNewInitBuilder();
          builder.unsubscribeWhenNotificationsAreDisabled(true);
          builder.filterOtherGCMReceivers(true);
+         builder.setInAppMessageClickHandler(this);
+
          OneSignal.init((Activity) unityPlayerClass.getField("currentActivity").get(null), googleProjectNumber, oneSignalAppId, this, this);
       } catch (Throwable t) {
          t.printStackTrace();
@@ -227,7 +237,33 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
    }
 
    public void setLocationShared(boolean shared) { OneSignal.setLocationShared(shared); }
-   
+
+   public void addTrigger(String key, String value) {
+      OneSignal.addTrigger(key,value);
+   }
+
+   public void addTriggers(String jsonString) {
+      OneSignal.addTriggersFromJsonString(jsonString);
+   }
+
+   public void removeTriggerForKey(String key) {
+      OneSignal.removeTriggerForKey(key);
+   }
+
+   public void removeTriggersForKeys(String keys) {
+      OneSignal.removeTriggersForKeysFromJsonArrayString(keys);
+   }
+
+   public String getTriggerValueForKey(final String key) throws JSONException {
+      return new JSONObject() {{
+         put("value", OneSignal.getTriggerValueForKey(key));
+      }}.toString();
+   }
+
+   public void pauseInAppMessages(boolean pause) {
+      OneSignal.pauseInAppMessages(pause);
+   }
+
    @Override
    public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
       unitySafeInvoke("onOSPermissionChanged", stateChanges.toJSONObject().toString());
@@ -249,5 +285,10 @@ public class OneSignalUnityProxy implements NotificationOpenedHandler, Notificat
       } catch (Throwable t) {
          t.printStackTrace();
       }
+   }
+
+   @Override
+   public void inAppMessageClicked(OSInAppMessageAction result) {
+      unitySafeInvoke("onInAppMessageClicked", result.toJSONObject().toString());
    }
 }

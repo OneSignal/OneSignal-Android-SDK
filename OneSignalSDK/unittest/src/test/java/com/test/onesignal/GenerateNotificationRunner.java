@@ -43,6 +43,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Button;
@@ -65,6 +66,7 @@ import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowRoboNotificationManager;
@@ -76,6 +78,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -92,6 +95,7 @@ import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.android.controller.ServiceController;
+import org.robolectric.shadows.ShadowWebView;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
@@ -140,14 +144,14 @@ public class GenerateNotificationRunner {
    private static final String notifMessage = "Robo test message";
    
    @BeforeClass // Runs only once, before any tests
-   public static void setUpClass() {
+   public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
       StaticResetHelper.saveStaticValues();
    }
    
    @Before // Before each test
-   public void beforeEachTest() {
+   public void beforeEachTest() throws Exception {
       // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
    
@@ -167,7 +171,7 @@ public class GenerateNotificationRunner {
    }
    
    @AfterClass
-   public static void afterEverything() {
+   public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
    }
    
@@ -1176,6 +1180,64 @@ public class GenerateNotificationRunner {
       
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
       assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+   }
+
+   private static @NonNull Bundle inAppPreviewMockPayloadBundle() throws JSONException {
+      Bundle bundle = new Bundle();
+      bundle.putString("custom", new JSONObject() {{
+         put("i", "UUID");
+         put("a", new JSONObject() {{
+            put("os_in_app_message_preview_id", "UUID");
+         }});
+      }}.toString());
+      return bundle;
+   }
+
+   private static void mockNextRESTGetAsBlankHTMLPage() throws JSONException {
+      ShadowOneSignalRestClient.nextSuccessfulGETResponse = new JSONObject() {{
+         put("html", "<html></html>");
+      }}.toString();
+   }
+
+   @Test
+   @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
+   public void shouldShowInAppPreviewWhenInFocus() throws Exception {
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      Intent intentGcm = new Intent();
+      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intentGcm.putExtra("message_type", "gcm");
+      intentGcm.putExtras(inAppPreviewMockPayloadBundle());
+
+      mockNextRESTGetAsBlankHTMLPage();
+
+      new GcmBroadcastReceiver().onReceive(blankActivity, intentGcm);
+      threadAndTaskWait();
+
+      assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);
+   }
+
+   @Test
+   @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
+   public void shouldShowInAppPreviewWhenOpeningPreviewNotification() throws Exception {
+      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      threadAndTaskWait();
+
+      Bundle bundle = new Bundle();
+      bundle.putString("custom", new JSONObject() {{
+         put("i", "UUID1");
+         put("a", new JSONObject() {{
+            put("os_in_app_message_preview_id", "UUID");
+         }});
+      }}.toString());
+
+      mockNextRESTGetAsBlankHTMLPage();
+
+      Intent notificationOpenIntent = createOpenIntent(2, inAppPreviewMockPayloadBundle());
+      NotificationOpenedProcessor_processFromContext(blankActivity, notificationOpenIntent);
+
+      assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);
    }
    
    private OSNotification lastNotificationReceived;

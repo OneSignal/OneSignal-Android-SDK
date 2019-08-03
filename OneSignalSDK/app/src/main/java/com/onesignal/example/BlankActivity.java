@@ -31,6 +31,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 
+import com.onesignal.MainActivity;
+
 public class BlankActivity extends Activity {
 
    @Override

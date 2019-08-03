@@ -1,10 +1,17 @@
 package com.onesignal;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -142,6 +149,52 @@ class JSONUtils {
         }
 
         return toReturn;
+    }
+
+    // Converts a JSONObject into a Map, returns null if a null value is passed in.
+    static @Nullable Map<String, Object> jsonObjectToMap(@Nullable JSONObject json) throws JSONException {
+        if (json == null || json == JSONObject.NULL)
+            return null;
+        return jsonObjectToMapNonNull(json);
+    }
+
+    // Converts a JSONObject into a Map, same as above however does NOT accept null values
+    private static @NonNull Map<String, Object> jsonObjectToMapNonNull(@NonNull JSONObject object) throws JSONException {
+        Map<String, Object> map = new HashMap<>();
+        Iterator<String> keysItr = object.keys();
+        while(keysItr.hasNext()) {
+            String key = keysItr.next();
+            Object value = object.get(key);
+            map.put(key, convertNestedJSONType(value));
+        }
+        return map;
+    }
+
+    // Converts a JSONArray into a List, returns null if a null value is passed in.
+    static @Nullable List<Object> jsonArrayToList(@Nullable JSONArray array) throws JSONException {
+        if (array == null)
+            return null;
+        return jsonArrayToListNonNull(array);
+    }
+
+    // Converts a JSONArray into a List, same as above however does NOT accept null values
+    private static @NonNull List<Object> jsonArrayToListNonNull(@NonNull JSONArray array) throws JSONException {
+        List<Object> list = new ArrayList<>();
+        for(int i = 0; i < array.length(); i++) {
+            Object value = array.get(i);
+            list.add(convertNestedJSONType(value));
+        }
+        return list;
+    }
+
+    // Digs into any nested JSONObject or JSONArray to convert them to a List or Map
+    // If object is another type is is returned back.
+    private static @NonNull Object convertNestedJSONType(@NonNull Object value) throws JSONException {
+        if (value instanceof JSONObject)
+            return jsonObjectToMapNonNull((JSONObject)value);
+        if (value instanceof JSONArray)
+            return jsonArrayToListNonNull((JSONArray)value);
+        return value;
     }
 
 }

@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
+
 abstract class UserStateSynchronizer {
 
     static class GetTagsResult {
@@ -372,6 +374,7 @@ abstract class UserStateSynchronizer {
                     currentUserState.persistStateAfterSync(dependDiff, jsonBody);
 
                     try {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "doCreateOrNewSession:response: " + response);
                         JSONObject jsonResponse = new JSONObject(response);
 
                         if (jsonResponse.has("id")) {
@@ -384,6 +387,10 @@ abstract class UserStateSynchronizer {
 
                         getUserStateForModification().dependValues.put("session", false);
                         getUserStateForModification().persistState();
+
+                        // List of in app messages to evaluate for the session
+                        if (jsonResponse.has(IN_APP_MESSAGES_JSON_KEY))
+                            OSInAppMessageController.getController().receivedInAppMessageJson(jsonResponse.getJSONArray(IN_APP_MESSAGES_JSON_KEY));
 
                         onSuccessfulSync(jsonBody);
                     } catch (Throwable t) {

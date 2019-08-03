@@ -1,16 +1,20 @@
 package com.onesignal;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.annotation.NonNull;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 
@@ -183,9 +187,8 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() { return OneSignal.appId; }
 
-
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
-
+   
    static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
       public static void update(SQLiteDatabase readableDb, Context context) {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);
@@ -203,4 +206,88 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public class OneSignalDbContract extends com.onesignal.OneSignalDbContract {}
+
+   /** In-App Messaging Helpers */
+
+   public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
+
+      public OSTestInAppMessage(JSONObject json) throws JSONException {
+         super(json);
+      }
+
+      @Override
+      ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
+         ArrayList<ArrayList<OSTrigger>> parsedTriggers = new ArrayList<>();
+
+         for (int i = 0; i < triggersJson.length(); i++) {
+            JSONArray ands = triggersJson.getJSONArray(i);
+
+            ArrayList parsed = new ArrayList();
+
+            for (int j = 0; j < ands.length(); j++) {
+               OSTestTrigger trig = new OSTestTrigger(ands.getJSONObject(j));
+
+               parsed.add(trig);
+            }
+
+            parsedTriggers.add(parsed);
+         }
+
+         return parsedTriggers;
+      }
+
+      public JSONObject toJSONObject() {
+         return super.toJSONObject();
+      }
+   }
+
+   public static class OSTestTrigger extends com.onesignal.OSTrigger {
+      public OSTestTrigger(JSONObject json) throws JSONException {
+         super(json);
+      }
+   }
+
+   public static class OSTestInAppMessageAction extends com.onesignal.OSInAppMessageAction {
+      public boolean closes() {
+         return closesMessage;
+      }
+      public String getClickId() { return clickId; }
+
+      public OSTestInAppMessageAction(JSONObject json) throws JSONException {
+         super(json);
+      }
+   }
+
+   public static void dismissCurrentMessage() {
+      com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage();
+      com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
+   }
+
+   public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {
+      private static OSInAppMessageController sharedInstance;
+
+      public static OSInAppMessageController getController() {
+         if (sharedInstance == null)
+            sharedInstance = new OSInAppMessageController();
+
+         return sharedInstance;
+      }
+      public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
+         super.onMessageActionOccurredOnMessage(message, actionJson);
+      }
+
+      public void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+         com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
+      }
+   }
+
+   public static class OSInAppMessage extends com.onesignal.OSInAppMessage {
+      public OSInAppMessage(JSONObject json) throws JSONException {
+         super(json);
+      }
+   }
+
+   public static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
+      return OSUtils.hasConfigChangeFlag(activity, configChangeFlag);
+   }
 }

@@ -1,6 +1,5 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     package="com.onesignal">
 
     <!-- OneSignal SDK has runtime checks Android version. -->
@@ -65,8 +64,9 @@
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
         <service android:name="com.onesignal.GcmIntentService" />
+
         <service android:name="com.onesignal.GcmIntentJobService"
-                 android:permission="android.permission.BIND_JOB_SERVICE" />
+            android:permission="android.permission.BIND_JOB_SERVICE"/>
 
         <service android:name="com.onesignal.RestoreJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />

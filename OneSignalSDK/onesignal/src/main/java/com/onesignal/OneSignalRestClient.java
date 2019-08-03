@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import android.net.TrafficStats;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -47,8 +49,10 @@ class OneSignalRestClient {
 
    static final String CACHE_KEY_GET_TAGS = "CACHE_KEY_GET_TAGS";
    static final String CACHE_KEY_REMOTE_PARAMS = "CACHE_KEY_REMOTE_PARAMS";
-
+   
    private static final String BASE_URL = "https://onesignal.com/api/v1/";
+   
+   private static final int THREAD_ID = 10000;
    private static final int TIMEOUT = 120_000;
    private static final int GET_TIMEOUT = 60_000;
    
@@ -123,7 +127,11 @@ class OneSignalRestClient {
       int httpResponse = -1;
       HttpURLConnection con = null;
       Thread callbackThread;
-   
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+         TrafficStats.setThreadStatsTag(THREAD_ID);
+      }
+
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
          con = newHttpURLConnection(url);
