@@ -327,7 +327,7 @@ public class GenerateNotificationRunner {
 
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testGetMostRecentNotifIdFromGroup() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -352,7 +352,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testGetMostRecentNotifIdFromGroupless() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -408,7 +408,7 @@ public class GenerateNotificationRunner {
     }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissAllOnGroupSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -424,7 +424,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissRecentOnGroupSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -440,7 +440,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissAllOnGrouplessSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -456,7 +456,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissRecentOnGrouplessSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -496,7 +496,7 @@ public class GenerateNotificationRunner {
 
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.M)
+   @Config(sdk = Build.VERSION_CODES.N)
    public void testGrouplessSummaryKeyReassignmentAtFourOrMoreNotification() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
