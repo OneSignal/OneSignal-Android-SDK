@@ -86,7 +86,7 @@ class BadgeCountUpdater {
 
    @RequiresApi(api = Build.VERSION_CODES.M)
    private static void updateStandard(Context context) {
-      NotificationManager notifManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      NotificationManager notifManager = OneSignalNotificationManager.getNotificationManager(context);
       StatusBarNotification[] activeNotifs = notifManager.getActiveNotifications();
 
       int runningCount = 0;

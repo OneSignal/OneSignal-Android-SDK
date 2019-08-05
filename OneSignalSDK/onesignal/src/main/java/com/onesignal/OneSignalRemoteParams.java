@@ -17,6 +17,7 @@ class OneSignalRemoteParams {
       JSONArray notificationChannels;
       boolean firebaseAnalytics;
       boolean restoreTTLFilter;
+      boolean clearGroupOnSummaryClick;
    }
 
    interface CallBack {
@@ -85,6 +86,7 @@ class OneSignalRemoteParams {
          firebaseAnalytics = responseJson.optBoolean("fba", false);
          restoreTTLFilter = responseJson.optBoolean("restore_ttl_filter", true);
          googleProjectNumber = responseJson.optString("android_sender_id", null);
+         clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
       }};
 
       callBack.complete(params);

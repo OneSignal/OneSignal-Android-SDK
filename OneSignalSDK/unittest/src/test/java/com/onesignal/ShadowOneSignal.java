@@ -13,4 +13,5 @@ public class ShadowOneSignal {
       messages += message;
       Log.e("", message, throwable);
    }
+
 }

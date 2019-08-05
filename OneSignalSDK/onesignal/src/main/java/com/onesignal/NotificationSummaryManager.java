@@ -5,6 +5,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -71,7 +73,7 @@ class NotificationSummaryManager {
             return cursor;
       
          // Remove the summary notification from the shade.
-         NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+         NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
          notificationManager.cancel(androidNotifId);
       
          // Mark the summary notification as opened or dismissed.
@@ -154,20 +156,26 @@ class NotificationSummaryManager {
       }
    }
    
-   private static Integer getSummaryNotificationId(SQLiteDatabase writableDb, String group) {
+   static Integer getSummaryNotificationId(SQLiteDatabase writableDb, String group) {
       Integer androidNotifId = null;
       Cursor cursor = null;
+
+      String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+              NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+              NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+              NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1";
+      String[] whereArgs = new String[] { group };
+
       try {
          // Get the Android Notification ID of the summary notification
          cursor = writableDb.query(
              NotificationTable.TABLE_NAME,
-             new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID }, // retColumn
-             NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " + // Where String
-                 NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                 NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1" ,
-             new String[] { group }, // whereArgs
-             null, null, null);
+                 new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID }, // retColumn
+                 whereStr,
+                 whereArgs,
+                 null,
+                 null,
+                 null);
       
          boolean hasRecord = cursor.moveToFirst();
          if (!hasRecord) {
@@ -184,5 +192,34 @@ class NotificationSummaryManager {
       }
       
       return androidNotifId;
+   }
+
+   /**
+    * Clears notifications from the status bar based on a few parameters
+    */
+   static void clearNotificationOnSummaryClick(Context context, SQLiteDatabase db, String group) {
+      // Obtain the group to clear notifications from
+      Integer groupId = NotificationSummaryManager.getSummaryNotificationId(db, group);
+      boolean isGroupless = group.equals(OneSignalNotificationManager.getGrouplessSummaryKey());
+
+      NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
+      // Obtain the most recent notification id
+      Integer mostRecentId = OneSignalNotificationManager.getMostRecentNotifIdFromGroup(db, group, isGroupless);
+      if (mostRecentId != null) {
+         boolean shouldDismissAll = OneSignal.getClearGroupSummaryClick();
+         if (shouldDismissAll) {
+
+            // If the group is groupless, obtain the hardcoded groupless summary id
+            if (isGroupless)
+               groupId = OneSignalNotificationManager.getGrouplessSummaryId();
+
+            // Clear the entire notification summary
+            if (groupId != null)
+               notificationManager.cancel(groupId);
+         } else {
+            // Clear the most recent notification from the status bar summary
+            OneSignal.cancelNotification(mostRecentId);
+         }
+      }
    }
 }

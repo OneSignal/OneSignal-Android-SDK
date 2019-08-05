@@ -936,6 +936,11 @@ public class OneSignal {
                OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,
                remoteParams.restoreTTLFilter
             );
+            OneSignalPrefs.saveBool(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
+               remoteParams.clearGroupOnSummaryClick
+            );
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
@@ -1223,7 +1228,7 @@ public class OneSignal {
       
       getCurrentPermissionState(appContext).refreshAsTo();
 
-      if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
+      if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
 
       OneSignalSyncServiceUtils.cancelSyncTask(appContext);
@@ -2019,7 +2024,7 @@ public class OneSignal {
    //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
    static void handleNotificationReceived(JSONArray data, boolean displayed, boolean fromAlert) {
       OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed, fromAlert);
-      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
+      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
       if (mInitBuilder == null || mInitBuilder.mNotificationReceivedHandler == null)
@@ -2037,7 +2042,7 @@ public class OneSignal {
 
       notificationOpenedRESTCall(inContext, data);
 
-      if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled(appContext))
+      if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackOpenedEvent(generateOsNotificationOpenResult(data, true, fromAlert));
 
       boolean urlOpened = false;
@@ -2207,10 +2212,16 @@ public class OneSignal {
       }
    }
 
-   static boolean getFirebaseAnalyticsEnabled(Context context) {
+   static boolean getFirebaseAnalyticsEnabled() {
       return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED,false);
    }
+
+   static boolean getClearGroupSummaryClick() {
+      return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,true);
+   }
+
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
    // If false - Device will only vibrate when the device is set on it's vibrate only mode.
@@ -2424,7 +2435,7 @@ public class OneSignal {
       Runnable runClearOneSignalNotifications = new Runnable() {
          @Override
          public void run() {
-            NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
 
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             Cursor cursor = null;
@@ -2538,7 +2549,7 @@ public class OneSignal {
                }
             }
 
-            NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
             notificationManager.cancel(id);
          }
       };
@@ -2565,7 +2576,7 @@ public class OneSignal {
       Runnable runCancelGroupedNotifications = new Runnable() {
          @Override
          public void run() {
-            NotificationManager notificationManager = (NotificationManager)appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
 
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             Cursor cursor = null;
