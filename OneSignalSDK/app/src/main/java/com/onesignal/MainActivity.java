@@ -30,9 +30,9 @@ package com.onesignal;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
@@ -42,11 +42,9 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
-import android.os.Handler;
 import android.widget.Toast;
 
 import com.onesignal.OneSignal.NotificationOpenedHandler;
-
 import com.onesignal.example.OneSignalExampleApp;
 import com.onesignal.example.R;
 import com.onesignal.example.iap.IabHelper;
@@ -65,7 +63,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
            R.id.unsubscribe,
            R.id.sendTags,
            R.id.getTags,
-           R.id.setEmail,
+           R.id.sendEvent,
            R.id.postNotification,
            R.id.postNotificationAsync,
            R.id.postNotificationGroupCheckBox,
@@ -75,6 +73,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    private TextView emailTextView;
    private Button consentButton;
    private Button setEmailButton;
+   private Button sendEvent;
    private Button logoutEmailButton;
    private Button postNotifButton;
    private Button postNotifAsyncButton;
@@ -115,12 +114,14 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       setContentView(com.onesignal.example.R.layout.activity_main);
 
       this.consentButton = this.findViewById(R.id.consentButton);
-      this.setEmailButton = this.findViewById(R.id.setEmail);
       this.logoutEmailButton = this.findViewById(R.id.logoutEmail);
       this.postNotifButton = this.findViewById(R.id.postNotification);
       this.postNotifAsyncButton = this.findViewById(R.id.postNotificationAsync);
       this.postNotifGroupCheckBox = this.findViewById(R.id.postNotificationGroupCheckBox);
       this.postNotifAsyncGroupCheckBox = this.findViewById(R.id.postNotificationAsyncGroupCheckBox);
+      this.consentButton = (Button)this.findViewById(com.onesignal.example.R.id.consentButton);
+      this.logoutEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.logoutEmail);
+      this.sendEvent = (Button)this.findViewById(R.id.sendEvent);
       this.iamHost = this.findViewById(R.id.iamHost);
       this.triggerKeyTextView = this.findViewById(R.id.triggerKey);
       this.triggerValueTextView = this.findViewById(R.id.triggerValue);
@@ -318,6 +319,10 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
             updateTextView("Failed to set email with error: " + error.getMessage());
          }
       });
+   }
+
+   public void onSendOutcomeClicked(View view) {
+      OneSignal.outcome("12345678-1234-4aaa-1234-123456789012");
    }
 
    public void onLogoutEmailClicked(View v) {

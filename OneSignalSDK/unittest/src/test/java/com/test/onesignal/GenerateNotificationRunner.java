@@ -189,7 +189,7 @@ public class GenerateNotificationRunner {
       
       return bundle;
    }
-   
+
    private static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
           .putExtra("notificationId", notifId)

@@ -385,6 +385,9 @@ public class OneSignal {
 
    public static final String VERSION = "031103";
 
+   private static OSSessionManager sessionManager = new OSSessionManager();
+   private static OutcomeEventsController outcomeEventsController;
+
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
    private static int deviceType;
@@ -616,6 +619,9 @@ public class OneSignal {
          return;
       }
 
+      mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
+      outcomeEventsController = new OutcomeEventsController(sessionManager);
+
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
@@ -756,6 +762,7 @@ public class OneSignal {
          OSInAppMessageController.getController().initWithCachedInAppMessages();
       setLastSessionTime(System.currentTimeMillis());
       startRegistrationOrOnSession();
+      sessionManager.onSessionStarted();
    }
 
    private static boolean isContextActivity(Context context) {
@@ -1231,6 +1238,7 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
 
+      sessionManager.onSessionStarted();
       OneSignalSyncServiceUtils.cancelSyncTask(appContext);
    }
 
@@ -2045,7 +2053,7 @@ public class OneSignal {
    }
 
    // Called when opening a notification
-   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert) {
+   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert, String notificationId) {
 
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
@@ -2066,16 +2074,20 @@ public class OneSignal {
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
-         startOrResumeApp(inContext);
+         if (startOrResumeApp(inContext) || !isForeground()) {
+            initSessionFromNotification(notificationId);
+         }
    }
 
-   static void startOrResumeApp(Context inContext) {
+   static boolean startOrResumeApp(Context inContext) {
       Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
       // Make sure we have a launcher intent.
       if (launchIntent != null) {
          launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
          inContext.startActivity(launchIntent);
+         return true;
       }
+      return false;
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
@@ -2962,9 +2974,26 @@ public class OneSignal {
       return id == null || OneSignal.isDuplicateNotification(id, context);
    }
 
-   static String getNotificationIdFromGCMBundle(Bundle bundle) {
-      if (bundle.isEmpty())
+   static String getNotificationIdFromGCMJson(@Nullable JSONObject jsonObject) {
+      if (jsonObject == null)
          return null;
+      try {
+         JSONObject customJSON = new JSONObject(jsonObject.getString("custom"));
+
+         if (customJSON.has("i"))
+            return customJSON.optString("i", null);
+         else
+            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
+      } catch (JSONException e) {
+         Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the JSONObject.");
+      }
+
+      return null;
+   }
+
+    static String getNotificationIdFromGCMBundle(@Nullable Bundle bundle) {
+        if (bundle == null || bundle.isEmpty())
+            return null;
 
       try {
          if (bundle.containsKey("custom")) {
@@ -3034,4 +3063,43 @@ public class OneSignal {
          emailUpdateHandler = null;
       }
    }
+
+   /**
+   * Start OneSignalOutcome module
+   */
+   static void initSessionFromNotification(String notificationId) {
+      sessionManager.onSessionFromNotification(notificationId);
+   }
+
+   public static OSSessionManager.Session resetSessiontype() {
+      return sessionManager.resetSession();
+   }
+
+    public static OSSessionManager.Session getSessionType() {
+        return sessionManager.getSession();
+    }
+
+    public static void outcome(@NonNull String name) {
+        outcomeEventsController.sendOutcomeEvent(name);
+    }
+
+    public static void outcome(@NonNull String name, int value) {
+        outcomeEventsController.sendOutcomeEvent(name, value);
+    }
+
+    /**
+     * @param value must not be null or empty
+     */
+    public static void outcome(@NonNull String name, @NonNull String value) throws OutcomeEventsController.OutcomeException {
+        outcomeEventsController.sendOutcomeEvent(name, value);
+    }
+
+    public static void outcome(@NonNull String name, @NonNull Bundle params) {
+        outcomeEventsController.sendOutcomeEvent(name, params);
+    }
+
+    /*
+     * End OneSignalOutcome module
+     */
+
 }

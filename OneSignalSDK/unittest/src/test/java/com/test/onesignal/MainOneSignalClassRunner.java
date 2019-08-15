@@ -43,6 +43,7 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.NotificationData;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -53,6 +54,7 @@ import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSPermissionSubscriptionState;
+import com.onesignal.OSSessionManager;
 import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
@@ -112,6 +114,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_onReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
@@ -156,6 +159,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+   private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
    private static String callBackUseId, getCallBackRegId;
@@ -218,6 +222,7 @@ public class MainOneSignalClassRunner {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
 
+      OneSignal.resetSessiontype();
       cleanUp();
    }
 
@@ -522,13 +527,15 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
       assertEquals("Robo test message", notificationOpenedMessage);
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.DIRECT);
    }
 
    @Test
@@ -580,7 +587,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       OneSignal.removeNotificationOpenedHandler();
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(notificationOpenedMessage);
 
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
@@ -614,9 +621,10 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       assertNull(notificationOpenedMessage);
 
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertEquals("Test Msg", notificationOpenedMessage);
       threadAndTaskWait();
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.DIRECT);
    }
 
    @Test
@@ -625,11 +633,12 @@ public class MainOneSignalClassRunner {
 
       // From app launching normally
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
-
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.DIRECT);
    }
 
    @Test
@@ -640,11 +649,12 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       Intent intent = shadowOf(blankActivity).getNextStartedActivity();
       assertEquals("android.intent.action.VIEW", intent.getAction());
       assertEquals("http://google.com", intent.getData().toString());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
@@ -655,22 +665,24 @@ public class MainOneSignalClassRunner {
 
       // No OneSignal init here to test case where it is located in an Activity.
 
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
    @Test
-   public void testDisableOpeningLauncherActivityOnNotifiOpen() throws Exception {
+   public void testDisableOpeningLauncherActivityOnNotificationOpen() throws Exception {
       // From app launching normally
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       assertNull(notificationOpenedMessage);
 
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
       assertEquals("Test Msg", notificationOpenedMessage);
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    private static String notificationReceivedBody;
@@ -720,6 +732,24 @@ public class MainOneSignalClassRunner {
       assertEquals(null, notificationOpenedMessage);
       assertNull(notificationOpenedMessage);
       assertEquals("Robo test message", notificationReceivedBody);
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
+   }
+
+   @Test
+   public void testSessionIndirectWhenNotificationReceived() throws Exception {
+      Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
+
+      GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+      threadAndTaskWait();
+
+      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
+         @Override
+         public void notificationReceived(OSNotification notification) {
+         }
+      });
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.INDIRECT);
    }
 
    @Test
@@ -2422,7 +2452,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void getTagsDelayedAfterRegistering() throws Exception {
-      ShadowOneSignalRestClient.setNextSuccessfulGETJSONResponse(new JSONObject() {{
+      ShadowOneSignalRestClient.setSuccessfulGETJSONResponses(new JSONObject(), new JSONObject() {{
          put("tags", new JSONObject() {{
             put("test1", "value1");
          }});
@@ -3437,7 +3467,7 @@ public class MainOneSignalClassRunner {
       openPayload.put("title", "Test title");
       openPayload.put("alert", "Test Msg");
       openPayload.put("custom", new JSONObject("{ \"i\": \"UUID\" }"));
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), false);
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertEquals("os_notification_opened", ShadowFirebaseAnalytics.lastEventString);
       Bundle expectedBundle = new Bundle();

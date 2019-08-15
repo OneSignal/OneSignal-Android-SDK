@@ -126,6 +126,14 @@ public class OneSignalPackagePrivateHelper {
       return processedResult.processed();
    }
 
+   public static void GcmBroadcastReceiver_onReceived(Context context, Bundle bundle) {
+      GCMBroadcastReceiver receiver = new GCMBroadcastReceiver();
+      Intent intent = new Intent();
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intent.putExtras(bundle);
+      receiver.onReceive(context,intent);
+   }
+
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
@@ -146,6 +154,8 @@ public class OneSignalPackagePrivateHelper {
       protected void stopSync() {
       }
    }
+
+   public static class GCMBroadcastReceiver extends com.onesignal.GcmBroadcastReceiver {}
 
    public static class PushRegistratorGCM extends com.onesignal.PushRegistratorGCM {}
 

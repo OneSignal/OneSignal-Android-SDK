@@ -79,6 +79,9 @@ class OneSignalPrefs {
     public static final String PREFS_OS_DISPLAYED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
     public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
     public static final String PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS";
+    public static final String PREFS_OS_LAST_NOTIFICATION_RECEIVED = "PREFS_OS_LAST_NOTIFICATION_RECEIVED";
+    public static final String PREFS_OS_DIRECT_SESSION = "PREFS_OS_DIRECT_SESSION";
+
 
     // PLAYER PURCHASE KEYS
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
