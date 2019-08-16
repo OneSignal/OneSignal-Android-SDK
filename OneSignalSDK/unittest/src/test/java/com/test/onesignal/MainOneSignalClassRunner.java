@@ -117,6 +117,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_o
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_GetSessionType;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_CleanSessionType;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
@@ -221,7 +223,7 @@ public class MainOneSignalClassRunner {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
 
-      OneSignal.resetSessionType();
+      OneSignal_CleanSessionType();
       cleanUp();
    }
 
@@ -534,7 +536,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals("Robo test message", notificationOpenedMessage);
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.DIRECT);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.DIRECT);
    }
 
    @Test
@@ -623,7 +625,7 @@ public class MainOneSignalClassRunner {
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertEquals("Test Msg", notificationOpenedMessage);
       threadAndTaskWait();
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.DIRECT);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.DIRECT);
    }
 
    @Test
@@ -637,7 +639,7 @@ public class MainOneSignalClassRunner {
 
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.DIRECT);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.DIRECT);
    }
 
    @Test
@@ -653,7 +655,7 @@ public class MainOneSignalClassRunner {
       assertEquals("android.intent.action.VIEW", intent.getAction());
       assertEquals("http://google.com", intent.getData().toString());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
@@ -666,7 +668,7 @@ public class MainOneSignalClassRunner {
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
@@ -681,7 +683,7 @@ public class MainOneSignalClassRunner {
 
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
       assertEquals("Test Msg", notificationOpenedMessage);
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    private static String notificationReceivedBody;
@@ -731,7 +733,7 @@ public class MainOneSignalClassRunner {
       assertEquals(null, notificationOpenedMessage);
       assertNull(notificationOpenedMessage);
       assertEquals("Robo test message", notificationReceivedBody);
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.UNATTRIBUTED);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.UNATTRIBUTED);
    }
 
    @Test
@@ -749,7 +751,7 @@ public class MainOneSignalClassRunner {
       });
       threadAndTaskWait();
 
-      assertEquals(OneSignal.getSessionType(), OSSessionManager.Session.INDIRECT);
+      assertEquals(OneSignal_GetSessionType(), OSSessionManager.Session.INDIRECT);
    }
 
    @Test

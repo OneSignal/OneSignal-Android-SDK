@@ -385,7 +385,15 @@ public class OneSignal {
 
    public static final String VERSION = "031103";
 
-   private static OSSessionManager sessionManager = new OSSessionManager();
+   private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
+      @Override
+      public void onSessionRestarted() {
+         if (outcomeEventsController != null)
+            outcomeEventsController.clearOutcomes();
+      }
+   };
+
+   private static OSSessionManager sessionManager = new OSSessionManager(sessionListener);
    private static OutcomeEventsController outcomeEventsController;
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -620,7 +628,7 @@ public class OneSignal {
       }
 
       mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
-      outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
+      outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext), outcomeSettings);
 
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
@@ -757,13 +765,13 @@ public class OneSignal {
    }
 
    private static void doSessionInit() {
-      if (isPastOnSessionTime())
-         OneSignalStateSynchronizer.setNewSession();
-      else
-         OSInAppMessageController.getController().initWithCachedInAppMessages();
+      if (isPastOnSessionTime()) {
+          OneSignalStateSynchronizer.setNewSession();
+          sessionManager.restartSession();
+      } else
+          OSInAppMessageController.getController().initWithCachedInAppMessages();
       setLastSessionTime(System.currentTimeMillis());
       startRegistrationOrOnSession();
-      sessionManager.onSessionStarted();
    }
 
    private static boolean isContextActivity(Context context) {
@@ -1224,6 +1232,12 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
          return;
 
+      if (isPastOnSessionTime()) {
+         OneSignalStateSynchronizer.setNewSession();
+         sessionManager.restartSession();
+      }
+      setLastSessionTime(System.currentTimeMillis());
+
       if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
 
@@ -1239,7 +1253,6 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
 
-      sessionManager.onSessionStarted();
       OneSignalSyncServiceUtils.cancelSyncTask(appContext);
    }
 
@@ -2081,7 +2094,7 @@ public class OneSignal {
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
-         if (startOrResumeApp(inContext) || !isForeground()) {
+         if (startOrResumeApp(inContext)) {
             initSessionFromNotification(notificationId);
          }
    }
@@ -3075,22 +3088,90 @@ public class OneSignal {
    * Start OneSignalOutcome module
    */
 
+   private static OutcomeSettings outcomeSettings = null;
+
+   public static void changeOutcomeSettings(OutcomeSettings settings){
+      outcomeSettings = settings;
+      outcomeEventsController.setOutcomeSettings(settings);
+   }
+
    static void initSessionFromNotification(String notificationId) {
       sessionManager.onSessionFromNotification(notificationId);
    }
 
-   public static void resetSessionType() {
-      sessionManager.resetSession();
+   static void cleanSessionType() {
+      sessionManager.cleanSession();
    }
 
-   public static OSSessionManager.Session getSessionType() {
+   static OSSessionManager.Session getSessionType() {
         return sessionManager.getSession();
-    }
+   }
+
+   public static void uniqueOutcome(@NonNull String name, OutcomeCallback callback) {
+      if (outcomeEventsController == null)
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+
+      outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
+   }
+
+   public static void uniqueOutcome(@NonNull String name) {
+      if (outcomeEventsController == null)
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+
+      outcomeEventsController.sendUniqueOutcomeEvent(name, null);
+   }
+
+   public static void outcome(@NonNull String name, OutcomeCallback callback) {
+      if (outcomeEventsController == null)
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+
+      outcomeEventsController.sendOutcomeEvent(name, callback);
+   }
 
    public static void outcome(@NonNull String name) {
-      outcomeEventsController.sendOutcomeEvent(name);
+      if (outcomeEventsController == null)
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+
+      outcomeEventsController.sendOutcomeEvent(name, (OutcomeCallback) null);
    }
 
+   public interface OutcomeCallback {
+      void onOutcomeSuccess(String name);
+      void onOutcomeFail(int statusCode, String response);
+   }
+
+   public static class OutcomeSettings {
+      private boolean cacheActive;
+
+      OutcomeSettings(Builder builder) {
+         this.cacheActive = builder.cacheActive;
+      }
+
+      boolean isCacheActive() {
+         return cacheActive;
+      }
+
+      public static class Builder {
+
+         private boolean cacheActive = true;
+
+         public static Builder newInstance() {
+            return new Builder();
+         }
+
+         private Builder() {
+         }
+
+         public Builder setCacheActive(boolean active) {
+            this.cacheActive = active;
+            return this;
+         }
+
+         public OutcomeSettings build() {
+            return new OutcomeSettings(this);
+         }
+      }
+   }
    /*
     * End OneSignalOutcome module
     */

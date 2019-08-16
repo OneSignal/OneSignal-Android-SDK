@@ -188,6 +188,7 @@ class OneSignalRestClient {
                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + (method == null ? "GET" : method) + " - Using Cached response due to 304: " + cachedResponse);
                callbackThread = callResponseHandlerOnSuccess(responseHandler, cachedResponse);
             break;
+            case HttpURLConnection.HTTP_ACCEPTED:
             case HttpURLConnection.HTTP_OK: // 200
                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Successfully finished request to: " + BASE_URL + url);
 

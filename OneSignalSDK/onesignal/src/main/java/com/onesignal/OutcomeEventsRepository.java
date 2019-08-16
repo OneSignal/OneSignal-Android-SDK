@@ -11,8 +11,9 @@ class OutcomeEventsRepository {
     private static final String DEVICE_TYPE = "device_type";
     private static final String DIRECT = "direct";
     private static final String NOTIFICATION_ID = "notification_id";
+    private static final String OUTCOME_ID = "id";
     private static final String WEIGHT = "weight";
-    private static final String TIME = "time";
+    private static final String TIMESTAMP = "timestamp";
 
     private final OutcomeEventsService outcomeEventsService;
     private final OneSignalDbHelper dbHelper;
@@ -35,6 +36,10 @@ class OutcomeEventsRepository {
         OutcomeEventsCache.saveOutcomeEvent(event, dbHelper);
     }
 
+    void removeEvent(OutcomeEvent outcomeEvent) {
+        OutcomeEventsCache.deleteOldOutcomeEvent(outcomeEvent, dbHelper);
+    }
+
     void removeEvents(List<OutcomeEvent> outcomeEvents) {
         OutcomeEventsCache.deleteOldOutcomeEvents(outcomeEvents, dbHelper);
     }
@@ -46,12 +51,13 @@ class OutcomeEventsRepository {
                     .put(APP_ID, appId)
                     .put(DEVICE_TYPE, deviceType)
                     .put(DIRECT, true)
+                    .put(OUTCOME_ID, outcomeId)
                     .put(NOTIFICATION_ID, notificationId);
 
             if (timestamp != null)
-                jsonBody.put(TIME, timestamp);
+                jsonBody.put(TIMESTAMP, timestamp);
 
-            outcomeEventsService.sendOutcomeEvent(outcomeId, jsonBody, responseHandler);
+            outcomeEventsService.sendOutcomeEvent(jsonBody, responseHandler);
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating direct outcome:JSON Failed.", e);
         }
@@ -69,12 +75,13 @@ class OutcomeEventsRepository {
                     .put(APP_ID, appId)
                     .put(DEVICE_TYPE, deviceType)
                     .put(DIRECT, false)
+                    .put(OUTCOME_ID, outcomeId)
                     .put(NOTIFICATION_ID, notificationId);
 
             if (timestamp != null)
-                jsonBody.put(TIME, timestamp);
+                jsonBody.put(TIMESTAMP, timestamp);
 
-            outcomeEventsService.sendOutcomeEvent(outcomeId, jsonBody, responseHandler);
+            outcomeEventsService.sendOutcomeEvent(jsonBody, responseHandler);
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating indirect outcome:JSON Failed.", e);
         }
@@ -90,9 +97,10 @@ class OutcomeEventsRepository {
         try {
             JSONObject jsonBody = new JSONObject()
                     .put(APP_ID, appId)
+                    .put(OUTCOME_ID, outcomeId)
                     .put(DEVICE_TYPE, deviceType);
 
-            outcomeEventsService.sendOutcomeEvent(outcomeId, jsonBody, responseHandler);
+            outcomeEventsService.sendOutcomeEvent(jsonBody, responseHandler);
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating indirect outcome:JSON Failed.", e);
         }
@@ -106,12 +114,13 @@ class OutcomeEventsRepository {
                     .put(APP_ID, appId)
                     .put(DEVICE_TYPE, deviceType)
                     .put(DIRECT, direct)
+                    .put(OUTCOME_ID, outcomeId)
                     .put(WEIGHT, weight);
             if (direct) {
                 jsonBody.put(NOTIFICATION_ID, notificationId);
             }
 
-            outcomeEventsService.sendOutcomeEvent(outcomeId, jsonBody, responseHandler);
+            outcomeEventsService.sendOutcomeEvent(jsonBody, responseHandler);
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating weight outcome:JSON Failed.", e);
         }

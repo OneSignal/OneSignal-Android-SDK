@@ -322,7 +322,31 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    public void onSendOutcomeClicked(View view) {
-      OneSignal.outcome("12345678-1234-4aaa-1234-123456789012");
+      OneSignal.outcome("test", new OneSignal.OutcomeCallback() {
+         @Override
+         public void onOutcomeSuccess(String name) {
+            updateTextView(name + "Outcome sent successfully");
+         }
+
+         @Override
+         public void onOutcomeFail(int statusCode, String response) {
+            updateTextView("OutcomeFail with status code: " + statusCode);
+         }
+      });
+   }
+
+   public void onSendUniqueOutcomeClicked(View view) {
+      OneSignal.uniqueOutcome("uniqueTest", new OneSignal.OutcomeCallback() {
+         @Override
+         public void onOutcomeSuccess(String name) {
+            updateTextView(name + "Outcome sent successfully");
+         }
+
+         @Override
+         public void onOutcomeFail(int statusCode, String response) {
+            updateTextView("OutcomeFail with status code: " + statusCode);
+         }
+      });
    }
 
    public void onLogoutEmailClicked(View v) {

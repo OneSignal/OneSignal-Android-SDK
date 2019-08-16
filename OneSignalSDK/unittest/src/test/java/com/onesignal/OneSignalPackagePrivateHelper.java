@@ -16,7 +16,6 @@ import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -98,6 +97,14 @@ public class OneSignalPackagePrivateHelper {
             break;
       }
       return true;
+   }
+
+   public static OSSessionManager.Session OneSignal_GetSessionType() {
+      return OneSignal.getSessionType();
+   }
+
+   public static void OneSignal_CleanSessionType() {
+      OneSignal.cleanSessionType();
    }
 
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {

@@ -21,6 +21,10 @@ public class OSSessionManager {
     private static final String TAG = OSSessionManager.class.getCanonicalName();
     private static final long TWENTY_FOUR_HOURS_MILLISECONDS = 24 * 60 * 60 * 1000;
 
+    interface SessionListener {
+        void onSessionRestarted();
+    }
+
     public enum Session {
         DIRECT,
         INDIRECT,
@@ -41,14 +45,25 @@ public class OSSessionManager {
     }
 
     private Session session = null;
-
     private String notificationId = null;
+    private SessionListener sessionListener = null;
 
     public OSSessionManager() {
     }
 
-    public void resetSession() {
+    public OSSessionManager(SessionListener sessionListener) {
+        this.sessionListener = sessionListener;
+    }
+
+    void cleanSession() {
         this.session = null;
+    }
+
+    void restartSession() {
+        cleanSession();
+        onSessionStarted();
+        if (sessionListener != null)
+            sessionListener.onSessionRestarted();
     }
 
     @NonNull
@@ -72,12 +87,19 @@ public class OSSessionManager {
         if (jsonString != null) {
             try {
                 JSONObject jsonObject = new JSONObject(jsonString);
+                String notificationId = jsonObject.getString(NotificationData.NOTIFICATION_ID);
+                if (notificationId == null || notificationId.isEmpty()) {
+                    onSessionNotInfluenced();
+                    return;
+                }
+                this.notificationId = notificationId;
                 long time = jsonObject.getLong(NotificationData.TIME);
                 long currentTime = new Date().getTime();
                 long difference = currentTime - time;
+
                 if (difference < TWENTY_FOUR_HOURS_MILLISECONDS) {
                     session = Session.INDIRECT;
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + jsonObject.getString(NotificationData.NOTIFICATION_ID));
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + notificationId);
                 } else {
                     onSessionNotInfluenced();
                 }

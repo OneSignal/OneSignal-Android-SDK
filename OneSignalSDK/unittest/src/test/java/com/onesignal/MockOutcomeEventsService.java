@@ -17,7 +17,7 @@ public class MockOutcomeEventsService extends OutcomeEventsService {
     }
 
     @Override
-    void sendOutcomeEvent(String outcomeId, JSONObject object, OneSignalRestClient.ResponseHandler responseHandler) {
+    void sendOutcomeEvent(JSONObject object, OneSignalRestClient.ResponseHandler responseHandler) {
         if (success)
             responseHandler.onSuccess("");
         else

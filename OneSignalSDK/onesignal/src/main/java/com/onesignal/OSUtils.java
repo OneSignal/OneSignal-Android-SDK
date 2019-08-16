@@ -56,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -467,4 +468,5 @@ class OSUtils {
          "ensure to always initialize OneSignal from the onCreate of your Application class.");
       return true;
    }
+
 }

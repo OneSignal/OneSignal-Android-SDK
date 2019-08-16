@@ -3,13 +3,10 @@ package com.onesignal;
 import android.os.Bundle;
 import android.os.Process;
 import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
+import android.support.annotation.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 class OutcomeEventsController {
 
@@ -20,25 +17,44 @@ class OutcomeEventsController {
         }
     }
 
+    private Set<String> eventsSent = OSUtils.newConcurrentSet();
+
+    @NonNull
     private final OutcomeEventsRepository outcomeEventsRepository;
+    @NonNull
     private final OSSessionManager osSessionManager;
+    @Nullable
+    private OneSignal.OutcomeSettings outcomeSettings;
 
-    private Set<OutcomeEvent> eventsSent = Collections.newSetFromMap(new ConcurrentHashMap<OutcomeEvent, Boolean>());
-
-    OutcomeEventsController(OSSessionManager osSessionManager, OneSignalDbHelper dbHelper) {
-        this.outcomeEventsRepository = new OutcomeEventsRepository(dbHelper);
+    OutcomeEventsController(@NonNull OSSessionManager osSessionManager, @NonNull OutcomeEventsRepository outcomeEventsRepository) {
+        this.outcomeEventsRepository = outcomeEventsRepository;
         this.osSessionManager = osSessionManager;
     }
 
-    OutcomeEventsController(OSSessionManager osSessionManager, OutcomeEventsRepository outcomeEventsRepository) {
-        this.outcomeEventsRepository = outcomeEventsRepository;
+    OutcomeEventsController(@NonNull OSSessionManager osSessionManager, @NonNull OneSignalDbHelper dbHelper, @Nullable OneSignal.OutcomeSettings outcomeSettings) {
+        this.outcomeEventsRepository = new OutcomeEventsRepository(dbHelper);
         this.osSessionManager = osSessionManager;
+        this.outcomeSettings = outcomeSettings;
+    }
+
+    void setOutcomeSettings(@Nullable OneSignal.OutcomeSettings outcomeSettings) {
+        this.outcomeSettings = outcomeSettings;
+    }
+
+    /**
+     * Clean events sent
+     */
+    void clearOutcomes() {
+        eventsSent = OSUtils.newConcurrentSet();
     }
 
     /**
      * Send all the outcomes that from some reason failed
      */
     void sendSavedOutcomes() {
+        if (outcomeSettings != null && !outcomeSettings.isCacheActive())
+            return;
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -48,14 +64,11 @@ class OutcomeEventsController {
                 for (OutcomeEvent event : outcomeEvents) {
                     sendSavedOutcomeEvent(event);
                 }
-
-                outcomeEventsRepository.removeEvents(new ArrayList<>(eventsSent));
-                eventsSent.clear();
             }
         }, "OS_SEND_SAVED_OUTCOMES").start();
     }
 
-    private void sendSavedOutcomeEvent(final OutcomeEvent event) {
+    private void sendSavedOutcomeEvent(@NonNull final OutcomeEvent event) {
         OSSessionManager.Session session = event.getSession();
         String name = event.getName();
         String notificationId = event.getNotificationId();
@@ -69,7 +82,7 @@ class OutcomeEventsController {
             @Override
             void onSuccess(String response) {
                 super.onSuccess(response);
-                eventsSent.add(event);
+                outcomeEventsRepository.removeEvent(event);
             }
         };
 
@@ -86,16 +99,20 @@ class OutcomeEventsController {
         }
     }
 
-    void sendOutcomeEvent(@NonNull final String name) {
+    void sendUniqueOutcomeEvent(@NonNull final String name, @Nullable OneSignal.OutcomeCallback callback) {
+        if (eventsSent.contains(name)) {
+            //Event already sent
+            return;
+        }
+        sendOutcomeEvent(name, callback);
+        //Even if the outcome fail we don't attempt to send it again because we have cache
+        eventsSent.add(name);
+    }
+
+    void sendOutcomeEvent(@NonNull final String name, @Nullable final OneSignal.OutcomeCallback callback) {
         final String notificationId = osSessionManager.getNotificationId();
         final long sessionTimeStamp = System.currentTimeMillis() / 1000;
-        OSSessionManager.Session session = osSessionManager.getSession();
-
-        if (notificationId == null || notificationId.isEmpty()) {
-            session = OSSessionManager.Session.UNATTRIBUTED;
-        }
-
-        final OSSessionManager.Session finalSession = session;
+        final OSSessionManager.Session session = osSessionManager.getSession();
 
         int deviceType = new OSUtils().getDeviceType();
         String appId = OneSignal.appId;
@@ -104,18 +121,27 @@ class OutcomeEventsController {
             @Override
             void onSuccess(String response) {
                 super.onSuccess(response);
+                if (callback != null)
+                    callback.onOutcomeSuccess(name);
             }
 
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                 super.onFailure(statusCode, response, throwable);
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                        outcomeEventsRepository.saveOutcomeEvent(new OutcomeEvent(finalSession, notificationId, name, sessionTimeStamp));
-                    }
-                }, "OS_SAVE_OUTCOMES").start();
+                if (isCacheActive()) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                            outcomeEventsRepository.saveOutcomeEvent(new OutcomeEvent(session, notificationId, name, sessionTimeStamp));
+                        }
+                    }, "OS_SAVE_OUTCOMES").start();
+                } else {
+                    eventsSent.remove(name);
+                }
+
+                if (callback != null)
+                    callback.onOutcomeFail(statusCode, response);
             }
         };
 
@@ -147,22 +173,7 @@ class OutcomeEventsController {
         //TODO when backend changes are done
     }
 
-    private void sendOutcomeEvent() {
-        String outcomeId = "";
-        OSSessionManager.Session session = osSessionManager.getSession();
-        outcomeEventsRepository.requestMeasureDirectOutcomeEvent(outcomeId, OneSignal.appId, "",
-                new OSUtils().getDeviceType(), new OneSignalRestClient.ResponseHandler() {
-                    @Override
-                    void onSuccess(String response) {
-                        super.onSuccess(response);
-                        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Outcome sent successfully");
-                    }
-
-                    @Override
-                    void onFailure(int statusCode, String response, Throwable throwable) {
-                        super.onFailure(statusCode, response, throwable);
-                        OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed outcome event request. statusCode: " + statusCode + "\nresponse: " + response);
-                    }
-                });
+    boolean isCacheActive() {
+        return outcomeSettings == null || outcomeSettings.isCacheActive();
     }
 }

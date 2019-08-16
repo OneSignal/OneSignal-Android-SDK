@@ -111,6 +111,13 @@
                 android:text="Send Outcome" />
 
             <Button
+                android:id="@+id/sendUniqueEvent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:onClick="onSendUniqueOutcomeClicked"
+                android:text="Send Unique Outcome" />
+
+            <Button
                 android:id="@+id/logoutEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
