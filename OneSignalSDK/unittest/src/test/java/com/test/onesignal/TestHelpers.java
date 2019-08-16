@@ -4,9 +4,11 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
 
+import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
@@ -32,6 +34,7 @@ import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
@@ -240,6 +243,39 @@ public class TestHelpers {
       cursor.close();
 
       return mapList;
+   }
+
+   static List<OutcomeEvent>  getAllOutcomesRecords() {
+      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      Cursor cursor = readableDatabase.query(
+              OneSignalPackagePrivateHelper.OutcomeEventsTable.TABLE_NAME,
+              null,
+              null,
+              null,
+              null, // group by
+              null, // filter by row groups
+              null, // sort order, new to old
+              null // limit
+      );
+
+      List<OutcomeEvent> events = new ArrayList<>();
+      if (cursor.moveToFirst()) {
+         do {
+            String notificationId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID));
+            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME));
+            String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
+            OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
+            long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+            OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp);
+
+            events.add(event);
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+      readableDatabase.close();
+
+      return events;
    }
 
    static void advanceTimeByMs(long advanceBy) {

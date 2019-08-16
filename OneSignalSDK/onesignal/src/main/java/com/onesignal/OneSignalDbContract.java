@@ -56,4 +56,12 @@ class OneSignalDbContract {
       public static final String INDEX_CREATE_CREATED_TIME = "CREATE INDEX notification_created_time_idx ON notification(created_time); ";
       public static final String INDEX_CREATE_EXPIRE_TIME = "CREATE INDEX notification_expire_time_idx ON notification(expire_time); ";
    }
+
+   static abstract class OutcomeEventsTable implements BaseColumns {
+      public static final String TABLE_NAME = "outcome";
+      public static final String COLUMN_NAME_NOTIFICATION_ID = "notification_id"; // OneSignal Notification Id
+      public static final String COLUMN_NAME_TIMESTAMP = "timestamp";
+      public static final String COLUMN_NAME = "name";
+      public static final String COLUMN_NAME_SESSION = "session";
+   }
 }

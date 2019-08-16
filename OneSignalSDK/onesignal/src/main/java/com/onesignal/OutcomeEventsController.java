@@ -1,10 +1,14 @@
 package com.onesignal;
 
 import android.os.Bundle;
+import android.os.Process;
 import android.support.annotation.NonNull;
+import android.support.annotation.WorkerThread;
 
-import org.json.JSONObject;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 class OutcomeEventsController {
@@ -19,10 +23,10 @@ class OutcomeEventsController {
     private final OutcomeEventsRepository outcomeEventsRepository;
     private final OSSessionManager osSessionManager;
 
-    private final ConcurrentHashMap<String, JSONObject> eventsNotSent = new ConcurrentHashMap<>();
+    private Set<OutcomeEvent> eventsSent = Collections.newSetFromMap(new ConcurrentHashMap<OutcomeEvent, Boolean>());
 
-    OutcomeEventsController(OSSessionManager osSessionManager) {
-        this.outcomeEventsRepository = new OutcomeEventsRepository();
+    OutcomeEventsController(OSSessionManager osSessionManager, OneSignalDbHelper dbHelper) {
+        this.outcomeEventsRepository = new OutcomeEventsRepository(dbHelper);
         this.osSessionManager = osSessionManager;
     }
 
@@ -31,10 +35,70 @@ class OutcomeEventsController {
         this.osSessionManager = osSessionManager;
     }
 
-    void sendOutcomeEvent(@NonNull String name) {
-        OSSessionManager.Session session = osSessionManager.getSession();
+    /**
+     * Send all the outcomes that from some reason failed
+     */
+    void sendSavedOutcomes() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+
+                List<OutcomeEvent> outcomeEvents = outcomeEventsRepository.getSavedOutcomeEvents();
+                for (OutcomeEvent event : outcomeEvents) {
+                    sendSavedOutcomeEvent(event);
+                }
+
+                outcomeEventsRepository.removeEvents(new ArrayList<>(eventsSent));
+                eventsSent.clear();
+            }
+        }, "OS_SEND_SAVED_OUTCOMES").start();
+    }
+
+    private void sendSavedOutcomeEvent(final OutcomeEvent event) {
+        OSSessionManager.Session session = event.getSession();
+        String name = event.getName();
+        String notificationId = event.getNotificationId();
+
+        final long timestamp = event.getTimestamp();
+
         String appId = OneSignal.appId;
         int deviceType = new OSUtils().getDeviceType();
+
+        OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onSuccess(String response) {
+                super.onSuccess(response);
+                eventsSent.add(event);
+            }
+        };
+
+        switch (session) {
+            case DIRECT:
+                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, appId, notificationId, deviceType, timestamp, responseHandler);
+                break;
+            case INDIRECT:
+                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, appId, notificationId, deviceType, timestamp, responseHandler);
+                break;
+            case UNATTRIBUTED:
+                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, appId, deviceType, responseHandler);
+                break;
+        }
+    }
+
+    void sendOutcomeEvent(@NonNull final String name) {
+        final String notificationId = osSessionManager.getNotificationId();
+        final long sessionTimeStamp = System.currentTimeMillis() / 1000;
+        OSSessionManager.Session session = osSessionManager.getSession();
+
+        if (notificationId == null || notificationId.isEmpty()) {
+            session = OSSessionManager.Session.UNATTRIBUTED;
+        }
+
+        final OSSessionManager.Session finalSession = session;
+
+        int deviceType = new OSUtils().getDeviceType();
+        String appId = OneSignal.appId;
 
         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -45,19 +109,22 @@ class OutcomeEventsController {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                 super.onFailure(statusCode, response, throwable);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                        outcomeEventsRepository.saveOutcomeEvent(new OutcomeEvent(finalSession, notificationId, name, sessionTimeStamp));
+                    }
+                }, "OS_SAVE_OUTCOMES").start();
             }
         };
 
         switch (session) {
             case DIRECT:
-                String notificationId = osSessionManager.getNotificationId();
-                if (notificationId != null && !notificationId.isEmpty()) {
-                    outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, appId, notificationId, deviceType, responseHandler);
-                    break;
-                }
-                // If notification from some reason is null or empty we should send anyways the event as indirect
+                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, appId, notificationId, deviceType, responseHandler);
+                break;
             case INDIRECT:
-                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, appId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, appId, notificationId, deviceType, responseHandler);
                 break;
             case UNATTRIBUTED:
                 outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, appId, deviceType, responseHandler);

@@ -40,5 +40,4 @@ public class NotificationData {
     static String getLastNotificationReceivedData() {
         return OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_LAST_NOTIFICATION_RECEIVED, null);
     }
-
 }

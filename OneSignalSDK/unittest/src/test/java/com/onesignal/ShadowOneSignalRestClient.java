@@ -302,8 +302,7 @@ public class ShadowOneSignalRestClient {
          nextSuccessfulGETResponse = null;
       }
       else if (successfulGETResponses.size() > 0) {
-         responseHandler.onSuccess(successfulGETResponses.get(0));
-         successfulGETResponses.remove(0);
+         responseHandler.onSuccess(successfulGETResponses.remove(0));
       }
       else if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
@@ -352,8 +351,7 @@ public class ShadowOneSignalRestClient {
          nextSuccessfulGETResponse = null;
          return true;
       } else if (successfulGETResponses.size() > 0) {
-         responseHandler.onSuccess(successfulGETResponses.get(0));
-         successfulGETResponses.remove(0);
+         responseHandler.onSuccess(successfulGETResponses.remove(0));
          return true;
       }
       return false;

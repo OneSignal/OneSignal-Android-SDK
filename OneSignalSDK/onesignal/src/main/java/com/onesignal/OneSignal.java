@@ -620,7 +620,7 @@ public class OneSignal {
       }
 
       mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
-      outcomeEventsController = new OutcomeEventsController(sessionManager);
+      outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
 
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
@@ -677,6 +677,7 @@ public class OneSignal {
 
       initDone = true;
 
+      outcomeEventsController.sendSavedOutcomes();
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
    }
@@ -1512,11 +1513,15 @@ public class OneSignal {
    /**
     * Tag a user based on an app event of your choosing so later you can create
     * <a href="https://documentation.onesignal.com/docs/segmentation">OneSignal Segments</a>
-    * to target these users. Use {@link #sendTags(String)} to set more than one tag on a user at
-    * a time.
+    * to target these users.
+    *
+    * @see OneSignal#sendTags to set more than one tag on a user at a time.
+    *
     * @param key Key of your chossing to create or update
     * @param value Value to set on the key. <b>Note:</b> Passing in a blank {@code String} deletes
-    *              the key. You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
+    *              the key.
+    * @see OneSignal#deleteTag
+    * @see OneSignal#deleteTags
     */
    public static void sendTag(String key, String value) {
 
@@ -1545,8 +1550,8 @@ public class OneSignal {
     *  to target these users.
     * @param keyValues Key value pairs of your choosing to create or update. <b>Note:</b>
     *                  Passing in a blank String as a value deletes a key.
-    *                  You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
-    *
+    * @see OneSignal#deleteTag
+    * @see OneSignal#deleteTags
     */
    public static void sendTags(final JSONObject keyValues) {
       sendTags(keyValues, null);
@@ -1562,7 +1567,8 @@ public class OneSignal {
     *  based on this callback.
     * @param keyValues Key value pairs of your choosing to create or update. <b>Note:</b>
     *                  Passing in a blank String as a value deletes a key.
-    *                  You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
+    * @see OneSignal#deleteTag
+    * @see OneSignal#deleteTags
     *
     */
    public static void sendTags(final JSONObject keyValues, final ChangeTagsUpdateHandler changeTagsUpdateHandler) {
@@ -1785,8 +1791,9 @@ public class OneSignal {
    }
 
    /**
-    * Deletes a single tag that was previously set on a user with {@link #sendTag(String, String)}
-    * or {@link #sendTags(JSONObject)}. Use {@link #deleteTags(String)} if you need to delete
+    * Deletes a single tag that was previously set on a user with
+    * @see OneSignal#sendTag or {@link #sendTags(JSONObject)}.
+    * @see OneSignal#deleteTags if you need to delete
     * more than one.
     * @param key Key to remove.
     */
@@ -1805,8 +1812,8 @@ public class OneSignal {
    }
 
    /**
-    * Deletes one or more tags that were previously set on a user with {@link #sendTag(String, String)}
-    * or {@link #sendTags(JSONObject)}.
+    * Deletes one or more tags that were previously set on a user with
+    * @see OneSignal#sendTag or {@link #sendTags(JSONObject)}.
     * @param keys Keys to remove.
     */
    public static void deleteTags(Collection<String> keys) {
@@ -3064,42 +3071,28 @@ public class OneSignal {
       }
    }
 
-   /**
+   /*
    * Start OneSignalOutcome module
    */
+
    static void initSessionFromNotification(String notificationId) {
       sessionManager.onSessionFromNotification(notificationId);
    }
 
-   public static OSSessionManager.Session resetSessiontype() {
-      return sessionManager.resetSession();
+   public static void resetSessionType() {
+      sessionManager.resetSession();
    }
 
-    public static OSSessionManager.Session getSessionType() {
+   public static OSSessionManager.Session getSessionType() {
         return sessionManager.getSession();
     }
 
-    public static void outcome(@NonNull String name) {
-        outcomeEventsController.sendOutcomeEvent(name);
-    }
+   public static void outcome(@NonNull String name) {
+      outcomeEventsController.sendOutcomeEvent(name);
+   }
 
-    public static void outcome(@NonNull String name, int value) {
-        outcomeEventsController.sendOutcomeEvent(name, value);
-    }
-
-    /**
-     * @param value must not be null or empty
-     */
-    public static void outcome(@NonNull String name, @NonNull String value) throws OutcomeEventsController.OutcomeException {
-        outcomeEventsController.sendOutcomeEvent(name, value);
-    }
-
-    public static void outcome(@NonNull String name, @NonNull Bundle params) {
-        outcomeEventsController.sendOutcomeEvent(name, params);
-    }
-
-    /*
-     * End OneSignalOutcome module
-     */
+   /*
+    * End OneSignalOutcome module
+    */
 
 }

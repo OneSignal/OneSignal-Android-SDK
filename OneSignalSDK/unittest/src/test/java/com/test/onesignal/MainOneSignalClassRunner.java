@@ -43,7 +43,6 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
-import com.onesignal.NotificationData;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -222,7 +221,7 @@ public class MainOneSignalClassRunner {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
 
-      OneSignal.resetSessiontype();
+      OneSignal.resetSessionType();
       cleanUp();
    }
 
@@ -738,8 +737,9 @@ public class MainOneSignalClassRunner {
    @Test
    public void testSessionIndirectWhenNotificationReceived() throws Exception {
       Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-
+      
       GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
       threadAndTaskWait();
 
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {

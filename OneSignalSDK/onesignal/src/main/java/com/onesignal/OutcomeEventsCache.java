@@ -1,0 +1,120 @@
+package com.onesignal;
+
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.support.annotation.WorkerThread;
+
+import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+class OutcomeEventsCache {
+
+    private static final Object lock = new Object();
+
+    /**
+     * Delete event from the DB
+     */
+    @WorkerThread
+    static void deleteOldOutcomeEvent(OutcomeEvent event, OneSignalDbHelper dbHelper) {
+        synchronized (lock) {
+            SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+
+            try {
+                writableDb.beginTransaction();
+                writableDb.delete(OutcomeEventsTable.TABLE_NAME,
+                        OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?", new String[]{String.valueOf(event.getTimestamp())});
+                writableDb.setTransactionSuccessful();
+            } catch (Throwable t) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old outcome event records! ", t);
+            } finally {
+                if (writableDb != null) {
+                    try {
+                        writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+                    } catch (Throwable t) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Delete events from the DB
+     */
+    @WorkerThread
+    static void deleteOldOutcomeEvents(Collection<OutcomeEvent> events, OneSignalDbHelper dbHelper) {
+        for (OutcomeEvent event : events) {
+            deleteOldOutcomeEvent(event, dbHelper);
+        }
+    }
+
+    /**
+     * Save an outcome event to send it on the future
+     * <p>
+     * For offline mode and contingency of errors
+     */
+    @WorkerThread
+    static void saveOutcomeEvent(OutcomeEvent event, OneSignalDbHelper dbHelper) {
+        synchronized (lock) {
+            SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+
+            ContentValues values = new ContentValues();
+            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID, event.getNotificationId());
+            values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
+            values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
+            values.put(OutcomeEventsTable.COLUMN_NAME, event.getName());
+
+            writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
+            writableDb.close();
+        }
+    }
+
+    /**
+     * Save an outcome event to send it on the future
+     * <p>
+     * For offline mode and contingency of errors
+     */
+    @WorkerThread
+    static List<OutcomeEvent> getAllEventsToSend(OneSignalDbHelper dbHelper) {
+        List<OutcomeEvent> events = new ArrayList<>();
+
+        synchronized (lock) {
+            Cursor cursor = null;
+
+            try {
+                SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+                cursor = readableDb.query(
+                        OutcomeEventsTable.TABLE_NAME,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+
+                if (cursor.moveToFirst()) {
+                    do {
+                        String notificationId = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID));
+                        String name = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME));
+                        String sessionString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_SESSION));
+                        OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
+                        long timestamp = cursor.getLong(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+                        OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp);
+
+                        events.add(event);
+                    } while (cursor.moveToNext());
+                }
+            } finally {
+                if (cursor != null && !cursor.isClosed())
+                    cursor.close();
+            }
+        }
+
+        return events;
+    }
+}

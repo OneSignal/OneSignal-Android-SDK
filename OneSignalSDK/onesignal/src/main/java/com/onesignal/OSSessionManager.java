@@ -25,25 +25,31 @@ public class OSSessionManager {
         DIRECT,
         INDIRECT,
         UNATTRIBUTED,
+        ;
+
+        public static @NonNull
+        Session fromString(String value) {
+            if (value == null || value.isEmpty())
+                return UNATTRIBUTED;
+
+            for (Session type : Session.values()) {
+                if (type.name().equalsIgnoreCase(value))
+                    return type;
+            }
+            return UNATTRIBUTED;
+        }
     }
 
     private Session session = null;
 
-    /**
-     * If session is indirect must keep the quantity of minutes
-     * since last notification
-     */
-    private long minutesFromNotification = 0;
     private String notificationId = null;
 
     public OSSessionManager() {
     }
 
-    @NonNull
-    public Session resetSession() {
-        return session = null;
+    public void resetSession() {
+        this.session = null;
     }
-
 
     @NonNull
     public Session getSession() {
@@ -71,8 +77,7 @@ public class OSSessionManager {
                 long difference = currentTime - time;
                 if (difference < TWENTY_FOUR_HOURS_MILLISECONDS) {
                     session = Session.INDIRECT;
-                    minutesFromNotification = (difference / 1000) / 60; //define with backend to send on second or minutes
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect minutesFromNotification: " + minutesFromNotification);
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + jsonObject.getString(NotificationData.NOTIFICATION_ID));
                 } else {
                     onSessionNotInfluenced();
                 }
@@ -90,7 +95,6 @@ public class OSSessionManager {
      */
     void onSessionNotInfluenced() {
         session = Session.UNATTRIBUTED;
-        minutesFromNotification = 0;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session not influenced");
     }
 
@@ -99,7 +103,6 @@ public class OSSessionManager {
      */
     void onSessionFromNotification(String notificationId) {
         this.session = Session.DIRECT;
-        this.minutesFromNotification = 0;
         this.notificationId = notificationId;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with notificationId: " + notificationId);
     }

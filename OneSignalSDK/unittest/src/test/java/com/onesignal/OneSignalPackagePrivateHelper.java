@@ -16,6 +16,7 @@ import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -69,7 +70,7 @@ public class OneSignalPackagePrivateHelper {
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
       if (looper == null)
          return false;
-      
+
       final Scheduler scheduler = shadowOf(looper).getScheduler();
       if (scheduler == null)
          return false;
@@ -141,6 +142,7 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
+   public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
@@ -173,15 +175,15 @@ public class OneSignalPackagePrivateHelper {
       notifJob.jsonPayload = payload;
       return NotificationChannelManager.createNotificationChannel(notifJob);
    }
-   
+
    public static void NotificationChannelManager_processChannelList(Context context, JSONArray jsonArray) {
       NotificationChannelManager.processChannelList(context, jsonArray);
    }
-   
+
    public static void NotificationOpenedProcessor_processFromContext(Context context, Intent intent) {
       NotificationOpenedProcessor.processFromContext(context, intent);
    }
-   
+
    public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
       NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
    }
@@ -199,7 +201,7 @@ public class OneSignalPackagePrivateHelper {
    public static String OneSignal_appId() { return OneSignal.appId; }
 
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
-   
+
    static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
       public static void update(SQLiteDatabase readableDb, Context context) {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);
