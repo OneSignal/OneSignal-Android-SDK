@@ -70,13 +70,8 @@ class OutcomeEventsController {
 
     private void sendSavedOutcomeEvent(@NonNull final OutcomeEvent event) {
         OSSessionManager.Session session = event.getSession();
-        String name = event.getName();
-        String notificationId = event.getNotificationId();
-
-        final long timestamp = event.getTimestamp();
-
-        String appId = OneSignal.appId;
         int deviceType = new OSUtils().getDeviceType();
+        String appId = OneSignal.appId;
 
         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -88,13 +83,13 @@ class OutcomeEventsController {
 
         switch (session) {
             case DIRECT:
-                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, appId, notificationId, deviceType, timestamp, responseHandler);
+                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(appId, deviceType, event, responseHandler);
                 break;
             case INDIRECT:
-                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, appId, notificationId, deviceType, timestamp, responseHandler);
+                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(appId, deviceType, event, responseHandler);
                 break;
             case UNATTRIBUTED:
-                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, appId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(appId, deviceType, event, responseHandler);
                 break;
         }
     }
@@ -110,9 +105,28 @@ class OutcomeEventsController {
     }
 
     void sendOutcomeEvent(@NonNull final String name, @Nullable final OneSignal.OutcomeCallback callback) {
+        sendOutcomeEvent(name, null, callback);
+    }
+
+    void sendOutcomeEvent(@NonNull String name, float value, @Nullable final OneSignal.OutcomeCallback callback) {
+        OutcomeParams params = OutcomeParams.Builder
+                .newInstance()
+                .setWeight(value)
+                .build();
+        sendOutcomeEvent(name, params, callback);
+    }
+
+    void sendOutcomeEvent(@NonNull String name, @NonNull String value) throws OutcomeException {
+        if (value.isEmpty()) {
+            throw new OutcomeException("Value must not be empty");
+        }
+        //TODO when backend changes are done
+    }
+
+    private void sendOutcomeEvent(@NonNull final String name, @Nullable final OutcomeParams params, @Nullable final OneSignal.OutcomeCallback callback) {
         final String notificationId = osSessionManager.getNotificationId();
-        final long sessionTimeStamp = System.currentTimeMillis() / 1000;
-        final OSSessionManager.Session session = osSessionManager.getSession();
+        final OSSessionManager.Session session = notificationId != null ? osSessionManager.getSession() : OSSessionManager.Session.UNATTRIBUTED;
+        final long timestamp = System.currentTimeMillis() / 1000;
 
         int deviceType = new OSUtils().getDeviceType();
         String appId = OneSignal.appId;
@@ -133,7 +147,7 @@ class OutcomeEventsController {
                         @Override
                         public void run() {
                             Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                            outcomeEventsRepository.saveOutcomeEvent(new OutcomeEvent(session, notificationId, name, sessionTimeStamp));
+                            outcomeEventsRepository.saveOutcomeEvent(new OutcomeEvent(session, notificationId, name, timestamp, params));
                         }
                     }, "OS_SAVE_OUTCOMES").start();
                 } else {
@@ -147,26 +161,15 @@ class OutcomeEventsController {
 
         switch (session) {
             case DIRECT:
-                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, appId, notificationId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, params, appId, notificationId, deviceType, responseHandler);
                 break;
             case INDIRECT:
-                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, appId, notificationId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, params, appId, notificationId, deviceType, responseHandler);
                 break;
             case UNATTRIBUTED:
-                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, appId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, params, appId, deviceType, responseHandler);
                 break;
         }
-    }
-
-    void sendOutcomeEvent(@NonNull String name, int value) {
-        //TODO when backend changes are done
-    }
-
-    void sendOutcomeEvent(@NonNull String name, @NonNull String value) throws OutcomeException {
-        if (value.isEmpty()) {
-            throw new OutcomeException("Value must not be empty");
-        }
-        //TODO when backend changes are done
     }
 
     void sendOutcomeEvent(@NonNull String name, @NonNull Bundle params) {

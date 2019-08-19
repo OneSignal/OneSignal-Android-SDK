@@ -20,9 +20,13 @@ public class MockOutcomeEventsController extends OutcomeEventsController {
         super.sendSavedOutcomes();
     }
 
+    public void sendOutcomeEvent(@NonNull String name, float value) {
+        super.sendOutcomeEvent(name, value, null);
+    }
+
     @Override
-    public void sendOutcomeEvent(@NonNull String name, int value) {
-        super.sendOutcomeEvent(name, value);
+    public void sendOutcomeEvent(@NonNull String name, float value, @Nullable OneSignal.OutcomeCallback callback) {
+        super.sendOutcomeEvent(name, value, callback);
     }
 
     @Override

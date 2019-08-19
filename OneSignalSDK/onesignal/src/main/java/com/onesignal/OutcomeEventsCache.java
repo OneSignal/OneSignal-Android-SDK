@@ -8,7 +8,6 @@ import android.support.annotation.WorkerThread;
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 class OutcomeEventsCache {
@@ -43,16 +42,6 @@ class OutcomeEventsCache {
     }
 
     /**
-     * Delete events from the DB
-     */
-    @WorkerThread
-    static void deleteOldOutcomeEvents(Collection<OutcomeEvent> events, OneSignalDbHelper dbHelper) {
-        for (OutcomeEvent event : events) {
-            deleteOldOutcomeEvent(event, dbHelper);
-        }
-    }
-
-    /**
      * Save an outcome event to send it on the future
      * <p>
      * For offline mode and contingency of errors
@@ -65,8 +54,11 @@ class OutcomeEventsCache {
             ContentValues values = new ContentValues();
             values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID, event.getNotificationId());
             values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
-            values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
             values.put(OutcomeEventsTable.COLUMN_NAME, event.getName());
+            values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
+
+            if (event.getParams() != null)
+                values.put(OutcomeEventsTable.COLUMN_NAME_PARAMS, event.getParams());
 
             writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
             writableDb.close();
@@ -104,7 +96,15 @@ class OutcomeEventsCache {
                         String sessionString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_SESSION));
                         OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
                         long timestamp = cursor.getLong(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
-                        OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp);
+
+                        int paramsIndex = cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_PARAMS);
+                        String paramsString = cursor.isNull(paramsIndex) ? null : cursor.getString(paramsIndex);
+                        OutcomeParams params =
+                                paramsString != null ? OutcomeParams.Builder
+                                        .newInstance()
+                                        .setJsonString(paramsString)
+                                        .build() : null;
+                        OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp, params);
 
                         events.add(event);
                     } while (cursor.moveToNext());

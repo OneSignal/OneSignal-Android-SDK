@@ -62,12 +62,11 @@ public class OutcomeEventTests {
 
     private static final String OUTCOME_NAME = "testing";
 
-    private OSSessionManager sessionManager;
     private MockOutcomeEventsController controller;
     private MockOutcomeEventsRepository repository;
     private MockOutcomeEventsService service;
     private OneSignalDbHelper dbHelper;
-    private OneSignal.OutcomeSettings outcomeSettings;
+
     private static List<OutcomeEvent> outcomeEvents;
 
     public interface OutcomeEventsHandler {
@@ -92,11 +91,11 @@ public class OutcomeEventTests {
     public void beforeEachTest() {
         outcomeEvents = null;
 
-        dbHelper = OneSignalDbHelper.getInstance(RuntimeEnvironment.application);
-        outcomeSettings = OneSignal.OutcomeSettings.Builder.newInstance()
+        OneSignal.OutcomeSettings outcomeSettings = OneSignal.OutcomeSettings.Builder.newInstance()
                 .setCacheActive(true)
                 .build();
-        sessionManager = new OSSessionManager();
+        OSSessionManager sessionManager = new OSSessionManager();
+        dbHelper = OneSignalDbHelper.getInstance(RuntimeEnvironment.application);
         service = new MockOutcomeEventsService();
         repository = new MockOutcomeEventsRepository(service, dbHelper);
         controller = new MockOutcomeEventsController(sessionManager, repository);
@@ -125,6 +124,26 @@ public class OutcomeEventTests {
 
         threadAndTaskWait();
         Assert.assertEquals(0, outcomeEvents.size());
+        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":2}", service.getLastJsonObjectSent());
+    }
+
+    @Test
+    public void testOutcomeWithValueSuccess() throws Exception {
+        service.setSuccess(true);
+
+        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f, null);
+        threadAndTaskWait();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                handler.setOutcomes(repository.getSavedOutcomeEvents());
+            }
+        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+
+        threadAndTaskWait();
+        Assert.assertEquals(0, outcomeEvents.size());
+        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":2,\"weight\":1.1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -146,6 +165,7 @@ public class OutcomeEventTests {
 
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() == 0);
+        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":2}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -168,6 +188,7 @@ public class OutcomeEventTests {
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() == 1);
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
+        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":2}", service.getLastJsonObjectSent());
 
         controller.clearOutcomes();
 
@@ -207,8 +228,6 @@ public class OutcomeEventTests {
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() == 1);
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
-
-
     }
 
     @Test
@@ -270,9 +289,9 @@ public class OutcomeEventTests {
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         controller.sendOutcomeEvent(OUTCOME_NAME + "1");
-        controller.sendOutcomeEvent(OUTCOME_NAME + "2");
+        controller.sendOutcomeEvent(OUTCOME_NAME + "2", 1);
         controller.sendOutcomeEvent(OUTCOME_NAME + "3");
-        controller.sendOutcomeEvent(OUTCOME_NAME + "4");
+        controller.sendOutcomeEvent(OUTCOME_NAME + "4", 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -299,6 +318,42 @@ public class OutcomeEventTests {
         threadAndTaskWait();
 
         Assert.assertEquals(0, outcomeEvents.size());
+    }
+
+    @Test
+    public void testSendFailedOutcomeWithValueOnDB() throws Exception {
+        service.setSuccess(false);
+
+        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f);
+        threadAndTaskWait();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                handler.setOutcomes(repository.getSavedOutcomeEvents());
+            }
+        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+
+        threadAndTaskWait();
+        Assert.assertEquals(1, outcomeEvents.size());
+        Assert.assertEquals("{\"weight\":1.1}", outcomeEvents.get(0).getParams());
+        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":2,\"weight\":1.1}", service.getLastJsonObjectSent());
+
+        service.setSuccess(true);
+        service.resetLastJsonObjectSent();
+        controller.sendSavedOutcomes();
+        threadAndTaskWait();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                handler.setOutcomes(repository.getSavedOutcomeEvents());
+            }
+        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+        threadAndTaskWait();
+
+        Assert.assertEquals(0, outcomeEvents.size());
+        Assert.assertEquals("{\"id\":\"testing\",\"timestamp\":0,\"weight\":1.1,\"device_type\":2}", service.getLastJsonObjectSent());
     }
 
     private static void threadAndTaskWait() throws Exception {

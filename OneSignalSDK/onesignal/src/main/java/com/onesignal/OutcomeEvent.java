@@ -1,38 +1,29 @@
 package com.onesignal;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OutcomeEvent {
 
     private static final String NOTIFICATION_ID = "notification_id";
-    private static final String NAME = "name";
-    private static final String SESSION = "session";
+    private static final String OUTCOME_ID = "id";
     private static final String TIMESTAMP = "timestamp";
 
     private OSSessionManager.Session session;
+    private OutcomeParams params;
     private String notificationId;
     private String name;
     private long timestamp;
 
-    OutcomeEvent(OSSessionManager.Session session, String name, long timestamp) {
-        this(session, null, name, timestamp);
-    }
-
-    public OutcomeEvent(OSSessionManager.Session session, String notificationId, String name, long timestamp) {
+    public OutcomeEvent(@NonNull OSSessionManager.Session session, @Nullable String notificationId, @NonNull String name, long timestamp, @Nullable OutcomeParams params) {
         this.session = session;
         this.notificationId = notificationId;
         this.name = name;
         this.timestamp = timestamp;
-    }
-
-    OutcomeEvent(JSONObject json) {
-        String session = json.optString(SESSION);
-
-        this.session = session != null && !session.isEmpty() ? OSSessionManager.Session.valueOf(session.toUpperCase()) : OSSessionManager.Session.UNATTRIBUTED;
-        this.notificationId = json.optString(NOTIFICATION_ID, null);
-        this.name = json.optString(NAME);
-        this.timestamp = json.optLong(TIMESTAMP);
+        this.params = params;
     }
 
     public OSSessionManager.Session getSession() {
@@ -67,16 +58,33 @@ public class OutcomeEvent {
         this.timestamp = timestamp;
     }
 
+    public String getParams() {
+        return params != null ? params.getAsJSONString() : null;
+    }
+
     public JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {
-            json.put(NOTIFICATION_ID, this.notificationId);
-            json.put(NAME, this.name);
-            json.put(SESSION, this.session.toString().toLowerCase());
-            json.put(TIMESTAMP, this.timestamp);
+            json.put(OUTCOME_ID, name);
+            json.put(TIMESTAMP, timestamp);
+
+            if (params != null)
+                params.addParamsToJson(json);
         } catch (JSONException exception) {
-            exception.printStackTrace();
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating OutcomeEvent toJSONObject ", exception);
+        }
+
+        return json;
+    }
+
+    public JSONObject toJSONObjectWithNotification() {
+        JSONObject json = toJSONObject();
+
+        try {
+            json.put(NOTIFICATION_ID, notificationId);
+        } catch (JSONException exception) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating OutcomeEvent toJSONObject ", exception);
         }
 
         return json;

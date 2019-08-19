@@ -322,7 +322,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    public void onSendOutcomeClicked(View view) {
-      OneSignal.outcome("test", new OneSignal.OutcomeCallback() {
+      OneSignal.outcome("test", 1, new OneSignal.OutcomeCallback() {
          @Override
          public void onOutcomeSuccess(String name) {
             updateTextView(name + "Outcome sent successfully");

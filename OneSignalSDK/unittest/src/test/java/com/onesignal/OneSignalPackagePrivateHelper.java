@@ -209,6 +209,52 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
 
+   static public class OutcomeParams extends com.onesignal.OutcomeParams {
+
+      OutcomeParams(Builder builder) {
+         super(builder);
+      }
+
+      public static class Builder extends com.onesignal.OutcomeParams.Builder {
+
+         private Float weight;
+         private JSONObject jsonObject;
+
+         public static Builder newInstance() {
+            return new Builder();
+         }
+
+         Builder setWeight(@Nullable Float weight) {
+            if (weight != null)
+               this.weight = weight;
+            return this;
+         }
+
+         public  Builder setJsonString(@Nullable String jsonString) {
+            if (jsonString == null || jsonString.isEmpty())
+               return this;
+            try {
+               this.jsonObject = new JSONObject(jsonString);
+            } catch (JSONException e) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating outcome params fromJSON Failed.", e);
+            }
+            return this;
+         }
+
+         Builder setJson(@Nullable JSONObject jsonObject) {
+            if (jsonObject != null)
+               this.jsonObject = jsonObject;
+            return this;
+         }
+
+
+         @Override
+         public OutcomeParams build() {
+            return new OutcomeParams(this);
+         }
+      }
+   }
+
    static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
       public static void update(SQLiteDatabase readableDb, Context context) {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);

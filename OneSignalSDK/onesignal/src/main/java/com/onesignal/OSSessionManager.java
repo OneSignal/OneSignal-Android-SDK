@@ -20,6 +20,7 @@ public class OSSessionManager {
 
     private static final String TAG = OSSessionManager.class.getCanonicalName();
     private static final long TWENTY_FOUR_HOURS_MILLISECONDS = 24 * 60 * 60 * 1000;
+    private static final long HALF_MINUTE_IN_MILLISECONDS = 30 * 1000;
 
     interface SessionListener {
         void onSessionRestarted();
@@ -46,6 +47,7 @@ public class OSSessionManager {
 
     private Session session = null;
     private String notificationId = null;
+    private Long sessionTime = null;
     private SessionListener sessionListener = null;
 
     public OSSessionManager() {
@@ -59,7 +61,10 @@ public class OSSessionManager {
         this.session = null;
     }
 
-    void restartSession() {
+    void restartSessionIfNeeded() {
+        if (sessionTime != null && System.currentTimeMillis() - sessionTime < HALF_MINUTE_IN_MILLISECONDS)
+            //avoid reset session if the session was recently being set
+            return;
         cleanSession();
         onSessionStarted();
         if (sessionListener != null)
@@ -125,6 +130,8 @@ public class OSSessionManager {
      */
     void onSessionFromNotification(String notificationId) {
         this.session = Session.DIRECT;
+        this.sessionTime = System.currentTimeMillis();
+        //Is not saved on the DB because a newer notification might have arrived
         this.notificationId = notificationId;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with notificationId: " + notificationId);
     }

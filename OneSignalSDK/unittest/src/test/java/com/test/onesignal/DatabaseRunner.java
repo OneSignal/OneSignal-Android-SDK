@@ -103,7 +103,7 @@ public class DatabaseRunner {
 
       readableDatabase.close();
 
-      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, "name", "notificationID", 0);
+      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, "name", "notificationID", 0, null);
       ContentValues values = new ContentValues();
       values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID, event.getNotificationId());
       values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());

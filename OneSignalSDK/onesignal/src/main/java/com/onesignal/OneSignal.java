@@ -756,7 +756,7 @@ public class OneSignal {
          trackAmazonPurchase = new TrackAmazonPurchase(appContext);
       } catch (ClassNotFoundException e) {}
    }
-
+   
    private static void handleSessionTimeRegistrationOnInit() {
       // If the app is not in the foreground yet do not make an on_session call yet.
       // If we don't have a OneSignal player_id yet make the call to create it regardless of focus
@@ -767,7 +767,7 @@ public class OneSignal {
    private static void doSessionInit() {
       if (isPastOnSessionTime()) {
           OneSignalStateSynchronizer.setNewSession();
-          sessionManager.restartSession();
+          sessionManager.restartSessionIfNeeded();
       } else
           OSInAppMessageController.getController().initWithCachedInAppMessages();
       setLastSessionTime(System.currentTimeMillis());
@@ -1234,7 +1234,7 @@ public class OneSignal {
 
       if (isPastOnSessionTime()) {
          OneSignalStateSynchronizer.setNewSession();
-         sessionManager.restartSession();
+         sessionManager.restartSessionIfNeeded();
       }
       setLastSessionTime(System.currentTimeMillis());
 
@@ -3104,36 +3104,63 @@ public class OneSignal {
    }
 
    static OSSessionManager.Session getSessionType() {
-        return sessionManager.getSession();
+       return sessionManager.getSession();
    }
 
-   public static void uniqueOutcome(@NonNull String name, OutcomeCallback callback) {
-      if (outcomeEventsController == null)
+   public static void uniqueOutcome(@NonNull String name, @NonNull OutcomeCallback callback) {
+      if (outcomeEventsController == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return;
+      }
 
       outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
    }
 
    public static void uniqueOutcome(@NonNull String name) {
-      if (outcomeEventsController == null)
+      if (outcomeEventsController == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return;
+      }
 
       outcomeEventsController.sendUniqueOutcomeEvent(name, null);
    }
 
-   public static void outcome(@NonNull String name, OutcomeCallback callback) {
-      if (outcomeEventsController == null)
+   public static void outcome(@NonNull String name, @NonNull OutcomeCallback callback) {
+      if (outcomeEventsController == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return;
+      }
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
    }
 
    public static void outcome(@NonNull String name) {
-      if (outcomeEventsController == null)
+      if (outcomeEventsController == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return;
+      }
 
       outcomeEventsController.sendOutcomeEvent(name, (OutcomeCallback) null);
    }
+
+   public static void outcome(@NonNull String name, float value, @NonNull OutcomeCallback callback) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return;
+      }
+
+      outcomeEventsController.sendOutcomeEvent(name, value, callback);
+   }
+
+   public static void outcome(@NonNull String name, float value) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return;
+      }
+
+      outcomeEventsController.sendOutcomeEvent(name, value, null);
+   }
+
 
    public interface OutcomeCallback {
       void onOutcomeSuccess(String name);

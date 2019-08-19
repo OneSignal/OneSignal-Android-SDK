@@ -8,6 +8,7 @@ public class MockOutcomeEventsService extends OutcomeEventsService {
     private static final String FAIL_STRING_RESPONSE = "error";
 
     private boolean success;
+    private JSONObject lastJsonObjectSent;
 
     /**
      * Set to fail or success the api service call
@@ -16,8 +17,17 @@ public class MockOutcomeEventsService extends OutcomeEventsService {
         this.success = success;
     }
 
+    public void resetLastJsonObjectSent() {
+        this.lastJsonObjectSent = null;
+    }
+
+    public String getLastJsonObjectSent() {
+        return lastJsonObjectSent.toString();
+    }
+
     @Override
     void sendOutcomeEvent(JSONObject object, OneSignalRestClient.ResponseHandler responseHandler) {
+        lastJsonObjectSent = object;
         if (success)
             responseHandler.onSuccess("");
         else

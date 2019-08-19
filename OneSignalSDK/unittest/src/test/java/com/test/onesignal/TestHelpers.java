@@ -265,8 +265,16 @@ public class TestHelpers {
             String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME));
             String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
             OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
-            long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
-            OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp);
+            Long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+
+            int paramsIndex = cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_PARAMS);
+            String paramsString = cursor.isNull(paramsIndex) ? null : cursor.getString(paramsIndex);
+            OneSignalPackagePrivateHelper.OutcomeParams params =
+                    paramsString != null ? OneSignalPackagePrivateHelper.OutcomeParams.Builder
+                            .newInstance()
+                            .setJsonString(paramsString)
+                            .build() : null;
+            OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp, params);
 
             events.add(event);
          } while (cursor.moveToNext());

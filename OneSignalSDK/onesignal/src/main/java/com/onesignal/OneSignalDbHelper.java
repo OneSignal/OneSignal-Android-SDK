@@ -74,6 +74,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME + TEXT_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " TIMESTAMP" +
                    ");";
 

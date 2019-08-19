@@ -25,42 +25,32 @@ public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
     }
 
     @Override
-    void requestMeasureDirectOutcomeEvent(String outcomeId, String appId, String notificationId, int deviceType, Long timestamp, OneSignalRestClient.ResponseHandler responseHandler) {
-        if (customResponseHandler != null)
-            super.requestMeasureDirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, timestamp, customResponseHandler);
-        else
-            super.requestMeasureDirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, timestamp, responseHandler);
+    void requestMeasureDirectOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalRestClient.ResponseHandler responseHandler) {
+        super.requestMeasureDirectOutcomeEvent(appId, deviceType, event, responseHandler);
     }
 
     @Override
-    void requestMeasureDirectOutcomeEvent(String outcomeId, String appId, String notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
-        if (customResponseHandler != null)
-            super.requestMeasureDirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, customResponseHandler);
-        else
-            super.requestMeasureDirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, responseHandler);
+    void requestMeasureDirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, String notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
+        super.requestMeasureDirectOutcomeEvent(outcomeId, outcomeParams, appId, notificationId, deviceType, responseHandler);
     }
 
     @Override
-    void requestMeasureIndirectOutcomeEvent(String outcomeId, String appId, String notificationId, int deviceType, Long timestamp, OneSignalRestClient.ResponseHandler responseHandler) {
-        if (customResponseHandler != null)
-            super.requestMeasureIndirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, timestamp, customResponseHandler);
-        else
-            super.requestMeasureIndirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, timestamp, responseHandler);
+    void requestMeasureIndirectOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalRestClient.ResponseHandler responseHandler) {
+        super.requestMeasureIndirectOutcomeEvent(appId, deviceType, event, responseHandler);
     }
 
     @Override
-    void requestMeasureIndirectOutcomeEvent(String outcomeId, String appId, String notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
-        if (customResponseHandler != null)
-            super.requestMeasureIndirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, customResponseHandler);
-        else
-            super.requestMeasureIndirectOutcomeEvent(outcomeId, appId, notificationId, deviceType, responseHandler);
+    void requestMeasureIndirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, String notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
+        super.requestMeasureIndirectOutcomeEvent(outcomeId, outcomeParams, appId, notificationId, deviceType, responseHandler);
     }
 
     @Override
-    void requestMeasureUnattributedOutcomeEvent(String outcomeId, String appId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
-        if (customResponseHandler != null)
-            super.requestMeasureUnattributedOutcomeEvent(outcomeId, appId, deviceType, customResponseHandler);
-        else
-            super.requestMeasureUnattributedOutcomeEvent(outcomeId, appId, deviceType, responseHandler);
+    void requestMeasureUnattributedOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalRestClient.ResponseHandler responseHandler) {
+        super.requestMeasureUnattributedOutcomeEvent(appId, deviceType, event, responseHandler);
+    }
+
+    @Override
+    void requestMeasureUnattributedOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
+        super.requestMeasureUnattributedOutcomeEvent(outcomeId, outcomeParams, appId, deviceType, responseHandler);
     }
 }
