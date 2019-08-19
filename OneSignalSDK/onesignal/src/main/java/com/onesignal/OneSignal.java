@@ -1189,6 +1189,9 @@ public class OneSignal {
             .put("type", 1)
             .put("state", "ping")
             .put("active_time", totalTimeActive);
+
+         sessionManager.addSessionNotificationId(jsonBody);
+
          addNetType(jsonBody);
 
          sendOnFocusToPlayer(getUserId(), jsonBody, synchronous);

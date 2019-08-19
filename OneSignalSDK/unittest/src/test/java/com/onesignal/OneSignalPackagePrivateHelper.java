@@ -21,7 +21,7 @@ import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
-public class OneSignalPackagePrivateHelper {
+public class c {
 
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
@@ -230,7 +230,7 @@ public class OneSignalPackagePrivateHelper {
             return this;
          }
 
-         public  Builder setJsonString(@Nullable String jsonString) {
+         public Builder setJsonString(@Nullable String jsonString) {
             if (jsonString == null || jsonString.isEmpty())
                return this;
             try {

@@ -40,4 +40,18 @@ public class NotificationData {
     static String getLastNotificationReceivedData() {
         return OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_LAST_NOTIFICATION_RECEIVED, null);
     }
+
+    @Nullable
+    static String getLastNotificationReceivedId() {
+        String jsonString = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_LAST_NOTIFICATION_RECEIVED, null);
+        if (jsonString != null) {
+            try {
+                JSONObject jsonObject = new JSONObject(jsonString);
+                return jsonObject.getString(NotificationData.NOTIFICATION_ID);
+            } catch (JSONException e) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Creating from string notification arrived id:JSON Failed.", e);
+            }
+        }
+        return null;
+    }
 }

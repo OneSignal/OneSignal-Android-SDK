@@ -19,6 +19,7 @@ import java.util.Date;
 public class OSSessionManager {
 
     private static final String TAG = OSSessionManager.class.getCanonicalName();
+    private static final String DIRECT_TAG = "direct";
     private static final long TWENTY_FOUR_HOURS_MILLISECONDS = 24 * 60 * 60 * 1000;
     private static final long HALF_MINUTE_IN_MILLISECONDS = 30 * 1000;
 
@@ -55,6 +56,28 @@ public class OSSessionManager {
 
     public OSSessionManager(SessionListener sessionListener) {
         this.sessionListener = sessionListener;
+    }
+
+    void addSessionNotificationId(JSONObject jsonObject) {
+        if (session == null || session == Session.UNATTRIBUTED)
+            return;
+
+        String notificationId = NotificationData.getLastNotificationReceivedId();
+        if (notificationId != null && !notificationId.isEmpty()) {
+            try {
+                jsonObject.put(NotificationData.NOTIFICATION_ID, notificationId);
+                switch (session) {
+                    case DIRECT:
+                        jsonObject.put(DIRECT_TAG, true);
+                        break;
+                    case INDIRECT:
+                        jsonObject.put(DIRECT_TAG, false);
+                        break;
+                }
+            } catch (JSONException e) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating addNotificationId:JSON Failed.", e);
+            }
+        }
     }
 
     void cleanSession() {
