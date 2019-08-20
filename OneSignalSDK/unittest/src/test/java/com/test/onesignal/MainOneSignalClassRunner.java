@@ -118,11 +118,13 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
-import static com.test.onesignal.TestHelpers.stopAllOSThreads;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -317,6 +319,42 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
    }
 
+   private static void setOneSignalContextOpenAppThenBackgroundAndResume() throws Exception {
+      // 1. Context could be set by the app like this; Or on it's own when a push or other event happens
+      OneSignal.setAppContext(blankActivity.getApplication());
+
+      // 2. App is opened by user
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 3. User backgrounds app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // 4. User goes back to app again
+      blankActivityController.resume();
+      threadAndTaskWait();
+   }
+
+   @Test
+   public void testAppDoesNotCrashIfContextIsSetupViaEventButInitWasNotCalled() throws Exception {
+      setOneSignalContextOpenAppThenBackgroundAndResume();
+      assertRestCalls(0);
+   }
+
+   @Test
+   public void testStillRegistersIfInitCalledAfterIgnoredFocusEvents() throws Exception {
+      setOneSignalContextOpenAppThenBackgroundAndResume();
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Assert network calls are still made after SDK is initialized.
+      assertRemoteParamsAtIndex(0);
+      assertPlayerCreatePushAtIndex(1);
+      assertRestCalls(2);
+   }
+
    @Test
    public void testOnSessionCalledOnlyOncePer30Sec() throws Exception {
       // Will call create
@@ -435,7 +473,6 @@ public class MainOneSignalClassRunner {
 
       // 2. App is restarted before it can make it's on_session call
       OneSignalInit();
-      stopAllOSThreads();
       fastColdRestartApp();
 
       // 3. 3rd start of the app, we should make an on_session call since the last one did not go through

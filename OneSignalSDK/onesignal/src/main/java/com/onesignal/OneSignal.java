@@ -316,7 +316,7 @@ public class OneSignal {
       }
 
       public Builder inFocusDisplaying(OSInFocusDisplayOption displayOption) {
-         getCurrentOrNewInitBuilder().mDisplayOptionCarryOver = false;
+         mDisplayOptionCarryOver = false;
          mDisplayOption = displayOption;
          return this;
       }
@@ -357,7 +357,7 @@ public class OneSignal {
       }
    }
 
-   static String appId;
+   @Nullable static String appId;
    private static String mGoogleProjectNumber;
    static Context appContext;
    
@@ -391,7 +391,7 @@ public class OneSignal {
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
 
-   private static OSUtils osUtils;
+   @NonNull private static OSUtils osUtils = new OSUtils();
 
    private static String lastRegistrationId;
    private static boolean registerForPushFired, locationFired, promptedLocation;
@@ -399,7 +399,7 @@ public class OneSignal {
    private static LocationGMS.LocationPoint lastLocationPoint;
    
    static boolean shareLocation = true;
-   static OneSignal.Builder mInitBuilder;
+   @NonNull static OneSignal.Builder mInitBuilder = new OneSignal.Builder();
 
    private static Collection<JSONArray> unprocessedOpenedNotifis = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
@@ -526,10 +526,9 @@ public class OneSignal {
       }
    }
    private static IAPUpdateJob iapUpdateJob;
-   
+
+   // Rename to getInitBuilder in 4.0.0
    public static OneSignal.Builder getCurrentOrNewInitBuilder() {
-      if (mInitBuilder == null)
-         mInitBuilder = new OneSignal.Builder();
       return mInitBuilder;
    }
 
@@ -577,8 +576,8 @@ public class OneSignal {
     * @param inBuilder
     */
    private static void init(OneSignal.Builder inBuilder) {
-      if (getCurrentOrNewInitBuilder().mDisplayOptionCarryOver)
-         inBuilder.mDisplayOption = getCurrentOrNewInitBuilder().mDisplayOption;
+      if (mInitBuilder.mDisplayOptionCarryOver)
+         inBuilder.mDisplayOption = mInitBuilder.mDisplayOption;
       mInitBuilder = inBuilder;
 
       Context context = mInitBuilder.mContext;
@@ -620,7 +619,6 @@ public class OneSignal {
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
-      osUtils = new OSUtils();
       deviceType = osUtils.getDeviceType();
       subscribableStatus = osUtils.initializationChecker(context, deviceType, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
@@ -691,11 +689,10 @@ public class OneSignal {
    }
 
    private static Builder createInitBuilder(NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
-      OneSignal.Builder initBuilder = getCurrentOrNewInitBuilder();
-      initBuilder.mDisplayOptionCarryOver = false;
-      initBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
-      initBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
-      return initBuilder;
+      mInitBuilder.mDisplayOptionCarryOver = false;
+      mInitBuilder.mNotificationOpenedHandler = notificationOpenedHandler;
+      mInitBuilder.mNotificationReceivedHandler = notificationReceivedHandler;
+      return mInitBuilder;
    }
 
    private static void handleAppIdChange() {
@@ -1059,11 +1056,12 @@ public class OneSignal {
       return level.compareTo(visualLogLevel) < 1 || level.compareTo(logCatLevel) < 1;
    }
 
-   static void Log(LOG_LEVEL level, String message) {
+   static void Log(@NonNull LOG_LEVEL level, @NonNull String message) {
       Log(level, message, null);
    }
 
-   static void Log(final LOG_LEVEL level, String message, Throwable throwable) {
+   static void Log(@NonNull final LOG_LEVEL level, @NonNull String message, @Nullable Throwable throwable) {
+
       final String TAG = "OneSignal";
       
       if (level.compareTo(logCatLevel) < 1) {
@@ -1207,7 +1205,6 @@ public class OneSignal {
          OneSignalRestClient.post(url, jsonBody, responseHandler);
    }
 
-
    static void onAppFocus() {
       foreground = true;
 
@@ -1217,6 +1214,9 @@ public class OneSignal {
 
       // Make sure without privacy consent, onAppFocus returns early
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
+         return;
+
+      if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
 
       doSessionInit();
@@ -1255,9 +1255,15 @@ public class OneSignal {
    }
 
    private static void registerUser() {
-      Log(LOG_LEVEL.DEBUG, "registerUser: registerForPushFired:" + registerForPushFired + ", locationFired: " + locationFired + ", remoteParams: " + remoteParams);
+      Log(LOG_LEVEL.DEBUG,
+         "registerUser:" +
+         "registerForPushFired:" + registerForPushFired +
+         ", locationFired: " + locationFired +
+         ", remoteParams: " + remoteParams +
+         ", appId: " + appId
+      );
 
-      if (!registerForPushFired || !locationFired || remoteParams == null)
+      if (!registerForPushFired || !locationFired || remoteParams == null || appId == null)
          return;
 
       new Thread(new Runnable() {
@@ -1641,6 +1647,13 @@ public class OneSignal {
       try {
          if (!json.has("app_id"))
             json.put("app_id", getSavedAppId());
+
+         // app_id will not be set if init was never called.
+         if (!json.has("app_id")) {
+            if (handler != null)
+               handler.onFailure(new JSONObject().put("error", "Missing app_id"));
+            return;
+         }
 
          OneSignalRestClient.post("notifications/", json, new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -2111,7 +2124,7 @@ public class OneSignal {
 
    private static String getSavedAppId(Context inContext) {
       if (inContext == null)
-         return "";
+         return null;
 
       return OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_APP_ID,null);
@@ -2290,15 +2303,16 @@ public class OneSignal {
     * @param displayOption the {@link OneSignal.OSInFocusDisplayOption OSInFocusDisplayOption} to set
     */
    public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
-      getCurrentOrNewInitBuilder().mDisplayOptionCarryOver = true;
-      getCurrentOrNewInitBuilder().mDisplayOption = displayOption;
+      mInitBuilder.mDisplayOptionCarryOver = true;
+      mInitBuilder.mDisplayOption = displayOption;
    }
+
    public static void setInFocusDisplaying(int displayOption) {
       setInFocusDisplaying(getInFocusDisplaying(displayOption));
    }
 
    public static OSInFocusDisplayOption currentInFocusDisplayOption() {
-      return getCurrentOrNewInitBuilder().mDisplayOption;
+      return mInitBuilder.mDisplayOption;
    }
 
    private static OSInFocusDisplayOption getInFocusDisplaying(int displayOption) {
@@ -2655,15 +2669,15 @@ public class OneSignal {
    }
 
    public static void removeNotificationOpenedHandler() {
-      getCurrentOrNewInitBuilder().mNotificationOpenedHandler = null;
+      mInitBuilder.mNotificationOpenedHandler = null;
    }
 
    public static void removeInAppMessageClickHandler() {
-      getCurrentOrNewInitBuilder().mInAppMessageClickHandler = null;
+      mInitBuilder.mInAppMessageClickHandler = null;
    }
 
    public static void removeNotificationReceivedHandler() {
-      getCurrentOrNewInitBuilder().mNotificationReceivedHandler = null;
+      mInitBuilder.mNotificationReceivedHandler = null;
    }
 
    /**

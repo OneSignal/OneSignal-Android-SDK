@@ -11,8 +11,9 @@ import java.util.Set;
 
 abstract class UserState {
 
-    static final int DEVICE_TYPE_ANDROID = 1;
-    static final int DEVICE_TYPE_FIREOS = 2;
+    public static final int DEVICE_TYPE_ANDROID = 1;
+    public static final int DEVICE_TYPE_FIREOS = 2;
+    public static final int DEVICE_TYPE_EMAIL = 11;
 
     static final int PUSH_STATUS_SUBSCRIBED = 1;
     static final int PUSH_STATUS_NO_PERMISSION = 0;

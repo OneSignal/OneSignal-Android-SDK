@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import com.test.onesignal.RestClientValidator;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.annotation.Implements;
@@ -170,13 +172,16 @@ public class ShadowOneSignalRestClient {
       }
    }
 
-   private static void trackRequest(REST_METHOD method, JSONObject payload, String url) {
+   private static void trackRequest(REST_METHOD method, JSONObject payload, String url) throws JSONException {
       if (method == REST_METHOD.POST || method == REST_METHOD.PUT)
          lastPost = payload;
       lastUrl = url;
       networkCallCount++;
 
-      requests.add(new Request(method, payload, url));
+      Request request = new Request(method, payload, url);
+      requests.add(request);
+
+      RestClientValidator.validateRequest(request);
 
       System.out.println(networkCallCount + ":" + method + "@URL:" + url + "\nBODY: " + payload);
    }
@@ -237,18 +242,18 @@ public class ShadowOneSignalRestClient {
       }
    }
 
-   public static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void post(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) throws JSONException {
       trackRequest(REST_METHOD.POST, jsonBody, url);
       mockPost(url, jsonBody, responseHandler);
    }
 
-   public static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void postSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) throws JSONException {
       trackRequest(REST_METHOD.POST, jsonBody, url);
       freezeSyncCall();
       mockPost(url, jsonBody, responseHandler);
    }
 
-   public static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void putSync(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) throws JSONException {
       trackRequest(REST_METHOD.PUT, jsonBody, url);
 
       freezeSyncCall();
@@ -260,7 +265,7 @@ public class ShadowOneSignalRestClient {
          responseHandler.onSuccess(response);
    }
 
-   public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+   public static void put(String url, JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) throws JSONException {
       trackRequest(REST_METHOD.PUT, jsonBody, url);
 
       if (doFail(responseHandler, failNextPut)) return;
@@ -268,7 +273,7 @@ public class ShadowOneSignalRestClient {
       responseHandler.onSuccess("{}");
    }
 
-   public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) {
+   public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) throws JSONException {
       trackRequest(REST_METHOD.GET, null, url);
       if (failGetParams && doFail(responseHandler, true)) return;
 
@@ -297,7 +302,7 @@ public class ShadowOneSignalRestClient {
       }
    }
 
-   public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) {
+   public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) throws JSONException {
       trackRequest(REST_METHOD.GET, null, url);
 
       if (doFail(responseHandler)) return;
