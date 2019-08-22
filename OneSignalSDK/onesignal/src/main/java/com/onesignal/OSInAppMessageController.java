@@ -275,7 +275,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 put("device_type", new OSUtils().getDeviceType());
                 put("player_id", OneSignal.getUserId());
                 put("click_id", action.clickId);
-                put("click_name", action.clickName);
                 put("variant_id", variantId);
                 if (action.firstClick)
                     put("first_click", true);
