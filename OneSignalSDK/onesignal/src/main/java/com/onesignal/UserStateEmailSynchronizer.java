@@ -104,7 +104,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     @Override
     protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {
         try {
-            jsonBody.put("device_type", 11);
+            jsonBody.put("device_type", UserState.DEVICE_TYPE_EMAIL);
             jsonBody.putOpt("device_player_id", OneSignal.getUserId());
         } catch (JSONException e) {
             e.printStackTrace();

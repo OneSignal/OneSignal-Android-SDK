@@ -290,4 +290,10 @@ public class OneSignalPackagePrivateHelper {
    public static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
       return OSUtils.hasConfigChangeFlag(activity, configChangeFlag);
    }
+
+   public abstract class UserState extends com.onesignal.UserState {
+      UserState(String inPersistKey, boolean load) {
+         super(inPersistKey, load);
+      }
+   }
 }
