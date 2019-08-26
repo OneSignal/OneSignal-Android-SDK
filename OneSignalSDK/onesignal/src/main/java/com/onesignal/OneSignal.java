@@ -1557,9 +1557,7 @@ public class OneSignal {
     *                  You can also call {@link #deleteTag(String)} or {@link #deleteTags(String)}.
     *
     */
-   public static void sendTags(final JSONObject keyValues, ChangeTagsUpdateHandler handler) {
-      final ChangeTagsUpdateHandler tagsHandler = handler;
-
+   public static void sendTags(final JSONObject keyValues, final ChangeTagsUpdateHandler changeTagsUpdateHandler) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendTags()"))
          return;
@@ -1568,8 +1566,8 @@ public class OneSignal {
          @Override
          public void run() {
             if (keyValues == null) {
-               if (tagsHandler != null)
-                  tagsHandler.onFailure(new SendTagsError(-1, "Attempted to send null tags"));
+               if (changeTagsUpdateHandler != null)
+                  changeTagsUpdateHandler.onFailure(new SendTagsError(-1, "Attempted to send null tags"));
                return;
             }
 
@@ -1597,9 +1595,9 @@ public class OneSignal {
             }
 
             if (!toSend.toString().equals("{}")) {
-               OneSignalStateSynchronizer.sendTags(toSend, tagsHandler);
-            } else if (tagsHandler != null) {
-               tagsHandler.onSuccess(existingKeys);
+               OneSignalStateSynchronizer.sendTags(toSend, changeTagsUpdateHandler);
+            } else if (changeTagsUpdateHandler != null) {
+               changeTagsUpdateHandler.onSuccess(existingKeys);
             }
          }
       };
@@ -1608,8 +1606,8 @@ public class OneSignal {
       if (appContext == null || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags!" +
                  "Moving this operation to a pending task queue.");
-         if (tagsHandler != null)
-            tagsHandler.onFailure(new SendTagsError(-1, "You must initialize OneSignal before modifying tags!" +
+         if (changeTagsUpdateHandler != null)
+            changeTagsUpdateHandler.onFailure(new SendTagsError(-1, "You must initialize OneSignal before modifying tags!" +
                     "Moving this operation to a pending task queue."));
          addTaskToQueue(new PendingTaskRunnable(sendTagsRunnable));
          return;

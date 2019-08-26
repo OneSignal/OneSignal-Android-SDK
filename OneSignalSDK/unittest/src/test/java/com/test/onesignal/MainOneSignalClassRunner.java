@@ -1459,7 +1459,7 @@ public class MainOneSignalClassRunner {
       assertNotNull(callBackUseId);
    }
 
-   private class TestChangeTagsUpdateHandler implements ChangeTagsUpdateHandler {
+   private static class TestChangeTagsUpdateHandler implements ChangeTagsUpdateHandler {
       private AtomicBoolean succeeded = new AtomicBoolean(false);
       private AtomicBoolean failed = new AtomicBoolean(false);
 
@@ -1537,6 +1537,29 @@ public class MainOneSignalClassRunner {
 
       assertTrue(firstHandler.getSucceeded());
       assertTrue(secondHandler.getSucceeded());
+   }
+
+   @Test
+   public void testNestedSendTagsOnSuccess() throws Exception {
+      final JSONObject tags = new JSONObject().put("key", "value");
+
+      OneSignalInit();
+      OneSignal.sendTags(tags);
+      threadAndTaskWait();
+
+      // Sending same tags a 2nd time creates the issue, as it take a different code path
+      OneSignal.sendTags(
+         tags,
+         new ChangeTagsUpdateHandler() {
+            @Override
+            public void onSuccess(JSONObject values) {
+               OneSignal.sendTags(tags, new TestChangeTagsUpdateHandler());
+            }
+            @Override
+            public void onFailure(OneSignal.SendTagsError error) {}
+         }
+      );
+      threadAndTaskWait();
    }
 
    @Test
