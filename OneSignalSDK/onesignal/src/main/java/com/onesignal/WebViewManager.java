@@ -59,8 +59,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Nullable private OSWebView webView;
     @Nullable private InAppMessageView messageView;
 
-    @SuppressLint("StaticFieldLeak")
-    private static WebViewManager lastInstance = null;
+    @Nullable protected static WebViewManager lastInstance = null;
 
     @NonNull private Activity activity;
     @NonNull private OSInAppMessage message;
@@ -71,7 +70,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         void onComplete();
     }
 
-    private WebViewManager(@NonNull OSInAppMessage message, @NonNull Activity activity) {
+    protected WebViewManager(@NonNull OSInAppMessage message, @NonNull Activity activity) {
         this.message = message;
         this.activity = activity;
     }
@@ -99,9 +98,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                         initInAppMessage(currentActivity, message, htmlStr);
                     }
                 });
-            } else {
-                initInAppMessage(currentActivity, message, htmlStr);
             }
+            else
+                initInAppMessage(currentActivity, message, htmlStr);
             return;
         }
 
@@ -140,10 +139,17 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     // Lets JS from the page send JSON payloads to this class
-    private class OSJavaScriptInterface {
+    class OSJavaScriptInterface {
 
-        private static final String JS_OBJ_NAME = "OSAndroid";
+        static final String JS_OBJ_NAME = "OSAndroid";
         static final String GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()";
+
+        static final String EVENT_TYPE_KEY = "type";
+        static final String EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete";
+        static final String EVENT_TYPE_ACTION_TAKEN = "action_taken";
+
+        static final String IAM_DISPLAY_LOCATION_KEY = "displayLocation";
+        static final String IAM_PAGE_META_DATA_KEY = "pageMetaData";
 
         @JavascriptInterface
         public void postMessage(String message) {
@@ -151,13 +157,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSJavaScriptInterface:postMessage: " + message);
 
                 JSONObject jsonObject = new JSONObject(message);
-                String messageType = jsonObject.getString("type");
+                String messageType = jsonObject.getString(EVENT_TYPE_KEY);
 
-                if (messageType.equals("rendering_complete")) {
+                if (messageType.equals(EVENT_TYPE_RENDERING_COMPLETE))
                     handleRenderComplete(jsonObject);
-                } else if (messageType.equals("action_taken")) {
+                else if (messageType.equals(EVENT_TYPE_ACTION_TAKEN))
                     handleActionTaken(jsonObject);
-                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -171,7 +176,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         private int getPageHeightData(JSONObject jsonObject) {
             try {
-                return WebViewManager.pageRectToViewHeight(activity, jsonObject.getJSONObject("pageMetaData"));
+                return WebViewManager.pageRectToViewHeight(activity, jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY));
             } catch (JSONException e) {
                 return -1;
             }
@@ -180,8 +185,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private @NonNull Position getDisplayLocation(JSONObject jsonObject) {
             Position displayLocation = Position.FULL_SCREEN;
             try {
-                if (jsonObject.has("displayLocation") && !jsonObject.get("displayLocation").equals(""))
-                    displayLocation = Position.valueOf(jsonObject.optString("displayLocation", "FULL_SCREEN").toUpperCase());
+                if (jsonObject.has(IAM_DISPLAY_LOCATION_KEY) && !jsonObject.get(IAM_DISPLAY_LOCATION_KEY).equals(""))
+                    displayLocation = Position.valueOf(jsonObject.optString(IAM_DISPLAY_LOCATION_KEY, "FULL_SCREEN").toUpperCase());
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -239,16 +244,15 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
              // Set the WebView to the max screen size then run JS to evaluate the height.
              setWebViewToMaxSize(activity);
              webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
-                @Override
-                public void onReceiveValue(final String value) {
-                   System.out.println("2nd pageRectToViewHeight");
-                   try {
-                      int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
-                      showMessageView(pagePxHeight);
-                   } catch (JSONException e) {
-                      e.printStackTrace();
-                   }
-                }
+                 @Override
+                 public void onReceiveValue(final String value) {
+                    try {
+                       int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
+                       showMessageView(pagePxHeight);
+                    } catch (JSONException e) {
+                       e.printStackTrace();
+                    }
+                 }
              });
           }
        });
@@ -270,6 +274,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void showMessageView(@Nullable Integer newHeight) {
+        if (messageView == null) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "No messageView found to update a with a new height.");
+            return;
+        }
+
         messageView.setWebView(webView);
         if (newHeight != null)
             messageView.updateHeight(newHeight);
@@ -280,17 +289,17 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     // TODO: Test with chrome://crash
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message) {
-        enableWebViewRemoteDebugging();
+       enableWebViewRemoteDebugging();
 
-        webView = new OSWebView(currentActivity);
+       webView = new OSWebView(currentActivity);
 
-        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        webView.setVerticalScrollBarEnabled(false);
-        webView.setHorizontalScrollBarEnabled(false);
-        webView.getSettings().setJavaScriptEnabled(true);
+       webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+       webView.setVerticalScrollBarEnabled(false);
+       webView.setHorizontalScrollBarEnabled(false);
+       webView.getSettings().setJavaScriptEnabled(true);
 
-        // Setup receiver for page events / data from JS
-        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
+       // Setup receiver for page events / data from JS
+       webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
 
        blurryRenderingWebViewForKitKatWorkAround(webView);
 
@@ -361,7 +370,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     /**
      * Trigger the {@link #messageView} dismiss animation flow
      */
-    private void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
+    protected void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
         if (messageView == null)
             return;
 

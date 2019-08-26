@@ -1193,12 +1193,6 @@ public class GenerateNotificationRunner {
       return bundle;
    }
 
-   private static void mockNextRESTGetAsBlankHTMLPage() throws JSONException {
-      ShadowOneSignalRestClient.nextSuccessfulGETResponse = new JSONObject() {{
-         put("html", "<html></html>");
-      }}.toString();
-   }
-
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenInFocus() throws Exception {
@@ -1209,8 +1203,6 @@ public class GenerateNotificationRunner {
       intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
       intentGcm.putExtra("message_type", "gcm");
       intentGcm.putExtras(inAppPreviewMockPayloadBundle());
-
-      mockNextRESTGetAsBlankHTMLPage();
 
       new GcmBroadcastReceiver().onReceive(blankActivity, intentGcm);
       threadAndTaskWait();
@@ -1231,8 +1223,6 @@ public class GenerateNotificationRunner {
             put("os_in_app_message_preview_id", "UUID");
          }});
       }}.toString());
-
-      mockNextRESTGetAsBlankHTMLPage();
 
       Intent notificationOpenIntent = createOpenIntent(2, inAppPreviewMockPayloadBundle());
       NotificationOpenedProcessor_processFromContext(blankActivity, notificationOpenIntent);

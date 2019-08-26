@@ -16,6 +16,7 @@ import android.support.v7.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
@@ -378,12 +379,9 @@ class InAppMessageView {
         }
     }
 
-    /**
-     * Do not add view until activity is ready
-     * To check if activity is ready, token must not be null
-     */
+    // Do not add view until activity is ready
     private void delayShowUntilAvailable(final Activity currentActivity) {
-        if (currentActivity.getWindow().getDecorView().getApplicationWindowToken() != null && parentRelativeLayout == null) {
+        if (OSViewUtils.isActivityFullyReady(currentActivity) && parentRelativeLayout == null) {
             showInAppMessageView(currentActivity);
             return;
         }

@@ -7,7 +7,9 @@ import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.Build;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.Window;
@@ -98,5 +100,10 @@ class OSViewUtils {
 
     static int dpToPx(int dp) {
        return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
+    }
+
+    // Ensures the Activity is fully attached to a top-level Window by checking if it has an IBinder
+    static boolean isActivityFullyReady(@NonNull Activity activity) {
+        return activity.getWindow().getDecorView().getApplicationWindowToken() != null;
     }
 }

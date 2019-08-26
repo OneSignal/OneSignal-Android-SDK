@@ -18,6 +18,8 @@ import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSInAppMessageController;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOSViewUtils;
+import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
@@ -65,7 +67,9 @@ import static junit.framework.Assert.assertTrue;
                 ShadowNotificationManagerCompat.class,
                 ShadowJobService.class,
                 ShadowDynamicTimer.class,
-                ShadowOSInAppMessageController.class
+                ShadowOSInAppMessageController.class,
+                ShadowOSWebView.class,
+                ShadowOSViewUtils.class
         },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
@@ -154,10 +158,40 @@ public class InAppMessageIntegrationTests {
 
         // dismiss the message
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        threadAndTaskWait();
 
         // the second in app message should now be displayed
         assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
     }
+
+    // This tests both rotating the device or the app being resumed.
+    @Test
+    public void testMessageDismissingWhileDeviceIsRotating() throws Exception {
+        initializeSdkWithMultiplePendingMessages();
+
+        // 1. Add trigger to show IAM
+        OneSignal.addTriggers(new HashMap<String, Object>() {{
+            put("test_1", 3);
+            put("test_2", 2);
+        }});
+        threadAndTaskWait();
+
+        // 2. Assert one IAM was displayed
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+
+        // 3. Rotate device - This will kick off a JS task to get the new height
+        blankActivityController.pause();
+        blankActivityController.resume();
+
+        // 4. Dismiss the IAM
+        OneSignalPackagePrivateHelper.WebViewManager.callDismissAndAwaitNextMessage();
+        threadAndTaskWait();
+
+        // 5. Now fire resize event which was scheduled in step 3.
+        //    Test that this does not throw and handles this missing IAM view.
+        ShadowOSWebView.fireEvalJSCallbacks();
+    }
+
 
     private void nextResponseMultiplePendingMessages() throws JSONException {
         final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
