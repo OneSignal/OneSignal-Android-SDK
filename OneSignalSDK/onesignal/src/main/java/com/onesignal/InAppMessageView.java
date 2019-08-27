@@ -7,7 +7,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -16,15 +15,12 @@ import android.support.v7.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
-
-import java.lang.ref.WeakReference;
 
 import static com.onesignal.OSViewUtils.dpToPx;
 
@@ -76,14 +72,14 @@ class InAppMessageView {
     private RelativeLayout parentRelativeLayout;
     private DraggableRelativeLayout draggableRelativeLayout;
     private InAppMessageViewListener messageController;
-    private Runnable dismissSchedule;
+    private Runnable scheduleDismissRunnable;
 
     InAppMessageView(@NonNull WebView webView, @NonNull WebViewManager.Position displayLocation, int pageHeight, double dismissDuration) {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
         this.pageWidth = ViewGroup.LayoutParams.MATCH_PARENT;
-        this.dismissDuration = dismissDuration;
+        this.dismissDuration = Double.isNaN(dismissDuration) ? 0 : dismissDuration;
         this.hasBackground = !displayLocation.isBanner();
     }
 
@@ -97,20 +93,6 @@ class InAppMessageView {
 
     @NonNull WebViewManager.Position getDisplayPosition() {
         return displayLocation;
-    }
-
-    void destroyView(WeakReference<Activity> weakReference) {
-        // WeakReference is the Activity when onStop is called
-        if (weakReference.get() != null) {
-            if (draggableRelativeLayout != null) {
-                draggableRelativeLayout.removeAllViews();
-            }
-            if (parentRelativeLayout != null) {
-                removeParentLinearLayout(weakReference.get());
-                parentRelativeLayout.removeAllViews();
-            }
-        }
-        markAsDismissed();
     }
 
     void showView(Activity activity) {
@@ -252,7 +234,7 @@ class InAppMessageView {
                     messageController.onMessageWasShown();
                 }
 
-               initDismissIfNeeded();
+               startDismissTimerIfNeeded();
              }
         });
     }
@@ -298,7 +280,7 @@ class InAppMessageView {
        );
    }
 
-   private void setUpParentLinearLayout(Context context) {
+    private void setUpParentLinearLayout(Context context) {
         parentRelativeLayout = new RelativeLayout(context);
         parentRelativeLayout.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         parentRelativeLayout.setClipChildren(false);
@@ -321,7 +303,7 @@ class InAppMessageView {
         });
 
         if (webView.getParent() != null)
-            ((ViewGroup) webView.getParent()).removeAllViews();
+           ((ViewGroup) webView.getParent()).removeAllViews();
 
         CardView cardView = createCardView(context);
         cardView.addView(webView);
@@ -359,24 +341,27 @@ class InAppMessageView {
     }
 
     /**
-     * Schedule dismiss behavior
+     * Schedule dismiss behavior, if IAM has a dismiss after X number of seconds timer.
      */
-    private void initDismissIfNeeded() {
-        if (dismissDuration > 0 && dismissSchedule == null) {
-            dismissSchedule = new Runnable() {
-                public void run() {
-                    if (currentActivity != null) {
-                        dismissAndAwaitNextMessage(null);
-                        dismissSchedule = null;
-                    } else {
-                        //for cases when the app is on background and the dismiss is triggered
-                        shouldDismissWhenActive = true;
-                    }
-                }
-            };
+    private void startDismissTimerIfNeeded() {
+        if (dismissDuration <= 0)
+           return;
 
-            handler.postDelayed(dismissSchedule, (long) dismissDuration * 1_000);
-        }
+        if (scheduleDismissRunnable != null)
+           return;
+
+        scheduleDismissRunnable = new Runnable() {
+            public void run() {
+                if (currentActivity != null) {
+                    dismissAndAwaitNextMessage(null);
+                    scheduleDismissRunnable = null;
+                } else {
+                    // For cases when the app is on background and the dismiss is triggered
+                    shouldDismissWhenActive = true;
+                }
+            }
+        };
+        handler.postDelayed(scheduleDismissRunnable, (long) dismissDuration * 1_000);
     }
 
     // Do not add view until activity is ready
@@ -398,8 +383,8 @@ class InAppMessageView {
      */
     void dismissAndAwaitNextMessage(@Nullable WebViewManager.OneSignalGenericCallback callback) {
         if (draggableRelativeLayout == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already");
-            markAsDismissed();
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No host presenter to trigger dismiss animation, counting as dismissed already", new Throwable());
+            dereferenceViews();
             if (callback != null)
                 callback.onComplete();
             return;
@@ -417,48 +402,47 @@ class InAppMessageView {
         OSUtils.runOnMainThreadDelayed(new Runnable() {
             @Override
             public void run() {
-                if (hasBackground && parentRelativeLayout != null) {
+                if (hasBackground && parentRelativeLayout != null)
                     animateAndDismissLayout(parentRelativeLayout, callback);
-                } else {
-                    removeViews(callback);
+                else {
+                    cleanupViewsAfterDismiss();
+                    if (callback != null)
+                       callback.onComplete();
                 }
             }
         }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
     }
 
     /**
-     * Remove references from the views
+     * IAM has been fully dismissed, remove all views and call the onMessageWasDismissed callback
      */
-    private void removeViews(WebViewManager.OneSignalGenericCallback callback) {
-        if (dismissSchedule != null) {
-            //dismissed before the dismiss delay
-            handler.removeCallbacks(dismissSchedule);
-            dismissSchedule = null;
-        }
-        if (draggableRelativeLayout != null) {
-            draggableRelativeLayout.removeAllViews();
-        }
-
-        removeParentLinearLayout(currentActivity);
-
-        if (messageController != null) {
+    private void cleanupViewsAfterDismiss() {
+       removeAllViews();
+        if (messageController != null)
             messageController.onMessageWasDismissed();
-        }
-        markAsDismissed();
-
-        if (callback != null)
-            callback.onComplete();
     }
 
-    private void removeParentLinearLayout(Activity currentActivity) {
-        if (popupWindow != null)
-           popupWindow.dismiss();
+   /**
+    * Remove all views and dismiss PopupWindow
+    */
+    void removeAllViews() {
+       if (scheduleDismissRunnable != null) {
+          // Dismissed before the dismiss delay
+          handler.removeCallbacks(scheduleDismissRunnable);
+          scheduleDismissRunnable = null;
+       }
+       if (draggableRelativeLayout != null)
+          draggableRelativeLayout.removeAllViews();
+
+       if (popupWindow != null)
+          popupWindow.dismiss();
+       dereferenceViews();
     }
 
     /**
      * Cleans all layout references so this can be cleaned up in the next GC
      */
-    private void markAsDismissed() {
+    private void dereferenceViews() {
         // Dereference so this can be cleaned up in the next GC
         parentRelativeLayout = null;
         draggableRelativeLayout = null;
@@ -531,7 +515,9 @@ class InAppMessageView {
         Animator.AnimatorListener animCallback = new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                removeViews(callback);
+                cleanupViewsAfterDismiss();
+               if (callback != null)
+                  callback.onComplete();
             }
         };
 

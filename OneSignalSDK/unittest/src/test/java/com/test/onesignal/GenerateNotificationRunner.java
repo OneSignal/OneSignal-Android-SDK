@@ -66,6 +66,7 @@ import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -133,6 +134,7 @@ import static org.robolectric.Shadows.shadowOf;
          ShadowBadgeCountUpdater.class,
          ShadowNotificationManagerCompat.class,
          ShadowOSUtils.class,
+         ShadowOSViewUtils.class
       },
       sdk = 21)
 @RunWith(RobolectricTestRunner.class)

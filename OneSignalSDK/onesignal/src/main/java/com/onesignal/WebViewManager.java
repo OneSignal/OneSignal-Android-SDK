@@ -270,7 +270,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Override
     void stopped(WeakReference<Activity> reference) {
         if (messageView != null)
-            messageView.destroyView(reference);
+            messageView.removeAllViews();
     }
 
     private void showMessageView(@Nullable Integer newHeight) {
@@ -286,7 +286,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         messageView.checkIfShouldDismiss();
     }
 
-    // TODO: Test with chrome://crash
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message) {
        enableWebViewRemoteDebugging();
@@ -303,7 +302,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
        blurryRenderingWebViewForKitKatWorkAround(webView);
 
-       OSViewUtils.decorViewReady(activity, new Runnable() {
+       OSViewUtils.decorViewReady(currentActivity, new Runnable() {
           @Override
           public void run() {
              setWebViewToMaxSize(currentActivity);
@@ -371,8 +370,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * Trigger the {@link #messageView} dismiss animation flow
      */
     protected void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
-        if (messageView == null)
+        if (messageView == null) {
+            if (callback != null)
+                callback.onComplete();
             return;
+        }
 
         messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
             @Override

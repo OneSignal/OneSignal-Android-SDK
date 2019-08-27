@@ -7,9 +7,7 @@ import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.Build;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.Window;
@@ -45,9 +43,26 @@ class OSViewUtils {
         return isOpen;
     }
 
-
-    static void decorViewReady(@NonNull Activity activity, @NonNull Runnable runnable) {
-        activity.getWindow().getDecorView().post(runnable);
+    // Ensures the root decor view is ready by checking the following;
+    //   1. Is fully attach to the root window and insets are available
+    //   2. Ensure if any Activities are changed while waiting we use the updated one
+    static void decorViewReady(@NonNull Activity activity, final @NonNull Runnable runnable) {
+        final String listenerKey = "decorViewReady:" + runnable;
+        activity.getWindow().getDecorView().post(new Runnable() {
+            @Override
+            public void run() {
+                ActivityLifecycleHandler.setActivityAvailableListener(listenerKey, new ActivityLifecycleHandler.ActivityAvailableListener() {
+                    @Override
+                    void available(@NonNull Activity currentActivity) {
+                        ActivityLifecycleHandler.removeActivityAvailableListener(listenerKey);
+                        if (isActivityFullyReady(currentActivity))
+                            runnable.run();
+                        else
+                            decorViewReady(currentActivity, runnable);
+                    }
+                });
+            }
+        });
     }
 
     private static @NonNull Rect getWindowVisibleDisplayFrame(@NonNull Activity activity) {
@@ -102,8 +117,17 @@ class OSViewUtils {
        return (int) (dp * Resources.getSystem().getDisplayMetrics().density);
     }
 
-    // Ensures the Activity is fully attached to a top-level Window by checking if it has an IBinder
+    // Ensures the Activity is fully ready by;
+    //   1. Ensure it is attached to a top-level Window by checking if it has an IBinder
+    //   2. If Android M or higher ensure WindowInsets exists on the root window also
     static boolean isActivityFullyReady(@NonNull Activity activity) {
-        return activity.getWindow().getDecorView().getApplicationWindowToken() != null;
+        boolean hasToken = activity.getWindow().getDecorView().getApplicationWindowToken() != null;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            return hasToken;
+
+        View decorView = activity.getWindow().getDecorView();
+        boolean insetsAttached = decorView.getRootWindowInsets() != null;
+
+        return hasToken && insetsAttached;
     }
 }
