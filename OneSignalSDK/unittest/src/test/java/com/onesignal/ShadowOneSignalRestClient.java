@@ -92,6 +92,15 @@ public class ShadowOneSignalRestClient {
    public static boolean freezeResponses;
    private static ConcurrentHashMap<Object, PendingResponse> pendingResponses;
 
+   private static final String IAM_GET_HTML_RESPONSE;
+   static {
+      String value = null;
+      try {
+         value = new JSONObject().put("html", "<html></html>").toString();
+      } catch (JSONException e) { }
+      IAM_GET_HTML_RESPONSE = value;
+   }
+
    public static void resetStatics() {
       pushUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
       emailUserId = "b007f967-98cc-11e4-bed1-118f05be4522";
@@ -284,6 +293,9 @@ public class ShadowOneSignalRestClient {
          nextSuccessResponse = null;
       }
       else {
+         if (handleGetIAM(url, responseHandler))
+            return;
+
          try {
             JSONObject getResponseJson = new JSONObject(
                "{\"awl_list\": {}, \"android_sender_id\": \"87654321\"}"
@@ -310,6 +322,9 @@ public class ShadowOneSignalRestClient {
       if (doNextSuccessfulGETResponse(url, responseHandler))
          return;
 
+      if (handleGetIAM(url, responseHandler))
+         return;
+
       responseHandler.onSuccess("{}");
    }
 
@@ -321,5 +336,13 @@ public class ShadowOneSignalRestClient {
          return true;
       }
       return false;
+   }
+
+   private static boolean handleGetIAM(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      if (!url.startsWith("in_app_messages"))
+         return false;
+
+      responseHandler.onSuccess(IAM_GET_HTML_RESPONSE);
+      return true;
    }
 }

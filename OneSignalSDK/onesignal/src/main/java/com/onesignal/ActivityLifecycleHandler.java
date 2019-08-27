@@ -72,10 +72,9 @@ class ActivityLifecycleHandler {
     }
 
     static void setActivityAvailableListener(String key, ActivityAvailableListener activityAvailableListener) {
-        if (curActivity != null) {
-            activityAvailableListener.available(curActivity);
-        }
         sActivityAvailableListeners.put(key, activityAvailableListener);
+        if (curActivity != null)
+            activityAvailableListener.available(curActivity);
     }
 
     static void removeSystemConditionObserver(String key) {

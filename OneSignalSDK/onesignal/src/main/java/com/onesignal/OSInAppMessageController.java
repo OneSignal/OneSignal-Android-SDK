@@ -150,8 +150,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private static @Nullable
-    String variantIdForMessage(@NonNull OSInAppMessage message) {
+    private static @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
@@ -404,7 +403,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
     }
 
-    private void displayMessage(final OSInAppMessage message) {
+    public void displayMessage(@NonNull final OSInAppMessage message) {
         String htmlPath = htmlPathForMessage(message);
         OneSignalRestClient.getSync(htmlPath, new ResponseHandler() {
             @Override

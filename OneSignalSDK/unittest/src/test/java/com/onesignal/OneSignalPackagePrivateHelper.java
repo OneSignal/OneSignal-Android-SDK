@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -294,6 +295,21 @@ public class OneSignalPackagePrivateHelper {
    public abstract class UserState extends com.onesignal.UserState {
       UserState(String inPersistKey, boolean load) {
          super(inPersistKey, load);
+      }
+   }
+
+   public static class WebViewManager extends com.onesignal.WebViewManager {
+
+      public static void callDismissAndAwaitNextMessage() {
+         lastInstance.dismissAndAwaitNextMessage(null);
+      }
+
+      public void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
+         super.dismissAndAwaitNextMessage(callback);
+      }
+
+      protected WebViewManager(@NonNull com.onesignal.OSInAppMessage message, @NonNull Activity activity) {
+         super(message, activity);
       }
    }
 }
