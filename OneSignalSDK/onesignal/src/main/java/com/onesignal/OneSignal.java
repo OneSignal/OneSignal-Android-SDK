@@ -1,6 +1,6 @@
 /**
  * Modified MIT License
- * 
+ *
  * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -9,13 +9,13 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -229,7 +229,7 @@ public class OneSignal {
       boolean mDisplayOptionCarryOver;
       // Default Notification in 4.0.0 release.
       OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
-   
+
       private Builder() {}
 
       private Builder(Context context) {
@@ -360,7 +360,7 @@ public class OneSignal {
    @Nullable static String appId;
    private static String mGoogleProjectNumber;
    static Context appContext;
-   
+
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
@@ -383,7 +383,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031102";
+   public static final String VERSION = "031103";
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -395,9 +395,9 @@ public class OneSignal {
 
    private static String lastRegistrationId;
    private static boolean registerForPushFired, locationFired, promptedLocation;
-   
+
    private static LocationGMS.LocationPoint lastLocationPoint;
-   
+
    static boolean shareLocation = true;
    @NonNull static OneSignal.Builder mInitBuilder = new OneSignal.Builder();
 
@@ -413,32 +413,32 @@ public class OneSignal {
    static DelayedConsentInitializationParameters delayedInitParams;
 
    static OneSignalRemoteParams.Params remoteParams;
-   
+
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
    private static OSPermissionState getCurrentPermissionState(Context context) {
       if (context == null)
          return null;
-      
+
       if (currentPermissionState == null) {
          currentPermissionState = new OSPermissionState(false);
          currentPermissionState.observable.addObserverStrong(new OSPermissionChangedInternalObserver());
       }
-      
+
       return currentPermissionState;
    }
-   
+
    static OSPermissionState lastPermissionState;
    private static OSPermissionState getLastPermissionState(Context context) {
       if (context == null)
          return null;
-      
+
       if (lastPermissionState == null)
          lastPermissionState = new OSPermissionState(true);
-      
+
       return lastPermissionState;
    }
-   
+
    private static OSObservable<OSPermissionObserver, OSPermissionStateChanges> permissionStateChangesObserver;
    static OSObservable<OSPermissionObserver, OSPermissionStateChanges> getPermissionStateChangesObserver() {
       if (permissionStateChangesObserver == null)
@@ -446,7 +446,7 @@ public class OneSignal {
       return permissionStateChangesObserver;
    }
    // End PermissionState
-   
+
    // Start SubscriptionState
    private static OSSubscriptionState currentSubscriptionState;
    private static OSSubscriptionState getCurrentSubscriptionState(Context context) {
@@ -514,13 +514,13 @@ public class OneSignal {
       return emailSubscriptionStateChangesObserver;
    }
    // End EmailSubscriptionState
-   
-   
+
+
    private static class IAPUpdateJob {
       JSONArray toReport;
       boolean newAsExisting;
       OneSignalRestClient.ResponseHandler restResponseHandler;
-   
+
       IAPUpdateJob(JSONArray toReport) {
          this.toReport = toReport;
       }
@@ -651,7 +651,7 @@ public class OneSignal {
 
       // Check and handle app id change of the current session
       handleAppIdChange();
-   
+
       OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
       // When the session reaches timeout threshold, start new session
@@ -668,7 +668,7 @@ public class OneSignal {
          trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
 
       PushRegistratorFCM.disableFirebaseInstanceIdService(appContext);
-      
+
       initDone = true;
 
       // Clean up any pending tasks that were queued up before initialization
@@ -1028,7 +1028,7 @@ public class OneSignal {
    public static void setLogLevel(int inLogCatLevel, int inVisualLogLevel) {
       setLogLevel(getLogLevel(inLogCatLevel), getLogLevel(inVisualLogLevel));
    }
-   
+
    private static OneSignal.LOG_LEVEL getLogLevel(int level) {
       switch(level) {
          case 0:
@@ -1063,7 +1063,7 @@ public class OneSignal {
    static void Log(@NonNull final LOG_LEVEL level, @NonNull String message, @Nullable Throwable throwable) {
 
       final String TAG = "OneSignal";
-      
+
       if (level.compareTo(logCatLevel) < 1) {
          if (level == LOG_LEVEL.VERBOSE)
             Log.v(TAG, message, throwable);
@@ -1076,7 +1076,7 @@ public class OneSignal {
          else if (level == LOG_LEVEL.ERROR || level == LOG_LEVEL.FATAL)
             Log.e(TAG, message, throwable);
       }
-      
+
       if (level.compareTo(visualLogLevel) < 1 && ActivityLifecycleHandler.curActivity != null) {
          try {
             String fullMessage = message + "\n";
@@ -1087,7 +1087,7 @@ public class OneSignal {
                throwable.printStackTrace(pw);
                fullMessage += sw.toString();
             }
-            
+
             final String finalFullMessage = fullMessage;
             OSUtils.runOnMainUIThread(new Runnable() {
                @Override
@@ -1153,7 +1153,7 @@ public class OneSignal {
          OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
 
       OneSignalSyncServiceUtils.syncOnFocusTime();
-      
+
       return false;
    }
 
@@ -1225,7 +1225,7 @@ public class OneSignal {
          trackGooglePurchase.trackIAP();
 
       NotificationRestorer.asyncRestore(appContext);
-      
+
       getCurrentPermissionState(appContext).refreshAsTo();
 
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
@@ -1243,14 +1243,14 @@ public class OneSignal {
          jsonObj.put("net_type", osUtils.getNetType());
       } catch (Throwable t) {}
    }
-   
+
    private static int getTimeZoneOffset() {
       TimeZone timezone = Calendar.getInstance().getTimeZone();
       int offset = timezone.getRawOffset();
-      
+
       if (timezone.inDaylightTime(new Date()))
           offset = offset + timezone.getDSTSavings();
-      
+
       return offset / 1000;
    }
 
@@ -1913,7 +1913,7 @@ public class OneSignal {
          iapUpdateJob = new IAPUpdateJob(purchases);
          iapUpdateJob.newAsExisting = newAsExisting;
          iapUpdateJob.restResponseHandler = responseHandler;
-         
+
          return;
       }
 
@@ -1923,7 +1923,7 @@ public class OneSignal {
          if (newAsExisting)
             jsonBody.put("existing", true);
          jsonBody.put("purchases", purchases);
-         
+
          OneSignalRestClient.post("players/" + getUserId() + "/on_purchase", jsonBody, responseHandler);
          if (getEmailId() != null)
             OneSignalRestClient.post("players/" + getEmailId() + "/on_purchase", jsonBody, null);
@@ -1992,11 +1992,11 @@ public class OneSignal {
       for (int i = 0; i < jsonArraySize; i++) {
          try {
             JSONObject data = dataArray.getJSONObject(i);
-            
+
             notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
             if (actionSelected == null && data.has("actionSelected"))
                actionSelected = data.optString("actionSelected", null);
-            
+
             if (firstMessage)
                firstMessage = false;
             else {
@@ -2180,12 +2180,12 @@ public class OneSignal {
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_OS_EMAIL_ID, "".equals(emailId) ? null : emailId);
    }
-   
+
    static boolean getFilterOtherGCMReceivers(Context context) {
       return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_OS_FILTER_OTHER_GCM_RECEIVERS,false);
    }
-   
+
    static void saveFilterOtherGCMReceivers(boolean set) {
       if (appContext == null)
          return;
@@ -2199,9 +2199,9 @@ public class OneSignal {
       saveUserId(userId);
       fireIdsAvailableCallback();
       internalFireGetTagsCallbacks();
-   
+
       getCurrentSubscriptionState(appContext).setUserId(userId);
-      
+
       if (iapUpdateJob != null) {
          sendPurchases(iapUpdateJob.toReport, iapUpdateJob.newAsExisting, iapUpdateJob.restResponseHandler);
          iapUpdateJob = null;
@@ -2577,8 +2577,8 @@ public class OneSignal {
 
       runCancelNotification.run();
    }
-   
-   
+
+
    public static void cancelGroupedNotifications(final String group) {
 
       //if applicable, check if the user provided privacy consent
@@ -2699,19 +2699,19 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add permission observer");
          return;
       }
-   
+
       getPermissionStateChangesObserver().addObserver(observer);
-   
+
       if (getCurrentPermissionState(appContext).compare(getLastPermissionState(appContext)))
          OSPermissionChangedInternalObserver.fireChangesToPublicObserver(getCurrentPermissionState(appContext));
    }
-   
+
    public static void removePermissionObserver(OSPermissionObserver observer) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify permission observer");
          return;
       }
-   
+
       getPermissionStateChangesObserver().removeObserver(observer);
    }
 
@@ -2736,19 +2736,19 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
          return;
       }
-      
+
       getSubscriptionStateChangesObserver().addObserver(observer);
-      
+
       if (getCurrentSubscriptionState(appContext).compare(getLastSubscriptionState(appContext)))
          OSSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentSubscriptionState(appContext));
    }
-   
+
    public static void removeSubscriptionObserver(OSSubscriptionObserver observer) {
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify subscription observer");
          return;
       }
-      
+
       getSubscriptionStateChangesObserver().removeObserver(observer);
    }
 
@@ -2806,12 +2806,12 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSPermissionSubscriptionState");
          return null;
       }
-      
+
       OSPermissionSubscriptionState status = new OSPermissionSubscriptionState();
       status.subscriptionStatus = getCurrentSubscriptionState(appContext);
       status.permissionStatus = getCurrentPermissionState(appContext);
       status.emailSubscriptionStatus = getCurrentEmailSubscriptionState(appContext);
-   
+
       return status;
    }
 
@@ -2920,25 +2920,25 @@ public class OneSignal {
    private static boolean isDuplicateNotification(String id, Context context) {
       if (id == null || "".equals(id))
          return false;
-   
+
       boolean exists = false;
-      
+
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       Cursor cursor = null;
-      
+
       try {
          SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
-   
+
          String[] retColumn = {NotificationTable.COLUMN_NAME_NOTIFICATION_ID};
          String[] whereArgs = {id};
-   
+
          cursor = readableDb.query(
              NotificationTable.TABLE_NAME,
              retColumn,
              NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",   // Where String
              whereArgs,
              null, null, null);
-   
+
          exists = cursor.moveToFirst();
       }
       catch (Throwable t) {
@@ -2956,7 +2956,7 @@ public class OneSignal {
 
       return false;
    }
-   
+
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
       String id = getNotificationIdFromGCMJsonPayload(jsonPayload);
       return id == null || OneSignal.isDuplicateNotification(id, context);
@@ -2999,7 +2999,7 @@ public class OneSignal {
    private static boolean isPastOnSessionTime() {
       return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1_000 >= MIN_ON_SESSION_TIME;
    }
-   
+
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
    static boolean areNotificationsEnabledForSubscribedState() {
       if (mInitBuilder.mUnsubscribeWhenNotificationsAreDisabled)
