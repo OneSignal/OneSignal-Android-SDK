@@ -37,8 +37,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -73,8 +71,6 @@ class LocationGMS {
    static String requestPermission;
    private static Context classContext;
    
-   private static LocationHandlerThread locationHandlerThread;
-
    protected static final Object syncLock = new Object() {};
 
    enum CALLBACK_TYPE {
@@ -183,22 +179,19 @@ class LocationGMS {
          synchronized (syncLock) {
             startFallBackThread();
 
-            if (locationHandlerThread == null)
-               locationHandlerThread = new LocationHandlerThread();
-
             if (mGoogleApiClient == null || mLastLocation == null) {
                GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
                GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
                        .addApi(LocationServices.API)
                        .addConnectionCallbacks(googleApiClientListener)
-                       .addOnConnectionFailedListener(googleApiClientListener)
-                       .setHandler(locationHandlerThread.mHandler)
+                       .addOnConnectionFailedListener(googleApiClientListener)                       
                        .build();
                mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
 
                mGoogleApiClient.connect();
             }
-            else if (mLastLocation != null)
+            
+            if (mLastLocation != null)
                fireCompleteForLocation(mLastLocation);
          }
       } catch (Throwable t) {
@@ -303,8 +296,6 @@ class LocationGMS {
       }
    }
 
-   static LocationUpdateListener locationUpdateListener;
-   
    private static class GoogleApiClientListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
       @Override
       public void onConnected(Bundle bundle) {
@@ -313,8 +304,6 @@ class LocationGMS {
 
             if (mLastLocation == null) {
                mLastLocation = FusedLocationApiWrapper.getLastLocation(mGoogleApiClient.realInstance());
-               if (mLastLocation != null)
-                  fireCompleteForLocation(mLastLocation);
             }
 
             locationUpdateListener = new LocationUpdateListener(mGoogleApiClient.realInstance());
@@ -381,16 +370,6 @@ class LocationGMS {
                return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
          }
          return null;
-      }
-   }
-   
-   private static class LocationHandlerThread extends HandlerThread {
-      Handler mHandler;
-      
-      LocationHandlerThread() {
-         super("OSH_LocationHandlerThread");
-         start();
-         mHandler = new Handler(getLooper());
       }
    }
 }
