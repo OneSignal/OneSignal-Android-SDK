@@ -69,6 +69,7 @@ class LocationGMS {
    private static GoogleApiClientCompatProxy mGoogleApiClient;
    private static Location mLastLocation;
    static String requestPermission;
+   static LocationUpdateListener locationUpdateListener;
    private static Context classContext;
    
    protected static final Object syncLock = new Object() {};
