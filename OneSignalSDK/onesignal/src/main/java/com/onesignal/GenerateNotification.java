@@ -374,7 +374,7 @@ class GenerateNotification {
          // Create PendingIntents for notifications in a groupless or defined summary
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
                  group.equals(OneSignalNotificationManager.getGrouplessSummaryKey()))
-            createGrouplessSummaryNotification(notifJob, oneSignalNotificationBuilder, grouplessNotifs.size() + 1);
+            createGrouplessSummaryNotification(notifJob, grouplessNotifs.size() + 1);
          else
             createSummaryNotification(notifJob, oneSignalNotificationBuilder);
       }
@@ -389,7 +389,7 @@ class GenerateNotification {
       //     created by Android itself.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
-         NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
+         OneSignalNotificationManager.notifyNotificationUpdate(currentContext, notificationId, notification);
       }
    }
 
@@ -702,11 +702,11 @@ class GenerateNotification {
          addXiaomiSettings(notifBuilder, summaryNotification);
       }
 
-      NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
+      OneSignalNotificationManager.notifyNotificationUpdate(currentContext, summaryNotificationId, summaryNotification);
    }
 
    @RequiresApi(api = Build.VERSION_CODES.M)
-   private static void createGrouplessSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder, int grouplessNotifCount) {
+   private static void createGrouplessSummaryNotification(NotificationGenerationJob notifJob, int grouplessNotifCount) {
       JSONObject gcmBundle = notifJob.jsonPayload;
 
       Notification summaryNotification;
@@ -744,7 +744,7 @@ class GenerateNotification {
         summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
       }
       catch (Throwable t) {
-        //do nothing in this case...Android support lib 26 isn't in the project
+        // Do nothing in this case... Android support lib 26 isn't in the project
       }
 
       NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
@@ -753,7 +753,7 @@ class GenerateNotification {
       summaryBuilder.setStyle(inboxStyle);
       summaryNotification = summaryBuilder.build();
 
-      NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
+      OneSignalNotificationManager.notifyNotificationUpdate(currentContext, summaryNotificationId, summaryNotification);
    }
    
    private static Intent createBaseSummaryIntent(int summaryNotificationId, JSONObject gcmBundle, String group) {
