@@ -5,6 +5,7 @@ import android.content.res.Resources;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ViewDragHelper;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -16,8 +17,16 @@ class DraggableRelativeLayout extends RelativeLayout {
    private static final int MARGIN_PX_SIZE = dpToPx(28);
    private static final int EXTRA_PX_DISMISS = dpToPx(64);
 
+   // This will be buffered 3dp up or down depending on which direction we are dragging the IAM
+   private int DRAGGING_START_PX_THRESHOLD = MARGIN_PX_SIZE;
+
    static abstract class DraggableListener {
+      // Callback for dismissing the MessageView
       void onDismiss() {}
+
+      // Callbacks for knowing when dragging has started and ended
+      void onDraggingStart() {}
+      void onDraggingEnd() {}
    }
 
    private DraggableListener mListener;
@@ -63,9 +72,13 @@ class DraggableRelativeLayout extends RelativeLayout {
          params.offScreenYPos = -params.messageHeight - MARGIN_PX_SIZE;
          params.dismissingYVelocity = -params.dismissingYVelocity;
          params.dismissingYPos = params.offScreenYPos / 3;
+
+         DRAGGING_START_PX_THRESHOLD = MARGIN_PX_SIZE - dpToPx(2);
       }
-      else
+      else {
          params.dismissingYPos = (params.messageHeight / 3) + (params.maxYPos * 2);
+         DRAGGING_START_PX_THRESHOLD = MARGIN_PX_SIZE + dpToPx(2);
+      }
    }
 
    private void createDragHelper() {
@@ -79,12 +92,20 @@ class DraggableRelativeLayout extends RelativeLayout {
 
          @Override
          public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM Y: " + top);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM Dragging Threshold: " + DRAGGING_START_PX_THRESHOLD);
             lastYPos = top;
             if (params.dragDirection == Params.DRAGGABLE_DIRECTION_DOWN) {
+               if (top >= DRAGGING_START_PX_THRESHOLD)
+                  if (mListener != null) { mListener.onDraggingStart(); OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "DRAGGING STARTED DOWN"); }
+
                if (top < params.maxYPos)
                   return params.maxYPos;
             }
             else {
+               if (top <= DRAGGING_START_PX_THRESHOLD)
+                  if (mListener != null) { mListener.onDraggingStart(); if (mListener != null) mListener.onDraggingStart(); OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "DRAGGING STARTED UP"); }
+
                if (top > params.maxYPos)
                   return params.maxYPos;
             }
@@ -117,8 +138,9 @@ class DraggableRelativeLayout extends RelativeLayout {
                }
             }
 
-            if (DraggableRelativeLayout.this.mDragHelper.settleCapturedViewAt(params.maxXPos, settleDestY))
+            if (DraggableRelativeLayout.this.mDragHelper.settleCapturedViewAt(params.maxXPos, settleDestY)) {
                ViewCompat.postInvalidateOnAnimation(DraggableRelativeLayout.this);
+            }
          }
       });
    }
@@ -128,6 +150,13 @@ class DraggableRelativeLayout extends RelativeLayout {
       // Prevent any possible extra clicks or stopping the dismissing animation
       if (dismissing)
          return true;
+
+      switch (event.getAction()) {
+         case MotionEvent.ACTION_DOWN:
+         case MotionEvent.ACTION_POINTER_DOWN:
+            if (mListener != null) { mListener.onDraggingEnd(); OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "DRAGGING ENDED"); }
+            break;
+      }
 
       mDragHelper.processTouchEvent(event);
 

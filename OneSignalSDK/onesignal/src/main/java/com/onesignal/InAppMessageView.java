@@ -67,6 +67,7 @@ class InAppMessageView {
     private double dismissDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
+    private boolean isDragging = false;
     @NonNull private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
@@ -300,6 +301,16 @@ class InAppMessageView {
             void onDismiss() {
                 finishAfterDelay(null);
             }
+
+            @Override
+            void onDraggingStart() {
+                isDragging = true;
+            }
+
+            @Override
+            void onDraggingEnd() {
+                isDragging = false;
+            }
         });
 
         if (webView.getParent() != null)
@@ -312,6 +323,13 @@ class InAppMessageView {
         draggableRelativeLayout.setClipChildren(false);
         draggableRelativeLayout.setClipToPadding(false);
         draggableRelativeLayout.addView(cardView);
+    }
+
+    /**
+     * Simple getter to know when the MessageView is in a dragging state
+     */
+    boolean isDragging() {
+        return isDragging;
     }
 
     /**

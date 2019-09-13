@@ -161,7 +161,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
                 if (messageType.equals(EVENT_TYPE_RENDERING_COMPLETE))
                     handleRenderComplete(jsonObject);
-                else if (messageType.equals(EVENT_TYPE_ACTION_TAKEN))
+                else if (messageType.equals(EVENT_TYPE_ACTION_TAKEN) && !messageView.isDragging())
+                    // Added handling so that click actions won't trigger while dragging the IAM
                     handleActionTaken(jsonObject);
             } catch (JSONException e) {
                 e.printStackTrace();
