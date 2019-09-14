@@ -192,17 +192,22 @@ class InAppMessageView {
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
-        if (displayLocation == WebViewManager.Position.FULL_SCREEN)
-            draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
-
         switch (displayLocation) {
+            case TOP_BANNER:
+                draggableParams.dragThresholdY = MARGIN_PX_SIZE - dpToPx(2);
+                break;
             case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
+                draggableParams.dragThresholdY = MARGIN_PX_SIZE + dpToPx(-2);
                 break;
-            case CENTER_MODAL:
             case FULL_SCREEN:
-                draggableParams.maxYPos = (getDisplayYSize() / 2) - (pageHeight / 2);
-                draggableParams.posY = (getDisplayYSize() / 2) - (pageHeight / 2);
+                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
+                // fall through for FULL_SCREEN since it shares similar params to CENTER_MODAL
+            case CENTER_MODAL:
+                int y = (getDisplayYSize() / 2) - (pageHeight / 2);
+                draggableParams.dragThresholdY = y;
+                draggableParams.maxYPos = y;
+                draggableParams.posY = y;
                 break;
         }
 
@@ -289,7 +294,7 @@ class InAppMessageView {
         parentRelativeLayout.addView(draggableRelativeLayout);
     }
 
-    private void setUpDraggableLayout(Context context,
+    private void setUpDraggableLayout(final Context context,
                                       LinearLayout.LayoutParams linearLayoutParams,
                                       DraggableRelativeLayout.Params draggableParams) {
         draggableRelativeLayout = new DraggableRelativeLayout(context);
