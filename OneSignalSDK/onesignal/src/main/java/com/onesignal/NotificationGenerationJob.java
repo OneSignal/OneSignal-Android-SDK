@@ -98,7 +98,18 @@ class NotificationGenerationJob {
       overrideSettings.androidNotificationId = id;
    }
 
+   /**
+    * If notificationId is -1 then the notification is a silent one
+    */
+   boolean isNotificationToDisplay() {
+      return getAndroidIdWithoutCreate() != -1;
+   }
+
    boolean hasExtender() {
       return overrideSettings != null && overrideSettings.extender != null;
+   }
+
+   String getApiNotificationId() {
+      return OneSignal.getNotificationIdFromGCMJson(jsonPayload);
    }
 }

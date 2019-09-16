@@ -76,6 +76,8 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowReceiveReceiptController;
+import com.onesignal.ShadowReceiveReceiptRepository;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -145,7 +147,9 @@ import static org.robolectric.Shadows.shadowOf;
            ShadowCustomTabsClient.class,
            ShadowCustomTabsSession.class,
            ShadowNotificationManagerCompat.class,
-           ShadowJobService.class
+           ShadowJobService.class,
+           ShadowReceiveReceiptController.class,
+           ShadowReceiveReceiptRepository.class
         },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
@@ -697,6 +701,7 @@ public class MainOneSignalClassRunner {
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
       assertEquals("Robo test message", notificationReceivedBody);
       assertFalse(0 == androidNotificationId);
+      assertEquals(1, ShadowReceiveReceiptRepository.callQuantity);
 
       // Don't fire for duplicates
       notificationOpenedMessage = null;
@@ -717,6 +722,7 @@ public class MainOneSignalClassRunner {
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
+      assertEquals(2, ShadowReceiveReceiptRepository.callQuantity);
       assertEquals(null, notificationOpenedMessage);
       assertNull(notificationOpenedMessage);
       assertEquals("Robo test message", notificationReceivedBody);

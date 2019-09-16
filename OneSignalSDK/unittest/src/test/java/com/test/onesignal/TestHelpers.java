@@ -20,6 +20,7 @@ import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowReceiveReceiptRepository;
 import com.onesignal.StaticResetHelper;
 
 import junit.framework.Assert;
@@ -71,6 +72,7 @@ public class TestHelpers {
       ShadowOSWebView.resetStatics();
 
       ShadowDynamicTimer.resetStatics();
+      ShadowReceiveReceiptRepository.callQuantity = 0;
 
       ShadowOSWebView.resetStatics();
 

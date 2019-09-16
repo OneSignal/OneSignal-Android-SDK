@@ -938,6 +938,11 @@ public class OneSignal {
                OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
                remoteParams.clearGroupOnSummaryClick
             );
+            OneSignalPrefs.saveBool(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
+               remoteParams.receiveReceiptEnabled
+            );
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
@@ -2960,6 +2965,23 @@ public class OneSignal {
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
       String id = getNotificationIdFromGCMJsonPayload(jsonPayload);
       return id == null || OneSignal.isDuplicateNotification(id, context);
+   }
+
+   static String getNotificationIdFromGCMJson(@Nullable JSONObject jsonObject) {
+      if (jsonObject == null)
+         return null;
+      try {
+         JSONObject customJSON = new JSONObject(jsonObject.getString("custom"));
+
+         if (customJSON.has("i"))
+            return customJSON.optString("i", null);
+         else
+            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
+      } catch (JSONException e) {
+         Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the JSONObject.");
+      }
+
+      return null;
    }
 
    static String getNotificationIdFromGCMBundle(Bundle bundle) {

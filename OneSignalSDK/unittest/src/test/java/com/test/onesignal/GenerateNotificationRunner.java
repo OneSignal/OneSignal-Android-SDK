@@ -305,8 +305,6 @@ public class GenerateNotificationRunner {
       assertEquals(1, postedSummaryNotification.notif.actions.length);
    }
    
-   
-   
    @Test
    public void shouldCancelAllNotificationsPartOfAGroup() throws Exception {
       // Setup - Init
