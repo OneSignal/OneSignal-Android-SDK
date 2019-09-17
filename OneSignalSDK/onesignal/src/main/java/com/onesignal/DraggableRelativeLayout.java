@@ -35,7 +35,7 @@ class DraggableRelativeLayout extends RelativeLayout {
 
       int posY;
       int maxYPos;
-      int dragThresholdY; // Y value associated with trigger the onDragStart() callback
+      int dragThresholdY; // Y value associated with trigger for onDragStart() callback
       int maxXPos;
       int height;
       int messageHeight;
