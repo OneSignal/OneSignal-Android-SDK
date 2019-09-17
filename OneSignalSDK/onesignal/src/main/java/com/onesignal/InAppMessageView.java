@@ -53,6 +53,7 @@ class InAppMessageView {
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
     private static final int MARGIN_PX_SIZE = dpToPx(24);
+    private static final int DRAG_THRESHOLD_PX_SIZE = dpToPx(4);
     private PopupWindow popupWindow;
 
     interface InAppMessageViewListener {
@@ -194,18 +195,18 @@ class InAppMessageView {
 
         switch (displayLocation) {
             case TOP_BANNER:
-                draggableParams.dragThresholdY = MARGIN_PX_SIZE - dpToPx(2);
+                draggableParams.dragThresholdY = MARGIN_PX_SIZE - DRAG_THRESHOLD_PX_SIZE;
                 break;
             case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
-                draggableParams.dragThresholdY = MARGIN_PX_SIZE + dpToPx(-2);
+                draggableParams.dragThresholdY = MARGIN_PX_SIZE + DRAG_THRESHOLD_PX_SIZE;
                 break;
             case FULL_SCREEN:
                 draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
                 // fall through for FULL_SCREEN since it shares similar params to CENTER_MODAL
             case CENTER_MODAL:
                 int y = (getDisplayYSize() / 2) - (pageHeight / 2);
-                draggableParams.dragThresholdY = y;
+                draggableParams.dragThresholdY = y + DRAG_THRESHOLD_PX_SIZE;
                 draggableParams.maxYPos = y;
                 draggableParams.posY = y;
                 break;
@@ -303,17 +304,17 @@ class InAppMessageView {
         draggableRelativeLayout.setParams(draggableParams);
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
-            void onDismiss() {
+            public void onDismiss() {
                 finishAfterDelay(null);
             }
 
             @Override
-            void onDraggingStart() {
+            public void onDragStart() {
                 isDragging = true;
             }
 
             @Override
-            void onDraggingEnd() {
+            public void onDragEnd() {
                 isDragging = false;
             }
         });

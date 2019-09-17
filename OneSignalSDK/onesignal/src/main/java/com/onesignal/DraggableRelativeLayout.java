@@ -16,13 +16,13 @@ class DraggableRelativeLayout extends RelativeLayout {
    private static final int MARGIN_PX_SIZE = dpToPx(28);
    private static final int EXTRA_PX_DISMISS = dpToPx(64);
 
-   static abstract class DraggableListener {
+   interface DraggableListener {
       // Callback for dismissing the MessageView
-      void onDismiss() {}
+      void onDismiss();
 
       // Callbacks for knowing when dragging has started and ended
-      void onDraggingStart() {}
-      void onDraggingEnd() {}
+      void onDragStart();
+      void onDragEnd();
    }
 
    private DraggableListener mListener;
@@ -35,7 +35,7 @@ class DraggableRelativeLayout extends RelativeLayout {
 
       int posY;
       int maxYPos;
-      int dragThresholdY;
+      int dragThresholdY; // Y value associated with trigger the onDragStart() callback
       int maxXPos;
       int height;
       int messageHeight;
@@ -87,13 +87,19 @@ class DraggableRelativeLayout extends RelativeLayout {
          public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
             lastYPos = top;
             if (params.dragDirection == Params.DRAGGABLE_DIRECTION_DOWN) {
-               if (top >= params.dragThresholdY && mListener != null) { mListener.onDraggingStart(); }
+               // Dragging down
+               // If the top of the message is past the dragThresholdY trigger the onDragStart() callback
+               if (top >= params.dragThresholdY && mListener != null)
+                  mListener.onDragStart();
 
                if (top < params.maxYPos)
                   return params.maxYPos;
             }
             else {
-               if (top <= params.dragThresholdY && mListener != null) { mListener.onDraggingStart(); }
+               // Dragging up
+               // If the top of the message is past the dragThresholdY trigger the onDragStart() callback
+               if (top <= params.dragThresholdY && mListener != null)
+                  mListener.onDragStart();
 
                if (top > params.maxYPos)
                   return params.maxYPos;
@@ -115,21 +121,24 @@ class DraggableRelativeLayout extends RelativeLayout {
                   if (lastYPos > params.dismissingYPos || yvel > params.dismissingYVelocity) {
                      settleDestY = params.offScreenYPos;
                      dismissing = true;
-                     if (mListener != null) { mListener.onDismiss(); }
+
+                     if (mListener != null)
+                        mListener.onDismiss();
                   }
                }
                else {
                   if (lastYPos < params.dismissingYPos || yvel < params.dismissingYVelocity) {
                      settleDestY = params.offScreenYPos;
                      dismissing = true;
-                     if (mListener != null) { mListener.onDismiss(); }
+
+                     if (mListener != null)
+                        mListener.onDismiss();
                   }
                }
             }
 
-            if (DraggableRelativeLayout.this.mDragHelper.settleCapturedViewAt(params.maxXPos, settleDestY)) {
+            if (DraggableRelativeLayout.this.mDragHelper.settleCapturedViewAt(params.maxXPos, settleDestY))
                ViewCompat.postInvalidateOnAnimation(DraggableRelativeLayout.this);
-            }
          }
       });
    }
@@ -140,10 +149,22 @@ class DraggableRelativeLayout extends RelativeLayout {
       if (dismissing)
          return true;
 
+      // Override our own touch event actions on the view
       switch (event.getAction()) {
          case MotionEvent.ACTION_DOWN:
          case MotionEvent.ACTION_POINTER_DOWN:
-            if (mListener != null) { mListener.onDraggingEnd(); }
+            // On touch downs we want to trigger the onDragEnd() callback
+
+            // This seems confusing, but because the JS action within the WebView will trigger on
+            // touch up we need to stay in the onDragStart() state
+
+            // The fix for this is using on touch down to go to onDragEnd() state since we can
+            // confirm that the view will be at its origin position
+
+            // Therefore, the logic inside of onDragEnd() would be executed before touch up
+            // again and our JS action will execute properly
+            if (mListener != null)
+               mListener.onDragEnd();
             break;
       }
 
