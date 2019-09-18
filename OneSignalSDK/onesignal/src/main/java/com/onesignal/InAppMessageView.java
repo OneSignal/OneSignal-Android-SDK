@@ -53,6 +53,7 @@ class InAppMessageView {
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
     private static final int MARGIN_PX_SIZE = dpToPx(24);
+    private static final int DRAG_THRESHOLD_PX_SIZE = dpToPx(4);
     private PopupWindow popupWindow;
 
     interface InAppMessageViewListener {
@@ -67,6 +68,7 @@ class InAppMessageView {
     private double dismissDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
+    private boolean isDragging = false;
     @NonNull private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
@@ -191,17 +193,22 @@ class InAppMessageView {
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
-        if (displayLocation == WebViewManager.Position.FULL_SCREEN)
-            draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
-
         switch (displayLocation) {
+            case TOP_BANNER:
+                draggableParams.dragThresholdY = MARGIN_PX_SIZE - DRAG_THRESHOLD_PX_SIZE;
+                break;
             case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
+                draggableParams.dragThresholdY = MARGIN_PX_SIZE + DRAG_THRESHOLD_PX_SIZE;
                 break;
-            case CENTER_MODAL:
             case FULL_SCREEN:
-                draggableParams.maxYPos = (getDisplayYSize() / 2) - (pageHeight / 2);
-                draggableParams.posY = (getDisplayYSize() / 2) - (pageHeight / 2);
+                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
+                // fall through for FULL_SCREEN since it shares similar params to CENTER_MODAL
+            case CENTER_MODAL:
+                int y = (getDisplayYSize() / 2) - (pageHeight / 2);
+                draggableParams.dragThresholdY = y + DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.maxYPos = y;
+                draggableParams.posY = y;
                 break;
         }
 
@@ -288,7 +295,7 @@ class InAppMessageView {
         parentRelativeLayout.addView(draggableRelativeLayout);
     }
 
-    private void setUpDraggableLayout(Context context,
+    private void setUpDraggableLayout(final Context context,
                                       LinearLayout.LayoutParams linearLayoutParams,
                                       DraggableRelativeLayout.Params draggableParams) {
         draggableRelativeLayout = new DraggableRelativeLayout(context);
@@ -297,8 +304,18 @@ class InAppMessageView {
         draggableRelativeLayout.setParams(draggableParams);
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
-            void onDismiss() {
+            public void onDismiss() {
                 finishAfterDelay(null);
+            }
+
+            @Override
+            public void onDragStart() {
+                isDragging = true;
+            }
+
+            @Override
+            public void onDragEnd() {
+                isDragging = false;
             }
         });
 
@@ -312,6 +329,13 @@ class InAppMessageView {
         draggableRelativeLayout.setClipChildren(false);
         draggableRelativeLayout.setClipToPadding(false);
         draggableRelativeLayout.addView(cardView);
+    }
+
+    /**
+     * Simple getter to know when the MessageView is in a dragging state
+     */
+    boolean isDragging() {
+        return isDragging;
     }
 
     /**
