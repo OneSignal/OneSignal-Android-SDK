@@ -3111,59 +3111,59 @@ public class OneSignal {
    }
 
    public static void uniqueOutcome(@NonNull String name, @NonNull OutcomeCallback callback) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+      if (!validateOutcomeEntry(name))
          return;
-      }
 
       outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
    }
 
    public static void uniqueOutcome(@NonNull String name) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+      if (!validateOutcomeEntry(name))
          return;
-      }
 
       outcomeEventsController.sendUniqueOutcomeEvent(name, null);
    }
 
    public static void outcome(@NonNull String name, @NonNull OutcomeCallback callback) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+      if (!validateOutcomeEntry(name))
          return;
-      }
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
    }
 
    public static void outcome(@NonNull String name) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+      if (!validateOutcomeEntry(name))
          return;
-      }
 
       outcomeEventsController.sendOutcomeEvent(name, (OutcomeCallback) null);
    }
 
    public static void outcome(@NonNull String name, float value, @NonNull OutcomeCallback callback) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+      if (!validateOutcomeEntry(name))
          return;
-      }
 
       outcomeEventsController.sendOutcomeEvent(name, value, callback);
    }
 
    public static void outcome(@NonNull String name, float value) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+      if (!validateOutcomeEntry(name))
          return;
-      }
 
       outcomeEventsController.sendOutcomeEvent(name, value, null);
    }
 
+   private static boolean validateOutcomeEntry(String name) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
+         return false;
+      }
+      if (name == null || name.isEmpty()) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Outcome name must not be empty");
+         return false;
+      }
+
+      return true;
+   }
 
    public interface OutcomeCallback {
       void onOutcomeSuccess(String name);

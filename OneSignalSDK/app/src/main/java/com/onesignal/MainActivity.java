@@ -71,6 +71,10 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
    private TextView debugTextView;
    private TextView emailTextView;
+   private TextView outcomeName;
+   private TextView outcomeValueName;
+   private TextView outcomeValue;
+   private TextView outcomeUnique;
    private Button consentButton;
    private Button setEmailButton;
    private Button sendEvent;
@@ -85,7 +89,6 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    private TextView iamHost;
    private TextView triggerKeyTextView;
    private TextView triggerValueTextView;
-   private String SHARDPRES_KEY_IAM_HOST = "SHARDPRES_KEY_IAM_HOST";
 
    @Override
    public boolean onCreateOptionsMenu(Menu menu) {
@@ -125,6 +128,10 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.iamHost = this.findViewById(R.id.iamHost);
       this.triggerKeyTextView = this.findViewById(R.id.triggerKey);
       this.triggerValueTextView = this.findViewById(R.id.triggerValue);
+      this.outcomeName = this.findViewById(R.id.outcomeName);
+      this.outcomeValueName = this.findViewById(R.id.outcomeNameValue);
+      this.outcomeValue = this.findViewById(R.id.outcomeValue);
+      this.outcomeUnique = this.findViewById(R.id.outcomeUniqueName);
       this.iamHost.setText(OneSignalExampleApp.getOneSignalAppId(this));
 
       if (OneSignal.requiresUserPrivacyConsent()) {
@@ -258,10 +265,9 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.debugTextView.setText("Unsubscribed");
    }
 
-
    public void onSendTagsClicked(View v) {
       try {
-         OneSignal.sendTags(new JSONObject("{\"counter\" : " + String.valueOf(sendTagsCounter) + ", \"test_value\" : \"test_key\"}"), new OneSignal.ChangeTagsUpdateHandler() {
+         OneSignal.sendTags(new JSONObject("{\"counter\" : " + sendTagsCounter + ", \"test_value\" : \"test_key\"}"), new OneSignal.ChangeTagsUpdateHandler() {
             @Override
             public void onSuccess(JSONObject tags) {
                updateTextView("Successfully sent tags: " + tags.toString());
@@ -322,29 +328,46 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    public void onSendOutcomeClicked(View view) {
-      OneSignal.outcome("test", 1, new OneSignal.OutcomeCallback() {
+      OneSignal.outcome(outcomeName.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
          public void onOutcomeSuccess(String name) {
-            updateTextView(name + "Outcome sent successfully");
+            updateTextView(name + " Outcome sent successfully");
          }
 
          @Override
          public void onOutcomeFail(int statusCode, String response) {
-            updateTextView("OutcomeFail with status code: " + statusCode);
+            updateTextView("Outcome fail with status code: " + statusCode);
+         }
+      });
+   }
+
+   public void onSendOutcomeWithValueClicked(View view) {
+      if (outcomeValue.getText().toString().isEmpty())
+         return;
+
+      OneSignal.outcome(outcomeValueName.getText().toString(), Float.parseFloat(outcomeValue.getText().toString()), new OneSignal.OutcomeCallback() {
+         @Override
+         public void onOutcomeSuccess(String name) {
+            updateTextView(name + " Outcome sent with value successfully");
+         }
+
+         @Override
+         public void onOutcomeFail(int statusCode, String response) {
+            updateTextView("Outcome with value fail with status code: " + statusCode);
          }
       });
    }
 
    public void onSendUniqueOutcomeClicked(View view) {
-      OneSignal.uniqueOutcome("uniqueTest", new OneSignal.OutcomeCallback() {
+      OneSignal.uniqueOutcome(outcomeUnique.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
          public void onOutcomeSuccess(String name) {
-            updateTextView(name + "Outcome sent successfully");
+            updateTextView(name + " Unique Outcome sent successfully");
          }
 
          @Override
          public void onOutcomeFail(int statusCode, String response) {
-            updateTextView("OutcomeFail with status code: " + statusCode);
+            updateTextView("Unique Outcome fail with status code: " + statusCode);
          }
       });
    }
