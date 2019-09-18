@@ -374,7 +374,7 @@ class GenerateNotification {
          // Create PendingIntents for notifications in a groupless or defined summary
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
                  group.equals(OneSignalNotificationManager.getGrouplessSummaryKey()))
-            createGrouplessSummaryNotification(notifJob, oneSignalNotificationBuilder, grouplessNotifs.size() + 1);
+            createGrouplessSummaryNotification(notifJob, grouplessNotifs.size() + 1);
          else
             createSummaryNotification(notifJob, oneSignalNotificationBuilder);
       }
@@ -706,7 +706,7 @@ class GenerateNotification {
    }
 
    @RequiresApi(api = Build.VERSION_CODES.M)
-   private static void createGrouplessSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder, int grouplessNotifCount) {
+   private static void createGrouplessSummaryNotification(NotificationGenerationJob notifJob, int grouplessNotifCount) {
       JSONObject gcmBundle = notifJob.jsonPayload;
 
       Notification summaryNotification;
@@ -744,7 +744,7 @@ class GenerateNotification {
         summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
       }
       catch (Throwable t) {
-        //do nothing in this case...Android support lib 26 isn't in the project
+        // Do nothing in this case... Android support lib 26 isn't in the project
       }
 
       NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();

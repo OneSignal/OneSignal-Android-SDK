@@ -41,6 +41,7 @@ public class OneSignalNotificationManager {
     @RequiresApi(api = Build.VERSION_CODES.M)
     static Integer getGrouplessNotifsCount(Context context) {
         StatusBarNotification[] statusBarNotifications = getActiveNotifications(context);
+
         int groupCount = 0;
         for (StatusBarNotification statusBarNotification : statusBarNotifications) {
             if (!NotificationCompat.isGroupSummary(statusBarNotification.getNotification())
@@ -56,7 +57,16 @@ public class OneSignalNotificationManager {
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
     static StatusBarNotification[] getActiveNotifications(Context context) {
-        return getNotificationManager(context).getActiveNotifications();
+        StatusBarNotification[] statusBarNotifications = new StatusBarNotification[]{};
+        try {
+            statusBarNotifications = getNotificationManager(context).getActiveNotifications();
+        } catch(Throwable e) {
+            // try-catch for Android 6.0.X and possibly 8.0.0 bug work around,
+            //    getActiveNotifications sometimes throws a fatal exception.
+            // Seem to be related to what Android's internal method getAppActiveNotifications returns.
+            // Issue #422
+        }
+        return statusBarNotifications;
     }
 
     /**
@@ -81,7 +91,6 @@ public class OneSignalNotificationManager {
             if (!isGroupSummary && isGroupless)
                 grouplessStatusBarNotifications.add(statusBarNotification);
         }
-
         return grouplessStatusBarNotifications;
     }
 
@@ -102,6 +111,7 @@ public class OneSignalNotificationManager {
             Notification notif = grouplessNotifBuilder
                     .setGroup(GROUPLESS_SUMMARY_KEY)
                     .build();
+
             NotificationManagerCompat.from(context).notify(grouplessNotif.getId(), notif);
         }
     }

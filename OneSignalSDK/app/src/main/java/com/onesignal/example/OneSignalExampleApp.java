@@ -47,10 +47,17 @@ public class OneSignalExampleApp extends Application {
    public void onCreate() {
       super.onCreate();
 
-      StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().build());
-      StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().build());
+      StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+              .detectAll()
+              .penaltyLog()
+              .build());
 
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.ERROR);
+      StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+              .detectAll()
+              .penaltyLog()
+              .build());
+
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
       String currentAppId = getOneSignalAppId(this);
       if (currentAppId == null)
