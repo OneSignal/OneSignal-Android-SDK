@@ -91,7 +91,6 @@ public class OneSignalNotificationManager {
             if (!isGroupSummary && isGroupless)
                 grouplessStatusBarNotifications.add(statusBarNotification);
         }
-
         return grouplessStatusBarNotifications;
     }
 
@@ -113,22 +112,7 @@ public class OneSignalNotificationManager {
                     .setGroup(GROUPLESS_SUMMARY_KEY)
                     .build();
 
-            notifyNotificationUpdate(context, grouplessNotif.getId(), notif);
-        }
-    }
-
-    /**
-     * Separated notify() calls with NotificationManagerCompat to help various places consolidate
-     * to a single method call, which will help catching any fatal exceptions and prevent crashes
-     */
-    static void notifyNotificationUpdate(Context context, int notifId, Notification notification) {
-        try {
-            NotificationManagerCompat.from(context).notify(notifId, notification);
-        } catch(Throwable e) {
-            // try-catch for Android 6.0.X and possibly 8.0.0 bug work around,
-            //    notify sometimes throws a fatal exception similar to getActiveNotifications.
-            // Seem to be related to what Android's internal method getAppActiveNotifications returns.
-            // Suspected to be related to Issue #422
+            NotificationManagerCompat.from(context).notify(grouplessNotif.getId(), notif);
         }
     }
 

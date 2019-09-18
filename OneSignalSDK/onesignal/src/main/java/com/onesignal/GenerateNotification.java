@@ -389,7 +389,7 @@ class GenerateNotification {
       //     created by Android itself.
       if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
-         OneSignalNotificationManager.notifyNotificationUpdate(currentContext, notificationId, notification);
+         NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
    }
 
@@ -702,7 +702,7 @@ class GenerateNotification {
          addXiaomiSettings(notifBuilder, summaryNotification);
       }
 
-      OneSignalNotificationManager.notifyNotificationUpdate(currentContext, summaryNotificationId, summaryNotification);
+      NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
 
    @RequiresApi(api = Build.VERSION_CODES.M)
@@ -753,7 +753,7 @@ class GenerateNotification {
       summaryBuilder.setStyle(inboxStyle);
       summaryNotification = summaryBuilder.build();
 
-      OneSignalNotificationManager.notifyNotificationUpdate(currentContext, summaryNotificationId, summaryNotification);
+      NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
    
    private static Intent createBaseSummaryIntent(int summaryNotificationId, JSONObject gcmBundle, String group) {
