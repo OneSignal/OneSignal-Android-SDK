@@ -1188,7 +1188,8 @@ public class OneSignal {
             .put("app_id", appId)
             .put("type", 1)
             .put("state", "ping")
-            .put("active_time", totalTimeActive);
+            .put("active_time", totalTimeActive)
+            .put("device_type", deviceType);
 
          sessionManager.addSessionNotificationId(jsonBody);
 
@@ -2130,6 +2131,7 @@ public class OneSignal {
             jsonBody.put("app_id", getSavedAppId(inContext));
             jsonBody.put("player_id", getSavedUserId(inContext));
             jsonBody.put("opened", true);
+            jsonBody.put("device_type", deviceType);
 
             OneSignalRestClient.put("notifications/" + notificationId, jsonBody, new OneSignalRestClient.ResponseHandler() {
                @Override
