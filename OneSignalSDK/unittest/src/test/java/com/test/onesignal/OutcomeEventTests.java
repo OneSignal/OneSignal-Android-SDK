@@ -82,7 +82,7 @@ public class OutcomeEventTests {
     };
 
     @BeforeClass // Runs only once, before any tests
-    public static void setUpClass() {
+    public static void setUpClass() throws Exception {
         ShadowLog.stream = System.out;
         TestHelpers.beforeTestSuite();
     }

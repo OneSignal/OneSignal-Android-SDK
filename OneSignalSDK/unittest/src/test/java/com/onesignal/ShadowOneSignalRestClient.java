@@ -92,7 +92,7 @@ public class ShadowOneSignalRestClient {
    // Pauses any network callbacks from firing.
    // Also blocks any sync network calls.
    public static boolean freezeResponses;
-   private static ConcurrentHashMap<Object, PendingResponse> pendingResponses;
+   private static ConcurrentHashMap<Object, PendingResponse> pendingResponses = new ConcurrentHashMap<>();
 
    private static final String IAM_GET_HTML_RESPONSE;
    static {
@@ -297,14 +297,7 @@ public class ShadowOneSignalRestClient {
       if (doNextSuccessfulGETResponse(url, responseHandler))
          return;
 
-      if (nextSuccessfulGETResponse != null) {
-         responseHandler.onSuccess(nextSuccessfulGETResponse);
-         nextSuccessfulGETResponse = null;
-      }
-      else if (successfulGETResponses.size() > 0) {
-         responseHandler.onSuccess(successfulGETResponses.remove(0));
-      }
-      else if (nextSuccessResponse != null) {
+     if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
       }

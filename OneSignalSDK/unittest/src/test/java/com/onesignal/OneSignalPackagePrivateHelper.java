@@ -21,7 +21,7 @@ import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
-public class c {
+public class OneSignalPackagePrivateHelper {
 
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
