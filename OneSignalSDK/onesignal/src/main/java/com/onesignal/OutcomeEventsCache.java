@@ -7,6 +7,9 @@ import android.support.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,9 +53,10 @@ class OutcomeEventsCache {
     static void saveOutcomeEvent(OutcomeEvent event, OneSignalDbHelper dbHelper) {
         synchronized (lock) {
             SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
-
+            String notificationIds = event.getNotificationIds() != null ? event.getNotificationIds().toString() : "[]";
+            
             ContentValues values = new ContentValues();
-            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID, event.getNotificationId());
+            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds);
             values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
             values.put(OutcomeEventsTable.COLUMN_NAME, event.getName());
             values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
@@ -91,7 +95,7 @@ class OutcomeEventsCache {
 
                 if (cursor.moveToFirst()) {
                     do {
-                        String notificationId = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID));
+                        String notificationIds = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
                         String name = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME));
                         String sessionString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_SESSION));
                         OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
@@ -104,9 +108,13 @@ class OutcomeEventsCache {
                                         .newInstance()
                                         .setJsonString(paramsString)
                                         .build() : null;
-                        OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp, params);
 
-                        events.add(event);
+                        try {
+                            OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, params);
+                            events.add(event);
+                        } catch (JSONException e) {
+                            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating JSONArray from notifications ids outcome:JSON Failed.", e);
+                        }
                     } while (cursor.moveToNext());
                 }
             } finally {

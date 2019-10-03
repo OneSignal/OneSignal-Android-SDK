@@ -152,7 +152,7 @@ class NotificationBundleProcessor {
    static void processNotification(NotificationGenerationJob notifiJob, boolean opened) {
       saveNotification(notifiJob, opened);
       if (notifiJob.isNotificationToDisplay()) {
-         NotificationData.markLastNotificationReceived(notifiJob.getApiNotificationId());
+         OutcomesUtils.markLastNotificationReceived(notifiJob.getApiNotificationId());
       }
    }
 

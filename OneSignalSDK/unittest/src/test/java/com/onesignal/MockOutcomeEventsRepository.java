@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import org.json.JSONArray;
+
 import java.util.List;
 
 public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
@@ -30,7 +32,7 @@ public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
     }
 
     @Override
-    void requestMeasureDirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, String notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
+    void requestMeasureDirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, JSONArray notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
         super.requestMeasureDirectOutcomeEvent(outcomeId, outcomeParams, appId, notificationId, deviceType, responseHandler);
     }
 
@@ -40,7 +42,7 @@ public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
     }
 
     @Override
-    void requestMeasureIndirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, String notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
+    void requestMeasureIndirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, JSONArray notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
         super.requestMeasureIndirectOutcomeEvent(outcomeId, outcomeParams, appId, notificationId, deviceType, responseHandler);
     }
 

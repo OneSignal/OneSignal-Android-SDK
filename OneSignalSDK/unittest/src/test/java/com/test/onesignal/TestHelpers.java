@@ -27,6 +27,8 @@ import com.onesignal.StaticResetHelper;
 import junit.framework.Assert;
 
 import org.robolectric.Robolectric;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowSystemClock;
@@ -261,7 +263,7 @@ public class TestHelpers {
       List<OutcomeEvent> events = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
-            String notificationId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID));
+            String notificationIds = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
             String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME));
             String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
             OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
@@ -274,9 +276,13 @@ public class TestHelpers {
                             .newInstance()
                             .setJsonString(paramsString)
                             .build() : null;
-            OutcomeEvent event = new OutcomeEvent(session, notificationId, name, timestamp, params);
 
-            events.add(event);
+            try {
+               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, params);
+               events.add(event);
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
          } while (cursor.moveToNext());
       }
 

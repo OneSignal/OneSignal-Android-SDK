@@ -954,6 +954,7 @@ public class OneSignal {
                OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
                remoteParams.clearGroupOnSummaryClick
             );
+            OutcomesUtils.saveOutcomesParams(params.outcomesParams);
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
@@ -1191,7 +1192,7 @@ public class OneSignal {
             .put("active_time", totalTimeActive)
             .put("device_type", deviceType);
 
-         sessionManager.addSessionNotificationId(jsonBody);
+         sessionManager.addSessionNotificationsIds(jsonBody);
 
          addNetType(jsonBody);
 

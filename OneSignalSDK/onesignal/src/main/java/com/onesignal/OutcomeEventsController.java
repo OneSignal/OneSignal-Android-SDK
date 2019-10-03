@@ -5,10 +5,14 @@ import android.os.Process;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.json.JSONArray;
+
 import java.util.List;
 import java.util.Set;
 
 class OutcomeEventsController {
+
+    private static final String OS_SAVE_OUTCOMES = "OS_SAVE_OUTCOMES";
 
     static class OutcomeException extends Exception {
 
@@ -124,12 +128,13 @@ class OutcomeEventsController {
     }
 
     private void sendOutcomeEvent(@NonNull final String name, @Nullable final OutcomeParams params, @Nullable final OneSignal.OutcomeCallback callback) {
-        final String notificationId = osSessionManager.getNotificationId();
-        final OSSessionManager.Session session = notificationId != null ? osSessionManager.getSession() : OSSessionManager.Session.UNATTRIBUTED;
-        final long timestamp = System.currentTimeMillis() / 1000;
+        OSSessionManager.SessionResult sessionResult = osSessionManager.getSessionResult();
 
-        int deviceType = new OSUtils().getDeviceType();
-        String appId = OneSignal.appId;
+        final OSSessionManager.Session session = sessionResult.session;
+        final JSONArray notificationIds = sessionResult.notificationIds;
+        final String appId = OneSignal.appId;
+        final long timestampSeconds = System.currentTimeMillis() / 1000;
+        final int deviceType = new OSUtils().getDeviceType();
 
         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -147,9 +152,10 @@ class OutcomeEventsController {
                         @Override
                         public void run() {
                             Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                            outcomeEventsRepository.saveOutcomeEvent(new OutcomeEvent(session, notificationId, name, timestamp, params));
+                            outcomeEventsRepository.saveOutcomeEvent(
+                                    new OutcomeEvent(session, notificationIds, name, timestampSeconds, params));
                         }
-                    }, "OS_SAVE_OUTCOMES").start();
+                    }, OS_SAVE_OUTCOMES).start();
                 } else {
                     eventsSent.remove(name);
                 }
@@ -161,13 +167,16 @@ class OutcomeEventsController {
 
         switch (session) {
             case DIRECT:
-                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, params, appId, notificationId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, params, appId, notificationIds, deviceType, responseHandler);
                 break;
             case INDIRECT:
-                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, params, appId, notificationId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, params, appId, notificationIds, deviceType, responseHandler);
                 break;
             case UNATTRIBUTED:
                 outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, params, appId, deviceType, responseHandler);
+                break;
+            case DISABLED:
+                OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes for current session are disabled");
                 break;
         }
     }

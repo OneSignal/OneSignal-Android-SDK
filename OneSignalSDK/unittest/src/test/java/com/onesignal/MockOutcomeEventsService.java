@@ -8,7 +8,7 @@ public class MockOutcomeEventsService extends OutcomeEventsService {
     private static final String FAIL_STRING_RESPONSE = "error";
 
     private boolean success;
-    private JSONObject lastJsonObjectSent;
+    private JSONObject lastJsonObjectSent = new JSONObject();
 
     /**
      * Set to fail or success the api service call

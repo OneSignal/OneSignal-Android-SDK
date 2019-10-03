@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -10,7 +11,7 @@ class OutcomeEventsRepository {
     private static final String APP_ID = "app_id";
     private static final String DEVICE_TYPE = "device_type";
     private static final String DIRECT = "direct";
-    private static final String NOTIFICATION_ID = "notification_id";
+    private static final String NOTIFICATION_IDS = "notification_ids";
     private static final String OUTCOME_ID = "id";
 
     private final OutcomeEventsService outcomeEventsService;
@@ -50,7 +51,7 @@ class OutcomeEventsRepository {
         }
     }
 
-    void requestMeasureDirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, String notificationId, int deviceType,
+    void requestMeasureDirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, JSONArray notificationIds, int deviceType,
                                           OneSignalRestClient.ResponseHandler responseHandler) {
         try {
             JSONObject jsonBody = new JSONObject()
@@ -58,7 +59,7 @@ class OutcomeEventsRepository {
                     .put(DEVICE_TYPE, deviceType)
                     .put(DIRECT, true)
                     .put(OUTCOME_ID, outcomeId)
-                    .put(NOTIFICATION_ID, notificationId);
+                    .put(NOTIFICATION_IDS, notificationIds);
 
             if (outcomeParams != null)
                 outcomeParams.addParamsToJson(jsonBody);
@@ -81,7 +82,7 @@ class OutcomeEventsRepository {
         }
     }
 
-    void requestMeasureIndirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, String notificationId, int deviceType,
+    void requestMeasureIndirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, JSONArray notificationIds, int deviceType,
                                             OneSignalRestClient.ResponseHandler responseHandler) {
         try {
             JSONObject jsonBody = new JSONObject()
@@ -89,7 +90,7 @@ class OutcomeEventsRepository {
                     .put(DEVICE_TYPE, deviceType)
                     .put(DIRECT, false)
                     .put(OUTCOME_ID, outcomeId)
-                    .put(NOTIFICATION_ID, notificationId);
+                    .put(NOTIFICATION_IDS, notificationIds);
 
             if (outcomeParams != null)
                 outcomeParams.addParamsToJson(jsonBody);

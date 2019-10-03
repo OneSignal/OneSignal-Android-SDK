@@ -14,6 +14,7 @@ import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 
+import org.json.JSONArray;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -103,9 +104,9 @@ public class DatabaseRunner {
 
       readableDatabase.close();
 
-      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, "name", "notificationID", 0, null);
+      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, null);
       ContentValues values = new ContentValues();
-      values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID, event.getNotificationId());
+      values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
       values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
       values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
       values.put(OutcomeEventsTable.COLUMN_NAME, event.getName());

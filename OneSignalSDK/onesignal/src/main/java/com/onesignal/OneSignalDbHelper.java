@@ -71,7 +71,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    private static final String SQL_CREATE_OUTCOME_ENTRIES =
            "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
                    OutcomeEventsTable._ID + " INTEGER PRIMARY KEY," +
-                   OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME + TEXT_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + COMMA_SEP +

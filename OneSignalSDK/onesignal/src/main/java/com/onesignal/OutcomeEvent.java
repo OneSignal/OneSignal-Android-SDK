@@ -3,24 +3,25 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OutcomeEvent {
 
-    private static final String NOTIFICATION_ID = "notification_id";
+    private static final String NOTIFICATION_IDs = "notification_ids";
     private static final String OUTCOME_ID = "id";
     private static final String TIMESTAMP = "timestamp";
 
     private OSSessionManager.Session session;
     private OutcomeParams params;
-    private String notificationId;
+    private JSONArray notificationIds;
     private String name;
     private long timestamp;
 
-    public OutcomeEvent(@NonNull OSSessionManager.Session session, @Nullable String notificationId, @NonNull String name, long timestamp, @Nullable OutcomeParams params) {
+    public OutcomeEvent(@NonNull OSSessionManager.Session session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, @Nullable OutcomeParams params) {
         this.session = session;
-        this.notificationId = notificationId;
+        this.notificationIds = notificationIds;
         this.name = name;
         this.timestamp = timestamp;
         this.params = params;
@@ -34,12 +35,12 @@ public class OutcomeEvent {
         this.session = session;
     }
 
-    public String getNotificationId() {
-        return notificationId;
+    public JSONArray getNotificationIds() {
+        return notificationIds;
     }
 
-    public void setNotificationId(String notificationId) {
-        this.notificationId = notificationId;
+    public void setNotificationIds(JSONArray notificationIds) {
+        this.notificationIds = notificationIds;
     }
 
     public String getName() {
@@ -78,11 +79,11 @@ public class OutcomeEvent {
         return json;
     }
 
-    public JSONObject toJSONObjectWithNotification() {
+    JSONObject toJSONObjectWithNotification() {
         JSONObject json = toJSONObject();
 
         try {
-            json.put(NOTIFICATION_ID, notificationId);
+            json.put(NOTIFICATION_IDs, notificationIds);
         } catch (JSONException exception) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating OutcomeEvent toJSONObject ", exception);
         }
@@ -97,13 +98,13 @@ public class OutcomeEvent {
         OutcomeEvent event = (OutcomeEvent) o;
         return timestamp == event.timestamp &&
                 session == event.session &&
-                notificationId.equals(event.notificationId) &&
+                notificationIds.equals(event.notificationIds) &&
                 name.equals(event.name);
     }
 
     @Override
     public int hashCode() {
-        Object[] a = new Object[]{session, notificationId, name, timestamp};
+        Object[] a = new Object[]{session, notificationIds, name, timestamp};
 
         int result = 1;
 
@@ -111,5 +112,16 @@ public class OutcomeEvent {
             result = 31 * result + (element == null ? 0 : element.hashCode());
 
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "OutcomeEvent{" +
+                "session=" + session +
+                ", params=" + params +
+                ", notificationIds=" + notificationIds +
+                ", name='" + name + '\'' +
+                ", timestamp=" + timestamp +
+                '}';
     }
 }

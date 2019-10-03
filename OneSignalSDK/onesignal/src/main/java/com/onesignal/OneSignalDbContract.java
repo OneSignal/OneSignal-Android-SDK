@@ -59,7 +59,7 @@ class OneSignalDbContract {
 
    static abstract class OutcomeEventsTable implements BaseColumns {
       public static final String TABLE_NAME = "outcome";
-      public static final String COLUMN_NAME_NOTIFICATION_ID = "notification_id"; // OneSignal Notification Id
+      public static final String COLUMN_NAME_NOTIFICATION_IDS = "notification_ids"; // OneSignal Notification Ids
       public static final String COLUMN_NAME_TIMESTAMP = "timestamp";
       public static final String COLUMN_NAME = "name";
       public static final String COLUMN_NAME_SESSION = "session";

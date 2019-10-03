@@ -3,6 +3,7 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -18,10 +19,46 @@ import java.util.Date;
  */
 public class OSSessionManager {
 
-    private static final String TAG = OSSessionManager.class.getCanonicalName();
     private static final String DIRECT_TAG = "direct";
-    private static final long TWENTY_FOUR_HOURS_MILLISECONDS = 24 * 60 * 60 * 1000;
-    private static final long HALF_MINUTE_IN_MILLISECONDS = 30 * 1000;
+    private static final long HALF_MIN_IN_MILLIS = 30 * 1_000;
+    private static final long MIN_IN_MILLIS = 60 * 1_000;
+
+    public static class SessionResult {
+        JSONArray notificationIds;
+        Session session;
+
+        SessionResult(SessionResult.Builder builder) {
+            this.notificationIds = builder.notificationIds;
+            this.session = builder.session;
+        }
+
+        public static class Builder {
+
+            private JSONArray notificationIds;
+            private Session session;
+
+            public static SessionResult.Builder newInstance() {
+                return new SessionResult.Builder();
+            }
+
+            private Builder() {
+            }
+
+            public SessionResult.Builder setNotificationIds(JSONArray notificationIds) {
+                this.notificationIds = notificationIds;
+                return this;
+            }
+
+            public SessionResult.Builder setSession(Session session) {
+                this.session = session;
+                return this;
+            }
+
+            public SessionResult build() {
+                return new SessionResult(this);
+            }
+        }
+    }
 
     interface SessionListener {
         void onSessionRestarted();
@@ -31,6 +68,7 @@ public class OSSessionManager {
         DIRECT,
         INDIRECT,
         UNATTRIBUTED,
+        DISABLED,
         ;
 
         public static @NonNull
@@ -48,6 +86,7 @@ public class OSSessionManager {
 
     private Session session = null;
     private String notificationId = null;
+    private JSONArray notificationIds = null;
     private Long sessionTime = null;
     private SessionListener sessionListener = null;
 
@@ -58,25 +97,23 @@ public class OSSessionManager {
         this.sessionListener = sessionListener;
     }
 
-    void addSessionNotificationId(JSONObject jsonObject) {
+    void addSessionNotificationsIds(JSONObject jsonObject) {
         if (session == null || session == Session.UNATTRIBUTED)
             return;
-
-        String notificationId = NotificationData.getLastNotificationReceivedId();
-        if (notificationId != null && !notificationId.isEmpty()) {
-            try {
-                jsonObject.put(NotificationData.NOTIFICATION_ID, notificationId);
-                switch (session) {
-                    case DIRECT:
-                        jsonObject.put(DIRECT_TAG, true);
-                        break;
-                    case INDIRECT:
-                        jsonObject.put(DIRECT_TAG, false);
-                        break;
+        try {
+            if (notificationId != null && session == Session.DIRECT) {
+                jsonObject.put(DIRECT_TAG, true);
+                jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(notificationId));
+            } else {
+                if (notificationIds == null)
+                    setLastNotificationsId();
+                if (notificationIds.length() > 0 && session == Session.INDIRECT) {
+                    jsonObject.put(DIRECT_TAG, false);
+                    jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, notificationIds);
                 }
-            } catch (JSONException e) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating addNotificationId:JSON Failed.", e);
             }
+        } catch (JSONException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating addNotificationId:JSON Failed.", e);
         }
     }
 
@@ -85,7 +122,8 @@ public class OSSessionManager {
     }
 
     void restartSessionIfNeeded() {
-        if (sessionTime != null && System.currentTimeMillis() - sessionTime < HALF_MINUTE_IN_MILLISECONDS)
+        long resetTime = sessionTime != null ? System.currentTimeMillis() - sessionTime : HALF_MIN_IN_MILLIS;
+        if (resetTime < HALF_MIN_IN_MILLIS)
             //avoid reset session if the session was recently being set
             return;
         cleanSession();
@@ -95,13 +133,18 @@ public class OSSessionManager {
     }
 
     @NonNull
-    public Session getSession() {
+    Session getSession() {
         return session != null ? session : Session.UNATTRIBUTED;
     }
 
     @Nullable
-    public String getNotificationId() {
+    String getNotificationId() {
         return notificationId;
+    }
+
+    @Nullable
+    JSONArray getNotificationIds() {
+        return notificationIds;
     }
 
     /**
@@ -111,30 +154,10 @@ public class OSSessionManager {
         if (session != null)
             //session already set
             return;
-        String jsonString = NotificationData.getLastNotificationReceivedData();
-        if (jsonString != null) {
-            try {
-                JSONObject jsonObject = new JSONObject(jsonString);
-                String notificationId = jsonObject.getString(NotificationData.NOTIFICATION_ID);
-                if (notificationId == null || notificationId.isEmpty()) {
-                    onSessionNotInfluenced();
-                    return;
-                }
-                this.notificationId = notificationId;
-                long time = jsonObject.getLong(NotificationData.TIME);
-                long currentTime = new Date().getTime();
-                long difference = currentTime - time;
-
-                if (difference < TWENTY_FOUR_HOURS_MILLISECONDS) {
-                    session = Session.INDIRECT;
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + notificationId);
-                } else {
-                    onSessionNotInfluenced();
-                }
-            } catch (JSONException e) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Creating from string notification arrived:JSON Failed.", e);
-                onSessionNotInfluenced();
-            }
+        setLastNotificationsId();
+        if (notificationIds.length() > 0) {
+            session = Session.INDIRECT;
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + notificationId);
         } else {
             onSessionNotInfluenced();
         }
@@ -154,9 +177,62 @@ public class OSSessionManager {
     void onSessionFromNotification(String notificationId) {
         this.session = Session.DIRECT;
         this.sessionTime = System.currentTimeMillis();
-        //Is not saved on the DB because a newer notification might have arrived
         this.notificationId = notificationId;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with notificationId: " + notificationId);
     }
 
+    /**
+     * Set the notifications ids that influenced the session
+     */
+    void setLastNotificationsId() {
+        JSONArray notificationsReceived = OutcomesUtils.getLastNotificationsReceivedData();
+        JSONArray notificationsIds = new JSONArray();
+
+        long attributionWindow = OutcomesUtils.getIndirectAttributionWindow() * MIN_IN_MILLIS;
+        long currentTime = new Date().getTime();
+        for (int i = 0; i < notificationsReceived.length(); i++) {
+            try {
+                JSONObject jsonObject = notificationsReceived.getJSONObject(i);
+                long time = jsonObject.getLong(OutcomesUtils.TIME);
+                long difference = currentTime - time;
+
+                if (difference <= attributionWindow) {
+                    String notificationId = jsonObject.getString(OutcomesUtils.NOTIFICATION_ID);
+                    notificationsIds.put(notificationId);
+                }
+            } catch (JSONException e) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "From getting notification from array:JSON Failed.", e);
+            }
+        }
+
+        notificationIds = notificationsIds;
+    }
+
+    SessionResult getSessionResult() {
+        if (session == OSSessionManager.Session.DIRECT && notificationId != null) {
+            if (OutcomesUtils.isDirectSessionEnabled()) {
+                JSONArray notificationIds = new JSONArray().put(notificationId);
+
+                return SessionResult.Builder.newInstance()
+                        .setNotificationIds(notificationIds)
+                        .setSession(Session.DIRECT)
+                        .build();
+            }
+        } else if (session == OSSessionManager.Session.INDIRECT && notificationIds != null) {
+            if (OutcomesUtils.isIndirectSessionEnabled()) {
+                return SessionResult.Builder.newInstance()
+                        .setNotificationIds(notificationIds)
+                        .setSession(Session.INDIRECT)
+                        .build();
+            }
+        } else if (OutcomesUtils.isUnattributedSessionEnabled()) {
+            return SessionResult.Builder.newInstance()
+                    .setSession(Session.UNATTRIBUTED)
+                    .build();
+        }
+
+        return SessionResult.Builder.newInstance()
+                .setSession(Session.DISABLED)
+                .build();
+    }
 }
