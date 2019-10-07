@@ -178,7 +178,9 @@ class OneSignalSyncServiceUtils {
 
    private static void internalSyncOnFocusTime() {
       long unsentTime = OneSignal.GetUnsentActiveTime();
-      if (unsentTime < OneSignal.MIN_ON_FOCUS_TIME)
+      boolean sendOnFocus = OneSignal.isOnFocusNeeded();
+
+      if (unsentTime < OneSignal.MIN_ON_FOCUS_TIME && !sendOnFocus)
          return;
 
       OneSignal.sendOnFocus(unsentTime, true);

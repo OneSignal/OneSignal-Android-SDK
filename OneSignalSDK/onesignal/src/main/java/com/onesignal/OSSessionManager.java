@@ -32,6 +32,10 @@ public class OSSessionManager {
             this.session = builder.session;
         }
 
+        boolean sessionHasNotifications() {
+            return notificationIds != null && notificationIds.length() > 0;
+        }
+
         public static class Builder {
 
             private JSONArray notificationIds;
@@ -126,6 +130,7 @@ public class OSSessionManager {
         if (resetTime < HALF_MIN_IN_MILLIS)
             //avoid reset session if the session was recently being set
             return;
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session restarted");
         cleanSession();
         onSessionStarted();
         if (sessionListener != null)
@@ -157,7 +162,7 @@ public class OSSessionManager {
         setLastNotificationsId();
         if (notificationIds.length() > 0) {
             session = Session.INDIRECT;
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + notificationId);
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + notificationIds);
         } else {
             onSessionNotInfluenced();
         }

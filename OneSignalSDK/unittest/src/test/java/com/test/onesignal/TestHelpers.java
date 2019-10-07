@@ -79,6 +79,10 @@ public class TestHelpers {
 
       ShadowOSWebView.resetStatics();
 
+      // 100ms is default time Robolectric uses,
+      //   however it does not reset back on it's own between tests.
+      ShadowSystemClock.setCurrentTimeMillis(100);
+
       lastException = null;
    }
 

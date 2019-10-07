@@ -28,7 +28,7 @@
 package com.test.onesignal;
 
 import com.onesignal.BuildConfig;
-import com.onesignal.MockNotificationData;
+import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockOutcomeEventsController;
 import com.onesignal.MockOutcomeEventsRepository;
 import com.onesignal.MockOutcomeEventsService;
@@ -72,7 +72,7 @@ public class OutcomeEventTests {
     private MockOutcomeEventsRepository repository;
     private MockOutcomeEventsService service;
     private MockSessionManager sessionManager;
-    private MockNotificationData notificationData;
+    private MockOutcomesUtils notificationData;
     private OneSignalDbHelper dbHelper;
 
     private static List<OutcomeEvent> outcomeEvents;
@@ -103,7 +103,7 @@ public class OutcomeEventTests {
                 .setCacheActive(true)
                 .build();
         sessionManager = new MockSessionManager();
-        notificationData = new MockNotificationData();
+        notificationData = new MockOutcomesUtils();
         dbHelper = OneSignalDbHelper.getInstance(RuntimeEnvironment.application);
         service = new MockOutcomeEventsService();
         repository = new MockOutcomeEventsRepository(service, dbHelper);

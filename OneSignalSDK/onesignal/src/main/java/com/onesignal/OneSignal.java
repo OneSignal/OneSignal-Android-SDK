@@ -84,6 +84,26 @@ public class OneSignal {
       None, InAppAlert, Notification
    }
 
+   enum OSServiceCall {
+      ON_SESSION,
+      ON_FOCUS,
+      ;
+
+      public static final OSServiceCall DEFAULT_CALL = ON_FOCUS;
+
+      public @NonNull
+      static OSServiceCall fromString(String value) {
+         if (value == null || value.isEmpty())
+            return DEFAULT_CALL;
+
+         for (OSServiceCall type : OSServiceCall.values()) {
+            if (type.name().equalsIgnoreCase(value))
+               return type;
+         }
+         return DEFAULT_CALL;
+      }
+   }
+
    static final long MIN_ON_FOCUS_TIME = 60;
    private static final long MIN_ON_SESSION_TIME = 30;
 
@@ -424,6 +444,7 @@ public class OneSignal {
    static DelayedConsentInitializationParameters delayedInitParams;
 
    static OneSignalRemoteParams.Params remoteParams;
+   private static OSServiceCall serviceCall = OSServiceCall.DEFAULT_CALL;
 
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -633,6 +654,9 @@ public class OneSignal {
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
+      //Init last service call
+      markOnFocusCalled();
+
       deviceType = osUtils.getDeviceType();
       subscribableStatus = osUtils.initializationChecker(context, deviceType, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
@@ -685,6 +709,7 @@ public class OneSignal {
 
       initDone = true;
 
+      sessionManager.onSessionStarted();
       outcomeEventsController.sendSavedOutcomes();
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
@@ -1156,13 +1181,13 @@ public class OneSignal {
       }
 
       boolean scheduleSyncService = scheduleSyncService();
-
+      boolean needOnFocusCall = isOnFocusNeeded();
       long unSentActiveTime = GetUnsentActiveTime();
       long totalTimeActive = unSentActiveTime + time_elapsed;
 
       SaveUnsentActiveTime(totalTimeActive);
 
-      if (totalTimeActive < MIN_ON_FOCUS_TIME || getUserId() == null)
+      if ((totalTimeActive < MIN_ON_FOCUS_TIME && !needOnFocusCall) || getUserId() == null)
          return totalTimeActive >= MIN_ON_FOCUS_TIME;
 
       // Schedule this sync in case app is killed before completing
@@ -1201,6 +1226,7 @@ public class OneSignal {
          if (emailId != null)
             sendOnFocusToPlayer(emailId, jsonBody, synchronous);
 
+         markOnFocusCalled();
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
       }
@@ -1236,13 +1262,7 @@ public class OneSignal {
       // Make sure without privacy consent, onAppFocus returns early
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
          return;
-
-      if (isPastOnSessionTime()) {
-         OneSignalStateSynchronizer.setNewSession();
-         sessionManager.restartSessionIfNeeded();
-      }
-      setLastSessionTime(System.currentTimeMillis());
-
+      
       if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
 
@@ -2931,6 +2951,52 @@ public class OneSignal {
     */
    public static void pauseInAppMessages(boolean pause) {
       OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
+   }
+
+   /**
+    * Mark that an on Session call was done
+    * */
+   static void markOnSessionCalled() {
+      serviceCall = OSServiceCall.ON_SESSION;
+      saveLastServiceCalled();
+   }
+
+   /**
+    * Mark that an on Focus call was done
+    * */
+   static void markOnFocusCalled() {
+      serviceCall = OSServiceCall.ON_FOCUS;
+      saveLastServiceCalled();
+   }
+
+   /**
+    * On focus call must only be done if an on_session call was done before
+    * and the Session is influenced
+    *
+    * @see OSSessionManager.Session
+    *
+    * */
+   static boolean isOnFocusNeeded() {
+      OSServiceCall sessionState = getLastServiceCalled();
+      if (sessionManager == null || sessionState != OSServiceCall.ON_SESSION)
+         return false;
+
+      OSSessionManager.SessionResult sessionResult = sessionManager.getSessionResult();
+      return sessionResult.sessionHasNotifications();
+   }
+
+   static void saveLastServiceCalled() {
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_GT_LAST_SERVICE_CALLED, serviceCall.toString());
+   }
+
+   static OSServiceCall getLastServiceCalled() {
+      if (appContext != null) {
+         String serviceCallName = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_GT_LAST_SERVICE_CALLED, OSServiceCall.DEFAULT_CALL.toString());
+         return OSServiceCall.fromString(serviceCallName);
+      }
+      return OSServiceCall.DEFAULT_CALL;
    }
 
    static long GetUnsentActiveTime() {

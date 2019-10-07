@@ -43,6 +43,7 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -167,6 +168,7 @@ public class MainOneSignalClassRunner {
    private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
    private static ActivityController<BlankActivity> blankActivityController;
+   private MockOutcomesUtils notificationData;
 
    private static void GetIdsAvailable() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
@@ -222,6 +224,7 @@ public class MainOneSignalClassRunner {
    public void beforeEachTest() throws Exception {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
+      notificationData = new MockOutcomesUtils();
 
       OneSignal_CleanSessionType();
       cleanUp();
@@ -229,6 +232,7 @@ public class MainOneSignalClassRunner {
 
    @After
    public void afterEachTest() throws Exception {
+      notificationData.clearNotificationSharedPreferences();
       afterTestCleanup();
    }
 
@@ -323,6 +327,137 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+   }
+
+   @Test
+   public void testAppOnFocusAfterOnSessionCall() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+
+      ShadowSystemClock.setCurrentTimeMillis(120 * 1000);
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
+      assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
+   }
+
+   @Test
+   public void testAppOnFocusAfterOnSessionCallFail() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+      ShadowOneSignalRestClient.lastUrl = null;
+
+      ShadowSystemClock.setCurrentTimeMillis(119 * 1000);
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      assertNull(ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   public void testAppOnFocusNeededAfterOnSessionCall() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+
+      notificationData.markLastNotificationReceived("notification_id");
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+
+      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+
+      notificationData.saveOutcomesParams(params);
+      ShadowSystemClock.setCurrentTimeMillis(70 * 1000);
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
+      assertEquals(10, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
+      assertEquals("[\"notification_id\"]", ShadowOneSignalRestClient.lastPost.getString("notification_ids"));
+   }
+
+   @Test
+   public void testAppOnFocusNeededAfterOnSessionCallFail() throws Exception {
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      notificationData.markLastNotificationReceived("notification_id");
+
+      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+
+      notificationData.saveOutcomesParams(params);
+      ShadowSystemClock.setCurrentTimeMillis(70 * 1000);
+
+      ShadowOneSignalRestClient.lastUrl = null;
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      assertNull(ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   public void testAppTwiceOnFocusNeededAfterOnSessionCallFail() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+
+      notificationData.markLastNotificationReceived("notification_id");
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+
+      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+
+      notificationData.saveOutcomesParams(params);
+      ShadowSystemClock.setCurrentTimeMillis(70 * 1000);
+
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
+      assertEquals(10, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
+      assertEquals("[\"notification_id\"]", ShadowOneSignalRestClient.lastPost.getString("notification_ids"));
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.lastUrl = null;
+      ShadowSystemClock.setCurrentTimeMillis(80 * 1000);
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      assertNull(ShadowOneSignalRestClient.lastUrl);
    }
 
    private static void setOneSignalContextOpenAppThenBackgroundAndResume() throws Exception {
@@ -2174,7 +2309,6 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       threadAndTaskWait();
       assertEquals(3, ShadowOneSignalRestClient.requests.size());
-
 
       // Simulate a hung network connection when SyncJobService starts.
       ShadowOneSignalRestClient.failAll = false;

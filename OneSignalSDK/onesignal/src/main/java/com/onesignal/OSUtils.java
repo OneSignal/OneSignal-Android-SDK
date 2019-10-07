@@ -55,8 +55,6 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;

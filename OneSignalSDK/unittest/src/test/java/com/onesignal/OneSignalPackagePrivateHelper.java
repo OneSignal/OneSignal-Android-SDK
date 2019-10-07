@@ -209,6 +209,15 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
 
+   static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
+
+      public RemoteOutcomeParams() {
+         directEnabled = true;
+         indirectEnabled = true;
+         unattributedEnabled = true;
+      }
+   }
+
    static public class OutcomeParams extends com.onesignal.OutcomeParams {
 
       OutcomeParams(Builder builder) {
