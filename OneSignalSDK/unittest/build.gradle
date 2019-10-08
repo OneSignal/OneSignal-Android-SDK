@@ -1,18 +1,17 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
-    buildToolsVersion '27.0.3'
-
+    compileSdkVersion 28
     defaultConfig {
         applicationId 'com.onesignal.example'
         manifestPlaceholders = [onesignal_app_id: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba',
-                                // Project number pulled from dashboard, local value is ignored.
+                                // Project number pulled from dashboard, local value is ignored
                                 onesignal_google_project_number: 'REMOTE']
         minSdkVersion 15
-        targetSdkVersion 27
+        targetSdkVersion 28
         versionCode 1
         versionName '1.0'
+        testOptions.unitTests.includeAndroidResources = true
     }
     buildTypes {
         debug {
@@ -24,9 +23,6 @@ android {
         unitTests.all {
             maxParallelForks 1
             maxHeapSize '2048m'
-        }
-        unitTests {
-            includeAndroidResources = true
         }
     }
 }
@@ -42,15 +38,15 @@ tasks.withType(Test) {
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
-    // Use for SDK Development
+    // Use local onesignal SDK
     implementation(project(':onesignal'))
 
     // Required to shadow firebase analytics classes
-    implementation 'com.google.firebase:firebase-core:12.0.1'
+    implementation 'com.google.android.gms:play-services-location:16.0.0'
 
-    implementation 'com.google.android.gms:play-services-location:12.0.1'
+    implementation 'com.google.firebase:firebase-core:16.0.4'
 
     testImplementation 'junit:junit:4.12'
-    testImplementation 'org.robolectric:robolectric:3.8'
-    testCompile 'org.awaitility:awaitility:3.1.5'
+    testImplementation 'org.robolectric:robolectric:4.0'
+    testImplementation 'org.awaitility:awaitility:3.1.5'
 }

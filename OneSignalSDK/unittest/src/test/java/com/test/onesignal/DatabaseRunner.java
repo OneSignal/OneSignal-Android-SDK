@@ -10,6 +10,8 @@ import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OutcomeEventsTable;
 import com.onesignal.OutcomeEvent;
+import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 
@@ -32,13 +34,14 @@ import static com.test.onesignal.TestHelpers.getAllOutcomesRecords;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 
-@Config(
-   packageName = "com.onesignal.example",
-   constants = BuildConfig.class,
-   instrumentedPackages = { "com.onesignal" },
-   shadows = { ShadowOneSignalDbHelper.class },
-   sdk = 26
+@Config(packageName = "com.onesignal.example",
+        instrumentedPackages = { "com.onesignal" },
+        shadows = {
+            ShadowOneSignalDbHelper.class
+        },
+        sdk = 26
 )
+
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseRunner {
    @BeforeClass // Runs only once, before any tests
@@ -59,7 +62,7 @@ public class DatabaseRunner {
    }
 
    @Test
-   public void shouldUpgradeDbFromV2ToV3() throws Exception {
+   public void shouldUpgradeDbFromV2ToV3() {
       // 1. Init DB as version 2 and add one notification record
       ShadowOneSignalDbHelper.DATABASE_VERSION = 2;
       SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();

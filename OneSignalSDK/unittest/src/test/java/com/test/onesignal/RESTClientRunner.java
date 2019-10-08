@@ -27,7 +27,6 @@
 
 package com.test.onesignal;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.MockHttpURLConnection;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalRestClient;
@@ -48,10 +47,13 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-    constants = BuildConfig.class,
-    instrumentedPackages = {"com.onesignal"},
-    shadows = { ShadowOneSignalRestClientWithMockConnection.class },
-    sdk = 26)
+        instrumentedPackages = { "com.onesignal" },
+        shadows = {
+            ShadowOneSignalRestClientWithMockConnection.class
+        },
+        sdk = 26
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class RESTClientRunner {
    

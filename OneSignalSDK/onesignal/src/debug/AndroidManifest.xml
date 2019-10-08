@@ -1,10 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.onesignal">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.onesignal">
 
     <!-- Create a unique permission for your app and use it so only your app can receive your OneSignal messages. -->
     <permission android:name="${applicationId}.permission.C2D_MESSAGE" android:protectionLevel="signature" />
     <uses-permission android:name="${applicationId}.permission.C2D_MESSAGE" />
 
     <application>
+
         <meta-data android:name="onesignal_app_id" android:value="${onesignal_app_id}" />
         <!-- Deprecated - Pulled from OneSignal dashboard. -->
         <meta-data android:name="onesignal_google_project_number" android:value="str:${onesignal_google_project_number}" />

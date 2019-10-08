@@ -75,7 +75,8 @@ public class StaticResetHelper {
       }
 
       private Object tryClone(Object v) throws Exception {
-         if (v instanceof Cloneable)
+         if (v instanceof Cloneable
+                 && !Modifier.isFinal(v.getClass().getModifiers()))
             return v.getClass().getMethod("clone").invoke(v);
          return v;
       }
