@@ -14,8 +14,10 @@ android:
     - android-28
   licenses:
     - '.+'
+    - 'android-sdk-license-.+'
 before_install:
     - yes | sdkmanager "platforms;android-28"
+    - yes | sdkmanager "build-tools;28.0.3"
     - pwd
     - ls -la
     - cd OneSignalSDK
