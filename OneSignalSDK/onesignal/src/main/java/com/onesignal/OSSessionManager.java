@@ -20,7 +20,7 @@ import java.util.Date;
 public class OSSessionManager {
 
     private static final String DIRECT_TAG = "direct";
-    private static final long HALF_MIN_IN_MILLIS = 30 * 1_000;
+    private static final long MAX_DIRECT_SESSION_TIME_SET = 5_000;
     private static final long MIN_IN_MILLIS = 60 * 1_000;
 
     public static class SessionResult {
@@ -91,7 +91,7 @@ public class OSSessionManager {
     private Session session = null;
     private String notificationId = null;
     private JSONArray notificationIds = null;
-    private Long sessionTime = null;
+    private Long directSessionTime = null;
     private SessionListener sessionListener = null;
 
     public OSSessionManager() {
@@ -126,9 +126,8 @@ public class OSSessionManager {
     }
 
     void restartSessionIfNeeded() {
-        long resetTime = sessionTime != null ? System.currentTimeMillis() - sessionTime : HALF_MIN_IN_MILLIS;
-        if (resetTime < HALF_MIN_IN_MILLIS)
-            //avoid reset session if the session was recently being set
+        if (directSessionRecentlySet())
+            //avoid reset session if a direct session was recently being set
             return;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session restarted");
         cleanSession();
@@ -181,9 +180,9 @@ public class OSSessionManager {
      */
     void onSessionFromNotification(String notificationId) {
         this.session = Session.DIRECT;
-        this.sessionTime = System.currentTimeMillis();
+        this.directSessionTime = System.currentTimeMillis();
         this.notificationId = notificationId;
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with notificationId: " + notificationId);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with notificationId: " + notificationId + "directSessionTime: " + directSessionTime);
     }
 
     /**
@@ -239,5 +238,10 @@ public class OSSessionManager {
         return SessionResult.Builder.newInstance()
                 .setSession(Session.DISABLED)
                 .build();
+    }
+
+    private boolean directSessionRecentlySet() {
+        long directSessionResetTime = directSessionTime != null ? System.currentTimeMillis() - directSessionTime : MAX_DIRECT_SESSION_TIME_SET;
+        return directSessionResetTime < MAX_DIRECT_SESSION_TIME_SET;
     }
 }
