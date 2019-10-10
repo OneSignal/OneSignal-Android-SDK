@@ -396,7 +396,7 @@ public class OneSignal {
 
    static boolean initDone;
    private static boolean foreground;
-   static AppEntryAction appEntryState;
+   static AppEntryAction appEntryState = AppEntryAction.APP_CLOSE;
 
    // the concurrent queue in which we pin pending tasks upon finishing initialization
    static ExecutorService pendingTaskExecutor;
