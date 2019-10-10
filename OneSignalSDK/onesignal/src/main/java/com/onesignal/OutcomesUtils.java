@@ -64,9 +64,9 @@ class OutcomesUtils {
             int notificationLimit = getNotificationLimit();
             JSONArray notificationsToSave = notificationsReceived;
 
-            //Only save the last notifications ids without surpassing the limit
-            //Always keep the max quantity of ids possible
-            //If the attribution window increases, old notifications ids might influence the session
+            // Only save the last notifications ids without surpassing the limit
+            // Always keep the max quantity of ids possible
+            // If the attribution window increases, old notifications ids might influence the session
             if (notificationsReceived.length() > notificationLimit) {
                 int lengthDifference = notificationsReceived.length() - notificationLimit;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {

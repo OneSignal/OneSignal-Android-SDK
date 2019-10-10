@@ -89,6 +89,19 @@ public class OneSignal {
       APP_OPEN,
       APP_CLOSE,
       ;
+
+      boolean isNotificationClick() {
+          return this.equals(NOTIFICATION_CLICK);
+      }
+
+      boolean isAppOpen() {
+          return this.equals(APP_OPEN);
+      }
+
+      boolean isAppClose() {
+          return this.equals(APP_CLOSE);
+      }
+
    }
 
    enum OSServiceCall {

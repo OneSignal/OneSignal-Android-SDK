@@ -473,9 +473,9 @@ public class OutcomeEventTests {
         threadAndTaskWait();
         assertEquals(3, outcomeEvents.size());
         for (OutcomeEvent outcomeEvent : outcomeEvents) {
-            if (outcomeEvent.getSession() == OSSessionManager.Session.DIRECT) {
+            if (outcomeEvent.getSession().isDirect()) {
                 assertEquals("OutcomeEvent{session=DIRECT, params=null, notificationIds=[\"testing\"], name='testing1', timestamp=0}", outcomeEvent.toString());
-            } else if (outcomeEvent.getSession() == OSSessionManager.Session.INDIRECT) {
+            } else if (outcomeEvent.getSession().isIndirect()) {
                 assertEquals("OutcomeEvent{session=INDIRECT, params=null, notificationIds=[\"testing\"], name='testing2', timestamp=0}", outcomeEvent.toString());
             } else {
                 assertEquals("OutcomeEvent{session=UNATTRIBUTED, params=null, notificationIds=[], name='testing', timestamp=0}", outcomeEvent.toString());
@@ -567,7 +567,7 @@ public class OutcomeEventTests {
         notificationData.markLastNotificationReceived(NOTIFICATION_ID);
 
         sessionManager.onSessionStarted();
-        assertEquals(OSSessionManager.Session.INDIRECT, sessionManager.getSession());
+        assertTrue(sessionManager.getSession().isIndirect());
         assertEquals(1, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
     }
 
@@ -578,7 +578,7 @@ public class OutcomeEventTests {
         }
 
         sessionManager.onSessionStarted();
-        assertEquals(OSSessionManager.Session.INDIRECT, sessionManager.getSession());
+        assertTrue(sessionManager.getSession().isIndirect());
         assertNull(sessionManager.getDirectNotificationId());
         assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
         assertEquals(NOTIFICATION_ID + "5", sessionManager.getIndirectNotificationIds().get(0));
@@ -591,7 +591,7 @@ public class OutcomeEventTests {
         }
 
         sessionManager.onSessionFromNotification(NOTIFICATION_ID);
-        assertEquals(OSSessionManager.Session.DIRECT, sessionManager.getSession());
+        assertTrue(sessionManager.getSession().isDirect());
         assertNull(sessionManager.getIndirectNotificationIds());
         assertEquals(NOTIFICATION_ID, sessionManager.getDirectNotificationId());
     }
@@ -600,7 +600,7 @@ public class OutcomeEventTests {
     public void testUnattributedSession() {
         sessionManager.onSessionStarted();
 
-        assertEquals(OSSessionManager.Session.UNATTRIBUTED, sessionManager.getSession());
+        assertTrue(sessionManager.getSession().isUnattributed());
         assertEquals(0, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
         assertNull(sessionManager.getDirectNotificationId());
     }

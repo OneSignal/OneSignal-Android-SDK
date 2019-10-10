@@ -71,6 +71,18 @@ public class OSSessionManager {
         DISABLED,
         ;
 
+        public boolean isDirect() {
+            return this.equals(DIRECT);
+        }
+
+        public boolean isIndirect() {
+            return this.equals(INDIRECT);
+        }
+
+        public boolean isUnattributed() {
+            return this.equals(UNATTRIBUTED);
+        }
+
         public static @NonNull
         Session fromString(String value) {
             if (value == null || value.isEmpty())
@@ -97,17 +109,17 @@ public class OSSessionManager {
     }
 
     void addSessionNotificationsIds(JSONObject jsonObject) {
-        if (session == null || session.equals(Session.UNATTRIBUTED))
+        if (session == null || session.isUnattributed())
             return;
 
         try {
-            if (session.equals(Session.DIRECT) && hasDirectNotification()) {
+            if (session.isDirect() && hasDirectNotification()) {
                 jsonObject.put(DIRECT_TAG, true);
                 jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(directNotificationId));
             } else {
                 if (indirectNotificationIds == null)
                     setLastNotificationsId();
-                if (session.equals(Session.INDIRECT) && hasIndirectNotifications()) {
+                if (session.isIndirect() && hasIndirectNotifications()) {
                     jsonObject.put(DIRECT_TAG, false);
                     jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, indirectNotificationIds);
                 }
@@ -122,8 +134,8 @@ public class OSSessionManager {
     }
 
     void restartSessionIfNeeded() {
-        if (isDirectSession())
-            // Avoid reset session if a direct session was recently set
+        if (OneSignal.appEntryState.isNotificationClick())
+            // Avoid reset session if coming from a notification click (direct session recently set)
             return;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session restarted");
         cleanSession();
@@ -155,7 +167,7 @@ public class OSSessionManager {
             //session already set
             return;
         setLastNotificationsId();
-        if (isIndirectSession()) {
+        if (hasIndirectNotifications()) {
             setSession(Session.INDIRECT);
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with directNotificationId: " + indirectNotificationIds);
         } else {
@@ -214,7 +226,7 @@ public class OSSessionManager {
     }
 
     SessionResult getSessionResult() {
-        if (session.equals(Session.DIRECT) && hasDirectNotification()) {
+        if (session.isDirect() && hasDirectNotification()) {
             // Make sure direct flag is true
             if (OutcomesUtils.isDirectSessionEnabled()) {
                 JSONArray directNotificationIds = new JSONArray().put(directNotificationId);
@@ -223,7 +235,7 @@ public class OSSessionManager {
                         .setSession(Session.DIRECT)
                         .build();
             }
-        } else if (session.equals(Session.INDIRECT) && hasIndirectNotifications()) {
+        } else if (session.isIndirect() && hasIndirectNotifications()) {
             // Make sure indirect flag is true
             if (OutcomesUtils.isIndirectSessionEnabled()) {
                 return SessionResult.Builder.newInstance()
@@ -245,15 +257,6 @@ public class OSSessionManager {
     }
 
     /**
-     * Validate if the current session could be indirect by checking for a indirectNotificationIds
-     * and if the app entry was through an APP_OPEN
-     */
-    boolean isIndirectSession() {
-        return hasIndirectNotifications()
-                && OneSignal.appEntryState.equals(OneSignal.AppEntryAction.APP_OPEN);
-    }
-
-    /**
      * If indirectNotificationIds exist and have at least 1 notification id, this would imply a
      * app open with notifications within the attribution window time
      */
@@ -263,16 +266,8 @@ public class OSSessionManager {
     }
 
     /**
-     * Validate if the current session could be direct by checking for a directNotificationId
-     * and if the app entry was through a NOTIFICATION_CLICK
-     */
-    boolean isDirectSession() {
-        return hasDirectNotification()
-                && OneSignal.appEntryState.equals(OneSignal.AppEntryAction.NOTIFICATION_CLICK);
-    }
-
-    /**
      * With a directNotificationId set this would imply that the notification opened logic occurred
+     * to set a DIRECT session
      */
     boolean hasDirectNotification() {
         return directNotificationId != null
@@ -287,15 +282,15 @@ public class OSSessionManager {
     void attemptSessionOverride() {
         // Get cached current session state
         Session currentSession = OutcomesUtils.getCachedSession();
-        if (currentSession.equals(Session.UNATTRIBUTED)) {
+        if (currentSession.isUnattributed()) {
             // We will try to override the UNATTRIBUTED session with INDIRECT
             setLastNotificationsId();
-            if (isIndirectSession())
+            if (hasIndirectNotifications() && OneSignal.appEntryState.isAppOpen())
                 setSession(Session.INDIRECT);
         }
 
         // Try to override the current session with a DIRECT session
-        if (isDirectSession())
+        if (hasDirectNotification() && OneSignal.appEntryState.isNotificationClick())
             setSession(Session.DIRECT);
     }
 }
