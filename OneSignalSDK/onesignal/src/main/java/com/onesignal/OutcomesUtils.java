@@ -58,7 +58,7 @@ class OutcomesUtils {
             JSONArray notificationsReceived = new JSONArray(object);
             JSONObject notification = new JSONObject()
                     .put(NOTIFICATION_ID, notificationId)
-                    .put(TIME, new Date().getTime());
+                    .put(TIME, System.currentTimeMillis());
             notificationsReceived.put(notification);
 
             int notificationLimit = getNotificationLimit();

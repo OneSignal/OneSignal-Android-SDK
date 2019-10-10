@@ -138,6 +138,7 @@ import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -350,6 +351,109 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
       assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
    }
+
+    @Test
+    public void testAppSessionBeforeOnSessionCalls() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Check session UNATTRIBUTED
+        assertEquals(OSSessionManager.Session.UNATTRIBUTED, OneSignal_GetSessionType());
+
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
+        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Check session INDIRECT
+        assertEquals(OSSessionManager.Session.INDIRECT, OneSignal_GetSessionType());
+
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Click notification
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        threadAndTaskWait();
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Check session DIRECT
+        assertEquals(OSSessionManager.Session.DIRECT, OneSignal_GetSessionType());
+    }
+
+    @Test
+    public void testAppSessionAfterOnSessionCalls() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Check session UNATTRIBUTED
+        assertEquals(OSSessionManager.Session.UNATTRIBUTED, OneSignal_GetSessionType());
+
+        blankActivityController.pause();
+        threadAndTaskWait();
+        ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
+        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Check session INDIRECT
+        assertEquals(OSSessionManager.Session.INDIRECT, OneSignal_GetSessionType());
+
+        blankActivityController.pause();
+        threadAndTaskWait();
+        ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+
+        // Click notification
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        threadAndTaskWait();
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Check session DIRECT
+        assertEquals(OSSessionManager.Session.DIRECT, OneSignal_GetSessionType());
+    }
+
+    @Test
+    public void testIndirectAttributionWindowWithNoNotifications() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
+        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Check session INDIRECT
+        assertEquals(OSSessionManager.Session.INDIRECT, OneSignal_GetSessionType());
+
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Move current time past attribution window
+        ShadowSystemClock.setCurrentTimeMillis(1_441L * 60L * 1_000L);
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Check session UNATTRIBUTED
+        assertEquals(OSSessionManager.Session.UNATTRIBUTED, OneSignal_GetSessionType());
+    }
 
    @Test
    public void testAppOnFocusAfterOnSessionCallFail() throws Exception {
@@ -757,16 +861,35 @@ public class MainOneSignalClassRunner {
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
       threadAndTaskWait();
 
+      // Make sure no notification data exists
+      assertNull(notificationOpenedMessage);
+
+      // Foreground app
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // Click notification
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg 1\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      threadAndTaskWait();
+
+      // Check message String matches data sent in open handler
+      assertEquals("Test Msg 1", notificationOpenedMessage);
+
+      // Make sure session is not DIRECT
+      assertNotEquals(OSSessionManager.Session.DIRECT, OneSignal_GetSessionType());
+
+      // Background app
       blankActivityController.pause();
       threadAndTaskWait();
 
-      assertNull(notificationOpenedMessage);
-
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+       // Click notification
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg 2\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       threadAndTaskWait();
 
-      assertEquals("Test Msg", notificationOpenedMessage);
+       // Check message String matches data sent in open handler
+      assertEquals("Test Msg 2", notificationOpenedMessage);
 
+      // Make sure session is DIRECT
       assertEquals(OSSessionManager.Session.DIRECT, OneSignal_GetSessionType());
    }
 

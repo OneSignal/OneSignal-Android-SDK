@@ -28,18 +28,17 @@
 package com.test.onesignal;
 
 import com.onesignal.BuildConfig;
-import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockOutcomeEventsController;
 import com.onesignal.MockOutcomeEventsRepository;
 import com.onesignal.MockOutcomeEventsService;
+import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOSUtils;
-
-import junit.framework.Assert;
+import com.onesignal.StaticResetHelper;
 
 import org.json.JSONArray;
 import org.junit.After;
@@ -55,7 +54,9 @@ import org.robolectric.shadows.ShadowLog;
 import java.util.List;
 import java.util.Objects;
 
-import static junit.framework.Assert.assertTrue;
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
@@ -96,7 +97,11 @@ public class OutcomeEventTests {
     @BeforeClass // Runs only once, before any tests
     public static void setUpClass() throws Exception {
         ShadowLog.stream = System.out;
+
         TestHelpers.beforeTestSuite();
+
+        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+        StaticResetHelper.saveStaticValues();
     }
 
     @Before // Before each test
@@ -116,7 +121,7 @@ public class OutcomeEventTests {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         dbHelper.cleanOutcomeDatabase();
         dbHelper.close();
         notificationData.clearNotificationSharedPreferences();
@@ -142,8 +147,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"device_type\":1,\"direct\":true,\"id\":\"testing\",\"notification_ids\":[\"testing\"]}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"device_type\":1,\"direct\":true,\"id\":\"testing\",\"notification_ids\":[\"testing\"]}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -165,8 +170,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"]}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"]}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -187,8 +192,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -209,8 +214,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -231,8 +236,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":1,\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"id\":\"testing\",\"device_type\":1,\"weight\":1.1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -253,8 +258,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -276,8 +281,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"device_type\":1,\"direct\":true,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"device_type\":1,\"direct\":true,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -299,8 +304,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -325,8 +330,8 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -350,9 +355,9 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(1, outcomeEvents.size());
+        assertEquals(1, outcomeEvents.size());
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
-        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
 
         controller.clearOutcomes();
 
@@ -367,7 +372,7 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(2, outcomeEvents.size());
+        assertEquals(2, outcomeEvents.size());
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
         assertEquals(OUTCOME_NAME, outcomeEvents.get(1).getName());
     }
@@ -393,7 +398,7 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(1, outcomeEvents.size());
+        assertEquals(1, outcomeEvents.size());
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
     }
 
@@ -449,7 +454,7 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
         threadAndTaskWait();
 
-        Assert.assertEquals(3, outcomeEvents.size());
+        assertEquals(3, outcomeEvents.size());
 
         sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
                 .setSession(OSSessionManager.Session.DISABLED)
@@ -466,14 +471,14 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(3, outcomeEvents.size());
+        assertEquals(3, outcomeEvents.size());
         for (OutcomeEvent outcomeEvent : outcomeEvents) {
             if (outcomeEvent.getSession() == OSSessionManager.Session.DIRECT) {
-                Assert.assertEquals("OutcomeEvent{session=DIRECT, params=null, notificationIds=[\"testing\"], name='testing1', timestamp=0}", outcomeEvent.toString());
+                assertEquals("OutcomeEvent{session=DIRECT, params=null, notificationIds=[\"testing\"], name='testing1', timestamp=0}", outcomeEvent.toString());
             } else if (outcomeEvent.getSession() == OSSessionManager.Session.INDIRECT) {
-                Assert.assertEquals("OutcomeEvent{session=INDIRECT, params=null, notificationIds=[\"testing\"], name='testing2', timestamp=0}", outcomeEvent.toString());
+                assertEquals("OutcomeEvent{session=INDIRECT, params=null, notificationIds=[\"testing\"], name='testing2', timestamp=0}", outcomeEvent.toString());
             } else {
-                Assert.assertEquals("OutcomeEvent{session=UNATTRIBUTED, params=null, notificationIds=[], name='testing', timestamp=0}", outcomeEvent.toString());
+                assertEquals("OutcomeEvent{session=UNATTRIBUTED, params=null, notificationIds=[], name='testing', timestamp=0}", outcomeEvent.toString());
             }
         }
     }
@@ -500,7 +505,7 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(5, outcomeEvents.size());
+        assertEquals(5, outcomeEvents.size());
 
         service.setSuccess(true);
 
@@ -515,7 +520,7 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
         threadAndTaskWait();
 
-        Assert.assertEquals(0, outcomeEvents.size());
+        assertEquals(0, outcomeEvents.size());
     }
 
     @Test
@@ -536,9 +541,9 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
 
         threadAndTaskWait();
-        Assert.assertEquals(1, outcomeEvents.size());
-        Assert.assertEquals("{\"weight\":1.1}", outcomeEvents.get(0).getParams());
-        Assert.assertEquals("{\"id\":\"testing\",\"device_type\":1,\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals(1, outcomeEvents.size());
+        assertEquals("{\"weight\":1.1}", outcomeEvents.get(0).getParams());
+        assertEquals("{\"id\":\"testing\",\"device_type\":1,\"weight\":1.1}", service.getLastJsonObjectSent());
 
         service.setSuccess(true);
         service.resetLastJsonObjectSent();
@@ -553,17 +558,17 @@ public class OutcomeEventTests {
         }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
         threadAndTaskWait();
 
-        Assert.assertEquals(0, outcomeEvents.size());
-        Assert.assertEquals("{\"id\":\"testing\",\"timestamp\":0,\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"id\":\"testing\",\"timestamp\":0,\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
-    public void testIndirectSession() throws Exception {
+    public void testIndirectSession() {
         notificationData.markLastNotificationReceived(NOTIFICATION_ID);
 
         sessionManager.onSessionStarted();
-        Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.INDIRECT);
-        Assert.assertEquals(1, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        assertEquals(OSSessionManager.Session.INDIRECT, sessionManager.getSession());
+        assertEquals(1, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
     }
 
     @Test
@@ -573,34 +578,30 @@ public class OutcomeEventTests {
         }
 
         sessionManager.onSessionStarted();
-        Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.INDIRECT);
-        Assert.assertNull(sessionManager.getDirectNotificationId());
-        Assert.assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
-        Assert.assertEquals(NOTIFICATION_ID + "5", sessionManager.getIndirectNotificationIds().get(0));
+        assertEquals(OSSessionManager.Session.INDIRECT, sessionManager.getSession());
+        assertNull(sessionManager.getDirectNotificationId());
+        assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        assertEquals(NOTIFICATION_ID + "5", sessionManager.getIndirectNotificationIds().get(0));
     }
 
     @Test
-    public void testDirectSession() throws Exception {
+    public void testDirectSession() {
         for (int i = 0; i < NOTIFICATION_LIMIT + 5; i++) {
             notificationData.markLastNotificationReceived(NOTIFICATION_ID + i);
         }
 
         sessionManager.onSessionFromNotification(NOTIFICATION_ID);
-        Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.DIRECT);
-        Assert.assertNull(sessionManager.getIndirectNotificationIds());
-        Assert.assertEquals(NOTIFICATION_ID, sessionManager.getDirectNotificationId());
+        assertEquals(OSSessionManager.Session.DIRECT, sessionManager.getSession());
+        assertNull(sessionManager.getIndirectNotificationIds());
+        assertEquals(NOTIFICATION_ID, sessionManager.getDirectNotificationId());
     }
 
     @Test
-    public void testUnattributedSession() throws Exception {
+    public void testUnattributedSession() {
         sessionManager.onSessionStarted();
 
-        Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.UNATTRIBUTED);
-        Assert.assertEquals(0, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
-        Assert.assertNull(sessionManager.getDirectNotificationId());
-    }
-
-    private static void threadAndTaskWait() throws Exception {
-        TestHelpers.threadAndTaskWait();
+        assertEquals(OSSessionManager.Session.UNATTRIBUTED, sessionManager.getSession());
+        assertEquals(0, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        assertNull(sessionManager.getDirectNotificationId());
     }
 }

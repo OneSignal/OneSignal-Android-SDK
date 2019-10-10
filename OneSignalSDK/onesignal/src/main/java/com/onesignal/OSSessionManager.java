@@ -196,8 +196,8 @@ public class OSSessionManager {
         JSONArray notificationsReceived = OutcomesUtils.getLastNotificationsReceivedData();
         JSONArray notificationsIds = new JSONArray();
 
-        long attributionWindow = OutcomesUtils.getIndirectAttributionWindow() * (OneSignal.MIN_ON_FOCUS_TIME_SECONDS * 1_000L);
-        long currentTime = new Date().getTime();
+        long attributionWindow = OutcomesUtils.getIndirectAttributionWindow() * 60L * 1_000L;
+        long currentTime = System.currentTimeMillis();
         for (int i = 0; i < notificationsReceived.length(); i++) {
             try {
                 JSONObject jsonObject = notificationsReceived.getJSONObject(i);
