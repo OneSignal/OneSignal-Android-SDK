@@ -125,7 +125,7 @@ public class OSSessionManager {
 
     void restartSessionIfNeeded() {
         if (isDirectSession())
-            //avoid reset session if a direct session was recently being set
+            // Avoid reset session if a direct session was recently set
             return;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session restarted");
         cleanSession();
