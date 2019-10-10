@@ -7,8 +7,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Date;
-
 /**
  * Manager in charge to check what type of session is active
  * <p>
@@ -103,13 +101,13 @@ public class OSSessionManager {
             return;
 
         try {
-            if (session.equals(Session.DIRECT) && isDirectSession()) {
+            if (session.equals(Session.DIRECT) && hasDirectNotification()) {
                 jsonObject.put(DIRECT_TAG, true);
                 jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(directNotificationId));
             } else {
                 if (indirectNotificationIds == null)
                     setLastNotificationsId();
-                if (session.equals(Session.INDIRECT) && isIndirectSession()) {
+                if (session.equals(Session.INDIRECT) && hasIndirectNotifications()) {
                     jsonObject.put(DIRECT_TAG, false);
                     jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, indirectNotificationIds);
                 }
@@ -216,7 +214,7 @@ public class OSSessionManager {
     }
 
     SessionResult getSessionResult() {
-        if (session.equals(Session.DIRECT) && isDirectSession()) {
+        if (session.equals(Session.DIRECT) && hasDirectNotification()) {
             // Make sure direct flag is true
             if (OutcomesUtils.isDirectSessionEnabled()) {
                 JSONArray directNotificationIds = new JSONArray().put(directNotificationId);
@@ -225,7 +223,7 @@ public class OSSessionManager {
                         .setSession(Session.DIRECT)
                         .build();
             }
-        } else if (session.equals(Session.INDIRECT) && isIndirectSession()) {
+        } else if (session.equals(Session.INDIRECT) && hasIndirectNotifications()) {
             // Make sure indirect flag is true
             if (OutcomesUtils.isIndirectSessionEnabled()) {
                 return SessionResult.Builder.newInstance()
@@ -247,23 +245,38 @@ public class OSSessionManager {
     }
 
     /**
-     * Validate if the current session could be indirect
-     * If indirectNotificationIds exist and have at least 1 notification id, this would imply a
-     * app open with notifications within the attribution window time
+     * Validate if the current session could be indirect by checking for a indirectNotificationIds
+     * and if the app entry was through an APP_OPEN
      */
     boolean isIndirectSession() {
-        return getIndirectNotificationIds() != null
-                && getIndirectNotificationIds().length() > 0
+        return hasIndirectNotifications()
                 && OneSignal.appEntryState.equals(OneSignal.AppEntryAction.APP_OPEN);
     }
 
     /**
-     * Validate if the current session could be direct
-     * With a directSessionTime and a directNotificationId set this would imply that the notification opened logic occurred
+     * If indirectNotificationIds exist and have at least 1 notification id, this would imply a
+     * app open with notifications within the attribution window time
+     */
+    boolean hasIndirectNotifications() {
+        return getIndirectNotificationIds() != null
+                && getIndirectNotificationIds().length() > 0;
+    }
+
+    /**
+     * Validate if the current session could be direct by checking for a directNotificationId
+     * and if the app entry was through a NOTIFICATION_CLICK
      */
     boolean isDirectSession() {
-        return getDirectNotificationId() != null
+        return hasDirectNotification()
                 && OneSignal.appEntryState.equals(OneSignal.AppEntryAction.NOTIFICATION_CLICK);
+    }
+
+    /**
+     * With a directNotificationId set this would imply that the notification opened logic occurred
+     */
+    boolean hasDirectNotification() {
+        return directNotificationId != null
+                && !directNotificationId.isEmpty();
     }
 
     /**
