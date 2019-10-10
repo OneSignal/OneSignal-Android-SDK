@@ -55,6 +55,7 @@ public class StaticResetHelper {
          }
       }));
       classes.add(new ClassState(OneSignalPackagePrivateHelper.OSInAppMessageController.class, null));
+      classes.add(new ClassState(FocusTimeController.class, null));
    }
 
    private interface OtherFieldHandler {

@@ -338,12 +338,13 @@ public class MainOneSignalClassRunner {
 
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
-      ShadowSystemClock.setCurrentTimeMillis(120 * 1000);
+      // TODO: This is advancing by 60 seconds! Need to make a helper to increaseBy!
+      ShadowSystemClock.setCurrentTimeMillis(121 * 1000);
 
       blankActivityController.pause();
       threadAndTaskWait();
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
-      assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
+      assertEquals(61, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
    }
 
    @Test
@@ -2604,13 +2605,15 @@ public class MainOneSignalClassRunner {
    public void sendsOnFocus() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
+      // TODO: Should not need blankActivityController.resume();, OneSignalInit() is created from an activity
+      // TODO: Check if we have a test for the ApplicationContext to OneSignal.init with a resume however
       blankActivityController.resume();
-      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      ShadowSystemClock.setCurrentTimeMillis(60 * 1_000);
 
       blankActivityController.pause();
       threadAndTaskWait();
       assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      RestClientAsserts.assertRestCalls(3);
    }
 
    @Test

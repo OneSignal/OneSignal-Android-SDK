@@ -87,8 +87,8 @@ class RestClientAsserts {
       assertEquals(3, parts.length);
    }
 
-   static void assertRestCalls(int calls) {
-      assertEquals(calls, ShadowOneSignalRestClient.networkCallCount);
+   static void assertRestCalls(int expected) {
+      assertEquals(expected, ShadowOneSignalRestClient.networkCallCount);
    }
 
    static void assertHasAppId(@NonNull Request request) {

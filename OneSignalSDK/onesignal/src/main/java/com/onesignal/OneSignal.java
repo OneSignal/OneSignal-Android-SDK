@@ -418,8 +418,6 @@ public class OneSignal {
 
    private static IdsAvailableHandler idsAvailableHandler;
 
-   private static long lastTrackedFocusTime = 1, unSentActiveTime = -1;
-
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
@@ -434,7 +432,7 @@ public class OneSignal {
       }
    };
 
-   private static OSSessionManager sessionManager = new OSSessionManager(sessionListener);
+   @NonNull static OSSessionManager sessionManager = new OSSessionManager(sessionListener);
    private static OutcomeEventsController outcomeEventsController;
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -701,8 +699,6 @@ public class OneSignal {
 
       handleActivityLifecycleHandler(context);
 
-      lastTrackedFocusTime = SystemClock.elapsedRealtime();
-
       OneSignalStateSynchronizer.initUserState();
 
       // Verify the session is an Amazon purchase and track it
@@ -792,6 +788,7 @@ public class OneSignal {
       if (foreground) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
          NotificationRestorer.asyncRestore(appContext);
+         FocusTimeController.getInstance(appContext).appForegrounded();
       }
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
@@ -1173,7 +1170,7 @@ public class OneSignal {
       }
    }
 
-   private static void logHttpError(String errorString, int statusCode, Throwable throwable, String errorResponse) {
+   static void logHttpError(String errorString, int statusCode, Throwable throwable, String errorResponse) {
       String jsonError = "";
       if (errorResponse != null && atLogLevel(LOG_LEVEL.INFO))
          jsonError = "\n" + errorResponse + "\n";
@@ -1182,48 +1179,34 @@ public class OneSignal {
 
    // Returns true if there is active time that is unsynced.
    @WorkerThread
-   static boolean onAppLostFocus() {
+   static void onAppLostFocus() {
       foreground = false;
       appEntryState = AppEntryAction.APP_CLOSE;
 
       setLastSessionTime(System.currentTimeMillis());
       LocationGMS.onFocusChange();
 
-      if (!initDone) return false;
+      if (!initDone)
+         return;
 
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
 
-      if (lastTrackedFocusTime == -1)
-         return false;
-
-      long time_elapsed = (long)(((SystemClock.elapsedRealtime() - lastTrackedFocusTime) / 1_000d) + 0.5d);
-      lastTrackedFocusTime = SystemClock.elapsedRealtime();
-      if (time_elapsed < 0 || time_elapsed > 86_400)
-         return false;
-
       if (appContext == null) {
          Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
-         return false;
+         return;
       }
+      // TODO: Do we account for missing a context?
+      FocusTimeController.getInstance(appContext).appBackgrounded();
 
       boolean scheduleSyncService = scheduleSyncService();
-      boolean needOnFocusCall = isOnFocusNeeded();
-      long unSentActiveTime = GetUnsentActiveTime();
-      long totalTimeActive = unSentActiveTime + time_elapsed;
 
-      SaveUnsentActiveTime(totalTimeActive);
-
-      if ((totalTimeActive < MIN_ON_FOCUS_TIME_SECONDS && !needOnFocusCall) || getUserId() == null)
-         return totalTimeActive >= MIN_ON_FOCUS_TIME_SECONDS;
-
+      // TODO: This needs to be moved into the FocusTimeController yet.
+      //       The shouldSyncPendingChangesFromSyncService is covering this case,
+      //         where it is checking it should NOT schedule a job if the focus time is under the limit
       // Schedule this sync in case app is killed before completing
       if (!scheduleSyncService)
          OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
-
-      OneSignalSyncServiceUtils.syncOnFocusTime();
-
-      return false;
    }
 
    static boolean scheduleSyncService() {
@@ -1235,50 +1218,6 @@ public class OneSignal {
       return locationScheduled || unsyncedChanges;
    }
 
-   static void sendOnFocus(long totalTimeActive, boolean synchronous) {
-      try {
-         JSONObject jsonBody = new JSONObject()
-            .put("app_id", appId)
-            .put("type", 1)
-            .put("state", "ping")
-            .put("active_time", totalTimeActive)
-            .put("device_type", deviceType);
-
-         sessionManager.addSessionNotificationsIds(jsonBody);
-
-         addNetType(jsonBody);
-
-         sendOnFocusToPlayer(getUserId(), jsonBody, synchronous);
-         String emailId = getEmailId();
-         if (emailId != null)
-            sendOnFocusToPlayer(emailId, jsonBody, synchronous);
-
-         markOnFocusCalled();
-      } catch (Throwable t) {
-         Log(LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
-      }
-   }
-
-   private static void sendOnFocusToPlayer(String userId, JSONObject jsonBody, boolean synchronous) {
-      String url = "players/" + userId + "/on_focus";
-      OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
-         @Override
-         void onFailure(int statusCode, String response, Throwable throwable) {
-            logHttpError("sending on_focus Failed", statusCode, throwable, response);
-         }
-
-         @Override
-         void onSuccess(String response) {
-            SaveUnsentActiveTime(0);
-         }
-      };
-
-      if (synchronous)
-         OneSignalRestClient.postSync(url, jsonBody, responseHandler);
-      else
-         OneSignalRestClient.post(url, jsonBody, responseHandler);
-   }
-
    static void onAppFocus() {
       foreground = true;
 
@@ -1288,14 +1227,14 @@ public class OneSignal {
 
       LocationGMS.onFocusChange();
 
-      lastTrackedFocusTime = SystemClock.elapsedRealtime();
-
       // Make sure without privacy consent, onAppFocus returns early
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
          return;
       
       if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
+
+      FocusTimeController.getInstance(appContext).appForegrounded();
 
       doSessionInit();
 
@@ -1316,7 +1255,7 @@ public class OneSignal {
       return foreground;
    }
 
-   private static void addNetType(JSONObject jsonObj) {
+   static void addNetType(JSONObject jsonObj) {
       try {
          jsonObj.put("net_type", osUtils.getNetType());
       } catch (Throwable t) {}
@@ -2250,6 +2189,10 @@ public class OneSignal {
               OneSignalPrefs.PREFS_GT_PLAYER_ID,null);
    }
 
+   static boolean hasUserId() {
+      return getUserId() != null;
+   }
+
    static String getUserId() {
       if (userId == null && appContext != null) {
          userId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
@@ -2265,6 +2208,10 @@ public class OneSignal {
 
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_PLAYER_ID, userId);
+   }
+
+   static boolean hasEmailId() {
+      return getEmailId() != null;
    }
 
    static String getEmailId() {
@@ -3026,7 +2973,7 @@ public class OneSignal {
     * */
    static boolean isOnFocusNeeded() {
       OSServiceCall sessionState = getLastServiceCalled();
-      if (sessionManager == null || sessionState != OSServiceCall.ON_SESSION)
+      if (sessionState != OSServiceCall.ON_SESSION)
          return false;
 
       OSSessionManager.SessionResult sessionResult = sessionManager.getSessionResult();
@@ -3045,28 +2992,6 @@ public class OneSignal {
          return OSServiceCall.fromString(serviceCallName);
       }
       return OSServiceCall.DEFAULT_CALL;
-   }
-
-   static long GetUnsentActiveTime() {
-      if (unSentActiveTime == -1 && appContext != null) {
-         unSentActiveTime = OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
-                 OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME,0);
-      }
-
-      Log(LOG_LEVEL.INFO, "GetUnsentActiveTime: " + unSentActiveTime);
-
-      return unSentActiveTime;
-   }
-
-   private static void SaveUnsentActiveTime(long time) {
-      unSentActiveTime = time;
-      if (appContext == null)
-         return;
-
-      Log(LOG_LEVEL.INFO, "SaveUnsentActiveTime: " + unSentActiveTime);
-
-      OneSignalPrefs.saveLong(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME, time);
    }
 
    private static boolean isDuplicateNotification(String id, Context context) {
