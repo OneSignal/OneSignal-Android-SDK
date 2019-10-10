@@ -563,7 +563,7 @@ public class OutcomeEventTests {
 
         sessionManager.onSessionStarted();
         Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.INDIRECT);
-        Assert.assertEquals(1, Objects.requireNonNull(sessionManager.getNotificationIds()).length());
+        Assert.assertEquals(1, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
     }
 
     @Test
@@ -574,9 +574,9 @@ public class OutcomeEventTests {
 
         sessionManager.onSessionStarted();
         Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.INDIRECT);
-        Assert.assertNull(sessionManager.getNotificationId());
-        Assert.assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getNotificationIds()).length());
-        Assert.assertEquals(NOTIFICATION_ID + "5", sessionManager.getNotificationIds().get(0));
+        Assert.assertNull(sessionManager.getDirectNotificationId());
+        Assert.assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        Assert.assertEquals(NOTIFICATION_ID + "5", sessionManager.getIndirectNotificationIds().get(0));
     }
 
     @Test
@@ -587,8 +587,8 @@ public class OutcomeEventTests {
 
         sessionManager.onSessionFromNotification(NOTIFICATION_ID);
         Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.DIRECT);
-        Assert.assertNull(sessionManager.getNotificationIds());
-        Assert.assertEquals(NOTIFICATION_ID, sessionManager.getNotificationId());
+        Assert.assertNull(sessionManager.getIndirectNotificationIds());
+        Assert.assertEquals(NOTIFICATION_ID, sessionManager.getDirectNotificationId());
     }
 
     @Test
@@ -596,8 +596,8 @@ public class OutcomeEventTests {
         sessionManager.onSessionStarted();
 
         Assert.assertEquals(sessionManager.getSession(), OSSessionManager.Session.UNATTRIBUTED);
-        Assert.assertEquals(0, Objects.requireNonNull(sessionManager.getNotificationIds()).length());
-        Assert.assertNull(sessionManager.getNotificationId());
+        Assert.assertEquals(0, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        Assert.assertNull(sessionManager.getDirectNotificationId());
     }
 
     private static void threadAndTaskWait() throws Exception {

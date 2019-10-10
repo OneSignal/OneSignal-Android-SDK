@@ -42,14 +42,14 @@ public class MockSessionManager extends OSSessionManager {
 
     @Nullable
     @Override
-    public String getNotificationId() {
-        return super.getNotificationId();
+    public String getDirectNotificationId() {
+        return super.getDirectNotificationId();
     }
 
     @Nullable
     @Override
-    public JSONArray getNotificationIds() {
-        return super.getNotificationIds();
+    public JSONArray getIndirectNotificationIds() {
+        return super.getIndirectNotificationIds();
     }
 
     @Override

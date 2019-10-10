@@ -20,8 +20,6 @@ import java.util.Date;
 public class OSSessionManager {
 
     private static final String DIRECT_TAG = "direct";
-    private static final long MAX_DIRECT_SESSION_TIME_SET = 5_000;
-    private static final long MIN_IN_MILLIS = 60 * 1_000;
 
     public static class SessionResult {
         JSONArray notificationIds;
@@ -89,8 +87,8 @@ public class OSSessionManager {
     }
 
     private Session session = null;
-    private String notificationId = null;
-    private JSONArray notificationIds = null;
+    private String directNotificationId = null;
+    private JSONArray indirectNotificationIds = null;
     private Long directSessionTime = null;
     private SessionListener sessionListener = null;
 
@@ -105,15 +103,15 @@ public class OSSessionManager {
         if (session == null || session == Session.UNATTRIBUTED)
             return;
         try {
-            if (notificationId != null && session == Session.DIRECT) {
+            if (directNotificationId != null && session == Session.DIRECT) {
                 jsonObject.put(DIRECT_TAG, true);
-                jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(notificationId));
+                jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(directNotificationId));
             } else {
-                if (notificationIds == null)
+                if (indirectNotificationIds == null)
                     setLastNotificationsId();
-                if (notificationIds.length() > 0 && session == Session.INDIRECT) {
+                if (indirectNotificationIds.length() > 0 && session == Session.INDIRECT) {
                     jsonObject.put(DIRECT_TAG, false);
-                    jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, notificationIds);
+                    jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, indirectNotificationIds);
                 }
             }
         } catch (JSONException e) {
@@ -142,13 +140,13 @@ public class OSSessionManager {
     }
 
     @Nullable
-    String getNotificationId() {
-        return notificationId;
+    String getDirectNotificationId() {
+        return directNotificationId;
     }
 
     @Nullable
-    JSONArray getNotificationIds() {
-        return notificationIds;
+    JSONArray getIndirectNotificationIds() {
+        return indirectNotificationIds;
     }
 
     /**
@@ -159,9 +157,9 @@ public class OSSessionManager {
             //session already set
             return;
         setLastNotificationsId();
-        if (notificationIds.length() > 0) {
-            session = Session.INDIRECT;
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with notificationId: " + notificationIds);
+        if (indirectNotificationIds.length() > 0) {
+            setSession(Session.INDIRECT);
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with directNotificationId: " + indirectNotificationIds);
         } else {
             onSessionNotInfluenced();
         }
@@ -171,7 +169,8 @@ public class OSSessionManager {
      * Set active session type to {@link Session#UNATTRIBUTED}
      */
     void onSessionNotInfluenced() {
-        session = Session.UNATTRIBUTED;
+        setSession(Session.UNATTRIBUTED);
+        OutcomesUtils.cacheCurrentSession(getSession());
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session not influenced");
     }
 
@@ -179,10 +178,15 @@ public class OSSessionManager {
      * Set active session type to {@link Session#DIRECT}
      */
     void onSessionFromNotification(String notificationId) {
-        this.session = Session.DIRECT;
+        setSession(Session.DIRECT);
         this.directSessionTime = System.currentTimeMillis();
-        this.notificationId = notificationId;
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with notificationId: " + notificationId + "directSessionTime: " + directSessionTime);
+        this.directNotificationId = notificationId;
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with directNotificationId: " + notificationId + "directSessionTime: " + directSessionTime);
+    }
+
+    public void setSession(Session session) {
+        this.session = session;
+        OutcomesUtils.cacheCurrentSession(getSession());
     }
 
     /**
@@ -192,7 +196,7 @@ public class OSSessionManager {
         JSONArray notificationsReceived = OutcomesUtils.getLastNotificationsReceivedData();
         JSONArray notificationsIds = new JSONArray();
 
-        long attributionWindow = OutcomesUtils.getIndirectAttributionWindow() * MIN_IN_MILLIS;
+        long attributionWindow = OutcomesUtils.getIndirectAttributionWindow() * (OneSignal.MIN_ON_FOCUS_TIME_SECONDS * 1_000L);
         long currentTime = new Date().getTime();
         for (int i = 0; i < notificationsReceived.length(); i++) {
             try {
@@ -209,39 +213,79 @@ public class OSSessionManager {
             }
         }
 
-        notificationIds = notificationsIds;
+        indirectNotificationIds = notificationsIds;
     }
 
     SessionResult getSessionResult() {
-        if (session == OSSessionManager.Session.DIRECT && notificationId != null) {
+        if (session.equals(OSSessionManager.Session.DIRECT) && isDirectSession()) {
+            // Make sure direct flag is true
             if (OutcomesUtils.isDirectSessionEnabled()) {
-                JSONArray notificationIds = new JSONArray().put(notificationId);
-
+                JSONArray directNotificationIds = new JSONArray().put(directNotificationId);
                 return SessionResult.Builder.newInstance()
-                        .setNotificationIds(notificationIds)
+                        .setNotificationIds(directNotificationIds)
                         .setSession(Session.DIRECT)
                         .build();
             }
-        } else if (session == OSSessionManager.Session.INDIRECT && notificationIds != null) {
+        } else if (session.equals(OSSessionManager.Session.INDIRECT) && isIndirectSession()) {
+            // Make sure indirect flag is true
             if (OutcomesUtils.isIndirectSessionEnabled()) {
                 return SessionResult.Builder.newInstance()
-                        .setNotificationIds(notificationIds)
+                        .setNotificationIds(indirectNotificationIds)
                         .setSession(Session.INDIRECT)
                         .build();
             }
         } else if (OutcomesUtils.isUnattributedSessionEnabled()) {
+            // Make sure unattributed flag is true
             return SessionResult.Builder.newInstance()
                     .setSession(Session.UNATTRIBUTED)
                     .build();
         }
 
+        // Outcomes is disabled if it gets here
         return SessionResult.Builder.newInstance()
                 .setSession(Session.DISABLED)
                 .build();
     }
 
     private boolean directSessionRecentlySet() {
-        long directSessionResetTime = directSessionTime != null ? System.currentTimeMillis() - directSessionTime : MAX_DIRECT_SESSION_TIME_SET;
-        return directSessionResetTime < MAX_DIRECT_SESSION_TIME_SET;
+        long directSessionResetTime = directSessionTime != null ? System.currentTimeMillis() - directSessionTime : OneSignal.MIN_ON_SESSION_TIME_MILLIS;
+        return directSessionResetTime < OneSignal.MIN_ON_SESSION_TIME_MILLIS;
+    }
+
+    /**
+     * Validate if the current session could be indirect
+     * If indirectNotificationIds exist and have at least 1 notification id, this would imply a
+     * app open with notifications within the attribution window time
+     */
+    boolean isIndirectSession() {
+        return getIndirectNotificationIds() != null && getIndirectNotificationIds().length() > 0;
+    }
+
+    /**
+     * Validate if the current session could be direct
+     * With a directSessionTime and a directNotificationId set this would imply that the notification opened logic occurred
+     */
+    boolean isDirectSession() {
+        return directSessionTime != null && getDirectNotificationId() != null;
+    }
+
+    /**
+     * Attempt to override the current session before the 30 second session minimum
+     * This should only be done in a upward direction, so UNATTRIBUTED can become INDIRECT or DIRECT
+     * And INDIRECT can become DIRECT
+     */
+    void attemptSessionOverride() {
+        // Get cached current session state
+        OSSessionManager.Session currentSession = OutcomesUtils.getCachedSession();
+        if (currentSession.equals(OSSessionManager.Session.UNATTRIBUTED)) {
+            // We will try to override the UNATTRIBUTED session with INDIRECT
+            setLastNotificationsId();
+            if (isIndirectSession())
+                setSession(OSSessionManager.Session.INDIRECT);
+        }
+
+        // Try to override the current session with a DIRECT session
+        if (isDirectSession())
+            setSession(OSSessionManager.Session.DIRECT);
     }
 }

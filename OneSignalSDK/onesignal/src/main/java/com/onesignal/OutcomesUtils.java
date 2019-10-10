@@ -19,6 +19,29 @@ class OutcomesUtils {
     static final String TIME = "time";
 
     /**
+     * Cache a session enum as a string
+     */
+    static void cacheCurrentSession(OSSessionManager.Session session) {
+        OneSignalPrefs.saveString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CACHED_SESSION_OUTCOME_EVENT,
+                session.toString()
+        );
+    }
+
+    /**
+     * Get the current cached session string, convert it to the session enum, and return it
+     */
+    static OSSessionManager.Session getCachedSession() {
+        String sessionString = OneSignalPrefs.getString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CACHED_SESSION_OUTCOME_EVENT,
+                OSSessionManager.Session.UNATTRIBUTED.toString()
+        );
+        return OSSessionManager.Session.fromString(sessionString);
+    }
+
+    /**
      * Save state of last notification received
      */
     static void markLastNotificationReceived(@Nullable String notificationId) {

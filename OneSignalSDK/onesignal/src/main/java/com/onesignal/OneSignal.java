@@ -104,8 +104,8 @@ public class OneSignal {
       }
    }
 
-   static final long MIN_ON_FOCUS_TIME = 60;
-   private static final long MIN_ON_SESSION_TIME = 30;
+   static final long MIN_ON_FOCUS_TIME_SECONDS = 60;
+   static final long MIN_ON_SESSION_TIME_MILLIS = 30 * 1_000L;
 
    /**
     * An interface used to process a OneSignal notification the user just tapped on.
@@ -790,11 +790,15 @@ public class OneSignal {
    }
 
    private static void doSessionInit() {
+      // Check session time to determine whether to start a new session or not
       if (isPastOnSessionTime()) {
           OneSignalStateSynchronizer.setNewSession();
           sessionManager.restartSessionIfNeeded();
-      } else
-          OSInAppMessageController.getController().initWithCachedInAppMessages();
+      } else {
+         OSInAppMessageController.getController().initWithCachedInAppMessages();
+         sessionManager.attemptSessionOverride();
+      }
+
       setLastSessionTime(System.currentTimeMillis());
       startRegistrationOrOnSession();
    }
@@ -1187,8 +1191,8 @@ public class OneSignal {
 
       SaveUnsentActiveTime(totalTimeActive);
 
-      if ((totalTimeActive < MIN_ON_FOCUS_TIME && !needOnFocusCall) || getUserId() == null)
-         return totalTimeActive >= MIN_ON_FOCUS_TIME;
+      if ((totalTimeActive < MIN_ON_FOCUS_TIME_SECONDS && !needOnFocusCall) || getUserId() == null)
+         return totalTimeActive >= MIN_ON_FOCUS_TIME_SECONDS;
 
       // Schedule this sync in case app is killed before completing
       if (!scheduleSyncService)
@@ -2119,7 +2123,8 @@ public class OneSignal {
 
       // Open/Resume app when opening the notification.
       if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
-         if (startOrResumeApp(inContext)) {
+         // Only when the app is coming from the background we should init DIRECT session
+         if (startOrResumeApp(inContext) && !foreground) {
             initSessionFromNotification(notificationId);
          }
    }
@@ -3118,7 +3123,7 @@ public class OneSignal {
    }
 
    private static boolean isPastOnSessionTime() {
-      return (System.currentTimeMillis() - getLastSessionTime(appContext)) / 1_000 >= MIN_ON_SESSION_TIME;
+      return (System.currentTimeMillis() - getLastSessionTime(appContext)) >= MIN_ON_SESSION_TIME_MILLIS;
    }
 
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
