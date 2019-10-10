@@ -604,4 +604,5 @@ public class OutcomeEventTests {
         assertEquals(0, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
         assertNull(sessionManager.getDirectNotificationId());
     }
+
 }

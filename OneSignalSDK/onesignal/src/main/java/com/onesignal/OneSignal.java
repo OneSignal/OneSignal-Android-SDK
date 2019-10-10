@@ -84,6 +84,13 @@ public class OneSignal {
       None, InAppAlert, Notification
    }
 
+   public enum AppEntryAction {
+      NOTIFICATION_CLICK,
+      APP_OPEN,
+      APP_CLOSE,
+      ;
+   }
+
    enum OSServiceCall {
       ON_SESSION,
       ON_FOCUS,
@@ -389,6 +396,7 @@ public class OneSignal {
 
    static boolean initDone;
    private static boolean foreground;
+   static AppEntryAction appEntryState;
 
    // the concurrent queue in which we pin pending tasks upon finishing initialization
    static ExecutorService pendingTaskExecutor;
@@ -711,6 +719,7 @@ public class OneSignal {
 
       sessionManager.onSessionStarted();
       outcomeEventsController.sendSavedOutcomes();
+
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
    }
@@ -1162,6 +1171,7 @@ public class OneSignal {
    @WorkerThread
    static boolean onAppLostFocus() {
       foreground = false;
+      appEntryState = AppEntryAction.APP_CLOSE;
 
       setLastSessionTime(System.currentTimeMillis());
       LocationGMS.onFocusChange();
@@ -1258,6 +1268,10 @@ public class OneSignal {
 
    static void onAppFocus() {
       foreground = true;
+
+      // If the app gains focus and has not been set to NOTIFICATION_CLICK yet we can assume this is a normal app open
+      if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
+         appEntryState = AppEntryAction.APP_OPEN;
 
       LocationGMS.onFocusChange();
 
@@ -2121,12 +2135,13 @@ public class OneSignal {
 
       runNotificationOpenedCallback(data, true, fromAlert);
 
-      // Open/Resume app when opening the notification.
-      if (!fromAlert && !urlOpened && !defaultOpenActionDisabled)
-         // Only when the app is coming from the background we should init DIRECT session
-         if (startOrResumeApp(inContext) && !foreground) {
-            initSessionFromNotification(notificationId);
-         }
+      // Check if the notification click should lead to a DIRECT session
+      if (shouldInitDirectSessionFromNotificationClick(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+
+         // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
+         appEntryState = AppEntryAction.NOTIFICATION_CLICK;
+         initDirectSessionFromNotificationClick(notificationId);
+      }
    }
 
    static boolean startOrResumeApp(Context inContext) {
@@ -2138,6 +2153,21 @@ public class OneSignal {
          return true;
       }
       return false;
+   }
+
+   /**
+    * 1. App is not an alert
+    * 2. Not a URL open
+    * 3. Manifest setting for com.onesignal.NotificationOpened.DEFAULT is not disabled
+    * 4. App is coming from the background
+    * 5. App open/resume intent exists
+    */
+   private static boolean shouldInitDirectSessionFromNotificationClick(Context context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
+      return !fromAlert
+              && !urlOpened
+              && !defaultOpenActionDisabled
+              && !foreground
+              && startOrResumeApp(context);
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
@@ -3172,7 +3202,7 @@ public class OneSignal {
       outcomeEventsController.setOutcomeSettings(settings);
    }
 
-   static void initSessionFromNotification(String notificationId) {
+   static void initDirectSessionFromNotificationClick(String notificationId) {
       sessionManager.onSessionFromNotification(notificationId);
    }
 

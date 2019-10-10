@@ -212,9 +212,13 @@ public class OneSignalPackagePrivateHelper {
    static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 
       public RemoteOutcomeParams() {
-         directEnabled = true;
-         indirectEnabled = true;
-         unattributedEnabled = true;
+         new RemoteOutcomeParams(true, true, true);
+      }
+
+      public RemoteOutcomeParams(boolean direct, boolean indirect, boolean unattributed) {
+         directEnabled = direct;
+         indirectEnabled = indirect;
+         unattributedEnabled = unattributed;
       }
    }
 

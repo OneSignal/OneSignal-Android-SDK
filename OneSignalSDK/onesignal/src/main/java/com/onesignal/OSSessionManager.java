@@ -89,7 +89,6 @@ public class OSSessionManager {
     private Session session = null;
     private String directNotificationId = null;
     private JSONArray indirectNotificationIds = null;
-    private Long directSessionTime = null;
     private SessionListener sessionListener = null;
 
     public OSSessionManager() {
@@ -124,7 +123,7 @@ public class OSSessionManager {
     }
 
     void restartSessionIfNeeded() {
-        if (directSessionRecentlySet())
+        if (isDirectSession())
             //avoid reset session if a direct session was recently being set
             return;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session restarted");
@@ -179,9 +178,8 @@ public class OSSessionManager {
      */
     void onSessionFromNotification(String notificationId) {
         setSession(Session.DIRECT);
-        this.directSessionTime = System.currentTimeMillis();
         this.directNotificationId = notificationId;
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with directNotificationId: " + notificationId + "directSessionTime: " + directSessionTime);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with directNotificationId: " + notificationId);
     }
 
     public void setSession(Session session) {
@@ -247,18 +245,15 @@ public class OSSessionManager {
                 .build();
     }
 
-    private boolean directSessionRecentlySet() {
-        long directSessionResetTime = directSessionTime != null ? System.currentTimeMillis() - directSessionTime : OneSignal.MIN_ON_SESSION_TIME_MILLIS;
-        return directSessionResetTime < OneSignal.MIN_ON_SESSION_TIME_MILLIS;
-    }
-
     /**
      * Validate if the current session could be indirect
      * If indirectNotificationIds exist and have at least 1 notification id, this would imply a
      * app open with notifications within the attribution window time
      */
     boolean isIndirectSession() {
-        return getIndirectNotificationIds() != null && getIndirectNotificationIds().length() > 0;
+        return getIndirectNotificationIds() != null
+                && getIndirectNotificationIds().length() > 0
+                && OneSignal.appEntryState.equals(OneSignal.AppEntryAction.APP_OPEN);
     }
 
     /**
@@ -266,7 +261,8 @@ public class OSSessionManager {
      * With a directSessionTime and a directNotificationId set this would imply that the notification opened logic occurred
      */
     boolean isDirectSession() {
-        return directSessionTime != null && getDirectNotificationId() != null;
+        return getDirectNotificationId() != null
+                && OneSignal.appEntryState.equals(OneSignal.AppEntryAction.NOTIFICATION_CLICK);
     }
 
     /**
