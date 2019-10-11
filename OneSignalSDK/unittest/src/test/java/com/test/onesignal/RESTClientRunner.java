@@ -42,6 +42,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
@@ -82,7 +83,7 @@ public class RESTClientRunner {
       }};
 
       OneSignalRestClient.getSync("URL", null,"");
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClientWithMockConnection.lastConnection.getDidInterruptMockHang());
    }
@@ -92,7 +93,7 @@ public class RESTClientRunner {
    @Test
    public void SDKHeaderIsIncludedInGetCalls() throws Exception {
       OneSignalRestClient.getSync("URL", null, null);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
    }
@@ -100,7 +101,7 @@ public class RESTClientRunner {
    @Test
    public void SDKHeaderIsIncludedInPostCalls() throws Exception {
       OneSignalRestClient.postSync("URL", null,null);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
    }
@@ -108,7 +109,7 @@ public class RESTClientRunner {
    @Test
    public void SDKHeaderIsIncludedInPutCalls() throws Exception {
       OneSignalRestClient.putSync("URL", null,null);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
    }
@@ -136,7 +137,7 @@ public class RESTClientRunner {
             firstResponse = response;
          }
       }, MOCK_CACHE_KEY);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
       Thread.sleep(200);
 
       // 2. Make 2nd request and make sure we send the ETag and use the cached response
@@ -150,7 +151,7 @@ public class RESTClientRunner {
             secondResponse = response;
          }
       }, MOCK_CACHE_KEY);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
       Thread.sleep(200);
 
       assertNotNull(firstResponse);
@@ -171,7 +172,7 @@ public class RESTClientRunner {
          mockProps.put("etag", "MOCK_ETAG_VALUE2");
       }};
       OneSignalRestClient.getSync("URL", null, MOCK_CACHE_KEY);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
       Thread.sleep(200);
 
       // 4. Make 4th request and make sure we get the new cached value
@@ -184,7 +185,7 @@ public class RESTClientRunner {
             secondResponse = response.replace("\u0000", "");
          }
       }, MOCK_CACHE_KEY);
-      TestHelpers.threadAndTaskWait();
+      threadAndTaskWait();
       Thread.sleep(200);
 
       assertEquals(newMockResponse, secondResponse);

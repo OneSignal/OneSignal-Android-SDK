@@ -47,6 +47,7 @@ import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexForPlayerId;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -67,7 +68,6 @@ import static junit.framework.Assert.assertTrue;
                 ShadowJobService.class
         },
         instrumentedPackages = {"com.onesignal"},
-        constants = BuildConfig.class,
         sdk = 26)
 @RunWith(RobolectricTestRunner.class)
 public class OutcomeEventIntegrationTests {
@@ -156,7 +156,7 @@ public class OutcomeEventIntegrationTests {
         // Background app for 30 seconds
         blankActivityController.pause();
         threadAndTaskWait();
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+        advanceSystemTimeBy(31);
 
         // Click notification
         OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
@@ -182,7 +182,7 @@ public class OutcomeEventIntegrationTests {
         // Background app for attribution window time
         blankActivityController.pause();
         threadAndTaskWait();
-        ShadowSystemClock.setCurrentTimeMillis(1_441L * 60L * 1_000L);
+        advanceSystemTimeBy(1_441L * 60L);
 
         // Foreground app
         blankActivityController.resume();
@@ -253,7 +253,7 @@ public class OutcomeEventIntegrationTests {
         GcmBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Wait 31 seconds to start new session
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1_000L);
+        advanceSystemTimeBy(31);
 
         // Foreground app
         blankActivityController.resume();
@@ -302,7 +302,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Wait 31 seconds to start new session
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1_000L);
+        advanceSystemTimeBy(31);
 
         // Foreground app
         blankActivityController.resume();
@@ -372,7 +372,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // Foreground for 10 seconds
-        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
+        advanceSystemTimeBy(10);
 
         // Make sure session is INDIRECT
         assertTrue(OneSignal_getSessionType().isIndirect());
@@ -443,7 +443,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Wait 31 seconds
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1_000L);
+        advanceSystemTimeBy(31);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -517,7 +517,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // App in foreground for 10 seconds
-        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
+        advanceSystemTimeBy(10);
 
         // Background app
         // Sync job will be scheduled here but not run yet
@@ -539,7 +539,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // App in foreground for 10 seconds
-        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
+        advanceSystemTimeBy(10);
 
         // Background app
         // Sync job will be scheduled here but not run yet
@@ -564,7 +564,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // App in foreground for 10 seconds
-        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
+        advanceSystemTimeBy(10);
 
         // Background app
         // Sync job will be scheduled here but not run yet
@@ -606,7 +606,7 @@ public class OutcomeEventIntegrationTests {
         indirectNotificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
 
         // App in background for 31 seconds to trigger new session
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1_000);
+        advanceSystemTimeBy(31);
 
         // Foreground app through icon
         blankActivityController.resume();

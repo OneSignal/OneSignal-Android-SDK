@@ -38,6 +38,7 @@ import org.json.JSONException;
 import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowApplication;
+import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
@@ -55,6 +56,8 @@ public class TestHelpers {
       OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
       if (!ranBeforeTestSuite)
          return;
+
+      resetSystemClock();
 
       stopAllOSThreads();
 
@@ -85,9 +88,6 @@ public class TestHelpers {
 
       ShadowOSWebView.resetStatics();
 
-      // 100ms is default time Robolectric uses,
-      //   however it does not reset back on it's own between tests.
-      ShadowSystemClock.setCurrentTimeMillis(100);
       OneSignalShadowPackageManager.resetStatics();
 
       lastException = null;
@@ -215,12 +215,12 @@ public class TestHelpers {
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
    }
-   private static int sessionCountOffset = 1;
+
    static void restartAppAndElapseTimeToNextSession() throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1_000 * 31 * sessionCountOffset++);
+      advanceSystemTimeBy(31);
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords() {
@@ -303,8 +303,13 @@ public class TestHelpers {
       return events;
    }
 
-   static void advanceTimeByMs(long advanceBy) {
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis() +  advanceBy);
+   static void resetSystemClock() {
+      SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
+   }
+
+   static void advanceSystemTimeBy(long sec) {
+      long ms = sec * 1_000L;
+      SystemClock.setCurrentTimeMillis(ShadowSystemClock.currentTimeMillis() + ms);
    }
 
    public static void assertMainThread() {

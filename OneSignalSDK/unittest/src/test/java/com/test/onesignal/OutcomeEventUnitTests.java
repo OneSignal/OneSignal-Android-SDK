@@ -60,7 +60,6 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-        constants = BuildConfig.class,
         instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOSUtils.class,

@@ -106,7 +106,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
-import static com.test.onesignal.TestHelpers.advanceTimeByMs;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -147,9 +147,6 @@ public class GenerateNotificationRunner {
    
    @Before // Before each test
    public void beforeEachTest() throws Exception {
-      // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
-   
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
@@ -164,7 +161,7 @@ public class GenerateNotificationRunner {
       notificationManager.cancelAll();
       NotificationRestorer.restored = false;
    }
-   
+
    @AfterClass
    public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
@@ -259,7 +256,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
    
       // Go forward 4 weeks
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 2419202L * 1000L);
+      advanceSystemTimeBy(2_419_202);
       
       // Display a 3 normal notification.
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
@@ -805,7 +802,7 @@ public class GenerateNotificationRunner {
 
       // Go forward 4 weeks
       // Note: Does not effect the SQL function strftime
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 2419201L * 1000L);
+      advanceSystemTimeBy(2_419_202);
 
       // Display a 3rd notification
       // Should of been added for a total of 2 records now.
@@ -832,7 +829,7 @@ public class GenerateNotificationRunner {
 
       // Go forward 1 week
       // Note: Does not effect the SQL function strftime
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604801L * 1000L);
+      advanceSystemTimeBy(604_801);
 
       // Restorer should not fire service since the notification is over 1 week old.
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
@@ -863,7 +860,7 @@ public class GenerateNotificationRunner {
       assertRestoreRan();
 
       // Go forward just past the TTL of the notification
-      advanceTimeByMs((ttl + 1) * 1_000L);
+      advanceSystemTimeBy(ttl + 1);
       restoreNotifications();
       if (should)
          assertRestoreRan();
@@ -887,7 +884,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       // Go forward 1 week
-      SystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604801 * 1000);
+      advanceSystemTimeBy(604_801);
 
       // Should not count as a badge
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();

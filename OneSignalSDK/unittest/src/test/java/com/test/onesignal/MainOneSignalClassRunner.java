@@ -40,7 +40,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.os.SystemClock;
 
 import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomesUtils;
@@ -60,6 +59,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.PermissionsActivity;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -76,7 +76,6 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
@@ -124,12 +123,14 @@ import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHa
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.getNextJob;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
 import static com.test.onesignal.TestHelpers.runNextJob;
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -305,7 +306,7 @@ public class MainOneSignalClassRunner {
       // Make sure onAppFocus does not move past privacy consent check and on_session is not called
       blankActivityController.pause();
       threadAndTaskWait();
-      SystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      advanceSystemTimeBy(31);
 
       blankActivityController.resume();
       threadAndTaskWait();
@@ -320,7 +321,7 @@ public class MainOneSignalClassRunner {
       // Pause app and wait enough time to trigger on_session
       blankActivityController.pause();
       threadAndTaskWait();
-      SystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+      advanceSystemTimeBy(31);
 
       // Call onAppFocus and check that the last url is a on_session request
       blankActivityController.resume();
@@ -336,7 +337,7 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      advanceSystemTimeBy(60);
 
       blankActivityController.resume();
       threadAndTaskWait();
@@ -344,7 +345,7 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
       // TODO: This is advancing by 60 seconds! Need to make a helper to increaseBy!
-      ShadowSystemClock.setCurrentTimeMillis(121 * 1000);
+      advanceSystemTimeBy(61);
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -359,7 +360,7 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      advanceSystemTimeBy(60);
 
       blankActivityController.resume();
       threadAndTaskWait();
@@ -367,7 +368,7 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
       ShadowOneSignalRestClient.lastUrl = null;
 
-      ShadowSystemClock.setCurrentTimeMillis(119 * 1000);
+      advanceSystemTimeBy(59);
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -381,7 +382,7 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+      advanceSystemTimeBy(31);
 
       notificationData.markLastNotificationReceived("notification_id");
       blankActivityController.resume();
@@ -392,7 +393,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
 
       notificationData.saveOutcomesParams(params);
-      ShadowSystemClock.setCurrentTimeMillis(92 * 1000);
+      advanceSystemTimeBy(61);
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -420,7 +421,7 @@ public class MainOneSignalClassRunner {
       // Background app for 31 seconds
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+      advanceSystemTimeBy(31);
 
       // Click notification
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, "notification_id");
@@ -433,7 +434,7 @@ public class MainOneSignalClassRunner {
       // Make sure on_session is called
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
-      ShadowSystemClock.setCurrentTimeMillis(92 * 1000);
+      advanceSystemTimeBy(61);
 
       // Background app
       blankActivityController.pause();
@@ -463,7 +464,7 @@ public class MainOneSignalClassRunner {
       // Background app for 31 seconds
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+      advanceSystemTimeBy(31);
 
       // Click notification
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
@@ -476,7 +477,7 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
       // Wait 61 seconds
-      ShadowSystemClock.setCurrentTimeMillis(91 * 1000);
+      advanceSystemTimeBy(60);
 
       // Background app
       blankActivityController.pause();
@@ -494,7 +495,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAppOnFocusNeededAfterOnSessionCallFail() throws Exception {
-      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      advanceSystemTimeBy(60);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -506,7 +507,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
 
       notificationData.saveOutcomesParams(params);
-      ShadowSystemClock.setCurrentTimeMillis(70 * 1000);
+      advanceSystemTimeBy(10);
 
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.pause();
@@ -522,7 +523,7 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+      advanceSystemTimeBy(31);
 
       notificationData.markLastNotificationReceived("notification_id");
       blankActivityController.resume();
@@ -533,7 +534,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
       notificationData.saveOutcomesParams(params);
 
-      ShadowSystemClock.setCurrentTimeMillis(92 * 1000);
+      advanceSystemTimeBy(61);
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -554,7 +555,7 @@ public class MainOneSignalClassRunner {
       // Doing a quick 1 second focus should NOT trigger another network call
       blankActivityController.resume();
       threadAndTaskWait();
-      TestHelpers.advanceTimeByMs(1_000);
+      advanceSystemTimeBy(1);
       blankActivityController.pause();
       threadAndTaskWait();
 
@@ -600,7 +601,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testOnSessionCalledOnlyOncePer30Sec() throws Exception {
       // Will call create
-      SystemClock.setCurrentTimeMillis(60 * 60 * 1000);
+      advanceSystemTimeBy(2 * 60);
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -625,7 +626,7 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      SystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+      advanceSystemTimeBy(2 * 60);
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
       threadAndTaskWait();
@@ -635,8 +636,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAlwaysUseRemoteProjectNumberOverLocal() throws Exception {
-      SystemClock.setCurrentTimeMillis(60 * 60 * 1000);
-
       OneSignalInit();
       threadAndTaskWait();
       assertEquals("87654321", ShadowPushRegistratorGCM.lastProjectNumber);
@@ -646,7 +645,7 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      SystemClock.setCurrentTimeMillis(121 * 60 * 1000);
+      advanceSystemTimeBy(31);
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -657,8 +656,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testPutStillCalledOnChanges() throws Exception {
-      // Will call create
-      SystemClock.setCurrentTimeMillis(60 * 60 * 1000);
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -754,8 +751,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testPutCallsMadeWhenUserStateChangesOnAppResume() throws Exception {
-      // Will call create
-      SystemClock.setCurrentTimeMillis(60 * 60 * 1000);
       OneSignalInit();
       threadAndTaskWait();
       blankActivityController.resume();
@@ -881,7 +876,6 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(manifest= "AndroidManifest_DefaultOpenDisabled.xml")
    public void testOpeningLaunchUrlWithDisableDefault() throws Exception {
       // Add the 'com.onesignal.NotificationOpened.DEFAULT' as 'DISABLE' meta-data tag
       OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
@@ -2322,7 +2316,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 2. Wait 2 minutes
-      SystemClock.setCurrentTimeMillis(120_000);
+      advanceSystemTimeBy(2 * 60);
 
       // 3. Put app in background
       blankActivityController.pause();
@@ -2364,7 +2358,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 2. Wait 2 minutes
-      SystemClock.setCurrentTimeMillis(120_000);
+      advanceSystemTimeBy(2 * 60);
 
       // 3. Put app in background, simulating network issue.
       ShadowOneSignalRestClient.failAll = true;
@@ -2415,14 +2409,14 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(sdk = 26)
    public void ensureNoConcurrentUpdateCallsWithSameData_forPendingActiveTime() throws Exception {
-      //useAppFor2minThenBackground();
+//      useAppFor2minThenBackground();
 
       // 1. Start app
       OneSignalInit();
       threadAndTaskWait();
 
       // 2. Wait 2 minutes
-      SystemClock.setCurrentTimeMillis(120_000);
+      advanceSystemTimeBy(2 * 60);
 
       // 3. Put app in background
       ShadowOneSignalRestClient.freezeResponses = true;
@@ -2706,9 +2700,9 @@ public class MainOneSignalClassRunner {
    public void sendsOnFocus() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      ShadowSystemClock.setCurrentTimeMillis(60 * 1_000);
+      advanceSystemTimeBy(60);
       blankActivityController.resume();
-      SystemClock.setCurrentTimeMillis(60 * 1000);
+      advanceSystemTimeBy(60);
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -2723,7 +2717,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       blankActivityController.resume();
-      SystemClock.setCurrentTimeMillis(60 * 1000);
+      advanceSystemTimeBy(60);
       blankActivityController.pause();
       threadAndTaskWait();
 
@@ -2752,7 +2746,7 @@ public class MainOneSignalClassRunner {
       // Provide consent to OneSignal SDK amd forward time 2 minutes
       OneSignal.provideUserConsent(true);
       threadAndTaskWait();
-      SystemClock.setCurrentTimeMillis(120_000);
+      advanceSystemTimeBy(2 * 60);
       blankActivityController.pause();
       threadAndTaskWait();
 
@@ -2963,13 +2957,13 @@ public class MainOneSignalClassRunner {
 
       // Press home button after 30 sec
       blankActivityController.resume();
-      ShadowSystemClock.setCurrentTimeMillis(30 * 1000);
+      advanceSystemTimeBy(30 * 1_000L);
       blankActivityController.pause();
       threadAndTaskWait();
 
       // Press home button after 30 more sec, with a network hang
       blankActivityController.resume();
-      ShadowSystemClock.setCurrentTimeMillis(60 * 1000);
+      advanceSystemTimeBy(60 * 1_000L);
       ShadowOneSignalRestClient.interruptibleDelayNext = true;
       blankActivityController.pause();
       System.out.println("HERE1");
@@ -3934,10 +3928,6 @@ public class MainOneSignalClassRunner {
       osNotification.groupedNotifications.add(groupedPayload);
 
       return osNotification;
-   }
-
-   private static void threadAndTaskWait() throws Exception {
-      TestHelpers.threadAndTaskWait();
    }
 
    private void OneSignalInit() {
