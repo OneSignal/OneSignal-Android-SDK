@@ -5,8 +5,10 @@ import android.app.Activity;
 import android.os.Bundle;
 
 import com.onesignal.BuildConfig;
+import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
@@ -19,6 +21,7 @@ import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -38,6 +41,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDi
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
+import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -57,7 +61,7 @@ import static junit.framework.Assert.assertTrue;
         },
         instrumentedPackages = {"com.onesignal"},
         constants = BuildConfig.class,
-        sdk = 21)
+        sdk = 26)
 @RunWith(RobolectricTestRunner.class)
 public class OutcomeEventIntegrationTests {
 
@@ -82,9 +86,9 @@ public class OutcomeEventIntegrationTests {
         ShadowLog.stream = System.out;
 
         TestHelpers.beforeTestSuite();
+        StaticResetHelper.saveStaticValues();
 
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-        StaticResetHelper.saveStaticValues();
     }
 
     private static void cleanUp() throws Exception {
@@ -463,10 +467,71 @@ public class OutcomeEventIntegrationTests {
         assertTrue(OneSignal_getSessionType().isIndirect());
     }
 
-    private void OneSignalInit() {
-        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+    private void openAppFromIconAfterSeeingNotification_thenBackgroundAppAfterTenSeconds() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Make sure session started unattributed
+        assertTrue(OneSignal_getSessionType().isUnattributed());
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "1");
+        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        // Open app through icon
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Sync job will be scheduled here but not run yet
+    }
+
+    @Test
+    public void testIndirectSession_sendsOnFocusFromSyncJob() throws Exception {
+        openAppFromIconAfterSeeingNotification_thenBackgroundAppAfterTenSeconds();
+
+        TestHelpers.runNextJob();
+        threadAndTaskWait();
+
+        RestClientAsserts.assertOnFocusAtIndex(2, new JSONObject() {{
+            put("active_time", 10);
+            put("direct", false);
+            put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
+        }});
+    }
+
+    @Test
+    public void testIndirectSession_sendsOnFocusFromSyncJob_EvenAfterKillingApp() throws Exception {
+        openAppFromIconAfterSeeingNotification_thenBackgroundAppAfterTenSeconds();
+
+        fastColdRestartApp();
+
+        TestHelpers.runNextJob();
+        threadAndTaskWait();
+
+        RestClientAsserts.assertOnFocusAtIndex(2, new JSONObject() {{
+            put("active_time", 10);
+            put("direct", false);
+            put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
+        }});
+    }
+
+    private void OneSignalInit() throws Exception {
+        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
         OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+        threadAndTaskWait();
+        OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+        new MockOutcomesUtils().saveOutcomesParams(params);
         blankActivityController.resume();
     }
 }

@@ -46,7 +46,7 @@ class OutcomeEventsController {
     }
 
     /**
-     * Clean events sent
+     * Clean unique events sent so they can be sent after a new session
      */
     void clearOutcomes() {
         eventsSent = OSUtils.newConcurrentSet();

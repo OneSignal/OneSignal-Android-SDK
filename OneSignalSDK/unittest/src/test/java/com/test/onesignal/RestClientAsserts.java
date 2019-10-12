@@ -50,6 +50,18 @@ class RestClientAsserts {
       assertPlayerCreatePush(ShadowOneSignalRestClient.requests.get(index));
    }
 
+   static void assertOnFocusAtIndex(int index, int focusTimeSec) throws JSONException {
+      assertOnFocusAtIndex(index, new JSONObject().put("active_time", focusTimeSec));
+   }
+
+   static void assertOnFocusAtIndex(int index, JSONObject hasPayload) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertEquals(REST_METHOD.POST, request.method);
+      assertOnFocusUrl(request.url);
+      JsonAsserts.containsSubset(request.payload, hasPayload);
+   }
+
    private static void assertPlayerCreateMethodAndUrl(@NonNull Request request) {
       assertEquals(REST_METHOD.POST, request.method);
       assertEquals(request.url, "players");
@@ -68,6 +80,13 @@ class RestClientAsserts {
 
       assertEquals(REST_METHOD.GET, request.method);
       assertRemoteParamsUrl(request.url);
+   }
+
+   static void assertOnFocusUrl(@NonNull String url) {
+      String[] parts = url.split("/");
+      assertEquals("players", parts[0]);
+      assertIsUUID(parts[1]);
+      assertEquals("on_focus", parts[2]);
    }
 
    // Assert that URL matches the format apps/{UUID}/android_params.js

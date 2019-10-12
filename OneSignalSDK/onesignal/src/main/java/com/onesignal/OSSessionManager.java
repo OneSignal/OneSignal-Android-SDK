@@ -15,21 +15,19 @@ import org.json.JSONObject;
  * - Indirect: the session occurred on a time frame less than 24hrs
  * - Unattributed: the session was not influenced nor was on the time frame os a push
  */
+// TODO: Should be package-private
 public class OSSessionManager {
 
     private static final String DIRECT_TAG = "direct";
 
     public static class SessionResult {
-        JSONArray notificationIds;
+        // Value will be Session.DISABLED if the outcome type is disabled.
         Session session;
+        JSONArray notificationIds;
 
         SessionResult(SessionResult.Builder builder) {
             this.notificationIds = builder.notificationIds;
             this.session = builder.session;
-        }
-
-        boolean sessionHasNotifications() {
-            return notificationIds != null && notificationIds.length() > 0;
         }
 
         public static class Builder {
@@ -61,7 +59,8 @@ public class OSSessionManager {
     }
 
     interface SessionListener {
-        void onSessionRestarted();
+        // Fire with the SessionResult that just ended.
+        void onSessionEnding(SessionResult lastSessionResult);
     }
 
     public enum Session {
@@ -79,11 +78,19 @@ public class OSSessionManager {
             return this.equals(INDIRECT);
         }
 
+        public boolean isAttributed() {
+            return this.isDirect() || this.isIndirect();
+        }
+
         public boolean isUnattributed() {
             return this.equals(UNATTRIBUTED);
         }
 
-        public static Session fromString(String value) {
+        public boolean isDisabled() {
+            return this.equals(DISABLED);
+        }
+
+        public static @NonNull Session fromString(String value) {
             if (value == null || value.isEmpty())
                 return UNATTRIBUTED;
 
@@ -97,129 +104,112 @@ public class OSSessionManager {
 
     private static OSSessionManager manager;
 
-    private Session session = null;
-    private String directNotificationId = null;
-    private JSONArray indirectNotificationIds = null;
-    private SessionListener sessionListener = null;
+    @NonNull protected Session session;
+    @Nullable private String directNotificationId;
+    @Nullable private JSONArray indirectNotificationIds;
+    @NonNull private SessionListener sessionListener;
 
-    public OSSessionManager() {
-
-    }
-
-    public OSSessionManager(SessionListener sessionListener) {
+    public OSSessionManager(@NonNull SessionListener sessionListener) {
         this.sessionListener = sessionListener;
+        this.initSessionFromCache();
     }
 
-    void addSessionNotificationsIds(JSONObject jsonObject) {
-        if (session == null || session.isUnattributed())
+    private void initSessionFromCache() {
+        session = OutcomesUtils.getCachedSession();
+        if (session.isIndirect())
+            indirectNotificationIds = getLastNotificationsReceivedIds();
+        else if (session.isDirect())
+            directNotificationId = OutcomesUtils.getCacheNotificationOpenId();
+
+    }
+
+    void addSessionNotificationsIds(@NonNull JSONObject jsonObject) {
+        if (session.isUnattributed())
             return;
 
         try {
-            if (session.isDirect() && hasDirectNotification()) {
+            if (session.isDirect()) {
                 jsonObject.put(DIRECT_TAG, true);
                 jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(directNotificationId));
-            } else {
-                if (indirectNotificationIds == null)
-                    setLastNotificationsId();
-                if (session.isIndirect() && hasIndirectNotifications()) {
-                    jsonObject.put(DIRECT_TAG, false);
-                    jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, indirectNotificationIds);
-                }
+            }
+            else if (session.isIndirect()) {
+                jsonObject.put(DIRECT_TAG, false);
+                jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, indirectNotificationIds);
             }
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating addNotificationId:JSON Failed.", e);
         }
     }
 
-    void cleanSession() {
-        this.session = null;
-    }
-
     void restartSessionIfNeeded() {
+        // Avoid reset session if app was focused due to a notification click (direct session recently set)
         if (OneSignal.appEntryState.isNotificationClick())
-            // Avoid reset session if coming from a notification click (direct session recently set)
             return;
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session restarted");
-        cleanSession();
-        onSessionStarted();
-        if (sessionListener != null)
-            sessionListener.onSessionRestarted();
+
+        JSONArray lastNotifications = getLastNotificationsReceivedIds();
+        if (lastNotifications.length() > 0)
+            setSession(Session.INDIRECT, null, lastNotifications);
+        else
+            setSession(Session.UNATTRIBUTED,null, null);
     }
 
-    Session getSession() {
-        return session != null ? session : Session.UNATTRIBUTED;
+    @NonNull Session getSession() {
+        return session;
     }
 
-    String getDirectNotificationId() {
+    @Nullable String getDirectNotificationId() {
         return directNotificationId;
     }
 
-    JSONArray getIndirectNotificationIds() {
+    @Nullable JSONArray getIndirectNotificationIds() {
         return indirectNotificationIds;
     }
 
-    /**
-     * Set the type of active session
-     */
-    void onSessionStarted() {
-        if (session != null)
-            //session already set
+    void onDirectSessionFromNotificationOpen(@NonNull String notificationId) {
+        setSession(Session.DIRECT, notificationId, null);
+    }
+
+    // Call when the session for the app changes, caches the state, and broadcasts the session that just ended
+    private void setSession(@NonNull Session session, @Nullable String directNotificationId, @Nullable JSONArray indirectNotificationIds) {
+        if (!willChangeSession(session, directNotificationId))
             return;
 
-        setLastNotificationsId();
-        if (hasIndirectNotifications()) {
-            setSession(Session.INDIRECT);
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session indirect with indirectNotificationIds: " + indirectNotificationIds);
-        } else {
-            onSessionNotInfluenced();
-        }
-    }
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
+           "OSSession changed" +
+              "\nfrom:\n" +
+              "session: " + this.session +
+              ", directNotificationId: " + this.directNotificationId +
+              ", indirectNotificationIds: " + this.indirectNotificationIds +
+              "\nto:\n" +
+              "session: " + session +
+              ", directNotificationId: " + directNotificationId +
+              ", indirectNotificationIds: " + indirectNotificationIds);
 
-    /**
-     * Set active session type to {@link Session#UNATTRIBUTED}
-     */
-    private void onSessionNotInfluenced() {
-        setSession(Session.UNATTRIBUTED);
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session unattributed");
-    }
+        OutcomesUtils.cacheCurrentSession(session);
+        OutcomesUtils.cacheNotificationOpenId(directNotificationId);
 
-    /**
-     * Set active session type to {@link Session#DIRECT}
-     */
-    void onDirectSessionFromNotificationOpen(String notificationId) {
-        setSession(Session.DIRECT);
-        this.directNotificationId = notificationId;
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Session Direct with directNotificationId: " + notificationId);
-    }
+        // Broadcast the session that just ended before finalizing the state change
+        sessionListener.onSessionEnding(getSessionResult());
 
-    /**
-     * Set the current session
-     * Cache the current session
-     * Clear any unused variables associated with the current session
-     */
-    void setSession(@NonNull Session session) {
         this.session = session;
-        OutcomesUtils.cacheCurrentSession(getSession());
+        this.directNotificationId = directNotificationId;
+        this.indirectNotificationIds = indirectNotificationIds;
+    }
 
-        // Based on the current session set, clear any variables not associated with that session
-        switch (session) {
-            case DIRECT:
-                indirectNotificationIds = null;
-                break;
-            case INDIRECT:
-                directNotificationId = null;
-                break;
-            case UNATTRIBUTED:
-                directNotificationId = null;
-                indirectNotificationIds = null;
-                break;
-        }
+    private boolean willChangeSession(@NonNull Session session, @Nullable String directNotificationId) {
+        if (!session.equals(this.session))
+            return true;
+
+        // Allow changing from direct to direct when a different notification is clicked
+        return this.session.isDirect() &&
+           this.directNotificationId != null &&
+           !this.directNotificationId.equals(directNotificationId);
     }
 
     /**
      * Set the notifications ids that influenced the session
      */
-    private void setLastNotificationsId() {
+    @NonNull protected JSONArray getLastNotificationsReceivedIds() {
         JSONArray notificationsReceived = OutcomesUtils.getLastNotificationsReceivedData();
         JSONArray notificationsIds = new JSONArray();
 
@@ -240,11 +230,12 @@ public class OSSessionManager {
             }
         }
 
-        indirectNotificationIds = notificationsIds;
+        return notificationsIds;
     }
 
-    SessionResult getSessionResult() {
-        if (session.isDirect() && hasDirectNotification()) {
+    // Get the current session based on state + if outcomes features are enabled.
+    @NonNull SessionResult getSessionResult() {
+        if (session.isDirect()) {
             if (OutcomesUtils.isDirectSessionEnabled()) {
                 JSONArray directNotificationIds = new JSONArray().put(directNotificationId);
                 return SessionResult.Builder.newInstance()
@@ -252,7 +243,7 @@ public class OSSessionManager {
                         .setSession(Session.DIRECT)
                         .build();
             }
-        } else if (session.isIndirect() && hasIndirectNotifications()) {
+        } else if (session.isIndirect()) {
             if (OutcomesUtils.isIndirectSessionEnabled()) {
                 return SessionResult.Builder.newInstance()
                         .setNotificationIds(indirectNotificationIds)
@@ -271,40 +262,24 @@ public class OSSessionManager {
     }
 
     /**
-     * If indirectNotificationIds exist and have at least 1 notification id, this would imply a
-     * app open with notifications within the attribution window time
-     */
-    private boolean hasIndirectNotifications() {
-        return getIndirectNotificationIds() != null
-                && getIndirectNotificationIds().length() > 0;
-    }
-
-    /**
-     * With a directNotificationId set this would imply that the notification opened logic occurred
-     * to set a DIRECT session
-     */
-    private boolean hasDirectNotification() {
-        return directNotificationId != null
-                && !directNotificationId.isEmpty();
-    }
-
-    /**
      * Attempt to override the current session before the 30 second session minimum
      * This should only be done in a upward direction, so UNATTRIBUTED can become INDIRECT or DIRECT
      * And INDIRECT can become DIRECT
      */
-    void attemptSessionOverride() {
-        // Get cached current session state
-        Session currentSession = OutcomesUtils.getCachedSession();
-        if (currentSession.isUnattributed()) {
-            // We will try to override the UNATTRIBUTED session with INDIRECT
-            setLastNotificationsId();
-            if (hasIndirectNotifications() && OneSignal.appEntryState.isAppOpen())
-                setSession(Session.INDIRECT);
+    void attemptSessionUpgrade() {
+        // TODO: Don't think we want to check the appEntryState here, as backgrounding the app quickly and resuming would clean it.
+        // Try to override the current session with a DIRECT session
+        if (OneSignal.appEntryState.isNotificationClick()) {
+            setSession(Session.DIRECT, directNotificationId, null);
+            return;
         }
 
-        // Try to override the current session with a DIRECT session
-        if (hasDirectNotification() && OneSignal.appEntryState.isNotificationClick())
-            setSession(Session.DIRECT);
+        // Get cached current session state
+        if (session.isUnattributed()) {
+            // We will try to override the UNATTRIBUTED session with INDIRECT
+            JSONArray lastNotificationIds = getLastNotificationsReceivedIds();
+            if (lastNotificationIds.length() > 0 && OneSignal.appEntryState.isAppOpen())
+                setSession(Session.INDIRECT, null, lastNotificationIds);
+        }
     }
 }

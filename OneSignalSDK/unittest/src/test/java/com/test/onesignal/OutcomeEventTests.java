@@ -121,11 +121,13 @@ public class OutcomeEventTests {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         dbHelper.cleanOutcomeDatabase();
         dbHelper.close();
         notificationData.clearNotificationSharedPreferences();
         sessionManager.resetMock();
+        StaticResetHelper.restSetStaticFields();
+        threadAndTaskWait();
     }
 
     @Test
@@ -563,12 +565,14 @@ public class OutcomeEventTests {
     }
 
     @Test
-    public void testIndirectSession() {
+    public void testIndirectSession() throws Exception {
         notificationData.markLastNotificationReceived(NOTIFICATION_ID);
 
-        sessionManager.onSessionStarted();
+        sessionManager.startSession();
+        threadAndTaskWait();
         assertTrue(sessionManager.getSession().isIndirect());
-        assertEquals(1, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        threadAndTaskWait();
+        assertEquals(1, sessionManager.getLastNotificationsReceivedIds().length());
     }
 
     @Test
@@ -577,11 +581,11 @@ public class OutcomeEventTests {
             notificationData.markLastNotificationReceived(NOTIFICATION_ID + i);
         }
 
-        sessionManager.onSessionStarted();
+        sessionManager.startSession();
         assertTrue(sessionManager.getSession().isIndirect());
         assertNull(sessionManager.getDirectNotificationId());
-        assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
-        assertEquals(NOTIFICATION_ID + "5", sessionManager.getIndirectNotificationIds().get(0));
+        assertEquals(NOTIFICATION_LIMIT, sessionManager.getLastNotificationsReceivedIds().length());
+        assertEquals(NOTIFICATION_ID + "5", sessionManager.getLastNotificationsReceivedIds().get(0));
     }
 
     @Test
@@ -598,10 +602,10 @@ public class OutcomeEventTests {
 
     @Test
     public void testUnattributedSession() {
-        sessionManager.onSessionStarted();
+        sessionManager.startSession();
 
         assertTrue(sessionManager.getSession().isUnattributed());
-        assertNull(sessionManager.getIndirectNotificationIds());
+        assertEquals(new JSONArray(), sessionManager.getLastNotificationsReceivedIds());
         assertNull(sessionManager.getDirectNotificationId());
     }
 

@@ -119,13 +119,16 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
+import static com.test.onesignal.TestHelpers.getNextJob;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
+import static com.test.onesignal.TestHelpers.runNextJob;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -242,6 +245,7 @@ public class MainOneSignalClassRunner {
       // Application.onCreate
       OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
       threadAndTaskWait();
+      // Testing we still register the user in the background if this is the first time. (Note Context is application)
       assertNotNull(ShadowOneSignalRestClient.lastPost);
 
       ShadowOneSignalRestClient.lastPost = null;
@@ -391,9 +395,16 @@ public class MainOneSignalClassRunner {
 
       blankActivityController.pause();
       threadAndTaskWait();
-      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
-      assertEquals(61, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      assertEquals("[\"notification_id\"]", ShadowOneSignalRestClient.lastPost.getString("notification_ids"));
+
+      // A sync job should have been schedule, lets run it to ensure on_focus is called.
+      TestHelpers.runNextJob();
+      threadAndTaskWait();
+
+      assertOnFocusAtIndex(3, new JSONObject() {{
+         put("active_time", 61);
+         put("direct", false);
+         put("notification_ids", new JSONArray().put("notification_id"));
+      }});
    }
 
    @Test
@@ -435,25 +446,34 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-
       notificationData.saveOutcomesParams(params);
+
       ShadowSystemClock.setCurrentTimeMillis(92 * 1000);
 
       blankActivityController.pause();
       threadAndTaskWait();
 
-      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
-      assertEquals(61, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      assertEquals("[\"notification_id\"]", ShadowOneSignalRestClient.lastPost.getString("notification_ids"));
+      // on_focus should not run yet as we need to wait until the job kicks off due to needing
+      //   to wait until the session is ended for outcome session counts to be correct
+      assertRestCalls(3);
 
+      runNextJob();
+      threadAndTaskWait();
+      assertRestCalls(4);
+      assertOnFocusAtIndex(3, new JSONObject() {{
+         put("active_time", 61);
+         put("direct", false);
+         put("notification_ids", new JSONArray().put("notification_id"));
+      }});
+
+      // Doing a quick 1 second focus should NOT trigger another network call
       blankActivityController.resume();
       threadAndTaskWait();
-      ShadowOneSignalRestClient.lastUrl = null;
-      ShadowSystemClock.setCurrentTimeMillis(93 * 1000);
+      TestHelpers.advanceTimeByMs(1_000);
       blankActivityController.pause();
       threadAndTaskWait();
 
-      assertNull(ShadowOneSignalRestClient.lastUrl);
+      assertRestCalls(4);
    }
 
    private static void setOneSignalContextOpenAppThenBackgroundAndResume() throws Exception {
@@ -2151,8 +2171,7 @@ public class MainOneSignalClassRunner {
       sendTagsAndImmediatelyBackgroundApp();
 
       // A future job should be scheduled to finish the sync.
-      JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-      assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+      assertEquals("com.onesignal.SyncJobService", getNextJob().getService().getClassName());
    }
 
    @Test
@@ -2161,8 +2180,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
 
       // Jobs should no longer be not be scheduled
-      JobScheduler jobScheduler = (JobScheduler) blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-      assertEquals(0, jobScheduler.getAllPendingJobs().size());
+      assertNull(getNextJob());
    }
 
    @Test
@@ -2205,8 +2223,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-      assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+      assertEquals("com.onesignal.SyncJobService", getNextJob().getService().getClassName());
    }
 
    private void useAppFor2minThenBackground() throws Exception {
@@ -2228,20 +2245,14 @@ public class MainOneSignalClassRunner {
    public void ensureSchedulingOfSyncJobServiceOnActivityPause_forPendingActiveTime() throws Exception {
       useAppFor2minThenBackground();
 
-      // A future job should be scheduled to finish the sync.
-      JobScheduler jobScheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-      assertEquals("com.onesignal.SyncJobService", jobScheduler.getAllPendingJobs().get(0).getService().getClassName());
+      // A future job should be scheduled to finish the sync in case the process is killed
+      //   for the on_focus call can be made.
+      assertEquals("com.onesignal.SyncJobService", getNextJob().getService().getClassName());
 
       // FIXME: Cleanup for upcoming unit test
       //  This is a one off scenario where a unit test fails after this one is run
       blankActivityController.resume();
       threadAndTaskWait();
-   }
-
-   private static void assertSuccessfulOnFocus(ShadowOneSignalRestClient.Request request) {
-      assertThat(request.method, is(REST_METHOD.POST));
-      assertThat(request.url, containsString("focus"));
-      assertThat(request.payload.optInt("active_time"), is(120));
    }
 
    @Test
@@ -2251,8 +2262,8 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      assertThat(ShadowOneSignalRestClient.requests.size(), is(3));
-      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(2));
+      assertRestCalls(3);
+      assertOnFocusAtIndex(2, 120);
    }
 
    @Test
@@ -2277,8 +2288,8 @@ public class MainOneSignalClassRunner {
       syncJobService.onStartJob(null);
       threadAndTaskWait(); // Kicks off the Job service's background thread.
 
-      assertEquals(4, ShadowOneSignalRestClient.requests.size());
-      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(3));
+      assertRestCalls(4);
+      assertOnFocusAtIndex(3, 120);
 
       // FIXME: Cleanup for upcoming unit test
       //  This is a one off scenario where a unit test fails after this one is run
@@ -2657,7 +2668,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Check that time is tracked successfully by validating the "on_focus" endpoint
-      assertSuccessfulOnFocus(ShadowOneSignalRestClient.requests.get(2));
+      assertRestCalls(3);
+      assertOnFocusAtIndex(2, 120);
    }
 
    @Test

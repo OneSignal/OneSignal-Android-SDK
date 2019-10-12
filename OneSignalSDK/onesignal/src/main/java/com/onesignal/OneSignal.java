@@ -44,8 +44,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.json.*;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -59,13 +57,16 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * The main OneSignal class - this is where you will interface with the OneSignal SDK
@@ -101,30 +102,9 @@ public class OneSignal {
       boolean isAppClose() {
           return this.equals(APP_CLOSE);
       }
-
    }
 
-   enum OSServiceCall {
-      ON_SESSION,
-      ON_FOCUS,
-      ;
-
-      public static final OSServiceCall DEFAULT_CALL = ON_FOCUS;
-
-      public @NonNull
-      static OSServiceCall fromString(String value) {
-         if (value == null || value.isEmpty())
-            return DEFAULT_CALL;
-
-         for (OSServiceCall type : OSServiceCall.values()) {
-            if (type.name().equalsIgnoreCase(value))
-               return type;
-         }
-         return DEFAULT_CALL;
-      }
-   }
-
-   static final long MIN_ON_FOCUS_TIME_SECONDS = 60;
+   // If the app is this amount time or longer in the background we will count the session as done
    static final long MIN_ON_SESSION_TIME_MILLIS = 30 * 1_000L;
 
    /**
@@ -424,16 +404,20 @@ public class OneSignal {
 
    public static final String VERSION = "031103";
 
-   private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
-      @Override
-      public void onSessionRestarted() {
-         if (outcomeEventsController != null)
-            outcomeEventsController.clearOutcomes();
-      }
-   };
+   static OSSessionManager.SessionListener getNewSessionListener() {
+      return new OSSessionManager.SessionListener() {
+         @Override
+         public void onSessionEnding(OSSessionManager.SessionResult lastSessionResult) {
+            if (outcomeEventsController != null)
+               outcomeEventsController.clearOutcomes();
+            FocusTimeController.getInstance().onSessionEnded(lastSessionResult);
+         }
+      };
+   }
 
-   @NonNull static OSSessionManager sessionManager = new OSSessionManager(sessionListener);
-   private static OutcomeEventsController outcomeEventsController;
+   // TODO:KASTEN: Session manager needs to read from shardPrefs so we need to move this.
+   @NonNull static OSSessionManager sessionManager = new OSSessionManager(getNewSessionListener());
+   @Nullable private static OutcomeEventsController outcomeEventsController;
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -463,7 +447,6 @@ public class OneSignal {
    static DelayedConsentInitializationParameters delayedInitParams;
 
    static OneSignalRemoteParams.Params remoteParams;
-   private static OSServiceCall serviceCall = OSServiceCall.DEFAULT_CALL;
 
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -673,9 +656,6 @@ public class OneSignal {
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
-      //Init last service call
-      markOnFocusCalled();
-
       deviceType = osUtils.getDeviceType();
       subscribableStatus = osUtils.initializationChecker(context, deviceType, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
@@ -711,7 +691,7 @@ public class OneSignal {
 
       // When the session reaches timeout threshold, start new session
       // This is where the LocationGMS prompt is triggered and shown to the user
-      handleSessionTimeRegistrationOnInit();
+      doSessionInit();
 
       if (mInitBuilder.mNotificationOpenedHandler != null)
          fireCallbackForOpenedNotifications();
@@ -726,7 +706,6 @@ public class OneSignal {
 
       initDone = true;
 
-      sessionManager.onSessionStarted();
       outcomeEventsController.sendSavedOutcomes();
 
       // Clean up any pending tasks that were queued up before initialization
@@ -788,7 +767,7 @@ public class OneSignal {
       if (foreground) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
          NotificationRestorer.asyncRestore(appContext);
-         FocusTimeController.getInstance(appContext).appForegrounded();
+         FocusTimeController.getInstance().appForegrounded();
       }
       else
          ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
@@ -800,23 +779,22 @@ public class OneSignal {
          trackAmazonPurchase = new TrackAmazonPurchase(appContext);
       } catch (ClassNotFoundException e) {}
    }
-   
-   private static void handleSessionTimeRegistrationOnInit() {
-      // If the app is not in the foreground yet do not make an on_session call yet.
-      // If we don't have a OneSignal player_id yet make the call to create it regardless of focus
-      if (foreground || getUserId() == null)
-         doSessionInit();
-   }
 
+   // If the app is not in the foreground yet do not make an on_session call yet.
+   // If we don't have a OneSignal player_id yet make the call to create it regardless of focus
    private static void doSessionInit() {
       // Check session time to determine whether to start a new session or not
       if (isPastOnSessionTime()) {
           OneSignalStateSynchronizer.setNewSession();
-          sessionManager.restartSessionIfNeeded();
-      } else {
+         if (foreground)
+            sessionManager.restartSessionIfNeeded();
+      } else if (foreground) {
          OSInAppMessageController.getController().initWithCachedInAppMessages();
-         sessionManager.attemptSessionOverride();
+         sessionManager.attemptSessionUpgrade();
       }
+
+      if (!foreground && getUserId() != null)
+         return;
 
       setLastSessionTime(System.currentTimeMillis());
       startRegistrationOrOnSession();
@@ -1197,16 +1175,9 @@ public class OneSignal {
          return;
       }
       // TODO: Do we account for missing a context?
-      FocusTimeController.getInstance(appContext).appBackgrounded();
+      FocusTimeController.getInstance().appBackgrounded();
 
       boolean scheduleSyncService = scheduleSyncService();
-
-      // TODO: This needs to be moved into the FocusTimeController yet.
-      //       The shouldSyncPendingChangesFromSyncService is covering this case,
-      //         where it is checking it should NOT schedule a job if the focus time is under the limit
-      // Schedule this sync in case app is killed before completing
-      if (!scheduleSyncService)
-         OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
    }
 
    static boolean scheduleSyncService() {
@@ -1234,7 +1205,7 @@ public class OneSignal {
       if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
 
-      FocusTimeController.getInstance(appContext).appForegrounded();
+      FocusTimeController.getInstance().appForegrounded();
 
       doSessionInit();
 
@@ -2089,10 +2060,9 @@ public class OneSignal {
 
       // Check if the notification click should lead to a DIRECT session
       if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
-
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
-         initDirectSessionFromNotificationOpen(notificationId);
+         sessionManager.onDirectSessionFromNotificationOpen(notificationId);
       }
    }
 
@@ -2120,6 +2090,7 @@ public class OneSignal {
               && !defaultOpenActionDisabled
               && !foreground
               && startOrResumeApp(context);
+               // TODO: Might have to split up the startOrResumeApp into the check and the action otherwise OSSessionManger.restartSessionIfNeeded() may not work.
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
@@ -2948,52 +2919,6 @@ public class OneSignal {
       OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
    }
 
-   /**
-    * Mark that an on Session call was done
-    * */
-   static void markOnSessionCalled() {
-      serviceCall = OSServiceCall.ON_SESSION;
-      saveLastServiceCalled();
-   }
-
-   /**
-    * Mark that an on Focus call was done
-    * */
-   static void markOnFocusCalled() {
-      serviceCall = OSServiceCall.ON_FOCUS;
-      saveLastServiceCalled();
-   }
-
-   /**
-    * On focus call must only be done if an on_session call was done before
-    * and the Session is influenced
-    *
-    * @see OSSessionManager.Session
-    *
-    * */
-   static boolean isOnFocusNeeded() {
-      OSServiceCall sessionState = getLastServiceCalled();
-      if (sessionState != OSServiceCall.ON_SESSION)
-         return false;
-
-      OSSessionManager.SessionResult sessionResult = sessionManager.getSessionResult();
-      return sessionResult.sessionHasNotifications();
-   }
-
-   static void saveLastServiceCalled() {
-      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_LAST_SERVICE_CALLED, serviceCall.toString());
-   }
-
-   static OSServiceCall getLastServiceCalled() {
-      if (appContext != null) {
-         String serviceCallName = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
-                 OneSignalPrefs.PREFS_GT_LAST_SERVICE_CALLED, OSServiceCall.DEFAULT_CALL.toString());
-         return OSServiceCall.fromString(serviceCallName);
-      }
-      return OSServiceCall.DEFAULT_CALL;
-   }
-
    private static boolean isDuplicateNotification(String id, Context context) {
       if (id == null || "".equals(id))
          return false;
@@ -3140,12 +3065,8 @@ public class OneSignal {
       outcomeEventsController.setOutcomeSettings(settings);
    }
 
-   static void initDirectSessionFromNotificationOpen(String notificationId) {
-      sessionManager.onDirectSessionFromNotificationOpen(notificationId);
-   }
-
    static OSSessionManager getSessionManager() {
-       return sessionManager;
+      return sessionManager;
    }
 
    public static void uniqueOutcome(@NonNull String name, @NonNull OutcomeCallback callback) {
