@@ -220,7 +220,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -242,7 +242,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.DISABLED)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -265,7 +265,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.DIRECT)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -288,7 +288,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.INDIRECT)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -487,9 +487,9 @@ public class OutcomeEventTests {
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         controller.sendOutcomeEvent(OUTCOME_NAME + "1");
-        controller.sendOutcomeEvent(OUTCOME_NAME + "2", 1);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME + "2", 1);
         controller.sendOutcomeEvent(OUTCOME_NAME + "3");
-        controller.sendOutcomeEvent(OUTCOME_NAME + "4", 1.1f);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME + "4", 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -525,7 +525,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, 1.1f);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
