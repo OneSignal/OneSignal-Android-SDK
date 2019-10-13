@@ -3157,9 +3157,8 @@ public class OneSignal {
    }
 
    /*
-   * Start OneSignalOutcome module
-   */
-
+    * Start OneSignalOutcome module
+    */
    private static OutcomeSettings outcomeSettings = null;
 
    public static void changeOutcomeSettings(OutcomeSettings settings){
@@ -3179,46 +3178,37 @@ public class OneSignal {
        return sessionManager.getSession();
    }
 
-   public static void uniqueOutcome(@NonNull String name, @NonNull OutcomeCallback callback) {
-      if (!validateOutcomeEntry(name))
-         return;
-
-      outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
+   public static void sendOutcome(@NonNull String name) {
+      sendOutcome(name, null);
    }
 
-   public static void uniqueOutcome(@NonNull String name) {
-      if (!validateOutcomeEntry(name))
-         return;
-
-      outcomeEventsController.sendUniqueOutcomeEvent(name, null);
-   }
-
-   public static void outcome(@NonNull String name, @NonNull OutcomeCallback callback) {
+   public static void sendOutcome(@NonNull String name, OutcomeCallback callback) {
       if (!validateOutcomeEntry(name))
          return;
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
    }
 
-   public static void outcome(@NonNull String name) {
-      if (!validateOutcomeEntry(name))
-         return;
-
-      outcomeEventsController.sendOutcomeEvent(name, (OutcomeCallback) null);
+   public static void sendUniqueOutcome(@NonNull String name) {
+      sendUniqueOutcome(name, null);
    }
 
-   public static void outcome(@NonNull String name, float value, @NonNull OutcomeCallback callback) {
+   public static void sendUniqueOutcome(@NonNull String name, OutcomeCallback callback) {
       if (!validateOutcomeEntry(name))
          return;
 
-      outcomeEventsController.sendOutcomeEvent(name, value, callback);
+      outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
    }
 
-   public static void outcome(@NonNull String name, float value) {
+   public static void sendOutcomeWithValue(@NonNull String name, float value) {
+      sendOutcomeWithValue(name, value, null);
+   }
+
+   public static void sendOutcomeWithValue(@NonNull String name, float value, OutcomeCallback callback) {
       if (!validateOutcomeEntry(name))
          return;
 
-      outcomeEventsController.sendOutcomeEvent(name, value, null);
+      outcomeEventsController.sendOutcomeEventWithValue(name, value, callback);
    }
 
    private static boolean validateOutcomeEntry(String name) {

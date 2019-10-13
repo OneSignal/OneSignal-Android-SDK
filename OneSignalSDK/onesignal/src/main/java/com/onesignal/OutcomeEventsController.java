@@ -19,6 +19,7 @@ class OutcomeEventsController {
         OutcomeException(String message) {
             super(message);
         }
+
     }
 
     private Set<String> eventsSent = OSUtils.newConcurrentSet();
@@ -98,6 +99,10 @@ class OutcomeEventsController {
         }
     }
 
+    void sendOutcomeEvent(@NonNull final String name, @Nullable final OneSignal.OutcomeCallback callback) {
+        sendOutcomeEvent(name, null, callback);
+    }
+
     void sendUniqueOutcomeEvent(@NonNull final String name, @Nullable OneSignal.OutcomeCallback callback) {
         if (eventsSent.contains(name)) {
             //Event already sent
@@ -108,23 +113,12 @@ class OutcomeEventsController {
         eventsSent.add(name);
     }
 
-    void sendOutcomeEvent(@NonNull final String name, @Nullable final OneSignal.OutcomeCallback callback) {
-        sendOutcomeEvent(name, null, callback);
-    }
-
-    void sendOutcomeEvent(@NonNull String name, float value, @Nullable final OneSignal.OutcomeCallback callback) {
+    void sendOutcomeEventWithValue(@NonNull String name, float value, @Nullable final OneSignal.OutcomeCallback callback) {
         OutcomeParams params = OutcomeParams.Builder
                 .newInstance()
                 .setWeight(value)
                 .build();
         sendOutcomeEvent(name, params, callback);
-    }
-
-    void sendOutcomeEvent(@NonNull String name, @NonNull String value) throws OutcomeException {
-        if (value.isEmpty()) {
-            throw new OutcomeException("Value must not be empty");
-        }
-        //TODO when backend changes are done
     }
 
     private void sendOutcomeEvent(@NonNull final String name, @Nullable final OutcomeParams params, @Nullable final OneSignal.OutcomeCallback callback) {
@@ -182,6 +176,13 @@ class OutcomeEventsController {
     }
 
     void sendOutcomeEvent(@NonNull String name, @NonNull Bundle params) {
+        //TODO when backend changes are done
+    }
+
+    void sendOutcomeEvent(@NonNull String name, @NonNull String value) throws OutcomeException {
+        if (value.isEmpty())
+            throw new OutcomeException("Value must not be empty");
+
         //TODO when backend changes are done
     }
 
