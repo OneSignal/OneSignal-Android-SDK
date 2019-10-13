@@ -2149,11 +2149,11 @@ public class OneSignal {
       runNotificationOpenedCallback(data, true, fromAlert);
 
       // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationClick(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+      if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
 
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
-         initDirectSessionFromNotificationClick(notificationId);
+         initDirectSessionFromNotificationOpen(notificationId);
       }
    }
 
@@ -2175,7 +2175,7 @@ public class OneSignal {
     * 4. App is coming from the background
     * 5. App open/resume intent exists
     */
-   private static boolean shouldInitDirectSessionFromNotificationClick(Context context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Context context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
       return !fromAlert
               && !urlOpened
               && !defaultOpenActionDisabled
@@ -3215,16 +3215,12 @@ public class OneSignal {
       outcomeEventsController.setOutcomeSettings(settings);
    }
 
-   static void initDirectSessionFromNotificationClick(String notificationId) {
-      sessionManager.onSessionFromNotification(notificationId);
+   static void initDirectSessionFromNotificationOpen(String notificationId) {
+      sessionManager.onDirectSessionFromNotificationOpen(notificationId);
    }
 
-   static void cleanSessionType() {
-      sessionManager.cleanSession();
-   }
-
-   static OSSessionManager.Session getSessionType() {
-       return sessionManager.getSession();
+   static OSSessionManager getSessionManager() {
+       return sessionManager;
    }
 
    public static void uniqueOutcome(@NonNull String name, @NonNull OutcomeCallback callback) {

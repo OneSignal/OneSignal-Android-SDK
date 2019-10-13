@@ -590,7 +590,7 @@ public class OutcomeEventTests {
             notificationData.markLastNotificationReceived(NOTIFICATION_ID + i);
         }
 
-        sessionManager.onSessionFromNotification(NOTIFICATION_ID);
+        sessionManager.onDirectSessionFromNotificationOpen(NOTIFICATION_ID);
         assertTrue(sessionManager.getSession().isDirect());
         assertNull(sessionManager.getIndirectNotificationIds());
         assertEquals(NOTIFICATION_ID, sessionManager.getDirectNotificationId());
@@ -601,7 +601,7 @@ public class OutcomeEventTests {
         sessionManager.onSessionStarted();
 
         assertTrue(sessionManager.getSession().isUnattributed());
-        assertEquals(0, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        assertNull(sessionManager.getIndirectNotificationIds());
         assertNull(sessionManager.getDirectNotificationId());
     }
 

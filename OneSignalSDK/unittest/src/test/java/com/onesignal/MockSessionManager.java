@@ -16,7 +16,6 @@ public class MockSessionManager extends OSSessionManager {
 
     public void setSessionResult(SessionResult sessionResult) {
         this.sessionResult = sessionResult;
-
     }
 
     @Override
@@ -25,8 +24,8 @@ public class MockSessionManager extends OSSessionManager {
     }
 
     @Override
-    public void onSessionFromNotification(String notificationId) {
-        super.onSessionFromNotification(notificationId);
+    public void onDirectSessionFromNotificationOpen(String notificationId) {
+        super.onDirectSessionFromNotificationOpen(notificationId);
     }
 
     @Override
@@ -58,4 +57,5 @@ public class MockSessionManager extends OSSessionManager {
             return sessionResult;
         return super.getSessionResult();
     }
+
 }

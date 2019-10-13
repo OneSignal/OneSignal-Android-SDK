@@ -99,12 +99,20 @@ public class OneSignalPackagePrivateHelper {
       return true;
    }
 
-   public static OSSessionManager.Session OneSignal_GetSessionType() {
-      return OneSignal.getSessionType();
+   public static OSSessionManager.Session OneSignal_getSessionType() {
+      return OneSignal_getSessionManager().getSession();
    }
 
-   public static void OneSignal_CleanSessionType() {
-      OneSignal.cleanSessionType();
+   public static String OneSignal_getSessionDirectNotification() {
+      return OneSignal_getSessionManager().getDirectNotificationId();
+   }
+
+   public static JSONArray OneSignal_getIndirectNotificationIds() {
+      return OneSignal_getSessionManager().getIndirectNotificationIds();
+   }
+
+   public static OSSessionManager OneSignal_getSessionManager() {
+      return OneSignal.getSessionManager();
    }
 
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
@@ -212,7 +220,7 @@ public class OneSignalPackagePrivateHelper {
    static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 
       public RemoteOutcomeParams() {
-         new RemoteOutcomeParams(true, true, true);
+         this(true, true, true);
       }
 
       public RemoteOutcomeParams(boolean direct, boolean indirect, boolean unattributed) {

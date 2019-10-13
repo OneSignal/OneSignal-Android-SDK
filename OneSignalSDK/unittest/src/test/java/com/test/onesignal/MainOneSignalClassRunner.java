@@ -54,7 +54,6 @@ import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSPermissionSubscriptionState;
-import com.onesignal.OSSessionManager;
 import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
@@ -114,12 +113,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_onReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_GetSessionType;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_CleanSessionType;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
@@ -138,7 +134,6 @@ import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -227,7 +222,6 @@ public class MainOneSignalClassRunner {
       blankActivity = blankActivityController.get();
       notificationData = new MockOutcomesUtils();
 
-      OneSignal_CleanSessionType();
       cleanUp();
    }
 
@@ -351,109 +345,6 @@ public class MainOneSignalClassRunner {
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
       assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
    }
-
-    @Test
-    public void testAppSessionBeforeOnSessionCalls() throws Exception {
-        OneSignalInit();
-        threadAndTaskWait();
-
-        // Check session UNATTRIBUTED
-        assertTrue(OneSignal_GetSessionType().isUnattributed());
-
-        blankActivityController.pause();
-        threadAndTaskWait();
-
-        // Receive notification
-        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
-
-        blankActivityController.resume();
-        threadAndTaskWait();
-
-        // Check session INDIRECT
-       assertTrue(OneSignal_GetSessionType().isIndirect());
-
-        blankActivityController.pause();
-        threadAndTaskWait();
-
-        // Click notification
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
-        threadAndTaskWait();
-
-        blankActivityController.resume();
-        threadAndTaskWait();
-
-        // Check session DIRECT
-       assertTrue(OneSignal_GetSessionType().isDirect());
-    }
-
-    @Test
-    public void testAppSessionAfterOnSessionCalls() throws Exception {
-        OneSignalInit();
-        threadAndTaskWait();
-
-        // Check session UNATTRIBUTED
-        assertTrue(OneSignal_GetSessionType().isUnattributed());
-
-        blankActivityController.pause();
-        threadAndTaskWait();
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
-
-        // Receive notification
-        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
-
-        blankActivityController.resume();
-        threadAndTaskWait();
-
-        // Check session INDIRECT
-        assertTrue(OneSignal_GetSessionType().isIndirect());
-
-        blankActivityController.pause();
-        threadAndTaskWait();
-        ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
-
-        // Click notification
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
-        threadAndTaskWait();
-
-        blankActivityController.resume();
-        threadAndTaskWait();
-
-        // Check session DIRECT
-       assertTrue(OneSignal_GetSessionType().isDirect());
-    }
-
-    @Test
-    public void testIndirectAttributionWindowWithNoNotifications() throws Exception {
-        OneSignalInit();
-        threadAndTaskWait();
-
-        blankActivityController.pause();
-        threadAndTaskWait();
-
-        // Receive notification
-        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
-
-        blankActivityController.resume();
-        threadAndTaskWait();
-
-        // Check session INDIRECT
-       assertTrue(OneSignal_GetSessionType().isIndirect());
-
-        blankActivityController.pause();
-        threadAndTaskWait();
-
-        // Move current time past attribution window
-        ShadowSystemClock.setCurrentTimeMillis(1_441L * 60L * 1_000L);
-
-        blankActivityController.resume();
-        threadAndTaskWait();
-
-        // Check session UNATTRIBUTED
-       assertTrue(OneSignal_GetSessionType().isUnattributed());
-    }
 
    @Test
    public void testAppOnFocusAfterOnSessionCallFail() throws Exception {
@@ -775,7 +666,6 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals("Robo test message", notificationOpenedMessage);
-      assertTrue(OneSignal_GetSessionType().isDirect());
    }
 
    @Test
@@ -857,51 +747,6 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testNoDirectSession_fromNotificationOpen_whenAppIsInForeground() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
-      threadAndTaskWait();
-
-      // Make sure no notification data exists
-      assertNull(notificationOpenedMessage);
-
-      // Foreground app
-      blankActivityController.resume();
-      threadAndTaskWait();
-
-      // Click notification
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
-      threadAndTaskWait();
-
-      // Check message String matches data sent in open handler
-      assertEquals("Test Msg", notificationOpenedMessage);
-
-      // Make sure session is not DIRECT
-      assertFalse(OneSignal_GetSessionType().isDirect());
-   }
-
-   @Test
-   public void testDirectSession_fromNotificationOpen_whenAppIsInBackground() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
-      threadAndTaskWait();
-      // Make sure no notification data exists
-      assertNull(notificationOpenedMessage);
-
-      // Background app
-      blankActivityController.pause();
-      threadAndTaskWait();
-
-      // Click notification
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
-      threadAndTaskWait();
-
-      // Check message String matches data sent in open handler
-      assertEquals("Test Msg", notificationOpenedMessage);
-
-      // Make sure session is DIRECT
-      assertTrue(OneSignal_GetSessionType().isDirect());
-   }
-
-   @Test
    public void testOpeningLauncherActivity() throws Exception {
       AddLauncherIntentFilter();
 
@@ -912,7 +757,6 @@ public class MainOneSignalClassRunner {
 
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertTrue(OneSignal_GetSessionType().isDirect());
    }
 
    @Test
@@ -928,7 +772,6 @@ public class MainOneSignalClassRunner {
       assertEquals("android.intent.action.VIEW", intent.getAction());
       assertEquals("http://google.com", intent.getData().toString());
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertTrue(OneSignal_GetSessionType().isUnattributed());
    }
 
    @Test
@@ -941,7 +784,6 @@ public class MainOneSignalClassRunner {
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertTrue(OneSignal_GetSessionType().isUnattributed());
    }
 
    @Test
@@ -956,7 +798,6 @@ public class MainOneSignalClassRunner {
 
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
       assertEquals("Test Msg", notificationOpenedMessage);
-      assertTrue(OneSignal_GetSessionType().isUnattributed());
    }
 
    private static String notificationReceivedBody;
@@ -1006,25 +847,6 @@ public class MainOneSignalClassRunner {
       assertEquals(null, notificationOpenedMessage);
       assertNull(notificationOpenedMessage);
       assertEquals("Robo test message", notificationReceivedBody);
-      assertTrue(OneSignal_GetSessionType().isUnattributed());
-   }
-
-   @Test
-   public void testSessionIndirectWhenNotificationReceived() throws Exception {
-      Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-      
-      GcmBroadcastReceiver_onReceived(blankActivity, bundle);
-
-      threadAndTaskWait();
-
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
-         @Override
-         public void notificationReceived(OSNotification notification) {
-         }
-      });
-      threadAndTaskWait();
-
-      assertTrue(OneSignal_GetSessionType().isIndirect());
    }
 
    @Test
