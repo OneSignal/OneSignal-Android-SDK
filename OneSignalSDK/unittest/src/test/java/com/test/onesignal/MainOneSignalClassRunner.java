@@ -119,6 +119,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
@@ -405,7 +406,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void FIGURE_OUT_JOB_ISSUE_WITH_SYSTEM_TIME_FOR_OUTCOMES() throws Exception {
+   public void testAppOnFocus_containsOutcomeData_withOutcomeEventFlagsEnabled() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
 
@@ -436,6 +437,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // A sync job should have been schedule, lets run it to ensure on_focus is called.
+      assertRestCalls(4);
       TestHelpers.runNextJob();
       threadAndTaskWait();
 
@@ -467,25 +469,24 @@ public class MainOneSignalClassRunner {
       // Foreground app
       blankActivityController.resume();
       threadAndTaskWait();
-
       // Make sure on_session is called
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
       // Wait 61 seconds
-      ShadowSystemClock.setCurrentTimeMillis(61 * 1000);
+      ShadowSystemClock.setCurrentTimeMillis(91 * 1000);
 
       // Background app
       blankActivityController.pause();
       threadAndTaskWait();
 
-      // A sync job should have been schedule, lets run it to ensure on_focus is called.
-//      TestHelpers.runNextJob();
-//      threadAndTaskWait();
-
       // Make sure no direct flag or notifications are added into the on_focus
-      assertOnFocusAtIndex(4, new JSONObject() {{
-         put("active_time", 61);
-      }});
+      assertOnFocusAtIndex(4, new JSONObject().put("active_time", 60));
+      assertOnFocusAtIndexDoesNotHaveKeys(4, Arrays.asList("notification_ids", "direct"));
+
+      // If we have a job make sure it doesn't make another on_focus call
+      runNextJob();
+      threadAndTaskWait();
+      assertRestCalls(5);
    }
 
    @Test

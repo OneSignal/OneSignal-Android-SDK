@@ -29,7 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 class FocusTimeController {
-   private long timeFocusedAtMs;
+   // Only present if app is currently in focus.
+   @Nullable private Long timeFocusedAtMs;
 
    private static FocusTimeController sInstance;
 
@@ -54,6 +55,7 @@ class FocusTimeController {
 
    void appBackgrounded() {
       giveProcessorsValidFocusTime(OneSignal.sessionManager.getSessionResult(), FocusEventType.BACKGROUND);
+      timeFocusedAtMs = null;
    }
 
    void onSessionEnded(@NonNull OSSessionManager.SessionResult lastSessionResult) {
@@ -80,6 +82,10 @@ class FocusTimeController {
    // Get time past since app was put into focus.
    // Will be null if time is invalid or 0
    private @Nullable Long getTimeFocusedElapsed() {
+      // timeFocusedAtMs is cleared when the app goes into the background so we don't have a focus time
+      if (timeFocusedAtMs == null)
+         return null;
+
       long timeElapsed = (long)(((SystemClock.elapsedRealtime() - timeFocusedAtMs) / 1_000d) + 0.5d);
 
       // Time is invalid if below 1 or over a day

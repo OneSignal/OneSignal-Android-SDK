@@ -11,6 +11,8 @@ import org.hamcrest.core.AnyOf;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.List;
+
 import static com.test.onesignal.RestClientValidator.GET_REMOTE_PARAMS_ENDPOINT;
 import static com.test.onesignal.TypeAsserts.assertIsUUID;
 import static org.hamcrest.CoreMatchers.anyOf;
@@ -54,12 +56,20 @@ class RestClientAsserts {
       assertOnFocusAtIndex(index, new JSONObject().put("active_time", focusTimeSec));
    }
 
-   static void assertOnFocusAtIndex(int index, JSONObject hasPayload) throws JSONException {
+   static void assertOnFocusAtIndex(int index, @NonNull JSONObject containsPayload) throws JSONException {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 
       assertEquals(REST_METHOD.POST, request.method);
       assertOnFocusUrl(request.url);
-      JsonAsserts.containsSubset(request.payload, hasPayload);
+      JsonAsserts.containsSubset(request.payload, containsPayload);
+   }
+
+   static void assertOnFocusAtIndexDoesNotHaveKeys(int index, @NonNull List<String> omitKeys) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertEquals(REST_METHOD.POST, request.method);
+      assertOnFocusUrl(request.url);
+      JsonAsserts.doesNotContainKeys(request.payload, omitKeys);
    }
 
    private static void assertPlayerCreateMethodAndUrl(@NonNull Request request) {
