@@ -117,7 +117,7 @@ public class OSSessionManager {
         if (session.isIndirect())
             indirectNotificationIds = getLastNotificationsReceivedIds();
         else if (session.isDirect())
-            directNotificationId = OutcomesUtils.getCachedNotificationOpenedId();
+            directNotificationId = OutcomesUtils.getCachedNotificationOpenId();
 
     }
 
