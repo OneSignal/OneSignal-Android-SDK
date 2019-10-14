@@ -30,7 +30,6 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
-import android.app.job.JobScheduler;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -134,9 +133,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -404,6 +401,90 @@ public class MainOneSignalClassRunner {
          put("active_time", 61);
          put("direct", false);
          put("notification_ids", new JSONArray().put("notification_id"));
+      }});
+   }
+
+   @Test
+   public void FIGURE_OUT_JOB_ISSUE_WITH_SYSTEM_TIME_FOR_OUTCOMES() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Disable all outcome flags
+      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+      notificationData.saveOutcomesParams(params);
+
+      // Background app for 31 seconds
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+
+      // Click notification
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, "notification_id");
+      threadAndTaskWait();
+
+      // Foreground app
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // Make sure on_session is called
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+
+      ShadowSystemClock.setCurrentTimeMillis(92 * 1000);
+
+      // Background app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // A sync job should have been schedule, lets run it to ensure on_focus is called.
+      TestHelpers.runNextJob();
+      threadAndTaskWait();
+
+      assertOnFocusAtIndex(4, new JSONObject() {{
+         put("active_time", 61);
+         put("direct", true);
+         put("notification_ids", new JSONArray().put("notification_id"));
+      }});
+   }
+
+   @Test
+   public void testAppOnFocus_wontContainOutcomeData_withOutcomeEventFlagsDisabled() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Disable all outcome flags
+      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false);
+      notificationData.saveOutcomesParams(params);
+
+      // Background app for 31 seconds
+      blankActivityController.pause();
+      threadAndTaskWait();
+      ShadowSystemClock.setCurrentTimeMillis(31 * 1000);
+
+      // Click notification
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
+      threadAndTaskWait();
+
+      // Foreground app
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // Make sure on_session is called
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
+
+      // Wait 61 seconds
+      ShadowSystemClock.setCurrentTimeMillis(61 * 1000);
+
+      // Background app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // A sync job should have been schedule, lets run it to ensure on_focus is called.
+//      TestHelpers.runNextJob();
+//      threadAndTaskWait();
+
+      // Make sure no direct flag or notifications are added into the on_focus
+      assertOnFocusAtIndex(4, new JSONObject() {{
+         put("active_time", 61);
       }});
    }
 

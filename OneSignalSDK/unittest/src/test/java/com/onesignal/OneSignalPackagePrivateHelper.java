@@ -107,7 +107,7 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal_getSessionManager().getDirectNotificationId();
    }
 
-   public static JSONArray OneSignal_getIndirectNotificationIds() {
+   public static JSONArray OneSignal_getSessionIndirectNotificationIds() {
       return OneSignal_getSessionManager().getIndirectNotificationIds();
    }
 

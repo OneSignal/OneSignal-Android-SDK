@@ -169,7 +169,7 @@ public class OSSessionManager {
 
     // Call when the session for the app changes, caches the state, and broadcasts the session that just ended
     private void setSession(@NonNull Session session, @Nullable String directNotificationId, @Nullable JSONArray indirectNotificationIds) {
-        if (!willChangeSession(session, directNotificationId))
+        if (!willChangeSession(session, directNotificationId, indirectNotificationIds))
             return;
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
@@ -194,14 +194,26 @@ public class OSSessionManager {
         this.indirectNotificationIds = indirectNotificationIds;
     }
 
-    private boolean willChangeSession(@NonNull Session session, @Nullable String directNotificationId) {
+    private boolean willChangeSession(@NonNull Session session, @Nullable String directNotificationId, @Nullable JSONArray indirectNotificationIds) {
         if (!session.equals(this.session))
             return true;
 
-        // Allow changing from direct to direct when a different notification is clicked
-        return this.session.isDirect() &&
-           this.directNotificationId != null &&
-           !this.directNotificationId.equals(directNotificationId);
+        // Allow updating a direct session to a new direct when a new notification is clicked
+        if (this.session.isDirect() &&
+                this.directNotificationId != null &&
+                !this.directNotificationId.equals(directNotificationId)) {
+            return true;
+        }
+
+        // Allow updating an indirect session to a new indirect when a new notification is received
+        if (this.session.isIndirect() &&
+           this.indirectNotificationIds != null &&
+           this.indirectNotificationIds.length() > 0 &&
+           !JSONUtils.compareJSONArrays(this.indirectNotificationIds, indirectNotificationIds)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
