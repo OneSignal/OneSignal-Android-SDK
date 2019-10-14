@@ -21,11 +21,11 @@ public class OSSessionManager {
     private static final String DIRECT_TAG = "direct";
 
     public static class SessionResult {
-        // Value will be Session.DISABLED if the outcome type is disabled.
-        Session session;
-        JSONArray notificationIds;
+        // Value will be Session.DISABLED only if the outcome type is disabled.
+        @NonNull Session session;
+        @Nullable JSONArray notificationIds;
 
-        SessionResult(SessionResult.Builder builder) {
+        SessionResult(@NonNull SessionResult.Builder builder) {
             this.notificationIds = builder.notificationIds;
             this.session = builder.session;
         }
@@ -42,12 +42,12 @@ public class OSSessionManager {
             private Builder() {
             }
 
-            public SessionResult.Builder setNotificationIds(JSONArray notificationIds) {
+            public SessionResult.Builder setNotificationIds(@Nullable JSONArray notificationIds) {
                 this.notificationIds = notificationIds;
                 return this;
             }
 
-            public SessionResult.Builder setSession(Session session) {
+            public SessionResult.Builder setSession(@NonNull Session session) {
                 this.session = session;
                 return this;
             }
@@ -60,7 +60,7 @@ public class OSSessionManager {
 
     interface SessionListener {
         // Fire with the SessionResult that just ended.
-        void onSessionEnding(SessionResult lastSessionResult);
+        void onSessionEnding(@NonNull SessionResult lastSessionResult);
     }
 
     public enum Session {
@@ -117,7 +117,7 @@ public class OSSessionManager {
         if (session.isIndirect())
             indirectNotificationIds = getLastNotificationsReceivedIds();
         else if (session.isDirect())
-            directNotificationId = OutcomesUtils.getCacheNotificationOpenId();
+            directNotificationId = OutcomesUtils.getCachedNotificationOpenedId();
 
     }
 
@@ -148,7 +148,7 @@ public class OSSessionManager {
         if (lastNotifications.length() > 0)
             setSession(Session.INDIRECT, null, lastNotifications);
         else
-            setSession(Session.UNATTRIBUTED,null, null);
+            setSession(Session.UNATTRIBUTED, null, null);
     }
 
     @NonNull Session getSession() {

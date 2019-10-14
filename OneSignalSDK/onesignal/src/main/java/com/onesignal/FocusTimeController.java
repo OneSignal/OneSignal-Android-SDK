@@ -189,7 +189,6 @@ class FocusTimeController {
       }
 
       private void syncUnsentTimeFromSyncJob() {
-         // TODO: Cold start of job does not send session attribution if it has some
          // TODO: Need to account for some job kicking off before 30 sec out of focus for attributed jobs
          if (hasMinSyncTime())
             syncOnFocusTime();
