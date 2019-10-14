@@ -404,7 +404,7 @@ public class OneSignal {
 
    public static final String VERSION = "031103";
 
-   static OSSessionManager.SessionListener getNewSessionListener() {
+   private static OSSessionManager.SessionListener getNewSessionListener() {
       return new OSSessionManager.SessionListener() {
          @Override
          public void onSessionEnding(OSSessionManager.SessionResult lastSessionResult) {
@@ -414,9 +414,7 @@ public class OneSignal {
          }
       };
    }
-
-   // TODO:KASTEN: Session manager needs to read from shardPrefs so we need to move this.
-   @NonNull static OSSessionManager sessionManager = new OSSessionManager(getNewSessionListener());
+   @Nullable static OSSessionManager sessionManager;
    @Nullable private static OutcomeEventsController outcomeEventsController;
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -581,10 +579,13 @@ public class OneSignal {
       // Register the lifecycle listener of the app for state changes in activities with proper context
       ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application)appContext);
 
-      // Prefs require a context to save
-      // If the previous state of appContext was null, kick off write in-case it was waiting
-      if (wasAppContextNull)
+
+      if (wasAppContextNull) {
+         sessionManager = new OSSessionManager(getNewSessionListener());
+         // Prefs require a context to save
+         // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
+      }
    }
 
    /**

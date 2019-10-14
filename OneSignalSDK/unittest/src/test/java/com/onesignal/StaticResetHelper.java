@@ -94,6 +94,8 @@ public class StaticResetHelper {
       }
 
       private void restSetStaticFields() throws Exception {
+         // appContext is manually set to null first since so many things depend on it.
+         OneSignal.appContext = null;
          for (Map.Entry<Field, Object> entry : orginalVals.entrySet()) {
             Field field = entry.getKey();
             field.setAccessible(true);

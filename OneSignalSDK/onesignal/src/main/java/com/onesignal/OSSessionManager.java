@@ -102,8 +102,6 @@ public class OSSessionManager {
         }
     }
 
-    private static OSSessionManager manager;
-
     @NonNull protected Session session;
     @Nullable private String directNotificationId;
     @Nullable private JSONArray indirectNotificationIds;
