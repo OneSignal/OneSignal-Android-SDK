@@ -85,7 +85,7 @@ public class OneSignal {
       None, InAppAlert, Notification
    }
 
-   public enum AppEntryAction {
+   enum AppEntryAction {
       NOTIFICATION_CLICK,
       APP_OPEN,
       APP_CLOSE,
@@ -2060,7 +2060,7 @@ public class OneSignal {
       runNotificationOpenedCallback(data, true, fromAlert);
 
       // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+      if (sessionManager != null && shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
          sessionManager.onDirectSessionFromNotificationOpen(notificationId);
@@ -3056,12 +3056,11 @@ public class OneSignal {
    }
 
    /*
-   * Start OneSignalOutcome module
-   */
-
+    * Start OneSignalOutcome module
+    */
    private static OutcomeSettings outcomeSettings = null;
 
-   public static void changeOutcomeSettings(OutcomeSettings settings){
+   static void changeOutcomeSettings(OutcomeSettings settings) {
       outcomeSettings = settings;
       outcomeEventsController.setOutcomeSettings(settings);
    }
@@ -3130,7 +3129,7 @@ public class OneSignal {
       void onOutcomeFail(int statusCode, String response);
    }
 
-   public static class OutcomeSettings {
+   static class OutcomeSettings {
       private boolean cacheActive;
 
       OutcomeSettings(Builder builder) {
