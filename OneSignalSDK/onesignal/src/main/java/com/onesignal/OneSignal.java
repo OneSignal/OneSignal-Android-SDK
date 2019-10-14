@@ -407,7 +407,7 @@ public class OneSignal {
    private static OSSessionManager.SessionListener getNewSessionListener() {
       return new OSSessionManager.SessionListener() {
          @Override
-         public void onSessionEnding(OSSessionManager.SessionResult lastSessionResult) {
+         public void onSessionEnding(@NonNull OSSessionManager.SessionResult lastSessionResult) {
             if (outcomeEventsController != null)
                outcomeEventsController.clearOutcomes();
             FocusTimeController.getInstance().onSessionEnded(lastSessionResult);

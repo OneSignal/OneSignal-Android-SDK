@@ -53,9 +53,9 @@ class OutcomesUtils {
     }
 
     /**
-     * Get the current cached session string, convert it to the session enum, and return it
+     * Get the current cached notification id, null if not direct
      */
-    @Nullable static String getCacheNotificationOpenId() {
+    @Nullable static String getCacheNotificationOpenedId() {
         return OneSignalPrefs.getString(
            OneSignalPrefs.PREFS_ONESIGNAL,
            OneSignalPrefs.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,

@@ -489,10 +489,9 @@ public class OutcomeEventIntegrationTests {
         ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
 
         // Background app
+        // Sync job will be scheduled here but not run yet
         blankActivityController.pause();
         threadAndTaskWait();
-
-        // Sync job will be scheduled here but not run yet
     }
 
     @Test
