@@ -23,6 +23,6 @@ public class GcmIntentJobService extends JobIntentService {
     }
 
     public static void enqueueWork(Context context, Intent intent) {
-        enqueueWork(context, GcmIntentJobService.class, JOB_ID, intent);
+        enqueueWork(context, GcmIntentJobService.class, JOB_ID, intent, false);
     }
 }

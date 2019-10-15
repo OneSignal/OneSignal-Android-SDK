@@ -157,7 +157,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
    }
 
    /**
-    * This function uses an android.support.v4.app.JobIntentService in order to enqueue the jobs.
+    * This function uses a com.OneSignal.JobIntentService in order to enqueue the jobs.
     * Some devices with Api O and upper can't schedule more than 100 distinct jobs,
     * this will process one notification sequentially like an IntentService.
     */
