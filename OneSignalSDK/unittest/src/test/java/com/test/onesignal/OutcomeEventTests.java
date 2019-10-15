@@ -33,7 +33,7 @@ import com.onesignal.MockOutcomeEventsRepository;
 import com.onesignal.MockOutcomeEventsService;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockSessionManager;
-import com.onesignal.OSSessionManager;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OutcomeEvent;

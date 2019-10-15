@@ -100,19 +100,15 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static OSSessionManager.Session OneSignal_getSessionType() {
-      return OneSignal_getSessionManager().getSession();
+      return OneSignal.getSessionManager().getSession();
    }
 
    public static String OneSignal_getSessionDirectNotification() {
-      return OneSignal_getSessionManager().getDirectNotificationId();
+      return OneSignal.getSessionManager().getDirectNotificationId();
    }
 
    public static JSONArray OneSignal_getSessionIndirectNotificationIds() {
-      return OneSignal_getSessionManager().getIndirectNotificationIds();
-   }
-
-   public static OSSessionManager OneSignal_getSessionManager() {
-      return OneSignal.getSessionManager();
+      return OneSignal.getSessionManager().getIndirectNotificationIds();
    }
 
    public static OneSignal.OutcomeSettings OneSignal_getOutcomeSettings(boolean cacheActive) {
@@ -123,6 +119,12 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
+   }
+
+   public static class OSSessionManager extends com.onesignal.OSSessionManager {
+      public OSSessionManager(@NonNull SessionListener sessionListener) {
+         super(sessionListener);
+      }
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {

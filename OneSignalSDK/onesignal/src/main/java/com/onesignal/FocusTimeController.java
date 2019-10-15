@@ -14,17 +14,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
- * Entry points that could case a state change to fire on_focus;
- * 1. State change from OSSessionManager
- * 2. App is foregrounded - Set start focused time
- * 3. App is backgrounded - Kick off job (if needed)
- *
- * Complete set;
- * 1. OneSignalSyncServiceUtils firing, cold starting the process
- * 2. App cold starting via app open.
- * 3. App cold starting via opening a notification.
- * 4. App resuming via app open.
- * 5. App resuming via a opening a notification.
+ * Entry points that could cause on_focus to fire:
+ * 1. OSSessionManager.session changed (onSessionEnded) - Send any attributed session time
+ * 2. App is foregrounded (appForegrounded) - Set start focused time
+ * 3. App is backgrounded (appBackgrounded) - Kick off job to sync when session ends
  */
 
 
@@ -54,7 +47,7 @@ class FocusTimeController {
    }
 
    void appBackgrounded() {
-      giveProcessorsValidFocusTime(OneSignal.sessionManager.getSessionResult(), FocusEventType.BACKGROUND);
+      giveProcessorsValidFocusTime(OneSignal.getSessionManager().getSessionResult(), FocusEventType.BACKGROUND);
       timeFocusedAtMs = null;
    }
 
@@ -132,8 +125,7 @@ class FocusTimeController {
       }
 
       protected void additionalFieldsToAddToOnFocusPayload(@NonNull JSONObject jsonBody) {
-         // TODO: Get the current state AT the start of the session instead of here. As this could be the wrong state
-         OneSignal.sessionManager.addSessionNotificationsIds(jsonBody);
+         OneSignal.getSessionManager().addSessionNotificationsIds(jsonBody);
       }
 
       protected void sendTime(@NonNull FocusEventType focusType) {
@@ -156,7 +148,6 @@ class FocusTimeController {
 
       private long getUnsentActiveTime() {
          if (unsentActiveTime == null) {
-            // TODO: Could this be getting zero when context hasn't been set yet!
             unsentActiveTime = OneSignalPrefs.getLong(
                OneSignalPrefs.PREFS_ONESIGNAL,
                PREF_KEY_FOR_UNSENT_TIME,
@@ -210,7 +201,6 @@ class FocusTimeController {
       }
 
       private void syncUnsentTimeFromSyncJob() {
-         // TODO: Need to account for some job kicking off before 30 sec out of focus for attributed jobs
          if (hasMinSyncTime())
             syncOnFocusTime();
       }
@@ -240,7 +230,6 @@ class FocusTimeController {
             void onSuccess(String response) {
                // TODO: PRE-EXISTING: This time is shared between the email + push player and
                //          is cleared no matter which one is successful.
-
                // TODO: PRE-EXISTING: This could be clearing time more then was persisted while the network call was in flight
                saveUnsentActiveTime(0);
             }
@@ -269,8 +258,6 @@ class FocusTimeController {
             additionalFieldsToAddToOnFocusPayload(jsonBody);
             sendOnFocusToPlayer(OneSignal.getUserId(), jsonBody);
 
-            // TODO: Omit call for email if an attributed type
-            //       Otherwise it would be counted twice (2 sessions with 2x time)
             if (OneSignal.hasEmailId())
                sendOnFocusToPlayer(OneSignal.getEmailId(), generateOnFocusPayload(totalTimeActive));
          }

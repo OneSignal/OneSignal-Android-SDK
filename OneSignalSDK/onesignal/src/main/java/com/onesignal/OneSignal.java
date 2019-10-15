@@ -414,7 +414,7 @@ public class OneSignal {
          }
       };
    }
-   @Nullable static OSSessionManager sessionManager;
+   @Nullable private static OSSessionManager sessionManager;
    @Nullable private static OutcomeEventsController outcomeEventsController;
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
@@ -1175,13 +1175,14 @@ public class OneSignal {
          Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
          return;
       }
-      // TODO: Do we account for missing a context?
+
       FocusTimeController.getInstance().appBackgrounded();
 
-      boolean scheduleSyncService = scheduleSyncService();
+      scheduleSyncService();
    }
 
-   static boolean scheduleSyncService() {
+   // Schedules location update or a player update if there are any unsynced changes
+   private static boolean scheduleSyncService() {
       boolean unsyncedChanges = OneSignalStateSynchronizer.persist();
       if (unsyncedChanges)
          OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
@@ -2091,7 +2092,6 @@ public class OneSignal {
               && !defaultOpenActionDisabled
               && !foreground
               && startOrResumeApp(context);
-               // TODO: Might have to split up the startOrResumeApp into the check and the action otherwise OSSessionManger.restartSessionIfNeeded() may not work.
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {

@@ -217,7 +217,6 @@ class OneSignalSyncServiceUtils {
 
             @Override
             public void complete(LocationGMS.LocationPoint point) {
-               // TODO: This job could be run very often now (for outcomes attribution) so don't ways send location
                if (point != null)
                   OneSignalStateSynchronizer.updateLocation(point);
 

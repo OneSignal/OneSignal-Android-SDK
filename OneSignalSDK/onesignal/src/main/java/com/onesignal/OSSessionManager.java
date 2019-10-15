@@ -15,8 +15,8 @@ import org.json.JSONObject;
  * - Indirect: the session occurred on a time frame less than 24hrs
  * - Unattributed: the session was not influenced nor was on the time frame os a push
  */
-// TODO: Should be package-private
-public class OSSessionManager {
+
+class OSSessionManager {
 
     private static final String DIRECT_TAG = "direct";
 
