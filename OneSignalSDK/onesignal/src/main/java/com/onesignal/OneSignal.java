@@ -387,9 +387,21 @@ public class OneSignal {
    private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
-   static boolean initDone;
+   private static boolean initDone;
+
+   static boolean isInitDone() {
+      return initDone;
+   }
+
    private static boolean foreground;
-   static AppEntryAction appEntryState = AppEntryAction.APP_CLOSE;
+   static boolean isForeground() {
+      return foreground;
+   }
+
+   @NonNull private static AppEntryAction appEntryState = AppEntryAction.APP_CLOSE;
+   static @NonNull AppEntryAction getAppEntryState() {
+      return appEntryState;
+   }
 
    // the concurrent queue in which we pin pending tasks upon finishing initialization
    static ExecutorService pendingTaskExecutor;
@@ -1224,10 +1236,6 @@ public class OneSignal {
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
 
       OneSignalSyncServiceUtils.cancelSyncTask(appContext);
-   }
-
-   static boolean isForeground() {
-      return foreground;
    }
 
    static void addNetType(JSONObject jsonObj) {

@@ -64,7 +64,7 @@ public class PermissionsActivity extends Activity {
    protected void onNewIntent(Intent intent) {
       super.onNewIntent(intent);
 
-      if (OneSignal.initDone)
+      if (OneSignal.isInitDone())
          requestPermission();
    }
 

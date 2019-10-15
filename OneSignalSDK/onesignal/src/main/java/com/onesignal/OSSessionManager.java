@@ -141,7 +141,7 @@ class OSSessionManager {
 
     void restartSessionIfNeeded() {
         // Avoid reset session if app was focused due to a notification click (direct session recently set)
-        if (OneSignal.appEntryState.isNotificationClick())
+        if (OneSignal.getAppEntryState().isNotificationClick())
             return;
 
         JSONArray lastNotifications = getLastNotificationsReceivedIds();
@@ -280,7 +280,7 @@ class OSSessionManager {
      */
     void attemptSessionUpgrade() {
         // We will try to override any session with DIRECT
-        if (OneSignal.appEntryState.isNotificationClick()) {
+        if (OneSignal.getAppEntryState().isNotificationClick()) {
             setSession(Session.DIRECT, directNotificationId, null);
             return;
         }
@@ -288,7 +288,7 @@ class OSSessionManager {
         // We will try to override the UNATTRIBUTED session with INDIRECT
         if (session.isUnattributed()) {
             JSONArray lastNotificationIds = getLastNotificationsReceivedIds();
-            if (lastNotificationIds.length() > 0 && OneSignal.appEntryState.isAppOpen())
+            if (lastNotificationIds.length() > 0 && OneSignal.getAppEntryState().isAppOpen())
                 setSession(Session.INDIRECT, null, lastNotificationIds);
         }
     }
