@@ -36,10 +36,11 @@ import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_onReceived;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDirectNotification;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -228,6 +229,40 @@ public class OutcomeEventIntegrationTests {
         assertNull(OneSignal_getSessionIndirectNotificationIds());
         // Make sure session is not DIRECT
         assertFalse(OneSignal_getSessionType().isIndirect());
+    }
+
+    @Test
+    public void testDirectSession_willOverrideIndirectSession_whenAppIsInBackground() throws Exception {
+        foregroundAppAfterReceivingNotification();
+
+        // Foreground for 10 seconds
+        ShadowSystemClock.setCurrentTimeMillis(10);
+
+        // Make sure session is INDIRECT
+        assertTrue(OneSignal_getSessionType().isIndirect());
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Click notification before new session
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        threadAndTaskWait();
+
+        // Foreground app
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Make sure on_focus is sent immediately since DIRECT session is going to override
+        assertOnFocusAtIndex(3, new JSONObject() {{
+            put("active_time", 10);
+            put("direct", false);
+            put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID));
+        }});
+        // Check directNotificationId is set to clicked notification
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "2", OneSignal_getSessionDirectNotification());
+        // Make sure session is DIRECT
+        assertTrue(OneSignal_getSessionType().isDirect());
     }
 
     @Test
