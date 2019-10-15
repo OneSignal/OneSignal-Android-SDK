@@ -52,8 +52,8 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.List;
-import java.util.Objects;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getOutcomeSettings;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertTrue;
@@ -108,16 +108,13 @@ public class OutcomeEventTests {
     public void beforeEachTest() {
         outcomeEvents = null;
 
-        OneSignal.OutcomeSettings outcomeSettings = OneSignal.OutcomeSettings.Builder.newInstance()
-                .setCacheActive(true)
-                .build();
         sessionManager = new MockSessionManager();
         notificationData = new MockOutcomesUtils();
         dbHelper = OneSignalDbHelper.getInstance(RuntimeEnvironment.application);
         service = new MockOutcomeEventsService();
         repository = new MockOutcomeEventsRepository(service, dbHelper);
         controller = new MockOutcomeEventsController(sessionManager, repository);
-        controller.setOutcomeSettings(outcomeSettings);
+        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(true));
     }
 
     @After
@@ -317,9 +314,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.setOutcomeSettings(OneSignal.OutcomeSettings.Builder.newInstance()
-                .setCacheActive(false)
-                .build());
+        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(false));
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
