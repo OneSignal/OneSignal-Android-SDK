@@ -33,7 +33,7 @@ import com.onesignal.MockOutcomeEventsRepository;
 import com.onesignal.MockOutcomeEventsService;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockSessionManager;
-import com.onesignal.OSSessionManager;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OutcomeEvent;
@@ -52,8 +52,8 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.List;
-import java.util.Objects;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getOutcomeSettings;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertTrue;
@@ -108,24 +108,23 @@ public class OutcomeEventTests {
     public void beforeEachTest() {
         outcomeEvents = null;
 
-        OneSignal.OutcomeSettings outcomeSettings = OneSignal.OutcomeSettings.Builder.newInstance()
-                .setCacheActive(true)
-                .build();
         sessionManager = new MockSessionManager();
         notificationData = new MockOutcomesUtils();
         dbHelper = OneSignalDbHelper.getInstance(RuntimeEnvironment.application);
         service = new MockOutcomeEventsService();
         repository = new MockOutcomeEventsRepository(service, dbHelper);
         controller = new MockOutcomeEventsController(sessionManager, repository);
-        controller.setOutcomeSettings(outcomeSettings);
+        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(true));
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         dbHelper.cleanOutcomeDatabase();
         dbHelper.close();
         notificationData.clearNotificationSharedPreferences();
         sessionManager.resetMock();
+        StaticResetHelper.restSetStaticFields();
+        threadAndTaskWait();
     }
 
     @Test
@@ -315,9 +314,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.setOutcomeSettings(OneSignal.OutcomeSettings.Builder.newInstance()
-                .setCacheActive(false)
-                .build());
+        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(false));
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
@@ -563,12 +560,14 @@ public class OutcomeEventTests {
     }
 
     @Test
-    public void testIndirectSession() {
+    public void testIndirectSession() throws Exception {
         notificationData.markLastNotificationReceived(NOTIFICATION_ID);
 
-        sessionManager.onSessionStarted();
+        sessionManager.startSession();
+        threadAndTaskWait();
         assertTrue(sessionManager.getSession().isIndirect());
-        assertEquals(1, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
+        threadAndTaskWait();
+        assertEquals(1, sessionManager.getLastNotificationsReceivedIds().length());
     }
 
     @Test
@@ -577,11 +576,11 @@ public class OutcomeEventTests {
             notificationData.markLastNotificationReceived(NOTIFICATION_ID + i);
         }
 
-        sessionManager.onSessionStarted();
+        sessionManager.startSession();
         assertTrue(sessionManager.getSession().isIndirect());
         assertNull(sessionManager.getDirectNotificationId());
-        assertEquals(NOTIFICATION_LIMIT, Objects.requireNonNull(sessionManager.getIndirectNotificationIds()).length());
-        assertEquals(NOTIFICATION_ID + "5", sessionManager.getIndirectNotificationIds().get(0));
+        assertEquals(NOTIFICATION_LIMIT, sessionManager.getLastNotificationsReceivedIds().length());
+        assertEquals(NOTIFICATION_ID + "5", sessionManager.getLastNotificationsReceivedIds().get(0));
     }
 
     @Test
@@ -598,10 +597,10 @@ public class OutcomeEventTests {
 
     @Test
     public void testUnattributedSession() {
-        sessionManager.onSessionStarted();
+        sessionManager.startSession();
 
         assertTrue(sessionManager.getSession().isUnattributed());
-        assertNull(sessionManager.getIndirectNotificationIds());
+        assertEquals(new JSONArray(), sessionManager.getLastNotificationsReceivedIds());
         assertNull(sessionManager.getDirectNotificationId());
     }
 

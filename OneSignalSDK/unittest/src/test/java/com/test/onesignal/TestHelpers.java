@@ -1,10 +1,15 @@
 package com.test.onesignal;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.app.job.JobService;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
+import android.support.annotation.Nullable;
 
-import com.onesignal.OSSessionManager;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
@@ -39,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
+import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
 public class TestHelpers {
@@ -303,5 +309,25 @@ public class TestHelpers {
    public static void assertMainThread() {
       if (!Looper.getMainLooper().getThread().equals(Thread.currentThread()))
          Assert.fail("assertMainThread - Not running on main thread when expected to!");
+   }
+
+
+   public static @Nullable JobInfo getNextJob() {
+      JobScheduler jobScheduler =
+         (JobScheduler)RuntimeEnvironment.application.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
+      if (jobs.size() == 0)
+         return null;
+      return jobs.get(0);
+   }
+
+   public static void runNextJob() {
+      try {
+         Class jobClass = Class.forName(getNextJob().getService().getClassName());
+         JobService jobService = (JobService)Robolectric.buildService(jobClass).create().get();
+         jobService.onStartJob(null);
+      } catch (ClassNotFoundException e) {
+         e.printStackTrace();
+      }
    }
 }

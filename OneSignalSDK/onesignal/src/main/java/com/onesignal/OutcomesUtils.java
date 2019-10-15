@@ -1,13 +1,12 @@
 package com.onesignal;
 
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.Date;
 
 /**
  * Setter and Getter of Notifications received
@@ -21,7 +20,7 @@ class OutcomesUtils {
     /**
      * Cache a session enum as a string
      */
-    static void cacheCurrentSession(OSSessionManager.Session session) {
+    static void cacheCurrentSession(@NonNull OSSessionManager.Session session) {
         OneSignalPrefs.saveString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CACHED_SESSION_OUTCOME_EVENT,
@@ -32,13 +31,36 @@ class OutcomesUtils {
     /**
      * Get the current cached session string, convert it to the session enum, and return it
      */
-    static OSSessionManager.Session getCachedSession() {
+    @NonNull static OSSessionManager.Session getCachedSession() {
         String sessionString = OneSignalPrefs.getString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CACHED_SESSION_OUTCOME_EVENT,
                 OSSessionManager.Session.UNATTRIBUTED.toString()
         );
         return OSSessionManager.Session.fromString(sessionString);
+    }
+
+
+    /**
+     * Cache attributed notification opened
+     */
+    static void cacheNotificationOpenId(@Nullable String id) {
+        OneSignalPrefs.saveString(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
+           id
+        );
+    }
+
+    /**
+     * Get the current cached notification id, null if not direct
+     */
+    @Nullable static String getCachedNotificationOpenId() {
+        return OneSignalPrefs.getString(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
+           null
+        );
     }
 
     /**

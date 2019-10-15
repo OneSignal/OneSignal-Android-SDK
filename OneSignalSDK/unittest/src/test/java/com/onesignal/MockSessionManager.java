@@ -9,9 +9,17 @@ public class MockSessionManager extends OSSessionManager {
 
     private SessionResult sessionResult;
 
+    public MockSessionManager() {
+        super(new SessionListener() {
+            @Override
+            public void onSessionEnding(SessionResult lastSessionResult) {
+            }
+        });
+    }
+
     public void resetMock() {
+        session = Session.UNATTRIBUTED;
         sessionResult = null;
-        cleanSession();
     }
 
     public void setSessionResult(SessionResult sessionResult) {
@@ -19,18 +27,12 @@ public class MockSessionManager extends OSSessionManager {
     }
 
     @Override
-    public void cleanSession() {
-        super.cleanSession();
-    }
-
-    @Override
     public void onDirectSessionFromNotificationOpen(String notificationId) {
         super.onDirectSessionFromNotificationOpen(notificationId);
     }
 
-    @Override
-    public void onSessionStarted() {
-        super.onSessionStarted();
+    public void startSession() {
+        super.restartSessionIfNeeded();
     }
 
     @NonNull
@@ -49,6 +51,11 @@ public class MockSessionManager extends OSSessionManager {
     @Override
     public JSONArray getIndirectNotificationIds() {
         return super.getIndirectNotificationIds();
+    }
+
+    @NonNull
+    public JSONArray getLastNotificationsReceivedIds() {
+        return super.getLastNotificationsReceivedIds();
     }
 
     @Override

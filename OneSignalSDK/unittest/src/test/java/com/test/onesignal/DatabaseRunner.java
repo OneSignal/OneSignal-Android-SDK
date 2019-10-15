@@ -5,8 +5,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.onesignal.BuildConfig;
-import com.onesignal.MockOutcomeEventsRepository;
-import com.onesignal.OSSessionManager;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OutcomeEventsTable;
@@ -42,8 +41,6 @@ import static junit.framework.Assert.assertFalse;
 )
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseRunner {
-   private MockOutcomeEventsRepository repository;
-
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;

@@ -55,6 +55,9 @@ public class StaticResetHelper {
          }
       }));
       classes.add(new ClassState(OneSignalPackagePrivateHelper.OSInAppMessageController.class, null));
+      classes.add(new ClassState(FocusTimeController.class, null));
+      classes.add(new ClassState(OSSessionManager.class, null));
+      classes.add(new ClassState(MockSessionManager.class, null));
    }
 
    private interface OtherFieldHandler {
@@ -91,12 +94,13 @@ public class StaticResetHelper {
       }
 
       private void restSetStaticFields() throws Exception {
+         // appContext is manually set to null first since so many things depend on it.
+         OneSignal.appContext = null;
          for (Map.Entry<Field, Object> entry : orginalVals.entrySet()) {
             Field field = entry.getKey();
-            Object value = entry.getValue();
-            field.getName();
             field.setAccessible(true);
 
+            Object value = entry.getValue();
             if (otherFieldHandler == null || !otherFieldHandler.onOtherField(field))
                field.set(null, tryClone(value));
          }
