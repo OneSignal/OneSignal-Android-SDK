@@ -261,7 +261,7 @@ class OneSignalRestClient {
          public void run() {
             handler.onSuccess(response);
          }
-      });
+      }, "OS_REST_SUCCESS_CALLBACK");
       thread.start();
       
       return thread;
@@ -275,7 +275,7 @@ class OneSignalRestClient {
          public void run() {
             handler.onFailure(statusCode, response, throwable);
          }
-      });
+      }, "OS_REST_FAILURE_CALLBACK");
       thread.start();
       
       return thread;
