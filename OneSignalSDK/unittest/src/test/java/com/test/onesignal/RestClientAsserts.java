@@ -1,6 +1,7 @@
 package com.test.onesignal;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -64,7 +65,14 @@ class RestClientAsserts {
       JsonAsserts.containsSubset(request.payload, containsPayload);
    }
 
-   static void assertOnFocusAtIndexDoesNotHaveKeys(int index, @NonNull List<String> omitKeys) throws JSONException {
+   static void assertOnFocusAtIndexForPlayerId(int index, @NonNull String id) {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertEquals(REST_METHOD.POST, request.method);
+      assertOnFocusUrlWithPlayerId(request.url, id);
+   }
+
+   static void assertOnFocusAtIndexDoesNotHaveKeys(int index, @NonNull List<String> omitKeys) {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 
       assertEquals(REST_METHOD.POST, request.method);
@@ -90,6 +98,11 @@ class RestClientAsserts {
 
       assertEquals(REST_METHOD.GET, request.method);
       assertRemoteParamsUrl(request.url);
+   }
+
+   static void assertOnFocusUrlWithPlayerId(@NonNull String url, @NonNull String id) {
+      assertOnFocusUrl(url);
+      assertEquals(id, url.split("/")[1]);
    }
 
    static void assertOnFocusUrl(@NonNull String url) {

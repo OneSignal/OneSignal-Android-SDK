@@ -35,11 +35,16 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
 
+import java.util.Arrays;
+
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_onReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDirectNotification;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
+import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexForPlayerId;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -357,7 +362,7 @@ public class OutcomeEventIntegrationTests {
         TestHelpers.runNextJob();
         threadAndTaskWait();
 
-        RestClientAsserts.assertOnFocusAtIndex(2, new JSONObject() {{
+        assertOnFocusAtIndex(2, new JSONObject() {{
             put("active_time", 10);
             put("direct", false);
             put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
@@ -381,11 +386,41 @@ public class OutcomeEventIntegrationTests {
         TestHelpers.runNextJob();
         threadAndTaskWait();
 
-        RestClientAsserts.assertOnFocusAtIndex(2, new JSONObject() {{
+        assertOnFocusAtIndex(2, new JSONObject() {{
             put("active_time", 10);
             put("direct", false);
             put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
         }});
+    }
+
+    @Test
+    public void testIndirectSession_sendsOnFocusAttributionForPushPlayer_butNotEmailPlayer() throws Exception {
+        OneSignal.setEmail("test@test.com");
+        foregroundAppAfterReceivingNotification();
+
+        // App in foreground for 10 seconds
+        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
+
+        // Background app
+        // Sync job will be scheduled here but not run yet
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        TestHelpers.runNextJob();
+        threadAndTaskWait();
+
+        // Ensure we send notification attribution for push player
+        assertOnFocusAtIndexForPlayerId(4, ShadowOneSignalRestClient.pushUserId);
+        assertOnFocusAtIndex(4, new JSONObject() {{
+            put("active_time", 10);
+            put("direct", false);
+            put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
+        }});
+
+        // Ensure we DO NOT send notification attribution for email player
+        //   Otherwise it would look like 2 different session to outcomes.
+        assertOnFocusAtIndexForPlayerId(5, ShadowOneSignalRestClient.emailUserId);
+        assertOnFocusAtIndexDoesNotHaveKeys(5, Arrays.asList("direct", "notification_ids"));
     }
 
     @Test

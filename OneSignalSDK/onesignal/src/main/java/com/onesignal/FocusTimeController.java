@@ -244,7 +244,6 @@ class FocusTimeController {
             .put("state", "ping") // Always ping, other types are not used
             .put("active_time", totalTimeActive)
             .put("device_type", new OSUtils().getDeviceType());
-         additionalFieldsToAddToOnFocusPayload(jsonBody);
          OneSignal.addNetType(jsonBody);
          return jsonBody;
       }
@@ -252,12 +251,13 @@ class FocusTimeController {
       private void sendOnFocus(long totalTimeActive) {
          try {
             JSONObject jsonBody = generateOnFocusPayload(totalTimeActive);
+            additionalFieldsToAddToOnFocusPayload(jsonBody);
             sendOnFocusToPlayer(OneSignal.getUserId(), jsonBody);
 
             // TODO: Omit call for email if an attributed type
             //       Otherwise it would be counted twice (2 sessions with 2x time)
             if (OneSignal.hasEmailId())
-               sendOnFocusToPlayer(OneSignal.getEmailId(), jsonBody);
+               sendOnFocusToPlayer(OneSignal.getEmailId(), generateOnFocusPayload(totalTimeActive));
          }
          catch (JSONException t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating on_focus:JSON Failed.", t);
