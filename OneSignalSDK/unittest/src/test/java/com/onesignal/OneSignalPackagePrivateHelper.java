@@ -99,16 +99,32 @@ public class OneSignalPackagePrivateHelper {
       return true;
    }
 
-   public static OSSessionManager.Session OneSignal_GetSessionType() {
-      return OneSignal.getSessionType();
+   public static OSSessionManager.Session OneSignal_getSessionType() {
+      return OneSignal.getSessionManager().getSession();
    }
 
-   public static void OneSignal_CleanSessionType() {
-      OneSignal.cleanSessionType();
+   public static String OneSignal_getSessionDirectNotification() {
+      return OneSignal.getSessionManager().getDirectNotificationId();
+   }
+
+   public static JSONArray OneSignal_getSessionIndirectNotificationIds() {
+      return OneSignal.getSessionManager().getIndirectNotificationIds();
+   }
+
+   public static OneSignal.OutcomeSettings OneSignal_getOutcomeSettings(boolean cacheActive) {
+       return OneSignal.OutcomeSettings.Builder.newInstance()
+               .setCacheActive(cacheActive)
+               .build();
    }
 
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
+   }
+
+   public static class OSSessionManager extends com.onesignal.OSSessionManager {
+      public OSSessionManager(@NonNull SessionListener sessionListener) {
+         super(sessionListener);
+      }
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -212,9 +228,13 @@ public class OneSignalPackagePrivateHelper {
    static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 
       public RemoteOutcomeParams() {
-         directEnabled = true;
-         indirectEnabled = true;
-         unattributedEnabled = true;
+         this(true, true, true);
+      }
+
+      public RemoteOutcomeParams(boolean direct, boolean indirect, boolean unattributed) {
+         directEnabled = direct;
+         indirectEnabled = indirect;
+         unattributedEnabled = unattributed;
       }
    }
 
@@ -386,4 +406,7 @@ public class OneSignalPackagePrivateHelper {
          super(message, activity);
       }
    }
+
+
+   public static class JSONUtils extends com.onesignal.JSONUtils {}
 }

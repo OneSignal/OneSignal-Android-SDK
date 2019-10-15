@@ -125,4 +125,5 @@ class OutcomeEventsCache {
 
         return events;
     }
+
 }
