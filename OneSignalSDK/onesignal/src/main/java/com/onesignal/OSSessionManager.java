@@ -273,20 +273,20 @@ public class OSSessionManager {
 
     /**
      * Attempt to override the current session before the 30 second session minimum
-     * This should only be done in a upward direction, so UNATTRIBUTED can become INDIRECT or DIRECT
-     * And INDIRECT can become DIRECT
+     * This should only be done in a upward direction:
+     *   * UNATTRIBUTED can become INDIRECT or DIRECT
+     *   * INDIRECT can become DIRECT
+     *   * DIRECT can become DIRECT
      */
     void attemptSessionUpgrade() {
-        // TODO: Don't think we want to check the appEntryState here, as backgrounding the app quickly and resuming would clean it.
-        // Try to override the current session with a DIRECT session
+        // We will try to override any session with DIRECT
         if (OneSignal.appEntryState.isNotificationClick()) {
             setSession(Session.DIRECT, directNotificationId, null);
             return;
         }
 
-        // Get cached current session state
+        // We will try to override the UNATTRIBUTED session with INDIRECT
         if (session.isUnattributed()) {
-            // We will try to override the UNATTRIBUTED session with INDIRECT
             JSONArray lastNotificationIds = getLastNotificationsReceivedIds();
             if (lastNotificationIds.length() > 0 && OneSignal.appEntryState.isAppOpen())
                 setSession(Session.INDIRECT, null, lastNotificationIds);

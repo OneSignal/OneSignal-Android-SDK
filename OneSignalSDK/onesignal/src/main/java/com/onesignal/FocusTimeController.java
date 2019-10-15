@@ -59,7 +59,14 @@ class FocusTimeController {
    }
 
    void onSessionEnded(@NonNull OSSessionManager.SessionResult lastSessionResult) {
-      giveProcessorsValidFocusTime(lastSessionResult, FocusEventType.END_SESSION);
+      final FocusEventType focusEventType = FocusEventType.END_SESSION;
+      boolean hadValidTime = giveProcessorsValidFocusTime(lastSessionResult, focusEventType);
+
+      // If there is no in focus time to be added we just need to send the time from the last session that just ended.
+      if (!hadValidTime) {
+         for (FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
+            focusTimeProcessor.sendUnsentTimeNow(focusEventType);
+      }
    }
 
    void doBlockingBackgroundSyncOfUnsentTime() {
@@ -70,13 +77,14 @@ class FocusTimeController {
          focusTimeProcessor.syncUnsentTimeFromSyncJob();
    }
 
-   private void giveProcessorsValidFocusTime(@NonNull OSSessionManager.SessionResult lastSessionResult, @NonNull FocusEventType focusType) {
+   private boolean giveProcessorsValidFocusTime(@NonNull OSSessionManager.SessionResult lastSessionResult, @NonNull FocusEventType focusType) {
       Long timeElapsed = getTimeFocusedElapsed();
       if (timeElapsed == null)
-         return;
+        return false;
 
       for(FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
-         focusTimeProcessor.addTime(timeElapsed, lastSessionResult, focusType);
+         focusTimeProcessor.addTime(timeElapsed, lastSessionResult.session, focusType);
+      return true;
    }
 
    // Get time past since app was put into focus.
@@ -100,11 +108,11 @@ class FocusTimeController {
          PREF_KEY_FOR_UNSENT_TIME = OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME;
       }
 
-      protected boolean timeTypeApplies(@NonNull OSSessionManager.SessionResult sessionResult) {
-         return sessionResult.session.isUnattributed() || sessionResult.session.isDisabled();
+      protected boolean timeTypeApplies(@NonNull OSSessionManager.Session session) {
+         return session.isUnattributed() || session.isDisabled();
       }
 
-      protected void sendTime(long time, @NonNull OSSessionManager.SessionResult sessionResult, @NonNull FocusEventType focusType) {
+      protected void sendTime(@NonNull FocusEventType focusType) {
          // We only need to send unattributed focus time when the app goes out of focus.
          if (focusType.equals(FocusEventType.END_SESSION))
             return;
@@ -119,8 +127,8 @@ class FocusTimeController {
          PREF_KEY_FOR_UNSENT_TIME = OneSignalPrefs.PREFS_OS_UNSENT_ATTRIBUTED_ACTIVE_TIME;
       }
 
-      protected boolean timeTypeApplies(@NonNull OSSessionManager.SessionResult sessionResult) {
-         return sessionResult.session.isAttributed();
+      protected boolean timeTypeApplies(@NonNull OSSessionManager.Session session) {
+         return session.isAttributed();
       }
 
       protected void additionalFieldsToAddToOnFocusPayload(@NonNull JSONObject jsonBody) {
@@ -128,7 +136,7 @@ class FocusTimeController {
          OneSignal.sessionManager.addSessionNotificationsIds(jsonBody);
       }
 
-      protected void sendTime(long time, @NonNull OSSessionManager.SessionResult sessionResult, @NonNull FocusEventType focusType) {
+      protected void sendTime(@NonNull FocusEventType focusType) {
          if (focusType.equals(FocusEventType.END_SESSION))
             syncOnFocusTime();
          else
@@ -141,27 +149,27 @@ class FocusTimeController {
       protected long MIN_ON_FOCUS_TIME_SEC;
       protected @NonNull String PREF_KEY_FOR_UNSENT_TIME;
 
-      protected abstract boolean timeTypeApplies( @NonNull OSSessionManager.SessionResult sessionResult);
-      protected abstract void sendTime(long time, @NonNull OSSessionManager.SessionResult sessionResult, @NonNull FocusEventType focusType);
+      protected abstract boolean timeTypeApplies(@NonNull OSSessionManager.Session session);
+      protected abstract void sendTime(@NonNull FocusEventType focusType);
 
-      @Nullable private Long unSentActiveTime = null;
+      @Nullable private Long unsentActiveTime = null;
 
       private long getUnsentActiveTime() {
-         if (unSentActiveTime == null) {
+         if (unsentActiveTime == null) {
             // TODO: Could this be getting zero when context hasn't been set yet!
-            unSentActiveTime = OneSignalPrefs.getLong(
+            unsentActiveTime = OneSignalPrefs.getLong(
                OneSignalPrefs.PREFS_ONESIGNAL,
                PREF_KEY_FOR_UNSENT_TIME,
                0
             );
          }
-         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":getUnsentActiveTime: " + unSentActiveTime);
-         return unSentActiveTime;
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":getUnsentActiveTime: " + unsentActiveTime);
+         return unsentActiveTime;
       }
 
       private void saveUnsentActiveTime(long time) {
-         unSentActiveTime = time;
-         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":saveUnsentActiveTime: " + unSentActiveTime);
+         unsentActiveTime = time;
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":saveUnsentActiveTime: " + unsentActiveTime);
          OneSignalPrefs.saveLong(
             OneSignalPrefs.PREFS_ONESIGNAL,
             PREF_KEY_FOR_UNSENT_TIME,
@@ -169,8 +177,8 @@ class FocusTimeController {
          );
       }
 
-      private void addTime(long time, @NonNull OSSessionManager.SessionResult sessionResult, @NonNull FocusEventType focusType) {
-         if (!timeTypeApplies(sessionResult))
+      private void addTime(long time, @NonNull OSSessionManager.Session session, @NonNull FocusEventType focusType) {
+         if (!timeTypeApplies(session))
             return;
 
          long totalTime = getUnsentActiveTime() + time;
@@ -179,7 +187,14 @@ class FocusTimeController {
          if (!OneSignal.hasUserId())
             return;
 
-         sendTime(totalTime, sessionResult, focusType);
+         sendUnsentTimeNow(focusType);
+      }
+
+      private void sendUnsentTimeNow(FocusEventType focusType) {
+         if (!OneSignal.hasUserId())
+            return;
+
+         sendTime(focusType);
       }
 
       private boolean hasMinSyncTime() {

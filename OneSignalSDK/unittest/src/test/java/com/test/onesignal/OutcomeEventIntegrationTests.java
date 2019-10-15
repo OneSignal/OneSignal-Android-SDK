@@ -240,7 +240,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // Foreground for 10 seconds
-        ShadowSystemClock.setCurrentTimeMillis(10);
+        ShadowSystemClock.setCurrentTimeMillis(10 * 1_000);
 
         // Make sure session is INDIRECT
         assertTrue(OneSignal_getSessionType().isIndirect());
@@ -261,7 +261,7 @@ public class OutcomeEventIntegrationTests {
         assertOnFocusAtIndex(3, new JSONObject() {{
             put("active_time", 10);
             put("direct", false);
-            put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID));
+            put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
         }});
         // Check directNotificationId is set to clicked notification
         assertEquals(ONESIGNAL_NOTIFICATION_ID + "2", OneSignal_getSessionDirectNotification());
