@@ -20,16 +20,10 @@ public class MockSessionManager extends OSSessionManager {
     public void resetMock() {
         session = Session.UNATTRIBUTED;
         sessionResult = null;
-        cleanSession();
     }
 
     public void setSessionResult(SessionResult sessionResult) {
         this.sessionResult = sessionResult;
-    }
-
-    public void cleanSession() {
-        // TODO: Remove, this isn't in production code any more
-//        session = null;
     }
 
     @Override
@@ -39,8 +33,6 @@ public class MockSessionManager extends OSSessionManager {
 
     public void startSession() {
         super.restartSessionIfNeeded();
-        // TODO: is restartSessionIfNeeded the same?
-//        super.startSession();
     }
 
     @NonNull

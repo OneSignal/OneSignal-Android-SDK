@@ -406,4 +406,7 @@ public class OneSignalPackagePrivateHelper {
          super(message, activity);
       }
    }
+
+
+   public static class JSONUtils extends com.onesignal.JSONUtils {}
 }

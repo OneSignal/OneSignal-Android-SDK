@@ -225,9 +225,11 @@ class JSONUtils {
         try {
             L1 : for (int i = 0; i < jsonArray1.length(); i++) {
                 for (int j = 0; j < jsonArray2.length(); j++) {
+                    Object obj1 = normalizeType(jsonArray1.get(i));
+                    Object obj2 = normalizeType(jsonArray2.get(j));
                     // Make sure jsonArray1 current item exists somewhere inside jsonArray2
-                    if (jsonArray1.get(i).equals(jsonArray2.get(j)))
-                        // Item found continue looping
+                    // If item found continue looping
+                    if (obj1.equals(obj2))
                         continue L1;
                 }
 
@@ -243,6 +245,20 @@ class JSONUtils {
 
         // JSONArrays are equal
         return true;
+    }
+
+    // Converts Java types that are equivalent in the JSON format to the same types.
+    // This allows for assertEquals on two values from JSONObject.get to test values as long as it
+    //   returns in the same JSON output.
+    public static Object normalizeType(Object object) {
+        Class clazz = object.getClass();
+
+        if (clazz.equals(Integer.class))
+            return Long.valueOf((Integer)object);
+        if (clazz.equals(Float.class))
+            return Double.valueOf((Float)object);
+
+        return object;
     }
 
 }

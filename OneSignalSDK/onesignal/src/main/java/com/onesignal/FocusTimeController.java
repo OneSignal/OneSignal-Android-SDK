@@ -174,10 +174,6 @@ class FocusTimeController {
 
          long totalTime = getUnsentActiveTime() + time;
          saveUnsentActiveTime(totalTime);
-
-         if (!OneSignal.hasUserId())
-            return;
-
          sendUnsentTimeNow(focusType);
       }
 
@@ -258,6 +254,8 @@ class FocusTimeController {
             additionalFieldsToAddToOnFocusPayload(jsonBody);
             sendOnFocusToPlayer(OneSignal.getUserId(), jsonBody);
 
+            // For email we omit additionalFieldsToAddToOnFocusPayload as we don't want to add
+            //   outcome fields which would double report the session time
             if (OneSignal.hasEmailId())
                sendOnFocusToPlayer(OneSignal.getEmailId(), generateOnFocusPayload(totalTimeActive));
          }

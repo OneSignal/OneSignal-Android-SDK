@@ -2698,9 +2698,6 @@ public class MainOneSignalClassRunner {
    public void sendsOnFocus() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      // TODO: Should not need blankActivityController.resume();, OneSignalInit() is created from an activity
-      // TODO: Check if we have a test for the ApplicationContext to OneSignal.init with a resume however
-      blankActivityController.resume();
       ShadowSystemClock.setCurrentTimeMillis(60 * 1_000);
 
       blankActivityController.pause();

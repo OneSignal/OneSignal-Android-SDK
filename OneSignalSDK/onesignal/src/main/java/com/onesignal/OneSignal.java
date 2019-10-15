@@ -794,7 +794,9 @@ public class OneSignal {
          sessionManager.attemptSessionUpgrade();
       }
 
-      if (!foreground && getUserId() != null)
+      // We still want register the user to OneSignal if the SDK was initialized
+      //   in the background for the first time.
+      if (!foreground && hasUserId())
          return;
 
       setLastSessionTime(System.currentTimeMillis());
