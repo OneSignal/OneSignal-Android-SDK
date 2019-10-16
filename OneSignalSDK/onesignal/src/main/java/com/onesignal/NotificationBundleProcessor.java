@@ -135,7 +135,6 @@ class NotificationBundleProcessor {
       return jsonArray;
    }
 
-
    private static void saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
@@ -155,7 +154,19 @@ class NotificationBundleProcessor {
       OSReceiveReceiptController controller = new OSReceiveReceiptController();
       controller.sendReceiveReceipt(notifiJob.getApiNotificationId());
    }
-   
+
+   /**
+    * Must call this method instead of saveNotification
+    *
+    * This method save the last notification that might influence session
+    */
+   static void processNotification(NotificationGenerationJob notifiJob, boolean opened) {
+      saveNotification(notifiJob, opened);
+      if (notifiJob.isNotificationToDisplay()) {
+         OutcomesUtils.markLastNotificationReceived(notifiJob.getApiNotificationId());
+      }
+   }
+
    // Saving the notification provides the following:
    //   * Prevent duplicates
    //   * Build summary notifications
@@ -274,7 +285,7 @@ class NotificationBundleProcessor {
    // Clean up old records after 1 week.
    static void deleteOldNotifications(SQLiteDatabase writableDb) {
       writableDb.delete(NotificationTable.TABLE_NAME,
-          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1000L) - 604800L),
+          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1_000L) - 604_800L),
           null);
    }
 

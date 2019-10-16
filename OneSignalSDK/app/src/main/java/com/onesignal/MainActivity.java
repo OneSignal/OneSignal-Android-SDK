@@ -30,9 +30,9 @@ package com.onesignal;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
@@ -42,11 +42,9 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
-import android.os.Handler;
 import android.widget.Toast;
 
 import com.onesignal.OneSignal.NotificationOpenedHandler;
-
 import com.onesignal.example.OneSignalExampleApp;
 import com.onesignal.example.R;
 import com.onesignal.example.iap.IabHelper;
@@ -65,7 +63,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
            R.id.unsubscribe,
            R.id.sendTags,
            R.id.getTags,
-           R.id.setEmail,
+           R.id.sendEvent,
            R.id.postNotification,
            R.id.postNotificationAsync,
            R.id.postNotificationGroupCheckBox,
@@ -73,8 +71,13 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
    private TextView debugTextView;
    private TextView emailTextView;
+   private TextView outcomeName;
+   private TextView outcomeValueName;
+   private TextView outcomeValue;
+   private TextView outcomeUnique;
    private Button consentButton;
    private Button setEmailButton;
+   private Button sendEvent;
    private Button logoutEmailButton;
    private Button postNotifButton;
    private Button postNotifAsyncButton;
@@ -86,7 +89,6 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    private TextView iamHost;
    private TextView triggerKeyTextView;
    private TextView triggerValueTextView;
-   private String SHARDPRES_KEY_IAM_HOST = "SHARDPRES_KEY_IAM_HOST";
 
    @Override
    public boolean onCreateOptionsMenu(Menu menu) {
@@ -115,15 +117,21 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       setContentView(com.onesignal.example.R.layout.activity_main);
 
       this.consentButton = this.findViewById(R.id.consentButton);
-      this.setEmailButton = this.findViewById(R.id.setEmail);
       this.logoutEmailButton = this.findViewById(R.id.logoutEmail);
       this.postNotifButton = this.findViewById(R.id.postNotification);
       this.postNotifAsyncButton = this.findViewById(R.id.postNotificationAsync);
       this.postNotifGroupCheckBox = this.findViewById(R.id.postNotificationGroupCheckBox);
       this.postNotifAsyncGroupCheckBox = this.findViewById(R.id.postNotificationAsyncGroupCheckBox);
+      this.consentButton = (Button)this.findViewById(com.onesignal.example.R.id.consentButton);
+      this.logoutEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.logoutEmail);
+      this.sendEvent = (Button)this.findViewById(R.id.sendEvent);
       this.iamHost = this.findViewById(R.id.iamHost);
       this.triggerKeyTextView = this.findViewById(R.id.triggerKey);
       this.triggerValueTextView = this.findViewById(R.id.triggerValue);
+      this.outcomeName = this.findViewById(R.id.outcomeName);
+      this.outcomeValueName = this.findViewById(R.id.outcomeNameValue);
+      this.outcomeValue = this.findViewById(R.id.outcomeValue);
+      this.outcomeUnique = this.findViewById(R.id.outcomeUniqueName);
       this.iamHost.setText(OneSignalExampleApp.getOneSignalAppId(this));
 
       if (OneSignal.requiresUserPrivacyConsent()) {
@@ -257,10 +265,9 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.debugTextView.setText("Unsubscribed");
    }
 
-
    public void onSendTagsClicked(View v) {
       try {
-         OneSignal.sendTags(new JSONObject("{\"counter\" : " + String.valueOf(sendTagsCounter) + ", \"test_value\" : \"test_key\"}"), new OneSignal.ChangeTagsUpdateHandler() {
+         OneSignal.sendTags(new JSONObject("{\"counter\" : " + sendTagsCounter + ", \"test_value\" : \"test_key\"}"), new OneSignal.ChangeTagsUpdateHandler() {
             @Override
             public void onSuccess(JSONObject tags) {
                updateTextView("Successfully sent tags: " + tags.toString());
@@ -316,6 +323,51 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
          @Override
          public void onFailure(OneSignal.EmailUpdateError error) {
             updateTextView("Failed to set email with error: " + error.getMessage());
+         }
+      });
+   }
+
+   public void onSendOutcomeClicked(View view) {
+      OneSignal.sendOutcome(outcomeName.getText().toString(), new OneSignal.OutcomeCallback() {
+         @Override
+         public void onOutcomeSuccess(String name) {
+            updateTextView(name + " Outcome sent successfully");
+         }
+
+         @Override
+         public void onOutcomeFail(int statusCode, String response) {
+            updateTextView("Outcome fail with status code: " + statusCode);
+         }
+      });
+   }
+
+   public void onSendUniqueOutcomeClicked(View view) {
+      OneSignal.sendUniqueOutcome(outcomeUnique.getText().toString(), new OneSignal.OutcomeCallback() {
+         @Override
+         public void onOutcomeSuccess(String name) {
+            updateTextView(name + " Unique Outcome sent successfully");
+         }
+
+         @Override
+         public void onOutcomeFail(int statusCode, String response) {
+            updateTextView("Unique Outcome fail with status code: " + statusCode);
+         }
+      });
+   }
+
+   public void onSendOutcomeWithValueClicked(View view) {
+      if (outcomeValue.getText().toString().isEmpty())
+         return;
+
+      OneSignal.sendOutcomeWithValue(outcomeValueName.getText().toString(), Float.parseFloat(outcomeValue.getText().toString()), new OneSignal.OutcomeCallback() {
+         @Override
+         public void onOutcomeSuccess(String name) {
+            updateTextView(name + " Outcome sent with value successfully");
+         }
+
+         @Override
+         public void onOutcomeFail(int statusCode, String response) {
+            updateTextView("Outcome with value fail with status code: " + statusCode);
          }
       });
    }

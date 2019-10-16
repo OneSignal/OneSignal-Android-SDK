@@ -9,7 +9,8 @@ import org.robolectric.annotation.Implements;
 @Implements(OneSignalDbHelper.class)
 public class ShadowOneSignalDbHelper {
 
-   public static int DATABASE_VERSION = 3;
+   public static final String DATABASE_NAME = "OneSignal.db";
+   public static int DATABASE_VERSION = 4;
    public static boolean igngoreDuplicatedFieldsOnUpgrade;
 
    private static OneSignalDbHelper sInstance;
@@ -22,6 +23,13 @@ public class ShadowOneSignalDbHelper {
 
    public static int getDbVersion() {
       return DATABASE_VERSION;
+   }
+
+   public void onCreate(SQLiteDatabase db) {
+      db.execSQL(OneSignalDbHelper.SQL_CREATE_ENTRIES);
+      for (String ind : OneSignalDbHelper.SQL_INDEX_ENTRIES) {
+         db.execSQL(ind);
+      }
    }
 
    public static synchronized OneSignalDbHelper getInstance(Context context) {

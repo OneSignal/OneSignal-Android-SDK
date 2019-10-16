@@ -35,22 +35,23 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.os.SystemClock;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class OneSignalDbHelper extends SQLiteOpenHelper {
-   static final int DATABASE_VERSION = 3;
+   static final int DATABASE_VERSION = 4;
    private static final String DATABASE_NAME = "OneSignal.db";
 
    private static final String TEXT_TYPE = " TEXT";
    private static final String INT_TYPE = " INTEGER";
    private static final String COMMA_SEP = ",";
-   
+
    private static final int DB_OPEN_RETRY_MAX = 5;
    private static final int DB_OPEN_RETRY_BACKOFF = 400;
 
-   private static final String SQL_CREATE_ENTRIES =
+   protected static final String SQL_CREATE_ENTRIES =
        "CREATE TABLE " + NotificationTable.TABLE_NAME + " (" +
            NotificationTable._ID + " INTEGER PRIMARY KEY," +
            NotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
@@ -67,7 +68,17 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
            NotificationTable.COLUMN_NAME_EXPIRE_TIME + " TIMESTAMP" +
        ");";
 
-   private static final String[] SQL_INDEX_ENTRIES = {
+   private static final String SQL_CREATE_OUTCOME_ENTRIES =
+           "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
+                   OutcomeEventsTable._ID + " INTEGER PRIMARY KEY," +
+                   OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " TIMESTAMP" +
+                   ");";
+
+   protected static final String[] SQL_INDEX_ENTRIES = {
       NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
       NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,
       NotificationTable.INDEX_CREATE_GROUP_ID,
@@ -107,7 +118,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
          }
       }
    }
-   
+
    synchronized SQLiteDatabase getReadableDbWithRetries() {
       int count = 0;
       while(true) {
@@ -124,6 +135,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    @Override
    public void onCreate(SQLiteDatabase db) {
       db.execSQL(SQL_CREATE_ENTRIES);
+      db.execSQL(SQL_CREATE_OUTCOME_ENTRIES);
       for (String ind : SQL_INDEX_ENTRIES) {
          db.execSQL(ind);
       }
@@ -139,13 +151,16 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error in upgrade, migration may have already run! Skipping!" , e);
       }
    }
-   
+
    private static void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
       if (oldVersion < 2)
          upgradeFromV1ToV2(db);
 
       if (oldVersion < 3)
          upgradeFromV2ToV3(db);
+
+      if (oldVersion < 4)
+          upgradeToV4(db);
    }
 
    // Add collapse_id field and index
@@ -174,6 +189,10 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       safeExecSQL(db, NotificationTable.INDEX_CREATE_EXPIRE_TIME);
    }
 
+   private static void upgradeToV4(SQLiteDatabase db) {
+      safeExecSQL(db, SQL_CREATE_OUTCOME_ENTRIES);
+   }
+
    private static void safeExecSQL(SQLiteDatabase db, String sql) {
       try {
          db.execSQL(sql);
@@ -181,18 +200,18 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
          e.printStackTrace();
       }
    }
-   
+
    @Override
    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
       OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "SDK version rolled back! Clearing " + DATABASE_NAME + " as it could be in an unexpected state.");
-      
+
       Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null);
       try {
          List<String> tables = new ArrayList<>(cursor.getCount());
-      
+
          while (cursor.moveToNext())
             tables.add(cursor.getString(0));
-      
+
          for (String table : tables) {
             if (table.startsWith("sqlite_"))
                continue;
@@ -201,10 +220,10 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       } finally {
          cursor.close();
       }
-      
+
       onCreate(db);
    }
-   
+
    // Could enable WAL in the future but requires Android API 11
    /*
    @Override
@@ -230,5 +249,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
          where.append(" AND " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec);
 
       return where;
+   }
+
+   public void cleanOutcomeDatabase() {
+      this.getWritableDatabase().delete(OneSignalDbContract.OutcomeEventsTable.TABLE_NAME, null, null);
    }
 }

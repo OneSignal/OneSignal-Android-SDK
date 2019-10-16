@@ -35,6 +35,7 @@ import org.robolectric.annotation.Implements;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -81,6 +82,7 @@ public class ShadowOneSignalRestClient {
    public static int failHttpCode;
    public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse;
    public static Pattern nextSuccessfulGETResponsePattern;
+   public static List<String> successfulGETResponses = new ArrayList<>();
    public static int networkCallCount;
 
    public static String pushUserId, emailUserId;
@@ -90,7 +92,7 @@ public class ShadowOneSignalRestClient {
    // Pauses any network callbacks from firing.
    // Also blocks any sync network calls.
    public static boolean freezeResponses;
-   private static ConcurrentHashMap<Object, PendingResponse> pendingResponses;
+   private static ConcurrentHashMap<Object, PendingResponse> pendingResponses = new ConcurrentHashMap<>();
 
    private static final String IAM_GET_HTML_RESPONSE;
    static {
@@ -157,6 +159,12 @@ public class ShadowOneSignalRestClient {
 
    public static void setNextSuccessfulRegistrationResponse(JSONObject response) throws JSONException {
       nextSuccessfulRegistrationResponse = response.toString(1);
+   }
+
+   public static void setSuccessfulGETJSONResponses(JSONObject... responses) throws JSONException {
+      for (JSONObject response : responses) {
+         successfulGETResponses.add(response.toString(1));
+      }
    }
 
    private static void freezeSyncCall() {
@@ -288,7 +296,8 @@ public class ShadowOneSignalRestClient {
 
       if (doNextSuccessfulGETResponse(url, responseHandler))
          return;
-      if (nextSuccessResponse != null) {
+
+     if (nextSuccessResponse != null) {
          responseHandler.onSuccess(nextSuccessResponse);
          nextSuccessResponse = null;
       }
@@ -333,6 +342,9 @@ public class ShadowOneSignalRestClient {
          (nextSuccessfulGETResponsePattern == null || nextSuccessfulGETResponsePattern.matcher(url).matches())) {
          responseHandler.onSuccess(nextSuccessfulGETResponse);
          nextSuccessfulGETResponse = null;
+         return true;
+      } else if (successfulGETResponses.size() > 0) {
+         responseHandler.onSuccess(successfulGETResponses.remove(0));
          return true;
       }
       return false;

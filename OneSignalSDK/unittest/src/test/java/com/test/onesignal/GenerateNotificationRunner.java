@@ -61,6 +61,9 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
+import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
+import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGcmBroadcastReceiver;
@@ -75,10 +78,6 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
-import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
-import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
-
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -91,13 +90,12 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
+import org.robolectric.android.controller.ActivityController;
+import org.robolectric.android.controller.ServiceController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowAlertDialog;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowSystemClock;
-import org.robolectric.android.controller.ActivityController;
-import org.robolectric.android.controller.ServiceController;
-import org.robolectric.shadows.ShadowWebView;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
@@ -113,6 +111,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadB
 
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
+
 import static com.test.onesignal.TestHelpers.advanceTimeByMs;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
@@ -121,11 +120,8 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
-
 import static org.hamcrest.CoreMatchers.not;
-
 import static org.junit.Assert.assertThat;
-
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
@@ -192,7 +188,7 @@ public class GenerateNotificationRunner {
       
       return bundle;
    }
-   
+
    private static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
           .putExtra("notificationId", notifId)

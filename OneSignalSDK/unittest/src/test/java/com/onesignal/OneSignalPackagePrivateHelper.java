@@ -69,7 +69,7 @@ public class OneSignalPackagePrivateHelper {
       Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
       if (looper == null)
          return false;
-      
+
       final Scheduler scheduler = shadowOf(looper).getScheduler();
       if (scheduler == null)
          return false;
@@ -99,8 +99,32 @@ public class OneSignalPackagePrivateHelper {
       return true;
    }
 
+   public static OSSessionManager.Session OneSignal_getSessionType() {
+      return OneSignal.getSessionManager().getSession();
+   }
+
+   public static String OneSignal_getSessionDirectNotification() {
+      return OneSignal.getSessionManager().getDirectNotificationId();
+   }
+
+   public static JSONArray OneSignal_getSessionIndirectNotificationIds() {
+      return OneSignal.getSessionManager().getIndirectNotificationIds();
+   }
+
+   public static OneSignal.OutcomeSettings OneSignal_getOutcomeSettings(boolean cacheActive) {
+       return OneSignal.OutcomeSettings.Builder.newInstance()
+               .setCacheActive(cacheActive)
+               .build();
+   }
+
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
+   }
+
+   public static class OSSessionManager extends com.onesignal.OSSessionManager {
+      public OSSessionManager(@NonNull SessionListener sessionListener) {
+         super(sessionListener);
+      }
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -126,6 +150,14 @@ public class OneSignalPackagePrivateHelper {
       return processedResult.processed();
    }
 
+   public static void GcmBroadcastReceiver_onReceived(Context context, Bundle bundle) {
+      GCMBroadcastReceiver receiver = new GCMBroadcastReceiver();
+      Intent intent = new Intent();
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intent.putExtras(bundle);
+      receiver.onReceive(context,intent);
+   }
+
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
@@ -133,6 +165,7 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
+   public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
@@ -146,6 +179,8 @@ public class OneSignalPackagePrivateHelper {
       protected void stopSync() {
       }
    }
+
+   public static class GCMBroadcastReceiver extends com.onesignal.GcmBroadcastReceiver {}
 
    public static class PushRegistratorGCM extends com.onesignal.PushRegistratorGCM {}
 
@@ -163,15 +198,15 @@ public class OneSignalPackagePrivateHelper {
       notifJob.jsonPayload = payload;
       return NotificationChannelManager.createNotificationChannel(notifJob);
    }
-   
+
    public static void NotificationChannelManager_processChannelList(Context context, JSONArray jsonArray) {
       NotificationChannelManager.processChannelList(context, jsonArray);
    }
-   
+
    public static void NotificationOpenedProcessor_processFromContext(Context context, Intent intent) {
       NotificationOpenedProcessor.processFromContext(context, intent);
    }
-   
+
    public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
       NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
    }
@@ -189,7 +224,66 @@ public class OneSignalPackagePrivateHelper {
    public static String OneSignal_appId() { return OneSignal.appId; }
 
    public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
-   
+
+   static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
+
+      public RemoteOutcomeParams() {
+         this(true, true, true);
+      }
+
+      public RemoteOutcomeParams(boolean direct, boolean indirect, boolean unattributed) {
+         directEnabled = direct;
+         indirectEnabled = indirect;
+         unattributedEnabled = unattributed;
+      }
+   }
+
+   static public class OutcomeParams extends com.onesignal.OutcomeParams {
+
+      OutcomeParams(Builder builder) {
+         super(builder);
+      }
+
+      public static class Builder extends com.onesignal.OutcomeParams.Builder {
+
+         private Float weight;
+         private JSONObject jsonObject;
+
+         public static Builder newInstance() {
+            return new Builder();
+         }
+
+         Builder setWeight(@Nullable Float weight) {
+            if (weight != null)
+               this.weight = weight;
+            return this;
+         }
+
+         public Builder setJsonString(@Nullable String jsonString) {
+            if (jsonString == null || jsonString.isEmpty())
+               return this;
+            try {
+               this.jsonObject = new JSONObject(jsonString);
+            } catch (JSONException e) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating outcome params fromJSON Failed.", e);
+            }
+            return this;
+         }
+
+         Builder setJson(@Nullable JSONObject jsonObject) {
+            if (jsonObject != null)
+               this.jsonObject = jsonObject;
+            return this;
+         }
+
+
+         @Override
+         public OutcomeParams build() {
+            return new OutcomeParams(this);
+         }
+      }
+   }
+
    static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
       public static void update(SQLiteDatabase readableDb, Context context) {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);
@@ -312,4 +406,7 @@ public class OneSignalPackagePrivateHelper {
          super(message, activity);
       }
    }
+
+
+   public static class JSONUtils extends com.onesignal.JSONUtils {}
 }

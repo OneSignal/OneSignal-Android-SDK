@@ -1,12 +1,19 @@
 package com.test.onesignal;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.app.job.JobService;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
+import android.support.annotation.Nullable;
 
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
@@ -24,6 +31,8 @@ import com.onesignal.StaticResetHelper;
 
 import junit.framework.Assert;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowApplication;
@@ -32,6 +41,7 @@ import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
@@ -73,6 +83,10 @@ public class TestHelpers {
       ShadowDynamicTimer.resetStatics();
 
       ShadowOSWebView.resetStatics();
+
+      // 100ms is default time Robolectric uses,
+      //   however it does not reset back on it's own between tests.
+      ShadowSystemClock.setCurrentTimeMillis(100);
 
       lastException = null;
    }
@@ -242,6 +256,51 @@ public class TestHelpers {
       return mapList;
    }
 
+   static List<OutcomeEvent>  getAllOutcomesRecords() {
+      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      Cursor cursor = readableDatabase.query(
+              OneSignalPackagePrivateHelper.OutcomeEventsTable.TABLE_NAME,
+              null,
+              null,
+              null,
+              null, // group by
+              null, // filter by row groups
+              null, // sort order, new to old
+              null // limit
+      );
+
+      List<OutcomeEvent> events = new ArrayList<>();
+      if (cursor.moveToFirst()) {
+         do {
+            String notificationIds = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
+            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME));
+            String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
+            OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
+            Long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+
+            int paramsIndex = cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_PARAMS);
+            String paramsString = cursor.isNull(paramsIndex) ? null : cursor.getString(paramsIndex);
+            OneSignalPackagePrivateHelper.OutcomeParams params =
+                    paramsString != null ? OneSignalPackagePrivateHelper.OutcomeParams.Builder
+                            .newInstance()
+                            .setJsonString(paramsString)
+                            .build() : null;
+
+            try {
+               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, params);
+               events.add(event);
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+      readableDatabase.close();
+
+      return events;
+   }
+
    static void advanceTimeByMs(long advanceBy) {
       ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() +  advanceBy);
    }
@@ -249,5 +308,25 @@ public class TestHelpers {
    public static void assertMainThread() {
       if (!Looper.getMainLooper().getThread().equals(Thread.currentThread()))
          Assert.fail("assertMainThread - Not running on main thread when expected to!");
+   }
+
+
+   public static @Nullable JobInfo getNextJob() {
+      JobScheduler jobScheduler =
+         (JobScheduler)RuntimeEnvironment.application.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
+      if (jobs.size() == 0)
+         return null;
+      return jobs.get(0);
+   }
+
+   public static void runNextJob() {
+      try {
+         Class jobClass = Class.forName(getNextJob().getService().getClassName());
+         JobService jobService = (JobService)Robolectric.buildService(jobClass).create().get();
+         jobService.onStartJob(null);
+      } catch (ClassNotFoundException e) {
+         e.printStackTrace();
+      }
    }
 }
