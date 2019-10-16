@@ -6,14 +6,8 @@ import java.util.List;
 
 public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
 
-    private OneSignalRestClient.ResponseHandler customResponseHandler;
-
     public MockOutcomeEventsRepository(OutcomeEventsService outcomeEventsService, OneSignalDbHelper dbHelper) {
         super(outcomeEventsService, dbHelper);
-    }
-
-    public void setCustomResponseHandler(OneSignalRestClient.ResponseHandler customResponseHandler) {
-        this.customResponseHandler = customResponseHandler;
     }
 
     @Override

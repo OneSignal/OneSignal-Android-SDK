@@ -23,7 +23,7 @@ class OutcomesUtils {
     static void cacheCurrentSession(@NonNull OSSessionManager.Session session) {
         OneSignalPrefs.saveString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_CACHED_SESSION_OUTCOME_EVENT,
+                OneSignalPrefs.PREFS_OS_OUTCOMES_CURRENT_SESSION,
                 session.toString()
         );
     }
@@ -34,7 +34,7 @@ class OutcomesUtils {
     @NonNull static OSSessionManager.Session getCachedSession() {
         String sessionString = OneSignalPrefs.getString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_CACHED_SESSION_OUTCOME_EVENT,
+                OneSignalPrefs.PREFS_OS_OUTCOMES_CURRENT_SESSION,
                 OSSessionManager.Session.UNATTRIBUTED.toString()
         );
         return OSSessionManager.Session.fromString(sessionString);

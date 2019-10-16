@@ -387,17 +387,19 @@ public class OneSignal {
    private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
+   // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
-
    static boolean isInitDone() {
       return initDone;
    }
 
+   // Is the app in the foreground or not
    private static boolean foreground;
    static boolean isForeground() {
       return foreground;
    }
 
+   // Tells the action taken to enter the app
    @NonNull private static AppEntryAction appEntryState = AppEntryAction.APP_CLOSE;
    static @NonNull AppEntryAction getAppEntryState() {
       return appEntryState;
@@ -421,7 +423,8 @@ public class OneSignal {
          @Override
          public void onSessionEnding(@NonNull OSSessionManager.SessionResult lastSessionResult) {
             if (outcomeEventsController != null)
-               outcomeEventsController.clearOutcomes();
+               outcomeEventsController.cleanOutcomes();
+
             FocusTimeController.getInstance().onSessionEnded(lastSessionResult);
          }
       };
@@ -799,8 +802,10 @@ public class OneSignal {
       // Check session time to determine whether to start a new session or not
       if (isPastOnSessionTime()) {
           OneSignalStateSynchronizer.setNewSession();
-         if (foreground)
+         if (foreground) {
+            outcomeEventsController.cleanOutcomes();
             sessionManager.restartSessionIfNeeded();
+         }
       } else if (foreground) {
          OSInAppMessageController.getController().initWithCachedInAppMessages();
          sessionManager.attemptSessionUpgrade();

@@ -9,9 +9,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
 import android.support.annotation.Nullable;
 
-import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
@@ -31,9 +31,9 @@ import com.onesignal.StaticResetHelper;
 
 import junit.framework.Assert;
 
-import org.robolectric.Robolectric;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowSystemClock;
@@ -44,7 +44,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
 public class TestHelpers {

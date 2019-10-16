@@ -1,18 +1,17 @@
 package com.onesignal;
 
-import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 public class MockOutcomeEventsController extends OutcomeEventsController {
 
-    public MockOutcomeEventsController(OSSessionManager osSessionManager, OutcomeEventsRepository outcomeEventsRepository) {
-        super(osSessionManager, outcomeEventsRepository);
+    public MockOutcomeEventsController(MockSessionManager sessionManager, MockOutcomeEventsRepository repository) {
+        super(sessionManager, repository);
     }
 
     @Override
-    public void clearOutcomes() {
-        super.clearOutcomes();
+    public void cleanOutcomes() {
+        super.cleanOutcomes();
     }
 
     @Override
@@ -20,27 +19,8 @@ public class MockOutcomeEventsController extends OutcomeEventsController {
         super.sendSavedOutcomes();
     }
 
-    public void sendOutcomeEventWithValue(@NonNull String name, float value) {
-        super.sendOutcomeEventWithValue(name, value, null);
-    }
-
-    @Override
-    public void sendOutcomeEventWithValue(@NonNull String name, float value, @Nullable OneSignal.OutcomeCallback callback) {
-        super.sendOutcomeEventWithValue(name, value, callback);
-    }
-
-    @Override
-    public void sendOutcomeEvent(@NonNull String name, @NonNull String value) throws OutcomeException {
-        super.sendOutcomeEvent(name, value);
-    }
-
-    @Override
-    public void sendOutcomeEvent(@NonNull String name, @NonNull Bundle params) {
-        super.sendOutcomeEvent(name, params);
-    }
-
     public void sendOutcomeEvent(@NonNull String name) {
-        super.sendOutcomeEvent(name, (OneSignal.OutcomeCallback) null);
+        sendOutcomeEvent(name, null);
     }
 
     @Override
@@ -49,12 +29,21 @@ public class MockOutcomeEventsController extends OutcomeEventsController {
     }
 
     public void sendUniqueOutcomeEvent(@NonNull String name) {
-        super.sendUniqueOutcomeEvent(name, null);
+        sendUniqueOutcomeEvent(name, null);
     }
 
     @Override
     public void sendUniqueOutcomeEvent(@NonNull String name, @Nullable OneSignal.OutcomeCallback callback) {
         super.sendUniqueOutcomeEvent(name, callback);
+    }
+
+    public void sendOutcomeEventWithValue(@NonNull String name, float value) {
+        sendOutcomeEventWithValue(name, value, null);
+    }
+
+    @Override
+    public void sendOutcomeEventWithValue(@NonNull String name, float value, @Nullable OneSignal.OutcomeCallback callback) {
+        super.sendOutcomeEventWithValue(name, value, callback);
     }
 
     @Override

@@ -274,7 +274,7 @@ class NotificationBundleProcessor {
    // Clean up old records after 1 week.
    static void deleteOldNotifications(SQLiteDatabase writableDb) {
       writableDb.delete(NotificationTable.TABLE_NAME,
-          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1_000L) - 604800L),
+          NotificationTable.COLUMN_NAME_CREATED_TIME + " < " + ((System.currentTimeMillis() / 1_000L) - 604_800L),
           null);
    }
 

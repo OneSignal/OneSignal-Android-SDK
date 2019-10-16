@@ -42,9 +42,11 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDi
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.RestClientAsserts.assertMeasureAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexForPlayerId;
+import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -72,6 +74,7 @@ public class OutcomeEventIntegrationTests {
 
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
     private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
+    private static final String ONESIGNAL_OUTCOME_NAME = "Testing_Outcome";
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
     private static ActivityController<BlankActivity> blankActivityController;
@@ -171,6 +174,8 @@ public class OutcomeEventIntegrationTests {
     public void testIndirectAttributionWindow_withNoNotifications() throws Exception {
         foregroundAppAfterReceivingNotification();
 
+        // Check received notifications matches indirectNotificationIds
+        assertEquals(new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"), OneSignal_getSessionIndirectNotificationIds());
         // Check session INDIRECT
         assertTrue(OneSignal_getSessionType().isIndirect());
 
@@ -185,6 +190,133 @@ public class OutcomeEventIntegrationTests {
 
         // Check session UNATTRIBUTED
         assertTrue(OneSignal_getSessionType().isUnattributed());
+    }
+
+    @Test
+    public void testUniqueOutcomeMeasureOnlySentOncePerClickedNotification_whenSendingMultipleUniqueOutcomes_inDirectSession() throws Exception {
+        foregroundAppAfterClickingNotification();
+
+        // Check clicked notification matches directNotificationId
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", OneSignal_getSessionDirectNotification());
+        // Make sure session is DIRECT
+        assertTrue(OneSignal_getSessionType().isDirect());
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check measure end point was most recent request and contains clicked notification
+        assertMeasureAtIndex(3, true, ONESIGNAL_OUTCOME_NAME, new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
+        // Only 4 requests have been made
+        assertRestCalls(4);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make still only 4 requests have been made
+        assertRestCalls(4);
+    }
+
+    @Test
+    public void testUniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
+        foregroundAppAfterReceivingNotification();
+
+        // Check notificationIds equal indirectNotificationIds from OSSessionManager
+        JSONArray notificationIds = new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1");
+        assertEquals(notificationIds, OneSignal_getSessionIndirectNotificationIds());
+        // Make sure session is INDIRECT
+        assertTrue(OneSignal_getSessionType().isIndirect());
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureAtIndex(2, false, ONESIGNAL_OUTCOME_NAME, new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
+        // Only 3 requests have been made
+        assertRestCalls(3);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make still only 3 requests have been made
+        assertRestCalls(3);
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
+        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        // Wait 31 seconds to start new session
+        ShadowSystemClock.setCurrentTimeMillis(31 * 1_000L);
+
+        // Foreground app
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check notificationIds are not equal indirectNotificationIds from OSSessionManager
+        notificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
+        assertEquals(notificationIds, OneSignal_getSessionIndirectNotificationIds());
+        // Make sure session is INDIRECT
+        assertTrue(OneSignal_getSessionType().isIndirect());
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureAtIndex(4, false, ONESIGNAL_OUTCOME_NAME, new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
+    }
+
+    @Test
+    public void testOutcomeNameSentWithMeasureOncePerSession_whenSendingMultipleUniqueOutcomes_inUnattributedSession() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Make sure session is UNATTRIBUTED
+        assertTrue(OneSignal_getSessionType().isUnattributed());
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureAtIndex(2, ONESIGNAL_OUTCOME_NAME);
+        // Only 3 requests have been made
+        assertRestCalls(3);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make still only 3 requests have been made
+        assertRestCalls(3);
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Wait 31 seconds to start new session
+        ShadowSystemClock.setCurrentTimeMillis(31 * 1_000L);
+
+        // Foreground app
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make sure session is UNATTRIBUTED
+        assertTrue(OneSignal_getSessionType().isUnattributed());
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureAtIndex(4, ONESIGNAL_OUTCOME_NAME);
     }
 
     @Test
@@ -322,8 +454,7 @@ public class OutcomeEventIntegrationTests {
         // Make sure no indirectNotificationIds exist
         assertNull(OneSignal_getSessionDirectNotification());
         // Make sure indirectNotificationIds are correct
-        JSONArray indirectNotificationIds = new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2");
-        assertEquals(indirectNotificationIds, OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"), OneSignal_getSessionIndirectNotificationIds());
         // Make sure session is INDIRECT
         assertTrue(OneSignal_getSessionType().isIndirect());
     }

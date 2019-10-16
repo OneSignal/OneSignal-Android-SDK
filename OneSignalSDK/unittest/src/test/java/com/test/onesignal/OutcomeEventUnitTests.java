@@ -67,7 +67,7 @@ import static org.junit.Assert.assertEquals;
         },
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
-public class OutcomeEventTests {
+public class OutcomeEventUnitTests {
 
     private static final String OUTCOME_NAME = "testing";
     private static final String NOTIFICATION_ID = "testing";
@@ -105,7 +105,7 @@ public class OutcomeEventTests {
     }
 
     @Before // Before each test
-    public void beforeEachTest() {
+    public void beforeEachTest() throws Exception {
         outcomeEvents = null;
 
         sessionManager = new MockSessionManager();
@@ -115,6 +115,8 @@ public class OutcomeEventTests {
         repository = new MockOutcomeEventsRepository(service, dbHelper);
         controller = new MockOutcomeEventsController(sessionManager, repository);
         controller.setOutcomeSettings(OneSignal_getOutcomeSettings(true));
+
+        TestHelpers.beforeTestInitAndCleanup();
     }
 
     @After
@@ -135,7 +137,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.DIRECT)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, (OneSignal.OutcomeCallback) null);
+        controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -158,7 +160,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.INDIRECT)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, (OneSignal.OutcomeCallback) null);
+        controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -180,7 +182,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, (OneSignal.OutcomeCallback) null);
+        controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -202,7 +204,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.DISABLED)
                 .build());
 
-        controller.sendOutcomeEvent(OUTCOME_NAME, (OneSignal.OutcomeCallback) null);
+        controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -224,7 +226,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -246,7 +248,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.DISABLED)
                 .build());
 
-        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -269,7 +271,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.DIRECT)
                 .build());
 
-        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -292,7 +294,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.INDIRECT)
                 .build());
 
-        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -356,7 +358,7 @@ public class OutcomeEventTests {
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
         assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
 
-        controller.clearOutcomes();
+        controller.cleanOutcomes();
 
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
@@ -527,7 +529,7 @@ public class OutcomeEventTests {
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
 
-        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
         threadAndTaskWait();
 
         new Thread(new Runnable() {

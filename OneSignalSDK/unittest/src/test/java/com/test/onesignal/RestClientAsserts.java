@@ -9,6 +9,7 @@ import com.onesignal.ShadowOneSignalRestClient.Request;
 import com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 
 import org.hamcrest.core.AnyOf;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -100,6 +101,28 @@ class RestClientAsserts {
       assertRemoteParamsUrl(request.url);
    }
 
+   static void assertMeasureAtIndex(int index, @NonNull String outcomeName) throws JSONException {
+      assertMeasureAtIndex(index, new JSONObject()
+              .put("id", outcomeName)
+      );
+   }
+
+   static void assertMeasureAtIndex(int index, @NonNull boolean isDirect, @NonNull String outcomeName, @NonNull JSONArray notificationIds) throws JSONException {
+      assertMeasureAtIndex(index, new JSONObject()
+              .put("direct", isDirect)
+              .put("id", outcomeName)
+              .put("notification_ids", notificationIds)
+      );
+   }
+
+   private static void assertMeasureAtIndex(int index, JSONObject containsPayload) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertEquals(REST_METHOD.POST, request.method);
+      assertMeasureUrl(request.url);
+      JsonAsserts.containsSubset(request.payload, containsPayload);
+   }
+
    static void assertOnFocusUrlWithPlayerId(@NonNull String url, @NonNull String id) {
       assertOnFocusUrl(url);
       assertEquals(id, url.split("/")[1]);
@@ -127,6 +150,12 @@ class RestClientAsserts {
          fail("Invalid format");
 
       assertEquals(3, parts.length);
+   }
+
+   private static void assertMeasureUrl(String url) {
+      String[] parts = url.split("/");
+      assertEquals("outcomes", parts[0]);
+      assertEquals("measure", parts[1]);
    }
 
    static void assertRestCalls(int expected) {
