@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * <p>
- * Copyright 2018 OneSignal
+ * Copyright 2019 OneSignal
  * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import android.support.annotation.NonNull;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -35,23 +37,13 @@ class OSReceiveReceiptRepository {
     private static final String APP_ID = "app_id";
     private static final String PLAYER_ID = "player_id";
 
-    private final OSReceiveReceiptService service;
-
-    OSReceiveReceiptRepository() {
-        this(new OSReceiveReceiptService());
-    }
-
-    OSReceiveReceiptRepository(OSReceiveReceiptService service) {
-        this.service = service;
-    }
-
-    void sendReceiveReceipt(String appId, String playerId, String notificationId, OneSignalRestClient.ResponseHandler responseHandler) {
+    void sendReceiveReceipt(@NonNull String appId, @NonNull String playerId, @NonNull String notificationId, @NonNull OneSignalRestClient.ResponseHandler responseHandler) {
         try {
             JSONObject jsonBody = new JSONObject()
                     .put(APP_ID, appId)
                     .put(PLAYER_ID, playerId);
 
-            service.sendReceiveReceipt(notificationId, jsonBody, responseHandler);
+            OneSignalRestClient.put("notifications/" + notificationId + "/report_received", jsonBody, responseHandler);
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating direct receive receipt:JSON Failed.", e);
         }

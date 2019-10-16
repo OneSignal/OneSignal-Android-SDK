@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * <p>
- * Copyright 2018 OneSignal
+ * Copyright 2019 OneSignal
  * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,45 +27,44 @@
 
 package com.onesignal;
 
+import android.support.annotation.NonNull;
+
 class OSReceiveReceiptController {
 
     private final OSReceiveReceiptRepository repository;
 
     OSReceiveReceiptController() {
-        this(new OSReceiveReceiptRepository());
+        this.repository = new OSReceiveReceiptRepository();
     }
 
-    OSReceiveReceiptController(OSReceiveReceiptRepository repository) {
-        this.repository = repository;
-    }
-
-    void sendReceiveReceipt(final String notificationId) {
+    void sendReceiveReceipt(@NonNull final String notificationId) {
         String appId = OneSignal.appId == null || OneSignal.appId.isEmpty() ? OneSignal.getSavedAppId() : OneSignal.appId;
         String playerId = OneSignal.getUserId();
-
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "sendReceiveReceipt appId: " + appId + " playerId: " + playerId + " notificationId: " + notificationId);
 
         if (!isReceiveReceiptEnabled()) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "sendReceiveReceipt disable");
             return;
         }
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "sendReceiveReceipt appId: " + appId + " playerId: " + playerId + " notificationId: " + notificationId);
         repository.sendReceiveReceipt(appId, playerId, notificationId, new OneSignalRestClient.ResponseHandler() {
             @Override
             void onSuccess(String response) {
-                super.onSuccess(response);
                 OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Receive receipt sent for notificationID: " + notificationId);
             }
 
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
-                super.onFailure(statusCode, response, throwable);
                 OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Receive receipt failed with statusCode: " + statusCode + " response: " + response);
             }
         });
     }
 
     private boolean isReceiveReceiptEnabled() {
-        return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT, false);
+        return OneSignalPrefs.getBool(
+           OneSignalPrefs.PREFS_ONESIGNAL,
+           OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
+           false
+        );
     }
 }
