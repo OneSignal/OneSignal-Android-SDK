@@ -2700,14 +2700,13 @@ public class MainOneSignalClassRunner {
    public void sendsOnFocus() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      advanceSystemTimeBy(60);
-      blankActivityController.resume();
-      advanceSystemTimeBy(60);
 
+      advanceSystemTimeBy(60);
       blankActivityController.pause();
       threadAndTaskWait();
-      assertEquals(60, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
-      RestClientAsserts.assertRestCalls(3);
+
+      assertOnFocusAtIndex(2, 60);
+      assertRestCalls(3);
    }
 
    @Test

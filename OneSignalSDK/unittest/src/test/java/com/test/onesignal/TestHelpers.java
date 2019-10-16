@@ -303,6 +303,15 @@ public class TestHelpers {
       return events;
    }
 
+   /**
+    * Calling setNanoTime ends up locking time to zero.
+    * NOTE: This setNanoTime is going away in future robolectric versions
+    */
+   static void lockTimeTo(long sec) {
+      long nano = sec * 1_000L * 1_000L;
+      ShadowSystemClock.setNanoTime(nano);
+   }
+
    static void resetSystemClock() {
       SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
    }
