@@ -209,7 +209,7 @@ class ActivityLifecycleHandler {
     }
 
     static class FocusHandlerThread extends HandlerThread {
-        Handler mHandler;
+        private Handler mHandler;
         private AppFocusRunnable appFocusRunnable;
 
         FocusHandlerThread() {

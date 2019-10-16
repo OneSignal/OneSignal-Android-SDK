@@ -385,7 +385,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private @NonNull Set<String> getAllDismissedIams() {
         Set<String> dismissedIams = new HashSet<>(triggeredMessages);
         synchronized (messageDisplayQueue) {
-            for(OSInAppMessage message : messageDisplayQueue)
+            for (OSInAppMessage message : messageDisplayQueue)
                 dismissedIams.remove(message.messageId);
         }
         return dismissedIams;

@@ -37,29 +37,31 @@ import android.support.annotation.NonNull;
 import android.os.Build;
 import android.support.v4.app.NotificationManagerCompat;
 
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import com.onesignal.OneSignalDbContract.NotificationTable;
-
 // Process both notifications opens and dismisses.
 class NotificationOpenedProcessor {
+
+   private static final String TAG = NotificationOpenedProcessor.class.getCanonicalName();
 
    static void processFromContext(Context context, Intent intent) {
       if (!isOneSignalIntent(intent))
          return;
 
       OneSignal.setAppContext(context);
-      
+
       handleDismissFromActionButtonPress(context, intent);
 
       processIntent(context, intent);
    }
-   
+
    private static boolean isOneSignalIntent(Intent intent) {
       return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra("notificationId");
    }
-   
+
    private static void handleDismissFromActionButtonPress(Context context, Intent intent) {
       // Pressed an action button, need to clear the notification and close the notification area manually.
       if (intent.getBooleanExtra("action_button", false)) {
@@ -74,9 +76,10 @@ class NotificationOpenedProcessor {
       boolean dismissed = intent.getBooleanExtra("dismissed", false);
 
       JSONArray dataArray = null;
+      JSONObject jsonData = null;
       if (!dismissed) {
          try {
-            JSONObject jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
+            jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
 
             if (handleIAMPreviewOpen(context, jsonData))
                return;
@@ -88,14 +91,14 @@ class NotificationOpenedProcessor {
             t.printStackTrace();
          }
       }
-   
+
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       SQLiteDatabase writableDb = null;
-      
+
       try {
          writableDb = dbHelper.getWritableDbWithRetries();
          writableDb.beginTransaction();
-         
+
          // We just opened a summary notification.
          if (!dismissed && summaryGroup != null)
             addChildNotifications(dataArray, summaryGroup, writableDb);
@@ -121,9 +124,9 @@ class NotificationOpenedProcessor {
          }
       }
 
-      if (!dismissed) {
-         OneSignal.handleNotificationOpen(context, dataArray, intent.getBooleanExtra("from_alert", false));
-      }
+      if (!dismissed)
+         OneSignal.handleNotificationOpen(context, dataArray,
+                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromGCMJson(jsonData));
    }
 
    private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {

@@ -263,7 +263,7 @@ class GenerateNotification {
 
       if (notifJob.shownTimeStamp != null) {
          try {
-            notifBuilder.setWhen(notifJob.shownTimeStamp * 1000L);
+            notifBuilder.setWhen(notifJob.shownTimeStamp * 1_000L);
          } catch (Throwable t) {} // Can throw if an old android support lib is used.
       }
 

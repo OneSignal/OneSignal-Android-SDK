@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2018 OneSignal
+ * Copyright 2019 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,15 +43,23 @@ import android.support.annotation.RequiresApi;
 
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+/**
+ This schedules a job to fire later in the background preform player REST calls to make a(n);
+   - on_focus
+     - Delayed by MIN_ON_SESSION_TIME so we know no more time can be attributed to current session
+   - Location update
+   - Player update
+      - IF there are any pending field updates - pushToken, tags, etc
+*/
 
 class OneSignalSyncServiceUtils {
 
    private static final int SYNC_TASK_ID = 2071862118;
 
-   private static final int SYNC_AFTER_BG_DELAY_MS = 120_000;
+   // We want to perform a on_focus sync as soon as the session is done to report the time
+   private static final long SYNC_AFTER_BG_DELAY_MS = OneSignal.MIN_ON_SESSION_TIME_MILLIS;
 
-   private static Long nextScheduledSyncTime = 0L;
+   private static Long nextScheduledSyncTimeMs = 0L;
 
    static void scheduleLocationUpdateTask(Context context, long delayMs) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleLocationUpdateTask:delayMs: " + delayMs);
@@ -63,20 +71,18 @@ class OneSignalSyncServiceUtils {
       scheduleSyncTask(context, SYNC_AFTER_BG_DELAY_MS);
    }
 
-   static void cancelSyncTask(Context context) {
-      synchronized (nextScheduledSyncTime) {
-         nextScheduledSyncTime = 0L;
-         boolean didSchedule = LocationGMS.scheduleUpdate(context);
-         if (didSchedule)
-            return;
+   static synchronized void cancelSyncTask(Context context) {
+      nextScheduledSyncTimeMs = 0L;
+      boolean didSchedule = LocationGMS.scheduleUpdate(context);
+      if (didSchedule)
+         return;
 
-         if (useJob()) {
-            JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-            jobScheduler.cancel(SYNC_TASK_ID);
-         } else {
-            AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
-            alarmManager.cancel(syncServicePendingIntent(context));
-         }
+      if (useJob()) {
+         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+         jobScheduler.cancel(SYNC_TASK_ID);
+      } else {
+         AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+         alarmManager.cancel(syncServicePendingIntent(context));
       }
    }
 
@@ -100,24 +106,22 @@ class OneSignalSyncServiceUtils {
     * The main schedule method for all SyncTasks - this method differentiates between
     * Legacy Android versions (pre-LOLLIPOP 21) and 21+ to execute an Alarm (<21) or a Job (>=21)
     *
-    * @param context
-    * @param delayMs
+    * @param context - Any context type
+    * @param delayMs - How long to wait before doing work
     */
-   private static void scheduleSyncTask(Context context, long delayMs) {
-      synchronized (nextScheduledSyncTime) {
-         if (nextScheduledSyncTime != 0 &&
-               System.currentTimeMillis() + delayMs > nextScheduledSyncTime)
-            return;
+   private static synchronized void scheduleSyncTask(Context context, long delayMs) {
+      if (nextScheduledSyncTimeMs != 0 &&
+            System.currentTimeMillis() + delayMs > nextScheduledSyncTimeMs)
+         return;
 
-         if (delayMs < 5_000)
-            delayMs = 5_000;
+      if (delayMs < 5_000)
+         delayMs = 5_000;
 
-         if (useJob())
-            scheduleSyncServiceAsJob(context, delayMs);
-         else
-            scheduleSyncServiceAsAlarm(context, delayMs);
-         nextScheduledSyncTime = System.currentTimeMillis() + delayMs;
-      }
+      if (useJob())
+         scheduleSyncServiceAsJob(context, delayMs);
+      else
+         scheduleSyncServiceAsAlarm(context, delayMs);
+      nextScheduledSyncTimeMs = System.currentTimeMillis() + delayMs;
    }
 
    private static boolean hasBootPermission(Context context) {
@@ -165,26 +169,8 @@ class OneSignalSyncServiceUtils {
       alarm.set(AlarmManager.RTC_WAKEUP,  triggerAtMs + delayMs, pendingIntent);
    }
 
-   private static AtomicBoolean runningOnFocusTime = new AtomicBoolean();
-   static void syncOnFocusTime() {
-      if (runningOnFocusTime.get())
-         return;
-      synchronized (runningOnFocusTime) {
-         runningOnFocusTime.set(true);
-         internalSyncOnFocusTime();
-         runningOnFocusTime.set(false);
-      }
-   }
-
-   private static void internalSyncOnFocusTime() {
-      long unsentTime = OneSignal.GetUnsentActiveTime();
-      if (unsentTime < OneSignal.MIN_ON_FOCUS_TIME)
-         return;
-
-      OneSignal.sendOnFocus(unsentTime, true);
-   }
-
    private static Thread syncBgThread;
+   // Entry point from SyncJobService and SyncService when the job is kicked off
    static void doBackgroundSync(Context context, SyncRunnable runnable) {
       OneSignal.setAppContext(context);
       syncBgThread = new Thread(runnable, "OS_SYNCSRV_BG_SYNC");
@@ -212,8 +198,8 @@ class OneSignalSyncServiceUtils {
    static abstract class SyncRunnable implements Runnable {
       @Override
       public final void run() {
-         synchronized (nextScheduledSyncTime) {
-            nextScheduledSyncTime = 0L;
+         synchronized (OneSignalSyncServiceUtils.class) {
+            nextScheduledSyncTimeMs = 0L;
          }
          if (OneSignal.getUserId() == null) {
             stopSync();
@@ -237,7 +223,7 @@ class OneSignalSyncServiceUtils {
                // Both these calls are synchronous.
                //   Thread is blocked until network calls are made or their retry limits are reached
                OneSignalStateSynchronizer.syncUserState(true);
-               OneSignalSyncServiceUtils.syncOnFocusTime();
+               FocusTimeController.getInstance().doBlockingBackgroundSyncOfUnsentTime();
                stopSync();
             }
          };
