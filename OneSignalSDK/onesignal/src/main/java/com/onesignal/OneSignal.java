@@ -3116,6 +3116,11 @@ public class OneSignal {
    }
 
    private static boolean isValidOutcomeEntry(String name) {
+      if (outcomeEventsController == null) {
+          OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+          return false;
+      }
+
       if (name == null || name.isEmpty()) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Outcome name must not be empty");
          return false;
