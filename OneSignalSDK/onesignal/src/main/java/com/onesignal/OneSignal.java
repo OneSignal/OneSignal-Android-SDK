@@ -422,9 +422,7 @@ public class OneSignal {
       return new OSSessionManager.SessionListener() {
          @Override
          public void onSessionEnding(@NonNull OSSessionManager.SessionResult lastSessionResult) {
-            if (outcomeEventsController != null)
-               outcomeEventsController.cleanOutcomes();
-
+            outcomeEventsController.cleanOutcomes();
             FocusTimeController.getInstance().onSessionEnded(lastSessionResult);
          }
       };
@@ -597,6 +595,7 @@ public class OneSignal {
 
       if (wasAppContextNull) {
          sessionManager = new OSSessionManager(getNewSessionListener());
+         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext), outcomeSettings);
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
@@ -667,7 +666,6 @@ public class OneSignal {
       }
 
       mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
-      outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext), outcomeSettings);
 
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
@@ -2076,7 +2074,7 @@ public class OneSignal {
       runNotificationOpenedCallback(data, true, fromAlert);
 
       // Check if the notification click should lead to a DIRECT session
-      if (sessionManager != null && shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+      if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
          sessionManager.onDirectSessionFromNotificationOpen(notificationId);
@@ -3089,7 +3087,7 @@ public class OneSignal {
    }
 
    public static void sendOutcome(@NonNull String name, OutcomeCallback callback) {
-      if (!validateOutcomeEntry(name))
+      if (!isValidOutcomeEntry(name))
          return;
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
@@ -3100,7 +3098,7 @@ public class OneSignal {
    }
 
    public static void sendUniqueOutcome(@NonNull String name, OutcomeCallback callback) {
-      if (!validateOutcomeEntry(name))
+      if (!isValidOutcomeEntry(name))
          return;
 
       outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
@@ -3111,17 +3109,13 @@ public class OneSignal {
    }
 
    public static void sendOutcomeWithValue(@NonNull String name, float value, OutcomeCallback callback) {
-      if (!validateOutcomeEntry(name))
+      if (!isValidOutcomeEntry(name))
          return;
 
       outcomeEventsController.sendOutcomeEventWithValue(name, value, callback);
    }
 
-   private static boolean validateOutcomeEntry(String name) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Must call OneSignal.init first");
-         return false;
-      }
+   private static boolean isValidOutcomeEntry(String name) {
       if (name == null || name.isEmpty()) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Outcome name must not be empty");
          return false;

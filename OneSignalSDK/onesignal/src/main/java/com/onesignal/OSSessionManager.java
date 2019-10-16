@@ -118,7 +118,6 @@ class OSSessionManager {
             indirectNotificationIds = getLastNotificationsReceivedIds();
         else if (session.isDirect())
             directNotificationId = OutcomesUtils.getCachedNotificationOpenId();
-
     }
 
     void addSessionNotificationsIds(@NonNull JSONObject jsonObject) {

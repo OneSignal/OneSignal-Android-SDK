@@ -56,9 +56,12 @@ class OutcomeEventsController {
      * Init the sets used for tracking attributed and unattributed unique outcome events
      */
     private void initUniqueOutcomeEventsSentSets() {
-        attributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
-        unattributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
+        // If UNATTRIBUTED unique outcomes is already set in current session we don't want to clear it
+        if (unattributedUniqueOutcomeEventsSentSet == null)
+            unattributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
 
+        // Get all cached ATTRIBUTED unique outcomes
+        attributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
         Set<String> tempAttributedUniqueOutcomeEventsSentSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_UNIQUE_OUTCOME_EVENTS_SENT,
