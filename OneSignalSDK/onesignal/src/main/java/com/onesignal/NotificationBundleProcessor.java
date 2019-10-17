@@ -155,18 +155,6 @@ class NotificationBundleProcessor {
       controller.sendReceiveReceipt(notifiJob.getApiNotificationId());
    }
 
-   /**
-    * Must call this method instead of saveNotification
-    *
-    * This method save the last notification that might influence session
-    */
-   static void processNotification(NotificationGenerationJob notifiJob, boolean opened) {
-      saveNotification(notifiJob, opened);
-      if (notifiJob.isNotificationToDisplay()) {
-         OutcomesUtils.markLastNotificationReceived(notifiJob.getApiNotificationId());
-      }
-   }
-
    // Saving the notification provides the following:
    //   * Prevent duplicates
    //   * Build summary notifications
