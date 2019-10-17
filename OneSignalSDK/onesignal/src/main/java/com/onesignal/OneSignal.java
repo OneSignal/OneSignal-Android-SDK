@@ -998,6 +998,12 @@ public class OneSignal {
                OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
                remoteParams.clearGroupOnSummaryClick
             );
+            OneSignalPrefs.saveBool(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
+               remoteParams.receiveReceiptEnabled
+            );
+           
             OutcomesUtils.saveOutcomesParams(params.outcomesParams);
 
             NotificationChannelManager.processChannelList(

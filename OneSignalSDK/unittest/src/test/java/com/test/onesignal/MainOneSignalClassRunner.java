@@ -77,6 +77,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -137,6 +138,8 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -923,12 +926,13 @@ public class MainOneSignalClassRunner {
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      assertEquals(null, notificationOpenedMessage);
+
+      assertNull(notificationOpenedMessage);
       assertFalse(processResult);
       // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
       assertEquals("Robo test message", notificationReceivedBody);
-      assertFalse(0 == androidNotificationId);
+      assertNotEquals(0, androidNotificationId);
 
       // Don't fire for duplicates
       notificationOpenedMessage = null;
@@ -938,8 +942,8 @@ public class MainOneSignalClassRunner {
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      assertEquals(null, notificationOpenedMessage);
-      assertEquals(null, notificationReceivedBody);
+      assertNull(notificationOpenedMessage);
+      assertNull(notificationReceivedBody);
 
       // Test that only NotificationReceivedHandler fires
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
@@ -949,7 +953,6 @@ public class MainOneSignalClassRunner {
 
       GcmBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      assertEquals(null, notificationOpenedMessage);
       assertNull(notificationOpenedMessage);
       assertEquals("Robo test message", notificationReceivedBody);
    }

@@ -112,4 +112,5 @@ class NotificationGenerationJob {
    boolean hasExtender() {
       return overrideSettings != null && overrideSettings.extender != null;
    }
+
 }

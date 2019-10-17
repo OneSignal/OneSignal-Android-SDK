@@ -27,6 +27,7 @@ class OneSignalRemoteParams {
       boolean firebaseAnalytics;
       boolean restoreTTLFilter;
       boolean clearGroupOnSummaryClick;
+      boolean receiveReceiptEnabled;
       OutcomesParams outcomesParams;
    }
 
@@ -107,6 +108,7 @@ class OneSignalRemoteParams {
          restoreTTLFilter = responseJson.optBoolean("restore_ttl_filter", true);
          googleProjectNumber = responseJson.optString("android_sender_id", null);
          clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
+         receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
          outcomesParams = new OutcomesParams();
 
          //Process outcomes params

@@ -94,6 +94,20 @@ class RestClientAsserts {
       assertThat(payload.getInt("device_type"), ANY_OF_VALID_DEVICE_TYPES);
    }
 
+   static void assertReportReceivedAtIndex(int index, @NonNull String notificationId, @NonNull JSONObject payload) {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+      assertEquals(REST_METHOD.PUT, request.method);
+      assertRemoteParamsUrlReportReceived(request.url, notificationId);
+      assertEquals(payload.toString(), request.payload.toString());
+   }
+
+   static void assertRemoteParamsUrlReportReceived(@NonNull String url, @NonNull String notificationId) {
+      String[] parts = url.split("/");
+      assertEquals("notifications", parts[0]);
+      assertEquals(notificationId, parts[1]);
+      assertEquals("report_received", parts[2]);
+   }
+
    static void assertRemoteParamsAtIndex(int index) {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 

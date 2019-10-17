@@ -145,15 +145,16 @@ class NotificationBundleProcessor {
    }
 
    /**
-    * Must call this method instead of saveNotification
-    *
-    * This method save the last notification that might influence session
+    * Save notification, updates Outcomes, and sends Received Receipt if they are enabled.
     */
    static void processNotification(NotificationGenerationJob notifiJob, boolean opened) {
       saveNotification(notifiJob, opened);
-      if (notifiJob.isNotificationToDisplay()) {
-         OutcomesUtils.markLastNotificationReceived(notifiJob.getApiNotificationId());
-      }
+
+      if (!notifiJob.isNotificationToDisplay())
+         return;
+      String notificationId = notifiJob.getApiNotificationId();
+      OutcomesUtils.markLastNotificationReceived(notificationId);
+      OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
    }
 
    // Saving the notification provides the following:

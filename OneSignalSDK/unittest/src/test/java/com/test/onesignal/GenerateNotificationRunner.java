@@ -72,6 +72,7 @@ import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.StaticResetHelper;
@@ -106,8 +107,11 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
+import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
+
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -295,8 +299,6 @@ public class GenerateNotificationRunner {
       assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
       assertEquals(1, postedSummaryNotification.notif.actions.length);
    }
-   
-   
    
    @Test
    public void shouldCancelAllNotificationsPartOfAGroup() throws Exception {
@@ -1222,6 +1224,34 @@ public class GenerateNotificationRunner {
 
       assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);
    }
+
+   @Test
+   @Config(shadows = { ShadowReceiveReceiptController.class })
+   public void shouldSendReceivedReceiptWhenEnabled() throws Exception {
+      String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+      OneSignal.init(blankActivity, "123456789", appId);
+      threadAndTaskWait();
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
+
+      assertReportReceivedAtIndex(
+         2,
+         "UUID",
+         new JSONObject().put("app_id", appId).put("player_id", ShadowOneSignalRestClient.pushUserId)
+      );
+   }
+
+   @Test
+   public void shouldNotSendReceivedReceiptWhenDisabled() throws Exception {
+      String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+      OneSignal.init(blankActivity, "123456789", appId);
+      threadAndTaskWait();
+      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
+
+      assertRestCalls(2);
+   }
+
    
    private OSNotification lastNotificationReceived;
    @Test
