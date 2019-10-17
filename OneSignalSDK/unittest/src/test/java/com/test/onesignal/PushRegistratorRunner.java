@@ -29,9 +29,8 @@ package com.test.onesignal;
 
 import android.app.Activity;
 
-import com.onesignal.BuildConfig;
-import com.onesignal.PushRegistrator;
 import com.onesignal.OneSignalPackagePrivateHelper.PushRegistratorGCM;
+import com.onesignal.PushRegistrator;
 import com.onesignal.ShadowFirebaseCloudMessaging;
 import com.onesignal.ShadowGooglePlayServicesUtil;
 import com.onesignal.example.BlankActivity;
@@ -48,10 +47,13 @@ import org.robolectric.shadows.ShadowLog;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-      constants = BuildConfig.class,
-      instrumentedPackages = {"com.onesignal"},
-      shadows = { ShadowGooglePlayServicesUtil.class, ShadowFirebaseCloudMessaging.class },
-      sdk = 21)
+        instrumentedPackages = { "com.onesignal" },
+        shadows = {
+            ShadowGooglePlayServicesUtil.class,
+            ShadowFirebaseCloudMessaging.class },
+        sdk = 21
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class PushRegistratorRunner {
 
@@ -72,7 +74,7 @@ public class PushRegistratorRunner {
    }
 
    @Test
-   public void testGooglePlayServicesAPKMissingOnDevice() throws Exception {
+   public void testGooglePlayServicesAPKMissingOnDevice() {
       PushRegistratorGCM pushReg = new PushRegistratorGCM();
       final Thread testThread = Thread.currentThread();
 
@@ -89,7 +91,7 @@ public class PushRegistratorRunner {
    }
 
    @Test
-   public void testGCMPartOfGooglePlayServicesMissing() throws Exception {
+   public void testGCMPartOfGooglePlayServicesMissing() {
       PushRegistratorGCM pushReg = new PushRegistratorGCM();
       ShadowFirebaseCloudMessaging.exists = false;
 

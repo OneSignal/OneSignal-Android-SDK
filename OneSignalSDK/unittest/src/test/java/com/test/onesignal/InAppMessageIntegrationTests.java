@@ -3,7 +3,6 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -56,23 +55,24 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 
 @Config(packageName = "com.onesignal.example",
+        instrumentedPackages = { "com.onesignal" },
         shadows = {
-                ShadowOneSignalRestClient.class,
-                ShadowPushRegistratorGCM.class,
-                ShadowOSUtils.class,
-                ShadowAdvertisingIdProviderGPS.class,
-                ShadowCustomTabsClient.class,
-                ShadowCustomTabsSession.class,
-                ShadowNotificationManagerCompat.class,
-                ShadowJobService.class,
-                ShadowDynamicTimer.class,
-                ShadowOSInAppMessageController.class,
-                ShadowOSWebView.class,
-                ShadowOSViewUtils.class
+            ShadowOneSignalRestClient.class,
+            ShadowPushRegistratorGCM.class,
+            ShadowOSUtils.class,
+            ShadowAdvertisingIdProviderGPS.class,
+            ShadowCustomTabsClient.class,
+            ShadowCustomTabsSession.class,
+            ShadowNotificationManagerCompat.class,
+            ShadowJobService.class,
+            ShadowDynamicTimer.class,
+            ShadowOSInAppMessageController.class,
+            ShadowOSWebView.class,
+            ShadowOSViewUtils.class
         },
-        instrumentedPackages = {"com.onesignal"},
-        constants = BuildConfig.class,
-        sdk = 21)
+        sdk = 21
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessageIntegrationTests {
     private static final String IAM_CLICK_ID = "button_id_123";

@@ -5,7 +5,6 @@ import android.content.Context;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -34,16 +33,17 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-   constants = BuildConfig.class,
-   instrumentedPackages = { "com.onesignal" },
-   shadows = {
-      ShadowNotificationLimitManager.class,
-      ShadowPushRegistratorGCM.class,
-      ShadowOSUtils.class,
-      ShadowAdvertisingIdProviderGPS.class,
-      ShadowOneSignalRestClient.class
-   },
-   sdk = 26)
+        instrumentedPackages = { "com.onesignal" },
+        shadows = {
+            ShadowNotificationLimitManager.class,
+            ShadowPushRegistratorGCM.class,
+            ShadowOSUtils.class,
+            ShadowAdvertisingIdProviderGPS.class,
+            ShadowOneSignalRestClient.class
+        },
+        sdk = 26
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class NotificationLimitManagerRunner {
 

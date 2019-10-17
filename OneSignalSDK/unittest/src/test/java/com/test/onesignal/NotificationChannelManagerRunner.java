@@ -11,8 +11,6 @@ import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.example.BlankActivity;
 
-import junit.framework.Assert;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,19 +28,21 @@ import java.math.BigInteger;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_createNotificationChannel;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationChannelManager_processChannelList;
-import static org.junit.Assert.assertFalse;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
-      shadows = {
-         ShadowOSUtils.class,
-         ShadowRoboNotificationManager.class},
-      instrumentedPackages = {"com.onesignal"},
-      sdk = 26)
+        instrumentedPackages = { "com.onesignal" },
+        shadows = {
+            ShadowOSUtils.class,
+            ShadowRoboNotificationManager.class},
+         sdk = 26
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class NotificationChannelManagerRunner {
 
@@ -61,14 +61,14 @@ public class NotificationChannelManagerRunner {
    }
 
    @Before
-   public void beforeEachTest() throws Exception {
+   public void beforeEachTest() {
       ActivityController<BlankActivity> blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
       mContext = blankActivity;
    }
 
    @Test
-   public void createNotificationChannelShouldReturnDefaultChannelWithEmptyPayload() throws Exception {
+   public void createNotificationChannelShouldReturnDefaultChannelWithEmptyPayload() {
       JSONObject payload = new JSONObject();
 
       String ret = NotificationChannelManager_createNotificationChannel(blankActivity, payload);
@@ -168,7 +168,7 @@ public class NotificationChannelManagerRunner {
    // Start - Cold start sync tests
    
    @Test
-   public void processPayloadWithOutChannelList() throws Exception {
+   public void processPayloadWithOutChannelList() {
       createChannel("local_existing_id");
       createChannel("OS_existing_id");
    

@@ -28,9 +28,9 @@ class Global {
 
     // Limit upper number (exclusive) to prevent untested versions
     static def versionGroupOverrides = [
-        'com.google.android.gms': '[10.2.1, 12.1.0)',
-        'com.google.firebase': '[10.2.1, 12.1.0)',
-        'com.android.support': '[26.0.0, 27.2.0)'
+        'com.google.android.gms': '[10.2.1, 16.1.0)',
+        'com.google.firebase': '[10.2.1, 16.1.0)',
+        'com.android.support': '[26.0.0, 28.1.0)'
     ]
 
     static def GROUP_ID = 'com.onesignal'
