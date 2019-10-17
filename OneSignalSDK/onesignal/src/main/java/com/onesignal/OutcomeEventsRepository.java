@@ -6,6 +6,9 @@ import org.json.JSONObject;
 
 import java.util.List;
 
+// TODO: Clean up duplicated requestMeasure*OutcomeEvent methods.
+//       There are 2 of each with different params, there should only be one of each.
+//         - Possibility just one depending on how it is cleaned up.
 class OutcomeEventsRepository {
 
     private static final String APP_ID = "app_id";
