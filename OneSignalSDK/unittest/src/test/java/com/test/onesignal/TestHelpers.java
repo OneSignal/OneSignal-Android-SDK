@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.os.SystemClock;
 
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -26,6 +27,7 @@ import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
+import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 
@@ -54,6 +56,8 @@ public class TestHelpers {
       OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
       if (!ranBeforeTestSuite)
          return;
+
+      resetSystemClock();
 
       stopAllOSThreads();
 
@@ -84,9 +88,7 @@ public class TestHelpers {
 
       ShadowOSWebView.resetStatics();
 
-      // 100ms is default time Robolectric uses,
-      //   however it does not reset back on it's own between tests.
-      ShadowSystemClock.setCurrentTimeMillis(100);
+      OneSignalShadowPackageManager.resetStatics();
 
       lastException = null;
    }
@@ -213,12 +215,12 @@ public class TestHelpers {
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
    }
-   private static int sessionCountOffset = 1;
+
    static void restartAppAndElapseTimeToNextSession() throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 1_000 * 31 * sessionCountOffset++);
+      advanceSystemTimeBy(31);
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords() {
@@ -301,8 +303,22 @@ public class TestHelpers {
       return events;
    }
 
-   static void advanceTimeByMs(long advanceBy) {
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() +  advanceBy);
+   /**
+    * Calling setNanoTime ends up locking time to zero.
+    * NOTE: This setNanoTime is going away in future robolectric versions
+    */
+   static void lockTimeTo(long sec) {
+      long nano = sec * 1_000L * 1_000L;
+      ShadowSystemClock.setNanoTime(nano);
+   }
+
+   static void resetSystemClock() {
+      SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
+   }
+
+   static void advanceSystemTimeBy(long sec) {
+      long ms = sec * 1_000L;
+      SystemClock.setCurrentTimeMillis(ShadowSystemClock.currentTimeMillis() + ms);
    }
 
    public static void assertMainThread() {

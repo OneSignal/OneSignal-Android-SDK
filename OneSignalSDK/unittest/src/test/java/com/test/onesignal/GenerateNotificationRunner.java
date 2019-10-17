@@ -48,7 +48,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Button;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.BundleCompat;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
@@ -108,11 +107,9 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
-
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
-
-import static com.test.onesignal.TestHelpers.advanceTimeByMs;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 import static junit.framework.Assert.assertEquals;
@@ -125,17 +122,18 @@ import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
-      constants = BuildConfig.class,
-      instrumentedPackages = {"com.onesignal"},
-      shadows = {
-         ShadowRoboNotificationManager.class,
-         ShadowOneSignalRestClient.class,
-         ShadowBadgeCountUpdater.class,
-         ShadowNotificationManagerCompat.class,
-         ShadowOSUtils.class,
-         ShadowOSViewUtils.class
-      },
-      sdk = 21)
+        instrumentedPackages = { "com.onesignal" },
+        shadows = {
+            ShadowRoboNotificationManager.class,
+            ShadowOneSignalRestClient.class,
+            ShadowBadgeCountUpdater.class,
+            ShadowNotificationManagerCompat.class,
+            ShadowOSUtils.class,
+            ShadowOSViewUtils.class
+        },
+        sdk = 21
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
    
@@ -153,9 +151,6 @@ public class GenerateNotificationRunner {
    
    @Before // Before each test
    public void beforeEachTest() throws Exception {
-      // Robolectric mocks System.currentTimeMillis() to 0, we need the current real time to match our SQL records.
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis());
-   
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
@@ -170,12 +165,11 @@ public class GenerateNotificationRunner {
       notificationManager.cancelAll();
       NotificationRestorer.restored = false;
    }
-   
+
    @AfterClass
    public static void afterEverything() throws Exception {
       StaticResetHelper.restSetStaticFields();
    }
-   
    
    public static Bundle getBaseNotifBundle() {
       return getBaseNotifBundle("UUID");
@@ -200,7 +194,8 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldSetTitleCorrectly() throws Exception {
+   @Config (sdk = 22)
+   public void shouldSetTitleCorrectly() {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
@@ -214,7 +209,8 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldProcessRestore() throws Exception {
+   @Config (sdk = 22)
+   public void shouldProcessRestore() {
       BundleCompat bundle = createInternalPayloadBundle(getBaseNotifBundle());
       bundle.putInt("android_notif_id", 0);
       bundle.putBoolean("restoring", true);
@@ -245,7 +241,7 @@ public class GenerateNotificationRunner {
    private static OSNotificationOpenResult lastOpenResult;
    
    @Test
-   public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() throws Exception {
+   public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new OneSignal.NotificationOpenedHandler() {
          @Override
@@ -264,7 +260,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
    
       // Go forward 4 weeks
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 2419202L * 1000L);
+      advanceSystemTimeBy(2_419_202);
       
       // Display a 3 normal notification.
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
@@ -687,7 +683,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldSetBadgesWhenRestoringNotifications() throws Exception {
+   public void shouldSetBadgesWhenRestoringNotifications() {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
       ShadowBadgeCountUpdater.lastCount = 0;
 
@@ -706,7 +702,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() throws Exception {
+   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() {
       Bundle bundle = getBaseNotifBundle();
       bundle.remove("alert");
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
@@ -769,7 +765,7 @@ public class GenerateNotificationRunner {
    
 
    @Test
-   public void shouldHandleBasicNotifications() throws Exception {
+   public void shouldHandleBasicNotifications() {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
@@ -808,7 +804,7 @@ public class GenerateNotificationRunner {
 
       // Go forward 4 weeks
       // Note: Does not effect the SQL function strftime
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 2419201L * 1000L);
+      advanceSystemTimeBy(2_419_202);
 
       // Display a 3rd notification
       // Should of been added for a total of 2 records now.
@@ -824,7 +820,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldRestoreNotifications() throws Exception {
+   public void shouldRestoreNotifications() {
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
 
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
@@ -835,7 +831,7 @@ public class GenerateNotificationRunner {
 
       // Go forward 1 week
       // Note: Does not effect the SQL function strftime
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604801L * 1000L);
+      advanceSystemTimeBy(604_801);
 
       // Restorer should not fire service since the notification is over 1 week old.
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
@@ -866,7 +862,7 @@ public class GenerateNotificationRunner {
       assertRestoreRan();
 
       // Go forward just past the TTL of the notification
-      advanceTimeByMs((ttl + 1) * 1_000L);
+      advanceSystemTimeBy(ttl + 1);
       restoreNotifications();
       if (should)
          assertRestoreRan();
@@ -875,12 +871,12 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void doNotRestoreNotificationsPastExpireTime() throws Exception {
+   public void doNotRestoreNotificationsPastExpireTime() {
       helperShouldRestoreNotificationsPastExpireTime(false);
    }
 
    @Test
-   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() throws Exception {
+   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() {
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
       helperShouldRestoreNotificationsPastExpireTime(true);
    }
@@ -890,7 +886,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       // Go forward 1 week
-      ShadowSystemClock.setCurrentTimeMillis(System.currentTimeMillis() + 604_801L * 1_000L);
+      advanceSystemTimeBy(604_801);
 
       // Should not count as a badge
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -899,7 +895,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldGenerate2BasicGroupNotifications() throws Exception {
+   public void shouldGenerate2BasicGroupNotifications() {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("grp", "test1");
@@ -986,7 +982,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldHandleOpeningInAppAlertWithGroupKeySet() throws Exception {
+   public void shouldHandleOpeningInAppAlertWithGroupKeySet() {
       SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "some_group", false);
    }
@@ -1163,7 +1159,7 @@ public class GenerateNotificationRunner {
    
    @Test
    @Config(shadows = {ShadowGcmBroadcastReceiver.class}, sdk = 26)
-   public void shouldStartGCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() throws Exception {
+   public void shouldStartGCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
       
       Intent intentGcm = new Intent();
       intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
@@ -1294,7 +1290,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void notificationExtenderServiceOverrideShouldOverrideAndroidNotificationId() throws Exception {
+   public void notificationExtenderServiceOverrideShouldOverrideAndroidNotificationId() {
       overrideNotificationId = 1;
       
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")),
@@ -1346,7 +1342,7 @@ public class GenerateNotificationRunner {
    }
 
    // Test to make sure changed bodies and titles are used for the summary notification.
-   private void testNotificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
+   private void testNotificationExtenderServiceOverridePropertiesWithSummary() {
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
    

@@ -4,8 +4,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.onesignal.BuildConfig;
-import com.onesignal.OneSignal;
+import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.StaticResetHelper;
+import com.onesignal.example.BlankActivity;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -18,17 +19,14 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
-import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
-
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppContext;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-   constants = BuildConfig.class,
-   instrumentedPackages = {"com.onesignal"},
-   sdk = 21)
+        instrumentedPackages = { "com.onesignal" },
+        sdk = 21
+)
+
 @RunWith(RobolectricTestRunner.class)
 public class OneSignalPrefsRunner {
    private static Activity blankActivity;
@@ -53,7 +51,7 @@ public class OneSignalPrefsRunner {
    }
 
    @Test
-   public void testNullContextDoesNotCrash() throws Exception {
+   public void testNullContextDoesNotCrash() {
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
    }

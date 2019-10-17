@@ -1,24 +1,27 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 27
-    buildToolsVersion '27.0.3'
-
+    compileSdkVersion 28
     defaultConfig {
+        // Normally we shouldn't need to redefine manifestPlaceholders for our onesignal project
+        //   but Android Studio gets a sync error if these are not here.
+        //      - /gradlew onesignal:assembleRelease is fine from the console.
+        // We can't use static values are these are directly added to the AndroidManifest.xml in the .aar file.
+        manifestPlaceholders = [onesignal_app_id: '${onesignal_app_id}',
+                                // Project number pulled from dashboard, local value is ignored
+                                onesignal_google_project_number: '${onesignal_google_project_number}']
         minSdkVersion 15
         consumerProguardFiles 'consumer-proguard-rules.pro'
     }
 
     buildTypes {
-        main {
+        original {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
-
         release {
             minifyEnabled false
         }
-
         unity {
             minifyEnabled false
         }
@@ -30,19 +33,18 @@ android {
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
-    compileOnly 'com.google.android.gms:play-services-gcm:12.0.1'
-    api 'com.google.firebase:firebase-messaging:12.0.1'
-
+    compileOnly 'com.google.android.gms:play-services-gcm:16.0.0'
     // Can be compileOnly in 4.0.0, can't change until then as some projects may rely on this
-    implementation 'com.google.android.gms:play-services-location:12.0.1'
-
-    implementation 'com.android.support:cardview-v7:27.1.1'
-
+    implementation 'com.google.android.gms:play-services-location:16.0.0'
+    implementation 'com.google.android.gms:play-services-ads-identifier:16.0.0'
     // Required for GoogleApiAvailability
-    implementation 'com.google.android.gms:play-services-base:12.0.1'
+    implementation 'com.google.android.gms:play-services-base:16.0.1'
 
-    api 'com.android.support:support-v4:27.1.1'
-    api 'com.android.support:customtabs:27.1.1'
+    api 'com.google.firebase:firebase-messaging:17.3.3'
+
+    api 'com.android.support:cardview-v7:28.0.0'
+    api 'com.android.support:support-v4:28.0.0'
+    api 'com.android.support:customtabs:28.0.0'
 
     // Change api to implementation. Need to check however this has any effect in production
     //   projects that pull from maven.

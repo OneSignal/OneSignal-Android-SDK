@@ -27,6 +27,8 @@
 
 package com.test.onesignal;
 
+import android.os.SystemClock;
+
 import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomeEventsController;
 import com.onesignal.MockOutcomeEventsRepository;
@@ -50,17 +52,20 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
+import org.robolectric.shadows.ShadowSystemClock;
 
 import java.util.List;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getOutcomeSettings;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
+import static com.test.onesignal.TestHelpers.lockTimeTo;
+import static com.test.onesignal.TestHelpers.resetSystemClock;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-        constants = BuildConfig.class,
         instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOSUtils.class,
@@ -425,6 +430,7 @@ public class OutcomeEventUnitTests {
 
     @Test
     public void testOutcomeMultipleFailsSavedOnDB() throws Exception {
+        lockTimeTo(0);
         service.setSuccess(false);
 
         sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
@@ -524,11 +530,11 @@ public class OutcomeEventUnitTests {
 
     @Test
     public void testSendFailedOutcomeWithValueOnDB() throws Exception {
+        lockTimeTo(0);
         service.setSuccess(false);
         sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
-
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
         threadAndTaskWait();
 
