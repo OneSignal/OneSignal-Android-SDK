@@ -33,8 +33,14 @@ class OSReceiveReceiptController {
 
     private final OSReceiveReceiptRepository repository;
 
-    OSReceiveReceiptController() {
+    private static OSReceiveReceiptController sInstance;
+    private OSReceiveReceiptController() {
         this.repository = new OSReceiveReceiptRepository();
+    }
+    public static synchronized OSReceiveReceiptController getInstance() {
+        if (sInstance == null)
+            sInstance = new OSReceiveReceiptController();
+        return sInstance;
     }
 
     void sendReceiveReceipt(@NonNull final String notificationId) {

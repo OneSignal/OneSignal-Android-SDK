@@ -145,14 +145,16 @@ class NotificationBundleProcessor {
    }
 
    /**
-    * Must call this method instead of saveNotification
-    *
-    * This send receive receipt call
+    * Save notification, updates Outcomes, and sends Received Receipt if they are enabled.
     */
    static void processNotification(NotificationGenerationJob notifiJob, boolean opened) {
       saveNotification(notifiJob, opened);
-      OSReceiveReceiptController controller = new OSReceiveReceiptController();
-      controller.sendReceiveReceipt(notifiJob.getApiNotificationId());
+
+      if (!notifiJob.isNotificationToDisplay())
+         return;
+      String notificationId = notifiJob.getApiNotificationId();
+      OutcomesUtils.markLastNotificationReceived(notificationId);
+      OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
    }
 
    // Saving the notification provides the following:
