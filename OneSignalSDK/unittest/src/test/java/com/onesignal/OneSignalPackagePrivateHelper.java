@@ -111,12 +111,6 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.getSessionManager().getIndirectNotificationIds();
    }
 
-   public static OneSignal.OutcomeSettings OneSignal_getOutcomeSettings(boolean cacheActive) {
-       return OneSignal.OutcomeSettings.Builder.newInstance()
-               .setCacheActive(cacheActive)
-               .build();
-   }
-
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }

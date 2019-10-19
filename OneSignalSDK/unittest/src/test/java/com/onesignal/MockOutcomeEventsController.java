@@ -46,8 +46,4 @@ public class MockOutcomeEventsController extends OutcomeEventsController {
         super.sendOutcomeEventWithValue(name, value, callback);
     }
 
-    @Override
-    public void setOutcomeSettings(@Nullable OneSignal.OutcomeSettings outcomeSettings) {
-        super.setOutcomeSettings(outcomeSettings);
-    }
 }

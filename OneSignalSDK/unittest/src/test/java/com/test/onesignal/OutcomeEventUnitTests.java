@@ -27,17 +27,14 @@
 
 package com.test.onesignal;
 
-import android.os.SystemClock;
-
-import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomeEventsController;
 import com.onesignal.MockOutcomeEventsRepository;
 import com.onesignal.MockOutcomeEventsService;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockSessionManager;
-import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
@@ -52,14 +49,10 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowSystemClock;
 
 import java.util.List;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getOutcomeSettings;
-import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.lockTimeTo;
-import static com.test.onesignal.TestHelpers.resetSystemClock;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertTrue;
@@ -119,7 +112,6 @@ public class OutcomeEventUnitTests {
         service = new MockOutcomeEventsService();
         repository = new MockOutcomeEventsRepository(service, dbHelper);
         controller = new MockOutcomeEventsController(sessionManager, repository);
-        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(true));
 
         TestHelpers.beforeTestInitAndCleanup();
     }
@@ -312,30 +304,6 @@ public class OutcomeEventUnitTests {
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
         assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
-    }
-
-    @Test
-    public void testOutcomeFailWithoutCache() throws Exception {
-        service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
-
-        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(false));
-
-        controller.sendOutcomeEvent(OUTCOME_NAME);
-        threadAndTaskWait();
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
-
-        threadAndTaskWait();
-        assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test

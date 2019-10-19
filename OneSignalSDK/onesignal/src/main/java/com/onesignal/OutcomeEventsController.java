@@ -34,8 +34,6 @@ class OutcomeEventsController {
     private final OutcomeEventsRepository outcomeEventsRepository;
     @NonNull
     private final OSSessionManager osSessionManager;
-    @Nullable
-    private OneSignal.OutcomeSettings outcomeSettings;
 
     public OutcomeEventsController(@NonNull OSSessionManager osSessionManager, @NonNull OutcomeEventsRepository outcomeEventsRepository) {
         this.osSessionManager = osSessionManager;
@@ -44,10 +42,9 @@ class OutcomeEventsController {
         initUniqueOutcomeEventsSentSets();
     }
 
-    OutcomeEventsController(@NonNull OSSessionManager osSessionManager, @NonNull OneSignalDbHelper dbHelper, @Nullable OneSignal.OutcomeSettings outcomeSettings) {
+    OutcomeEventsController(@NonNull OSSessionManager osSessionManager, @NonNull OneSignalDbHelper dbHelper) {
         this.outcomeEventsRepository = new OutcomeEventsRepository(dbHelper);
         this.osSessionManager = osSessionManager;
-        this.outcomeSettings = outcomeSettings;
 
         initUniqueOutcomeEventsSentSets();
     }
@@ -71,10 +68,6 @@ class OutcomeEventsController {
             attributedUniqueOutcomeEventsSentSet.addAll(tempAttributedUniqueOutcomeEventsSentSet);
     }
 
-    void setOutcomeSettings(@Nullable OneSignal.OutcomeSettings outcomeSettings) {
-        this.outcomeSettings = outcomeSettings;
-    }
-
     /**
      * Clean unattributed unique outcome events sent so they can be sent after a new session
      */
@@ -86,9 +79,6 @@ class OutcomeEventsController {
      * Send all the outcomes that from some reason failed
      */
     void sendSavedOutcomes() {
-        if (outcomeSettings != null && !outcomeSettings.isCacheActive())
-            return;
-
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -183,6 +173,8 @@ class OutcomeEventsController {
         final long timestampSeconds = System.currentTimeMillis() / 1000;
         final int deviceType = new OSUtils().getDeviceType();
 
+        final OutcomeEvent outcomeEvent = new OutcomeEvent(session, notificationIds, name, timestampSeconds, params);
+
         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
             @Override
             void onSuccess(String response) {
@@ -195,26 +187,24 @@ class OutcomeEventsController {
                         attributedUniqueOutcomeEventsSentSet);
 
                 if (callback != null)
-                    callback.onOutcomeSuccess(name);
+                    callback.onSuccess(outcomeEvent);
             }
 
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                 super.onFailure(statusCode, response, throwable);
 
-                if (isCacheActive()) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                            outcomeEventsRepository.saveOutcomeEvent(
-                                    new OutcomeEvent(session, notificationIds, name, timestampSeconds, params));
-                        }
-                    }, OS_SAVE_OUTCOMES).start();
-                }
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                        outcomeEventsRepository.saveOutcomeEvent(outcomeEvent);
+                    }
+                }, OS_SAVE_OUTCOMES).start();
 
-                if (callback != null)
-                    callback.onOutcomeFail(statusCode, response);
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN,
+                        "Sending outcome with name: " + name + " failed with status code: " + statusCode + " and response: " + response +
+                                "\nOutcome event was cached and will be reattempted on app cold start");
             }
         };
 
@@ -294,7 +284,4 @@ class OutcomeEventsController {
         return uniqueNotificationIds;
     }
 
-    boolean isCacheActive() {
-        return outcomeSettings == null || outcomeSettings.isCacheActive();
-    }
 }

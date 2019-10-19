@@ -595,7 +595,7 @@ public class OneSignal {
 
       if (wasAppContextNull) {
          sessionManager = new OSSessionManager(getNewSessionListener());
-         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext), outcomeSettings);
+         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
@@ -3077,13 +3077,6 @@ public class OneSignal {
    /*
     * Start OneSignalOutcome module
     */
-   private static OutcomeSettings outcomeSettings = null;
-
-   static void changeOutcomeSettings(OutcomeSettings settings) {
-      outcomeSettings = settings;
-      outcomeEventsController.setOutcomeSettings(settings);
-   }
-
    static OSSessionManager getSessionManager() {
       return sessionManager;
    }
@@ -3096,6 +3089,11 @@ public class OneSignal {
       if (!isValidOutcomeEntry(name))
          return;
 
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
+
       outcomeEventsController.sendOutcomeEvent(name, callback);
    }
 
@@ -3106,6 +3104,11 @@ public class OneSignal {
    public static void sendUniqueOutcome(@NonNull String name, OutcomeCallback callback) {
       if (!isValidOutcomeEntry(name))
          return;
+
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
 
       outcomeEventsController.sendUniqueOutcomeEvent(name, callback);
    }
@@ -3118,15 +3121,15 @@ public class OneSignal {
       if (!isValidOutcomeEntry(name))
          return;
 
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
+
       outcomeEventsController.sendOutcomeEventWithValue(name, value, callback);
    }
 
    private static boolean isValidOutcomeEntry(String name) {
-      if (outcomeEventsController == null) {
-          OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
-          return false;
-      }
-
       if (name == null || name.isEmpty()) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Outcome name must not be empty");
          return false;
@@ -3136,41 +3139,7 @@ public class OneSignal {
    }
 
    public interface OutcomeCallback {
-      void onOutcomeSuccess(String name);
-      void onOutcomeFail(int statusCode, String response);
-   }
-
-   static class OutcomeSettings {
-      private boolean cacheActive;
-
-      OutcomeSettings(Builder builder) {
-         this.cacheActive = builder.cacheActive;
-      }
-
-      boolean isCacheActive() {
-         return cacheActive;
-      }
-
-      public static class Builder {
-
-         private boolean cacheActive = true;
-
-         public static Builder newInstance() {
-            return new Builder();
-         }
-
-         private Builder() {
-         }
-
-         public Builder setCacheActive(boolean active) {
-            this.cacheActive = active;
-            return this;
-         }
-
-         public OutcomeSettings build() {
-            return new OutcomeSettings(this);
-         }
-      }
+      void onSuccess(OutcomeEvent outcomeEvent);
    }
    /*
     * End OneSignalOutcome module
