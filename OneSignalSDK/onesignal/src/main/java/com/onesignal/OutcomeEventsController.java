@@ -228,33 +228,11 @@ class OutcomeEventsController {
      * Get the unique notifications that have not been sent before with the current unique outcome name
      */
     private JSONArray getUniqueNotificationIds(String name, JSONArray notificationIds) {
-        boolean hasNoUniqueNotificationIds = hasNoUniqueOutcomeNotificationIds(name, notificationIds);
-        if (hasNoUniqueNotificationIds)
+        JSONArray uniqueNotificationIds = getUniqueOutcomeNotificationIds(name, notificationIds);
+        if (uniqueNotificationIds.length() == 0)
             return null;
 
-        return getUniqueOutcomeNotificationIds(name, notificationIds);
-    }
-
-    /**
-     * Validate whether or not the JSONArray of notificationIds has ids that have not been sent with the specific unique outcome name
-     */
-    private boolean hasNoUniqueOutcomeNotificationIds(String uniqueName, JSONArray notificationIds) {
-        int uniqueIdCount = 0;
-        try {
-            for (int i = 0; i < notificationIds.length(); i++) {
-                String notificationId = notificationIds.getString(i);
-                String uniqueOutcomeNotificationId = uniqueName + "_" + notificationId;
-
-                if (attributedUniqueOutcomeEventsSentSet.contains(uniqueOutcomeNotificationId))
-                    uniqueIdCount++;
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-
-            return false;
-        }
-
-        return uniqueIdCount == notificationIds.length();
+        return uniqueNotificationIds;
     }
 
     /**
