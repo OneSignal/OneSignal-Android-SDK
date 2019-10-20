@@ -31,12 +31,16 @@ import android.app.NotificationChannel;
 import android.app.Notification;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
+import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
 
 import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowNotification;
 import org.robolectric.shadows.ShadowNotificationManager;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import static org.robolectric.Shadows.shadowOf;
 
@@ -69,6 +73,11 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    public static int lastNotifId;
 
    public static LinkedHashMap<Integer, PostedNotification> notifications = new LinkedHashMap<>();
+
+   private static ShadowRoboNotificationManager mInstance;
+   ShadowRoboNotificationManager() {
+      mInstance = this;
+   }
    
    @Override
    public void cancelAll() {
@@ -94,6 +103,18 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
       lastNotifId = id;
       notifications.put(id, new PostedNotification(id, lastNotif));
       super.notify(tag, id, notification);
+   }
+
+   public static @NonNull List<Notification> getNotificationsInGroup(@NonNull String group) {
+      List<Notification> notifications = new ArrayList<>();
+      for (Notification notification : mInstance.getAllNotifications()) {
+         if (NotificationCompat.isGroupSummary(notification))
+            continue;
+         if (!group.equals(notification.getGroup()))
+            continue;
+         notifications.add(notification);
+      }
+      return notifications;
    }
 
    public static NotificationChannel lastChannel;

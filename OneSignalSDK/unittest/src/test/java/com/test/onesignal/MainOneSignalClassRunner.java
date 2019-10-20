@@ -3826,11 +3826,7 @@ public class MainOneSignalClassRunner {
       class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            try {
-               queue.put(true);
-            } catch (InterruptedException e) {
-               Assert.fail("Throw unexpected");
-            }
+            queue.offer(true);
          }
       }
 
@@ -3862,11 +3858,7 @@ public class MainOneSignalClassRunner {
             OneSignal.getTags(new OneSignal.GetTagsHandler() {
                @Override
                public void tagsAvailable(JSONObject tags) {
-                  try {
-                     queue.put(true);
-                  } catch (InterruptedException e) {
-                     Assert.fail("Throw unexpected");
-                  }
+                  queue.offer(true);
                }
             });
          }
