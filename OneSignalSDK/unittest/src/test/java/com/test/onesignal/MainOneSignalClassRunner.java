@@ -89,6 +89,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -110,6 +111,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -3817,14 +3820,13 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testGetTagsQueuesCallbacks() throws Exception {
+      final BlockingQueue<Boolean> queue = new ArrayBlockingQueue<>(2);
 
       // Allows us to validate that both handlers get executed independently
       class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
-         boolean executed = false;
-
          @Override
          public void tagsAvailable(JSONObject tags) {
-            executed = true;
+            queue.offer(true);
          }
       }
 
@@ -3841,30 +3843,26 @@ public class MainOneSignalClassRunner {
       OneSignal.getTags(second);
       threadAndTaskWait();
 
-      assertTrue(first.executed);
-      assertTrue(second.executed);
+      assertTrue(queue.take());
+      assertTrue(queue.take());
    }
 
    @Test
    public void testNestedGetTags() throws Exception {
+      final BlockingQueue<Boolean> queue = new ArrayBlockingQueue<>(2);
 
       // Validates that nested getTags calls won't throw a ConcurrentModificationException
       class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
-         boolean executed = false;
-
          @Override
          public void tagsAvailable(JSONObject tags) {
             OneSignal.getTags(new OneSignal.GetTagsHandler() {
                @Override
                public void tagsAvailable(JSONObject tags) {
-                  executed = true;
+                  queue.offer(true);
                }
             });
          }
       }
-
-      DebugGetTagsHandler first = new DebugGetTagsHandler();
-      DebugGetTagsHandler second = new DebugGetTagsHandler();
 
       OneSignalInit();
       threadAndTaskWait();
@@ -3872,12 +3870,14 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("test", "value");
       threadAndTaskWait();
 
+      DebugGetTagsHandler first = new DebugGetTagsHandler();
+      DebugGetTagsHandler second = new DebugGetTagsHandler();
       OneSignal.getTags(first);
       OneSignal.getTags(second);
       threadAndTaskWait();
 
-      assertTrue(first.executed);
-      assertTrue(second.executed);
+      assertTrue(queue.take());
+      assertTrue(queue.take());
    }
 
    /**

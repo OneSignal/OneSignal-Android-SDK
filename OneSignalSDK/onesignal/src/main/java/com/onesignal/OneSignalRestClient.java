@@ -66,7 +66,7 @@ class OneSignalRestClient {
          public void run() {
             makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT, null);
          }
-      }).start();
+      }, "OS_REST_ASYNC_PUT").start();
    }
 
    public static void post(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
@@ -74,7 +74,7 @@ class OneSignalRestClient {
          public void run() {
             makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT, null);
          }
-      }).start();
+      }, "OS_REST_ASYNC_POST").start();
    }
 
    public static void get(final String url, final ResponseHandler responseHandler, @NonNull final String cacheKey) {
@@ -82,7 +82,7 @@ class OneSignalRestClient {
          public void run() {
             makeRequest(url, null, null, responseHandler, GET_TIMEOUT, cacheKey);
          }
-      }).start();
+      }, "OS_REST_ASYNC_GET").start();
    }
 
    public static void getSync(final String url, final ResponseHandler responseHandler, @NonNull String cacheKey) {
@@ -261,7 +261,7 @@ class OneSignalRestClient {
          public void run() {
             handler.onSuccess(response);
          }
-      });
+      }, "OS_REST_SUCCESS_CALLBACK");
       thread.start();
       
       return thread;
@@ -275,7 +275,7 @@ class OneSignalRestClient {
          public void run() {
             handler.onFailure(statusCode, response, throwable);
          }
-      });
+      }, "OS_REST_FAILURE_CALLBACK");
       thread.start();
       
       return thread;

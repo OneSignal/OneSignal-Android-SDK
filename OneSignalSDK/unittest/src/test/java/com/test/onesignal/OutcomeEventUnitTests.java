@@ -348,7 +348,6 @@ public class OutcomeEventUnitTests {
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
-
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -367,6 +366,7 @@ public class OutcomeEventUnitTests {
 
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
+        threadAndTaskWait();
 
         new Thread(new Runnable() {
             @Override
