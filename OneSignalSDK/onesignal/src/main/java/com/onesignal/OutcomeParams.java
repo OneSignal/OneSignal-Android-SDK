@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-class OutcomeParams {
+public class OutcomeParams {
 
     private static final String WEIGHT = "weight";
 
@@ -30,7 +30,7 @@ class OutcomeParams {
         }
     }
 
-    String getAsJSONString() {
+    public String getAsJSONString() {
         JSONObject jsonObject = new JSONObject();
         addParamsToJson(jsonObject);
         return jsonObject.toString();

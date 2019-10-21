@@ -31,36 +31,20 @@ public class OutcomeEvent {
         return session;
     }
 
-    public void setSession(OSSessionManager.Session session) {
-        this.session = session;
+    public String getParams() {
+        return params != null ? params.getAsJSONString() : null;
     }
 
     public JSONArray getNotificationIds() {
         return notificationIds;
     }
 
-    public void setNotificationIds(JSONArray notificationIds) {
-        this.notificationIds = notificationIds;
-    }
-
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public long getTimestamp() {
         return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public String getParams() {
-        return params != null ? params.getAsJSONString() : null;
     }
 
     public JSONObject toJSONObject() {
