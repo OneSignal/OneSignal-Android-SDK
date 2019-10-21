@@ -110,8 +110,8 @@ import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGrou
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
+import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
-
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
@@ -738,7 +738,7 @@ public class GenerateNotificationRunner {
    
 
    @Test
-   public void shouldHandleBasicNotifications() {
+   public void shouldHandleBasicNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
@@ -778,6 +778,10 @@ public class GenerateNotificationRunner {
       // Go forward 4 weeks
       // Note: Does not effect the SQL function strftime
       advanceSystemTimeBy(2_419_202);
+
+      // Restart the app so OneSignalCacheCleaner can clean out old notifications
+      fastColdRestartApp();
+      threadAndTaskWait();
 
       // Display a 3rd notification
       // Should of been added for a total of 2 records now.

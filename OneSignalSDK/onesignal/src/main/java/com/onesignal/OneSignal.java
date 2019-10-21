@@ -599,6 +599,8 @@ public class OneSignal {
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
+         // Cleans out old cached data to prevent over using the storage on devices
+         OneSignalCacheCleaner.cleanOldCachedData(context);
       }
    }
 

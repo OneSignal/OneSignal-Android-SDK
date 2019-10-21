@@ -159,8 +159,9 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
-   public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
+   public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
+   public static class CachedUniqueOutcomeNotificationTable extends OneSignalDbContract.CachedUniqueOutcomeNotificationTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
       NotificationGenerationJob(Context context) {

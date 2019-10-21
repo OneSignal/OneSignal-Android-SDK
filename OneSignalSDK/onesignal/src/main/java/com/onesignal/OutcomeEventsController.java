@@ -13,21 +13,10 @@ import java.util.Set;
 class OutcomeEventsController {
 
     private static final String OS_SAVE_OUTCOMES = "OS_SAVE_OUTCOMES";
+    private static final String OS_SEND_SAVED_OUTCOMES = "OS_SEND_SAVED_OUTCOMES";
+    private static final String OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS = "OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS";
 
-    static class OutcomeException extends Exception {
-
-        OutcomeException(String message) {
-            super(message);
-        }
-
-    }
-
-    // Keeps track of unique outcome events sent for ATTRIBUTED sessions on a notification level
-    //  Saved in format: <outcome_name + notification_id>
-    private Set<String> attributedUniqueOutcomeEventsSentSet;
-
-    // Keeps track of unique outcomeevents sent for UNATTRIBUTED sessions on a session level
-    //  Saved in format: <outcome_name>
+    // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
     private Set<String> unattributedUniqueOutcomeEventsSentSet;
 
     @NonNull
@@ -53,19 +42,15 @@ class OutcomeEventsController {
      * Init the sets used for tracking attributed and unattributed unique outcome events
      */
     private void initUniqueOutcomeEventsSentSets() {
-        // If UNATTRIBUTED unique outcomes is already set in current session we don't want to clear it
-        if (unattributedUniqueOutcomeEventsSentSet == null)
-            unattributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
-
-        // Get all cached ATTRIBUTED unique outcomes
-        attributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
-        Set<String> tempAttributedUniqueOutcomeEventsSentSet = OneSignalPrefs.getStringSet(
+        // Get all cached UNATTRIBUTED unique outcomes
+        unattributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
+        Set<String> tempUnattributedUniqueOutcomeEventsSentSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_UNIQUE_OUTCOME_EVENTS_SENT,
+                OneSignalPrefs.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
                 null
         );
-        if (tempAttributedUniqueOutcomeEventsSentSet != null)
-            attributedUniqueOutcomeEventsSentSet.addAll(tempAttributedUniqueOutcomeEventsSentSet);
+        if (tempUnattributedUniqueOutcomeEventsSentSet != null)
+            unattributedUniqueOutcomeEventsSentSet.addAll(tempUnattributedUniqueOutcomeEventsSentSet);
     }
 
     /**
@@ -73,6 +58,7 @@ class OutcomeEventsController {
      */
     void cleanOutcomes() {
         unattributedUniqueOutcomeEventsSentSet = OSUtils.newConcurrentSet();
+        saveUnattributedUniqueOutcomeEvents();
     }
 
     /**
@@ -89,7 +75,7 @@ class OutcomeEventsController {
                     sendSavedOutcomeEvent(event);
                 }
             }
-        }, "OS_SEND_SAVED_OUTCOMES").start();
+        }, OS_SEND_SAVED_OUTCOMES).start();
     }
 
     private void sendSavedOutcomeEvent(@NonNull final OutcomeEvent event) {
@@ -180,11 +166,10 @@ class OutcomeEventsController {
             void onSuccess(String response) {
                 super.onSuccess(response);
 
-                OneSignalPrefs.saveStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_UNIQUE_OUTCOME_EVENTS_SENT,
-                        // Post success, store unique outcome event ids
-                        attributedUniqueOutcomeEventsSentSet);
+                if (session.isAttributed())
+                    saveAttributedUniqueOutcomeNotifications(notificationIds, name);
+                else
+                    saveUnattributedUniqueOutcomeEvents();
 
                 if (callback != null)
                     callback.onSuccess(outcomeEvent);
@@ -225,6 +210,30 @@ class OutcomeEventsController {
     }
 
     /**
+     * Save the ATTRIBUTED JSONArray of notification ids with unique outcome names to SQL
+     */
+    private void saveAttributedUniqueOutcomeNotifications(final JSONArray notificationIds, final String name) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                outcomeEventsRepository.saveUniqueOutcomeNotifications(notificationIds, name);
+            }
+        }, OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS).start();
+    }
+
+    /**
+     * Save the current set of UNATTRIBUTED unique outcome names to SharedPrefs
+     */
+    private void saveUnattributedUniqueOutcomeEvents() {
+        OneSignalPrefs.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
+                // Post success, store unattributed unique outcome event names
+                unattributedUniqueOutcomeEventsSentSet);
+    }
+
+    /**
      * Get the unique notifications that have not been sent before with the current unique outcome name
      */
     private JSONArray getUniqueNotificationIds(String name, JSONArray notificationIds) {
@@ -238,7 +247,7 @@ class OutcomeEventsController {
     /**
      * Get all of the notificationIds that have not been sent for the specific unique outcome event
      */
-    private JSONArray getUniqueOutcomeNotificationIds(String uniqueName, @Nullable JSONArray notificationIds) {
+    private JSONArray getUniqueOutcomeNotificationIds(String name, @Nullable JSONArray notificationIds) {
         if (notificationIds == null)
             return new JSONArray();
 
@@ -246,12 +255,11 @@ class OutcomeEventsController {
         try {
             for (int i = 0; i < notificationIds.length(); i++) {
                 String notificationId = notificationIds.getString(i);
-                String uniqueOutcomeNotificationId = uniqueName + "_" + notificationId;
+                CachedUniqueOutcomeNotification notification = new CachedUniqueOutcomeNotification(notificationId, name);
 
-                if (!attributedUniqueOutcomeEventsSentSet.contains(uniqueOutcomeNotificationId)) {
-                    attributedUniqueOutcomeEventsSentSet.add(uniqueOutcomeNotificationId);
+                if (!outcomeEventsRepository.isUniqueOutcomeNotificationCached(notification))
                     uniqueNotificationIds.put(notificationId);
-                }
+
             }
         } catch (JSONException e) {
             e.printStackTrace();

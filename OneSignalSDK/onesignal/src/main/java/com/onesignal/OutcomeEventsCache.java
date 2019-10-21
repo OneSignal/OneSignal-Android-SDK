@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.support.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
+import com.onesignal.OneSignalDbContract.CachedUniqueOutcomeNotificationTable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -58,7 +59,7 @@ class OutcomeEventsCache {
             ContentValues values = new ContentValues();
             values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds);
             values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
-            values.put(OutcomeEventsTable.COLUMN_NAME, event.getName());
+            values.put(OutcomeEventsTable.COLUMN_NAME_NAME, event.getName());
             values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
 
             if (event.getParams() != null)
@@ -96,7 +97,7 @@ class OutcomeEventsCache {
                 if (cursor.moveToFirst()) {
                     do {
                         String notificationIds = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
-                        String name = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME));
+                        String name = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NAME));
                         String sessionString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_SESSION));
                         OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
                         long timestamp = cursor.getLong(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
@@ -126,4 +127,73 @@ class OutcomeEventsCache {
         return events;
     }
 
+    /**
+     * Save a JSONArray of notification ids as separate items with the unique outcome name
+     */
+    static void saveUniqueOutcomeNotifications(JSONArray notificationIds, String outcomeName, OneSignalDbHelper dbHelper) {
+        if (notificationIds == null)
+            return;
+
+        synchronized (lock) {
+            SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+            try {
+                for (int i = 0; i < notificationIds.length(); i++) {
+                    ContentValues values = new ContentValues();
+
+                    String notificationId = notificationIds.getString(i);
+                    values.put(CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID, notificationId);
+                    values.put(CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME, outcomeName);
+
+                    writableDb.insert(CachedUniqueOutcomeNotificationTable.TABLE_NAME, null, values);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            writableDb.close();
+        }
+    }
+
+    /**
+     * Check if a notification id with a unique outcome name exists in the SQL table
+     */
+    static boolean isUniqueOutcomeNotificationCached(CachedUniqueOutcomeNotification notification, OneSignalDbHelper dbHelper) {
+        boolean isCached;
+
+        synchronized (lock) {
+            Cursor cursor = null;
+
+            try {
+                SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+
+                String[] columns = new String[]{
+                        CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID,
+                        CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME};
+
+                String where = CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID +  " = ? AND " +
+                        CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME +  " = ?";
+
+                String[] args = new String[]{notification.getNotificationId(), notification.getName()};
+
+                cursor = readableDb.query(
+                        OneSignalDbContract.CachedUniqueOutcomeNotificationTable.TABLE_NAME,
+                        columns,
+                        where,
+                        args,
+                        null,
+                        null,
+                        null,
+                        "1"
+                );
+
+                isCached = cursor.getCount() == 1;
+
+            } finally {
+                if (cursor != null && !cursor.isClosed())
+                    cursor.close();
+            }
+        }
+
+        return isCached;
+    }
 }

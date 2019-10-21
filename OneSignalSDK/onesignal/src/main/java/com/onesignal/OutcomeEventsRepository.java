@@ -131,4 +131,12 @@ class OutcomeEventsRepository {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating unattributed outcome:JSON Failed.", e);
         }
     }
+
+    void saveUniqueOutcomeNotifications(JSONArray notificationIds, String name) {
+        OutcomeEventsCache.saveUniqueOutcomeNotifications(notificationIds, name, dbHelper);
+    }
+
+    public boolean isUniqueOutcomeNotificationCached(CachedUniqueOutcomeNotification notification) {
+        return OutcomeEventsCache.isUniqueOutcomeNotificationCached(notification, dbHelper);
+    }
 }
