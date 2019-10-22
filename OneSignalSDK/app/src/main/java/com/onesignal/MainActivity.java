@@ -331,11 +331,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       OneSignal.sendOutcome(outcomeName.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
          public void onSuccess(OutcomeEvent outcomeEvent) {
-            updateTextView("Outcome sent successfully with " +
-                    "\nsession: " + outcomeEvent.getSession() +
-                    "\nname: " + outcomeEvent.getName() +
-                    "\nnotificationIds: " + outcomeEvent.getNotificationIds() +
-                    "\nparams: " + outcomeEvent.getParams());
+            updateTextView(outcomeEvent.toString());
          }
       });
    }
@@ -344,11 +340,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       OneSignal.sendUniqueOutcome(outcomeUnique.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
          public void onSuccess(OutcomeEvent outcomeEvent) {
-            updateTextView("Unique outcome sent successfully with " +
-                    "\nsession: " + outcomeEvent.getSession() +
-                    "\nname: " + outcomeEvent.getName() +
-                    "\nnotificationIds: " + outcomeEvent.getNotificationIds() +
-                    "\nparams: " + outcomeEvent.getParams());
+            updateTextView(outcomeEvent.toString());
          }
       });
    }
@@ -360,11 +352,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       OneSignal.sendOutcomeWithValue(outcomeValueName.getText().toString(), Float.parseFloat(outcomeValue.getText().toString()), new OneSignal.OutcomeCallback() {
          @Override
          public void onSuccess(OutcomeEvent outcomeEvent) {
-            updateTextView("Outcome with value sent successfully with " +
-                    "\nsession: " + outcomeEvent.getSession() +
-                    "\nname: " + outcomeEvent.getName() +
-                    "\nnotificationIds: " + outcomeEvent.getNotificationIds() +
-                    "\nparams: " + outcomeEvent.getParams());
+            updateTextView(outcomeEvent.toString());
          }
       });
    }
