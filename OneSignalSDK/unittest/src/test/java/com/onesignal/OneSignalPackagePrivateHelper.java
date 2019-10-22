@@ -121,6 +121,22 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
+   public static class CachedUniqueOutcomeNotification extends com.onesignal.CachedUniqueOutcomeNotification {
+      public CachedUniqueOutcomeNotification(String notificationId, String name) {
+         super(notificationId, name);
+      }
+
+      @Override
+      public String getNotificationId() {
+         return super.getNotificationId();
+      }
+
+      @Override
+      public String getName() {
+         return super.getName();
+      }
+   }
+
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }

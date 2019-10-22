@@ -10,11 +10,11 @@ import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.os.SystemClock;
 
-import com.onesignal.CachedUniqueOutcomeNotification;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;

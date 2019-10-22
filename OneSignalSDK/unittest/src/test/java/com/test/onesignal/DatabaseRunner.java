@@ -4,12 +4,12 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.onesignal.CachedUniqueOutcomeNotification;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OutcomeEventsTable;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable;
+import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;

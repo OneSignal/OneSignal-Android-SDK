@@ -49,7 +49,7 @@ public class OutcomeEvent {
         return weight;
     }
 
-    JSONObject toJSONObject() {
+    public JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {
