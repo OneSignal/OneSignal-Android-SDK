@@ -104,12 +104,13 @@ public class DatabaseRunner {
 
       readableDatabase.close();
 
-      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, null);
+      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
       ContentValues values = new ContentValues();
-      values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
       values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
-      values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
+      values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
       values.put(OutcomeEventsTable.COLUMN_NAME_NAME, event.getName());
+      values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
+      values.put(OutcomeEventsTable.COLUMN_NAME_NAME, event.getWeight());
 
       // 3. Clear the cache of the DB so it reloads the file.
       ShadowOneSignalDbHelper.restSetStaticFields();
