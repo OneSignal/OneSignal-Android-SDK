@@ -97,7 +97,7 @@ public class OutcomeEvent {
                 this.notificationIds.equals(event.notificationIds) &&
                 this.name.equals(event.name) &&
                 this.timestamp == event.timestamp &&
-                this.weight == event.weight;
+                this.weight.equals(event.weight);
     }
 
     @Override

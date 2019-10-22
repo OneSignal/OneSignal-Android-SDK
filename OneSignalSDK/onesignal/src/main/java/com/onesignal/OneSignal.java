@@ -3120,7 +3120,7 @@ public class OneSignal {
    }
 
    public static void sendOutcomeWithValue(@NonNull String name, float value, OutcomeCallback callback) {
-      if (!isValidOutcomeEntry(name) && !isValidOutcomeValue(value))
+      if (!isValidOutcomeEntry(name) || !isValidOutcomeValue(value))
          return;
 
       if (outcomeEventsController == null) {
