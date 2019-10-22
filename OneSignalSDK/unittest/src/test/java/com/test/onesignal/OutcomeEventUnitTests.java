@@ -27,17 +27,14 @@
 
 package com.test.onesignal;
 
-import android.os.SystemClock;
-
-import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomeEventsController;
 import com.onesignal.MockOutcomeEventsRepository;
 import com.onesignal.MockOutcomeEventsService;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockSessionManager;
-import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
@@ -52,14 +49,10 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowSystemClock;
 
 import java.util.List;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getOutcomeSettings;
-import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.lockTimeTo;
-import static com.test.onesignal.TestHelpers.resetSystemClock;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertTrue;
@@ -119,7 +112,6 @@ public class OutcomeEventUnitTests {
         service = new MockOutcomeEventsService();
         repository = new MockOutcomeEventsRepository(service, dbHelper);
         controller = new MockOutcomeEventsController(sessionManager, repository);
-        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(true));
 
         TestHelpers.beforeTestInitAndCleanup();
     }
@@ -154,7 +146,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"device_type\":1,\"direct\":true,\"id\":\"testing\",\"notification_ids\":[\"testing\"]}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"device_type\":1,\"direct\":true}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -177,7 +169,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"]}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"device_type\":1,\"direct\":false}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -243,7 +235,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"device_type\":1,\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -288,7 +280,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"device_type\":1,\"direct\":true,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"weight\":1.1,\"device_type\":1,\"direct\":true}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -311,31 +303,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"device_type\":1,\"direct\":false,\"id\":\"testing\",\"notification_ids\":[\"testing\"],\"weight\":1.1}", service.getLastJsonObjectSent());
-    }
-
-    @Test
-    public void testOutcomeFailWithoutCache() throws Exception {
-        service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
-
-        controller.setOutcomeSettings(OneSignal_getOutcomeSettings(false));
-
-        controller.sendOutcomeEvent(OUTCOME_NAME);
-        threadAndTaskWait();
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
-
-        threadAndTaskWait();
-        assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"weight\":1.1,\"device_type\":1,\"direct\":false}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -479,11 +447,11 @@ public class OutcomeEventUnitTests {
         assertEquals(3, outcomeEvents.size());
         for (OutcomeEvent outcomeEvent : outcomeEvents) {
             if (outcomeEvent.getSession().isDirect()) {
-                assertEquals("OutcomeEvent{session=DIRECT, params=null, notificationIds=[\"testing\"], name='testing1', timestamp=0}", outcomeEvent.toString());
+                assertEquals("OutcomeEvent{session=DIRECT, notificationIds=[\"testing\"], name='testing1', timestamp=0, weight=0.0}", outcomeEvent.toString());
             } else if (outcomeEvent.getSession().isIndirect()) {
-                assertEquals("OutcomeEvent{session=INDIRECT, params=null, notificationIds=[\"testing\"], name='testing2', timestamp=0}", outcomeEvent.toString());
+                assertEquals("OutcomeEvent{session=INDIRECT, notificationIds=[\"testing\"], name='testing2', timestamp=0, weight=0.0}", outcomeEvent.toString());
             } else {
-                assertEquals("OutcomeEvent{session=UNATTRIBUTED, params=null, notificationIds=[], name='testing', timestamp=0}", outcomeEvent.toString());
+                assertEquals("OutcomeEvent{session=UNATTRIBUTED, notificationIds=[], name='testing', timestamp=0, weight=0.0}", outcomeEvent.toString());
             }
         }
     }
@@ -535,7 +503,7 @@ public class OutcomeEventUnitTests {
         sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
                 .setSession(OSSessionManager.Session.UNATTRIBUTED)
                 .build());
-        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f, null);
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
         new Thread(new Runnable() {
@@ -547,8 +515,8 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
-        assertEquals("{\"weight\":1.1}", outcomeEvents.get(0).getParams());
-        assertEquals("{\"id\":\"testing\",\"device_type\":1,\"weight\":1.1}", service.getLastJsonObjectSent());
+        assertEquals(1.1f, outcomeEvents.get(0).getWeight(), 0);
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
 
         service.setSuccess(true);
         service.resetLastJsonObjectSent();
@@ -564,7 +532,7 @@ public class OutcomeEventUnitTests {
         threadAndTaskWait();
 
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"timestamp\":0,\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test

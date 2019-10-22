@@ -330,13 +330,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    public void onSendOutcomeClicked(View view) {
       OneSignal.sendOutcome(outcomeName.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
-         public void onOutcomeSuccess(String name) {
-            updateTextView(name + " Outcome sent successfully");
-         }
-
-         @Override
-         public void onOutcomeFail(int statusCode, String response) {
-            updateTextView("Outcome fail with status code: " + statusCode);
+         public void onSuccess(OutcomeEvent outcomeEvent) {
+            updateTextView(outcomeEvent.toString());
          }
       });
    }
@@ -344,13 +339,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    public void onSendUniqueOutcomeClicked(View view) {
       OneSignal.sendUniqueOutcome(outcomeUnique.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
-         public void onOutcomeSuccess(String name) {
-            updateTextView(name + " Unique Outcome sent successfully");
-         }
-
-         @Override
-         public void onOutcomeFail(int statusCode, String response) {
-            updateTextView("Unique Outcome fail with status code: " + statusCode);
+         public void onSuccess(OutcomeEvent outcomeEvent) {
+            updateTextView(outcomeEvent.toString());
          }
       });
    }
@@ -361,13 +351,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
       OneSignal.sendOutcomeWithValue(outcomeValueName.getText().toString(), Float.parseFloat(outcomeValue.getText().toString()), new OneSignal.OutcomeCallback() {
          @Override
-         public void onOutcomeSuccess(String name) {
-            updateTextView(name + " Outcome sent with value successfully");
-         }
-
-         @Override
-         public void onOutcomeFail(int statusCode, String response) {
-            updateTextView("Outcome with value fail with status code: " + statusCode);
+         public void onSuccess(OutcomeEvent outcomeEvent) {
+            updateTextView(outcomeEvent.toString());
          }
       });
    }

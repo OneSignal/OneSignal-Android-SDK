@@ -36,46 +36,57 @@ import android.os.SystemClock;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
+import com.onesignal.OneSignalDbContract.CachedUniqueOutcomeNotificationTable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class OneSignalDbHelper extends SQLiteOpenHelper {
-   static final int DATABASE_VERSION = 4;
+   static final int DATABASE_VERSION = 5;
    private static final String DATABASE_NAME = "OneSignal.db";
 
+   private static final String INTEGER_PRIMARY_KEY_TYPE = " INTEGER PRIMARY KEY";
    private static final String TEXT_TYPE = " TEXT";
    private static final String INT_TYPE = " INTEGER";
+   private static final String FLOAT_TYPE = " FLOAT";
+   private static final String TIMESTAMP_TYPE = " TIMESTAMP";
    private static final String COMMA_SEP = ",";
 
    private static final int DB_OPEN_RETRY_MAX = 5;
    private static final int DB_OPEN_RETRY_BACKOFF = 400;
 
    protected static final String SQL_CREATE_ENTRIES =
-       "CREATE TABLE " + NotificationTable.TABLE_NAME + " (" +
-           NotificationTable._ID + " INTEGER PRIMARY KEY," +
-           NotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + INT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_GROUP_ID + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_IS_SUMMARY + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_OPENED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_DISMISSED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_MESSAGE + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_FULL_DATA + TEXT_TYPE + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_CREATED_TIME + " TIMESTAMP DEFAULT (strftime('%s', 'now'))" + COMMA_SEP +
-           NotificationTable.COLUMN_NAME_EXPIRE_TIME + " TIMESTAMP" +
-       ");";
+           "CREATE TABLE " + NotificationTable.TABLE_NAME + " (" +
+                   NotificationTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + INT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_GROUP_ID + TEXT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_IS_SUMMARY + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_OPENED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_DISMISSED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_MESSAGE + TEXT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_FULL_DATA + TEXT_TYPE + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_CREATED_TIME + TIMESTAMP_TYPE + " DEFAULT (strftime('%s', 'now'))" + COMMA_SEP +
+                   NotificationTable.COLUMN_NAME_EXPIRE_TIME + TIMESTAMP_TYPE +
+                   ");";
 
    private static final String SQL_CREATE_OUTCOME_ENTRIES =
            "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
-                   OutcomeEventsTable._ID + " INTEGER PRIMARY KEY," +
-                   OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
                    OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " TIMESTAMP" +
+                   OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + COMMA_SEP +
+                   OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE +
+                   ");";
+
+   private static final String SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES =
+           "CREATE TABLE " + CachedUniqueOutcomeNotificationTable.TABLE_NAME + " (" +
+                   CachedUniqueOutcomeNotificationTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                   CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
+                   CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME + TEXT_TYPE +
                    ");";
 
    protected static final String[] SQL_INDEX_ENTRIES = {
@@ -136,6 +147,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    public void onCreate(SQLiteDatabase db) {
       db.execSQL(SQL_CREATE_ENTRIES);
       db.execSQL(SQL_CREATE_OUTCOME_ENTRIES);
+      db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES);
       for (String ind : SQL_INDEX_ENTRIES) {
          db.execSQL(ind);
       }
@@ -161,6 +173,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
       if (oldVersion < 4)
           upgradeToV4(db);
+
+      if (oldVersion < 5)
+         upgradeToV5(db);
    }
 
    // Add collapse_id field and index
@@ -191,6 +206,10 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
    private static void upgradeToV4(SQLiteDatabase db) {
       safeExecSQL(db, SQL_CREATE_OUTCOME_ENTRIES);
+   }
+
+   private static void upgradeToV5(SQLiteDatabase db) {
+      safeExecSQL(db, SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES);
    }
 
    private static void safeExecSQL(SQLiteDatabase db, String sql) {

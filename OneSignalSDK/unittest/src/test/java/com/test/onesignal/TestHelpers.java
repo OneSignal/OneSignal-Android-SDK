@@ -14,6 +14,7 @@ import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
@@ -275,22 +276,16 @@ public class TestHelpers {
       if (cursor.moveToFirst()) {
          do {
             String notificationIds = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
-            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME));
+            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NAME));
             String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
             OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
-            Long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
-
-            int paramsIndex = cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_PARAMS);
-            String paramsString = cursor.isNull(paramsIndex) ? null : cursor.getString(paramsIndex);
-            OneSignalPackagePrivateHelper.OutcomeParams params =
-                    paramsString != null ? OneSignalPackagePrivateHelper.OutcomeParams.Builder
-                            .newInstance()
-                            .setJsonString(paramsString)
-                            .build() : null;
+            long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+            float weight = cursor.getFloat(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_WEIGHT));
 
             try {
-               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, params);
+               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
                events.add(event);
+
             } catch (JSONException e) {
                e.printStackTrace();
             }
@@ -301,6 +296,37 @@ public class TestHelpers {
       readableDatabase.close();
 
       return events;
+   }
+
+   static ArrayList<CachedUniqueOutcomeNotification> getAllUniqueOutcomeNotificationRecords() {
+      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      Cursor cursor = readableDatabase.query(
+              OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable.TABLE_NAME,
+              null,
+              null,
+              null,
+              null, // group by
+              null, // filter by row groups
+              null, // sort order, new to old
+              null // limit
+      );
+
+      ArrayList<CachedUniqueOutcomeNotification> notifications = new ArrayList<>();
+      if (cursor.moveToFirst()) {
+         do {
+            String notificationId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID));
+            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME));
+
+            CachedUniqueOutcomeNotification notification = new CachedUniqueOutcomeNotification(notificationId, name);
+            notifications.add(notification);
+
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+      readableDatabase.close();
+
+      return notifications;
    }
 
    /**

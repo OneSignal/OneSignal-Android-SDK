@@ -4,14 +4,13 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OutcomeEventsTable;
+import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable;
+import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OutcomeEvent;
-import com.onesignal.OneSignalDbHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 
@@ -31,6 +30,7 @@ import java.util.List;
 
 import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
 import static com.test.onesignal.TestHelpers.getAllOutcomesRecords;
+import static com.test.onesignal.TestHelpers.getAllUniqueOutcomeNotificationRecords;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 
@@ -76,7 +76,7 @@ public class DatabaseRunner {
 
       // 2. Clear the cache of the DB so it reloads the file.
       ShadowOneSignalDbHelper.restSetStaticFields();
-      ShadowOneSignalDbHelper.igngoreDuplicatedFieldsOnUpgrade = true;
+      ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
       // 3. Opening the DB will auto trigger the update.
       HashMap<String, Object> notif = getAllNotificationRecords().get(0);
@@ -104,16 +104,17 @@ public class DatabaseRunner {
 
       readableDatabase.close();
 
-      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, null);
+      OutcomeEvent event = new OutcomeEvent(OSSessionManager.Session.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
       ContentValues values = new ContentValues();
-      values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
       values.put(OutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
+      values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
+      values.put(OutcomeEventsTable.COLUMN_NAME_NAME, event.getName());
       values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
-      values.put(OutcomeEventsTable.COLUMN_NAME, event.getName());
+      values.put(OutcomeEventsTable.COLUMN_NAME_NAME, event.getWeight());
 
       // 3. Clear the cache of the DB so it reloads the file.
       ShadowOneSignalDbHelper.restSetStaticFields();
-      ShadowOneSignalDbHelper.igngoreDuplicatedFieldsOnUpgrade = true;
+      ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
       // 4. Opening the DB will auto trigger the update.
       List<OutcomeEvent> events = getAllOutcomesRecords();
@@ -128,5 +129,47 @@ public class DatabaseRunner {
       List<OutcomeEvent> outcomeEvents = getAllOutcomesRecords();
 
       assertEquals(outcomeEvents.size(), 1);
+   }
+
+   @Test
+   public void shouldUpgradeDbFromV4ToV5() {
+      // 1. Init DB as version 4
+      ShadowOneSignalDbHelper.DATABASE_VERSION = 4;
+      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+
+      Cursor cursor = readableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + CachedUniqueOutcomeNotificationTable.TABLE_NAME + "'", null);
+
+      boolean exist = false;
+      if (cursor != null) {
+         exist = cursor.getCount() > 0;
+         cursor.close();
+      }
+      // 2. Table must not exist
+      assertFalse(exist);
+
+      readableDatabase.close();
+
+      CachedUniqueOutcomeNotification notification = new CachedUniqueOutcomeNotification("notificationId", "outcome");
+      ContentValues values = new ContentValues();
+      values.put(CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID, notification.getNotificationId());
+      values.put(CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME, notification.getName());
+
+      // 3. Clear the cache of the DB so it reloads the file.
+      ShadowOneSignalDbHelper.restSetStaticFields();
+      ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
+
+      // 4. Opening the DB will auto trigger the update.
+      List<CachedUniqueOutcomeNotification> notifications = getAllUniqueOutcomeNotificationRecords();
+
+      assertEquals(notifications.size(), 0);
+
+      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      // 5. Table now must exist
+      writableDatabase.insert(CachedUniqueOutcomeNotificationTable.TABLE_NAME, null, values);
+      writableDatabase.close();
+
+      List<CachedUniqueOutcomeNotification> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecords();
+
+      assertEquals(uniqueOutcomeNotifications.size(), 1);
    }
 }

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
@@ -33,7 +32,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
-import org.robolectric.shadows.ShadowSystemClock;
 
 import java.util.Arrays;
 
@@ -50,6 +48,8 @@ import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
+import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
+import static com.test.onesignal.TestHelpers.getAllUniqueOutcomeNotificationRecords;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -614,6 +614,64 @@ public class OutcomeEventIntegrationTests {
 
         // Make sure indirectNotificationIds are updated and correct
         assertEquals(indirectNotificationIds, OneSignal_getSessionIndirectNotificationIds());
+    }
+
+    @Test
+    public void testCleaningCachedNotifications_after7Days_willAlsoCleanUniqueOutcomeNotifications() throws Exception {
+        foregroundAppAfterReceivingNotification();
+
+        assertEquals(1, getAllNotificationRecords().size());
+        assertEquals(0, getAllUniqueOutcomeNotificationRecords().size());
+
+        // Should add a new unique outcome notifications (total in cache = 0 + 1)
+        OneSignal.sendUniqueOutcome("unique_1");
+        threadAndTaskWait();
+
+        // Should not add a new unique outcome notifications (total in cache = 1)
+        OneSignal.sendUniqueOutcome("unique_1");
+        threadAndTaskWait();
+
+        assertEquals(1, getAllNotificationRecords().size());
+        assertEquals(1, getAllUniqueOutcomeNotificationRecords().size());
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Wait for 30 seconds to trigger new session
+        advanceSystemTimeBy(31);
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
+        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        // Foreground app through icon
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Should add two unique outcome notifications (total in cache = 1 + 2)
+        OneSignal.sendUniqueOutcome("unique_2");
+        threadAndTaskWait();
+
+        // Should add two unique outcome notifications (total in cache = 3 + 2)
+        OneSignal.sendUniqueOutcome("unique_3");
+        threadAndTaskWait();
+
+        // Make sure only 2 notifications exist still, but 5 unique outcome notifications exist
+        assertEquals(2, getAllNotificationRecords().size());
+        assertEquals(5, getAllUniqueOutcomeNotificationRecords().size());
+
+        // Wait a week to clear cached notifications
+        advanceSystemTimeBy(604_800);
+
+        // Restart the app and re-init OneSignal
+        fastColdRestartApp();
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Make sure when notification cache is cleaned so is the unique outcome events cache
+        assertEquals(0, getAllNotificationRecords().size());
+        assertEquals(0, getAllUniqueOutcomeNotificationRecords().size());
     }
 
     private void foregroundAppAfterClickingNotification() throws Exception {

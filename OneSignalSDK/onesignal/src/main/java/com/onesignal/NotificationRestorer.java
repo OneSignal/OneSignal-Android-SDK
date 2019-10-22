@@ -122,33 +122,11 @@ class NotificationRestorer {
       OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Restoring notifications");
 
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-      deleteOldNotificationsFromDb(dbHelper);
 
       StringBuilder dbQuerySelection = OneSignalDbHelper.recentUninteractedWithNotificationsWhere();
       skipVisibleNotifications(context, dbQuerySelection);
 
       queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection);
-   }
-
-   private static void deleteOldNotificationsFromDb(OneSignalDbHelper dbHelper) {
-      SQLiteDatabase writableDb = null;
-
-      try {
-         writableDb = dbHelper.getWritableDbWithRetries();
-         writableDb.beginTransaction();
-         NotificationBundleProcessor.deleteOldNotifications(writableDb);
-         writableDb.setTransactionSuccessful();
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old notification records! ", t);
-      } finally {
-         if (writableDb != null) {
-            try {
-               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (Throwable t) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-            }
-         }
-      }
    }
 
    private static void queryAndRestoreNotificationsAndBadgeCount(

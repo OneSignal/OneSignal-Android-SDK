@@ -10,13 +10,13 @@ import org.robolectric.annotation.Implements;
 public class ShadowOneSignalDbHelper {
 
    public static final String DATABASE_NAME = "OneSignal.db";
-   public static int DATABASE_VERSION = 4;
-   public static boolean igngoreDuplicatedFieldsOnUpgrade;
+   public static int DATABASE_VERSION = 5;
+   public static boolean ignoreDuplicatedFieldsOnUpgrade;
 
    private static OneSignalDbHelper sInstance;
 
    public static void restSetStaticFields() {
-      igngoreDuplicatedFieldsOnUpgrade = false;
+      ignoreDuplicatedFieldsOnUpgrade = false;
       sInstance = null;
       DATABASE_VERSION = OneSignalDbHelper.DATABASE_VERSION;
    }
@@ -43,7 +43,7 @@ public class ShadowOneSignalDbHelper {
       try {
          db.execSQL(sql);
       } catch (SQLiteException e) {
-         if (!igngoreDuplicatedFieldsOnUpgrade)
+         if (!ignoreDuplicatedFieldsOnUpgrade)
             throw e;
          String causeMsg = e.getCause().getMessage();
          if (!causeMsg.contains("duplicate") && !causeMsg.contains("already exists"))
