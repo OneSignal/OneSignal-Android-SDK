@@ -26,18 +26,8 @@ public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
     }
 
     @Override
-    void requestMeasureDirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, JSONArray notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
-        super.requestMeasureDirectOutcomeEvent(outcomeId, outcomeParams, appId, notificationId, deviceType, responseHandler);
-    }
-
-    @Override
     void requestMeasureIndirectOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalRestClient.ResponseHandler responseHandler) {
         super.requestMeasureIndirectOutcomeEvent(appId, deviceType, event, responseHandler);
-    }
-
-    @Override
-    void requestMeasureIndirectOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, JSONArray notificationId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
-        super.requestMeasureIndirectOutcomeEvent(outcomeId, outcomeParams, appId, notificationId, deviceType, responseHandler);
     }
 
     @Override
@@ -45,8 +35,4 @@ public class MockOutcomeEventsRepository extends OutcomeEventsRepository {
         super.requestMeasureUnattributedOutcomeEvent(appId, deviceType, event, responseHandler);
     }
 
-    @Override
-    void requestMeasureUnattributedOutcomeEvent(String outcomeId, OutcomeParams outcomeParams, String appId, int deviceType, OneSignalRestClient.ResponseHandler responseHandler) {
-        super.requestMeasureUnattributedOutcomeEvent(outcomeId, outcomeParams, appId, deviceType, responseHandler);
-    }
 }

@@ -279,19 +279,13 @@ public class TestHelpers {
             String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NAME));
             String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
             OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
-            Long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
-
-            int paramsIndex = cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_PARAMS);
-            String paramsString = cursor.isNull(paramsIndex) ? null : cursor.getString(paramsIndex);
-            OneSignalPackagePrivateHelper.OutcomeParams params =
-                    paramsString != null ? OneSignalPackagePrivateHelper.OutcomeParams.Builder
-                            .newInstance()
-                            .setJsonString(paramsString)
-                            .build() : null;
+            long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+            float weight = cursor.getFloat(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_WEIGHT));
 
             try {
-               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, params);
+               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
                events.add(event);
+
             } catch (JSONException e) {
                e.printStackTrace();
             }

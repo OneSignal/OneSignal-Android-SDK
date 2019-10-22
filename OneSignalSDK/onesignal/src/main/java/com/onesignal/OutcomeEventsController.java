@@ -106,7 +106,7 @@ class OutcomeEventsController {
 
     void sendOutcomeEvent(@NonNull final String name, @Nullable final OneSignal.OutcomeCallback callback) {
         final JSONArray notificationIds = osSessionManager.getSessionResult().notificationIds;
-        sendOutcomeEvent(name, notificationIds, null, callback);
+        sendOutcomeEvent(name, notificationIds, 0, callback);
     }
 
     void sendUniqueOutcomeEvent(@NonNull final String name, @Nullable OneSignal.OutcomeCallback callback) {
@@ -125,7 +125,7 @@ class OutcomeEventsController {
                 return;
             }
 
-            sendOutcomeEvent(name, uniqueNotificationIds, null, callback);
+            sendOutcomeEvent(name, uniqueNotificationIds, 0, callback);
 
         } else if (osSessionManager.getSession().isUnattributed()) {
             // Make sure unique outcome has not been sent for current unattributed session
@@ -138,20 +138,16 @@ class OutcomeEventsController {
             }
 
             unattributedUniqueOutcomeEventsSentSet.add(name);
-            sendOutcomeEvent(name, null, null, callback);
+            sendOutcomeEvent(name, null, 0, callback);
         }
     }
 
-    void sendOutcomeEventWithValue(@NonNull String name, float value, @Nullable final OneSignal.OutcomeCallback callback) {
+    void sendOutcomeEventWithValue(@NonNull String name, float weight, @Nullable final OneSignal.OutcomeCallback callback) {
         final JSONArray notificationIds = osSessionManager.getSessionResult().notificationIds;
-        OutcomeParams params = OutcomeParams.Builder
-                .newInstance()
-                .setWeight(value)
-                .build();
-        sendOutcomeEvent(name, notificationIds, params, callback);
+        sendOutcomeEvent(name, notificationIds, weight, callback);
     }
 
-    private void sendOutcomeEvent(@NonNull final String name, @Nullable final JSONArray notificationIds, @Nullable final OutcomeParams params, @Nullable final OneSignal.OutcomeCallback callback) {
+    private void sendOutcomeEvent(@NonNull final String name, @Nullable final JSONArray notificationIds, final float weight, @Nullable final OneSignal.OutcomeCallback callback) {
         OSSessionManager.SessionResult sessionResult = osSessionManager.getSessionResult();
 
         final OSSessionManager.Session session = sessionResult.session;
@@ -159,7 +155,7 @@ class OutcomeEventsController {
         final long timestampSeconds = System.currentTimeMillis() / 1000;
         final int deviceType = new OSUtils().getDeviceType();
 
-        final OutcomeEvent outcomeEvent = new OutcomeEvent(session, notificationIds, name, timestampSeconds, params);
+        final OutcomeEvent outcomeEvent = new OutcomeEvent(session, notificationIds, name, timestampSeconds, weight);
 
         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -195,13 +191,13 @@ class OutcomeEventsController {
 
         switch (session) {
             case DIRECT:
-                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(name, params, appId, notificationIds, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(appId, deviceType, outcomeEvent, responseHandler);
                 break;
             case INDIRECT:
-                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(name, params, appId, notificationIds, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(appId, deviceType, outcomeEvent, responseHandler);
                 break;
             case UNATTRIBUTED:
-                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(name, params, appId, deviceType, responseHandler);
+                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(appId, deviceType, outcomeEvent, responseHandler);
                 break;
             case DISABLED:
                 OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes for current session are disabled");
@@ -234,38 +230,12 @@ class OutcomeEventsController {
     }
 
     /**
-     * Get the unique notifications that have not been sent before with the current unique outcome name
+     * Get the unique notifications that have not been cached/sent before with the current unique outcome name
      */
     private JSONArray getUniqueNotificationIds(String name, JSONArray notificationIds) {
-        JSONArray uniqueNotificationIds = getUniqueOutcomeNotificationIds(name, notificationIds);
+        JSONArray uniqueNotificationIds = outcomeEventsRepository.getNotCachedUniqueOutcomeNotifications(name, notificationIds);
         if (uniqueNotificationIds.length() == 0)
             return null;
-
-        return uniqueNotificationIds;
-    }
-
-    /**
-     * Get all of the notificationIds that have not been sent for the specific unique outcome event
-     */
-    private JSONArray getUniqueOutcomeNotificationIds(String name, @Nullable JSONArray notificationIds) {
-        if (notificationIds == null)
-            return new JSONArray();
-
-        JSONArray uniqueNotificationIds = new JSONArray();
-        try {
-            for (int i = 0; i < notificationIds.length(); i++) {
-                String notificationId = notificationIds.getString(i);
-                CachedUniqueOutcomeNotification notification = new CachedUniqueOutcomeNotification(notificationId, name);
-
-                if (!outcomeEventsRepository.isUniqueOutcomeNotificationCached(notification))
-                    uniqueNotificationIds.put(notificationId);
-
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-
-            return new JSONArray();
-        }
 
         return uniqueNotificationIds;
     }

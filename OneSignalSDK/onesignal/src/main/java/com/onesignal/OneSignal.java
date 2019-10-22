@@ -3120,7 +3120,7 @@ public class OneSignal {
    }
 
    public static void sendOutcomeWithValue(@NonNull String name, float value, OutcomeCallback callback) {
-      if (!isValidOutcomeEntry(name))
+      if (!isValidOutcomeEntry(name) || !isValidOutcomeValue(value))
          return;
 
       if (outcomeEventsController == null) {
@@ -3129,6 +3129,15 @@ public class OneSignal {
       }
 
       outcomeEventsController.sendOutcomeEventWithValue(name, value, callback);
+   }
+
+   private static boolean isValidOutcomeValue(float value) {
+      if (value <= 0) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Outcome value must be greater than 0");
+         return false;
+      }
+
+      return true;
    }
 
    private static boolean isValidOutcomeEntry(String name) {

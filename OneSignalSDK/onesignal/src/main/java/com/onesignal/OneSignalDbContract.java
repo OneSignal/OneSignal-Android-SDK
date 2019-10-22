@@ -66,7 +66,7 @@ class OneSignalDbContract {
       public static final String COLUMN_NAME_TIMESTAMP = "timestamp";
       public static final String COLUMN_NAME_NAME = "name";
       public static final String COLUMN_NAME_SESSION = "session";
-      public static final String COLUMN_NAME_PARAMS = "params";
+      public static final String COLUMN_NAME_WEIGHT = "weight";
    }
 
    static abstract class CachedUniqueOutcomeNotificationTable implements BaseColumns {
