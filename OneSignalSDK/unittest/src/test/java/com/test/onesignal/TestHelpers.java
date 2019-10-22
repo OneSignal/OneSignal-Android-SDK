@@ -172,7 +172,8 @@ public class TestHelpers {
 
       boolean createdNewThread;
       do {
-         createdNewThread = runOSThreads();
+         // We run a 2nd time if we did not find any threads to ensure we don't skip any
+         createdNewThread = runOSThreads() || runOSThreads();
          
          boolean advancedRunnables = OneSignalPackagePrivateHelper.runAllNetworkRunnables();
          advancedRunnables = OneSignalPackagePrivateHelper.runFocusRunnables() || advancedRunnables;
