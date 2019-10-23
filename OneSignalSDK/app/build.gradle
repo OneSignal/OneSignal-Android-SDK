@@ -52,17 +52,17 @@ dependencies {
     }
 
     // Use snapshot
-    // compile 'com.onesignal:OneSignal:4.0.0-SNAPSHOT'
-    // compile 'com.onesignal:OneSignal:4.0.0-20171206.043726-5'
+//     compile 'com.onesignal:OneSignal:4.0.0-SNAPSHOT'
+//     compile 'com.onesignal:OneSignal:4.0.0-20171206.043726-5'
 
     // Use to run local .aar file
-    // compile(name: 'OneSignal-release', ext: 'aar')
+//     compile(name: 'OneSignal-release', ext: 'aar')
 
     // New Instructions - Use for released SDK
 //     compile 'com.onesignal:OneSignal:[3.8.2, 3.99.99]'
 
     // Old Instructions - Use for released SDK
-    // compile 'com.onesignal:OneSignal:3.+@aar'
+//     compile 'com.onesignal:OneSignal:3.+@aar'
 
     implementation 'com.google.android.gms:play-services-location:16.0.0'
 
