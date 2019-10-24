@@ -122,6 +122,11 @@ class OutcomeEventsController {
                                 "\nSession: " + osSessionManager.getSession().toString() +
                                 "\nOutcome name: " + name +
                                 "\nnotificationIds: " + notificationIds);
+
+                // Return null within the callback to determine not a failure, but not a success in terms of the request made
+                if (callback != null)
+                    callback.onSuccess(null);
+
                 return;
             }
 
@@ -134,6 +139,11 @@ class OutcomeEventsController {
                         "Measure endpoint will not send because unique outcome already sent for: " +
                                 "\nSession: " + osSessionManager.getSession().toString() +
                                 "\nOutcome name: " + name);
+
+                // Return null within the callback to determine not a failure, but not a success in terms of the request made
+                if (callback != null)
+                    callback.onSuccess(null);
+
                 return;
             }
 
@@ -167,6 +177,7 @@ class OutcomeEventsController {
                 else
                     saveUnattributedUniqueOutcomeEvents();
 
+                // The only case where an actual success has occurred and the OutcomeEvent should be sent back
                 if (callback != null)
                     callback.onSuccess(outcomeEvent);
             }
@@ -186,6 +197,10 @@ class OutcomeEventsController {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN,
                         "Sending outcome with name: " + name + " failed with status code: " + statusCode + " and response: " + response +
                                 "\nOutcome event was cached and will be reattempted on app cold start");
+
+                // Return null within the callback to determine not a failure, but not a success in terms of the request made
+                if (callback != null)
+                    callback.onSuccess(null);
             }
         };
 
