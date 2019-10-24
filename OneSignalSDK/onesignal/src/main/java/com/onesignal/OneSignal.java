@@ -3149,8 +3149,14 @@ public class OneSignal {
       return true;
    }
 
+   /**
+    * OutcomeEvent will be null in cases where the request was not sent:
+    *    1. OutcomeEvent cached already for re-attempt in future
+    *    2. Unique OutcomeEvent already sent for ATTRIBUTED session and notification(s)
+    *    3. Unique OutcomeEvent already sent for UNATTRIBUTED session during session
+    */
    public interface OutcomeCallback {
-      void onSuccess(OutcomeEvent outcomeEvent);
+      void onSuccess(@Nullable OutcomeEvent outcomeEvent);
    }
    /*
     * End OneSignalOutcome module

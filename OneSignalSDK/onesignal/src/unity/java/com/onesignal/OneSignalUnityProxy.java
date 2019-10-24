@@ -32,6 +32,8 @@ import android.app.Activity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.support.annotation.Nullable;
+
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 import com.onesignal.OneSignal.NotificationReceivedHandler;
 import com.onesignal.OneSignal.GetTagsHandler;
@@ -262,6 +264,42 @@ public class OneSignalUnityProxy implements
 
    public void pauseInAppMessages(boolean pause) {
       OneSignal.pauseInAppMessages(pause);
+   }
+
+   public void sendOutcome(String name) {
+      OneSignal.sendOutcome(name, new OneSignal.OutcomeCallback() {
+         @Override
+         public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
+            if (outcomeEvent == null)
+               unitySafeInvoke("onSendOutcomeSuccess", "");
+            else
+               unitySafeInvoke("onSendOutcomeSuccess", outcomeEvent.toJSONObject().toString());
+         }
+      });
+   }
+
+   public void sendUniqueOutcome(String name) {
+      OneSignal.sendUniqueOutcome(name, new OneSignal.OutcomeCallback() {
+         @Override
+         public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
+            if (outcomeEvent == null)
+               unitySafeInvoke("onSendOutcomeSuccess", "");
+            else
+               unitySafeInvoke("onSendOutcomeSuccess", outcomeEvent.toJSONObject().toString());
+         }
+      });
+   }
+
+   public void sendOutcomeWithValue(String name, float value) {
+      OneSignal.sendOutcomeWithValue(name, value, new OneSignal.OutcomeCallback() {
+         @Override
+         public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
+            if (outcomeEvent == null)
+               unitySafeInvoke("onSendOutcomeSuccess", "");
+            else
+               unitySafeInvoke("onSendOutcomeSuccess", outcomeEvent.toJSONObject().toString());
+         }
+      });
    }
 
    @Override
