@@ -15,6 +15,7 @@ import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 
 import org.json.JSONArray;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -33,6 +34,7 @@ import static com.test.onesignal.TestHelpers.getAllOutcomesRecords;
 import static com.test.onesignal.TestHelpers.getAllUniqueOutcomeNotificationRecords;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         instrumentedPackages = { "com.onesignal" },
@@ -51,14 +53,19 @@ public class DatabaseRunner {
       StaticResetHelper.saveStaticValues();
    }
 
-   @Before // Before each test
+   @Before
    public void beforeEachTest() throws Exception {
       TestHelpers.beforeTestInitAndCleanup();
    }
 
+   @After
+   public void afterEachTest() throws Exception {
+      TestHelpers.afterTestCleanup();
+   }
+
    @AfterClass
    public static void afterEverything() throws Exception {
-      StaticResetHelper.restSetStaticFields();
+      TestHelpers.beforeTestInitAndCleanup();
    }
 
    @Test
@@ -131,13 +138,25 @@ public class DatabaseRunner {
       assertEquals(outcomeEvents.size(), 1);
    }
 
+
+   private static final String SQL_CREATE_OUTCOME_REVISION1_ENTRIES =
+      "CREATE TABLE outcome (" +
+         "_id INTEGER PRIMARY KEY, " +
+         "session TEXT," +
+         "notification_ids TEXT, " +
+         "name TEXT, " +
+         "timestamp TIMESTAMP, " +
+         "params TEXT " +
+      ")";
+
    @Test
    public void shouldUpgradeDbFromV4ToV5() {
       // 1. Init DB as version 4
       ShadowOneSignalDbHelper.DATABASE_VERSION = 4;
-      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
 
-      Cursor cursor = readableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + CachedUniqueOutcomeNotificationTable.TABLE_NAME + "'", null);
+      Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + CachedUniqueOutcomeNotificationTable.TABLE_NAME + "'", null);
 
       boolean exist = false;
       if (cursor != null) {
@@ -147,7 +166,7 @@ public class DatabaseRunner {
       // 2. Table must not exist
       assertFalse(exist);
 
-      readableDatabase.close();
+      writableDatabase.close();
 
       CachedUniqueOutcomeNotification notification = new CachedUniqueOutcomeNotification("notificationId", "outcome");
       ContentValues values = new ContentValues();
@@ -163,7 +182,7 @@ public class DatabaseRunner {
 
       assertEquals(notifications.size(), 0);
 
-      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
       // 5. Table now must exist
       writableDatabase.insert(CachedUniqueOutcomeNotificationTable.TABLE_NAME, null, values);
       writableDatabase.close();
@@ -171,5 +190,51 @@ public class DatabaseRunner {
       List<CachedUniqueOutcomeNotification> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecords();
 
       assertEquals(uniqueOutcomeNotifications.size(), 1);
+   }
+
+   @Test
+   public void shouldUpgradeDbFromV5ToV6() {
+      // 1. Init outcome table as version 5
+      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+
+      // Create table with the schema we had in DB v4
+      writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
+
+      // Insert one outcome record so we can test migration keeps it later on
+      ContentValues values = new ContentValues();
+      values.put("name", "a");
+      writableDatabase.insertOrThrow("outcome", null, values);
+      writableDatabase.setVersion(5);
+      writableDatabase.close();
+
+      // 2. restSetStaticFields so the db reloads and upgrade is done to version 6
+      ShadowOneSignalDbHelper.restSetStaticFields();
+      writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+
+      // 3. Ensure the upgrade kept our existing record
+      Cursor cursor = writableDatabase.query(
+         "outcome",
+        null,
+         null,
+         null,
+         null,
+         null,
+         null
+      );
+      assertTrue(cursor.moveToFirst());
+      assertEquals("a", cursor.getString(cursor.getColumnIndex("name")));
+
+      // 4. Ensure new weight column exists
+      values = new ContentValues();
+      values.put("weight", 1);
+      long successful = writableDatabase.insert("outcome", null, values);
+      assertFalse(successful == -1);
+
+      // 5. Ensure params column does NOT exists
+      values = new ContentValues();
+      values.put("params", 1);
+      successful = writableDatabase.insert("outcome", null, values);
+      writableDatabase.close();
+      assertEquals(-1, successful);
    }
 }

@@ -8,9 +8,7 @@ import org.robolectric.annotation.Implements;
 
 @Implements(OneSignalDbHelper.class)
 public class ShadowOneSignalDbHelper {
-
-   public static final String DATABASE_NAME = "OneSignal.db";
-   public static int DATABASE_VERSION = 5;
+   public static int DATABASE_VERSION;
    public static boolean ignoreDuplicatedFieldsOnUpgrade;
 
    private static OneSignalDbHelper sInstance;
