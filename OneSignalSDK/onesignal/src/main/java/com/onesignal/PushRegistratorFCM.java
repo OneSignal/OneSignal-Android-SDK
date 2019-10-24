@@ -52,6 +52,8 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    //      needs to be refreshed.
    // This checks for gcm_defaultSenderId in values.xml (normally added from google-services.json)
    // https://github.com/OneSignal/OneSignal-Android-SDK/issues/552
+   // TODO: FirebaseInstanceIdService was removed in firebase-messaging:18.0.0
+   //   Can remove this method once this is our minimum version
    static void disableFirebaseInstanceIdService(Context context) {
       String senderId = OSUtils.getResourceString(context, "gcm_defaultSenderId", null);
       int componentState =

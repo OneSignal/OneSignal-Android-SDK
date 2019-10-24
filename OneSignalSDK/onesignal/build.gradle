@@ -30,24 +30,39 @@ android {
 
 // api || implementation = compile and runtime
 
+// KEEP: version ranges, these get used in the released POM file for maven central
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
-    compileOnly 'com.google.android.gms:play-services-gcm:16.0.0'
+    // play-services-gcm:16.1.0 is the last version before going to AndroidX
+    // compileOnly as this is just for fallback code if FCM wasn't added to the project.
+    // Remove for 4.0.0 release
+    compileOnly 'com.google.android.gms:play-services-gcm:16.1.0'
+
+    // play-services-location:16.0.0 is the last version before going to AndroidX
     // Can be compileOnly in 4.0.0, can't change until then as some projects may rely on this
-    implementation 'com.google.android.gms:play-services-location:16.0.0'
-    implementation 'com.google.android.gms:play-services-ads-identifier:16.0.0'
+    implementation 'com.google.android.gms:play-services-location:[10.2.1, 16.0.99]'
+
+    // play-services-ads-identifier:15.0.0 first version
+    //   Classes used to live in play-services-base before this
+    // play-services-ads-identifier:16.0.0 is the last version before going to AndroidX
+    implementation 'com.google.android.gms:play-services-ads-identifier:[15.0.0, 16.0.99]'
+
+    // :play-services-base:16.1.0 is the last version before going to AndroidX
     // Required for GoogleApiAvailability
-    implementation 'com.google.android.gms:play-services-base:16.0.1'
+    implementation 'com.google.android.gms:play-services-base:[10.2.1, 16.1.99]'
 
-    api 'com.google.firebase:firebase-messaging:17.3.3'
+    // firebase-messaging:18.0.0 is the last version before going to AndroidX
+    // firebase-messaging:17.6.0 is the max version since we still have code looking for FirebaseInstanceIdService
+    api 'com.google.firebase:firebase-messaging:[10.2.1, 17.3.99]'
 
-    api 'com.android.support:cardview-v7:28.0.0'
-    api 'com.android.support:support-v4:28.0.0'
-    api 'com.android.support:customtabs:28.0.0'
-
-    // Change api to implementation. Need to check however this has any effect in production
-    //   projects that pull from maven.
+    // Keep under 28 until we switch to AndroidX
+    //   otherwise app can get dup classes between 26 & 28 when mixing these versions.
+    // Also note, firebase & gms libraries use android.support:26.
+    //   - They never refer to 27 or 28
+    api 'com.android.support:cardview-v7:[26.0.0, 27.99.99]'
+    api 'com.android.support:support-v4:[26.0.0, 27.99.99]'
+    api 'com.android.support:customtabs:[26.0.0, 27.99.99]'
 }
 
 apply from: 'maven-push.gradle'

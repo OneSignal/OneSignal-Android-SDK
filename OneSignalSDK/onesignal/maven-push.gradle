@@ -26,13 +26,6 @@ class Global {
     static def POM_PACKAGING = 'aar'
     static def VERSION_NAME = '3.12.1'
 
-    // Limit upper number (exclusive) to prevent untested versions
-    static def versionGroupOverrides = [
-        'com.google.android.gms': '[10.2.1, 16.1.0)',
-        'com.google.firebase': '[10.2.1, 16.1.0)',
-        'com.android.support': '[26.0.0, 28.1.0)'
-    ]
-
     static def GROUP_ID = 'com.onesignal'
     static def POM_DESCRIPTION = 'OneSignal Android SDK'
     static def POM_URL = 'https://github.com/one-signal/OneSignal-Android-SDK'
@@ -69,17 +62,6 @@ afterEvaluate { project ->
                 pom.groupId = Global.GROUP_ID
                 pom.artifactId = Global.POM_ARTIFACT_ID
                 pom.version = Global.VERSION_NAME
-
-                pom.withXml {
-                    asNode().dependencies.'*'.findAll() {
-                        def versionOverride = Global.versionGroupOverrides[it.groupId.text()]
-                        if (versionOverride) {
-                            it.version.replaceNode { node ->
-                                new Node(it, "version", versionOverride)
-                            }
-                        }
-                    }
-                }
 
                 repository(url: Global.RELEASE_REPOSITORY_URL) {
                     authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
