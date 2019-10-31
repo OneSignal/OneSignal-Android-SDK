@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://onesignal.com/assets/common/logo_onesignal_color.png"/>
+  <img src="https://media.onesignal.com/cms/Website%20Layout/logo-red.svg"/>
 </p>
 
 ### OneSignal Android Push Notification Plugin
