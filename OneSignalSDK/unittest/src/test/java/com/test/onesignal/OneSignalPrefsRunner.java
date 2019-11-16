@@ -66,6 +66,6 @@ public class OneSignalPrefsRunner {
 
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
       String value = prefs.getString("key", "");
-      assertEquals(value, "value");
+      assertEquals("value", value);
    }
 }
