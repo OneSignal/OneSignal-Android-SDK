@@ -223,16 +223,17 @@ class OneSignalRestClient {
                if (inputStream == null)
                   inputStream = con.getInputStream();
 
+               String jsonResponse = null;
                if (inputStream != null) {
                   scanner = new Scanner(inputStream, "UTF-8");
-                  json = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
+                  jsonResponse = scanner.useDelimiter("\\A").hasNext() ? scanner.next() : "";
                   scanner.close();
-                  OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " RECEIVED JSON: " + json);
+                  OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " RECEIVED JSON: " + jsonResponse);
                }
                else
                   OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "OneSignalRestClient: " + method + " HTTP Code: " + httpResponse + " No response body!");
 
-               callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, null, null);
+               callbackThread = callResponseHandlerOnFailure(responseHandler, httpResponse, jsonResponse, null);
          }
       } catch (Throwable t) {
          if (t instanceof java.net.ConnectException || t instanceof java.net.UnknownHostException)
