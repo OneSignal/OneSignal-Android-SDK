@@ -67,11 +67,11 @@ public class TestHelpers {
       ShadowOneSignalRestClient.resetStatics();
 
       ShadowPushRegistratorGCM.resetStatics();
-   
+
       ShadowNotificationManagerCompat.enabled = true;
 
       ShadowOSUtils.subscribableStatus = 1;
-   
+
       ShadowCustomTabsClient.resetStatics();
       ShadowGcmBroadcastReceiver.resetStatics();
 
@@ -125,7 +125,12 @@ public class TestHelpers {
    static void flushBufferedSharedPrefs() {
       OneSignalPrefs.WritePrefHandlerThread handlerThread = OneSignalPackagePrivateHelper.OneSignalPrefs.prefsHandler;
 
+      if (handlerThread.mHandler == null)
+         return;
+
       synchronized (handlerThread.mHandler) {
+         if (handlerThread.getLooper() == null)
+            return;
          Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
          while (scheduler.runOneTask());
       }
@@ -141,16 +146,16 @@ public class TestHelpers {
          Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
 
          for (Thread thread : threadSet) {
-            if (thread.getName().startsWith("OS_")) {
-               if (ShadowOneSignalRestClient.isAFrozenThread(thread))
-                  continue;
+            if (!thread.getName().startsWith("OS_"))
+               continue;
+            if (ShadowOneSignalRestClient.isAFrozenThread(thread))
+               continue;
 
-               thread.join(0, 1);
+            thread.join(0, 1);
 
-               if (lastException != null)
-                  throw lastException;
-               joinedAThread = createdNewThread = true;
-            }
+            if (lastException != null)
+               throw lastException;
+            joinedAThread = createdNewThread = true;
          }
       } while (joinedAThread);
 
@@ -193,8 +198,6 @@ public class TestHelpers {
          return;
 
       StaticResetHelper.load();
-
-      Looper.prepareMainLooper();
 
       beforeTestInitAndCleanup();
 

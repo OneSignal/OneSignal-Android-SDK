@@ -35,7 +35,6 @@ import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -111,11 +110,14 @@ class OneSignalPrefs {
 
         WritePrefHandlerThread(String name) {
             super(name);
-            start();
-            mHandler = new Handler(getLooper());
         }
 
         void startDelayedWrite() {
+            if (mHandler == null) {
+                start();
+                mHandler = new Handler(getLooper());
+            }
+
             synchronized (mHandler) {
                 mHandler.removeCallbacksAndMessages(null);
                 if (lastSyncTime == 0)
