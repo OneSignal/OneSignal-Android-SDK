@@ -191,6 +191,68 @@ public class RESTClientRunner {
       assertEquals(newMockResponse, secondResponse);
    }
 
+   @Test
+   public void testApiCall400Response() throws Exception {
+      final String newMockResponse = "{\"errors\":[\"test response\"]}";
+      final int statusCode = 400;
+
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         status = statusCode;
+         errorResponseBody = newMockResponse;
+      }};
+
+      final String[] failResponse = {null};
+      final int[] statusCodeResponse = {0};
+      OneSignalRestClient.postSync("URL", null, new OneSignalRestClient.ResponseHandler() {
+         @Override
+         public void onSuccess(String response) {
+            super.onSuccess(response);
+         }
+
+         @Override
+         public void onFailure(int statusCode, String response, Throwable throwable) {
+            super.onFailure(statusCode, response, throwable);
+            failResponse[0] = response;
+            statusCodeResponse[0] = statusCode;
+         }
+      });
+
+      threadAndTaskWait();
+      assertEquals(newMockResponse, failResponse[0]);
+      assertEquals(statusCode, statusCodeResponse[0]);
+   }
+
+   @Test
+   public void testApiCall400EmptyResponse() throws Exception {
+      final String newMockResponse = "";
+      final int statusCode = 400;
+
+      ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
+         status = statusCode;
+         responseBody = newMockResponse;
+      }};
+
+      final String[] failResponse = {null};
+      final int[] statusCodeResponse = {0};
+      OneSignalRestClient.postSync("URL", null, new OneSignalRestClient.ResponseHandler() {
+         @Override
+         public void onSuccess(String response) {
+            super.onSuccess(response);
+         }
+
+         @Override
+         public void onFailure(int statusCode, String response, Throwable throwable) {
+            super.onFailure(statusCode, response, throwable);
+            failResponse[0] = response;
+            statusCodeResponse[0] = statusCode;
+         }
+      });
+
+      threadAndTaskWait();
+      assertEquals(newMockResponse, failResponse[0]);
+      assertEquals(statusCode, statusCodeResponse[0]);
+   }
+
    private static String getLastHTTPHeaderProp(String prop) {
       return ShadowOneSignalRestClientWithMockConnection.lastConnection.getRequestProperty(prop);
    }

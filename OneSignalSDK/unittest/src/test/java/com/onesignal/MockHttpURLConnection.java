@@ -45,6 +45,7 @@ public class MockHttpURLConnection extends HttpURLConnection {
 
    public static class MockResponse {
       public String responseBody;
+      public String errorResponseBody;
       public boolean mockThreadHang;
       public int status;
       public Map<String, String> mockProps = new HashMap<>();
@@ -94,5 +95,14 @@ public class MockHttpURLConnection extends HttpURLConnection {
    @Override
    public InputStream getInputStream() throws IOException {
       return new ByteArrayInputStream(StandardCharsets.UTF_8.encode(mockResponse.responseBody).array());
+   }
+
+   @Override
+   public InputStream getErrorStream() {
+      if (mockResponse.errorResponseBody == null)
+         return null;
+
+      byte[] bytes = mockResponse.errorResponseBody.getBytes();
+      return new ByteArrayInputStream(bytes);
    }
 }
