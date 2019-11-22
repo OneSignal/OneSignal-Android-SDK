@@ -1229,14 +1229,14 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testUserDeletedFromServer() throws Exception {
-      // First cold boot normal
+      // 1. Open app and register for the first time.
       OneSignalInit();
       threadAndTaskWait();
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
       ShadowOneSignalRestClient.lastPost = null;
 
-      // Developer deletes user, cold boots apps should resend all fields
+      // 2. Developer deletes user and cold restarts the app
       restartAppAndElapseTimeToNextSession();
       ShadowOneSignalRestClient.failNext = true;
       ShadowOneSignalRestClient.setNextFailureJSONResponse(new JSONObject() {{
@@ -1247,21 +1247,24 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
+      // 3. Assert the SDK handles the error above and make a new create call.
+      assertPlayerCreatePushAtIndex(4);
+      // Checking that the number  of fields matches exactly to the original create call.
       assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
 
-
-      // Developer deletes users again from dashboard while app is running.
-      ShadowOneSignalRestClient.lastPost = null;
+      // 4. Developer deletes users again from dashboard while app is running.
       ShadowOneSignalRestClient.failNext = true;
       ShadowOneSignalRestClient.setNextFailureJSONResponse(new JSONObject() {{
-         put("errors", new JSONArray() {{
-            put("No user with this id found");
-         }});
+         put("errors", new JSONArray().put("No user with this id found"));
       }});
+      // 5. Make some call the will attempt a player update
       OneSignal.sendTag("key1", "value1");
       threadAndTaskWait();
 
-      assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length() - 1);
+      // 6. Assert the SDK handles the error above and make a new create call.
+      assertPlayerCreatePushAtIndex(6);
+      // Checking that the number of fields matches original create call, +1 for tags
+      assertEquals(normalCreateFieldCount + 1, ShadowOneSignalRestClient.lastPost.length());
    }
 
    @Test

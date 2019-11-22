@@ -478,8 +478,10 @@ abstract class UserStateSynchronizer {
     abstract void setSubscription(boolean enable);
 
     private void handlePlayerDeletedFromServer() {
+        OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Creating new player based on missing player_id noted above.");
         OneSignal.handleSuccessfulEmailLogout();
         resetCurrentState();
+        updateIdDependents(null);
         scheduleSyncToServer();
     }
 

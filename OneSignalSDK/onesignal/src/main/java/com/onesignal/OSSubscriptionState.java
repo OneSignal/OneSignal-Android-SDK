@@ -28,6 +28,8 @@
 package com.onesignal;
 
 
+import android.support.annotation.Nullable;
+
 import org.json.JSONObject;
 
 public class OSSubscriptionState implements Cloneable {
@@ -64,8 +66,13 @@ public class OSSubscriptionState implements Cloneable {
       setAccepted(state.getEnabled());
    }
    
-   void setUserId(String id) {
-      boolean changed = !id.equals(userId);
+   void setUserId(@Nullable String id) {
+      boolean changed = false;
+      if (id == null)
+         changed = userId != null;
+      else if (!id.equals(userId))
+         changed = true;
+
       userId = id;
       if (changed)
          observable.notifyChange(this);
