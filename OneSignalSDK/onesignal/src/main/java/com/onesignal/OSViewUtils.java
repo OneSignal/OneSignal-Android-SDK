@@ -89,20 +89,18 @@ class OSViewUtils {
     // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
     @TargetApi(Build.VERSION_CODES.M)
     private static int getWindowHeightAPI23Plus(@NonNull Activity activity) {
-        OneSignal.Log(com.onesignal.OneSignal.LOG_LEVEL.DEBUG,
-                "activity: " + activity.getClass().getSimpleName());
-
         View decorView = activity.getWindow().getDecorView();
         // Use use stable heights as SystemWindowInset subtracts the keyboard
 
-        OneSignal.Log(com.onesignal.OneSignal.LOG_LEVEL.DEBUG,
-                "decorView.isAttachedToWindow(): " + decorView.isAttachedToWindow());
-
-        int heightWithoutKeyboard =
-           decorView.getHeight() -
-           decorView.getRootWindowInsets().getStableInsetBottom() -
-           decorView.getRootWindowInsets().getStableInsetTop();
-        return heightWithoutKeyboard;
+        if (decorView.isAttachedToWindow()) {
+            int heightWithoutKeyboard =
+                    decorView.getHeight() -
+                            decorView.getRootWindowInsets().getStableInsetBottom() -
+                            decorView.getRootWindowInsets().getStableInsetTop();
+            return heightWithoutKeyboard;
+        } else {
+            return decorView.getHeight();
+        }
     }
 
     private static int getWindowHeightLollipop(@NonNull Activity activity) {
