@@ -320,6 +320,33 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    public void testCorrectOutcomeSent_fromNotificationOpenedHandler() throws Exception {
+        // Init OneSignal with a custom opened handler
+        OneSignalInit(new OneSignal.NotificationOpenedHandler() {
+            @Override
+            public void notificationOpened(OSNotificationOpenResult result) {
+                OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+            }
+        });
+        threadAndTaskWait();
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive and open a notification
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        threadAndTaskWait();
+
+        // Foreground the application
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Make sure a measure request is made with the correct session and notifications
+        assertMeasureAtIndex(3, true, ONESIGNAL_OUTCOME_NAME, new JSONArray("[" + ONESIGNAL_NOTIFICATION_ID + "]"));
+    }
+
+    @Test
     public void testNoDirectSession_fromNotificationOpen_whenAppIsInForeground() throws Exception {
         OneSignalInit();
         threadAndTaskWait();
@@ -724,6 +751,16 @@ public class OutcomeEventIntegrationTests {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
         OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+        threadAndTaskWait();
+        OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+        new MockOutcomesUtils().saveOutcomesParams(params);
+        blankActivityController.resume();
+    }
+
+    private void OneSignalInit(OneSignal.NotificationOpenedHandler notificationOpenedHandler) throws Exception {
+        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+        ShadowOSUtils.subscribableStatus = 1;
+        OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notificationOpenedHandler);
         threadAndTaskWait();
         OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
         new MockOutcomesUtils().saveOutcomesParams(params);
