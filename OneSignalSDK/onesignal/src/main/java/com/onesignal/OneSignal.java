@@ -2079,14 +2079,14 @@ public class OneSignal {
       if (!defaultOpenActionDisabled)
          urlOpened = openURLFromNotification(inContext, data);
 
-      runNotificationOpenedCallback(data, true, fromAlert);
-
       // Check if the notification click should lead to a DIRECT session
       if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
          sessionManager.onDirectSessionFromNotificationOpen(notificationId);
       }
+
+      runNotificationOpenedCallback(data, true, fromAlert);
    }
 
    static boolean startOrResumeApp(Context inContext) {
