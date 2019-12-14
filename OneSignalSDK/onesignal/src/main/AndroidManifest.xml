@@ -61,8 +61,6 @@
 
     <application>
 
-        <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
-
         <service android:name="com.onesignal.GcmIntentService" />
 
         <service android:name="com.onesignal.GcmIntentJobService"
@@ -94,6 +92,11 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+
+        <activity
+          android:name="com.onesignal.NotificationOpenedActivity"/>
+
     </application>
 
     <!-- NOTE: See release version for tags with placeholders -->
