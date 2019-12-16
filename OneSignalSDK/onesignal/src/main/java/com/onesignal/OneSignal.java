@@ -578,9 +578,20 @@ public class OneSignal {
       return mInitBuilder;
    }
 
-   // Sets the global shared ApplicationContext for OneSignal
-   // This is set from all OneSignal entry points
-   //   - BroadcastReceivers, Services, and Activities
+   /**
+    *
+    * @param appId -
+    */
+   public static void setAppId(String appId) {
+
+   }
+
+   /**
+    * Sets the global shared ApplicationContext for OneSignal
+    * This is set from all OneSignal entry points
+    *   - BroadcastReceivers, Services, and Activities
+    * @param context -
+    */
    public static void setAppContext(@NonNull Context context) {
       if (context == null) {
          Log(LOG_LEVEL.WARN, "setAppContext(null) is not valid, ignoring!");
