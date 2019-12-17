@@ -62,7 +62,7 @@ public class OSEmailSubscriptionState implements Cloneable {
     }
 
     void setEmailUserId(@NonNull String id) {
-        boolean changed = !id.equals(emailUserId);
+        boolean changed = id != null && !id.equals(emailUserId);
         emailUserId = id;
         if (changed)
             observable.notifyChange(this);

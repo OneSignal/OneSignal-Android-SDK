@@ -12,7 +12,7 @@ class OneSignalChromeTabAndroidFrame extends OneSignalChromeTab {
       if (OneSignal.remoteParams == null || OneSignal.remoteParams.enterprise)
          return;
 
-      if (userId == null || appId == null)
+      if (appId == null || userId == null)
          return;
 
       String params = "?app_id=" + appId + "&user_id=" + userId;

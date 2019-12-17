@@ -111,7 +111,7 @@ class OneSignalRemoteParams {
          receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
          outcomesParams = new OutcomesParams();
 
-         //Process outcomes params
+         // Process outcomes params
          if (responseJson.has(OUTCOME_PARAM)) {
             JSONObject outcomes = responseJson.optJSONObject(OUTCOME_PARAM);
 
