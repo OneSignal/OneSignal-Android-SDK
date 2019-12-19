@@ -54,7 +54,7 @@ public class OSNotificationOpenResult {
 
          mainObj.put("action", ac);
 
-         JSONObject notifObject = new JSONObject(notification.stringify());
+         JSONObject notifObject = notification.toJSONObject();
          mainObj.put("notification", notifObject);
       }
       catch(JSONException e) {e.printStackTrace();}
