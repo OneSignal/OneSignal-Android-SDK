@@ -105,24 +105,6 @@ public class OSNotification {
    //    The payload will be the most recent notification received.
    public List<OSNotificationPayload> groupedNotifications;
 
-   /**
-    * @deprecated  As of release 3.4.1, replaced by {@link #toJSONObject()}
-    */
-   @Deprecated
-   public String stringify() {
-      JSONObject mainObj = toJSONObject();
-
-      try {
-         if (mainObj.has("additionalData"))
-            mainObj.put("additionalData", mainObj.optJSONObject("additionalData").toString());
-      }
-      catch(JSONException e) {
-         e.printStackTrace();
-      }
-
-      return mainObj.toString();
-   }
-
    public JSONObject toJSONObject() {
       JSONObject mainObj = new JSONObject();
 

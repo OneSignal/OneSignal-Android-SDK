@@ -96,7 +96,7 @@ class LocationGMS {
          return false;
       
       long lastTime = System.currentTimeMillis() - getLastLocationTime();
-      long minTime = 1_000 * (OneSignal.isForeground() ? TIME_FOREGROUND_SEC : TIME_BACKGROUND_SEC);
+      long minTime = 1_000 * (OneSignal.isInForeground() ? TIME_FOREGROUND_SEC : TIME_BACKGROUND_SEC);
       long scheduleTime = minTime - lastTime;
       
       OneSignalSyncServiceUtils.scheduleLocationUpdateTask(context, scheduleTime);
@@ -270,7 +270,7 @@ class LocationGMS {
       LocationPoint point = new LocationPoint();
       
       point.accuracy = location.getAccuracy();
-      point.bg = !OneSignal.isForeground();
+      point.bg = !OneSignal.isInForeground();
       point.type = locationCoarse ? 0 : 1;
       point.timeStamp = location.getTime();
       
@@ -342,7 +342,7 @@ class LocationGMS {
          mGoogleApiClient = googleApiClient;
 
          long updateInterval = BACKGROUND_UPDATE_TIME_MS;
-         if (OneSignal.isForeground())
+         if (OneSignal.isInForeground())
             updateInterval =  FOREGROUND_UPDATE_TIME_MS;
 
          LocationRequest locationRequest = LocationRequest.create()
