@@ -239,12 +239,12 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void firePublicClickHandler(@NonNull final OSInAppMessageAction action) {
-        if (OneSignal.mInitBuilder.mInAppMessageClickHandler == null)
+        if (OneSignal.inAppMessageClickHandler == null)
             return;
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
-                OneSignal.mInitBuilder.mInAppMessageClickHandler.inAppMessageClicked(action);
+                OneSignal.inAppMessageClickHandler.inAppMessageClicked(action);
             }
         });
     }

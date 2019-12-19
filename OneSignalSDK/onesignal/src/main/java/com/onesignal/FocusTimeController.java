@@ -63,7 +63,7 @@ class FocusTimeController {
    }
 
    void doBlockingBackgroundSyncOfUnsentTime() {
-      if (OneSignal.isForeground())
+      if (OneSignal.isInForeground())
          return;
 
       for(FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
