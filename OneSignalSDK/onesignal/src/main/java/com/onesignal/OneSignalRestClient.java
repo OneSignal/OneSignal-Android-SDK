@@ -41,6 +41,8 @@ import java.util.Scanner;
 
 import org.json.JSONObject;
 
+import javax.net.ssl.HttpsURLConnection;
+
 class OneSignalRestClient {
    static abstract class ResponseHandler {
       void onSuccess(String response) {}
@@ -125,7 +127,7 @@ class OneSignalRestClient {
    
    private static Thread startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout, @Nullable String cacheKey) {
       int httpResponse = -1;
-      HttpURLConnection con = null;
+      HttpsURLConnection con = null;
       Thread callbackThread;
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -134,12 +136,14 @@ class OneSignalRestClient {
 
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
-         con = newHttpURLConnection(url);
+         con = newHttpsURLConnection(url);
 
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
          con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.VERSION);
+         KeyPinStore keystore = KeyPinStore.getInstance();
+         con.setSSLSocketFactory(keystore.getContext().getSocketFactory());
 
          if (jsonBody != null)
             con.setDoInput(true);
@@ -284,5 +288,9 @@ class OneSignalRestClient {
 
    private static HttpURLConnection newHttpURLConnection(String url) throws IOException {
       return (HttpURLConnection)new URL(BASE_URL + url).openConnection();
+   }
+
+   private static HttpsURLConnection newHttpsURLConnection(String url) throws IOException {
+      return (HttpsURLConnection)new URL(BASE_URL + url).openConnection();
    }
 }
