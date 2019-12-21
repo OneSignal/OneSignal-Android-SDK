@@ -18,7 +18,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
 public class KeyPinStore {
-    private static final String[] certificates = {"onesignal.crt"};
+    private static final String[] certificates = {"onesignal"};
     private static KeyPinStore instance = null;
     private SSLContext sslContext = SSLContext.getInstance("TLS");
 
@@ -36,7 +36,7 @@ public class KeyPinStore {
         for (int i = 0; i < certificates.length; i++) {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             String file = "res/raw/" + certificates[i];
-            InputStream caInput = this.getClass().getClassLoader().getResourceAsStream(file);
+            InputStream caInput = new BufferedInputStream(this.getClass().getClassLoader().getResourceAsStream("assets/" + certificates[i] + ".cer"));
             Certificate ca;
             try {
                 ca = cf.generateCertificate(caInput);
