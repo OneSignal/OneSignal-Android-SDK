@@ -45,6 +45,7 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.onesignal.OneSignal.NotificationWillShowInForegroundHandler;
 import com.onesignal.OneSignal.NotificationOpenedHandler;
 import com.onesignal.example.OneSignalExampleApp;
 import com.onesignal.example.R;
@@ -55,7 +56,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
-public class MainActivity extends Activity implements OSEmailSubscriptionObserver, OSPermissionObserver, OSSubscriptionObserver, NotificationOpenedHandler, OneSignal.NotificationReceivedHandler {
+public class MainActivity extends Activity implements OSEmailSubscriptionObserver, OSPermissionObserver, OSSubscriptionObserver, NotificationWillShowInForegroundHandler, NotificationOpenedHandler {
 
    IabHelper mHelper;
 
@@ -226,8 +227,8 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    @Override
-   public void notificationReceived(OSNotification notification) {
-      updateTextView("Received Notification: " + notification.toString());
+   public void notificationWillShowInForeground(OSNotificationWillShowInForegroundResult result) {
+      updateTextView("Received Notification: " + result.toString());
    }
 
    public void didGetEmailStatus(boolean hasEmailUserId) {

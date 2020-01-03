@@ -37,6 +37,7 @@ import android.util.Log;
 
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationWillShowInForegroundResult;
 import com.onesignal.OneSignal;
 
 public class OneSignalExampleApp extends Application {
@@ -63,24 +64,19 @@ public class OneSignalExampleApp extends Application {
       if (currentAppId == null)
          setOneSignalAppId(this, "0ba9731b-33bd-43f4-8b59-61172e27447d");
 
-      OneSignal.init(
-         this,
-         "1234567", // This is ignored, dashboard value will be used.
-         getOneSignalAppId(this),
-         new ExampleNotificationOpenedHandler(),
-         new ExampleNotificationReceivedHandler()
-      );
+       OneSignal.setAppContext(this);
+       OneSignal.setAppId(getOneSignalAppId(this));
 
       OneSignal.sendTag("test1", "test1");
    }
 
    public static void setOneSignalAppId(@NonNull Context context, @NonNull String id) {
-      SharedPreferences sharedPref = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE);
-      SharedPreferences.Editor editor = sharedPref.edit();
-      editor.putString(SHARED_PREFS_OS_APP_ID, id);
-      editor.commit();
+        SharedPreferences sharedPref = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(SHARED_PREFS_OS_APP_ID, id);
+        editor.commit();
 
-      OneSignal.init(context, null, id);
+       OneSignal.setAppId(getOneSignalAppId(context));
    }
 
    @Nullable
@@ -89,7 +85,7 @@ public class OneSignalExampleApp extends Application {
       return sharedPref.getString(SHARED_PREFS_OS_APP_ID, null);
    }
 
-   private class ExampleNotificationReceivedHandler implements OneSignal.NotificationReceivedHandler {
+   private class ExampleNotificationReceivedHandler implements OneSignal.NotificationWillShowInForegroundHandler {
       /**
        * Callback to implement in your app to handle when a notification is received while your app running
        *  in the foreground or background.
@@ -97,14 +93,13 @@ public class OneSignalExampleApp extends Application {
        *  Use a NotificationExtenderService instead to receive an event even when your app is closed (not 'forced stopped')
        *     or to override notification properties.
        *
-       * @param notification Contains information about the notification received.
+       * @param result Contains information about the notification received.
        */
-      @Override
-      public void notificationReceived(OSNotification notification) {
-         Log.w("OneSignalExample", "notificationReceived!!!!!!");
-         DebuggingHelper.printObject(notification);
-         DebuggingHelper.printObject(notification.payload);
-      }
+       @Override
+       public void notificationWillShowInForeground(OSNotificationWillShowInForegroundResult result) {
+           Log.w("OneSignalExample", "notificationReceived!!!!!!");
+           DebuggingHelper.printObject(result);
+       }
    }
 
    private class ExampleNotificationOpenedHandler implements OneSignal.NotificationOpenedHandler {
