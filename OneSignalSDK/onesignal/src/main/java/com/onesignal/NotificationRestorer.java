@@ -29,7 +29,6 @@ package com.onesignal;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.app.NotificationManager;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
@@ -230,8 +229,7 @@ class NotificationRestorer {
 
    private static final int RESTORE_NOTIFICATIONS_DELAY_MS = 15_000;
    static void startDelayedRestoreTaskFromReceiver(Context context) {
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-         // NotificationRestorer#restore is Code-sensitive to Android O
+      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
          OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreKickoffJob");
 
          // set the job id to android notif id - that way we don't restore any notif twice
@@ -251,8 +249,11 @@ class NotificationRestorer {
          intentForService.setComponent(new ComponentName(context.getPackageName(),
                  NotificationRestoreService.class.getName()));
 
+         // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
+         //        Some Samsung devices will throw the below exception otherwise.
+         //        "java.lang.SecurityException: !@Too many alarms (500) registered"
          PendingIntent pendingIntent = PendingIntent.getService(context,
-                 RESTORE_KICKOFF_REQUEST_CODE, intentForService, PendingIntent.FLAG_CANCEL_CURRENT);
+                 RESTORE_KICKOFF_REQUEST_CODE, intentForService, PendingIntent.FLAG_UPDATE_CURRENT);
 
          long scheduleTime = System.currentTimeMillis() + RESTORE_NOTIFICATIONS_DELAY_MS;
          AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
