@@ -230,7 +230,6 @@ class NotificationRestorer {
    private static final int RESTORE_NOTIFICATIONS_DELAY_MS = 15_000;
    static void startDelayedRestoreTaskFromReceiver(Context context) {
       if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-         // NotificationRestorer#restore is Code-sensitive to Android O
          OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreKickoffJob");
 
          // set the job id to android notif id - that way we don't restore any notif twice
