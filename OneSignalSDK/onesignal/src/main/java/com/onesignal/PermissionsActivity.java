@@ -73,6 +73,7 @@ public class PermissionsActivity extends Activity {
       // Activity maybe invoked directly through automated testing, omit prompting on old Android versions.
       if (Build.VERSION.SDK_INT < 23) {
          finish();
+         overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
          return;
       }
 
@@ -96,6 +97,7 @@ public class PermissionsActivity extends Activity {
 
       ActivityLifecycleHandler.removeActivityAvailableListener(TAG);
       finish();
+      overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
    }
 
 
@@ -110,6 +112,7 @@ public class PermissionsActivity extends Activity {
                Intent intent = new Intent(activity, PermissionsActivity.class);
                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                activity.startActivity(intent);
+               activity.overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
             }
          }
       };
