@@ -851,7 +851,7 @@ public class OneSignal {
          return;
       }
 
-      OneSignalRemoteParams.makeAndroidParamsRequest(new OneSignalRemoteParams.AndroidParamsRequestCallback() {
+      OneSignalRemoteParams.makeAndroidParamsRequest(new OneSignalRemoteParams.ParamsRequestCallback() {
          @Override
          public void complete(OneSignalRemoteParams.Params params) {
             remoteParams = params;
