@@ -7,10 +7,6 @@
 
     <application>
 
-        <meta-data android:name="onesignal_app_id" android:value="${onesignal_app_id}" />
-        <!-- Deprecated - Pulled from OneSignal dashboard. -->
-        <meta-data android:name="onesignal_google_project_number" android:value="str:${onesignal_google_project_number}" />
-
         <receiver
             android:name="com.onesignal.GcmBroadcastReceiver"
             android:permission="com.google.android.c2dm.permission.SEND" >
@@ -20,6 +16,7 @@
                 <category android:name="${applicationId}" />
             </intent-filter>
         </receiver>
+
     </application>
 
 </manifest>

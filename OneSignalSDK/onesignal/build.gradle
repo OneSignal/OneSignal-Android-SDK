@@ -3,13 +3,6 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion 28
     defaultConfig {
-        // Normally we shouldn't need to redefine manifestPlaceholders for our onesignal project
-        //   but Android Studio gets a sync error if these are not here.
-        //      - /gradlew onesignal:assembleRelease is fine from the console.
-        // We can't use static values are these are directly added to the AndroidManifest.xml in the .aar file.
-        manifestPlaceholders = [onesignal_app_id: '${onesignal_app_id}',
-                                // Project number pulled from dashboard, local value is ignored
-                                onesignal_google_project_number: '${onesignal_google_project_number}']
         minSdkVersion 15
         consumerProguardFiles 'consumer-proguard-rules.pro'
     }
