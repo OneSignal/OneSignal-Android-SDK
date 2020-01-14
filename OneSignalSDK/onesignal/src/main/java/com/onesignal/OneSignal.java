@@ -451,27 +451,28 @@ public class OneSignal {
     * @param newAppId - String app id associated with the OneSignal dashboard app
     */
    public static void setAppId(@NonNull String newAppId) {
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId called, checking if context has been set before proceeding...");
+      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) called with app_id: " + newAppId + "!");
 
       if (newAppId == null || newAppId.isEmpty()) {
-         OneSignal.onesignalLog(LOG_LEVEL.WARN, "setAppId(null) or setAppId(\"\") is not valid, ignoring!");
+         OneSignal.onesignalLog(LOG_LEVEL.WARN, "newAppId is null or empty, ignoring!");
          return;
       }
       else if (!newAppId.equals(appId)) {
          // Pre-check on app id to make sure init of SDK is performed properly
-         //    Usually when the app id is changed during runtime so that SDK is reinitialized properly
+         //     Usually when the app id is changed during runtime so that SDK is reinitialized properly
          initDone = false;
       }
 
       appId = newAppId;
       handleAppIdChange();
 
+      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) finished, checking if appContext has been set before proceeding...");
       if (appContext == null) {
-         OneSignal.onesignalLog(LOG_LEVEL.WARN, "appId set, but appContext is null. Please call setAppContext(appContext) with Application context to complete OneSignal init");
+         OneSignal.onesignalLog(LOG_LEVEL.WARN, "appId set, but please call setAppContext(appContext) with Application context to complete OneSignal init!");
          return;
       }
 
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(appId) called, appContext is set, continuing OneSignal init...");
+      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) successful and appContext is set, continuing OneSignal init...");
       init();
    }
 
@@ -483,37 +484,24 @@ public class OneSignal {
     * @param context - Context used by the Application of the app
     */
    public static void setAppContext(@NonNull Context context) {
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setContextApp called, checking if appId has been set before proceeding...");
+      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) called!");
 
       if (context == null) {
-         Log(LOG_LEVEL.WARN, "setAppContext(null) is not valid, ignoring!");
+         Log(LOG_LEVEL.WARN, "context is null, ignoring!");
          return;
       }
 
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
+      setupActivityLifecycleListener(wasAppContextNull);
 
-      // Register the lifecycle listener of the app for state changes in activities with proper context
-      ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application) appContext);
-
-      // Do work here that should only happen once or at the start of a new lifecycle
-      if (wasAppContextNull) {
-         sessionManager = new OSSessionManager(getNewSessionListener());
-         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
-         // Prefs require a context to save
-         // If the previous state of appContext was null, kick off write in-case it was waiting
-         OneSignalPrefs.startDelayedWrite();
-         // Cleans out old cached data to prevent over using the storage on devices
-         OneSignalCacheCleaner.cleanOldCachedData(context);
-      }
-
-      // Make sure appId has been set
+      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
-         OneSignal.onesignalLog(LOG_LEVEL.WARN, "setAppContext(context) set, but appId is null. Please call setAppId(appId) with a valid appId to complete OneSignal init");
+         OneSignal.onesignalLog(LOG_LEVEL.WARN, "appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
          return;
       }
 
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) called and appId is set, continuing OneSignal init...");
+      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) successful and appId is set, continuing OneSignal init...");
       init();
    }
 
@@ -530,13 +518,13 @@ public class OneSignal {
    }
 
    /**
-    *
+    * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
     */
    private static void init() {
       setupPrivacyConsent(appContext);
 
       if (requiresUserPrivacyConsent()) {
-         OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
+         OneSignal.Log(LOG_LEVEL.WARN, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
          delayedInitParams = new DelayedConsentInitializationParameters(appContext, googleProjectNumber, appId, notificationWillShowInForegroundHandler, notificationOpenedHandler);
          return;
       }
@@ -548,7 +536,6 @@ public class OneSignal {
       subscribableStatus = osUtils.initializationChecker(appContext, deviceType, appId);
       if (isSubscriptionStatusUninitializable())
          return;
-
 
       if (initDone) {
          if (notificationOpenedHandler != null)
@@ -565,9 +552,6 @@ public class OneSignal {
 
       // Verify the session is an Amazon purchase and track it
       handleAmazonPurchase();
-
-      // Check and handle app id change of the current session
-      handleAppIdChange();
 
       OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
@@ -592,8 +576,22 @@ public class OneSignal {
 
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
+   }
 
-      initDone = true;
+   private static void setupActivityLifecycleListener(boolean wasAppContextNull) {
+      // Register the lifecycle listener of the app for state changes in activities with proper context
+      ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application) appContext);
+
+      // Do work here that should only happen once or at the start of a new lifecycle
+      if (wasAppContextNull) {
+         sessionManager = new OSSessionManager(getNewSessionListener());
+         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
+         // Prefs require a context to save
+         // If the previous state of appContext was null, kick off write in-case it was waiting
+         OneSignalPrefs.startDelayedWrite();
+         // Cleans out old cached data to prevent over using the storage on devices
+         OneSignalCacheCleaner.cleanOldCachedData(appContext);
+      }
    }
 
    private static void setupPrivacyConsent(Context context) {
@@ -618,6 +616,7 @@ public class OneSignal {
             SaveAppId(appId);
             OneSignalStateSynchronizer.resetCurrentState();
             remoteParams = null;
+            initDone = false;
          }
       }
       else {

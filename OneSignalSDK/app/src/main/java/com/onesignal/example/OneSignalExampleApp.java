@@ -61,11 +61,10 @@ public class OneSignalExampleApp extends Application {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
       String currentAppId = getOneSignalAppId(this);
-      if (currentAppId == null)
-         setOneSignalAppId(this, "0ba9731b-33bd-43f4-8b59-61172e27447d");
+      if (!appId.equals(currentAppId))
+         setOneSignalAppId(this, appId);
 
-       OneSignal.setAppContext(this);
-       OneSignal.setAppId(getOneSignalAppId(this));
+      OneSignal.setAppContext(this);
 
       OneSignal.sendTag("test1", "test1");
    }
@@ -74,7 +73,7 @@ public class OneSignalExampleApp extends Application {
         SharedPreferences sharedPref = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString(SHARED_PREFS_OS_APP_ID, id);
-        editor.commit();
+        editor.apply();
 
        OneSignal.setAppId(getOneSignalAppId(context));
    }
