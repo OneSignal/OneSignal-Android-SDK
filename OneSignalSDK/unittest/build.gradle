@@ -4,9 +4,6 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId 'com.onesignal.example'
-        manifestPlaceholders = [onesignal_app_id: 'b2f7f966-d8cc-11e4-bed1-df8f05be55ba',
-                                // Project number pulled from dashboard, local value is ignored
-                                onesignal_google_project_number: 'REMOTE']
         minSdkVersion 15
         targetSdkVersion 28
         versionCode 1

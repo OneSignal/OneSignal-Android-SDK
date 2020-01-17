@@ -1,0 +1,69 @@
+{
+  "project_info": {
+    "project_number": "249481192614",
+    "firebase_url": "https://onesignaltest-e7802.firebaseio.com",
+    "project_id": "onesignaltest-e7802",
+    "storage_bucket": "onesignaltest-e7802.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249481192614:android:9d39e24e24034b14",
+        "android_client_info": {
+          "package_name": "com.onesignal.sdktest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "249481192614-7s79aqljidbvoqhvme00fp3qnl1303bc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpslt6X1qbJX0FRrnEi_9ESiYI55uJLl4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249481192614-7s79aqljidbvoqhvme00fp3qnl1303bc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249481192614:android:43a298ac2a079e90",
+        "android_client_info": {
+          "package_name": "com.onesignal.test"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "249481192614-7s79aqljidbvoqhvme00fp3qnl1303bc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpslt6X1qbJX0FRrnEi_9ESiYI55uJLl4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249481192614-7s79aqljidbvoqhvme00fp3qnl1303bc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

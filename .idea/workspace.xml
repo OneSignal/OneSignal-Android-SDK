@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="5dc20988-cbf6-4d00-9b81-4a86fb745d04" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/.idea/codeStyles/Project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/adapter/InAppMessageRecyclerViewAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/adapter/PairRecyclerViewAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/application/MainApplication.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/callback/AddPairAlertDialogCallback.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/callback/PairItemActionCallback.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/callback/UpdateAlertDialogCallback.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/type/InAppMessage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/type/ToastType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/ui/CustomAlertDialogBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/Dialog.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/InterfaceUtil.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/Toaster.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/Util.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-hdpi/ic_alert_octagon_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-hdpi/ic_alert_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-hdpi/ic_checkbox_marked_circle_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-hdpi/ic_information_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-hdpi/ic_message_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-mdpi/ic_alert_octagon_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-mdpi/ic_alert_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-mdpi/ic_checkbox_marked_circle_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-mdpi/ic_information_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-mdpi/ic_message_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xhdpi/ic_alert_octagon_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xhdpi/ic_alert_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xhdpi/ic_checkbox_marked_circle_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xhdpi/ic_information_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xhdpi/ic_message_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxhdpi/ic_alert_octagon_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxhdpi/ic_alert_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxhdpi/ic_checkbox_marked_circle_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxhdpi/ic_information_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxhdpi/ic_message_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxxhdpi/ic_alert_octagon_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxxhdpi/ic_alert_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxxhdpi/ic_checkbox_marked_circle_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxxhdpi/ic_information_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/drawable-xxxhdpi/ic_message_white_48dp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/add_pair_alert_dialog_layout.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/main_in_app_messages_recycler_view_item_layout.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/pair_recycler_view_item_layout.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/toaster_toast_card_layout.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/update_alert_dialog_layout.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/activity/LoginActivity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/activity/MainActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/activity/MainActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/activity/SplashActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/activity/SplashActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/adapter/NotificationRecyclerViewAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/adapter/NotificationRecyclerViewAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/constant/Key.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/constant/Key.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/constant/Text.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/constant/Text.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/model/LoginActivityViewModel.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/model/MainActivityViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/model/MainActivityViewModel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/model/SplashActivityViewModel.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/model/SplashActivityViewModel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/notification/NotificationData.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/notification/NotificationData.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/notification/NotificationExtenderServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/notification/AppNotificationExtenderService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/type/Notification.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/type/Notification.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/user/CurrentUser.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/user/CurrentUser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/IntentTo.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/IntentTo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/OneSignalPrefs.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/OneSignalPrefs.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/ProfileUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/java/com/onesignal/sdktest/util/ProfileUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/login_activity_layout.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/main_activity_layout.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/layout/main_activity_layout.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/values/colors.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/values/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/app/src/main/res/values/styles.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/gradle.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Examples/OneSignalTest/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/Examples/OneSignalTest/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OneSignalSDK/app/src/main/java/com/onesignal/example/OneSignalExampleApp.java" beforeDir="false" afterPath="$PROJECT_DIR$/OneSignalSDK/app/src/main/java/com/onesignal/example/OneSignalExampleApp.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OneSignalSDK/onesignal/src/main/java/com/onesignal/OneSignalRestClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/OneSignalSDK/onesignal/src/main/java/com/onesignal/OneSignalRestClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OneSignalSDK/onesignal/src/unity/java/com/onesignal/OneSignalUnityProxy.java" beforeDir="false" afterPath="$PROJECT_DIR$/OneSignalSDK/onesignal/src/unity/java/com/onesignal/OneSignalUnityProxy.java" afterDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectConfigurationFiles">
+    <option name="files">
+      <list>
+        <option value="$PROJECT_DIR$/.idea/OneSignal-Android-SDK.iml" />
+        <option value="$PROJECT_DIR$/.idea/vcs.xml" />
+        <option value="$PROJECT_DIR$/.idea/modules.xml" />
+        <option value="$PROJECT_DIR$/.idea/codeStyles/Project.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-2560" />
+    <option name="y" value="23" />
+    <option name="width" value="2560" />
+    <option name="height" value="1417" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectView">
+    <navigator currentView="ProjectPane" proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="PackagesPane" />
+      <pane id="Scope" />
+      <pane id="ProjectPane" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="android.sdk.path" value="$USER_HOME$/Library/Android/sdk" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="show.migrate.to.gradle.popup" value="false" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5dc20988-cbf6-4d00-9b81-4a86fb745d04" name="Default Changelist" comment="" />
+      <created>1572987615659</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1572987615659</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-2560" y="23" width="2560" height="1417" extended-state="6" />
+    <layout>
+      <window_info active="true" content_ui="combo" id="Project" visible="true" weight="0.20452741" />
+      <window_info id="Structure" side_tool="true" />
+      <window_info id="Image Layers" />
+      <window_info id="Designer" />
+      <window_info id="Resources Explorer" />
+      <window_info id="Capture Tool" />
+      <window_info id="Favorites" side_tool="true" />
+      <window_info id="Captures" order="0" weight="0.25" />
+      <window_info anchor="bottom" id="Version Control" />
+      <window_info anchor="bottom" id="TODO" />
+      <window_info anchor="bottom" id="Run" />
+      <window_info anchor="bottom" id="Debug" />
+      <window_info anchor="bottom" id="Terminal" visible="true" weight="0.32981133" />
+      <window_info anchor="bottom" id="Event Log" side_tool="true" />
+      <window_info anchor="bottom" id="Flutter Performance" side_tool="true" />
+      <window_info anchor="right" id="Capture Analysis" />
+      <window_info anchor="right" id="Theme Preview" />
+      <window_info anchor="right" id="Flutter Inspector" />
+      <window_info anchor="right" id="Flutter Outline" />
+      <window_info anchor="right" id="LuaJ" />
+      <window_info anchor="right" id="Palette&#9;" />
+    </layout>
+  </component>
+</project>
