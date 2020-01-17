@@ -1,0 +1,679 @@
+package com.onesignal.sdktest.model;
+
+import android.app.Activity;
+import android.content.Context;
+import android.support.design.widget.AppBarLayout;
+import android.support.v4.widget.NestedScrollView;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
+import android.util.Pair;
+import android.view.View;
+import android.view.ViewTreeObserver;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.Switch;
+import android.widget.TextView;
+
+import com.onesignal.OneSignal;
+import com.onesignal.sdktest.R;
+import com.onesignal.sdktest.adapter.InAppMessageRecyclerViewAdapter;
+import com.onesignal.sdktest.adapter.NotificationRecyclerViewAdapter;
+import com.onesignal.sdktest.adapter.PairRecyclerViewAdapter;
+import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
+import com.onesignal.sdktest.callback.PairItemActionCallback;
+import com.onesignal.sdktest.callback.SendOutcomeAlertDialogCallback;
+import com.onesignal.sdktest.callback.UpdateAlertDialogCallback;
+import com.onesignal.sdktest.constant.Text;
+import com.onesignal.sdktest.type.InAppMessage;
+import com.onesignal.sdktest.type.Notification;
+import com.onesignal.sdktest.type.ToastType;
+import com.onesignal.sdktest.ui.RecyclerViewBuilder;
+import com.onesignal.sdktest.user.CurrentUser;
+import com.onesignal.sdktest.util.Animate;
+import com.onesignal.sdktest.util.Dialog;
+import com.onesignal.sdktest.util.Font;
+import com.onesignal.sdktest.util.IntentTo;
+import com.onesignal.sdktest.util.OneSignalPrefs;
+import com.onesignal.sdktest.util.ProfileUtil;
+import com.onesignal.sdktest.util.Toaster;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+public class MainActivityViewModel implements ActivityViewModel {
+
+    private Animate animate;
+    private CurrentUser currentUser;
+    private Dialog dialog;
+    private Font font;
+    private IntentTo intentTo;
+    private RecyclerViewBuilder recyclerViewBuilder;
+    private Toaster toaster;
+
+    private AppBarLayout appBarLayout;
+    private Toolbar toolbar;
+    private LinearLayout privacyConsentLinearLayout;
+    private NestedScrollView nestedScrollView;
+
+    // Privacy Consent
+    private TextView privacyConsentTitleTextView;
+    private TextView privacyConsentDescriptionTextView;
+    private Button privacyConsentAllowButton;
+
+    // App
+    private TextView appTitleTextView;
+    private RelativeLayout appIdRelativeLayout;
+    private TextView appIdTitleTextView;
+    private TextView appIdTextView;
+    // Email
+    private RelativeLayout emailRelativeLayout;
+    private TextView emailTitleTextView;
+    private TextView userEmailTextView;
+    // External User Id
+    private RelativeLayout externalUserIdRelativeLayout;
+    private TextView externalUserIdTitleTextView;
+    private TextView userExternalUserIdTextView;
+
+    // Tags
+    private TextView tagsTitleTextView;
+    private TextView noTagsTextView;
+    private RecyclerView tagsRecyclerView;
+    private PairRecyclerViewAdapter tagPairRecyclerViewAdapter;
+    private Button addTagButton;
+
+    // Notification Demo
+    private TextView pushNotificationTitleTextView;
+    private RecyclerView pushNotificationRecyclerView;
+    private NotificationRecyclerViewAdapter pushNotificationRecyclerViewAdapter;
+
+    // Outcomes
+    private TextView outcomeTitleTextView;
+//    private LinearLayout outcomeCurrentSessionLinearLayout;
+//    private TextView outcomeCurrentSessionTitleTextView;
+//    private TextView outcomeCurrentSessionTextView;
+//    private LinearLayout outcomeForegroundTimerLinearLayout;
+//    private TextView outcomeForegroundTimerTitleTextView;
+//    private TextView outcomeForegroundTimerTextView;
+//    private LinearLayout outcomeBackgroundTimerLinearLayout;
+//    private TextView outcomeBackgroundTimerTitleTextView;
+//    private TextView outcomeBackgroundTimerTextView;
+    private Button sendOutcomeButton;
+
+    // Triggers
+    private TextView triggersTitleTextView;
+    private TextView noTriggersTextView;
+    private RecyclerView triggersRecyclerView;
+    private PairRecyclerViewAdapter triggerPairRecyclerViewAdapter;
+    private Button addTriggerButton;
+
+    // In App Messaging Demo
+    private TextView inAppMessagingTitleTextView;
+    private RecyclerView inAppMessagingRecyclerView;
+    private InAppMessageRecyclerViewAdapter inAppMessagingRecyclerViewAdapter;
+
+    // Settings
+    private TextView settingTitleTextView;
+    private RelativeLayout subscriptionRelativeLayout;
+    private TextView subscriptionTextView;
+    private TextView subscriptionDescriptionTextView;
+    private Switch subscriptionSwitch;
+    private RelativeLayout pauseInAppMessagesRelativeLayout;
+    private TextView pauseInAppMessagesTextView;
+    private TextView pauseInAppMessagesDescriptionTextView;
+    private Switch pauseInAppMessagesSwitch;
+    private Button revokeConsentButton;
+
+    private boolean shouldScrollTop = false;
+
+    private Context context;
+
+    private HashMap<String, Object> tagSet;
+    private ArrayList<Map.Entry> tagArrayList;
+
+    private HashMap<String, Object> triggerSet;
+    private ArrayList<Map.Entry> triggerArrayList;
+
+    @Override
+    public Activity getActivity() {
+        return (Activity) context;
+    }
+
+    @Override
+    public AppCompatActivity getAppCompatActivity() {
+        return (AppCompatActivity) context;
+    }
+
+    @Override
+    public ActivityViewModel onActivityCreated(Context context) {
+        this.context = context;
+
+        animate = new Animate();
+        currentUser = CurrentUser.getInstance();
+        dialog = new Dialog(context);
+        font = new Font(context);
+        intentTo = new IntentTo(context);
+        recyclerViewBuilder = new RecyclerViewBuilder(context);
+        toaster = new Toaster(context);
+
+        appBarLayout = getActivity().findViewById(R.id.main_activity_app_bar_layout);
+        toolbar = getActivity().findViewById(R.id.main_activity_toolbar);
+        privacyConsentLinearLayout = getActivity().findViewById(R.id.main_activity_privacy_consent_linear_layout);
+        nestedScrollView = getActivity().findViewById(R.id.main_activity_nested_scroll_view);
+
+        privacyConsentTitleTextView = getActivity().findViewById(R.id.main_activity_privacy_consent_title_text_view);
+        privacyConsentDescriptionTextView = getActivity().findViewById(R.id.main_activity_privacy_consent_description_text_view);
+        privacyConsentAllowButton = getActivity().findViewById(R.id.main_activity_privacy_consent_allow_button);
+
+        appTitleTextView = getActivity().findViewById(R.id.main_activity_account_title_text_view);
+        appIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_app_id_relative_layout);
+        appIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_title_text_view);
+        appIdTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_text_view);
+
+        emailRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_email_relative_layout);
+        emailTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_email_text_view);
+        userEmailTextView = getActivity().findViewById(R.id.main_activity_account_details_user_email_text_view);
+
+        externalUserIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_relative_layout);
+        externalUserIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_text_view);
+        userExternalUserIdTextView = getActivity().findViewById(R.id.main_activity_account_details_user_external_user_id_text_view);
+
+        tagsTitleTextView = getActivity().findViewById(R.id.main_activity_tags_title_text_view);
+        noTagsTextView = getActivity().findViewById(R.id.main_activity_tags_no_tags_text_view);
+        tagsRecyclerView = getActivity().findViewById(R.id.main_activity_tags_recycler_view);
+        addTagButton = getActivity().findViewById(R.id.main_activity_add_tags_button);
+
+        pushNotificationTitleTextView = getActivity().findViewById(R.id.main_activity_push_notification_title_text_view);
+        pushNotificationRecyclerView = getActivity().findViewById(R.id.main_activity_push_notification_recycler_view);
+
+        outcomeTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_title_text_view);
+//        outcomeCurrentSessionLinearLayout = getActivity().findViewById(R.id.main_activity_outcomes_current_session_relative_layout);
+//        outcomeCurrentSessionTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_current_session_title_text_view);
+//        outcomeCurrentSessionTextView = getActivity().findViewById(R.id.main_activity_outcomes_current_session_text_view);
+//        outcomeForegroundTimerLinearLayout = getActivity().findViewById(R.id.main_activity_outcomes_foreground_timer_relative_layout);
+//        outcomeForegroundTimerTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_foreground_timer_title_text_view);
+//        outcomeForegroundTimerTextView = getActivity().findViewById(R.id.main_activity_outcomes_foreground_timer_text_view);
+//        outcomeBackgroundTimerLinearLayout = getActivity().findViewById(R.id.main_activity_outcomes_background_timer_relative_layout);
+//        outcomeBackgroundTimerTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_background_timer_title_text_view);
+//        outcomeBackgroundTimerTextView = getActivity().findViewById(R.id.main_activity_outcomes_background_timer_text_view);
+        sendOutcomeButton = getActivity().findViewById(R.id.main_activity_outcomes_send_outcome_button);
+
+        triggersTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_title_text_view);
+        noTriggersTextView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_no_triggers_text_view);
+        triggersRecyclerView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_recycler_view);
+        addTriggerButton = getActivity().findViewById(R.id.main_activity_add_triggers_button);
+
+        inAppMessagingTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messaging_title_text_view);
+        inAppMessagingRecyclerView = getActivity().findViewById(R.id.main_activity_in_app_messaging_recycler_view);
+
+        settingTitleTextView = getActivity().findViewById(R.id.main_activity_settings_title_text_view);
+        subscriptionRelativeLayout = getActivity().findViewById(R.id.main_activity_settings_subscription_relative_layout);
+        subscriptionTextView = getActivity().findViewById(R.id.main_activity_settings_subscription_text_view);
+        subscriptionDescriptionTextView = getActivity().findViewById(R.id.main_activity_settings_subscription_info_text_view);
+        subscriptionSwitch = getActivity().findViewById(R.id.main_activity_settings_subscription_switch);
+        pauseInAppMessagesRelativeLayout = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_relative_layout);
+        pauseInAppMessagesTextView = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_text_view);
+        pauseInAppMessagesDescriptionTextView = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_info_text_view);
+        pauseInAppMessagesSwitch = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_switch);
+        revokeConsentButton = getActivity().findViewById(R.id.main_activity_settings_revoke_consent_button);
+
+        tagSet = new HashMap<>();
+        tagArrayList = new ArrayList<>();
+
+        triggerSet = new HashMap<>();
+        triggerArrayList = new ArrayList<>();
+
+        return this;
+    }
+
+    @Override
+    public ActivityViewModel setupInterfaceElements() {
+        font.applyFont(appTitleTextView, font.saralaBold);
+        font.applyFont(privacyConsentTitleTextView, font.saralaBold);
+        font.applyFont(privacyConsentDescriptionTextView, font.saralaRegular);
+        font.applyFont(privacyConsentAllowButton, font.saralaBold);
+        font.applyFont(appIdTitleTextView, font.saralaBold);
+        font.applyFont(appIdTextView, font.saralaRegular);
+        font.applyFont(emailTitleTextView, font.saralaBold);
+        font.applyFont(userEmailTextView, font.saralaRegular);
+        font.applyFont(externalUserIdTitleTextView, font.saralaBold);
+        font.applyFont(userExternalUserIdTextView, font.saralaRegular);
+        font.applyFont(tagsTitleTextView, font.saralaBold);
+        font.applyFont(noTagsTextView, font.saralaBold);
+        font.applyFont(addTagButton, font.saralaBold);
+        font.applyFont(pushNotificationTitleTextView, font.saralaBold);
+        font.applyFont(outcomeTitleTextView, font.saralaBold);
+//        font.applyFont(outcomeCurrentSessionTitleTextView, font.saralaBold);
+//        font.applyFont(outcomeCurrentSessionTextView, font.saralaRegular);
+//        font.applyFont(outcomeForegroundTimerTitleTextView, font.saralaBold);
+//        font.applyFont(outcomeForegroundTimerTextView, font.saralaRegular);
+//        font.applyFont(outcomeBackgroundTimerTitleTextView, font.saralaBold);
+//        font.applyFont(outcomeBackgroundTimerTextView, font.saralaRegular);
+        font.applyFont(sendOutcomeButton, font.saralaBold);
+        font.applyFont(triggersTitleTextView, font.saralaBold);
+        font.applyFont(noTriggersTextView, font.saralaBold);
+        font.applyFont(addTriggerButton, font.saralaBold);
+        font.applyFont(inAppMessagingTitleTextView, font.saralaBold);
+        font.applyFont(settingTitleTextView, font.saralaBold);
+        font.applyFont(subscriptionTextView, font.saralaBold);
+        font.applyFont(subscriptionDescriptionTextView, font.saralaRegular);
+        font.applyFont(pauseInAppMessagesTextView, font.saralaBold);
+        font.applyFont(pauseInAppMessagesDescriptionTextView, font.saralaRegular);
+        font.applyFont(revokeConsentButton, font.saralaBold);
+
+        boolean hasConsent = OneSignalPrefs.getUserPrivacyConsent(context);
+        setupConsentLayout(hasConsent);
+
+        if (hasConsent)
+            postPrivacyConsentSetup();
+
+        return this;
+    }
+
+    @Override
+    public void setupToolbar() {
+        toolbar.setTitle(Text.EMPTY);
+        getAppCompatActivity().setSupportActionBar(toolbar);
+    }
+
+    @Override
+    public void networkConnected() {
+
+    }
+
+    @Override
+    public void networkDisconnected() {
+
+    }
+
+    private void setupConsentLayout(boolean hasConsent) {
+        int consentVisibility = hasConsent ? View.GONE : View.VISIBLE;
+        int scrollVisibility = hasConsent ? View.VISIBLE : View.GONE;
+        privacyConsentLinearLayout.setVisibility(consentVisibility);
+        nestedScrollView.setVisibility(scrollVisibility);
+        appBarLayout.setExpanded(true);
+
+        privacyConsentAllowButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                togglePrivacyConsent(true);
+                postPrivacyConsentSetup();
+            }
+        });
+    }
+
+    private void postPrivacyConsentSetup() {
+        setupScrollView();
+        setupAppLayout();
+        setupTagsLayout();
+        setupPushNotificationLayout();
+        setupOutcomeLayout();
+        setupTriggersLayout();
+        setupInAppMessagingLayout();
+        setupSettingsLayout();
+    }
+
+    private void setupScrollView() {
+        nestedScrollView.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+            @Override
+            public void onScrollChanged() {
+                int scrollY = nestedScrollView.getScrollY();
+                shouldScrollTop = scrollY != 0;
+            }
+        });
+    }
+
+    private void setupAppLayout() {
+        appIdTextView.setText(getOneSignalAppId());
+        appIdRelativeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.createUpdateAlertDialog(getOneSignalAppId(), ProfileUtil.FieldType.APP_ID, new UpdateAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(String update) {
+                        appIdTextView.setText(update);
+                    }
+
+                    @Override
+                    public void onFailure() {
+
+                    }
+                });
+            }
+        });
+
+        setupEmailButton();
+        setupExternalUserIdButton();
+    }
+
+    private void setupEmailButton() {
+        boolean isEmailSet = currentUser.isEmailSet();
+        String email = isEmailSet ? currentUser.getEmail() : Text.EMAIL_NOT_SET;
+        userEmailTextView.setText(email);
+
+        emailRelativeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.createUpdateAlertDialog(currentUser.getEmail(), ProfileUtil.FieldType.EMAIL, new UpdateAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(String update) {
+                        userEmailTextView.setText(update);
+                    }
+
+                    @Override
+                    public void onFailure() {
+
+                    }
+                });
+            }
+        });
+    }
+
+    private void setupExternalUserIdButton() {
+        boolean isExternalUserSet = currentUser.isExternalUserIdSet(context);
+        String externalUserId = isExternalUserSet ? currentUser.getExternalUserId(context) : Text.EXTERNAL_USER_ID_NOT_SET;
+        userExternalUserIdTextView.setText(externalUserId);
+
+        externalUserIdRelativeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.createUpdateAlertDialog(currentUser.getExternalUserId(context), ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(String update) {
+                        userExternalUserIdTextView.setText(update);
+                    }
+
+                    @Override
+                    public void onFailure() {
+
+                    }
+                });
+            }
+        });
+    }
+
+    private void setupTagsLayout() {
+        animate.toggleAnimationView(true, View.GONE, tagsRecyclerView, noTagsTextView);
+
+        setupTagRecyclerView();
+
+        OneSignal.getTags(new OneSignal.GetTagsHandler() {
+            @Override
+            public void tagsAvailable(JSONObject tags) {
+                if (tags == null || tags.toString().isEmpty())
+                    return;
+
+                try {
+                    for (Iterator<String> it = tags.keys(); it.hasNext();) {
+                        String key = it.next();
+                        tagSet.put(key, tags.get(key));
+                    }
+
+                    refreshTagRecyclerView();
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        addTagButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.createAddPairAlertDialog("Add Tag", ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(Pair<String, Object> pair) {
+                        if (pair.second == null || pair.second.toString().isEmpty()) {
+                            OneSignal.deleteTag(pair.first);
+                            tagSet.remove(pair.first);
+                            toaster.makeCustomViewToast("Deleted tag " + pair.first, ToastType.SUCCESS);
+                        } else {
+                            tagSet.put(pair.first, pair.second);
+                            toaster.makeCustomViewToast("Added tag " + pair.first, ToastType.SUCCESS);
+                        }
+
+                        refreshTagRecyclerView();
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        refreshTagRecyclerView();
+                    }
+                });
+            }
+        });
+    }
+
+    private void setupTagRecyclerView() {
+        recyclerViewBuilder.setupRecyclerView(tagsRecyclerView, 20, false, true);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
+        tagsRecyclerView.setLayoutManager(linearLayoutManager);
+        tagPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, tagArrayList, new PairItemActionCallback() {
+            @Override
+            public void onLongClick(String key) {
+                OneSignal.deleteTag(key);
+                tagSet.remove(key);
+
+                refreshTagRecyclerView();
+
+                toaster.makeCustomViewToast("Deleted tag " + key, ToastType.SUCCESS);
+            }
+        });
+        tagsRecyclerView.setAdapter(tagPairRecyclerViewAdapter);
+    }
+
+    private void refreshTagRecyclerView() {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                tagArrayList.clear();
+                tagArrayList.addAll(tagSet.entrySet());
+
+                if (tagArrayList.size() > 0) {
+                    animate.toggleAnimationView(false, View.GONE, tagsRecyclerView, noTagsTextView);
+                } else {
+                    animate.toggleAnimationView(true, View.GONE, tagsRecyclerView, noTagsTextView);
+                }
+
+                tagPairRecyclerViewAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    private void setupPushNotificationLayout() {
+        recyclerViewBuilder.setupRecyclerView(pushNotificationRecyclerView, 16, false, true);
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
+        pushNotificationRecyclerView.setLayoutManager(gridLayoutManager);
+
+        pushNotificationRecyclerViewAdapter = new NotificationRecyclerViewAdapter(context, Notification.values());
+        pushNotificationRecyclerView.setAdapter(pushNotificationRecyclerViewAdapter);
+    }
+    private void setupOutcomeLayout() {
+        sendOutcomeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.createSendOutcomeAlertDialog("Select an Outcome Type...");
+            }
+        });
+    }
+
+    private void setupTriggersLayout() {
+        animate.toggleAnimationView(true, View.GONE, triggersRecyclerView, noTriggersTextView);
+
+        setupTriggerRecyclerView();
+        addTriggerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.createAddPairAlertDialog("Add Trigger", ProfileUtil.FieldType.TRIGGER, new AddPairAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(Pair<String, Object> pair) {
+                        if (pair.second == null || pair.second.toString().isEmpty()) {
+                            OneSignal.removeTriggerForKey(pair.first);
+                            triggerSet.remove(pair.first);
+                            toaster.makeCustomViewToast("Deleted trigger " + pair.first, ToastType.SUCCESS);
+                        } else {
+                            triggerSet.put(pair.first, pair.second);
+                            toaster.makeCustomViewToast("Added trigger " + pair.first, ToastType.SUCCESS);
+                        }
+
+                        refreshTriggerRecyclerView();
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        refreshTriggerRecyclerView();
+                    }
+                });
+            }
+        });
+    }
+
+    private void setupTriggerRecyclerView() {
+        recyclerViewBuilder.setupRecyclerView(triggersRecyclerView, 20, false, true);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
+        triggersRecyclerView.setLayoutManager(linearLayoutManager);
+        triggerPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, triggerArrayList, new PairItemActionCallback() {
+            @Override
+            public void onLongClick(String key) {
+                OneSignal.removeTriggerForKey(key);
+                triggerSet.remove(key);
+
+                refreshTriggerRecyclerView();
+
+                toaster.makeCustomViewToast("Deleted trigger " + key, ToastType.SUCCESS);
+            }
+        });
+        triggersRecyclerView.setAdapter(triggerPairRecyclerViewAdapter);
+    }
+
+    private void refreshTriggerRecyclerView() {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                triggerArrayList.clear();
+                triggerArrayList.addAll(triggerSet.entrySet());
+
+                if (triggerArrayList.size() > 0) {
+                    animate.toggleAnimationView(false, View.GONE, triggersRecyclerView, noTriggersTextView);
+                } else {
+                    animate.toggleAnimationView(true, View.GONE, triggersRecyclerView, noTriggersTextView);
+                }
+
+                triggerPairRecyclerViewAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    private void setupInAppMessagingLayout() {
+        recyclerViewBuilder.setupRecyclerView(inAppMessagingRecyclerView, 4, false, true);
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
+        inAppMessagingRecyclerView.setLayoutManager(gridLayoutManager);
+
+        inAppMessagingRecyclerViewAdapter = new InAppMessageRecyclerViewAdapter(context, InAppMessage.values());
+        inAppMessagingRecyclerView.setAdapter(inAppMessagingRecyclerViewAdapter);
+    }
+
+    public void setupSettingsLayout() {
+        setupSubscriptionSwitch();
+        setupPauseInAppMessagesSwitch();
+        setupRevokeConsentButton();
+    }
+
+    private void setupSubscriptionSwitch() {
+        boolean isPermissionEnabled = OneSignal
+                .getPermissionSubscriptionState()
+                .getPermissionStatus()
+                .getEnabled();
+
+        final boolean isSubscribed = OneSignal
+                .getPermissionSubscriptionState()
+                .getSubscriptionStatus()
+                .getSubscribed();
+
+        subscriptionSwitch.setEnabled(isPermissionEnabled);
+        subscriptionSwitch.setChecked(isSubscribed);
+
+        if (isPermissionEnabled) {
+            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean isSubscribed = subscriptionSwitch.isChecked();
+                    subscriptionSwitch.setChecked(!isSubscribed);
+                }
+            });
+        } else {
+            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    intentTo.notificationPermissions();
+                }
+            });
+        }
+
+        subscriptionSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                OneSignal.setSubscription(isChecked);
+                OneSignalPrefs.cacheSubscriptionStatus(context, isChecked);
+            }
+        });
+    }
+
+    private void setupPauseInAppMessagesSwitch() {
+        pauseInAppMessagesRelativeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
+                pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
+            }
+        });
+
+        pauseInAppMessagesSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                OneSignal.pauseInAppMessages(isChecked);
+            }
+        });
+    }
+
+    private void setupRevokeConsentButton() {
+        revokeConsentButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                togglePrivacyConsent(false);
+            }
+        });
+    }
+
+    public boolean shouldScrollToTop() {
+        return shouldScrollTop;
+    }
+
+    private String getOneSignalAppId() {
+        return OneSignalPrefs.getOneSignalAppId(context);
+    }
+
+    private void togglePrivacyConsent(boolean hasConsent) {
+        OneSignal.provideUserConsent(hasConsent);
+        OneSignalPrefs.cacheUserPrivacyConsent(context, hasConsent);
+
+        shouldScrollTop = hasConsent;
+
+        int consentVisibility = hasConsent ? View.GONE : View.VISIBLE;
+        int scrollVisibility = hasConsent ? View.VISIBLE : View.GONE;
+        privacyConsentLinearLayout.setVisibility(consentVisibility);
+        nestedScrollView.setVisibility(scrollVisibility);
+
+        appBarLayout.setExpanded(true);
+    }
+
+}

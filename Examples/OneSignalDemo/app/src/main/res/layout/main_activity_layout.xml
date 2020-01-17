@@ -1,0 +1,919 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".activity.MainActivity">
+
+    <android.support.design.widget.AppBarLayout
+        android:id="@+id/main_activity_app_bar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.AppBarOverlay"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        app:layout_behavior="com.onesignal.sdktest.ui.FixAppBarLayoutBehavior">
+
+        <android.support.v7.widget.Toolbar
+            android:id="@+id/main_activity_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/colorPrimary"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            app:popupTheme="@style/AppTheme.PopupOverlay"
+            app:layout_scrollFlags="snap|scroll|enterAlways">
+
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="start|center_vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <ImageView
+                    android:layout_width="148dp"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="-8dp"
+                    android:src="@drawable/onesignal_rectangle"
+                    android:tint="@android:color/white"/>
+
+            </RelativeLayout>
+
+        </android.support.v7.widget.Toolbar>
+
+    </android.support.design.widget.AppBarLayout>
+
+    <LinearLayout
+        android:id="@+id/main_activity_privacy_consent_linear_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical">
+
+
+        <!-- Privacy Consent -->
+
+        <TextView
+            android:id="@+id/main_activity_privacy_consent_title_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:layout_marginBottom="2dp"
+            android:text="@string/privacy_consent"
+            android:textSize="18dp"
+            android:textColor="@color/colorDarkText"/>
+
+        <TextView
+            android:id="@+id/main_activity_privacy_consent_description_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:layout_marginBottom="14dp"
+            android:layout_marginStart="64dp"
+            android:layout_marginEnd="64dp"
+            android:text="@string/consent_required"
+            android:textSize="12dp"
+            android:textColor="@color/colorDarkText"/>
+
+        <android.support.v7.widget.CardView
+            android:layout_width="172dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            app:cardCornerRadius="6dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:background="@color/colorPrimary">
+
+                <Button
+                    android:id="@+id/main_activity_privacy_consent_allow_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="@string/allow"
+                    android:textSize="19sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/ripple_selector_white_red"
+                    android:visibility="visible"/>
+
+            </LinearLayout>
+
+        </android.support.v7.widget.CardView>
+
+    </LinearLayout>
+
+    <!-- Main ScrollView -->
+
+    <android.support.v4.widget.NestedScrollView
+        android:id="@+id/main_activity_nested_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_behavior="android.support.design.widget.AppBarLayout$ScrollingViewBehavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="12dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:descendantFocusability="blocksDescendants"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/main_activity_account_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_account_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/app"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:id="@+id/main_activity_account_details_linear_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- App Id -->
+
+                            <RelativeLayout
+                                android:id="@+id/main_activity_account_details_app_id_relative_layout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingStart="20dp"
+                                android:paddingEnd="20dp"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="16dp"
+                                android:background="@drawable/ripple_selector_red_white">
+
+                                <TextView
+                                    android:id="@+id/main_activity_account_details_app_id_title_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentStart="true"
+                                    android:layout_centerVertical="true"
+                                    android:layout_toStartOf="@id/main_activity_account_details_app_id_text_view"
+                                    android:text="@string/id_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_account_details_app_id_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </RelativeLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="@color/colorDivider"/>
+
+
+                            <!-- Email -->
+
+                            <RelativeLayout
+                                android:id="@+id/main_activity_account_details_email_relative_layout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingStart="20dp"
+                                android:paddingEnd="20dp"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="16dp"
+                                android:background="@drawable/ripple_selector_red_white">
+
+                                <TextView
+                                    android:id="@+id/main_activity_account_details_email_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentStart="true"
+                                    android:layout_centerVertical="true"
+                                    android:layout_toStartOf="@id/main_activity_account_details_user_email_text_view"
+                                    android:text="@string/email_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_account_details_user_email_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </RelativeLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="@color/colorDivider"/>
+
+
+                            <!-- External User Id -->
+
+                            <RelativeLayout
+                                android:id="@+id/main_activity_account_details_external_user_id_relative_layout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingStart="20dp"
+                                android:paddingEnd="20dp"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="16dp"
+                                android:background="@drawable/ripple_selector_red_white">
+
+                                <TextView
+                                    android:id="@+id/main_activity_account_details_external_user_id_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentStart="true"
+                                    android:layout_centerVertical="true"
+                                    android:layout_toStartOf="@id/main_activity_account_details_user_external_user_id_text_view"
+                                    android:text="@string/external_user_id_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_account_details_user_external_user_id_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </RelativeLayout>
+
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+
+            <!-- Tags -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_tags_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_tags_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/tags"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <android.support.v7.widget.RecyclerView
+                            android:id="@+id/main_activity_tags_recycler_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:clipChildren="false"
+                            android:clipToPadding="false">
+
+                            <!-- Populated with the Tags added -->
+
+                        </android.support.v7.widget.RecyclerView>
+
+                        <TextView
+                            android:id="@+id/main_activity_tags_no_tags_text_view"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="@string/no_tags_added"
+                            android:textSize="18sp"
+                            android:textColor="@color/colorDarkText"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_add_tags_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/add_tag"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+
+            <!-- Push Notifications -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_push_notification_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_push_notification_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/push_notification"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.RecyclerView
+                    android:id="@+id/main_activity_push_notification_recycler_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:nestedScrollingEnabled="false"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
+
+                    <!-- Populated with the Notification enum -->
+
+                </android.support.v7.widget.RecyclerView>
+
+            </LinearLayout>
+
+
+            <!-- Outcomes -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_outcomes_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_outcomes_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/outcomes"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+<!--                        <LinearLayout-->
+<!--                            android:layout_width="match_parent"-->
+<!--                            android:layout_height="wrap_content"-->
+<!--                            android:orientation="horizontal">-->
+
+<!--                            &lt;!&ndash; Current Session &ndash;&gt;-->
+
+<!--                            <LinearLayout-->
+<!--                                android:id="@+id/main_activity_outcomes_current_session_relative_layout"-->
+<!--                                android:layout_width="wrap_content"-->
+<!--                                android:layout_height="wrap_content"-->
+<!--                                android:layout_gravity="top|center_horizontal"-->
+<!--                                android:gravity="top|center_horizontal"-->
+<!--                                android:paddingTop="12dp"-->
+<!--                                android:paddingBottom="12dp"-->
+<!--                                android:background="@drawable/ripple_selector_red_white"-->
+<!--                                android:orientation="vertical"-->
+<!--                                android:weightSum="0.3">-->
+
+<!--                                <TextView-->
+<!--                                    android:id="@+id/main_activity_outcomes_current_session_title_text_view"-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="wrap_content"-->
+<!--                                    android:layout_gravity="top|center_horizontal"-->
+<!--                                    android:gravity="top|center_horizontal"-->
+<!--                                    android:text="@string/current_session"-->
+<!--                                    android:textSize="16sp"-->
+<!--                                    android:textColor="@color/colorDarkText"/>-->
+
+<!--                                <TextView-->
+<!--                                    android:id="@+id/main_activity_outcomes_current_session_text_view"-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="wrap_content"-->
+<!--                                    android:layout_gravity="top|center_horizontal"-->
+<!--                                    android:gravity="top|center_horizontal"-->
+<!--                                    android:textSize="16sp"-->
+<!--                                    android:textColor="@color/colorDarkText"/>-->
+
+<!--                            </LinearLayout>-->
+
+<!--                            <View-->
+<!--                                android:layout_width="1dp"-->
+<!--                                android:layout_height="match_parent"-->
+<!--                                android:background="@color/colorDivider"/>-->
+
+<!--                            &lt;!&ndash; Foreground Time&ndash;&gt;-->
+
+<!--                            <LinearLayout-->
+<!--                                android:id="@+id/main_activity_outcomes_foreground_timer_relative_layout"-->
+<!--                                android:layout_width="wrap_content"-->
+<!--                                android:layout_height="wrap_content"-->
+<!--                                android:layout_gravity="top|center_horizontal"-->
+<!--                                android:gravity="top|center_horizontal"-->
+<!--                                android:paddingTop="12dp"-->
+<!--                                android:paddingBottom="12dp"-->
+<!--                                android:background="@drawable/ripple_selector_red_white"-->
+<!--                                android:orientation="vertical"-->
+<!--                                android:weightSum="0.3">-->
+
+<!--                                <TextView-->
+<!--                                    android:id="@+id/main_activity_outcomes_foreground_timer_title_text_view"-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="wrap_content"-->
+<!--                                    android:layout_gravity="top|center_horizontal"-->
+<!--                                    android:gravity="top|center_horizontal"-->
+<!--                                    android:text="@string/foreground_timer"-->
+<!--                                    android:textSize="16sp"-->
+<!--                                    android:textColor="@color/colorDarkText"/>-->
+
+<!--                                <TextView-->
+<!--                                    android:id="@+id/main_activity_outcomes_foreground_timer_text_view"-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="wrap_content"-->
+<!--                                    android:layout_gravity="top|center_horizontal"-->
+<!--                                    android:gravity="top|center_horizontal"-->
+<!--                                    android:textSize="16sp"-->
+<!--                                    android:textColor="@color/colorDarkText"/>-->
+
+<!--                            </LinearLayout>-->
+
+<!--                            <View-->
+<!--                                android:layout_width="1dp"-->
+<!--                                android:layout_height="match_parent"-->
+<!--                                android:background="@color/colorDivider"/>-->
+
+<!--                            &lt;!&ndash; Background Time &ndash;&gt;-->
+
+<!--                            <LinearLayout-->
+<!--                                android:id="@+id/main_activity_outcomes_background_timer_relative_layout"-->
+<!--                                android:layout_width="wrap_content"-->
+<!--                                android:layout_height="wrap_content"-->
+<!--                                android:layout_gravity="top|center_horizontal"-->
+<!--                                android:gravity="top|center_horizontal"-->
+<!--                                android:paddingTop="12dp"-->
+<!--                                android:paddingBottom="12dp"-->
+<!--                                android:background="@drawable/ripple_selector_red_white"-->
+<!--                                android:orientation="vertical"-->
+<!--                                android:weightSum="0.3">-->
+
+<!--                                <TextView-->
+<!--                                    android:id="@+id/main_activity_outcomes_background_timer_title_text_view"-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="wrap_content"-->
+<!--                                    android:layout_gravity="top|center_horizontal"-->
+<!--                                    android:gravity="top|center_horizontal"-->
+<!--                                    android:text="@string/background_timer"-->
+<!--                                    android:textSize="16sp"-->
+<!--                                    android:textColor="@color/colorDarkText"/>-->
+
+<!--                                <TextView-->
+<!--                                    android:id="@+id/main_activity_outcomes_background_timer_text_view"-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="wrap_content"-->
+<!--                                    android:layout_gravity="top|center_horizontal"-->
+<!--                                    android:gravity="top|center_horizontal"-->
+<!--                                    android:textSize="16sp"-->
+<!--                                    android:textColor="@color/colorDarkText"/>-->
+
+<!--                            </LinearLayout>-->
+
+<!--                        </LinearLayout>-->
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_outcomes_send_outcome_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/send_outcome"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+
+            <!-- Triggers -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_in_app_messaging_triggers_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_in_app_messages_triggers_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/triggers"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <android.support.v7.widget.RecyclerView
+                            android:id="@+id/main_activity_in_app_messages_triggers_recycler_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:clipChildren="false"
+                            android:clipToPadding="false">
+
+                            <!-- Populated with the Triggers added -->
+
+                        </android.support.v7.widget.RecyclerView>
+
+                        <TextView
+                            android:id="@+id/main_activity_in_app_messages_triggers_no_triggers_text_view"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="@string/no_triggers_added"
+                            android:textSize="18sp"
+                            android:textColor="@color/colorDarkText"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_add_triggers_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/add_trigger"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+
+            <!-- In-App Messaging -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_in_app_messaging_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_in_app_messaging_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/in_app_messaging"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.RecyclerView
+                    android:id="@+id/main_activity_in_app_messaging_recycler_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:nestedScrollingEnabled="false"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
+
+                    <!-- Populated with the In App Message enum -->
+
+                </android.support.v7.widget.RecyclerView>
+
+            </LinearLayout>
+
+
+            <!-- Settings -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_settings_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_settings_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/settings"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Subscription -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_settings_subscription_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="16dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_settings_subscription_switch"
+                                android:paddingEnd="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_subscription_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/subscribe_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_subscription_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/app_settings_notifications_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_settings_subscription_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme"/>
+
+                        </RelativeLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/colorDivider"/>
+
+
+                        <!-- Pause In-App Messages -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_settings_pause_in_app_messages_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="16dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_settings_pause_in_app_messages_switch"
+                                android:paddingEnd="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_pause_in_app_messages_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/pause_in_app_messages_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_pause_in_app_messages_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/app_settings_pause_in_app_messages_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_settings_pause_in_app_messages_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme"/>
+
+                        </RelativeLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_settings_revoke_consent_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/revoke_consent"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </android.support.v4.widget.NestedScrollView>
+
+</android.support.design.widget.CoordinatorLayout>

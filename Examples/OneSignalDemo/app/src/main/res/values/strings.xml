@@ -1,0 +1,44 @@
+<resources>
+    
+    <string name="app_name">OneSignal</string>
+
+    <string name="email">Email</string>
+    <string name="set_email">Set Email</string>
+
+    <string name="continue_to_demo">Continue to demo</string>
+
+    <string name="app">App</string>
+    <string name="id_colon">Id:</string>
+    <string name="email_colon">Email:</string>
+    <string name="external_user_id_colon">External User Id:</string>
+
+    <string name="tags">Tags</string>
+    <string name="no_tags_added">No Tags Added</string>
+    <string name="add_tag">Add Tag</string>
+
+    <string name="push_notification">Push Notifications</string>
+
+    <string name="outcomes">Outcome Events</string>
+    <string name="current_session">App Session:</string>
+    <string name="foreground_timer">Time In App:</string>
+    <string name="background_timer">Time Outside App:</string>
+    <string name="send_outcome">Send Outcome</string>
+
+    <string name="triggers">Triggers</string>
+    <string name="no_triggers_added">No Triggers Added</string>
+    <string name="add_trigger">Add Trigger</string>
+
+    <string name="in_app_messaging">In-App Messaging</string>
+
+    <string name="settings">Settings</string>
+    <string name="subscribe_colon">Subscribe:</string>
+    <string name="app_settings_notifications_description">Check app notification settings</string>
+    <string name="pause_in_app_messages_colon">Pause In-App Messages:</string>
+    <string name="app_settings_pause_in_app_messages_description">Toggle in-app messages</string>
+
+    <string name="consent_required">Consent must be given to proceed into the application</string>
+    <string name="privacy_consent">Privacy Consent</string>
+    <string name="allow">Allow</string>
+    <string name="revoke_consent">Revoke Consent</string>
+
+</resources>
