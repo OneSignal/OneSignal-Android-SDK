@@ -15,6 +15,7 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
@@ -44,6 +45,7 @@ import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -180,10 +182,10 @@ public class TestHelpers {
       do {
          // We run a 2nd time if we did not find any threads to ensure we don't skip any
          createdNewThread = runOSThreads() || runOSThreads();
-         
+
          boolean advancedRunnables = OneSignalPackagePrivateHelper.runAllNetworkRunnables();
          advancedRunnables = OneSignalPackagePrivateHelper.runFocusRunnables() || advancedRunnables;
-         
+
          if (advancedRunnables)
             createdNewThread = true;
       } while (createdNewThread);
@@ -331,6 +333,44 @@ public class TestHelpers {
       readableDatabase.close();
 
       return notifications;
+   }
+
+   static List<OSTestInAppMessage> getAllInAppMessages() throws JSONException {
+      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      Cursor cursor = readableDatabase.query(
+              OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+      );
+
+      List<OSTestInAppMessage> iams = new ArrayList<>();
+      if (cursor.moveToFirst()) {
+         do {
+            String messageId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
+            String clickIds = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_CLICK_IDS));
+            int displayQuantity = cursor.getInt(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY));
+            long lastDisplay = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY));
+
+            JSONArray clickIdsArray = new JSONArray(clickIds);
+            Set<String> clickIdsSet = new HashSet<>();
+
+            for (int i = 0; i < clickIdsArray.length(); i++) {
+               clickIdsSet.add(clickIdsArray.getString(i));
+            }
+
+            OSTestInAppMessage inAppMessage = new OSTestInAppMessage(messageId, displayQuantity, lastDisplay, clickIdsSet);
+            iams.add(inAppMessage);
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+      readableDatabase.close();
+
+      return iams;
    }
 
    /**

@@ -130,4 +130,15 @@ class OSTrigger {
 
         return json;
     }
+
+    @Override
+    public String toString() {
+        return "OSTrigger{" +
+                "triggerId='" + triggerId + '\'' +
+                ", kind=" + kind +
+                ", property='" + property + '\'' +
+                ", operatorType=" + operatorType +
+                ", value=" + value +
+                '}';
+    }
 }

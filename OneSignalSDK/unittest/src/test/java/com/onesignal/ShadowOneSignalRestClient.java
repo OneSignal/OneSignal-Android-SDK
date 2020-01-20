@@ -98,7 +98,10 @@ public class ShadowOneSignalRestClient {
    static {
       String value = null;
       try {
-         value = new JSONObject().put("html", "<html></html>").toString();
+         value = new JSONObject()
+                 .put("html", "<html></html>")
+                 .put("display_duration", 0.0)
+                 .toString();
       } catch (JSONException e) { }
       IAM_GET_HTML_RESPONSE = value;
    }
