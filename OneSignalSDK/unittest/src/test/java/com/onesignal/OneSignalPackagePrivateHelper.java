@@ -178,6 +178,7 @@ public class OneSignalPackagePrivateHelper {
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
    public static class CachedUniqueOutcomeNotificationTable extends OneSignalDbContract.CachedUniqueOutcomeNotificationTable { }
+   public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
       NotificationGenerationJob(Context context) {
@@ -271,21 +272,29 @@ public class OneSignalPackagePrivateHelper {
 
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
-      public OSTestInAppMessage(JSONObject json) throws JSONException {
+      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime) {
+         super(messageId, displaysQuantity, lastDisplayTime);
+      }
+
+      OSTestInAppMessage(JSONObject json) throws JSONException {
          super(json);
       }
 
+      OSTestInAppMessage(com.onesignal.OSInAppMessage inAppMessage) throws JSONException {
+         super(inAppMessage.toJSONObject());
+      }
+
       @Override
-      ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
+      protected ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
          ArrayList<ArrayList<OSTrigger>> parsedTriggers = new ArrayList<>();
 
          for (int i = 0; i < triggersJson.length(); i++) {
             JSONArray ands = triggersJson.getJSONArray(i);
 
-            ArrayList parsed = new ArrayList();
+            ArrayList<OSTrigger> parsed = new ArrayList<>();
 
             for (int j = 0; j < ands.length(); j++) {
-               OSTestTrigger trig = new OSTestTrigger(ands.getJSONObject(j));
+               OSTrigger trig = new OSTestTrigger(ands.getJSONObject(j));
 
                parsed.add(trig);
             }
@@ -294,6 +303,36 @@ public class OneSignalPackagePrivateHelper {
          }
 
          return parsedTriggers;
+      }
+
+      @Override
+      void setDisplayDuration(double displayDuration) {
+         super.setDisplayDuration(displayDuration);
+      }
+
+      @Override
+      public boolean isRedisplayEnabled() {
+         return super.isRedisplayEnabled();
+      }
+
+      @Override
+      public int getDisplayQuantity() {
+         return super.getDisplayQuantity();
+      }
+
+      @Override
+      public int getDisplayLimit() {
+         return super.getDisplayLimit();
+      }
+
+      @Override
+      public double getDisplayDelay() {
+         return super.getDisplayDelay();
+      }
+
+      @Override
+      public long getLastDisplayTime() {
+         return super.getLastDisplayTime();
       }
 
       public JSONObject toJSONObject() {
@@ -326,24 +365,23 @@ public class OneSignalPackagePrivateHelper {
    public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {
       private static OSInAppMessageController sharedInstance;
 
+      OSInAppMessageController(OneSignalDbHelper dbInstance) {
+         super((dbInstance));
+      }
+
       public static OSInAppMessageController getController() {
          if (sharedInstance == null)
-            sharedInstance = new OSInAppMessageController();
+            sharedInstance = new OSInAppMessageController(OneSignal.getDBHelperInstance());
 
          return sharedInstance;
       }
+
       public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
          super.onMessageActionOccurredOnMessage(message, actionJson);
       }
 
       public void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
          com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
-      }
-   }
-
-   public static class OSInAppMessage extends com.onesignal.OSInAppMessage {
-      public OSInAppMessage(JSONObject json) throws JSONException {
-         super(json);
       }
    }
 

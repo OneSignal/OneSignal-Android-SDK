@@ -53,6 +53,7 @@ import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         instrumentedPackages = { "com.onesignal" },
@@ -77,6 +78,8 @@ import static junit.framework.Assert.assertFalse;
 public class InAppMessageIntegrationTests {
     private static final String IAM_CLICK_ID = "button_id_123";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+    private static final int LIMIT = 5;
+    private static final double DELAY = 0.1;
 
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
@@ -546,6 +549,99 @@ public class InAppMessageIntegrationTests {
         // Now verify the most recent request was not a impression request
         boolean isImpressionUrl = mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/impression");
         assertFalse(isImpressionUrl);
+    }
+
+    @Test
+    public void testInAppMessageDisplayMultipleTimesAndSendImpressionClickEvent() throws Exception {
+        final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(),
+                0.05
+        );
+
+        ArrayList<ArrayList<OSTestTrigger>> triggers2 = new ArrayList<ArrayList<OSTestTrigger>>() {{
+            add(new ArrayList<OSTestTrigger>() {{
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.SESSION_TIME,null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.1));
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.TIME_SINCE_LAST_IN_APP, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.15));
+            }});
+        }};
+        final OSTestInAppMessage message2 = InAppMessagingHelpers.buildTestMessageWithMultipleTriggersAndRedisplay(triggers2, LIMIT, DELAY);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message1);
+            add(message2);
+        }});
+
+        // the SDK should read the message from registration JSON, set up a timer, and once
+        // the timer fires the message should get shown.
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // wait until the timer fires after 50ms and make sure the message gets displayed
+        // we already have tests to make sure that the timer is actually being scheduled
+        // for the correct amount of time, so all we are doing here is checking to
+        // make sure the message actually gets displayed once the timer fires
+        // Second in app should now display
+        Awaitility.await()
+                .atMost(new Duration(1, TimeUnit.SECONDS))
+                .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+                        assertEquals(message2.messageId, ShadowOSInAppMessageController.displayedMessages.get(1));
+                    }
+                });
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+
+        // Second in app should now display
+        Awaitility.await()
+                .atMost(new Duration(1, TimeUnit.SECONDS))
+                .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+                        assertEquals(message2.messageId, ShadowOSInAppMessageController.displayedMessages.get(1));
+                    }
+                });
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+
+        long firstLastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(1).getLastDisplayTime();
+        assertTrue(firstLastDisplayTime != -1);
+
+        // Repeat, after session time trigger is fire again the IAM should be displayed again
+        Awaitility.await()
+                .atMost(new Duration(1, TimeUnit.SECONDS))
+                .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(3, ShadowOSInAppMessageController.displayedMessages.size());
+                        assertEquals(message2.messageId, ShadowOSInAppMessageController.displayedMessages.get(2));
+                    }
+                });
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+//CHECK WHY IS NOT DISPLAYING AGAIN THE LAST IAM
+
+//
+//
+//        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+//            add(message);
+//        }});
+//
+//        // Cold restart app and re-init OneSignal
+//        fastColdRestartApp();
+//        OneSignalInit();
+//        threadAndTaskWait();
+
+
+        long secondLastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(2).getLastDisplayTime();
+        assertTrue(secondLastDisplayTime - firstLastDisplayTime > message2.getDisplayDelay());
     }
 
     @Test
