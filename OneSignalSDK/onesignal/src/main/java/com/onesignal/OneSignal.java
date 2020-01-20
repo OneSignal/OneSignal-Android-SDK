@@ -596,13 +596,17 @@ public class OneSignal {
 
       if (wasAppContextNull) {
          sessionManager = new OSSessionManager(getNewSessionListener());
-         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
+         outcomeEventsController = new OutcomeEventsController(sessionManager, getDBHelperInstance());
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
          // Cleans out old cached data to prevent over using the storage on devices
          OneSignalCacheCleaner.cleanOldCachedData(context);
       }
+   }
+
+   static OneSignalDbHelper getDBHelperInstance() {
+      return OneSignalDbHelper.getInstance(appContext);
    }
 
    /**

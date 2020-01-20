@@ -37,12 +37,13 @@ import android.os.SystemClock;
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
 import com.onesignal.OneSignalDbContract.CachedUniqueOutcomeNotificationTable;
+import com.onesignal.OneSignalDbContract.InAppMessageTable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class OneSignalDbHelper extends SQLiteOpenHelper {
-   static final int DATABASE_VERSION = 6;
+   static final int DATABASE_VERSION = 7;
    private static final String DATABASE_NAME = "OneSignal.db";
 
    private static final String INTEGER_PRIMARY_KEY_TYPE = " INTEGER PRIMARY KEY";
@@ -88,6 +89,15 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
                    CachedUniqueOutcomeNotificationTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
                    CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
                    CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME + TEXT_TYPE +
+                   ");";
+
+   private static final String SQL_CREATE_IN_APP_MESSAGE_ENTRIES =
+           "CREATE TABLE " + InAppMessageTable.TABLE_NAME + " (" +
+                   InAppMessageTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                   InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY + INT_TYPE + COMMA_SEP +
+                   InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + INT_TYPE + COMMA_SEP +
+                   InAppMessageTable.COLUMN_NAME_MESSAGE_ID + TEXT_TYPE + COMMA_SEP +
+                   InAppMessageTable.COLUMN_CLICK_IDS + TEXT_TYPE +
                    ");";
 
    protected static final String[] SQL_INDEX_ENTRIES = {
@@ -149,6 +159,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       db.execSQL(SQL_CREATE_ENTRIES);
       db.execSQL(SQL_CREATE_OUTCOME_ENTRIES);
       db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES);
+      db.execSQL(SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
       for (String ind : SQL_INDEX_ENTRIES) {
          db.execSQL(ind);
       }
@@ -181,6 +192,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       // Specifically running only when going from 5 to 6+ is intentional
       if (oldVersion == 5)
          upgradeFromV5ToV6(db);
+
+      if (oldVersion < 7)
+         upgradeToV7(db);
    }
 
    // Add collapse_id field and index
@@ -225,6 +239,10 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    // Added for 3.12.2
    private static void upgradeFromV5ToV6(SQLiteDatabase db) {
       upgradeOutcomeTableRevision1To2(db);
+   }
+
+   private static void upgradeToV7(SQLiteDatabase db) {
+      safeExecSQL(db, SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
    }
 
    // On the outcome table this adds the new weight column and drops params column.
