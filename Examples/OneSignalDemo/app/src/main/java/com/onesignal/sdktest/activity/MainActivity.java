@@ -5,7 +5,6 @@ import android.support.design.widget.AppBarLayout;
 import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
 
-import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.model.ActivityViewModel;
 import com.onesignal.sdktest.model.MainActivityViewModel;
@@ -19,8 +18,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity_layout);
-
-        OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
 
         viewModel = new MainActivityViewModel()
                 .onActivityCreated(this)
