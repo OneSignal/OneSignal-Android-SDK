@@ -3,7 +3,6 @@ package com.onesignal.sdktest.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.onesignal.sdktest.constant.Key;
 import com.onesignal.sdktest.constant.Text;
 
 public class OneSignalPrefs {
@@ -14,7 +13,7 @@ public class OneSignalPrefs {
     private static final String PRIVACY_CONSENT_SHARED_PREF = "PRIVACY_CONSENT_SHARED_PREF";
     public static final String USER_EMAIL_SHARED_PREF = "USER_EMAIL_SHARED_PREF";
     public static final String USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF";
-    private static final String SUBSCRIPTION_SHARED_PREF = "SUBSCRIPTION_SHARED_PREF";
+    private static final String LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF";
 
     private static SharedPreferences getSharedPreference(Context context) {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE);
@@ -40,8 +39,8 @@ public class OneSignalPrefs {
         return getSharedPreference(context).getString(USER_EXTERNAL_USER_ID_SHARED_PREF, Text.EMPTY);
     }
 
-    public static boolean getCachedSubscriptionStatus(Context context) {
-        return getSharedPreference(context).getBoolean(SUBSCRIPTION_SHARED_PREF, true);
+    public static boolean getCachedLocationSharedStatus(Context context) {
+        return getSharedPreference(context).getBoolean(LOCATION_SHARED_PREF, true);
     }
 
     public static void cacheOneSignalAppId(Context context, String appId) {
@@ -60,8 +59,8 @@ public class OneSignalPrefs {
         getSharedPreference(context).edit().putString(USER_EXTERNAL_USER_ID_SHARED_PREF, userId).apply();
     }
 
-    public static void cacheSubscriptionStatus(Context context, boolean subscribed) {
-        getSharedPreference(context).edit().putBoolean(SUBSCRIPTION_SHARED_PREF, subscribed).apply();
+    public static void cacheLocationSharedStatus(Context context, boolean subscribed) {
+        getSharedPreference(context).edit().putBoolean(LOCATION_SHARED_PREF, subscribed).apply();
     }
 
     public static void clearCachedEmail(Context context) {

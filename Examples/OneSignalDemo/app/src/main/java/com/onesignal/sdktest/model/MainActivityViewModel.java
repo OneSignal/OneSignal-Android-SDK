@@ -19,6 +19,9 @@ import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import com.onesignal.OSEmailSubscriptionStateChanges;
+import com.onesignal.OSPermissionStateChanges;
+import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.adapter.InAppMessageRecyclerViewAdapter;
@@ -26,7 +29,6 @@ import com.onesignal.sdktest.adapter.NotificationRecyclerViewAdapter;
 import com.onesignal.sdktest.adapter.PairRecyclerViewAdapter;
 import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
 import com.onesignal.sdktest.callback.PairItemActionCallback;
-import com.onesignal.sdktest.callback.SendOutcomeAlertDialogCallback;
 import com.onesignal.sdktest.callback.UpdateAlertDialogCallback;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.type.InAppMessage;
@@ -120,6 +122,15 @@ public class MainActivityViewModel implements ActivityViewModel {
     private TextView inAppMessagingTitleTextView;
     private RecyclerView inAppMessagingRecyclerView;
     private InAppMessageRecyclerViewAdapter inAppMessagingRecyclerViewAdapter;
+
+    // Location
+    private TextView locationTitleTextView;
+    private RelativeLayout locationSharedRelativeLayout;
+    private TextView locationSharedTextView;
+    private TextView locationSharedDescriptionTextView;
+    private Switch locationSharedSwitch;
+    private Button promptLocationButton;
+
 
     // Settings
     private TextView settingTitleTextView;
@@ -215,6 +226,13 @@ public class MainActivityViewModel implements ActivityViewModel {
         inAppMessagingTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messaging_title_text_view);
         inAppMessagingRecyclerView = getActivity().findViewById(R.id.main_activity_in_app_messaging_recycler_view);
 
+        locationTitleTextView = getActivity().findViewById(R.id.main_activity_location_title_text_view);
+        locationSharedRelativeLayout = getActivity().findViewById(R.id.main_activity_location_shared_relative_layout);
+        locationSharedTextView = getActivity().findViewById(R.id.main_activity_location_shared_text_view);
+        locationSharedDescriptionTextView = getActivity().findViewById(R.id.main_activity_location_shared_info_text_view);
+        locationSharedSwitch = getActivity().findViewById(R.id.main_activity_location_shared_switch);
+        promptLocationButton = getActivity().findViewById(R.id.main_activity_location_prompt_location_button);
+
         settingTitleTextView = getActivity().findViewById(R.id.main_activity_settings_title_text_view);
         subscriptionRelativeLayout = getActivity().findViewById(R.id.main_activity_settings_subscription_relative_layout);
         subscriptionTextView = getActivity().findViewById(R.id.main_activity_settings_subscription_text_view);
@@ -263,6 +281,10 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(noTriggersTextView, font.saralaBold);
         font.applyFont(addTriggerButton, font.saralaBold);
         font.applyFont(inAppMessagingTitleTextView, font.saralaBold);
+        font.applyFont(locationTitleTextView, font.saralaBold);
+        font.applyFont(locationSharedTextView, font.saralaBold);
+        font.applyFont(locationSharedDescriptionTextView, font.saralaRegular);
+        font.applyFont(promptLocationButton, font.saralaBold);
         font.applyFont(settingTitleTextView, font.saralaBold);
         font.applyFont(subscriptionTextView, font.saralaBold);
         font.applyFont(subscriptionDescriptionTextView, font.saralaRegular);
@@ -295,6 +317,30 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     }
 
+    @Override
+    public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+
+    }
+
+    @Override
+    public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+        final boolean isSubscribed = OneSignal
+                .getPermissionSubscriptionState()
+                .getSubscriptionStatus()
+                .getSubscribed();
+
+        boolean isPermissionEnabled = stateChanges.getTo().getEnabled();
+        subscriptionSwitch.setEnabled(isPermissionEnabled);
+        subscriptionSwitch.setChecked(isSubscribed);
+    }
+
+    @Override
+    public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+        boolean isSubscribed = stateChanges.getTo().getSubscribed();
+        subscriptionSwitch.setChecked(isSubscribed);
+        OneSignalPrefs.cacheLocationSharedStatus(context, isSubscribed);
+    }
+
     private void setupConsentLayout(boolean hasConsent) {
         int consentVisibility = hasConsent ? View.GONE : View.VISIBLE;
         int scrollVisibility = hasConsent ? View.VISIBLE : View.GONE;
@@ -319,6 +365,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         setupOutcomeLayout();
         setupTriggersLayout();
         setupInAppMessagingLayout();
+        setupLocationLayout();
         setupSettingsLayout();
     }
 
@@ -397,6 +444,113 @@ public class MainActivityViewModel implements ActivityViewModel {
 
                     }
                 });
+            }
+        });
+    }
+
+    private void setupLocationLayout() {
+        setupLocationSharedSwitch();
+        setupPromptLocationButton();
+    }
+
+    private void setupLocationSharedSwitch() {
+        locationSharedRelativeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean isLocationShared = !locationSharedSwitch.isChecked();
+                locationSharedSwitch.setChecked(isLocationShared);
+                OneSignalPrefs.cacheLocationSharedStatus(context, isLocationShared);
+            }
+        });
+
+        boolean isLocationShared = OneSignalPrefs.getCachedLocationSharedStatus(context);
+        locationSharedSwitch.setChecked(isLocationShared);
+        locationSharedSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                OneSignal.setLocationShared(isChecked);
+            }
+        });
+    }
+
+    private void setupPromptLocationButton() {
+        promptLocationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                OneSignal.promptLocation();
+            }
+        });
+    }
+
+    public void setupSettingsLayout() {
+        setupSubscriptionSwitch();
+        setupPauseInAppMessagesSwitch();
+        setupRevokeConsentButton();
+    }
+
+    private void setupSubscriptionSwitch() {
+        boolean isPermissionEnabled = OneSignal
+                .getPermissionSubscriptionState()
+                .getPermissionStatus()
+                .getEnabled();
+
+        final boolean isSubscribed = OneSignal
+                .getPermissionSubscriptionState()
+                .getSubscriptionStatus()
+                .getSubscribed();
+
+        subscriptionSwitch.setEnabled(isPermissionEnabled);
+        subscriptionSwitch.setChecked(isSubscribed);
+
+        if (isPermissionEnabled) {
+            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean isSubscribed = subscriptionSwitch.isChecked();
+                    subscriptionSwitch.setChecked(!isSubscribed);
+                    OneSignal.setSubscription(!isSubscribed);
+                }
+            });
+        } else {
+            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    intentTo.notificationPermissions();
+                }
+            });
+        }
+
+        subscriptionSwitch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean isSubscribed = subscriptionSwitch.isChecked();
+                OneSignal.setSubscription(!isSubscribed);
+            }
+        });
+    }
+
+    private void setupPauseInAppMessagesSwitch() {
+        pauseInAppMessagesRelativeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
+                pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
+            }
+        });
+
+        pauseInAppMessagesSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                OneSignal.pauseInAppMessages(isChecked);
+            }
+        });
+    }
+
+    private void setupRevokeConsentButton() {
+        revokeConsentButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                togglePrivacyConsent(false);
             }
         });
     }
@@ -580,78 +734,6 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         inAppMessagingRecyclerViewAdapter = new InAppMessageRecyclerViewAdapter(context, InAppMessage.values());
         inAppMessagingRecyclerView.setAdapter(inAppMessagingRecyclerViewAdapter);
-    }
-
-    public void setupSettingsLayout() {
-        setupSubscriptionSwitch();
-        setupPauseInAppMessagesSwitch();
-        setupRevokeConsentButton();
-    }
-
-    private void setupSubscriptionSwitch() {
-        boolean isPermissionEnabled = OneSignal
-                .getPermissionSubscriptionState()
-                .getPermissionStatus()
-                .getEnabled();
-
-        final boolean isSubscribed = OneSignal
-                .getPermissionSubscriptionState()
-                .getSubscriptionStatus()
-                .getSubscribed();
-
-        subscriptionSwitch.setEnabled(isPermissionEnabled);
-        subscriptionSwitch.setChecked(isSubscribed);
-
-        if (isPermissionEnabled) {
-            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    boolean isSubscribed = subscriptionSwitch.isChecked();
-                    subscriptionSwitch.setChecked(!isSubscribed);
-                }
-            });
-        } else {
-            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    intentTo.notificationPermissions();
-                }
-            });
-        }
-
-        subscriptionSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                OneSignal.setSubscription(isChecked);
-                OneSignalPrefs.cacheSubscriptionStatus(context, isChecked);
-            }
-        });
-    }
-
-    private void setupPauseInAppMessagesSwitch() {
-        pauseInAppMessagesRelativeLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
-                pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
-            }
-        });
-
-        pauseInAppMessagesSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                OneSignal.pauseInAppMessages(isChecked);
-            }
-        });
-    }
-
-    private void setupRevokeConsentButton() {
-        revokeConsentButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                togglePrivacyConsent(false);
-            }
-        });
     }
 
     public boolean shouldScrollToTop() {
