@@ -6,6 +6,9 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
+import com.onesignal.OSEmailSubscriptionStateChanges;
+import com.onesignal.OSPermissionStateChanges;
+import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.callback.EmailUpdateCallback;
 import com.onesignal.sdktest.constant.Tag;
@@ -66,14 +69,29 @@ public class SplashActivityViewModel implements ActivityViewModel {
 
     }
 
+    @Override
+    public void onOSEmailSubscriptionChanged(OSEmailSubscriptionStateChanges stateChanges) {
+
+    }
+
+    @Override
+    public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
+
+    }
+
+    @Override
+    public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
+
+    }
+
     private void setupOneSignalSDK() {
         boolean privacyConsent = true;
         OneSignal.setRequiresUserPrivacyConsent(privacyConsent);
-        Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
 
-        boolean isSubscribed = OneSignalPrefs.getCachedSubscriptionStatus(context);
-        OneSignal.setSubscription(isSubscribed);
-        Log.d(Tag.DEBUG, Text.SUBSCRIPTION_STATUS_SET + ": " + isSubscribed);
+        boolean isLocationShared = OneSignalPrefs.getCachedLocationSharedStatus(context);
+        OneSignal.setLocationShared(isLocationShared);
+
+        Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
 
         boolean isEmailCached = attemptSignIn(new EmailUpdateCallback() {
             @Override

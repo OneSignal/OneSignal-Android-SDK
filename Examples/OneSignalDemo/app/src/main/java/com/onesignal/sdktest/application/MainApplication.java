@@ -16,10 +16,12 @@ public class MainApplication extends Application {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
         // OneSignal Initialization
-        OneSignal.startInit(this)
-                .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
-                .unsubscribeWhenNotificationsAreDisabled(true)
-                .init();
+        OneSignal.init(this, "REMOTE", "<enter_your_app_id_here>");
+        OneSignal.getCurrentOrNewInitBuilder().unsubscribeWhenNotificationsAreDisabled(true);
+
+        OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+        OneSignal.setLocationShared(false);
+
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
     }
 

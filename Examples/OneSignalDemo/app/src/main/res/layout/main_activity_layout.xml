@@ -300,6 +300,297 @@
             </LinearLayout>
 
 
+            <!-- Location -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_location_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_location_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/location"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Location Shared -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_location_shared_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="16dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_location_shared_switch"
+                                android:paddingEnd="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_location_shared_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/location_shared_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_location_shared_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/location_shared_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_location_shared_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme"/>
+
+                        </RelativeLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_location_prompt_location_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/prompt_location"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+
+            <!-- Settings -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_settings_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_settings_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/settings"
+                    android:textColor="@color/colorDarkText"/>
+
+                <android.support.v7.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Subscription -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_settings_subscription_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="16dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_settings_subscription_switch"
+                                android:paddingEnd="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_subscription_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/subscribe_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_subscription_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/app_settings_notifications_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_settings_subscription_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme"/>
+
+                        </RelativeLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/colorDivider"/>
+
+
+                        <!-- Pause In-App Messages -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_settings_pause_in_app_messages_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="16dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_settings_pause_in_app_messages_switch"
+                                android:paddingEnd="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_pause_in_app_messages_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/pause_in_app_messages_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_settings_pause_in_app_messages_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/app_settings_pause_in_app_messages_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_settings_pause_in_app_messages_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme"/>
+
+                        </RelativeLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_settings_revoke_consent_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/revoke_consent"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </android.support.v7.widget.CardView>
+
+            </LinearLayout>
+
+
             <!-- Tags -->
 
             <LinearLayout
@@ -734,181 +1025,6 @@
                     <!-- Populated with the In App Message enum -->
 
                 </android.support.v7.widget.RecyclerView>
-
-            </LinearLayout>
-
-
-            <!-- Settings -->
-
-            <LinearLayout
-                android:id="@+id/main_activity_settings_linear_layout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipChildren="false"
-                android:clipToPadding="false"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/main_activity_settings_title_text_view"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
-                    android:layout_marginStart="12dp"
-                    android:text="@string/settings"
-                    android:textColor="@color/colorDarkText"/>
-
-                <android.support.v7.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <!-- Subscription -->
-
-                        <RelativeLayout
-                            android:id="@+id/main_activity_settings_subscription_relative_layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="16dp"
-                            android:clipChildren="false"
-                            android:clipToPadding="false"
-                            android:background="@drawable/ripple_selector_red_white">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentStart="true"
-                                android:layout_centerVertical="true"
-                                android:layout_toStartOf="@id/main_activity_settings_subscription_switch"
-                                android:paddingEnd="6dp"
-                                android:clipChildren="false"
-                                android:clipToPadding="false"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/main_activity_settings_subscription_text_view"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/subscribe_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
-
-                                <TextView
-                                    android:id="@+id/main_activity_settings_subscription_info_text_view"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/app_settings_notifications_description"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
-
-                            </LinearLayout>
-
-                            <Switch
-                                android:id="@+id/main_activity_settings_subscription_switch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:theme="@style/SwitchTheme"/>
-
-                        </RelativeLayout>
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="@color/colorDivider"/>
-
-
-                        <!-- Pause In-App Messages -->
-
-                        <RelativeLayout
-                            android:id="@+id/main_activity_settings_pause_in_app_messages_relative_layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="16dp"
-                            android:clipChildren="false"
-                            android:clipToPadding="false"
-                            android:background="@drawable/ripple_selector_red_white">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentStart="true"
-                                android:layout_centerVertical="true"
-                                android:layout_toStartOf="@id/main_activity_settings_pause_in_app_messages_switch"
-                                android:paddingEnd="6dp"
-                                android:clipChildren="false"
-                                android:clipToPadding="false"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/main_activity_settings_pause_in_app_messages_text_view"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/pause_in_app_messages_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
-
-                                <TextView
-                                    android:id="@+id/main_activity_settings_pause_in_app_messages_info_text_view"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/app_settings_pause_in_app_messages_description"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
-
-                            </LinearLayout>
-
-                            <Switch
-                                android:id="@+id/main_activity_settings_pause_in_app_messages_switch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:theme="@style/SwitchTheme"/>
-
-                        </RelativeLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:layout_gravity="center"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
-
-                            <Button
-                                android:id="@+id/main_activity_settings_revoke_consent_button"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:text="@string/revoke_consent"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
-
-                        </LinearLayout>
-
-                    </LinearLayout>
-
-                </android.support.v7.widget.CardView>
 
             </LinearLayout>
 
