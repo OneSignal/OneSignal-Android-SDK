@@ -140,7 +140,7 @@ class OneSignalPrefs {
 
         private void flushBufferToDisk() {
             // A flush will be triggered later once a context is set via OneSignal.setAppContext(...)
-            if (OneSignal.appContext == null)
+            if (!OneSignal.isInitDone())
                 return;
 
             for (String pref : prefsToApply.keySet()) {
