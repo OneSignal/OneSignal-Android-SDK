@@ -559,6 +559,7 @@ public class OneSignal {
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
       setupActivityLifecycleListener(wasAppContextNull);
+      setupPrivacyConsent(appContext);
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
@@ -572,16 +573,12 @@ public class OneSignal {
 
    public static void setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler callback) {
       notificationWillShowInForegroundHandler = callback;
-
-      if (appId != null && appContext != null)
-         init();
    }
 
    public static void setNotificationOpenedHandler(NotificationOpenedHandler callback) {
       notificationOpenedHandler = callback;
-
-      if (appId != null && appContext != null)
-         init();
+      if (appContext != null)
+        setAppContext(appContext);
    }
 
    public static void setInAppMessageClickHandler(InAppMessageClickHandler callback) {
@@ -591,9 +588,7 @@ public class OneSignal {
    /**
     * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
     */
-   private static void init() {
-      setupPrivacyConsent(appContext);
-
+   synchronized private static void init() {
       if (requiresUserPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.WARN, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
          delayedInitParams = new DelayedConsentInitializationParameters(appContext, googleProjectNumber, appId, notificationWillShowInForegroundHandler, notificationOpenedHandler);
@@ -1001,7 +996,8 @@ public class OneSignal {
 
       delayedInitParams = null;
 
-      setAppContext(appContext);
+       if (appContext != null)
+           setAppContext(appContext);
    }
 
    public static void setRequiresUserPrivacyConsent(boolean required) {
@@ -1156,11 +1152,6 @@ public class OneSignal {
 
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
-
-      if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "Android Context not found, please call OneSignal.init when your app starts.");
-         return;
-      }
 
       FocusTimeController.getInstance().appBackgrounded();
 
@@ -1317,7 +1308,7 @@ public class OneSignal {
       };
 
       //If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling syncHashedEmail! " +
                  "Moving this operation to a pending task queue.");
          addTaskToQueue(new PendingTaskRunnable(runSyncHashedEmail));
@@ -1387,7 +1378,7 @@ public class OneSignal {
       };
 
       // If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling setEmail! " +
                  "Moving this operation to a pending task queue.");
          addTaskToQueue(new PendingTaskRunnable(runSetEmail));
@@ -1429,7 +1420,7 @@ public class OneSignal {
       };
 
       // If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling logoutEmail! " +
                  "Moving this operation to a pending task queue.");
          addTaskToQueue(new PendingTaskRunnable(emailLogout));
@@ -1457,7 +1448,7 @@ public class OneSignal {
       };
 
       // If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          addTaskToQueue(new PendingTaskRunnable(runSetExternalUserId));
          return;
       }
@@ -1580,7 +1571,7 @@ public class OneSignal {
       };
 
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before modifying tags!" +
                  "Moving this operation to a pending task queue.");
          if (changeTagsUpdateHandler != null)
@@ -1706,7 +1697,7 @@ public class OneSignal {
                if (pendingGetTagsHandlers.size() > 1) return;
             }
 
-            if (appContext == null) {
+            if (!initDone) {
                Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
                        "Moving this tag operation to a pending queue.");
                taskQueueWaitingForInit.add(new Runnable() {
@@ -1842,7 +1833,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "You must initialize OneSignal before getting tags! " +
                  "Moving this tag operation to a pending queue.");
          addTaskToQueue(new PendingTaskRunnable(runIdsAvailable));
@@ -2363,7 +2354,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Moving subscription action to a waiting task queue.");
          addTaskToQueue(new PendingTaskRunnable(runSetSubscription));
@@ -2432,7 +2423,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not prompt for location at this time - moving this operation to a" +
                  "waiting queue.");
@@ -2513,7 +2504,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not clear notifications at this time - moving this operation to" +
                  "a waiting task queue.");
@@ -2571,7 +2562,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not clear notification id: " + id + " at this time - moving" +
                  "this operation to a waiting task queue. The notification will still be canceled" +
@@ -2660,7 +2651,7 @@ public class OneSignal {
          }
       };
 
-      if (appContext == null || shouldRunTaskThroughQueue()) {
+      if (!initDone || shouldRunTaskThroughQueue()) {
          Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
                  "Could not clear notifications part of group " + group + " - moving" +
                  "this operation to a waiting task queue.");
