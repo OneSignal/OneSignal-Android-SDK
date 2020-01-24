@@ -68,13 +68,11 @@ import static junit.framework.Assert.assertTrue;
         },
         sdk = 26
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingUnitTests {
 
     private static final double REQUIRED_TIMER_ACCURACY = 1.25;
     private static OSTestInAppMessage message;
-
 
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;

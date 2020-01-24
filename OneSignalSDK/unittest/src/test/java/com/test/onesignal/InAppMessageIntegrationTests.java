@@ -72,9 +72,9 @@ import static junit.framework.Assert.assertFalse;
         },
         sdk = 21
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessageIntegrationTests {
+
     private static final String IAM_CLICK_ID = "button_id_123";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
 

@@ -159,7 +159,6 @@ import static org.robolectric.Shadows.shadowOf;
         },
         sdk = 21
 )
-
 @RunWith(RobolectricTestRunner.class)
 // Enable to ensure test order to consistency debug flaky test.
 // @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -167,12 +166,13 @@ public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
+
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
+   private static ActivityController<BlankActivity> blankActivityController;
    private static String callBackUseId, getCallBackRegId;
    private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
-   private static ActivityController<BlankActivity> blankActivityController;
    private MockOutcomesUtils notificationData;
 
    private static void GetIdsAvailable() {
@@ -827,8 +827,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldCorrectlyRemoveOpenedHandlerAndFireMissedOnesWhenAddedBack() throws Exception {
-      OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(blankActivity);
+      OneSignalInit();
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
 
@@ -836,16 +835,14 @@ public class MainOneSignalClassRunner {
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(notificationOpenedMessage);
 
-      OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(blankActivity);
+      OneSignalInit();
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
    public void shouldNotFireNotificationOpenAgainAfterAppRestart() throws Exception {
-      OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(blankActivity);
+      OneSignalInit();
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
 
       threadAndTaskWait();
@@ -942,6 +939,7 @@ public class MainOneSignalClassRunner {
          }
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
+      blankActivityController.resume();
       threadAndTaskWait();
 
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
@@ -1084,6 +1082,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testSetSubscriptionShouldNotOverrideSubscribeError() throws Exception {
       OneSignalInitWithBadProjectNum();
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // Should not try to update server
@@ -1094,6 +1093,7 @@ public class MainOneSignalClassRunner {
       // Restart app - Should omit notification_types
       restartAppAndElapseTimeToNextSession();
       OneSignalInitWithBadProjectNum();
+      blankActivityController.resume();
       threadAndTaskWait();
       assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
    }
@@ -2474,27 +2474,28 @@ public class MainOneSignalClassRunner {
       assertEquals(3, ShadowOneSignalRestClient.requests.size());
    }
 
-   @Test
-   public void testMethodCallsBeforeInit() throws Exception {
-      GetTags();
-      OneSignal.sendTag("key", "value");
-      OneSignal.sendTags("{\"key\": \"value\"}");
-      OneSignal.deleteTag("key");
-      OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.setSubscription(false);
-      OneSignal.enableVibrate(false);
-      OneSignal.enableSound(false);
-      OneSignal.promptLocation();
-      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
-         @Override
-         public void onSuccess(JSONObject response) {}
-         @Override
-         public void onFailure(JSONObject response) {}
-      });
-
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationReceivedHandler();
+   // TODO: Builder method should be deleted?
+//   @Test
+//   public void testMethodCallsBeforeInit() throws Exception {
+//      GetTags();
+//      OneSignal.sendTag("key", "value");
+//      OneSignal.sendTags("{\"key\": \"value\"}");
+//      OneSignal.deleteTag("key");
+//      OneSignal.deleteTags("[\"key1\", \"key2\"]");
+//      OneSignal.setSubscription(false);
+//      OneSignal.enableVibrate(false);
+//      OneSignal.enableSound(false);
+//      OneSignal.promptLocation();
+//      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
+//         @Override
+//         public void onSuccess(JSONObject response) {}
+//         @Override
+//         public void onFailure(JSONObject response) {}
+//      });
+//
+//      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+//      OneSignal.removeNotificationOpenedHandler();
+//      OneSignal.removeNotificationWillShowInForegroundHandler();
 
 //      OneSignal.startInit(blankActivity).init();
 
@@ -2507,8 +2508,8 @@ public class MainOneSignalClassRunner {
 //      OneSignal.OSInFocusDisplayOption inFocusDisplayOption = (OneSignal.OSInFocusDisplayOption)OneSignal_Builder_mDisplayOption.get(builder);
 //      assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
 
-      threadAndTaskWait();
-   }
+//      threadAndTaskWait();
+//   }
 
    // ####### DeleteTags Tests ######
    @Test
@@ -2801,6 +2802,7 @@ public class MainOneSignalClassRunner {
 
       //privacy consent state should still be set to true (user consent required)
       OneSignalInit();
+      threadAndTaskWait();
 
       //the delayed params should now be set
       assertNotNull(OneSignalPackagePrivateHelper.OneSignal_delayedInitParams());
@@ -3284,7 +3286,9 @@ public class MainOneSignalClassRunner {
    @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class })
    public void shouldCancelAndClearNotifications() throws Exception {
       ShadowRoboNotificationManager.notifications.clear();
-      OneSignalInitFromApplication();
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
+      OneSignal_setGoogleProjectNumber("87654321");
       threadAndTaskWait();
 
       // Create 2 notifications
@@ -3976,24 +3980,25 @@ public class MainOneSignalClassRunner {
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
-      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
+      OneSignal_setGoogleProjectNumber("87654321");
       blankActivityController.resume();
    }
 
    private void OneSignalInitFromApplication() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity.getApplicationContext());
+      OneSignal_setGoogleProjectNumber("87654321");
+      blankActivityController.resume();
    }
 
    private void OneSignalInitWithBadProjectNum() {
       ShadowOSUtils.subscribableStatus = -6;
-      OneSignal_setGoogleProjectNumber("NOT A VALID Google project number");
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity.getApplicationContext());
+      OneSignal_setGoogleProjectNumber("NOT A VALID Google project number");
    }
 
    // For some reason Roboelctric does not automatically add this when it reads the AndroidManifest.xml

@@ -43,12 +43,11 @@ import static junit.framework.Assert.assertEquals;
         },
         sdk = 26
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class NotificationLimitManagerRunner {
 
-   private NotificationManager notificationManager;
    private BlankActivity blankActivity;
+   private NotificationManager notificationManager;
 
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
