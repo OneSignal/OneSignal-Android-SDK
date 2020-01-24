@@ -222,7 +222,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    @Override
-   public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+   public void notificationWillShowInForeground(OSNotification notification) {
       updateTextView("Received Notification: " + notification.toString());
    }
 

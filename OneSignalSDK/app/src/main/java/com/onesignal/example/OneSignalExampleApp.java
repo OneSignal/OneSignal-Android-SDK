@@ -36,7 +36,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.onesignal.OSNotificationOpenResult;
-import com.onesignal.OSNotificationWillShowInForeground;
+import com.onesignal.OSNotification;
 import com.onesignal.OneSignal;
 
 public class OneSignalExampleApp extends Application {
@@ -94,7 +94,7 @@ public class OneSignalExampleApp extends Application {
        * @param notification Contains information about the notification received.
        */
        @Override
-       public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+       public void notificationWillShowInForeground(OSNotification notification) {
            Log.w("OneSignalExample", "notificationReceived!!!!!!");
            DebuggingHelper.printObject(notification);
        }

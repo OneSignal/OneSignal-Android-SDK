@@ -50,10 +50,10 @@ import org.json.JSONObject;
  * {@link #groupedNotifications} - If the notification is a summary notification for a group, this will contain
  * all notification payloads it was created from.
  */
-public class OSNotificationWillShowInForeground {
+public class OSNotification {
 
    /**
-    * How the notification was displayed to the user. Part of {@link OSNotificationWillShowInForeground}.
+    * How the notification was displayed to the user. Part of {@link OSNotification}.
     */
    public enum DisplayType {
       // Notification shown in the notification shade.
@@ -66,10 +66,10 @@ public class OSNotificationWillShowInForeground {
       None
    }
    
-   public OSNotificationWillShowInForeground() {
+   public OSNotification() {
    }
    
-   public OSNotificationWillShowInForeground(JSONObject jsonObject) {
+   public OSNotification(JSONObject jsonObject) {
       isAppInFocus = jsonObject.optBoolean("isAppInFocus");
       shown = jsonObject.optBoolean("shown", shown);
       androidNotificationId = jsonObject.optInt("androidNotificationId");
