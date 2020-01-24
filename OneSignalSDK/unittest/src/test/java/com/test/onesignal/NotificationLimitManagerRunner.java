@@ -64,7 +64,8 @@ public class NotificationLimitManagerRunner {
       notificationManager = (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       TestHelpers.beforeTestInitAndCleanup();
 
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       threadAndTaskWait();
    }
