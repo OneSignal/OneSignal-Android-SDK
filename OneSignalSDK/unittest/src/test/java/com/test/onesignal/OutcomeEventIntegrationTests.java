@@ -750,7 +750,9 @@ public class OutcomeEventIntegrationTests {
     private void OneSignalInit() throws Exception {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
-        OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+        OneSignal.setAppId(ONESIGNAL_APP_ID);
+        OneSignal.setAppContext(blankActivity);
+        OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
         threadAndTaskWait();
         OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
         new MockOutcomesUtils().saveOutcomesParams(params);
@@ -760,7 +762,9 @@ public class OutcomeEventIntegrationTests {
     private void OneSignalInit(OneSignal.NotificationOpenedHandler notificationOpenedHandler) throws Exception {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
-        OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, notificationOpenedHandler);
+        OneSignal.setAppId(ONESIGNAL_APP_ID);
+        OneSignal.setAppContext(blankActivity);
+        OneSignal.setNotificationOpenedHandler(notificationOpenedHandler);
         threadAndTaskWait();
         OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
         new MockOutcomesUtils().saveOutcomesParams(params);

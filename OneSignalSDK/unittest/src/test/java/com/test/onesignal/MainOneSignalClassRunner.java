@@ -41,12 +41,11 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
-import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationWillShowInForeground;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
@@ -77,7 +76,6 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
-import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -89,7 +87,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -119,6 +116,7 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setGoogleProjectNumber;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
@@ -251,7 +249,9 @@ public class MainOneSignalClassRunner {
    @Test
    public void testInitFromApplicationContext() throws Exception {
       // Application.onCreate
-      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      OneSignal_setGoogleProjectNumber("123456789");
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(RuntimeEnvironment.application);
       threadAndTaskWait();
       // Testing we still register the user in the background if this is the first time. (Note Context is application)
       assertNotNull(ShadowOneSignalRestClient.lastPost);
@@ -260,7 +260,8 @@ public class MainOneSignalClassRunner {
       restartAppAndElapseTimeToNextSession();
 
       // Restart app, should not send onSession automatically
-      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(RuntimeEnvironment.application);
       threadAndTaskWait();
       assertNull(ShadowOneSignalRestClient.lastPost);
 
@@ -280,7 +281,7 @@ public class MainOneSignalClassRunner {
    @Config(sdk = 26)
    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
       OneSignal.setRequiresUserPrivacyConsent(true);
-      OneSignal.getCurrentOrNewInitBuilder().autoPromptLocation(true);
+      OneSignal.autoPromptLocation(true);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -768,7 +769,9 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -793,7 +796,9 @@ public class MainOneSignalClassRunner {
       // Don't fire the mock callback, it will be done from the real class.
       ShadowPushRegistratorGCM.skipComplete = true;
 
-      OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
+//      OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       assertEquals(-6, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
@@ -812,7 +817,9 @@ public class MainOneSignalClassRunner {
       // Don't fire the mock callback, it will be done from the real class.
 //      ShadowPushRegistratorGCM.skipComplete = true;
 
-      OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
+//      OneSignal.init(blankActivity, null, ONESIGNAL_APP_ID);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       testHelper.assertChannelsForBasicChannelList();
@@ -820,20 +827,26 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldCorrectlyRemoveOpenedHandlerAndFireMissedOnesWhenAddedBack() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
 
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(notificationOpenedMessage);
 
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertEquals("Robo test message", notificationOpenedMessage);
    }
 
    @Test
    public void shouldNotFireNotificationOpenAgainAfterAppRestart() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -846,7 +859,9 @@ public class MainOneSignalClassRunner {
 
       // Restart app - Should omit notification_types
       StaticResetHelper.restSetStaticFields();
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
 
       threadAndTaskWait();
 
@@ -902,7 +917,9 @@ public class MainOneSignalClassRunner {
 
       // From app launching normally
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertNull(notificationOpenedMessage);
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
@@ -915,13 +932,16 @@ public class MainOneSignalClassRunner {
    private static int androidNotificationId;
    @Test
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationReceived(OSNotification notification) {
+         public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
             androidNotificationId = notification.androidNotificationId;
             notificationReceivedBody = notification.payload.body;
          }
       });
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
 
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
@@ -966,7 +986,8 @@ public class MainOneSignalClassRunner {
       ShadowBadgeCountUpdater.lastCount = -1;
 
       // First run should set badge to 0
-      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(RuntimeEnvironment.application);
       threadAndTaskWait();
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
 
@@ -978,7 +999,8 @@ public class MainOneSignalClassRunner {
 
       // Nor an app restart
       StaticResetHelper.restSetStaticFields();
-      OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(RuntimeEnvironment.application);
       threadAndTaskWait();
       assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
    }
@@ -1205,7 +1227,8 @@ public class MainOneSignalClassRunner {
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
       fastColdRestartApp();
-      OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
+      OneSignal.setAppId("99f7f966-d8cc-11e4-bed1-df8f05be55b2");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
@@ -1221,7 +1244,8 @@ public class MainOneSignalClassRunner {
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
       ShadowOneSignalRestClient.resetStatics();
-      OneSignal.init(blankActivity, "123456789", "99f7f966-d8cc-11e4-bed1-df8f05be55b2");
+      OneSignal.setAppId("99f7f966-d8cc-11e4-bed1-df8f05be55b2");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
@@ -1807,7 +1831,8 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldCreatePlayerAfterDelayedTokenFromApplicationOnCreate() throws Exception {
       ShadowPushRegistratorGCM.skipComplete = true;
-      OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -2471,16 +2496,16 @@ public class MainOneSignalClassRunner {
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationReceivedHandler();
 
-      OneSignal.startInit(blankActivity).init();
+//      OneSignal.startInit(blankActivity).init();
 
-      // Checks that Notification setting worked.
-      Field OneSignal_mInitBuilder = OneSignal.class.getDeclaredField("mInitBuilder");
-      OneSignal_mInitBuilder.setAccessible(true);
-      OneSignal.Builder builder = (OneSignal.Builder)OneSignal_mInitBuilder.get(null);
-      Field OneSignal_Builder_mDisplayOption = builder.getClass().getDeclaredField("mDisplayOption");
-      OneSignal_Builder_mDisplayOption.setAccessible(true);
-      OneSignal.OSInFocusDisplayOption inFocusDisplayOption = (OneSignal.OSInFocusDisplayOption)OneSignal_Builder_mDisplayOption.get(builder);
-      assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
+//       Checks that Notification setting worked.
+//      Field OneSignal_mInitBuilder = OneSignal.class.getDeclaredField("mInitBuilder");
+//      OneSignal_mInitBuilder.setAccessible(true);
+//      OneSignal.Builder builder = (OneSignal.Builder)OneSignal_mInitBuilder.get(null);
+//      Field OneSignal_Builder_mDisplayOption = builder.getClass().getDeclaredField("mDisplayOption");
+//      OneSignal_Builder_mDisplayOption.setAccessible(true);
+//      OneSignal.OSInFocusDisplayOption inFocusDisplayOption = (OneSignal.OSInFocusDisplayOption)OneSignal_Builder_mDisplayOption.get(builder);
+//      assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
 
       threadAndTaskWait();
    }
@@ -2754,7 +2779,9 @@ public class MainOneSignalClassRunner {
 
       // Provide consent to OneSignal SDK amd forward time 2 minutes
       OneSignal.provideUserConsent(true);
-      threadAndTaskWait();
+      // TODO: This passed without a resume here, why?
+      blankActivityController.resume();
+
       advanceSystemTimeBy(2 * 60);
       blankActivityController.pause();
       threadAndTaskWait();
@@ -3291,7 +3318,7 @@ public class MainOneSignalClassRunner {
    // ####### Unit test toJSONObject methods
    @Test
    public void testOSNotificationToJSONObject() throws Exception {
-      OSNotification osNotification = createTestOSNotification();
+      OSNotificationWillShowInForeground osNotification = createTestOSNotification();
 
       JSONObject testJsonObj = osNotification.toJSONObject();
 
@@ -3397,8 +3424,9 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldSetNotificationTypesToZeroWhenUnsubscribeWhenNotificationsAreDisabledIsEnabled() throws Exception {
       ShadowNotificationManagerCompat.enabled = false;
-      OneSignal.startInit(blankActivity).unsubscribeWhenNotificationsAreDisabled(true).init();
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
@@ -3452,6 +3480,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldFireSubscriptionObserverWhenUserDisablesNotifications() throws Exception {
+//      OneSignal.unsubscribeWhenNotificationsAreDisabled(false);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3682,7 +3711,9 @@ public class MainOneSignalClassRunner {
 
       // Assert that another open isn't trigger later when the unprocessed opens are fired
       ShadowFirebaseAnalytics.lastEventString = null;
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertNull(ShadowFirebaseAnalytics.lastEventString);
    }
 
@@ -3708,15 +3739,21 @@ public class MainOneSignalClassRunner {
       assertEquals(expectedBundle.toString(), ShadowFirebaseAnalytics.lastEventBundle.toString());
 
       // Assert that another receive isn't trigger later when the unprocessed receives are fired
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler(), new OneSignal.NotificationReceivedHandler() {
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationReceived(OSNotification notification) {
+         public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+
          }
       });
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
 
       ShadowFirebaseAnalytics.lastEventString = null;
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID, getNotificationOpenedHandler());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertNull(ShadowFirebaseAnalytics.lastEventString);
    }
 
@@ -3914,8 +3951,8 @@ public class MainOneSignalClassRunner {
 
    // ####### Unit test helper methods ########
 
-   private static OSNotification createTestOSNotification() throws Exception {
-      OSNotification osNotification = new OSNotification();
+   private static OSNotificationWillShowInForeground createTestOSNotification() throws Exception {
+      OSNotificationWillShowInForeground osNotification = new OSNotificationWillShowInForeground();
 
       osNotification.payload = new OSNotificationPayload();
       osNotification.payload.body = "msg_body";
@@ -3926,7 +3963,7 @@ public class MainOneSignalClassRunner {
       actionButton.id = "id";
       osNotification.payload.actionButtons.add(actionButton);
 
-      osNotification.displayType = OSNotification.DisplayType.None;
+      osNotification.displayType = OSNotificationWillShowInForeground.DisplayType.None;
 
       osNotification.groupedNotifications = new ArrayList<>();
       OSNotificationPayload groupedPayload = new OSNotificationPayload();
@@ -3939,18 +3976,24 @@ public class MainOneSignalClassRunner {
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
-      OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      OneSignal_setGoogleProjectNumber("123456789");
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
       blankActivityController.resume();
    }
 
    private void OneSignalInitFromApplication() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-      OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+      OneSignal_setGoogleProjectNumber("123456789");
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
    }
 
    private void OneSignalInitWithBadProjectNum() {
       ShadowOSUtils.subscribableStatus = -6;
-      OneSignal.init(blankActivity, "NOT A VALID Google project number", ONESIGNAL_APP_ID);
+      OneSignal_setGoogleProjectNumber("NOT A VALID Google project number");
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
    }
 
    // For some reason Roboelctric does not automatically add this when it reads the AndroidManifest.xml

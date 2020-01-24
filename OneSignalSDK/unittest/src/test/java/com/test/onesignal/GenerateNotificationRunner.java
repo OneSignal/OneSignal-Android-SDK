@@ -52,10 +52,10 @@ import com.onesignal.BundleCompat;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
-import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationWillShowInForeground;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
-import com.onesignal.OSNotificationReceivedResult;
+import com.onesignal.OSNotificationWillShowInForegroundResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
@@ -105,6 +105,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setGoogleProjectNumber;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGroup;
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
@@ -243,7 +244,9 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", new OneSignal.NotificationOpenedHandler() {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
          @Override
          public void notificationOpened(OSNotificationOpenResult result) {
             lastOpenResult = result;
@@ -282,7 +285,8 @@ public class GenerateNotificationRunner {
    public void shouldSetCorrectNumberOfButtonsOnSummaryNotification() throws Exception {
       // Setup - Init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
    
       // Setup - Display a single notification with a grouped.
@@ -304,7 +308,8 @@ public class GenerateNotificationRunner {
    public void shouldCancelAllNotificationsPartOfAGroup() throws Exception {
       // Setup - Init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
       
       // Setup - Display 3 notifications, 2 of which that will be grouped together.
@@ -328,7 +333,8 @@ public class GenerateNotificationRunner {
    @Test
    @Config(sdk = Build.VERSION_CODES.N)
    public void testFourNotificationsUseProvidedGroup() throws Exception {
-      OneSignal.init(blankActivity.getApplicationContext(), "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
       threadAndTaskWait();
 
       // Add 4 grouped notifications
@@ -340,7 +346,8 @@ public class GenerateNotificationRunner {
    @Test
    @Config(sdk = Build.VERSION_CODES.N)
    public void testFourGrouplessNotificationsUseDefaultGroup() throws Exception {
-      OneSignal.init(blankActivity.getApplicationContext(), "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
       threadAndTaskWait();
 
       // Add 4 groupless notifications
@@ -353,7 +360,8 @@ public class GenerateNotificationRunner {
     @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
     public void testNotifDismissAllOnGroupSummaryClickForAndroidUnderM() throws Exception {
         OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-        OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+        OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+        OneSignal.setAppContext(blankActivity);
         threadAndTaskWait();
 
         SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -369,7 +377,8 @@ public class GenerateNotificationRunner {
     @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
     public void testNotifDismissRecentOnGroupSummaryClickForAndroidUnderM() throws Exception {
         OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-        OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+        OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+        OneSignal.setAppContext(blankActivity);
         threadAndTaskWait();
 
         SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -385,7 +394,8 @@ public class GenerateNotificationRunner {
    @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissAllOnGroupSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -401,7 +411,8 @@ public class GenerateNotificationRunner {
    @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissRecentOnGroupSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -417,7 +428,8 @@ public class GenerateNotificationRunner {
    @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissAllOnGrouplessSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -433,7 +445,8 @@ public class GenerateNotificationRunner {
    @Config(sdk = Build.VERSION_CODES.N)
    public void testNotifDismissRecentOnGrouplessSummaryClick() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
@@ -473,7 +486,8 @@ public class GenerateNotificationRunner {
    @Config(sdk = Build.VERSION_CODES.N)
    public void testGrouplessSummaryKeyReassignmentAtFourOrMoreNotification() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       // Add 3 groupless notifications
@@ -543,7 +557,8 @@ public class GenerateNotificationRunner {
    public void shouldCancelNotificationAndUpdateSummary() throws Exception {
       // Setup - Init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
       runImplicitServices(); // Flushes out other services, seems to be a roboelectric bug
       
@@ -647,7 +662,8 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldNotSetBadgesWhenNotificationPermissionIsDisabled() throws Exception {
       ShadowNotificationManagerCompat.enabled = false;
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
       
       Bundle bundle = getBaseNotifBundle();
@@ -695,7 +711,8 @@ public class GenerateNotificationRunner {
    public void shouldUpdateNormalNotificationDisplayWhenReplacingANotification() throws Exception {
       // Setup - init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
    
       // Setup - Display 2 notifications with the same group and collapse_id
@@ -963,7 +980,8 @@ public class GenerateNotificationRunner {
    public void shouldNotDisplaySummaryWhenDismissingAnInAppAlertIfOneDidntAlreadyExist() throws Exception {
       // Setup - init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
    
       // Setup1 - Display a notification with a group set
@@ -992,7 +1010,8 @@ public class GenerateNotificationRunner {
    public void shouldCorrectlyDisplaySummaryWithMixedInAppAlertsAndNotifications() throws Exception {
       // Setup - init
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
    
       // Setup - Display a notification with a group set
@@ -1070,7 +1089,7 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldAddDefaultButtonToAlertDialog() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
-      OneSignal.startInit(blankActivity).init();
+//      OneSignal.startInit(blankActivity).init();
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
@@ -1086,7 +1105,10 @@ public class GenerateNotificationRunner {
    @Config(shadows = {ShadowGcmBroadcastReceiver.class})
    public void shouldPreventOtherGCMReceiversWhenSettingEnabled() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
-      OneSignal.startInit(blankActivity).filterOtherGCMReceivers(true).init();
+//      OneSignal.startInit(blankActivity).filterOtherGCMReceivers(true).init();
+      OneSignal.filterOtherGCMReceivers(true);
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       Intent intentGcm = new Intent();
@@ -1160,7 +1182,9 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenInFocus() throws Exception {
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal_setGoogleProjectNumber("123456789");
       threadAndTaskWait();
 
       Intent intentGcm = new Intent();
@@ -1177,7 +1201,9 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenOpeningPreviewNotification() throws Exception {
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal_setGoogleProjectNumber("123456789");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       Bundle bundle = new Bundle();
@@ -1198,7 +1224,8 @@ public class GenerateNotificationRunner {
    @Config(shadows = { ShadowReceiveReceiptController.class })
    public void shouldSendReceivedReceiptWhenEnabled() throws Exception {
       String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
-      OneSignal.init(blankActivity, "123456789", appId);
+      OneSignal.setAppId(appId);
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
       threadAndTaskWait();
@@ -1213,7 +1240,8 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldNotSendReceivedReceiptWhenDisabled() throws Exception {
       String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
-      OneSignal.init(blankActivity, "123456789", appId);
+      OneSignal.setAppId(appId);
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
       threadAndTaskWait();
@@ -1222,16 +1250,19 @@ public class GenerateNotificationRunner {
    }
 
    
-   private OSNotification lastNotificationReceived;
+   private OSNotificationWillShowInForeground lastNotificationReceived;
    @Test
    public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", null, new OneSignal.NotificationReceivedHandler() {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationReceived(OSNotification notification) {
+         public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
             lastNotificationReceived = notification;
          }
       });
+      OneSignal.setNotificationOpenedHandler(null);
       threadAndTaskWait();
 
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()),
@@ -1243,7 +1274,8 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldNotFailedNotificationExtenderServiceWhenAlertIsNull() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
@@ -1374,7 +1406,7 @@ public class GenerateNotificationRunner {
       NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
                                                                           NotificationExtenderServiceTest.class);
 
-      OSNotificationReceivedResult notificationReceived = service.notification;
+      OSNotificationWillShowInForegroundResult notificationReceived = service.notification;
       OSNotificationPayload notificationPayload = notificationReceived.payload;
       assertEquals("Test H", notificationPayload.title);
       assertEquals("Test B", notificationPayload.body);
@@ -1487,13 +1519,13 @@ public class GenerateNotificationRunner {
    
    static int overrideNotificationId;
    public static class NotificationExtenderServiceTest extends NotificationExtenderServiceTestBase {
-      public OSNotificationReceivedResult notification;
+      public OSNotificationWillShowInForegroundResult notification;
       public int notificationId = -1;
       public static boolean throwInAppCode;
     
 
       @Override
-      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+      protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
          if (throwInAppCode)
             throw new NullPointerException();
 
@@ -1512,7 +1544,7 @@ public class GenerateNotificationRunner {
    public static class NotificationExtenderServiceOverrideProperties extends NotificationExtenderServiceTestBase {
       
       @Override
-      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+      protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
          
          OverrideSettings overrideSettings = new OverrideSettings();
          overrideSettings.extender = new NotificationCompat.Extender() {
@@ -1546,7 +1578,7 @@ public class GenerateNotificationRunner {
    
    public static class NotificationExtenderServiceTestReturnFalse extends NotificationExtenderServiceTest {
       @Override
-      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+      protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
          return false;
       }
    }

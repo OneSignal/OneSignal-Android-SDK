@@ -360,14 +360,16 @@ public class InAppMessageIntegrationTests {
     public void useCachedInAppListOnQuickColdRestartWhenInitFromAppClass() throws Exception {
         // 1. Start app
         nextResponseMultiplePendingMessages();
-        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+        OneSignal.setAppId(ONESIGNAL_APP_ID);
+        OneSignal.setAppContext(blankActivity.getApplicationContext());
         blankActivityController.resume();
         threadAndTaskWait();
 
         // 2. Swipe away app
         fastColdRestartApp();
         // 3. Cold Start app
-        OneSignal.init(blankActivity.getApplicationContext(), "123456789", ONESIGNAL_APP_ID);
+        OneSignal.setAppId(ONESIGNAL_APP_ID);
+        OneSignal.setAppContext(blankActivity.getApplicationContext());
         blankActivityController.resume();
         threadAndTaskWait();
 
@@ -579,7 +581,8 @@ public class InAppMessageIntegrationTests {
     private void OneSignalInit() {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
-        OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+        OneSignal.setAppId(ONESIGNAL_APP_ID);
+        OneSignal.setAppContext(blankActivity);
         blankActivityController.resume();
     }
 }

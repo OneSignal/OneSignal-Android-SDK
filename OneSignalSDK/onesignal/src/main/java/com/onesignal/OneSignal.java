@@ -120,9 +120,9 @@ public class OneSignal {
       /**
        * Fires when a notification is about to shown in the foreground. It will be fired when your app is in focus or
        * in the background.
-       * @param result Contains both the user's response and properties of the notification
+       * @param notification Contains both the user's response and properties of the notification
        */
-      void notificationWillShowInForeground(OSNotificationWillShowInForegroundResult result);
+      void notificationWillShowInForeground(OSNotificationWillShowInForeground notification);
    }
 
    /**
@@ -232,7 +232,7 @@ public class OneSignal {
    }
 
    static String appId;
-   private static String googleProjectNumber;
+   static String googleProjectNumber;
    static Context appContext;
 
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
@@ -250,14 +250,14 @@ public class OneSignal {
    static boolean mPromptLocation;
    static boolean mDisableGmsMissingPrompt;
    // Default true in 4.0.0 release.
-   static boolean mUnsubscribeWhenNotificationsAreDisabled = true;
-   static boolean mFilterOtherGCMReceivers = true;
+   static boolean mUnsubscribeWhenNotificationsAreDisabled;
+   static boolean mFilterOtherGCMReceivers;
    // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
    //  calling startInit().init()
    // mDisplayOptionCarryOver is used if setInFocusDisplaying is called but inFocusDisplaying wasn't
    static boolean mDisplayOptionCarryOver;
    // Default Notification in 4.0.0 release.
-   static OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.Notification;
+   static OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
    // TODOEnd OF mInitBuilder params
 
    // Is the init() of OneSignal SDK finished yet
@@ -444,6 +444,72 @@ public class OneSignal {
    }
    private static IAPUpdateJob iapUpdateJob;
 
+   private static void setDisplayOptionCarryOver(boolean carryOver) {
+      mDisplayOptionCarryOver = carryOver;
+   }
+
+   /**
+    * Prompts the user for location permissions.
+    * This allows for geotagging so you can send notifications to users based on location.
+    * This does not accommodate any rationale-gating that is encouraged before requesting
+    * permissions from the user.
+    * <br/><br/>
+    * See {@link #promptLocation()} for more details on how to manually prompt location permissions.
+    *
+    * @param enable If set to {@code false}, OneSignal will not prompt for location.
+    *               If set to {@code true}, OneSignal will prompt users for location permissions
+    *               when your app starts
+    * @return the builder object you called this method on
+    */
+   public static void autoPromptLocation(boolean enable) {
+      mPromptLocation = enable;
+   }
+
+   /**
+    * Prompts the user to update/enable Google Play Services if it's disabled on the device.
+    *
+    * @param disable if {@code false}, prompt users. if {@code true}, never show the out of date prompt.
+    *                Default is {@code false}
+    * @return
+    */
+   public static void disableGmsMissingPrompt(boolean disable) {
+      mDisableGmsMissingPrompt = disable;
+   }
+
+   public static void inFocusDisplaying(OSInFocusDisplayOption displayOption) {
+      mDisplayOptionCarryOver = false;
+      mDisplayOption = displayOption;
+   }
+
+   /**
+    * If notifications are disabled for your app, unsubscribe the user from OneSignal.
+    * This will happen when your users go to <i>Settings</i> > <i>Apps</i> and turn off notifications or
+    * they long press your notifications and select "block notifications". This is {@code false} by default.
+    * @param set if {@code false} - don't unsubscribe users<br/>
+    *            if {@code true} - unsubscribe users when notifications are disabled<br/>
+    *            the default is {@code false}
+    * @return the builder you called this method on
+    */
+   public static void unsubscribeWhenNotificationsAreDisabled(boolean set) {
+      mUnsubscribeWhenNotificationsAreDisabled = set;
+   }
+
+   /**
+    * Enable to prevent other broadcast receivers from receiving OneSignal FCM/GCM payloads.
+    * Prevent thrown exceptions or double notifications from other libraries/SDKs that implement
+    * notifications. Other non-OneSignal payloads will still be passed through so your app can
+    * handle FCM/GCM payloads from other back-ends.
+    * <br/><br/>
+    * <b>Note:</b> You can't use multiple
+    * Google Project numbers/Sender IDs. They must be the same if you are using multiple providers,
+    * otherwise there will be unexpected subscribes.
+    * @param set
+    * @return
+    */
+   public static void filterOtherGCMReceivers(boolean set) {
+      mFilterOtherGCMReceivers = set;
+   }
+
    /**
     * 1/2 steps in OneSignal init, relying on setAppContext (usage order does not matter)
     * Sets the app id OneSignal should use in the application
@@ -464,7 +530,6 @@ public class OneSignal {
       }
 
       appId = newAppId;
-      handleAppIdChange();
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) finished, checking if appContext has been set before proceeding...");
       if (appContext == null) {
@@ -552,6 +617,9 @@ public class OneSignal {
 
       // Verify the session is an Amazon purchase and track it
       handleAmazonPurchase();
+
+      // Check and handle app id change of the current session
+      handleAppIdChange();
 
       OSPermissionChangedInternalObserver.handleInternalChanges(getCurrentPermissionState(appContext));
 
@@ -925,7 +993,7 @@ public class OneSignal {
 
       delayedInitParams = null;
 
-      init();
+      setAppContext(appContext);
    }
 
    public static void setRequiresUserPrivacyConsent(boolean required) {
@@ -1876,7 +1944,7 @@ public class OneSignal {
       fireNotificationOpenedHandler(generateOsNotificationOpenResult(dataArray, shown, fromAlert));
    }
 
-   // Also called for received but OSNotification is extracted from it.
+   // Also called for received but OSNotificationWillShowInForeground is extracted from it.
    @NonNull
    private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown, boolean fromAlert) {
       int jsonArraySize = dataArray.length();
@@ -1884,7 +1952,7 @@ public class OneSignal {
       boolean firstMessage = true;
 
       OSNotificationOpenResult openResult = new OSNotificationOpenResult();
-      OSNotification notification = new OSNotification();
+      OSNotificationWillShowInForeground notification = new OSNotificationWillShowInForeground();
       notification.isAppInFocus = isAppActive();
       notification.shown = shown;
       notification.androidNotificationId = dataArray.optJSONObject(0).optInt("notificationId");
@@ -1916,9 +1984,9 @@ public class OneSignal {
       openResult.action.actionID = actionSelected;
       openResult.action.type = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
       if (fromAlert)
-         openResult.notification.displayType = OSNotification.DisplayType.InAppAlert;
+         openResult.notification.displayType = OSNotificationWillShowInForeground.DisplayType.InAppAlert;
       else
-         openResult.notification.displayType = OSNotification.DisplayType.Notification;
+         openResult.notification.displayType = OSNotificationWillShowInForeground.DisplayType.Notification;
 
       return openResult;
    }
@@ -1943,7 +2011,7 @@ public class OneSignal {
       if (notificationWillShowInForegroundHandler == null)
          return;
 
-      notificationWillShowInForegroundHandler.notificationWillShowInForeground(new OSNotificationWillShowInForegroundResult());
+      notificationWillShowInForegroundHandler.notificationWillShowInForeground(openResult.notification);
    }
 
    // Called when opening a notification

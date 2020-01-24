@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -51,10 +50,10 @@ import org.json.JSONObject;
  * {@link #groupedNotifications} - If the notification is a summary notification for a group, this will contain
  * all notification payloads it was created from.
  */
-public class OSNotification {
+public class OSNotificationWillShowInForeground {
 
    /**
-    * How the notification was displayed to the user. Part of {@link OSNotification}.
+    * How the notification was displayed to the user. Part of {@link OSNotificationWillShowInForeground}.
     */
    public enum DisplayType {
       // Notification shown in the notification shade.
@@ -67,10 +66,10 @@ public class OSNotification {
       None
    }
    
-   public OSNotification() {
+   public OSNotificationWillShowInForeground() {
    }
    
-   public OSNotification(JSONObject jsonObject) {
+   public OSNotificationWillShowInForeground(JSONObject jsonObject) {
       isAppInFocus = jsonObject.optBoolean("isAppInFocus");
       shown = jsonObject.optBoolean("shown", shown);
       androidNotificationId = jsonObject.optInt("androidNotificationId");

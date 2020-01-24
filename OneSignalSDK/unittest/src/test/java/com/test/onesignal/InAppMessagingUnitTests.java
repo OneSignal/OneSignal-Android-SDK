@@ -449,7 +449,8 @@ public class InAppMessagingUnitTests {
 
     private void OneSignalInit() {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-        OneSignal.init(blankActivity, "123456789", InAppMessagingHelpers.ONESIGNAL_APP_ID);
+        OneSignal.setAppId(InAppMessagingHelpers.ONESIGNAL_APP_ID);
+        OneSignal.setAppContext(blankActivity);
         blankActivityController.resume();
     }
 
@@ -457,7 +458,7 @@ public class InAppMessagingUnitTests {
     private static @Nullable OSInAppMessageAction lastAction;
     @Test
     public void testOnMessageActionOccurredOnMessage() throws Exception {
-        OneSignal.getCurrentOrNewInitBuilder().setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+        OneSignal.setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(OSInAppMessageAction result) {
                 lastAction = result;
