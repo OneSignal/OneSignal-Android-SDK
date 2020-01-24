@@ -57,7 +57,36 @@ public class OneSignalPrefsRunner {
    }
 
    @Test
-   public void tesWriteWithNullContextAndSavesAfterSetting() throws Exception {
+   public void tesWriteWithNullAppId_andSavesAfterSetting() {
+      OneSignal.setAppContext(blankActivity);
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
+      TestHelpers.flushBufferedSharedPrefs();
+
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      TestHelpers.flushBufferedSharedPrefs();
+
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
+      String value = prefs.getString("key", "");
+      assertEquals("value", value);
+   }
+
+   @Test
+   public void tesWriteWithNullContext_andSavesAfterSetting() {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
+      TestHelpers.flushBufferedSharedPrefs();
+
+      OneSignal.setAppContext(blankActivity);
+      TestHelpers.flushBufferedSharedPrefs();
+
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
+      String value = prefs.getString("key", "");
+      assertEquals("value", value);
+   }
+
+   @Test
+   public void tesWriteWithNullContextAndAppId_andSavesAfterSetting() {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
 
