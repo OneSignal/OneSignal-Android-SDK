@@ -1531,6 +1531,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldSendEmailAuthHashWithLogout() throws Exception {
       OneSignalInit();
+      threadAndTaskWait();
       String mockEmailHash = new String(new char[64]).replace('\0', '0');
       OneSignal.setEmail("josh@onesignal.com", mockEmailHash);
       threadAndTaskWait();
@@ -1538,7 +1539,7 @@ public class MainOneSignalClassRunner {
       OneSignal.logoutEmail();
       threadAndTaskWait();
 
-      ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(4);
+      ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(5);
       assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", emailPut.url);
       assertEquals(mockEmailHash, emailPut.payload.get("email_auth_hash"));
    }

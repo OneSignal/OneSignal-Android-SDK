@@ -735,7 +735,6 @@ public class GenerateNotificationRunner {
       assertEquals(notifMessage, postedSummaryNotification.getShadow().getContentText());
       assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
    }
-   
 
    @Test
    public void shouldHandleBasicNotifications() throws Exception {
@@ -895,13 +894,11 @@ public class GenerateNotificationRunner {
       // Badge count should only be one as only one notification is visible in the notification area.
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
-
       // Should be 2 DB entries (summary and individual)
       SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(2, cursor.getCount());
       cursor.close();
-
 
       // Add another notification to the group.
       ShadowRoboNotificationManager.notifications.clear();
@@ -925,12 +922,10 @@ public class GenerateNotificationRunner {
       assertEquals("Notif test 2", postedNotification.getShadow().getContentText());
       assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
-
       // Should be 3 DB entries (summary and 2 individual)
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(3, cursor.getCount());
-
 
       // Open summary notification
       postedNotifsIterator = postedNotifs.entrySet().iterator();
@@ -992,8 +987,7 @@ public class GenerateNotificationRunner {
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    }
-   
-   
+
    @Test
    public void shouldCorrectlyDisplaySummaryWithMixedInAppAlertsAndNotifications() throws Exception {
       // Setup - init
@@ -1024,8 +1018,6 @@ public class GenerateNotificationRunner {
       //         Alert should stay as an in-app alert.
       assertEquals(3, ShadowRoboNotificationManager.notifications.size());
    }
-   
-   
 
    @Test
    @Config(shadows = {ShadowGcmBroadcastReceiver.class})
@@ -1074,6 +1066,7 @@ public class GenerateNotificationRunner {
       assertEquals(0, ShadowRoboNotificationManager.getLastNotif().defaults);
    }
 
+   // TODO: Fails because of no appId being set because manifest placeholders removed
    @Test
    public void shouldAddDefaultButtonToAlertDialog() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
@@ -1087,15 +1080,15 @@ public class GenerateNotificationRunner {
       Button button = alert.getButton(AlertDialog.BUTTON_NEUTRAL);
       assertEquals(button.getText(), "Ok");
    }
-   
+
+   // TODO: Fails because of no appId being set because manifest placeholders removed
    @Test
    @Config(shadows = {ShadowGcmBroadcastReceiver.class})
    public void shouldPreventOtherGCMReceiversWhenSettingEnabled() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
       OneSignal.startInit(blankActivity).filterOtherGCMReceivers(true).init();
       threadAndTaskWait();
-      
-      
+
       Intent intentGcm = new Intent();
       intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
       intentGcm.putExtra("message_type", "gcm");
@@ -1106,10 +1099,9 @@ public class GenerateNotificationRunner {
       GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
       gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
       
-      assertEquals(Activity.RESULT_OK, (int)ShadowGcmBroadcastReceiver.lastResultCode);
+      assertEquals(Activity.RESULT_OK, (int) ShadowGcmBroadcastReceiver.lastResultCode);
       assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
    }
-
 
    @Test
    public void shouldSetExpireTimeCorrectlyFromGoogleTTL() {
