@@ -4,15 +4,14 @@ import android.support.v4.app.NotificationCompat;
 
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.NotificationExtenderService;
-import com.onesignal.OSNotificationReceivedResult;
+import com.onesignal.OSNotificationWillShowInForegroundResult;
 
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 
 public class NotificationExtenderServiceTest extends NotificationExtenderService {
 
    @Override
-   protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+   protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
       DebuggingHelper.printObject(notification);
       if (notification.payload.actionButtons != null) {
          for(OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {

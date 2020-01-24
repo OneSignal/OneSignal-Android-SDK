@@ -35,9 +35,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
-import com.onesignal.OSNotificationWillShowInForegroundResult;
 import com.onesignal.OneSignal;
 
 public class OneSignalExampleApp extends Application {

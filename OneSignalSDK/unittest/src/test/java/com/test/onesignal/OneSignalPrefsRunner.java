@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
@@ -19,7 +20,6 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppContext;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
@@ -61,7 +61,7 @@ public class OneSignalPrefsRunner {
       OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
 
-      OneSignal_setAppContext(blankActivity);
+      OneSignal.setAppContext(blankActivity);
       TestHelpers.flushBufferedSharedPrefs();
 
       final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
