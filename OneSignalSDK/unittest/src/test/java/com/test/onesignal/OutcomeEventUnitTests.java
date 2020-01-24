@@ -61,7 +61,7 @@ import static org.junit.Assert.assertEquals;
 @Config(packageName = "com.onesignal.example",
         instrumentedPackages = {"com.onesignal"},
         shadows = {
-                ShadowOSUtils.class,
+            ShadowOSUtils.class,
         },
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
@@ -81,7 +81,6 @@ public class OutcomeEventUnitTests {
     private static List<OutcomeEvent> outcomeEvents;
 
     public interface OutcomeEventsHandler {
-
         void setOutcomes(List<OutcomeEvent> outcomes);
     }
 

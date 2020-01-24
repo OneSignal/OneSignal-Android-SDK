@@ -9,4 +9,5 @@ class TypeAsserts {
    static void assertIsUUID(@Nullable String value) {
       UUID.fromString(value);
    }
+
 }

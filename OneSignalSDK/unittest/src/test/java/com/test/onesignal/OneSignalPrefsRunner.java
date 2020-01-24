@@ -26,9 +26,9 @@ import static org.junit.Assert.assertEquals;
         instrumentedPackages = { "com.onesignal" },
         sdk = 21
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class OneSignalPrefsRunner {
+
    private static Activity blankActivity;
 
    @BeforeClass // Runs only once, before any tests

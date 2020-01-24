@@ -134,15 +134,14 @@ import static org.robolectric.Shadows.shadowOf;
         },
         sdk = 21
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
    
+   private static final String notifMessage = "Robo test message";
+
    private Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
-   
-   private static final String notifMessage = "Robo test message";
-   
+
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
@@ -982,6 +981,7 @@ public class GenerateNotificationRunner {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
+      blankActivityController.resume();
       threadAndTaskWait();
    
       // Setup1 - Display a notification with a group set
@@ -1012,6 +1012,7 @@ public class GenerateNotificationRunner {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
+      blankActivityController.resume();
       threadAndTaskWait();
    
       // Setup - Display a notification with a group set
@@ -1090,6 +1091,9 @@ public class GenerateNotificationRunner {
    public void shouldAddDefaultButtonToAlertDialog() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
 //      OneSignal.startInit(blankActivity).init();
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      blankActivityController.resume();
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
@@ -1185,6 +1189,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
       OneSignal_setGoogleProjectNumber("123456789");
+      blankActivityController.resume();
       threadAndTaskWait();
 
       Intent intentGcm = new Intent();
@@ -1204,6 +1209,7 @@ public class GenerateNotificationRunner {
       OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
+      blankActivityController.resume();
       threadAndTaskWait();
 
       Bundle bundle = new Bundle();
