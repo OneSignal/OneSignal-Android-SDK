@@ -38,7 +38,7 @@ import org.json.JSONObject;
  * {@link #action} - The action the user took on the notification
  */
 public class OSNotificationOpenResult {
-   public OSNotificationWillShowInForeground notification;
+   public OSNotification notification;
    public OSNotificationAction action;
 
    /**
