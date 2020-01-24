@@ -52,7 +52,7 @@ import com.onesignal.BundleCompat;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
-import com.onesignal.OSNotificationWillShowInForeground;
+import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationWillShowInForegroundResult;
@@ -1256,7 +1256,7 @@ public class GenerateNotificationRunner {
    }
 
    
-   private OSNotificationWillShowInForeground lastNotificationReceived;
+   private OSNotification lastNotificationReceived;
    @Test
    public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
@@ -1264,7 +1264,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+         public void notificationWillShowInForeground(OSNotification notification) {
             lastNotificationReceived = notification;
          }
       });

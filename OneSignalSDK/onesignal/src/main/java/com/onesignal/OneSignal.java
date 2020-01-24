@@ -122,7 +122,7 @@ public class OneSignal {
        * in the background.
        * @param notification Contains both the user's response and properties of the notification
        */
-      void notificationWillShowInForeground(OSNotificationWillShowInForeground notification);
+      void notificationWillShowInForeground(OSNotification notification);
    }
 
    /**
@@ -1943,7 +1943,7 @@ public class OneSignal {
       fireNotificationOpenedHandler(generateOsNotificationOpenResult(dataArray, shown, fromAlert));
    }
 
-   // Also called for received but OSNotificationWillShowInForeground is extracted from it.
+   // Also called for received but OSNotification is extracted from it.
    @NonNull
    private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown, boolean fromAlert) {
       int jsonArraySize = dataArray.length();
@@ -1951,7 +1951,7 @@ public class OneSignal {
       boolean firstMessage = true;
 
       OSNotificationOpenResult openResult = new OSNotificationOpenResult();
-      OSNotificationWillShowInForeground notification = new OSNotificationWillShowInForeground();
+      OSNotification notification = new OSNotification();
       notification.isAppInFocus = isAppActive();
       notification.shown = shown;
       notification.androidNotificationId = dataArray.optJSONObject(0).optInt("notificationId");
@@ -1983,9 +1983,9 @@ public class OneSignal {
       openResult.action.actionID = actionSelected;
       openResult.action.type = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
       if (fromAlert)
-         openResult.notification.displayType = OSNotificationWillShowInForeground.DisplayType.InAppAlert;
+         openResult.notification.displayType = OSNotification.DisplayType.InAppAlert;
       else
-         openResult.notification.displayType = OSNotificationWillShowInForeground.DisplayType.Notification;
+         openResult.notification.displayType = OSNotification.DisplayType.Notification;
 
       return openResult;
    }

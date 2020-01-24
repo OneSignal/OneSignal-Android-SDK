@@ -45,7 +45,7 @@ import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
-import com.onesignal.OSNotificationWillShowInForeground;
+import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
@@ -933,7 +933,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+         public void notificationWillShowInForeground(OSNotification notification) {
             androidNotificationId = notification.androidNotificationId;
             notificationReceivedBody = notification.payload.body;
          }
@@ -3322,7 +3322,7 @@ public class MainOneSignalClassRunner {
    // ####### Unit test toJSONObject methods
    @Test
    public void testOSNotificationToJSONObject() throws Exception {
-      OSNotificationWillShowInForeground osNotification = createTestOSNotification();
+      OSNotification osNotification = createTestOSNotification();
 
       JSONObject testJsonObj = osNotification.toJSONObject();
 
@@ -3747,7 +3747,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+         public void notificationWillShowInForeground(OSNotification notification) {
 
          }
       });
@@ -3955,8 +3955,8 @@ public class MainOneSignalClassRunner {
 
    // ####### Unit test helper methods ########
 
-   private static OSNotificationWillShowInForeground createTestOSNotification() throws Exception {
-      OSNotificationWillShowInForeground osNotification = new OSNotificationWillShowInForeground();
+   private static OSNotification createTestOSNotification() throws Exception {
+      OSNotification osNotification = new OSNotification();
 
       osNotification.payload = new OSNotificationPayload();
       osNotification.payload.body = "msg_body";
@@ -3967,7 +3967,7 @@ public class MainOneSignalClassRunner {
       actionButton.id = "id";
       osNotification.payload.actionButtons.add(actionButton);
 
-      osNotification.displayType = OSNotificationWillShowInForeground.DisplayType.None;
+      osNotification.displayType = OSNotification.DisplayType.None;
 
       osNotification.groupedNotifications = new ArrayList<>();
       OSNotificationPayload groupedPayload = new OSNotificationPayload();
