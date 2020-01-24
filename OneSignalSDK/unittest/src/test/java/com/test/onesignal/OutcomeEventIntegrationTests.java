@@ -58,14 +58,14 @@ import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
-                ShadowOneSignalRestClient.class,
-                ShadowPushRegistratorGCM.class,
-                ShadowOSUtils.class,
-                ShadowAdvertisingIdProviderGPS.class,
-                ShadowCustomTabsClient.class,
-                ShadowCustomTabsSession.class,
-                ShadowNotificationManagerCompat.class,
-                ShadowJobService.class
+            ShadowOneSignalRestClient.class,
+            ShadowPushRegistratorGCM.class,
+            ShadowOSUtils.class,
+            ShadowAdvertisingIdProviderGPS.class,
+            ShadowCustomTabsClient.class,
+            ShadowCustomTabsSession.class,
+            ShadowNotificationManagerCompat.class,
+            ShadowJobService.class
         },
         instrumentedPackages = {"com.onesignal"},
         sdk = 26)
@@ -75,6 +75,7 @@ public class OutcomeEventIntegrationTests {
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
     private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
     private static final String ONESIGNAL_OUTCOME_NAME = "Testing_Outcome";
+
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
     private static ActivityController<BlankActivity> blankActivityController;

@@ -222,13 +222,13 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    @Override
-   public void notificationOpened(OSNotificationOpenResult result) {
-      updateTextView("Opened Notification: " + result.toString());
+   public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
+      updateTextView("Received Notification: " + notification.toString());
    }
 
    @Override
-   public void notificationWillShowInForeground(OSNotificationWillShowInForegroundResult result) {
-      updateTextView("Received Notification: " + result.toString());
+   public void notificationOpened(OSNotificationOpenResult result) {
+      updateTextView("Opened Notification: " + result.toString());
    }
 
    public void didGetEmailStatus(boolean hasEmailUserId) {

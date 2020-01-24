@@ -36,6 +36,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationWillShowInForeground;
 import com.onesignal.OneSignal;
 
 public class OneSignalExampleApp extends Application {
@@ -90,12 +91,12 @@ public class OneSignalExampleApp extends Application {
        *  Use a NotificationExtenderService instead to receive an event even when your app is closed (not 'forced stopped')
        *     or to override notification properties.
        *
-       * @param result Contains information about the notification received.
+       * @param notification Contains information about the notification received.
        */
        @Override
-       public void notificationWillShowInForeground(OSNotificationWillShowInForegroundResult result) {
+       public void notificationWillShowInForeground(OSNotificationWillShowInForeground notification) {
            Log.w("OneSignalExample", "notificationReceived!!!!!!");
-           DebuggingHelper.printObject(result);
+           DebuggingHelper.printObject(notification);
        }
    }
 
