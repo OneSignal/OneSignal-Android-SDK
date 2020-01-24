@@ -538,10 +538,12 @@ public class MainActivityViewModel implements ActivityViewModel {
             }
         });
 
+        pauseInAppMessagesSwitch.setChecked(OneSignalPrefs.getCachedInAppMessagingPausedStatus(context));
         pauseInAppMessagesSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 OneSignal.pauseInAppMessages(isChecked);
+                OneSignalPrefs.cacheInAppMessagingPausedStatus(context, isChecked);
             }
         });
     }

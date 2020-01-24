@@ -4,6 +4,7 @@ import android.app.Application;
 import android.util.Log;
 
 import com.onesignal.OneSignal;
+import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 
@@ -16,11 +17,11 @@ public class MainApplication extends Application {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
         // OneSignal Initialization
-        OneSignal.init(this, "REMOTE", "<enter_your_app_id_here>");
+        String appId = getString(R.string.onesignal_app_id);
+        OneSignal.init(this, "REMOTE", appId);
         OneSignal.getCurrentOrNewInitBuilder().unsubscribeWhenNotificationsAreDisabled(true);
 
         OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-        OneSignal.setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
     }

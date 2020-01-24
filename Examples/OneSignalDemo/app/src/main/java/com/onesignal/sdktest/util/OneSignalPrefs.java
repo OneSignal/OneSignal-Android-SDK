@@ -14,6 +14,7 @@ public class OneSignalPrefs {
     public static final String USER_EMAIL_SHARED_PREF = "USER_EMAIL_SHARED_PREF";
     public static final String USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF";
     private static final String LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF";
+    private static final String IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF";
 
     private static SharedPreferences getSharedPreference(Context context) {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE);
@@ -40,7 +41,11 @@ public class OneSignalPrefs {
     }
 
     public static boolean getCachedLocationSharedStatus(Context context) {
-        return getSharedPreference(context).getBoolean(LOCATION_SHARED_PREF, true);
+        return getSharedPreference(context).getBoolean(LOCATION_SHARED_PREF, false);
+    }
+
+    public static boolean getCachedInAppMessagingPausedStatus(Context context) {
+        return getSharedPreference(context).getBoolean(IN_APP_MESSAGING_PAUSED_PREF, true);
     }
 
     public static void cacheOneSignalAppId(Context context, String appId) {
@@ -63,8 +68,11 @@ public class OneSignalPrefs {
         getSharedPreference(context).edit().putBoolean(LOCATION_SHARED_PREF, subscribed).apply();
     }
 
+    public static void cacheInAppMessagingPausedStatus(Context context, boolean paused) {
+        getSharedPreference(context).edit().putBoolean(IN_APP_MESSAGING_PAUSED_PREF, paused).apply();
+    }
+
     public static void clearCachedEmail(Context context) {
         getSharedPreference(context).edit().remove(USER_EMAIL_SHARED_PREF).apply();
     }
-
 }
