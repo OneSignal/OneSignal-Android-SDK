@@ -42,7 +42,7 @@ public class CustomAlertDialogBuilder extends AlertDialog.Builder {
         this.view = view;
     }
 
-    public CustomAlertDialogBuilder setOnDismissListener (DialogInterface.OnDismissListener listener) {
+    public CustomAlertDialogBuilder setOnDismissListener(DialogInterface.OnDismissListener listener) {
         mOnDismissListener = listener;
         return this;
     }
