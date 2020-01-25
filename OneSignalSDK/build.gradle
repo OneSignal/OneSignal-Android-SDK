@@ -5,21 +5,23 @@ buildscript {
         google()
         jcenter()
         maven { url 'https://maven.google.com' }
+
         // OneSignal-Gradle-Plugin - Local testing
-//      maven { url uri('../../repo') }
+//        maven { url uri('../../repo') }
+
         // OneSignal-Gradle-Plugin - Public version
-//      maven { url 'https://plugins.gradle.org/m2/' }
+        maven { url 'https://plugins.gradle.org/m2/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath 'com.android.tools.build:gradle:3.5.3'
 
-        classpath 'com.google.gms:google-services:4.3.2'
+        classpath 'com.google.gms:google-services:4.3.3'
 
         // OneSignal-Gradle-Plugin - Local testing
-        // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
+//        classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
 
         // OneSignal-Gradle-Plugin - Public version
-        // classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
+        classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.12.6, 0.99.99]'
     }
 }
 
