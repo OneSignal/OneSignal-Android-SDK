@@ -100,15 +100,6 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     // Outcomes
     private TextView outcomeTitleTextView;
-//    private LinearLayout outcomeCurrentSessionLinearLayout;
-//    private TextView outcomeCurrentSessionTitleTextView;
-//    private TextView outcomeCurrentSessionTextView;
-//    private LinearLayout outcomeForegroundTimerLinearLayout;
-//    private TextView outcomeForegroundTimerTitleTextView;
-//    private TextView outcomeForegroundTimerTextView;
-//    private LinearLayout outcomeBackgroundTimerLinearLayout;
-//    private TextView outcomeBackgroundTimerTitleTextView;
-//    private TextView outcomeBackgroundTimerTextView;
     private Button sendOutcomeButton;
 
     // Triggers
@@ -207,15 +198,6 @@ public class MainActivityViewModel implements ActivityViewModel {
         pushNotificationRecyclerView = getActivity().findViewById(R.id.main_activity_push_notification_recycler_view);
 
         outcomeTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_title_text_view);
-//        outcomeCurrentSessionLinearLayout = getActivity().findViewById(R.id.main_activity_outcomes_current_session_relative_layout);
-//        outcomeCurrentSessionTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_current_session_title_text_view);
-//        outcomeCurrentSessionTextView = getActivity().findViewById(R.id.main_activity_outcomes_current_session_text_view);
-//        outcomeForegroundTimerLinearLayout = getActivity().findViewById(R.id.main_activity_outcomes_foreground_timer_relative_layout);
-//        outcomeForegroundTimerTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_foreground_timer_title_text_view);
-//        outcomeForegroundTimerTextView = getActivity().findViewById(R.id.main_activity_outcomes_foreground_timer_text_view);
-//        outcomeBackgroundTimerLinearLayout = getActivity().findViewById(R.id.main_activity_outcomes_background_timer_relative_layout);
-//        outcomeBackgroundTimerTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_background_timer_title_text_view);
-//        outcomeBackgroundTimerTextView = getActivity().findViewById(R.id.main_activity_outcomes_background_timer_text_view);
         sendOutcomeButton = getActivity().findViewById(R.id.main_activity_outcomes_send_outcome_button);
 
         triggersTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_title_text_view);
@@ -270,12 +252,6 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(addTagButton, font.saralaBold);
         font.applyFont(pushNotificationTitleTextView, font.saralaBold);
         font.applyFont(outcomeTitleTextView, font.saralaBold);
-//        font.applyFont(outcomeCurrentSessionTitleTextView, font.saralaBold);
-//        font.applyFont(outcomeCurrentSessionTextView, font.saralaRegular);
-//        font.applyFont(outcomeForegroundTimerTitleTextView, font.saralaBold);
-//        font.applyFont(outcomeForegroundTimerTextView, font.saralaRegular);
-//        font.applyFont(outcomeBackgroundTimerTitleTextView, font.saralaBold);
-//        font.applyFont(outcomeBackgroundTimerTextView, font.saralaRegular);
         font.applyFont(sendOutcomeButton, font.saralaBold);
         font.applyFont(triggersTitleTextView, font.saralaBold);
         font.applyFont(noTriggersTextView, font.saralaBold);
