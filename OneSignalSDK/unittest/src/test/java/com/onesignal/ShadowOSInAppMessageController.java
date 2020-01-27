@@ -1,6 +1,9 @@
 package com.onesignal;
 
+import android.support.annotation.NonNull;
+
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 import org.robolectric.annotation.RealObject;
@@ -18,10 +21,8 @@ public class ShadowOSInAppMessageController {
 
     @Implementation
     public void displayMessage(final OSInAppMessage message) throws JSONException {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ShadowOSInAppMessageController displayMessage: " + message.toString());
         displayedMessages.add(message.messageId);
 
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ShadowOSInAppMessageController size: " + displayedMessages.size());
         // Call original method
         Shadow.directlyOn(realObject, OSInAppMessageController.class).displayMessage(message);
     }

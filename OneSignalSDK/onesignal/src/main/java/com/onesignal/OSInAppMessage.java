@@ -9,13 +9,16 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 class OSInAppMessage {
 
     private static final String IAM_ID = "id";
     private static final String IAM_VARIANTS = "variants";
     private static final String IAM_TRIGGERS = "triggers";
+    private static final String IAM_CLICK_IDS = "click_ids";
     private static final String IAM_RE_DISPLAY = "redisplay";
     private static final String DISPLAY_DURATION = "display_duration";
     private static final String DISPLAY_LIMIT = "limit";
@@ -30,7 +33,7 @@ class OSInAppMessage {
     /**
      * Allows in-app messages to use multiple language variants, or to have variations between
      * different device types (ie. a different image for phones vs. tablets, etc.).
-     * <p>
+     *
      * An example: {'ios' : {'en' : 'wfgkv-...', 'es' : '56ytdygd...' }}
      */
     @NonNull
@@ -43,17 +46,23 @@ class OSInAppMessage {
     @NonNull
     public ArrayList<ArrayList<OSTrigger>> triggers;
 
+    /**
+     * IAM clicks associated to this IAM
+     */
+    @NonNull
+    private Set<String> clickedClickIds;
+
     //Last IAM display time in seconds
-    private long lastDisplayTime = -1;
+    private double lastDisplayTime = -1;
     //Current quantity of displays
-    private int displaysQuantity = 0;
+    private int displayQuantity = 0;
     //Quantity of displays limit
-    private int displaysLimit = Integer.MAX_VALUE;
+    private int displayLimit = Integer.MAX_VALUE;
     //Delay between displays in seconds
-    private long delay = 0;
+    private double displayDelay = 0;
     private double displayDuration;
 
-    private boolean reDisplayEnabled = false;
+    private boolean redisplayEnabled = false;
     private boolean actionTaken;
     boolean isPreview;
 
@@ -61,10 +70,11 @@ class OSInAppMessage {
         this.isPreview = isPreview;
     }
 
-    OSInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime) {
+    OSInAppMessage(@NonNull String messageId, int displayQuantity, double lastDisplayTime, Set<String> clickIds) {
         this.messageId = messageId;
         this.lastDisplayTime = lastDisplayTime;
-        this.displaysQuantity = displaysQuantity;
+        this.displayQuantity = displayQuantity;
+        this.clickedClickIds = clickIds;
     }
 
     OSInAppMessage(JSONObject json) throws JSONException {
@@ -73,6 +83,7 @@ class OSInAppMessage {
         this.messageId = json.getString(IAM_ID);
         this.variants = parseVariants(json.getJSONObject(IAM_VARIANTS));
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
+        this.clickedClickIds = new HashSet<>();
 
         if (json.has(IAM_RE_DISPLAY))
             parseReDisplayJSON(json.getJSONObject(IAM_RE_DISPLAY));
@@ -117,18 +128,18 @@ class OSInAppMessage {
     }
 
     private void parseReDisplayJSON(JSONObject json) throws JSONException {
-        reDisplayEnabled = true;
+        redisplayEnabled = true;
 
         Object displayLimit = json.get(DISPLAY_LIMIT);
         Object displayDelay = json.get(DISPLAY_DELAY);
 
         if (displayLimit instanceof Integer)
-            this.displaysLimit = (Integer) displayLimit;
+            this.displayLimit = (Integer) displayLimit;
 
-        if (displayDelay instanceof Long)
-            this.delay = (Long) displayDelay;
+        if (displayDelay instanceof Double)
+            this.displayDelay = (Double) displayDelay;
         else if (displayDelay instanceof Integer)
-            this.delay = (Integer) displayDelay;
+            this.displayDelay = (Integer) displayDelay;
     }
 
     JSONObject toJSONObject() {
@@ -150,13 +161,13 @@ class OSInAppMessage {
 
             json.put(IAM_VARIANTS, variants);
             json.put(DISPLAY_DURATION, this.displayDuration);
-            json.put(DISPLAY_LIMIT, this.displaysLimit);
-            json.put(DISPLAY_DELAY, this.delay);
+            json.put(DISPLAY_LIMIT, this.displayLimit);
+            json.put(DISPLAY_DELAY, this.displayDelay);
 
-            if (reDisplayEnabled)
+            if (redisplayEnabled)
                 json.put(IAM_RE_DISPLAY, new JSONObject() {{
-                    put(DISPLAY_LIMIT, displaysLimit);
-                    put(DISPLAY_DELAY, delay);
+                    put(DISPLAY_LIMIT, displayLimit);
+                    put(DISPLAY_DELAY, displayDelay);
                 }});
 
             JSONArray orConditions = new JSONArray();
@@ -197,51 +208,71 @@ class OSInAppMessage {
         this.displayDuration = displayDuration;
     }
 
-    int getDisplaysQuantity() {
-        return displaysQuantity;
+    int getDisplayQuantity() {
+        return displayQuantity;
     }
 
-    void setDisplaysQuantity(int displaysQuantity) {
-        this.displaysQuantity = displaysQuantity;
+    void setDisplayQuantity(int displayQuantity) {
+        this.displayQuantity = displayQuantity;
     }
 
-    void increaseDisplayQuantity() {
-        this.displaysQuantity++;
+    int getDisplayLimit() {
+        return displayLimit;
     }
 
-    int getDisplaysLimit() {
-        return displaysLimit;
+    void incrementDisplayQuantity() {
+        this.displayQuantity++;
     }
 
-    long getDelay() {
-        return delay;
+    double getDisplayDelay() {
+        return displayDelay;
     }
 
-    long getLastDisplayTime() {
+    double getLastDisplayTime() {
         return lastDisplayTime;
     }
 
-    void setLastDisplayTime(long lastDisplayTime) {
+    void setLastDisplayTime(double lastDisplayTime) {
         this.lastDisplayTime = lastDisplayTime;
     }
 
-    boolean isReDisplayEnabled() {
-        return reDisplayEnabled;
+    boolean isRedisplayEnabled() {
+        return redisplayEnabled;
     }
 
-    boolean isRemainingDisplays() {
-        return displaysQuantity <= displaysLimit;
+    boolean shouldDisplayAgain() {
+        return displayQuantity <= displayLimit;
     }
 
     boolean isDelayTimeSatisfied() {
-        if (lastDisplayTime == -1) {
+        if (lastDisplayTime < 0) {
             lastDisplayTime = new Date().getTime() / 1000; //Current time in seconds
             return true;
         }
 
+        double currentTimeInSeconds = new Date().getTime() / 1000;
         //Calculate gap between display times
-        long diffInSeconds = new Date().getTime() / 1000 - lastDisplayTime;
-        return diffInSeconds >= delay;
+        double diffInSeconds = currentTimeInSeconds - lastDisplayTime;
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessage lastDisplayTime: " + lastDisplayTime +
+                " currentTimeInSeconds: " + currentTimeInSeconds + " diffInSeconds: " + diffInSeconds + " displayDelay: " + displayDelay);
+        return diffInSeconds >= displayDelay;
+    }
+
+    @NonNull
+    Set<String> getClickedClickIds() {
+        return clickedClickIds;
+    }
+
+    boolean isClickAvailable(String clickId) {
+        return redisplayEnabled && !clickedClickIds.contains(clickId);
+    }
+
+    void clearClickIds() {
+        clickedClickIds.clear();
+    }
+
+    void addClickId(String clickId) {
+        clickedClickIds.add(clickId);
     }
 
     @Override
@@ -250,11 +281,12 @@ class OSInAppMessage {
                 "messageId='" + messageId + '\'' +
                 ", triggers=" + triggers +
                 ", lastDisplayTime=" + lastDisplayTime +
-                ", displaysQuantity=" + displaysQuantity +
-                ", displaysLimit=" + displaysLimit +
-                ", delay=" + delay +
-                ", reDisplayEnabled=" + reDisplayEnabled +
+                ", displayQuantity=" + displayQuantity +
+                ", displayLimit=" + displayLimit +
+                ", displayDelay=" + displayDelay +
+                ", redisplayEnabled=" + redisplayEnabled +
                 ", isPreview=" + isPreview +
+                ", clickIds=" + clickedClickIds.toString() +
                 '}';
     }
 

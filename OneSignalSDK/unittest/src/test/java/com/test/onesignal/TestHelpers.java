@@ -45,6 +45,7 @@ import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -334,7 +335,7 @@ public class TestHelpers {
       return notifications;
    }
 
-   static List<OSTestInAppMessage> getAllInAppMessages() {
+   static List<OSTestInAppMessage> getAllInAppMessages() throws JSONException {
       SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
       Cursor cursor = readableDatabase.query(
               OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,
@@ -350,11 +351,18 @@ public class TestHelpers {
       if (cursor.moveToFirst()) {
          do {
             String messageId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
-
+            String clickIds = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_CLICK_IDS));
             int displayQuantity = cursor.getInt(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY));
             long lastDisplay = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY));
 
-            OSTestInAppMessage inAppMessage = new OSTestInAppMessage(messageId, displayQuantity, lastDisplay);
+            JSONArray clickIdsArray = new JSONArray(clickIds);
+            Set<String> clickIdsSet = new HashSet<>();
+
+            for (int i = 0; i < clickIdsArray.length(); i++) {
+               clickIdsSet.add(clickIdsArray.getString(i));
+            }
+
+            OSTestInAppMessage inAppMessage = new OSTestInAppMessage(messageId, displayQuantity, lastDisplay, clickIdsSet);
             iams.add(inAppMessage);
          } while (cursor.moveToNext());
       }

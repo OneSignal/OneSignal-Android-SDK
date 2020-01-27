@@ -272,8 +272,8 @@ public class OneSignalPackagePrivateHelper {
 
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
-      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime) {
-         super(messageId, displaysQuantity, lastDisplayTime);
+      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, Set<String> clickIds) {
+         super(messageId, displaysQuantity, lastDisplayTime, clickIds);
       }
 
       OSTestInAppMessage(JSONObject json) throws JSONException {
@@ -306,7 +306,7 @@ public class OneSignalPackagePrivateHelper {
       }
 
       @Override
-      void setDisplayDuration(double displayDuration) {
+      public void setDisplayDuration(double displayDuration) {
          super.setDisplayDuration(displayDuration);
       }
 
@@ -321,6 +321,11 @@ public class OneSignalPackagePrivateHelper {
       }
 
       @Override
+      public void setDisplayQuantity(int displayQuantity) {
+         super.setDisplayQuantity(displayQuantity);
+      }
+
+      @Override
       public int getDisplayLimit() {
          return super.getDisplayLimit();
       }
@@ -331,8 +336,49 @@ public class OneSignalPackagePrivateHelper {
       }
 
       @Override
-      public long getLastDisplayTime() {
+      public double getLastDisplayTime() {
          return super.getLastDisplayTime();
+      }
+
+      @Override
+      public void setLastDisplayTime(double lastDisplayTime) {
+         super.setLastDisplayTime(lastDisplayTime);
+      }
+
+      @Override
+      public void incrementDisplayQuantity() {
+         super.incrementDisplayQuantity();
+      }
+
+      @Override
+      public boolean isDelayTimeSatisfied() {
+         return super.isDelayTimeSatisfied();
+      }
+
+      @Override
+      public boolean shouldDisplayAgain() {
+         return super.shouldDisplayAgain();
+      }
+
+      @NonNull
+      @Override
+      public Set<String> getClickedClickIds() {
+         return super.getClickedClickIds();
+      }
+
+      @Override
+      public boolean isClickAvailable(String clickId) {
+         return super.isClickAvailable(clickId);
+      }
+
+      @Override
+      public  void clearClickIds() {
+         super.clearClickIds();
+      }
+
+      @Override
+      public  void addClickId(String clickId) {
+         super.addClickId(clickId);
       }
 
       public JSONObject toJSONObject() {

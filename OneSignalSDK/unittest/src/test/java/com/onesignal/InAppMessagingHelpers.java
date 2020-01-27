@@ -33,6 +33,7 @@ public class InAppMessagingHelpers {
     public static void clearTestState() {
         OneSignal.pauseInAppMessages(false);
         ShadowOSInAppMessageController.displayedMessages.clear();
+        ShadowOSInAppMessageController.dismissedMessages.clear();
         OSInAppMessageController.getController().messageDisplayQueue.clear();
     }
 
@@ -63,6 +64,13 @@ public class InAppMessagingHelpers {
         JSONArray triggersJson = basicTrigger(kind, key, operator, value);
 
         return buildTestMessage(triggersJson);
+    }
+
+    public static OSTestInAppMessage buildTestMessageWithSingleTriggerAndRedisplay(final OSTriggerKind kind, final String key, final String operator,
+                                                                                   final Object value, int limit, double delay) throws JSONException {
+        JSONArray triggersJson = basicTrigger(kind, key, operator, value);
+
+        return buildTestMessageWithMultipleDisplays(triggersJson, limit, delay);
     }
 
     private static JSONObject basicIAMJSONObject(final JSONArray triggerJson) throws JSONException {

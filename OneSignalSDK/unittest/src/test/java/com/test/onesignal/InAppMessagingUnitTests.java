@@ -39,6 +39,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -72,6 +73,7 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingUnitTests {
 
+    private static final String IAM_CLICK_ID = "button_id_123";
     private static final double REQUIRED_TIMER_ACCURACY = 1.25;
     private static final int LIMIT = 5;
     private static final double DELAY = 60.0;
@@ -162,10 +164,10 @@ public class InAppMessagingUnitTests {
                 DELAY
         );
         assertTrue(message.isRedisplayEnabled());
-        assertEquals(message.getDisplayLimit(), LIMIT);
-        assertEquals(message.getDisplayDelay(), DELAY);
-        assertEquals(message.getLastDisplayTime(), -1);
-        assertEquals(message.getDisplayQuantity(), 0);
+        assertEquals(LIMIT, message.getDisplayLimit());
+        assertEquals(DELAY, message.getDisplayDelay());
+        assertEquals(-1.0, message.getLastDisplayTime());
+        assertEquals(0, message.getDisplayQuantity());
 
         OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
@@ -174,10 +176,76 @@ public class InAppMessagingUnitTests {
                 3
         );
         assertFalse(messageWithoutDisplay.isRedisplayEnabled());
-        assertEquals(messageWithoutDisplay.getDisplayLimit(), Integer.MAX_VALUE);
-        assertEquals(messageWithoutDisplay.getDisplayDelay(), 0.0);
-        assertEquals(messageWithoutDisplay.getLastDisplayTime(), -1);
-        assertEquals(messageWithoutDisplay.getDisplayQuantity(), 0);
+        assertEquals(Integer.MAX_VALUE, messageWithoutDisplay.getDisplayLimit());
+        assertEquals(0.0, messageWithoutDisplay.getDisplayDelay());
+        assertEquals(-1.0, messageWithoutDisplay.getLastDisplayTime());
+        assertEquals(0, messageWithoutDisplay.getDisplayQuantity());
+    }
+
+    @Test
+    public void testBuiltMessageRedisplayLimit() throws JSONException {
+        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+                LIMIT,
+                DELAY
+        );
+
+        for (int i = 0; i < LIMIT; i++) {
+            assertTrue( message.shouldDisplayAgain());
+            message.incrementDisplayQuantity();
+        }
+    }
+
+    @Test
+    public void testBuiltMessageRedisplayDelay() throws JSONException {
+        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+                LIMIT,
+                DELAY
+        );
+
+        assertTrue(message.isDelayTimeSatisfied());
+
+        double timeSeconds = new Date().getTime() / 1000;
+        message.setLastDisplayTime(timeSeconds - DELAY);
+
+        assertTrue(message.isDelayTimeSatisfied());
+
+        message.setLastDisplayTime(timeSeconds - DELAY + 1);
+
+        assertFalse(message.isDelayTimeSatisfied());
+    }
+
+    @Test
+    public void testBuiltMessageRedisplayCLickId() throws JSONException {
+        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+                LIMIT,
+                DELAY
+        );
+
+        assertTrue(message.getClickedClickIds().isEmpty());
+        assertTrue(message.isClickAvailable(IAM_CLICK_ID));
+
+        message.addClickId(IAM_CLICK_ID);
+        message.clearClickIds();
+
+        assertTrue(message.getClickedClickIds().isEmpty());
+
+        message.addClickId(IAM_CLICK_ID);
+        message.addClickId(IAM_CLICK_ID);
+        assertEquals(1, message.getClickedClickIds().size());
+
+        assertFalse(message.isClickAvailable(IAM_CLICK_ID));
+
+        OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
+                3
+        );
+
+        assertFalse(messageWithoutDisplay.isClickAvailable(IAM_CLICK_ID));
+
+        messageWithoutDisplay.addClickId(IAM_CLICK_ID);
+        assertFalse(messageWithoutDisplay.isClickAvailable(IAM_CLICK_ID));
     }
 
     @Test
