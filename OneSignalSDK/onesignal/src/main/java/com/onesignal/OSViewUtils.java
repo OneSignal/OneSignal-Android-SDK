@@ -11,6 +11,7 @@ import android.support.annotation.NonNull;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
 
 import java.lang.ref.WeakReference;
 
@@ -91,11 +92,13 @@ class OSViewUtils {
     private static int getWindowHeightAPI23Plus(@NonNull Activity activity) {
         View decorView = activity.getWindow().getDecorView();
         // Use use stable heights as SystemWindowInset subtracts the keyboard
-        int heightWithoutKeyboard =
-           decorView.getHeight() -
-           decorView.getRootWindowInsets().getStableInsetBottom() -
-           decorView.getRootWindowInsets().getStableInsetTop();
-        return heightWithoutKeyboard;
+        WindowInsets windowInsets = decorView.getRootWindowInsets();
+        if (windowInsets == null)
+            return decorView.getHeight();
+
+        return decorView.getHeight() -
+               windowInsets.getStableInsetBottom() -
+               windowInsets.getStableInsetTop();
     }
 
     private static int getWindowHeightLollipop(@NonNull Activity activity) {
