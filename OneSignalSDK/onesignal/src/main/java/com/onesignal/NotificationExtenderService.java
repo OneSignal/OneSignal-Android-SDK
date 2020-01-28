@@ -113,7 +113,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
    // App developer must implement
    //   - Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
-   protected abstract boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification);
+   protected abstract boolean onNotificationProcessing(OSNotificationReceivedResult notification);
 
    @Override
    protected final void onHandleWork(Intent intent) {
@@ -159,7 +159,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
    }
 
    void processJsonObject(JSONObject currentJsonPayload, boolean restoring) {
-      OSNotificationWillShowInForegroundResult receivedResult = new OSNotificationWillShowInForegroundResult();
+      OSNotificationReceivedResult receivedResult = new OSNotificationReceivedResult();
       receivedResult.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(currentJsonPayload);
       receivedResult.restoring = restoring;
       receivedResult.isAppInFocus = OneSignal.isAppActive();

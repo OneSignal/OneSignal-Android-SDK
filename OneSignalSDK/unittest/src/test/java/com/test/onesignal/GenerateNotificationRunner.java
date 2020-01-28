@@ -55,7 +55,7 @@ import com.onesignal.NotificationExtenderService;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
-import com.onesignal.OSNotificationWillShowInForegroundResult;
+import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
@@ -1097,7 +1097,6 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldAddDefaultButtonToAlertDialog() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
-//      OneSignal.startInit(blankActivity).init();
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
       blankActivityController.resume();
@@ -1420,7 +1419,7 @@ public class GenerateNotificationRunner {
       NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
                                                                           NotificationExtenderServiceTest.class);
 
-      OSNotificationWillShowInForegroundResult notificationReceived = service.notification;
+      OSNotificationReceivedResult notificationReceived = service.notification;
       OSNotificationPayload notificationPayload = notificationReceived.payload;
       assertEquals("Test H", notificationPayload.title);
       assertEquals("Test B", notificationPayload.body);
@@ -1533,13 +1532,13 @@ public class GenerateNotificationRunner {
    
    static int overrideNotificationId;
    public static class NotificationExtenderServiceTest extends NotificationExtenderServiceTestBase {
-      public OSNotificationWillShowInForegroundResult notification;
+      public OSNotificationReceivedResult notification;
       public int notificationId = -1;
       public static boolean throwInAppCode;
     
 
       @Override
-      protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
+      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
          if (throwInAppCode)
             throw new NullPointerException();
 
@@ -1558,7 +1557,7 @@ public class GenerateNotificationRunner {
    public static class NotificationExtenderServiceOverrideProperties extends NotificationExtenderServiceTestBase {
       
       @Override
-      protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
+      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
          
          OverrideSettings overrideSettings = new OverrideSettings();
          overrideSettings.extender = new NotificationCompat.Extender() {
@@ -1592,7 +1591,7 @@ public class GenerateNotificationRunner {
    
    public static class NotificationExtenderServiceTestReturnFalse extends NotificationExtenderServiceTest {
       @Override
-      protected boolean onNotificationProcessing(OSNotificationWillShowInForegroundResult notification) {
+      protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
          return false;
       }
    }
