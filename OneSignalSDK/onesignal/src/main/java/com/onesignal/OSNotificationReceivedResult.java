@@ -27,7 +27,7 @@
 
 package com.onesignal;
 
-public class OSNotificationWillShowInForegroundResult {
+public class OSNotificationReceivedResult {
 
    public OSNotificationPayload payload;
    public boolean restoring;

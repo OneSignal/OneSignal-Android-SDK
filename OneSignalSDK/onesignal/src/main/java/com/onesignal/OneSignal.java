@@ -562,6 +562,7 @@ public class OneSignal {
       setupPrivacyConsent(appContext);
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) finished, checking if appId has been set before proceeding...");
+      appId = getSavedAppId();
       if (appId == null) {
          OneSignal.onesignalLog(LOG_LEVEL.WARN, "appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
          return;
@@ -577,8 +578,9 @@ public class OneSignal {
 
    public static void setNotificationOpenedHandler(NotificationOpenedHandler callback) {
       notificationOpenedHandler = callback;
-      if (appContext != null)
-        setAppContext(appContext);
+
+      if (initDone && notificationOpenedHandler != null)
+            fireCallbackForOpenedNotifications();
    }
 
    public static void setInAppMessageClickHandler(InAppMessageClickHandler callback) {
@@ -596,9 +598,6 @@ public class OneSignal {
          appId = null;
          return;
       }
-
-      if (!isGoogleProjectNumberRemote())
-         googleProjectNumber = "";
 
       deviceType = osUtils.getDeviceType();
       subscribableStatus = osUtils.initializationChecker(appContext, deviceType, appId);
@@ -996,8 +995,10 @@ public class OneSignal {
 
       delayedInitParams = null;
 
-       if (appContext != null)
-           setAppContext(appContext);
+       if (appId != null && appContext != null) {
+          setupPrivacyConsent(appContext);
+          init();
+       }
    }
 
    public static void setRequiresUserPrivacyConsent(boolean required) {

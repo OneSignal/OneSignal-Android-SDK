@@ -116,6 +116,7 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_requiresUserPrivacyConsent;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setGoogleProjectNumber;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
@@ -351,7 +352,6 @@ public class MainOneSignalClassRunner {
 
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
-      // TODO: This is advancing by 60 seconds! Need to make a helper to increaseBy!
       advanceSystemTimeBy(61);
 
       blankActivityController.pause();
@@ -2474,42 +2474,139 @@ public class MainOneSignalClassRunner {
       assertEquals(3, ShadowOneSignalRestClient.requests.size());
    }
 
-   // TODO: Builder method should be deleted?
-//   @Test
-//   public void testMethodCallsBeforeInit() throws Exception {
-//      GetTags();
-//      OneSignal.sendTag("key", "value");
-//      OneSignal.sendTags("{\"key\": \"value\"}");
-//      OneSignal.deleteTag("key");
-//      OneSignal.deleteTags("[\"key1\", \"key2\"]");
-//      OneSignal.setSubscription(false);
-//      OneSignal.enableVibrate(false);
-//      OneSignal.enableSound(false);
-//      OneSignal.promptLocation();
-//      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
-//         @Override
-//         public void onSuccess(JSONObject response) {}
-//         @Override
-//         public void onFailure(JSONObject response) {}
-//      });
-//
-//      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-//      OneSignal.removeNotificationOpenedHandler();
-//      OneSignal.removeNotificationWillShowInForegroundHandler();
+   @Test
+   public void testMethodCalls_withSetAppIdCalledBeforeMethodCalls() throws Exception {
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
 
-//      OneSignal.startInit(blankActivity).init();
+      GetTags();
+      OneSignal.sendTag("key", "value");
+      OneSignal.sendTags("{\"key\": \"value\"}");
+      OneSignal.deleteTag("key");
+      OneSignal.deleteTags("[\"key1\", \"key2\"]");
+      OneSignal.setSubscription(true);
+      OneSignal.enableVibrate(false);
+      OneSignal.enableSound(false);
+      OneSignal.promptLocation();
+      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {}
+         @Override
+         public void onFailure(JSONObject response) {}
+      });
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.removeNotificationWillShowInForegroundHandler();
+      threadAndTaskWait();
 
-//       Checks that Notification setting worked.
-//      Field OneSignal_mInitBuilder = OneSignal.class.getDeclaredField("mInitBuilder");
-//      OneSignal_mInitBuilder.setAccessible(true);
-//      OneSignal.Builder builder = (OneSignal.Builder)OneSignal_mInitBuilder.get(null);
-//      Field OneSignal_Builder_mDisplayOption = builder.getClass().getDeclaredField("mDisplayOption");
-//      OneSignal_Builder_mDisplayOption.setAccessible(true);
-//      OneSignal.OSInFocusDisplayOption inFocusDisplayOption = (OneSignal.OSInFocusDisplayOption)OneSignal_Builder_mDisplayOption.get(builder);
-//      assertEquals(inFocusDisplayOption, OneSignal.OSInFocusDisplayOption.Notification);
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertNull(OneSignal.getPermissionSubscriptionState());
 
-//      threadAndTaskWait();
-//   }
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+   }
+
+   @Test
+   public void testMethodCalls_withSetAppContextCalledBeforeMethodCalls() throws Exception {
+      OneSignal.setAppContext(blankActivity);
+
+      GetTags();
+      OneSignal.sendTag("key", "value");
+      OneSignal.sendTags("{\"key\": \"value\"}");
+      OneSignal.deleteTag("key");
+      OneSignal.deleteTags("[\"key1\", \"key2\"]");
+      OneSignal.setSubscription(true);
+      OneSignal.enableVibrate(false);
+      OneSignal.enableSound(false);
+      OneSignal.promptLocation();
+      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {}
+         @Override
+         public void onFailure(JSONObject response) {}
+      });
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.removeNotificationWillShowInForegroundHandler();
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+   }
+
+   @Test
+   public void testMethodCalls_withSetAppContextAndSetAppId() throws Exception {
+      GetTags();
+      OneSignal.sendTag("key", "value");
+      OneSignal.sendTags("{\"key\": \"value\"}");
+      OneSignal.deleteTag("key");
+      OneSignal.deleteTags("[\"key1\", \"key2\"]");
+      OneSignal.setSubscription(true);
+      OneSignal.enableVibrate(false);
+      OneSignal.enableSound(false);
+      OneSignal.promptLocation();
+      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {}
+         @Override
+         public void onFailure(JSONObject response) {}
+      });
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.removeNotificationWillShowInForegroundHandler();
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertNull(OneSignal.getPermissionSubscriptionState());
+
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+   }
+
+   @Test
+   public void testMethodCalls_withSetAppIdAndSetAppContext() throws Exception {
+      GetTags();
+      OneSignal.sendTag("key", "value");
+      OneSignal.sendTags("{\"key\": \"value\"}");
+      OneSignal.deleteTag("key");
+      OneSignal.deleteTags("[\"key1\", \"key2\"]");
+      OneSignal.setSubscription(true);
+      OneSignal.enableVibrate(false);
+      OneSignal.enableSound(false);
+      OneSignal.promptLocation();
+      OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
+         @Override
+         public void onSuccess(JSONObject response) {}
+         @Override
+         public void onFailure(JSONObject response) {}
+      });
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.removeNotificationWillShowInForegroundHandler();
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertNull(OneSignal.getPermissionSubscriptionState());
+
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+
+      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+   }
 
    // ####### DeleteTags Tests ######
    @Test
@@ -3484,7 +3581,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldFireSubscriptionObserverWhenUserDisablesNotifications() throws Exception {
-//      OneSignal.unsubscribeWhenNotificationsAreDisabled(false);
       OneSignalInit();
       threadAndTaskWait();
 
