@@ -27,23 +27,6 @@
 
 package com.onesignal;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicLong;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -67,6 +50,24 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The main OneSignal class - this is where you will interface with the OneSignal SDK
@@ -847,7 +848,7 @@ public class OneSignal {
    }
 
    private static void startPendingTasks() {
-      if(!taskQueueWaitingForInit.isEmpty()) {
+      if (!taskQueueWaitingForInit.isEmpty()) {
          pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(@NonNull Runnable runnable) {
@@ -857,7 +858,7 @@ public class OneSignal {
             }
          });
 
-         while(!taskQueueWaitingForInit.isEmpty()) {
+         while (!taskQueueWaitingForInit.isEmpty()) {
             pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
          }
       }
@@ -866,29 +867,39 @@ public class OneSignal {
    private static void addTaskToQueue(PendingTaskRunnable task) {
       task.taskId = lastTaskId.incrementAndGet();
 
-      if(pendingTaskExecutor == null) {
+      if (pendingTaskExecutor == null) {
          OneSignal.Log(LOG_LEVEL.INFO,"Adding a task to the pending queue with ID: " + task.taskId);
          //the tasks haven't been executed yet...add them to the waiting queue
          taskQueueWaitingForInit.add(task);
       }
-      else if(!pendingTaskExecutor.isShutdown()) {
+      else if (!pendingTaskExecutor.isShutdown()) {
          OneSignal.Log(LOG_LEVEL.INFO,"Executor is still running, add to the executor with ID: " + task.taskId);
-         //if the executor isn't done with tasks, submit the task to the executor
-         pendingTaskExecutor.submit(task);
+         try {
+            //if the executor isn't done with tasks, submit the task to the executor
+            pendingTaskExecutor.submit(task);
+         } catch (RejectedExecutionException e) {
+            OneSignal.Log(LOG_LEVEL.INFO,"Executor is shutdown, running task manually with ID: " + task.taskId);
+            // Run task manually when RejectedExecutionException occurs due to the ThreadPoolExecutor.AbortPolicy
+            // The pendingTaskExecutor is already shutdown by the time it tries to run the task
+            // Issue #669
+            // https://github.com/OneSignal/OneSignal-Android-SDK/issues/669
+            task.run();
+            e.printStackTrace();
+         }
       }
 
    }
 
    private static boolean shouldRunTaskThroughQueue() {
-      if(initDone && pendingTaskExecutor == null) // there never were any waiting tasks
+      if (initDone && pendingTaskExecutor == null) // there never were any waiting tasks
          return false;
 
       //if init isn't finished and the pending executor hasn't been defined yet...
-      if(!initDone && pendingTaskExecutor == null)
+      if (!initDone && pendingTaskExecutor == null)
          return true;
 
       //or if the pending executor is alive and hasn't been shutdown yet...
-      if(pendingTaskExecutor != null && !pendingTaskExecutor.isShutdown())
+      if (pendingTaskExecutor != null && !pendingTaskExecutor.isShutdown())
          return true;
 
       return false;
