@@ -27,6 +27,13 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
                 @Override
                 void onSuccess(String responseStr) {
                     serverSuccess = true;
+
+                    // This should not typically come from the server as null or empty, but due to Issue #904
+                    // This check is added and will prevent further crashes
+                    // https://github.com/OneSignal/OneSignal-Android-SDK/issues/904
+                    if (responseStr == null || responseStr.isEmpty())
+                        responseStr = "{}";
+
                     try {
                         JSONObject lastGetTagsResponse = new JSONObject(responseStr);
                         if (lastGetTagsResponse.has("tags")) {
