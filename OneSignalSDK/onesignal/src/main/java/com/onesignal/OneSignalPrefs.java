@@ -112,7 +112,7 @@ class OneSignalPrefs {
             super(name);
         }
 
-        void startDelayedWrite() {
+        synchronized void startDelayedWrite() {
             if (mHandler == null) {
                 start();
                 mHandler = new Handler(getLooper());
