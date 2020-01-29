@@ -217,7 +217,7 @@ class OneSignalSyncServiceUtils {
          // Issue #650
          // https://github.com/OneSignal/OneSignal-Android-SDK/issues/650
          try {
-            final BlockingQueue<LocationGMS.LocationPoint> queue = new ArrayBlockingQueue<>(1);
+            final BlockingQueue<Object> queue = new ArrayBlockingQueue<>(1);
             LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
                @Override
                public LocationGMS.CALLBACK_TYPE getType() {
@@ -226,15 +226,16 @@ class OneSignalSyncServiceUtils {
 
                @Override
                public void complete(LocationGMS.LocationPoint point) {
-                  queue.offer(point);
+                  Object object = point != null ?  point : new Object();
+                  queue.offer(object);
                }
             };
             LocationGMS.getLocation(OneSignal.appContext, false, locationHandler);
 
             // The take() will return the offered point once the callback for the locationHandler is completed
-            LocationGMS.LocationPoint point = queue.take();
-            if (point != null)
-               OneSignalStateSynchronizer.updateLocation(point);
+            Object point = queue.take();
+            if (point instanceof LocationGMS.LocationPoint)
+               OneSignalStateSynchronizer.updateLocation((LocationGMS.LocationPoint) point);
 
          } catch (InterruptedException e) {
             e.printStackTrace();
