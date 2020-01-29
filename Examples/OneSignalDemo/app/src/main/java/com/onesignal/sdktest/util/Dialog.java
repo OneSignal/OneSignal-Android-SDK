@@ -128,7 +128,7 @@ public class Dialog {
              * Handles changing the app id for the SDK by reinitializing and caching
              */
             private void updateAppId(DialogInterface dialog, String appId) {
-                OneSignal.init(context, null, appId);
+                OneSignal.setAppId(appId);
                 OneSignalPrefs.cacheOneSignalAppId(context, appId);
 
                 toggleUpdateAlertDialogAttributes(false);

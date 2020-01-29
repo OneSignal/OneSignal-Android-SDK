@@ -18,10 +18,13 @@ public class MainApplication extends Application {
 
         // OneSignal Initialization
         String appId = getString(R.string.onesignal_app_id);
-        OneSignal.init(this, "REMOTE", appId);
-        OneSignal.getCurrentOrNewInitBuilder().unsubscribeWhenNotificationsAreDisabled(true);
+        OneSignal.setAppId(appId);
+        OneSignal.setAppContext(this);
 
+        OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+        OneSignal.pauseInAppMessages(true);
+        OneSignal.setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
     }

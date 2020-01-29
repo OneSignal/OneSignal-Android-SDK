@@ -10,7 +10,7 @@ import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
-public class AppNotificationExtenderService extends NotificationExtenderService implements OneSignal.NotificationReceivedHandler, OneSignal.NotificationOpenedHandler {
+public class AppNotificationExtenderService extends NotificationExtenderService implements OneSignal.NotificationWillShowInForegroundHandler, OneSignal.NotificationOpenedHandler {
 
    @Override
    protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
@@ -34,7 +34,7 @@ public class AppNotificationExtenderService extends NotificationExtenderService 
    }
 
    @Override
-   public void notificationReceived(OSNotification notification) {
+   public void notificationWillShowInForeground(OSNotification notification) {
 
    }
 
