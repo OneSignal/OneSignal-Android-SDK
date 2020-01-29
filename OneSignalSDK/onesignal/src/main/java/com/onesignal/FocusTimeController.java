@@ -66,7 +66,7 @@ class FocusTimeController {
       if (OneSignal.isForeground())
          return;
 
-      for(FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
+      for (FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
          focusTimeProcessor.syncUnsentTimeFromSyncJob();
    }
 
@@ -75,7 +75,7 @@ class FocusTimeController {
       if (timeElapsed == null)
         return false;
 
-      for(FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
+      for (FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
          focusTimeProcessor.addTime(timeElapsed, lastSessionResult.session, focusType);
       return true;
    }

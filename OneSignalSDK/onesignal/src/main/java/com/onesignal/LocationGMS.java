@@ -311,6 +311,9 @@ class LocationGMS {
          synchronized (syncLock) {
             PermissionsActivity.answered = false;
 
+            if (mGoogleApiClient == null || mGoogleApiClient.realInstance() == null)
+               return;
+
             if (mLastLocation == null) {
                mLastLocation = FusedLocationApiWrapper.getLastLocation(mGoogleApiClient.realInstance());
                if (mLastLocation != null)
