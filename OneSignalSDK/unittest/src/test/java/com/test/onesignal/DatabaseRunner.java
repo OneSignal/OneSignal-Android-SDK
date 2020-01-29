@@ -273,8 +273,8 @@ public class DatabaseRunner {
 
       ContentValues values = new ContentValues();
       values.put(InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
-      values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayQuantity());
-      values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getLastDisplayTime());
+      values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayStats().getDisplayQuantity());
+      values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getDisplayStats().getLastDisplayTime());
       values.put(InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
 
       // 3. Clear the cache of the DB so it reloads the file.

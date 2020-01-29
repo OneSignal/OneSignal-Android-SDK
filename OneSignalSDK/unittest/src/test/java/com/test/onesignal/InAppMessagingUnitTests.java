@@ -163,11 +163,11 @@ public class InAppMessagingUnitTests {
                 LIMIT,
                 DELAY
         );
-        assertTrue(message.isRedisplayEnabled());
-        assertEquals(LIMIT, message.getDisplayLimit());
-        assertEquals(DELAY, message.getDisplayDelay());
-        assertEquals(-1.0, message.getLastDisplayTime());
-        assertEquals(0, message.getDisplayQuantity());
+        assertTrue(message.getDisplayStats().isRedisplayEnabled());
+        assertEquals(LIMIT, message.getDisplayStats().getDisplayLimit());
+        assertEquals(DELAY, message.getDisplayStats().getDisplayDelay());
+        assertEquals(-1.0, message.getDisplayStats().getLastDisplayTime());
+        assertEquals(0, message.getDisplayStats().getDisplayQuantity());
 
         OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
@@ -175,11 +175,11 @@ public class InAppMessagingUnitTests {
                 OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
                 3
         );
-        assertFalse(messageWithoutDisplay.isRedisplayEnabled());
-        assertEquals(Integer.MAX_VALUE, messageWithoutDisplay.getDisplayLimit());
-        assertEquals(0.0, messageWithoutDisplay.getDisplayDelay());
-        assertEquals(-1.0, messageWithoutDisplay.getLastDisplayTime());
-        assertEquals(0, messageWithoutDisplay.getDisplayQuantity());
+        assertFalse(messageWithoutDisplay.getDisplayStats().isRedisplayEnabled());
+        assertEquals(Integer.MAX_VALUE, messageWithoutDisplay.getDisplayStats().getDisplayLimit());
+        assertEquals(0.0, messageWithoutDisplay.getDisplayStats().getDisplayDelay());
+        assertEquals(-1.0, messageWithoutDisplay.getDisplayStats().getLastDisplayTime());
+        assertEquals(0, messageWithoutDisplay.getDisplayStats().getDisplayQuantity());
     }
 
     @Test
@@ -190,9 +190,12 @@ public class InAppMessagingUnitTests {
         );
 
         for (int i = 0; i < LIMIT; i++) {
-            assertTrue( message.shouldDisplayAgain());
-            message.incrementDisplayQuantity();
+            assertTrue(message.getDisplayStats().shouldDisplayAgain());
+            message.getDisplayStats().incrementDisplayQuantity();
         }
+
+        message.getDisplayStats().incrementDisplayQuantity();
+        assertFalse(message.getDisplayStats().shouldDisplayAgain());
     }
 
     @Test
@@ -202,16 +205,17 @@ public class InAppMessagingUnitTests {
                 DELAY
         );
 
-        assertTrue(message.isDelayTimeSatisfied());
+        assertTrue(message.getDisplayStats().isDelayTimeSatisfied());
 
         double timeSeconds = new Date().getTime() / 1000;
-        message.setLastDisplayTime(timeSeconds - DELAY);
 
-        assertTrue(message.isDelayTimeSatisfied());
+        message.getDisplayStats().setLastDisplayTime(timeSeconds - DELAY);
 
-        message.setLastDisplayTime(timeSeconds - DELAY + 1);
+        assertTrue(message.getDisplayStats().isDelayTimeSatisfied());
 
-        assertFalse(message.isDelayTimeSatisfied());
+        message.getDisplayStats().setLastDisplayTime(timeSeconds - DELAY + 1);
+
+        assertFalse(message.getDisplayStats().isDelayTimeSatisfied());
     }
 
     @Test
@@ -241,8 +245,6 @@ public class InAppMessagingUnitTests {
                 OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
                 3
         );
-
-        assertFalse(messageWithoutDisplay.isClickAvailable(IAM_CLICK_ID));
 
         messageWithoutDisplay.addClickId(IAM_CLICK_ID);
         assertFalse(messageWithoutDisplay.isClickAvailable(IAM_CLICK_ID));

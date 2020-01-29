@@ -7,7 +7,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -18,11 +17,8 @@ class OSInAppMessage {
     private static final String IAM_ID = "id";
     private static final String IAM_VARIANTS = "variants";
     private static final String IAM_TRIGGERS = "triggers";
-    private static final String IAM_CLICK_IDS = "click_ids";
     private static final String IAM_RE_DISPLAY = "redisplay";
     private static final String DISPLAY_DURATION = "display_duration";
-    private static final String DISPLAY_LIMIT = "limit";
-    private static final String DISPLAY_DELAY = "delay";
 
     /**
      * The unique identifier for this in-app message
@@ -52,17 +48,13 @@ class OSInAppMessage {
     @NonNull
     private Set<String> clickedClickIds;
 
-    //Last IAM display time in seconds
-    private double lastDisplayTime = -1;
-    //Current quantity of displays
-    private int displayQuantity = 0;
-    //Quantity of displays limit
-    private int displayLimit = Integer.MAX_VALUE;
-    //Delay between displays in seconds
-    private double displayDelay = 0;
-    private double displayDuration;
+    /**
+     * Reference to redisplay properties
+     */
+    private OSInAppMessageDisplayStats displayStats = new OSInAppMessageDisplayStats();
 
-    private boolean redisplayEnabled = false;
+    private double displayDuration;
+    private boolean triggerChanged = false;
     private boolean actionTaken;
     boolean isPreview;
 
@@ -70,11 +62,11 @@ class OSInAppMessage {
         this.isPreview = isPreview;
     }
 
-    OSInAppMessage(@NonNull String messageId, int displayQuantity, double lastDisplayTime, Set<String> clickIds) {
+    OSInAppMessage(@NonNull String messageId, @NonNull Set<String> clickIds, OSInAppMessageDisplayStats displayStats) {
         this.messageId = messageId;
-        this.lastDisplayTime = lastDisplayTime;
-        this.displayQuantity = displayQuantity;
         this.clickedClickIds = clickIds;
+
+        this.displayStats = displayStats;
     }
 
     OSInAppMessage(JSONObject json) throws JSONException {
@@ -85,8 +77,9 @@ class OSInAppMessage {
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
         this.clickedClickIds = new HashSet<>();
 
-        if (json.has(IAM_RE_DISPLAY))
-            parseReDisplayJSON(json.getJSONObject(IAM_RE_DISPLAY));
+        if (json.has(IAM_RE_DISPLAY)) {
+            this.displayStats = new OSInAppMessageDisplayStats(json.getJSONObject(IAM_RE_DISPLAY));
+        }
     }
 
     private HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {
@@ -127,21 +120,6 @@ class OSInAppMessage {
         return parsedTriggers;
     }
 
-    private void parseReDisplayJSON(JSONObject json) throws JSONException {
-        redisplayEnabled = true;
-
-        Object displayLimit = json.get(DISPLAY_LIMIT);
-        Object displayDelay = json.get(DISPLAY_DELAY);
-
-        if (displayLimit instanceof Integer)
-            this.displayLimit = (Integer) displayLimit;
-
-        if (displayDelay instanceof Double)
-            this.displayDelay = (Double) displayDelay;
-        else if (displayDelay instanceof Integer)
-            this.displayDelay = (Integer) displayDelay;
-    }
-
     JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
@@ -161,14 +139,9 @@ class OSInAppMessage {
 
             json.put(IAM_VARIANTS, variants);
             json.put(DISPLAY_DURATION, this.displayDuration);
-            json.put(DISPLAY_LIMIT, this.displayLimit);
-            json.put(DISPLAY_DELAY, this.displayDelay);
 
-            if (redisplayEnabled)
-                json.put(IAM_RE_DISPLAY, new JSONObject() {{
-                    put(DISPLAY_LIMIT, displayLimit);
-                    put(DISPLAY_DELAY, displayDelay);
-                }});
+            if (displayStats.isRedisplayEnabled())
+                json.put(IAM_RE_DISPLAY, displayStats.toJSONObject());
 
             JSONArray orConditions = new JSONArray();
             for (ArrayList<OSTrigger> andArray : this.triggers) {
@@ -208,54 +181,12 @@ class OSInAppMessage {
         this.displayDuration = displayDuration;
     }
 
-    int getDisplayQuantity() {
-        return displayQuantity;
+    boolean isTriggerChanged() {
+        return triggerChanged;
     }
 
-    void setDisplayQuantity(int displayQuantity) {
-        this.displayQuantity = displayQuantity;
-    }
-
-    int getDisplayLimit() {
-        return displayLimit;
-    }
-
-    void incrementDisplayQuantity() {
-        this.displayQuantity++;
-    }
-
-    double getDisplayDelay() {
-        return displayDelay;
-    }
-
-    double getLastDisplayTime() {
-        return lastDisplayTime;
-    }
-
-    void setLastDisplayTime(double lastDisplayTime) {
-        this.lastDisplayTime = lastDisplayTime;
-    }
-
-    boolean isRedisplayEnabled() {
-        return redisplayEnabled;
-    }
-
-    boolean shouldDisplayAgain() {
-        return displayQuantity <= displayLimit;
-    }
-
-    boolean isDelayTimeSatisfied() {
-        if (lastDisplayTime < 0) {
-            lastDisplayTime = new Date().getTime() / 1000; //Current time in seconds
-            return true;
-        }
-
-        double currentTimeInSeconds = new Date().getTime() / 1000;
-        //Calculate gap between display times
-        double diffInSeconds = currentTimeInSeconds - lastDisplayTime;
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessage lastDisplayTime: " + lastDisplayTime +
-                " currentTimeInSeconds: " + currentTimeInSeconds + " diffInSeconds: " + diffInSeconds + " displayDelay: " + displayDelay);
-        return diffInSeconds >= displayDelay;
+    void setTriggerChanged(boolean triggerChanged) {
+        this.triggerChanged = triggerChanged;
     }
 
     @NonNull
@@ -264,7 +195,7 @@ class OSInAppMessage {
     }
 
     boolean isClickAvailable(String clickId) {
-        return redisplayEnabled && !clickedClickIds.contains(clickId);
+        return !clickedClickIds.contains(clickId);
     }
 
     void clearClickIds() {
@@ -275,18 +206,19 @@ class OSInAppMessage {
         clickedClickIds.add(clickId);
     }
 
+    OSInAppMessageDisplayStats getDisplayStats() {
+        return displayStats;
+    }
+
     @Override
     public String toString() {
         return "OSInAppMessage{" +
                 "messageId='" + messageId + '\'' +
                 ", triggers=" + triggers +
-                ", lastDisplayTime=" + lastDisplayTime +
-                ", displayQuantity=" + displayQuantity +
-                ", displayLimit=" + displayLimit +
-                ", displayDelay=" + displayDelay +
-                ", redisplayEnabled=" + redisplayEnabled +
+                ", clickedClickIds=" + clickedClickIds +
+                ", displayStats=" + displayStats +
+                ", actionTaken=" + actionTaken +
                 ", isPreview=" + isPreview +
-                ", clickIds=" + clickedClickIds.toString() +
                 '}';
     }
 

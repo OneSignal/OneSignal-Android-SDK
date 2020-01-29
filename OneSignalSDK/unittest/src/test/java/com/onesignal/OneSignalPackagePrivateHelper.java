@@ -273,7 +273,7 @@ public class OneSignalPackagePrivateHelper {
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
       public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, Set<String> clickIds) {
-         super(messageId, displaysQuantity, lastDisplayTime, clickIds);
+         super(messageId, clickIds, new OSInAppMessageDisplayStats(displaysQuantity, lastDisplayTime));
       }
 
       OSTestInAppMessage(JSONObject json) throws JSONException {
@@ -305,59 +305,11 @@ public class OneSignalPackagePrivateHelper {
          return parsedTriggers;
       }
 
+
+
       @Override
       public void setDisplayDuration(double displayDuration) {
          super.setDisplayDuration(displayDuration);
-      }
-
-      @Override
-      public boolean isRedisplayEnabled() {
-         return super.isRedisplayEnabled();
-      }
-
-      @Override
-      public int getDisplayQuantity() {
-         return super.getDisplayQuantity();
-      }
-
-      @Override
-      public void setDisplayQuantity(int displayQuantity) {
-         super.setDisplayQuantity(displayQuantity);
-      }
-
-      @Override
-      public int getDisplayLimit() {
-         return super.getDisplayLimit();
-      }
-
-      @Override
-      public double getDisplayDelay() {
-         return super.getDisplayDelay();
-      }
-
-      @Override
-      public double getLastDisplayTime() {
-         return super.getLastDisplayTime();
-      }
-
-      @Override
-      public void setLastDisplayTime(double lastDisplayTime) {
-         super.setLastDisplayTime(lastDisplayTime);
-      }
-
-      @Override
-      public void incrementDisplayQuantity() {
-         super.incrementDisplayQuantity();
-      }
-
-      @Override
-      public boolean isDelayTimeSatisfied() {
-         return super.isDelayTimeSatisfied();
-      }
-
-      @Override
-      public boolean shouldDisplayAgain() {
-         return super.shouldDisplayAgain();
       }
 
       @NonNull
@@ -381,8 +333,92 @@ public class OneSignalPackagePrivateHelper {
          super.addClickId(clickId);
       }
 
+      @Override
+      public double getDisplayDuration() {
+         return super.getDisplayDuration();
+      }
+
+      @Override
+      public OSTestInAppMessageDisplayStats getDisplayStats() {
+         return new OSTestInAppMessageDisplayStats(super.getDisplayStats());
+      }
+
       public JSONObject toJSONObject() {
          return super.toJSONObject();
+      }
+   }
+
+   public static class OSTestInAppMessageDisplayStats extends com.onesignal.OSInAppMessageDisplayStats {
+
+      private OSInAppMessageDisplayStats displayStats;
+
+      OSTestInAppMessageDisplayStats(OSInAppMessageDisplayStats displayStats) {
+         this.displayStats = displayStats;
+      }
+
+      @Override
+      public void setDisplayStats(OSInAppMessageDisplayStats displayStats) {
+         this.displayStats.setDisplayStats(displayStats);
+      }
+
+      @Override
+      public double getLastDisplayTime() {
+         return this.displayStats.getLastDisplayTime();
+      }
+
+      @Override
+      public void setLastDisplayTime(double lastDisplayTime) {
+         this.displayStats.setLastDisplayTime(lastDisplayTime);
+      }
+
+      @Override
+      public void incrementDisplayQuantity() {
+         this.displayStats.incrementDisplayQuantity();
+      }
+
+      @Override
+      public int getDisplayQuantity() {
+         return this.displayStats.getDisplayQuantity();
+      }
+
+      @Override
+      public void setDisplayQuantity(int displayQuantity) {
+         this.displayStats.setDisplayQuantity(displayQuantity);
+      }
+
+      @Override
+      public int getDisplayLimit() {
+         return this.displayStats.getDisplayLimit();
+      }
+
+      @Override
+      public void setDisplayLimit(int displayLimit) {
+         this.displayStats.setDisplayLimit(displayLimit);
+      }
+
+      @Override
+      public double getDisplayDelay() {
+         return this.displayStats.getDisplayDelay();
+      }
+
+      @Override
+      public void setDisplayDelay(double displayDelay) {
+         this.displayStats.setDisplayDelay(displayDelay);
+      }
+
+      @Override
+      public boolean shouldDisplayAgain() {
+         return this.displayStats.shouldDisplayAgain();
+      }
+
+      @Override
+      public boolean isDelayTimeSatisfied() {
+         return this.displayStats.isDelayTimeSatisfied();
+      }
+
+      @Override
+      public boolean isRedisplayEnabled() {
+         return this.displayStats.isRedisplayEnabled();
       }
    }
 

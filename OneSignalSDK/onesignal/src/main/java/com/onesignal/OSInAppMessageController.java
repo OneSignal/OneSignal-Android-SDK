@@ -41,8 +41,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // IAMs that have had their trigger(s) evaluated to true;
     //   This mean they have been added to the queue to display, or have already displayed
     @NonNull final private Set<String> dismissedMessages;
-    // IAMs displayed with last displayed time and quantity of displays data
-    @NonNull final private List<OSInAppMessage> displayedMessagesData;
     // IAMs that have been displayed to the user
     //   This means their impression has been successfully posted to our backend and should not be counted again
     @NonNull final private Set<String> impressionedMessages;
@@ -50,6 +48,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     @NonNull final private Set<String> clickedClickIds;
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
     @NonNull final ArrayList<OSInAppMessage> messageDisplayQueue;
+    // IAMs displayed with last displayed time and quantity of displays data
+    @NonNull private List<OSInAppMessage> displayedMessagesData;
 
     private boolean inAppMessagingEnabled = true;
 
@@ -103,12 +103,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (tempClickedMessageIdsSet != null)
             clickedClickIds.addAll(tempClickedMessageIdsSet);
 
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            displayedMessagesData = new ArrayList<>();
-        } else {
-            inAppMessageRepository = new OSInAppMessageRepository(dbInstance);
-            displayedMessagesData = inAppMessageRepository.getAllInAppMessages();
-        }
+        initRedisplayData(dbInstance);
+    }
+
+    void initRedisplayData(OneSignalDbHelper dbInstance) {
+        inAppMessageRepository = new OSInAppMessageRepository(dbInstance);
+        displayedMessagesData = inAppMessageRepository.getAllInAppMessages();
+
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "displayedMessagesData: " + displayedMessagesData.toString());
     }
 
@@ -281,9 +282,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             return;
 
         final String clickId = action.clickId;
+        boolean clickAvailableByRedisplay = message.getDisplayStats().isRedisplayEnabled() && message.isClickAvailable(clickId);
 
-        // Never count multiple clicks for the same click UUID
-        if (!message.isClickAvailable(clickId) && clickedClickIds.contains(clickId))
+        // Never count multiple clicks for the same click UUID unless that click is from an IAM with redisplay
+        if (!clickAvailableByRedisplay && clickedClickIds.contains(clickId))
             return;
         clickedClickIds.add(clickId);
         message.addClickId(clickId);
@@ -331,7 +333,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * For re display, the message need to be removed from the arrays that track the display
      * */
     private void setDataForReDisplay(OSInAppMessage message) {
-        if (!message.isRedisplayEnabled())
+        if (!message.getDisplayStats().isRedisplayEnabled())
             return;
 
         int index = displayedMessagesData.indexOf(message);
@@ -339,17 +341,16 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForReDisplay: " + message.messageId);
 
             OSInAppMessage savedIAM = displayedMessagesData.get(index);
-            message.setLastDisplayTime(savedIAM.getLastDisplayTime());
-            message.setDisplayQuantity(savedIAM.getDisplayQuantity());
+            message.getDisplayStats().setDisplayStats(savedIAM.getDisplayStats());
 
-            if (message.isDelayTimeSatisfied() && message.shouldDisplayAgain()) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForReDisplay: " + message.messageId + " reset arrays clickedClickIds: " + clickedClickIds);
+            // Check if conditions are correct for redisplay
+            if (message.isTriggerChanged() &&
+                    message.getDisplayStats().isDelayTimeSatisfied() &&
+                    message.getDisplayStats().shouldDisplayAgain()) {
 
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
                 message.clearClickIds();
-
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForReDisplay: " + message.messageId + "after reset arrays clickedClickIds: " + clickedClickIds);
             }
         }
     }
@@ -436,12 +437,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     private void persisIAMessageForReDisplay(final OSInAppMessage message) {
         //If the IAM doesn't have the re display configuration then no need to save it
-        if (!message.isRedisplayEnabled())
+        if (!message.getDisplayStats().isRedisplayEnabled())
             return;
 
         long displayTimeSeconds = new Date().getTime() / 1000;
-        message.setLastDisplayTime(displayTimeSeconds);
-        message.incrementDisplayQuantity();
+        message.getDisplayStats().setLastDisplayTime(displayTimeSeconds);
+        message.getDisplayStats().incrementDisplayQuantity();
+        message.setTriggerChanged(false);
 
         new Thread(new Runnable() {
             @Override
@@ -545,6 +547,40 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     /**
+     * Part of redisplay logic
+     *
+     * If trigger key is part of message triggers, then set triggerChanged flag true
+     * */
+    private void checkTriggerOnMessage(OSInAppMessage message, @NonNull String triggerKey) {
+        for (ArrayList<OSTrigger> andConditions : message.triggers) {
+            for (OSTrigger trigger : andConditions) {
+                if (triggerKey.equals(trigger.property)) {
+                    message.setTriggerChanged(true);
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * Part of redisplay logic
+     *
+     * Make all messages with redisplay enable available for redisplay if:
+     *   - Already displayed
+     *   - Trigger changed
+     * */
+    private void checkTriggerChanges(Map<String, Object> newTriggers) {
+        for (String triggerKey : newTriggers.keySet()) {
+            for (OSInAppMessage message : messages) {
+                if (displayedMessagesData.contains(message)) {
+                    checkTriggerOnMessage(message, triggerKey);
+                }
+            }
+
+        }
+    }
+
+    /**
      * Trigger logic
      * <p>
      * These methods mostly pass data to the Trigger Controller, but also cause the SDK to
@@ -553,6 +589,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      */
     void addTriggers(Map<String, Object> newTriggers) {
         triggerController.addTriggers(newTriggers);
+        checkTriggerChanges(newTriggers);
         evaluateInAppMessages();
     }
 

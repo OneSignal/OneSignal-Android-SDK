@@ -50,7 +50,6 @@ class OSDynamicTriggerController {
                         currentTimeInterval = DEFAULT_LAST_IN_APP_TIME_AGO;
                     else
                         currentTimeInterval = new Date().getTime() - lastTimeAppDismissed.getTime();
-
                     break;
             }
 

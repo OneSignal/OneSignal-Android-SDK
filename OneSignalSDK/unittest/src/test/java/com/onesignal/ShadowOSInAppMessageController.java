@@ -1,9 +1,6 @@
 package com.onesignal;
 
-import android.support.annotation.NonNull;
-
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 import org.robolectric.annotation.RealObject;
@@ -33,8 +30,8 @@ public class ShadowOSInAppMessageController {
         Shadow.directlyOn(realObject, OSInAppMessageController.class).messageWasDismissed(message);
 
         OneSignalPackagePrivateHelper.OSTestInAppMessage inAppMessage = new OneSignalPackagePrivateHelper.OSTestInAppMessage(message);
-        inAppMessage.setDisplayQuantity(message.getDisplayQuantity());
-        inAppMessage.setLastDisplayTime(message.getLastDisplayTime());
+        inAppMessage.getDisplayStats().setDisplayStats(message.getDisplayStats());
+
         dismissedMessages.add(inAppMessage);
     }
 }
