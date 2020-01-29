@@ -232,8 +232,8 @@ public class OneSignal {
    }
 
    static String appId;
-   static String googleProjectNumber;
    static Context appContext;
+   static String googleProjectNumber;
 
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
@@ -530,6 +530,7 @@ public class OneSignal {
       }
 
       appId = newAppId;
+      SaveAppId(newAppId);
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) finished, checking if appContext has been set before proceeding...");
       if (appContext == null) {
@@ -562,9 +563,17 @@ public class OneSignal {
       setupPrivacyConsent(appContext);
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) finished, checking if appId has been set before proceeding...");
-      appId = getSavedAppId();
       if (appId == null) {
-         OneSignal.onesignalLog(LOG_LEVEL.WARN, "appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
+
+         // Get the cached app id, if it exists
+         String oldAppId = getSavedAppId();
+         if (oldAppId == null) {
+            OneSignal.onesignalLog(LOG_LEVEL.WARN, "appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
+         } else {
+            // Init if the app id is not null
+            setAppId(oldAppId);
+         }
+
          return;
       }
 
@@ -593,7 +602,7 @@ public class OneSignal {
    synchronized private static void init() {
       if (requiresUserPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.WARN, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
-         delayedInitParams = new DelayedConsentInitializationParameters(appContext, googleProjectNumber, appId, notificationWillShowInForegroundHandler, notificationOpenedHandler);
+         delayedInitParams = new DelayedConsentInitializationParameters(appContext, appId);
          // Set app id null since OneSignal was not init fully
          appId = null;
          return;
@@ -699,11 +708,6 @@ public class OneSignal {
 
    public static boolean userProvidedPrivacyConsent() {
       return getSavedUserConsentStatus();
-   }
-
-   private static boolean isGoogleProjectNumberRemote() {
-      return remoteParams != null &&
-              remoteParams.googleProjectNumber != null;
    }
 
    private static boolean isSubscriptionStatusUninitializable() {
@@ -987,18 +991,13 @@ public class OneSignal {
    }
 
    private static void reassignDelayedInitParams() {
-      appContext = delayedInitParams.context;
-      googleProjectNumber = delayedInitParams.googleProjectNumber;
-      appId = delayedInitParams.appId;
-      notificationWillShowInForegroundHandler = delayedInitParams.notificationWillShowInForegroundHandler;
-      notificationOpenedHandler = delayedInitParams.notificationOpenedHandler;
+      Context delayedContext = delayedInitParams.context;
+      String delayedAppId = delayedInitParams.appId;
 
       delayedInitParams = null;
 
-       if (appId != null && appContext != null) {
-          setupPrivacyConsent(appContext);
-          init();
-       }
+      setAppId(delayedAppId);
+      setAppContext(delayedContext);
    }
 
    public static void setRequiresUserPrivacyConsent(boolean required) {

@@ -105,7 +105,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setGoogleProjectNumber;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGroup;
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
@@ -1187,7 +1186,7 @@ public class GenerateNotificationRunner {
    public void shouldShowInAppPreviewWhenInFocus() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal_setGoogleProjectNumber("123456789");
+//      OneSignal_setGoogleProjectNumber("123456789");
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -1205,7 +1204,7 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenOpeningPreviewNotification() throws Exception {
-      OneSignal_setGoogleProjectNumber("123456789");
+//      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
       blankActivityController.resume();
