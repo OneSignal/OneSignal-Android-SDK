@@ -92,11 +92,18 @@ class ActivityLifecycleHandler {
             entry.getValue().available(curActivity);
         }
 
-        ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
-        for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
-            KeyboardListener keyboardListener = new KeyboardListener(entry.getValue(), entry.getKey());
-            treeObserver.addOnGlobalLayoutListener(keyboardListener);
-            sKeyboardListeners.put(entry.getKey(), keyboardListener);
+        try {
+            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+            for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
+                KeyboardListener keyboardListener = new KeyboardListener(entry.getValue(), entry.getKey());
+                treeObserver.addOnGlobalLayoutListener(keyboardListener);
+                sKeyboardListeners.put(entry.getKey(), keyboardListener);
+            }
+        } catch (RuntimeException e) {
+            // Related to Unity Issue #239 on Github
+            // https://github.com/OneSignal/OneSignal-Unity-SDK/issues/239
+            // RuntimeException at ActivityLifecycleHandler.setCurActivity on Android (Unity 2.9.0)
+            e.printStackTrace();
         }
     }
 
