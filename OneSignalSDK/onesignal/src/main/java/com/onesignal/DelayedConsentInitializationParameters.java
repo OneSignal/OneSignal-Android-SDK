@@ -32,17 +32,12 @@ import com.onesignal.OneSignal.NotificationOpenedHandler;
 import com.onesignal.OneSignal.NotificationWillShowInForegroundHandler;
 
 class DelayedConsentInitializationParameters {
-    Context context;
-    String googleProjectNumber;
-    String appId;
-    NotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
-    NotificationOpenedHandler notificationOpenedHandler;
 
-    DelayedConsentInitializationParameters(Context delayContext, String delayGoogleProjectNumber, String delayAppId, NotificationWillShowInForegroundHandler delayNotificationWillShowInForegroundHandler, NotificationOpenedHandler delayNotificationOpenedHandler) {
+    Context context;
+    String appId;
+
+    DelayedConsentInitializationParameters(Context delayContext, String delayAppId) {
         this.context = delayContext;
-        this.googleProjectNumber = delayGoogleProjectNumber;
         this.appId = delayAppId;
-        this.notificationWillShowInForegroundHandler = delayNotificationWillShowInForegroundHandler;
-        this.notificationOpenedHandler = delayNotificationOpenedHandler;
     }
 }

@@ -116,8 +116,6 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_requiresUserPrivacyConsent;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setGoogleProjectNumber;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
@@ -140,7 +138,6 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
@@ -250,7 +247,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testInitFromApplicationContext() throws Exception {
       // Application.onCreate
-      OneSignal_setGoogleProjectNumber("123456789");
+//      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(RuntimeEnvironment.application);
       threadAndTaskWait();
@@ -1017,7 +1014,8 @@ public class MainOneSignalClassRunner {
       // A more real test would be "missing support library" but bad project number is an easier setup
       //   and is testing the same logic.
       ShadowPushRegistratorGCM.fail = true;
-      OneSignalInitWithBadProjectNum();
+//      OneSignalInitWithBadProjectNum();
+      OneSignalInit();
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
 
@@ -1053,8 +1051,8 @@ public class MainOneSignalClassRunner {
       // Ensures lower number notification_types do not over right higher numbered ones.
       ShadowPushRegistratorGCM.fail = true;
       GetIdsAvailable();
-      OneSignalInitWithBadProjectNum();
-
+//      OneSignalInitWithBadProjectNum();
+      OneSignalInit();
       threadAndTaskWait();
       Robolectric.getForegroundThreadScheduler().runOneTask();
       assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
@@ -1081,7 +1079,8 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testSetSubscriptionShouldNotOverrideSubscribeError() throws Exception {
-      OneSignalInitWithBadProjectNum();
+//      OneSignalInitWithBadProjectNum();
+      OneSignalInit();
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -1092,7 +1091,8 @@ public class MainOneSignalClassRunner {
 
       // Restart app - Should omit notification_types
       restartAppAndElapseTimeToNextSession();
-      OneSignalInitWithBadProjectNum();
+//      OneSignalInitWithBadProjectNum();
+      OneSignalInit();
       blankActivityController.resume();
       threadAndTaskWait();
       assertFalse(ShadowOneSignalRestClient.lastPost.has("notification_types"));
@@ -1243,9 +1243,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       int normalCreateFieldCount = ShadowOneSignalRestClient.lastPost.length();
-      ShadowOneSignalRestClient.resetStatics();
       OneSignal.setAppId("99f7f966-d8cc-11e4-bed1-df8f05be55b2");
-      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       assertEquals(normalCreateFieldCount, ShadowOneSignalRestClient.lastPost.length());
@@ -3385,7 +3383,7 @@ public class MainOneSignalClassRunner {
       ShadowRoboNotificationManager.notifications.clear();
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity.getApplicationContext());
-      OneSignal_setGoogleProjectNumber("87654321");
+//      OneSignal_setGoogleProjectNumber("87654321");
       threadAndTaskWait();
 
       // Create 2 notifications
@@ -4078,7 +4076,7 @@ public class MainOneSignalClassRunner {
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
-      OneSignal_setGoogleProjectNumber("87654321");
+//      OneSignal_setGoogleProjectNumber("87654321");
       blankActivityController.resume();
    }
 
@@ -4086,16 +4084,16 @@ public class MainOneSignalClassRunner {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity.getApplicationContext());
-      OneSignal_setGoogleProjectNumber("87654321");
+//      OneSignal_setGoogleProjectNumber("87654321");
       blankActivityController.resume();
    }
 
-   private void OneSignalInitWithBadProjectNum() {
-      ShadowOSUtils.subscribableStatus = -6;
-      OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(blankActivity.getApplicationContext());
-      OneSignal_setGoogleProjectNumber("NOT A VALID Google project number");
-   }
+//   private void OneSignalInitWithBadProjectNum() {
+//      ShadowOSUtils.subscribableStatus = -6;
+//      OneSignal.setAppId(ONESIGNAL_APP_ID);
+//      OneSignal.setAppContext(blankActivity.getApplicationContext());
+//      OneSignal_setGoogleProjectNumber("NOT A VALID Google project number");
+//   }
 
    // For some reason Roboelctric does not automatically add this when it reads the AndroidManifest.xml
    //    Also it seems it has to be done in the test itself instead of the setup process.

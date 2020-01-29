@@ -234,10 +234,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() { return OneSignal.appId; }
 
-   public static void OneSignal_setGoogleProjectNumber(String googleProjectNumber) {
-      OneSignal.googleProjectNumber = googleProjectNumber;
-   }
-
    static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 
       public RemoteOutcomeParams() {
