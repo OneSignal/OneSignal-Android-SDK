@@ -33,8 +33,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
     @NonNull private ArrayList<OSInAppMessage> messages;
-    // IAMs that have had their trigger(s) evaluated to true;
-    //   This mean they have been added to the queue to display, or have already displayed
+    // IAMs that have been dismissed by the user
+    //   This mean they have already displayed to the user
     @NonNull final private Set<String> dismissedMessages;
     // IAMs that have been displayed to the user
     //   This means their impression has been successfully posted to our backend and should not be counted again
@@ -71,13 +71,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
 
-        Set<String> tempTriggeredSet = OneSignalPrefs.getStringSet(
+        Set<String> tempDismissedSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
                 null
         );
-        if (tempTriggeredSet != null)
-            dismissedMessages.addAll(tempTriggeredSet);
+        if (tempDismissedSet != null)
+            dismissedMessages.addAll(tempDismissedSet);
 
         Set<String> tempImpressionedSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
@@ -124,8 +124,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     //    which is the REST call to create the player record on_session
     void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException {
         // Cache copy for quick cold starts
-        OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
-           OneSignalPrefs.PREFS_OS_CACHED_IAMS, json.toString());
+        OneSignalPrefs.saveString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CACHED_IAMS,
+                json.toString());
+
         processInAppMessageJson(json);
     }
 
