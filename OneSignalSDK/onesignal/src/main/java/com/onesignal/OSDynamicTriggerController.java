@@ -43,7 +43,7 @@ class OSDynamicTriggerController {
                     currentTimeInterval = new Date().getTime() - sessionLaunchTime.getTime();
                     break;
                 case TIME_SINCE_LAST_IN_APP:
-                    if (OSInAppMessageController.getController().isDisplayingInApp())
+                    if (OSInAppMessageController.getController().isInAppMessageShowing())
                         return false;
                     Date lastTimeAppDismissed = OSInAppMessageController.getController().lastTimeInAppDismissed;
                     if (lastTimeAppDismissed == null)
