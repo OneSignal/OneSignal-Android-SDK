@@ -43,6 +43,9 @@ import android.support.annotation.RequiresApi;
 
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 /**
  This schedules a job to fire later in the background preform player REST calls to make a(n);
    - on_focus
@@ -209,25 +212,40 @@ class OneSignalSyncServiceUtils {
          OneSignal.appId = OneSignal.getSavedAppId();
          OneSignalStateSynchronizer.initUserState();
 
-         LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
-            @Override
-            public LocationGMS.CALLBACK_TYPE getType() {
-               return LocationGMS.CALLBACK_TYPE.SYNC_SERVICE;
-            }
+         // BlockingQueue used to make sure that the complete() callback is completely finished before moving on
+         // SyncUserState was moving on and causing a thread lock with the complete() LocationGMS work
+         // Issue #650
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/650
+         try {
+            final BlockingQueue<Object> queue = new ArrayBlockingQueue<>(1);
+            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+               @Override
+               public LocationGMS.CALLBACK_TYPE getType() {
+                  return LocationGMS.CALLBACK_TYPE.SYNC_SERVICE;
+               }
 
-            @Override
-            public void complete(LocationGMS.LocationPoint point) {
-               if (point != null)
-                  OneSignalStateSynchronizer.updateLocation(point);
+               @Override
+               public void complete(LocationGMS.LocationPoint point) {
+                  Object object = point != null ?  point : new Object();
+                  queue.offer(object);
+               }
+            };
+            LocationGMS.getLocation(OneSignal.appContext, false, locationHandler);
 
-               // Both these calls are synchronous.
-               //   Thread is blocked until network calls are made or their retry limits are reached
-               OneSignalStateSynchronizer.syncUserState(true);
-               FocusTimeController.getInstance().doBlockingBackgroundSyncOfUnsentTime();
-               stopSync();
-            }
-         };
-         LocationGMS.getLocation(OneSignal.appContext, false, locationHandler);
+            // The take() will return the offered point once the callback for the locationHandler is completed
+            Object point = queue.take();
+            if (point instanceof LocationGMS.LocationPoint)
+               OneSignalStateSynchronizer.updateLocation((LocationGMS.LocationPoint) point);
+
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
+
+         // Both these calls are synchronous
+         // Once the queue calls take the code will continue and move on to the syncUserState
+         OneSignalStateSynchronizer.syncUserState(true);
+         FocusTimeController.getInstance().doBlockingBackgroundSyncOfUnsentTime();
+         stopSync();
       }
 
       protected abstract void stopSync();
