@@ -49,6 +49,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     boolean inAppMessageShowing = false;
 
     @Nullable Date lastTimeInAppDismissed;
+    int htmlNetworkRequestAttemptCount = 0;
 
     @Nullable private static OSInAppMessageController sharedInstance;
     public static OSInAppMessageController getController() {
@@ -121,8 +122,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    // Called after the device is registered from UserStateSynchronizer
-    //    which is the REST call to create the player record on_session
+    /**
+     * Called after the device is registered from UserStateSynchronizer
+     *  which is the REST call to create the player record on_session
+     */
     void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException {
         // Cache copy for quick cold starts
         OneSignalPrefs.saveString(
@@ -246,6 +249,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void firePublicClickHandler(@NonNull final OSInAppMessageAction action) {
         if (OneSignal.mInitBuilder.mInAppMessageClickHandler == null)
             return;
+
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
@@ -271,6 +275,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         // Never count multiple clicks for the same click UUID
         if (clickedClickIds.contains(action.clickId))
             return;
+
         clickedClickIds.add(action.clickId);
 
         try {
@@ -308,20 +313,40 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    // Message has passed triggers and de-duplication logic.
-    // Display message now or add it to the queue to be displayed.
+    /**
+     * Message has passed triggers and de-duplication logic.
+     * Display message now or add it to the queue to be displayed.
+     */
     private void queueMessageForDisplay(@NonNull OSInAppMessage message) {
         synchronized (messageDisplayQueue) {
-            messageDisplayQueue.add(message);
+            // Make sure no message is ever added to the queue more than once
+            if (!isInAppMessageQueued(message)) {
+                messageDisplayQueue.add(message);
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + message.messageId + ", added to the queue");
+            }
 
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "queueMessageForDisplay: " + messageDisplayQueue);
 
             // If there are IAMs in the queue and nothing showing, show first in the queue
-            if (messageDisplayQueue.size() > 0 && !isInAppMessageShowing())
+            if (messageDisplayQueue.size() > 0 && !isInAppMessageShowing()) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM showing currently, showing first item in the queue!");
                 displayMessage(messageDisplayQueue.get(0));
+                return;
+            }
 
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message is currently showing, next message will not display yet!");
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message is currently showing or there are no IAMs left in the queue!");
         }
+    }
+
+    /**
+     * Check the messageDisplayQueue for the message by messageId
+     */
+    private boolean isInAppMessageQueued(OSInAppMessage message) {
+        for (OSInAppMessage inAppMessage : messageDisplayQueue) {
+            if (message.messageId.equals(inAppMessage.messageId))
+                return true;
+        }
+        return false;
     }
 
     boolean isInAppMessageShowing() {
@@ -333,30 +358,44 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return inAppMessageShowing ? messageDisplayQueue.get(0) : null;
     }
 
-    // Called after an In-App message is closed and it's dismiss animation has completed
+    /**
+     * Called after an In-App message is closed and it's dismiss animation has completed
+     */
     void messageWasDismissed(@NonNull OSInAppMessage message) {
-        dismissedMessages.add(message.messageId);
-        OneSignalPrefs.saveStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                dismissedMessages);
-        inAppMessageShowing = false;
+        if (!message.isPreview) {
+            dismissedMessages.add(message.messageId);
+            OneSignalPrefs.saveStringSet(
+                    OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                    dismissedMessages);
 
+            // Don't keep track of last displayed time for a preview
+            lastTimeInAppDismissed = new Date();
+        }
+
+        dismissCurrentMessage();
+    }
+
+    /**
+     * Removes first item from the queue and attempts to show the next IAM in the queue
+     */
+    private void dismissCurrentMessage() {
         synchronized (messageDisplayQueue) {
-            messageDisplayQueue.remove(0);
+            if (messageDisplayQueue.size() > 0) {
+                String removedMessageId = messageDisplayQueue.get(0).messageId;
+                messageDisplayQueue.remove(0);
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
+            }
 
-            // Display the next message in the queue, if any
+            // Display the next message in the queue, or attempt to add more IAMs to the queue
             if (messageDisplayQueue.size() > 0)
                 displayMessage(messageDisplayQueue.get(0));
-            else {
-                lastTimeInAppDismissed = new Date();
+            else
                 evaluateInAppMessages();
-            }
         }
     }
 
-    private static @Nullable
-    String htmlPathForMessage(OSInAppMessage message) {
+    private static @Nullable String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 
         if (variantId == null) {
@@ -367,7 +406,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
     }
 
-    public void displayMessage(@NonNull final OSInAppMessage message) {
+    private void displayMessage(@NonNull final OSInAppMessage message) {
         if (!inAppMessagingEnabled) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "In app messaging is currently paused, iam will not be shown!");
             return;
@@ -380,13 +419,29 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                 inAppMessageShowing = false;
-                evaluateInAppMessages();
+
                 printHttpErrorForInAppMessageRequest("html", statusCode, response);
+
+                if (!OSUtils.shouldRetryNetworkRequest(statusCode) || htmlNetworkRequestAttemptCount >= OSUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT) {
+                    // Failure limit reached, reset
+                    htmlNetworkRequestAttemptCount = 0;
+                    messageWasDismissed(message);
+                    return;
+                }
+
+                // Failure limit not reached, increment by 1
+                htmlNetworkRequestAttemptCount++;
+                // Retry displaying the same IAM
+                // Using the queueMessageForDisplay method follows safety checks to prevent issues
+                // like having 2 IAMs showing at once or duplicate IAMs in the queue
+                queueMessageForDisplay(message);
             }
 
             @Override
             void onSuccess(String response) {
-                inAppMessageShowing = true;
+                // Successful request, reset count
+                htmlNetworkRequestAttemptCount = 0;
+
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");
@@ -403,11 +458,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     void displayPreviewMessage(@NonNull String previewUUID) {
+        inAppMessageShowing = true;
+
         String htmlPath = "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + OneSignal.appId;
         OneSignalRestClient.get(htmlPath, new ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
+                inAppMessageShowing = false;
+
                 printHttpErrorForInAppMessageRequest("html", statusCode, response);
+
+                dismissCurrentMessage();
             }
 
             @Override
@@ -432,16 +493,15 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     @Override
     public void messageTriggerConditionChanged() {
         // This method is called when a time-based trigger timer fires, meaning the message can
-        // probably be shown now. So the current message conditions should be re-evaluated
+        //  probably be shown now. So the current message conditions should be re-evaluated
         evaluateInAppMessages();
     }
 
     /**
      * Trigger logic
-     * <p>
      * These methods mostly pass data to the Trigger Controller, but also cause the SDK to
-     * re-evaluate messages to see if we should display a message now that the trigger
-     * conditions have changed.
+     *  re-evaluate messages to see if we should display a message now that the trigger
+     *  conditions have changed.
      */
     void addTriggers(Map<String, Object> newTriggers) {
         triggerController.addTriggers(newTriggers);
