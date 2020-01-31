@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
+
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android");
         add("app");
@@ -44,8 +45,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
     @NonNull final ArrayList<OSInAppMessage> messageDisplayQueue;
 
-    private boolean inAppMessagingEnabled = true;
-    private boolean inAppMessageShowing = false;
+    boolean inAppMessagingEnabled = true;
+    boolean inAppMessageShowing = false;
 
     @Nullable Date lastTimeInAppDismissed;
 
@@ -327,9 +328,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return inAppMessageShowing;
     }
 
-    @Nullable
-    OSInAppMessage getCurrentDisplayedInAppMessage() {
-        return messageDisplayQueue.size() > 0 ? messageDisplayQueue.get(0) : null;
+    @Nullable OSInAppMessage getCurrentDisplayedInAppMessage() {
+        // When in app messaging is paused, the messageDisplayQueue might have IAMs, so return null
+        return inAppMessageShowing ? messageDisplayQueue.get(0) : null;
     }
 
     // Called after an In-App message is closed and it's dismiss animation has completed
@@ -378,11 +379,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OneSignalRestClient.getSync(htmlPath, new ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
+                inAppMessageShowing = false;
+                evaluateInAppMessages();
                 printHttpErrorForInAppMessageRequest("html", statusCode, response);
             }
 
             @Override
             void onSuccess(String response) {
+                inAppMessageShowing = true;
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");

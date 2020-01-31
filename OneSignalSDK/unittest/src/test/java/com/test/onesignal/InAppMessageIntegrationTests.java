@@ -15,7 +15,6 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
-import com.onesignal.ShadowOSInAppMessageController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
@@ -53,6 +52,7 @@ import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         instrumentedPackages = { "com.onesignal" },
@@ -66,7 +66,6 @@ import static junit.framework.Assert.assertFalse;
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
             ShadowDynamicTimer.class,
-            ShadowOSInAppMessageController.class,
             ShadowOSWebView.class,
             ShadowOSViewUtils.class
         },
@@ -134,7 +133,10 @@ public class InAppMessageIntegrationTests {
         // We will set the trigger. However, since messaging is disabled, the message should not be shown
         OneSignal.addTrigger("test_key", 3);
 
-        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
+        // Make sure 1 IAM is in the display queue
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Make sure no IAM is showing
+        assertFalse(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
     /**
@@ -151,16 +153,28 @@ public class InAppMessageIntegrationTests {
         }});
         threadAndTaskWait();
 
-        //both messages should now be valid but only one should display
-        //which one displays first is undefined and doesn't really matter
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        // Make sure 2 items are in the display queue
+        assertEquals(2, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Make sure an IAM is showing
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
 
-        // dismiss the message
+        // Dismiss the message
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
         threadAndTaskWait();
 
-        // the second in app message should now be displayed
-        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+        // Make sure 1 item is in the display queue
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Make sure an IAM is showing
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+
+        // Dismiss the message
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        threadAndTaskWait();
+
+        // Make sure no items are in the display queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Make sure no IAM is showing
+        assertFalse(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
     // This tests both rotating the device or the app being resumed.
@@ -175,8 +189,9 @@ public class InAppMessageIntegrationTests {
         }});
         threadAndTaskWait();
 
-        // 2. Assert one IAM was displayed
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        // 2. Assert two IAM in the queue and 1 is showing
+        assertEquals(2, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
 
         // 3. Rotate device - This will kick off a JS task to get the new height
         blankActivityController.pause();
@@ -189,6 +204,10 @@ public class InAppMessageIntegrationTests {
         // 5. Now fire resize event which was scheduled in step 3.
         //    Test that this does not throw and handles this missing IAM view.
         ShadowOSWebView.fireEvalJSCallbacks();
+
+        // 6. Make sure only 1 IAM ios left in queue now and it is showing
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
 
@@ -233,7 +252,7 @@ public class InAppMessageIntegrationTests {
                 .until(new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                return ShadowOSInAppMessageController.displayedMessages.size() == 1;
+                return OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1;
             }
         });
     }
@@ -276,8 +295,8 @@ public class InAppMessageIntegrationTests {
            .untilAsserted(new ThrowingRunnable() {
                @Override
                public void run() {
-                   assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
-                   assertEquals(message1.messageId, ShadowOSInAppMessageController.displayedMessages.get(0));
+                   assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                   assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
                }
            });
 
@@ -290,8 +309,8 @@ public class InAppMessageIntegrationTests {
           .untilAsserted(new ThrowingRunnable() {
               @Override
               public void run() {
-                  assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
-                  assertEquals(message2.messageId, ShadowOSInAppMessageController.displayedMessages.get(1));
+                  assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                  assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
               }
           });
     }
@@ -324,20 +343,20 @@ public class InAppMessageIntegrationTests {
 
         // no timer should be scheduled since 'test_key' != 'squirrel'
         assertFalse(ShadowDynamicTimer.hasScheduledTimer);
-        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // since we are not actually waiting on any logic to finish, sleeping here is fine
         Thread.sleep(20);
 
         // the message still should not be displayed
-        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // after setting this trigger the message should be displayed immediately
         OneSignal.addTrigger("test_key", "squirrel");
         threadAndTaskWait();
 
         // the message should now have been displayed
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         assertFalse(ShadowDynamicTimer.hasScheduledTimer);
     }
 
@@ -353,7 +372,7 @@ public class InAppMessageIntegrationTests {
         // Should used cached triggers since we won't be making an on_session call.
         //   Testing for this by trying to add a trigger that should display an IAM
         OneSignal.addTrigger("test_2", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     @Test
@@ -374,7 +393,7 @@ public class InAppMessageIntegrationTests {
         // Should used cached triggers since we won't be making an on_session call.
         //   Testing for this by trying to add a trigger that should display an IAM
         OneSignal.addTrigger("test_2", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     @Test
@@ -383,7 +402,7 @@ public class InAppMessageIntegrationTests {
         initializeSdkWithMultiplePendingMessages();
         // 2. Trigger showing In App and dismiss it
         OneSignal.addTrigger("test_2", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
         // 3. Swipe away app
         fastColdRestartApp();
@@ -391,7 +410,7 @@ public class InAppMessageIntegrationTests {
         initializeSdkWithMultiplePendingMessages();
         // 5. Set same trigger, should not display again
         OneSignal.addTrigger("test_2", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     @Test
@@ -400,15 +419,15 @@ public class InAppMessageIntegrationTests {
         initializeSdkWithMultiplePendingMessages();
         // 2. Trigger showing In App
         OneSignal.addTrigger("test_2", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // 3. Swipe away app
         fastColdRestartApp();
         // 4. Cold Start app
         initializeSdkWithMultiplePendingMessages();
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // 5. Set same trigger, should now display again, since it was never dismissed
         OneSignal.addTrigger("test_2", 2);
-        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     @Test
@@ -560,7 +579,7 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Check no messages exist
-        assertEquals(0, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
