@@ -362,6 +362,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * Called after an In-App message is closed and it's dismiss animation has completed
      */
     void messageWasDismissed(@NonNull OSInAppMessage message) {
+        inAppMessageShowing = false;
+
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             OneSignalPrefs.saveStringSet(
