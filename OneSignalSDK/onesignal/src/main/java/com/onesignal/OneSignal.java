@@ -570,7 +570,7 @@ public class OneSignal {
          if (oldAppId == null) {
             OneSignal.onesignalLog(LOG_LEVEL.WARN, "appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
          } else {
-            // Init if the app id is not null
+            OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "appContext set and an old appId was found, attempting to call setAppId(oldAppId)");
             setAppId(oldAppId);
          }
 
