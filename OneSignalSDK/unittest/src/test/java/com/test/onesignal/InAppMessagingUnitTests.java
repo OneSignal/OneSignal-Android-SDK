@@ -17,7 +17,6 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
-import com.onesignal.ShadowOSInAppMessageController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
@@ -64,7 +63,6 @@ import static junit.framework.Assert.assertTrue;
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
             ShadowDynamicTimer.class,
-            ShadowOSInAppMessageController.class
         },
         sdk = 26
 )

@@ -320,7 +320,20 @@ public class OneSignalPackagePrivateHelper {
 
    public static void dismissCurrentMessage() {
       com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage();
-      com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
+      if (message != null)
+         com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
+   }
+
+   public static boolean isInAppMessageShowing() {
+      return com.onesignal.OSInAppMessageController.getController().isInAppMessageShowing();
+   }
+
+   public static String getShowingInAppMessageId() {
+      return com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage().messageId;
+   }
+
+   public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
+      return com.onesignal.OSInAppMessageController.getController().messageDisplayQueue;
    }
 
    public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {
@@ -332,6 +345,7 @@ public class OneSignalPackagePrivateHelper {
 
          return sharedInstance;
       }
+
       public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
          super.onMessageActionOccurredOnMessage(message, actionJson);
       }

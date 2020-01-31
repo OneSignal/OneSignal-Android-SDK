@@ -34,7 +34,7 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
     void onMessageActionOccurredOnPreview(@NonNull OSInAppMessage message, @NonNull JSONObject actionJson) { }
 
     @Override
-    boolean isDisplayingInApp() { return false; }
+    boolean isInAppMessageShowing() { return false; }
 
     @Nullable
     @Override
