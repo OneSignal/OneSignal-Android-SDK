@@ -161,7 +161,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void evaluateInAppMessages() {
         if (systemConditionController.systemConditionsAvailable()) {
             for (OSInAppMessage message : messages) {
-                setDataForReDisplay(message);
+                setDataForRedisplay(message);
                 if (triggerController.evaluateMessageTriggers(message))
                     messageCanBeDisplayed(message);
             }
@@ -332,13 +332,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      *
      * For re display, the message need to be removed from the arrays that track the display
      * */
-    private void setDataForReDisplay(OSInAppMessage message) {
+    private void setDataForRedisplay(OSInAppMessage message) {
         if (!message.getDisplayStats().isRedisplayEnabled())
             return;
 
         int index = displayedMessagesData.indexOf(message);
         if (index != -1) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForReDisplay: " + message.messageId);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.messageId);
 
             OSInAppMessage savedIAM = displayedMessagesData.get(index);
             message.getDisplayStats().setDisplayStats(savedIAM.getDisplayStats());
@@ -412,7 +412,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
             if (!message.isPreview) {
                 persistDisplayedIAMs();
-                persisIAMessageForReDisplay(message);
+                persisIAMessageForRedisplay(message);
             }
 
             // Display the next message in the queue, if any
@@ -435,7 +435,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         );
     }
 
-    private void persisIAMessageForReDisplay(final OSInAppMessage message) {
+    private void persisIAMessageForRedisplay(final OSInAppMessage message) {
         //If the IAM doesn't have the re display configuration then no need to save it
         if (!message.getDisplayStats().isRedisplayEnabled())
             return;
@@ -462,7 +462,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             displayedMessagesData.add(message);
         }
 
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "persisIAMessageForReDisplay: " + message.toString() + " with msg array data: " + displayedMessagesData.toString());
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "persisIAMessageForRedisplay: " + message.toString() + " with msg array data: " + displayedMessagesData.toString());
     }
 
     // Calculate all dismissed as dismissedMessages minus any in the display queue
