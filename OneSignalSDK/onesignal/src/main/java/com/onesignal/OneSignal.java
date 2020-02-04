@@ -85,26 +85,26 @@ public class OneSignal {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
 
-   public enum OSInFocusDisplayOption {
-      None, InAppAlert, Notification
-   }
+   public enum OSInFocusDisplay {
+      // Notification will show in shade of notification tray
+      NOTIFICATION,
 
-   enum AppEntryAction {
-      NOTIFICATION_CLICK,
-      APP_OPEN,
-      APP_CLOSE,
-      ;
+      // Notification will show inside of the app as an alert
+      IN_APP_ALERT,
 
-      boolean isNotificationClick() {
-          return this.equals(NOTIFICATION_CLICK);
+      // Notification will be a background notification and will not be shown on the device
+      SILENT;
+
+      boolean isNotification() {
+         return this.equals(NOTIFICATION);
       }
 
-      boolean isAppOpen() {
-          return this.equals(APP_OPEN);
+      boolean isInAppAlert() {
+         return this.equals(IN_APP_ALERT);
       }
 
-      boolean isAppClose() {
-          return this.equals(APP_CLOSE);
+      boolean isSilent() {
+         return this.equals(SILENT);
       }
    }
 
@@ -118,11 +118,11 @@ public class OneSignal {
     */
    public interface NotificationWillShowInForegroundHandler {
       /**
-       * Fires when a notification is about to shown in the foreground. It will be fired when your app is in focus or
+       * Fires when a notifJob is about to shown in the foreground. It will be fired when your app is in focus or
        * in the background.
-       * @param notification Contains both the user's response and properties of the notification
+       * @param notifJob Contains both the user's response and properties of the notifJob
        */
-      void notificationWillShowInForeground(OSNotification notification);
+      void notificationWillShowInForeground(NotificationGenerationJob notifJob);
    }
 
    /**
@@ -252,13 +252,6 @@ public class OneSignal {
    // Default true in 4.0.0 release.
    static boolean mUnsubscribeWhenNotificationsAreDisabled;
    static boolean mFilterOtherGCMReceivers;
-   // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
-   //  calling startInit().init()
-   // mDisplayOptionCarryOver is used if setInFocusDisplaying is called but inFocusDisplaying wasn't
-   static boolean mDisplayOptionCarryOver;
-   // Default Notification in 4.0.0 release.
-   static OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
-   // TODOEnd OF mInitBuilder params
 
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
@@ -270,6 +263,29 @@ public class OneSignal {
    private static boolean inForeground;
    static boolean isInForeground() {
       return inForeground;
+   }
+
+   enum AppEntryAction {
+      // Entered the app through opening a notification
+      NOTIFICATION_CLICK,
+
+      // Entered the app through clicking the icon
+      APP_OPEN,
+
+      // App came from the background
+      APP_CLOSE;
+
+      boolean isNotificationClick() {
+         return this.equals(NOTIFICATION_CLICK);
+      }
+
+      boolean isAppOpen() {
+         return this.equals(APP_OPEN);
+      }
+
+      boolean isAppClose() {
+         return this.equals(APP_CLOSE);
+      }
    }
 
    // Tells the action taken to enter the app
@@ -444,10 +460,6 @@ public class OneSignal {
    }
    private static IAPUpdateJob iapUpdateJob;
 
-   private static void setDisplayOptionCarryOver(boolean carryOver) {
-      mDisplayOptionCarryOver = carryOver;
-   }
-
    /**
     * Prompts the user for location permissions.
     * This allows for geotagging so you can send notifications to users based on location.
@@ -474,11 +486,6 @@ public class OneSignal {
     */
    public static void disableGmsMissingPrompt(boolean disable) {
       mDisableGmsMissingPrompt = disable;
-   }
-
-   public static void inFocusDisplaying(OSInFocusDisplayOption displayOption) {
-      mDisplayOptionCarryOver = false;
-      mDisplayOption = displayOption;
    }
 
    /**
@@ -964,8 +971,8 @@ public class OneSignal {
 
    }
    private static void fireCallbackForOpenedNotifications() {
-      for(JSONArray dataArray : unprocessedOpenedNotifs)
-         runNotificationOpenedCallback(dataArray, true, false);
+      for (JSONArray dataArray : unprocessedOpenedNotifs)
+         runNotificationOpenedCallback(dataArray, true);
 
       unprocessedOpenedNotifs.clear();
    }
@@ -1934,18 +1941,17 @@ public class OneSignal {
       return urlOpened;
    }
 
-   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean shown, boolean fromAlert) {
+   private static void runNotificationOpenedCallback(final JSONArray dataArray, final boolean shown) {
       if (notificationOpenedHandler == null) {
          unprocessedOpenedNotifs.add(dataArray);
          return;
       }
 
-      fireNotificationOpenedHandler(generateOsNotificationOpenResult(dataArray, shown, fromAlert));
+      fireNotificationOpenedHandler(generateOsNotificationOpenResult(dataArray, shown));
    }
 
    // Also called for received but OSNotification is extracted from it.
-   @NonNull
-   private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown, boolean fromAlert) {
+   static @NonNull OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown) {
       int jsonArraySize = dataArray.length();
 
       boolean firstMessage = true;
@@ -1955,6 +1961,7 @@ public class OneSignal {
       notification.isAppInFocus = isAppActive();
       notification.shown = shown;
       notification.androidNotificationId = dataArray.optJSONObject(0).optInt("notificationId");
+      notification.inFocusDisplayType = OSInFocusDisplay.values()[dataArray.optJSONObject(0).optInt("inFocusDisplayType")];
 
       String actionSelected = null;
 
@@ -1982,10 +1989,6 @@ public class OneSignal {
       openResult.action = new OSNotificationAction();
       openResult.action.actionID = actionSelected;
       openResult.action.type = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
-      if (fromAlert)
-         openResult.notification.displayType = OSNotification.DisplayType.InAppAlert;
-      else
-         openResult.notification.displayType = OSNotification.DisplayType.Notification;
 
       return openResult;
    }
@@ -2002,30 +2005,52 @@ public class OneSignal {
    // Called when receiving GCM/ADM message after it has been displayed.
    // Or right when it is received if it is a silent one
    //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
-   static void handleNotificationReceived(JSONArray data, boolean displayed, boolean fromAlert) {
-      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed, fromAlert);
-      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
-         trackFirebaseAnalytics.trackReceivedEvent(openResult);
+   static void handleNotificationReceived(final NotificationGenerationJob notifJob, boolean displayed) {
+      try {
+         notifJob.jsonPayload.put("notificationId", notifJob.getAndroidId());
 
-      if (notificationWillShowInForegroundHandler == null)
-         return;
+         JSONArray notifData = NotificationBundleProcessor.newJsonArray(notifJob.jsonPayload);
+         OSNotificationOpenResult openResult = generateOsNotificationOpenResult(notifData, displayed);
+         if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
+            trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
-      notificationWillShowInForegroundHandler.notificationWillShowInForeground(openResult.notification);
+
+
+         // NotificationExtenderService.isNotificationShowingHandled will only be set true if
+         //    showNotification method is called within the notificationWillShowInForegroundHandler.notificationWillShowInForeground
+         //    method
+         // Otherwise, the GenerateNotification.fromJsonPayload will use the OSInFocusDisplay NOTIFICATION to show the notification
+         if (notificationWillShowInForegroundHandler != null)
+            new Thread(new Runnable() {
+               @Override
+               public void run() {
+                  notificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob);
+               }
+            }).start();
+         else {
+            GenerateNotification.fromJsonPayload(notifJob);
+         }
+
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
    }
 
-   // Called when opening a notification
-   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert, String notificationId) {
-
-      //if applicable, check if the user provided privacy consent
+   /**
+    * Called when opening a notification
+    */
+   public static void handleNotificationOpen(Context inContext, JSONArray data, String notificationId) {
+      // If applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
          return;
 
       notificationOpenedRESTCall(inContext, data);
-
+      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, true);
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
-         trackFirebaseAnalytics.trackOpenedEvent(generateOsNotificationOpenResult(data, true, fromAlert));
+         trackFirebaseAnalytics.trackOpenedEvent(openResult);
 
       boolean urlOpened = false;
+      boolean fromAlert = openResult.notification.inFocusDisplayType.isInAppAlert();
       boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(inContext, "com.onesignal.NotificationOpened.DEFAULT"));
 
       if (!defaultOpenActionDisabled)
@@ -2038,7 +2063,7 @@ public class OneSignal {
          sessionManager.onDirectSessionFromNotificationOpen(notificationId);
       }
 
-      runNotificationOpenedCallback(data, true, fromAlert);
+      runNotificationOpenedCallback(data, true);
    }
 
    static boolean startOrResumeApp(Context inContext) {
@@ -2053,7 +2078,7 @@ public class OneSignal {
    }
 
    /**
-    * 1. App is not an alert
+    * 1. Notification is not an alert
     * 2. Not a URL open
     * 3. Manifest setting for com.onesignal.NotificationOpened.DEFAULT is not disabled
     * 4. App is coming from the background
@@ -2284,55 +2309,6 @@ public class OneSignal {
    private static long getLastSessionTime(Context context) {
       return OneSignalPrefs.getLong(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_OS_LAST_SESSION_TIME,-31*1000);
-   }
-
-   /**
-    * Setting to control how OneSignal notifications will be shown when one is received while your app
-    * is in focus.
-    * <br/><br/>
-    * {@link OneSignal.OSInFocusDisplayOption#Notification Notification} - native notification display while user has app in focus (can be distracting).
-    * <br/>
-    * {@link OneSignal.OSInFocusDisplayOption#InAppAlert In-App Alert (Default)} - native alert dialog display, which can be helpful during development.
-    * <br/>
-    * {@link OneSignal.OSInFocusDisplayOption#None None} - notification is silent.
-    *
-    * @param displayOption the {@link OneSignal.OSInFocusDisplayOption OSInFocusDisplayOption} to set
-    */
-   public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
-      mDisplayOptionCarryOver = true;
-      mDisplayOption = displayOption;
-   }
-
-   public static void setInFocusDisplaying(int displayOption) {
-      setInFocusDisplaying(getInFocusDisplaying(displayOption));
-   }
-
-   public static OSInFocusDisplayOption currentInFocusDisplayOption() {
-      return mDisplayOption;
-   }
-
-   private static OSInFocusDisplayOption getInFocusDisplaying(int displayOption) {
-      switch(displayOption) {
-         case 0:
-            return OSInFocusDisplayOption.None;
-         case 1:
-            return OSInFocusDisplayOption.InAppAlert;
-         case 2:
-            return OSInFocusDisplayOption.Notification;
-      }
-
-      if (displayOption < 0)
-         return OSInFocusDisplayOption.None;
-      return OSInFocusDisplayOption.Notification;
-   }
-
-   static boolean getNotificationsWhenActiveEnabled() {
-      // If OneSignal hasn't been initialized yet it is best to display a normal notification.
-      return mDisplayOption == OSInFocusDisplayOption.Notification;
-   }
-
-   static boolean getInAppAlertNotificationEnabled() {
-      return mDisplayOption == OSInFocusDisplayOption.InAppAlert;
    }
 
    /**

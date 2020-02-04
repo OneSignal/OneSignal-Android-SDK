@@ -35,13 +35,13 @@ import org.json.JSONObject;
 
 import java.security.SecureRandom;
 
-class NotificationGenerationJob {
+public class NotificationGenerationJob {
+
    Context context;
    JSONObject jsonPayload;
    boolean restoring;
-   boolean isInAppPreviewPush;
-   
-   boolean showAsAlert;
+   boolean isIamPreviewPush;
+   OneSignal.OSInFocusDisplay inFocusDisplayType = OneSignal.OSInFocusDisplay.NOTIFICATION;
    
    Long shownTimeStamp;
    

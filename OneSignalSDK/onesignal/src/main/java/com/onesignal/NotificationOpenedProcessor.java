@@ -94,7 +94,6 @@ class NotificationOpenedProcessor {
 
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       SQLiteDatabase writableDb = null;
-
       try {
          writableDb = dbHelper.getWritableDbWithRetries();
          writableDb.beginTransaction();
@@ -112,8 +111,10 @@ class NotificationOpenedProcessor {
                NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
          }
          writableDb.setTransactionSuccessful();
+
       } catch (Exception e) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error processing notification open or dismiss record! ", e);
+
       } finally {
          if (writableDb != null) {
             try {
@@ -125,8 +126,7 @@ class NotificationOpenedProcessor {
       }
 
       if (!dismissed)
-         OneSignal.handleNotificationOpen(context, dataArray,
-                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromGCMJson(jsonData));
+         OneSignal.handleNotificationOpen(context, dataArray, OneSignal.getNotificationIdFromGCMJson(jsonData));
    }
 
    private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {

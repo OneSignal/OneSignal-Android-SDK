@@ -1,11 +1,12 @@
 package com.onesignal.sdktest.application;
 
 import android.app.Application;
-import android.util.Log;
 
+import com.onesignal.NotificationExtenderService;
+import com.onesignal.NotificationGenerationJob;
+import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 
 public class MainApplication extends Application {
@@ -21,12 +22,26 @@ public class MainApplication extends Application {
         OneSignal.setAppId(appId);
         OneSignal.setAppContext(this);
 
+        OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+            @Override
+            public void notificationWillShowInForeground(NotificationGenerationJob notifJob) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification received!!!");
+
+                NotificationExtenderService.showNotification(notifJob, OneSignal.OSInFocusDisplay.NOTIFICATION);
+            }
+        });
+
+        OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
+            @Override
+            public void notificationOpened(OSNotificationOpenResult result) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification opened!!!");
+            }
+        });
+
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
-        OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
         OneSignal.pauseInAppMessages(true);
         OneSignal.setLocationShared(false);
 
-        Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, Text.ONESIGNAL_SDK_INIT);
     }
-
 }

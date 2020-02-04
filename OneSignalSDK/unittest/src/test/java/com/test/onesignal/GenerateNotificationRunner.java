@@ -52,7 +52,9 @@ import com.onesignal.BundleCompat;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
 import com.onesignal.NotificationExtenderService;
+import com.onesignal.NotificationGenerationJob;
 import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationDisplayedResult;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
@@ -1262,7 +1264,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotification notification) {
+         public boolean notificationWillShowInForeground(NotificationGenerationJob notification) {
             lastNotificationReceived = notification;
          }
       });
@@ -1539,7 +1541,8 @@ public class GenerateNotificationRunner {
          if (overrideNotificationId != -1)
             overrideSettings.androidNotificationId = overrideNotificationId;
          
-         notificationId = displayNotification(overrideSettings).androidNotificationId;
+         OSNotificationDisplayedResult notificationDisplayedResult = modifyNotification(overrideSettings);
+         notificationId = notificationDisplayedResult.androidNotificationId;
 
          return true;
       }
@@ -1573,7 +1576,8 @@ public class GenerateNotificationRunner {
                    .setContentText("[Modified Body(ContentText)]");
             }
          };
-         displayNotification(overrideSettings);
+
+         modifyNotification(overrideSettings);
          
          return true;
       }

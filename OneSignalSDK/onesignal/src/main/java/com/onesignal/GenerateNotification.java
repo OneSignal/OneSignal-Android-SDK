@@ -88,15 +88,26 @@ class GenerateNotification {
       contextResources = inContext.getResources();
    }
 
+   /**
+    * Accepts a NotificationGenerationJob as only param and creates a notification and shows it based on the contents
+    * This is also where the OSInFocusDisplay param is processed and it is decide how the notification with show on the device
+    */
    static void fromJsonPayload(NotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
-      if (!notifJob.restoring && notifJob.showAsAlert && ActivityLifecycleHandler.curActivity != null) {
+      // Notification set to OSInFocusDisplay SILENT
+      if (notifJob.inFocusDisplayType.isSilent())
+         return;
+
+      // Notification set to OSInFocusDisplay IN_APP_ALERT
+      if (notifJob.inFocusDisplayType.isInAppAlert() && !notifJob.restoring && ActivityLifecycleHandler.curActivity != null) {
          showNotificationAsAlert(notifJob.jsonPayload, ActivityLifecycleHandler.curActivity, notifJob.getAndroidId());
          return;
       }
 
-      showNotification(notifJob);
+      // Notification set to OSInFocusDisplay NOTIFICATION
+      if (notifJob.inFocusDisplayType.isNotification())
+         showNotification(notifJob);
    }
 
    static void updateSummaryNotification(NotificationGenerationJob notifJob) {
@@ -312,7 +323,7 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   private static void showNotification(NotificationGenerationJob notifJob) {
+   static void showNotification(NotificationGenerationJob notifJob) {
       int notificationId = notifJob.getAndroidId();
       JSONObject gcmBundle = notifJob.jsonPayload;
       String group = gcmBundle.optString("grp", null);

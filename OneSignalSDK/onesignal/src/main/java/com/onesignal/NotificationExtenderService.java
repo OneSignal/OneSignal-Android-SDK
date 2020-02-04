@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.app.Notification;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -35,10 +36,13 @@ import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.List;
+
+import static com.onesignal.OneSignal.getFirebaseAnalyticsEnabled;
 
 // Designed to be extended by app developer.
 // Must add the following to the AndroidManifest.xml for this to be triggered.
@@ -70,6 +74,14 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
    static final int EXTENDER_SERVICE_JOB_ID = 2071862121;
 
+   static boolean isNotificationShowingHandled = false;
+
+   private OSNotificationDisplayedResult osNotificationDisplayedResult;
+   private JSONObject currentJsonPayload;
+   private boolean currentlyRestoring;
+   private Long restoreTimestamp;
+   private OverrideSettings currentBaseOverrideSettings = null;
+
    public static class OverrideSettings {
       public NotificationCompat.Extender extender;
       public Integer androidNotificationId;
@@ -78,7 +90,6 @@ public abstract class NotificationExtenderService extends JobIntentService {
       // Possible future options
       //    int badgeCount;
       //   NotificationCompat.Extender summaryExtender;
-
       void override(OverrideSettings overrideSettings) {
          if (overrideSettings == null)
             return;
@@ -88,15 +99,14 @@ public abstract class NotificationExtenderService extends JobIntentService {
       }
    }
 
-   private OSNotificationDisplayedResult osNotificationDisplayedResult;
-   private JSONObject currentJsonPayload;
-   private boolean currentlyRestoring;
-   private Long restoreTimestamp;
-   private OverrideSettings currentBaseOverrideSettings = null;
+   /**
+    * Developer may call to override some notification settings.
+    * If this method is called the SDK will omit it's notification regardless of what is
+    *    returned from onNotificationProcessing.
+    */
+   protected final OSNotificationDisplayedResult modifyNotification(OverrideSettings overrideSettings) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "modifyNotification called with overrideSettings: " + overrideSettings.toString());
 
-   // Developer may call to override some notification settings.
-   // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
-   protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
       // Check if this method has been called already or if no override was set.
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
@@ -111,12 +121,36 @@ public abstract class NotificationExtenderService extends JobIntentService {
       return osNotificationDisplayedResult;
    }
 
-   // App developer must implement
-   //   - Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
+   /**
+    * Developer may call to override the way a notification is being shown.
+    * If this method is called the SDK will display the notification based on the parameter passed in.
+    */
+   public static void showNotification(final NotificationGenerationJob notifJob, OneSignal.OSInFocusDisplay inFocusDisplayType) {
+      isNotificationShowingHandled = true;
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "showNotification called with inFocusDisplayType: " + inFocusDisplayType.toString());
+
+      notifJob.inFocusDisplayType = inFocusDisplayType;
+
+      // Running on the main thread so that any work done by the developer will be on a
+      //    separate thread/Async until reaching this spot
+      OSUtils.runOnMainUIThread(new Runnable() {
+         @Override
+         public void run() {
+            GenerateNotification.fromJsonPayload(notifJob);
+         }
+      });
+   }
+
+   /**
+    * App developer must implement.
+    * Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
+    */
    protected abstract boolean onNotificationProcessing(OSNotificationReceivedResult notification);
 
    @Override
    protected final void onHandleWork(Intent intent) {
+      isNotificationShowingHandled = false;
+
       if (intent == null)
          return;
       
@@ -169,14 +203,14 @@ public abstract class NotificationExtenderService extends JobIntentService {
       try {
          developerProcessed = onNotificationProcessing(receivedResult);
       } catch (Throwable t) {
-         //noinspection ConstantConditions - displayNotification might have been called by the developer
+         //noinspection ConstantConditions - modifyNotification might have been called by the developer
          if (osNotificationDisplayedResult == null)
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
          else
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
       }
 
-      // If the developer did not call displayNotification from onNotificationProcessing
+      // If the developer did not call modifyNotification from onNotificationProcessing
       if (osNotificationDisplayedResult == null) {
          // Save as processed to prevent possible duplicate calls from canonical ids.
 
@@ -191,7 +225,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
                notifJob.overrideSettings.androidNotificationId = -1;
 
                NotificationBundleProcessor.processNotification(notifJob, true);
-               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
+               OneSignal.handleNotificationReceived(notifJob, false);
             }
             // If are are not displaying a restored notification make sure we mark it as dismissed
             //   This will prevent it from being restored again.

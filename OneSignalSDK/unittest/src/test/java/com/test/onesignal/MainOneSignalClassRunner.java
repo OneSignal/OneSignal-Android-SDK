@@ -42,6 +42,7 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.MockOutcomesUtils;
+import com.onesignal.NotificationGenerationJob;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -428,7 +429,7 @@ public class MainOneSignalClassRunner {
       advanceSystemTimeBy(31);
 
       // Click notification
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, "notification_id");
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), "notification_id");
       threadAndTaskWait();
 
       // Foreground app
@@ -471,7 +472,7 @@ public class MainOneSignalClassRunner {
       advanceSystemTimeBy(31);
 
       // Click notification
-      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
+      OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "1");
       threadAndTaskWait();
 
       // Foreground app
@@ -930,7 +931,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotification notification) {
+         public boolean notificationWillShowInForeground(NotificationGenerationJob notification) {
             androidNotificationId = notification.androidNotificationId;
             notificationReceivedBody = notification.payload.body;
          }
@@ -3841,7 +3842,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotification notification) {
+         public boolean notificationWillShowInForeground(NotificationGenerationJob notification) {
 
          }
       });
@@ -4061,7 +4062,7 @@ public class MainOneSignalClassRunner {
       actionButton.id = "id";
       osNotification.payload.actionButtons.add(actionButton);
 
-      osNotification.displayType = OSNotification.DisplayType.None;
+      osNotification.inFocusDisplayType = OneSignal.OSInFocusDisplay.SILENT;
 
       osNotification.groupedNotifications = new ArrayList<>();
       OSNotificationPayload groupedPayload = new OSNotificationPayload();

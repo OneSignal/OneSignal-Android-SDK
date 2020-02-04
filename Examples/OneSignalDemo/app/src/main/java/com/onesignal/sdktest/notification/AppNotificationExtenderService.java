@@ -3,14 +3,13 @@ package com.onesignal.sdktest.notification;
 import android.support.v4.app.NotificationCompat;
 
 import com.onesignal.NotificationExtenderService;
-import com.onesignal.OSNotification;
-import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationDisplayedResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
-public class AppNotificationExtenderService extends NotificationExtenderService implements OneSignal.NotificationWillShowInForegroundHandler, OneSignal.NotificationOpenedHandler {
+public class AppNotificationExtenderService extends NotificationExtenderService {
 
    @Override
    protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
@@ -28,19 +27,11 @@ public class AppNotificationExtenderService extends NotificationExtenderService 
          }
       };
 
-      displayNotification(overrideSettings);
+      OSNotificationDisplayedResult displayedResult = modifyNotification(overrideSettings);
+      if (displayedResult != null)
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification displayed with id: " + displayedResult.androidNotificationId);
 
       return true;
-   }
-
-   @Override
-   public void notificationWillShowInForeground(OSNotification notification) {
-
-   }
-
-   @Override
-   public void notificationOpened(OSNotificationOpenResult result) {
-
    }
 
 }
