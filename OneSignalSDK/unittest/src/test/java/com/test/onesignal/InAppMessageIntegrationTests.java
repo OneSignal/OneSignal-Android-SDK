@@ -759,6 +759,8 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
+        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+
         // Set same trigger, should display again
         OneSignal.addTrigger("test_1", 2);
         assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
