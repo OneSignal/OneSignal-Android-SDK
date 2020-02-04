@@ -7,7 +7,28 @@ import android.webkit.WebView;
 public class OSWebView extends WebView {
 
    public OSWebView(Context context) {
-      super(context);
+      super(getFixedContext(context));
+   }
+
+   public OSWebView(Context context, AttributeSet attrs) {
+      super(getFixedContext(context), attrs);
+   }
+
+   public OSWebView(Context context, AttributeSet attrs, int defStyleAttr) {
+      super(getFixedContext(context), attrs, defStyleAttr);
+   }
+
+   @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+   public OSWebView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+      super(getFixedContext(context), attrs, defStyleAttr, defStyleRes);
+   }
+
+   public OSWebView(Context context, AttributeSet attrs, int defStyleAttr, boolean privateBrowsing) {
+      super(getFixedContext(context), attrs, defStyleAttr, privateBrowsing);
+   }
+
+   public static Context getFixedContext(Context context) {
+      return context.createConfigurationContext(new Configuration());
    }
 
    // The method overrides below; overScrollBy, scrollTo, and computeScroll prevent page scrolling
