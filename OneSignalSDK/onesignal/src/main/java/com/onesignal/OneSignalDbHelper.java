@@ -50,7 +50,6 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    private static final String TEXT_TYPE = " TEXT";
    private static final String INT_TYPE = " INTEGER";
    private static final String FLOAT_TYPE = " FLOAT";
-   private static final String REAL_TYPE = " REAL";
    private static final String TIMESTAMP_TYPE = " TIMESTAMP";
    private static final String COMMA_SEP = ",";
 
@@ -96,7 +95,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
            "CREATE TABLE " + InAppMessageTable.TABLE_NAME + " (" +
                    InAppMessageTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
                    InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY + INT_TYPE + COMMA_SEP +
-                   InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + REAL_TYPE + COMMA_SEP +
+                   InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + INT_TYPE + COMMA_SEP +
                    InAppMessageTable.COLUMN_NAME_MESSAGE_ID + TEXT_TYPE + COMMA_SEP +
                    InAppMessageTable.COLUMN_CLICK_IDS + TEXT_TYPE +
                    ");";

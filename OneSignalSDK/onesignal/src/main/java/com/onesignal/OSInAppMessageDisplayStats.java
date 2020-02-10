@@ -3,28 +3,26 @@ package com.onesignal;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Date;
-
 class OSInAppMessageDisplayStats {
 
     private static final String DISPLAY_LIMIT = "limit";
     private static final String DISPLAY_DELAY = "delay";
 
     //Last IAM display time in seconds
-    private double lastDisplayTime = -1;
+    private long lastDisplayTime = -1;
     //Current quantity of displays
     private int displayQuantity = 0;
     //Quantity of displays limit
     private int displayLimit = Integer.MAX_VALUE;
     //Delay between displays in seconds
-    private double displayDelay = 0;
+    private long displayDelay = 0;
 
     private boolean redisplayEnabled = false;
 
     OSInAppMessageDisplayStats() {
     }
 
-    OSInAppMessageDisplayStats(int displayQuantity, double lastDisplayTime) {
+    OSInAppMessageDisplayStats(int displayQuantity, long lastDisplayTime) {
         this.displayQuantity = displayQuantity;
         this.lastDisplayTime = lastDisplayTime;
     }
@@ -37,8 +35,8 @@ class OSInAppMessageDisplayStats {
         if (displayLimit instanceof Integer)
             this.displayLimit = (Integer) displayLimit;
 
-        if (displayDelay instanceof Double)
-            this.displayDelay = (Double) displayDelay;
+        if (displayDelay instanceof Long)
+            this.displayDelay = (Long) displayDelay;
         else if (displayDelay instanceof Integer)
             this.displayDelay = (Integer) displayDelay;
     }
@@ -48,11 +46,11 @@ class OSInAppMessageDisplayStats {
         setDisplayQuantity(displayStats.getDisplayQuantity());
     }
 
-    double getLastDisplayTime() {
+    long getLastDisplayTime() {
         return lastDisplayTime;
     }
 
-    void setLastDisplayTime(double lastDisplayTime) {
+    void setLastDisplayTime(long lastDisplayTime) {
         this.lastDisplayTime = lastDisplayTime;
     }
 
@@ -76,11 +74,11 @@ class OSInAppMessageDisplayStats {
         this.displayLimit = displayLimit;
     }
 
-    double getDisplayDelay() {
+    long getDisplayDelay() {
         return displayDelay;
     }
 
-    void setDisplayDelay(double displayDelay) {
+    void setDisplayDelay(long displayDelay) {
         this.displayDelay = displayDelay;
     }
 
@@ -89,14 +87,15 @@ class OSInAppMessageDisplayStats {
     }
 
     boolean isDelayTimeSatisfied() {
+        long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
         if (lastDisplayTime < 0) {
-            lastDisplayTime = new Date().getTime() / 1000; //Current time in seconds
+            lastDisplayTime = currentTimeInSeconds;
             return true;
         }
 
-        double currentTimeInSeconds = new Date().getTime() / 1000;
         //Calculate gap between display times
-        double diffInSeconds = currentTimeInSeconds - lastDisplayTime;
+        long diffInSeconds = currentTimeInSeconds - lastDisplayTime;
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessage lastDisplayTime: " + lastDisplayTime +
                 " currentTimeInSeconds: " + currentTimeInSeconds + " diffInSeconds: " + diffInSeconds + " displayDelay: " + displayDelay);
         return diffInSeconds >= displayDelay;

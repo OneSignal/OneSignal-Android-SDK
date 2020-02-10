@@ -54,7 +54,7 @@ public class InAppMessagingHelpers {
         return wrap(wrap(triggerJson));
     }
 
-    public static OSTestInAppMessage buildTestMessageWitRedisplay(final int limit, final double delay) throws JSONException {
+    public static OSTestInAppMessage buildTestMessageWitRedisplay(final int limit, final long delay) throws JSONException {
         return buildTestMessageWithMultipleDisplays(null, limit, delay);
     }
 
@@ -67,7 +67,7 @@ public class InAppMessagingHelpers {
     }
 
     public static OSTestInAppMessage buildTestMessageWithSingleTriggerAndRedisplay(final OSTriggerKind kind, final String key, final String operator,
-                                                                                   final Object value, int limit, double delay) throws JSONException {
+                                                                                   final Object value, int limit, long delay) throws JSONException {
         JSONArray triggersJson = basicTrigger(kind, key, operator, value);
 
         return buildTestMessageWithMultipleDisplays(triggersJson, limit, delay);
@@ -96,7 +96,7 @@ public class InAppMessagingHelpers {
         return json;
     }
 
-    private static OSTestInAppMessage buildTestMessageWithMultipleDisplays(final JSONArray triggerJson, final int limit, final double delay) throws JSONException {
+    private static OSTestInAppMessage buildTestMessageWithMultipleDisplays(final JSONArray triggerJson, final int limit, final long delay) throws JSONException {
         JSONObject json = basicIAMJSONObject(triggerJson);
         json.put("redisplay",  new JSONObject() {{
             put("limit", limit);
@@ -115,7 +115,7 @@ public class InAppMessagingHelpers {
         return buildTestMessage(ors);
     }
 
-    public static OSTestInAppMessage buildTestMessageWithMultipleTriggersAndRedisplay(ArrayList<ArrayList<OSTestTrigger>> triggers, int limit, double delay) throws JSONException {
+    public static OSTestInAppMessage buildTestMessageWithMultipleTriggersAndRedisplay(ArrayList<ArrayList<OSTestTrigger>> triggers, int limit, long delay) throws JSONException {
         JSONArray ors = buildTriggers(triggers);
         return buildTestMessageWithMultipleDisplays(ors, limit, delay);
     }

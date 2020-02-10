@@ -354,7 +354,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             if (message.isTriggerChanged() &&
                     message.getDisplayStats().isDelayTimeSatisfied() &&
                     message.getDisplayStats().shouldDisplayAgain()) {
-
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
                 message.clearClickIds();
@@ -447,7 +446,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (!message.getDisplayStats().isRedisplayEnabled())
             return;
 
-        long displayTimeSeconds = new Date().getTime() / 1000;
+        long displayTimeSeconds = System.currentTimeMillis() / 1000;
         message.getDisplayStats().setLastDisplayTime(displayTimeSeconds);
         message.getDisplayStats().incrementDisplayQuantity();
         message.setTriggerChanged(false);
@@ -464,7 +463,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         //Avoid calling the repository data again
         int index = displayedMessagesData.indexOf(message);
         if (index != -1) {
-            displayedMessagesData.add(index, message);
+            displayedMessagesData.set(index, message);
         } else {
             displayedMessagesData.add(message);
         }

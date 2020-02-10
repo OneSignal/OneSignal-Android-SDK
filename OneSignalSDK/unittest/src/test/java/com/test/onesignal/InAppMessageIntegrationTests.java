@@ -49,6 +49,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
@@ -79,7 +80,7 @@ public class InAppMessageIntegrationTests {
     private static final String IAM_CLICK_ID = "button_id_123";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
     private static final int LIMIT = 5;
-    private static final int DELAY = 1;
+    private static final int DELAY = 60;
 
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
@@ -563,7 +564,7 @@ public class InAppMessageIntegrationTests {
         // Init OneSignal with IAM with redisplay
         OneSignalInit();
         threadAndTaskWait();
-
+        
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
         assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
@@ -579,11 +580,11 @@ public class InAppMessageIntegrationTests {
         // Check if data after dismiss is set correctly
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        double lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
+        long lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
-        Thread.sleep(DELAY * 1000);
+        advanceSystemTimeBy(DELAY);
 
         // Set same trigger, should display again
         OneSignal.addTrigger("test_1", 2);
@@ -599,13 +600,13 @@ public class InAppMessageIntegrationTests {
         // Check if data after dismiss is set correctly
         assertEquals(2, ShadowOSInAppMessageController.dismissedMessages.size());
         assertEquals(2, ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getDisplayQuantity());
-        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
+        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getLastDisplayTime() - lastDisplayTime == DELAY);
     }
 
     @Test
-    public void testInAppMessageNoDisplayMultipleTimes_Trigger() throws Exception {
+    public void testInAppMessageDisplayMultipleTimes_RemoveTrigger() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(), 2, LIMIT, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -615,8 +616,7 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        // Add trigger to make IAM display
-        OneSignal.addTrigger("test_1", 2);
+        // Because trigger doesn't exist IAM will be shown immediately
         assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
 
         // Dismiss IAM will make display quantity increase and last display time to change
@@ -625,28 +625,16 @@ public class InAppMessageIntegrationTests {
         // Check if data after dismiss is set correctly
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        double lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
-        assertTrue(lastDisplayTime > 0);
+        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime() > 0);
+
+        OneSignal.addTrigger("test_1", 2);
 
         // Wait for the delay between redisplay
-        Thread.sleep(DELAY * 1000);
-
-        // Set other trigger, should no display again
-        OneSignal.addTrigger("test_2", 2);
+        advanceSystemTimeBy(DELAY);
         assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
 
-        // Set trigger, should display again
-        OneSignal.addTrigger("test_1", 2);
-        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
-
-        // Dismiss IAM will make display quantity increase and last display time to change
-        OneSignalPackagePrivateHelper.dismissCurrentMessage();
-
-        // Wait for the delay between redisplay
-        Thread.sleep(DELAY * 1000);
-
-        // Set other trigger, should no display again
-        OneSignal.addTrigger("test_2", 2);
+        // Remove trigger, IAM should display again
+        OneSignal.removeTriggerForKey("test_1");
         assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
     }
 
@@ -704,11 +692,10 @@ public class InAppMessageIntegrationTests {
         // Check if data after dismiss is set correctly
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        double lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
-        assertTrue(lastDisplayTime > 0);
+        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime() > 0);
 
         // Wait for the delay between redisplay
-        Thread.sleep(DELAY * 1000);
+        advanceSystemTimeBy(DELAY);
 
         // Set trigger, should no display again because limit is 1
         OneSignal.addTrigger("test_1", 2);
@@ -743,12 +730,11 @@ public class InAppMessageIntegrationTests {
         // Check if data after dismiss is set correctly
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
         assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        double lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
+        long lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
-        Thread.sleep(DELAY * 1000);
-
+        advanceSystemTimeBy(DELAY);
         // Swipe away app
         fastColdRestartApp();
         // Cold Start app
