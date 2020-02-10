@@ -444,22 +444,22 @@ public class OneSignalPackagePrivateHelper {
       com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
    }
 
-   public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {
+   public static class OSInAppMessageController {
+      public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
       private static OSInAppMessageController sharedInstance;
 
-      OSInAppMessageController(OneSignalDbHelper dbInstance) {
-         super((dbInstance));
+      OSInAppMessageController() {
       }
 
       public static OSInAppMessageController getController() {
          if (sharedInstance == null)
-            sharedInstance = new OSInAppMessageController(OneSignal.getDBHelperInstance());
+            sharedInstance = new OSInAppMessageController();
 
          return sharedInstance;
       }
 
       public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
-         super.onMessageActionOccurredOnMessage(message, actionJson);
+         com.onesignal.OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionJson);
       }
 
       public void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
