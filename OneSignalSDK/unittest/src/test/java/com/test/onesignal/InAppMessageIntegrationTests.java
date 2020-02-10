@@ -44,6 +44,7 @@ import org.robolectric.shadows.ShadowLog;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -76,8 +77,10 @@ import static junit.framework.Assert.assertTrue;
 
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessageIntegrationTests {
+
     private static final String IAM_CLICK_ID = "button_id_123";
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+    private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
     private static final int LIMIT = 5;
     private static final int DELAY = 60;
 
@@ -847,6 +850,46 @@ public class InAppMessageIntegrationTests {
         // Call IAM clicked again, ensure a 3nd network call isn't made.
         assertEquals("in_app_messages/" + message.messageId + "/click", secondIAMClickRequest.url);
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
+    }
+
+    @Test
+    public void testInAppMessageRedisplayCacheUpdate() throws Exception {
+        final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+        final OSTestInAppMessage inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
+                OSTriggerKind.CUSTOM,"test_saved", OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+
+        String firstID = inAppMessage.messageId + "_test";
+        inAppMessage.messageId = firstID;
+        inAppMessage.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
+        TestHelpers.saveIAM(inAppMessage);
+
+        inAppMessage.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
+        inAppMessage.messageId += "1";
+        TestHelpers.saveIAM(inAppMessage);
+
+        List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages();
+
+        assertEquals(2, savedInAppMessages.size());
+
+        final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
+                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+        final OSTestInAppMessage message2 = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
+                OSTriggerKind.CUSTOM,"test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message1);
+            add(message2);
+        }});
+
+        // Init OneSignal with IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        List<OSTestInAppMessage> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages();
+        // Message with old display time should be removed
+        assertEquals(1, savedInAppMessagesAfterInit.size());
+        assertEquals(firstID, savedInAppMessagesAfterInit.get(0).messageId);
     }
 
     @Test

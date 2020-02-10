@@ -247,7 +247,6 @@ public class MainOneSignalClassRunner {
       cleanUp();
    }
 
-
    @Test
    public void testInitFromApplicationContext() throws Exception {
       // Application.onCreate
