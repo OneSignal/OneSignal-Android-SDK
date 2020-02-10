@@ -198,14 +198,13 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayDelay() throws JSONException {
-        final long currentTimeInSeconds = new Date().getTime() / 1000;
-
         OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
 
         assertTrue(message.getDisplayStats().isDelayTimeSatisfied());
+        final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
 
         message.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - DELAY);
         assertTrue(message.getDisplayStats().isDelayTimeSatisfied());
