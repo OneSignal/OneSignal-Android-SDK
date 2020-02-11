@@ -46,7 +46,7 @@ import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
-import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
+import static com.onesignal.OSNotificationExtensionService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
@@ -60,7 +60,7 @@ class NotificationBundleProcessor {
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
 
-   static void ProcessFromGCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   static void ProcessFromGCMIntentService(Context context, BundleCompat bundle, OSNotificationIntentService.OverrideSettings overrideSettings) {
       OneSignal.setAppContext(context);
       try {
          String jsonStrPayload = bundle.getString("json_payload");
@@ -82,7 +82,7 @@ class NotificationBundleProcessor {
 
          if (bundle.containsKey("android_notif_id")) {
             if (overrideSettings == null)
-               overrideSettings = new NotificationExtenderService.OverrideSettings();
+               overrideSettings = new OSNotificationIntentService.OverrideSettings();
             overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
          
@@ -131,7 +131,7 @@ class NotificationBundleProcessor {
    private static NotificationGenerationJob saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
-      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+      notifJob.overrideSettings = new OSNotificationIntentService.OverrideSettings();
       notifJob.overrideSettings.androidNotificationId = notificationId;
 
       processNotification(notifJob, opened);
@@ -508,9 +508,9 @@ class NotificationBundleProcessor {
       return null;
    }
 
-   // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
+   // OSNotificationExtensionService still makes additional checks such as notValidOrDuplicated
    private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
-      Intent intent = NotificationExtenderService.getIntent(context);
+      Intent intent = OSNotificationIntentService.getInstance().getIntent(context);
       if (intent == null)
          return false;
 
@@ -520,7 +520,7 @@ class NotificationBundleProcessor {
       boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-         NotificationExtenderService.enqueueWork(
+         OSNotificationIntentService.enqueueWork(
             context,
             intent.getComponent(),
             EXTENDER_SERVICE_JOB_ID,

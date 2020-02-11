@@ -5,6 +5,7 @@ import android.support.design.widget.AppBarLayout;
 import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
 
+import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.model.ActivityViewModel;
 import com.onesignal.sdktest.model.MainActivityViewModel;
@@ -22,6 +23,9 @@ public class MainActivity extends AppCompatActivity {
         viewModel = new MainActivityViewModel()
                 .onActivityCreated(this)
                 .setupInterfaceElements();
+
+        String appId = getString(R.string.onesignal_app_id);
+        OneSignal.setAppId(appId);
     }
 
     @Override

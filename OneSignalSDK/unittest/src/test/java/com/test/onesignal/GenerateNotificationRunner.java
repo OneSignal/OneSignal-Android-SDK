@@ -51,7 +51,7 @@ import android.widget.Button;
 import com.onesignal.BundleCompat;
 import com.onesignal.GcmBroadcastReceiver;
 import com.onesignal.GcmIntentService;
-import com.onesignal.NotificationExtenderService;
+import com.onesignal.OSNotificationExtensionService;
 import com.onesignal.NotificationGenerationJob;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationDisplayedResult;
@@ -1399,7 +1399,7 @@ public class GenerateNotificationRunner {
 
       Intent serviceIntent = new Intent();
       serviceIntent.setPackage("com.onesignal.example");
-      serviceIntent.setAction("com.onesignal.NotificationExtender");
+      serviceIntent.setAction("com.onesignal.NotificationExtension");
       ResolveInfo resolveInfo = new ResolveInfo();
       resolveInfo.serviceInfo = new ServiceInfo();
       resolveInfo.serviceInfo.name = "com.onesignal.example.NotificationExtenderServiceTest";
@@ -1512,7 +1512,7 @@ public class GenerateNotificationRunner {
       cursor.close();
    }
    
-   static abstract class NotificationExtenderServiceTestBase extends NotificationExtenderService {
+   static abstract class NotificationExtenderServiceTestBase extends OSNotificationExtensionService {
       // Override onStartCommand to manually call onHandleIntent on the main thread.
       @Override
       public int onStartCommand(@Nullable Intent intent, int flags, int startId) {

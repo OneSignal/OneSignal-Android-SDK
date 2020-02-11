@@ -50,7 +50,7 @@ public class GcmIntentService extends IntentService {
 
    // Called when GCM message is received from Google or a notification is being restored.
    //    Even for ADM messages.
-   //    Expect if a NotificationExtenderService is setup.
+   //    Expect if a OSNotificationExtensionService is setup.
    @Override
    protected void onHandleIntent(Intent intent) {
       Bundle extras = intent.getExtras();

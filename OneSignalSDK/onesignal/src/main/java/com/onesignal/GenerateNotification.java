@@ -322,7 +322,9 @@ class GenerateNotification {
              .setTicker(null);
    }
 
-   // Put the message into a notification and post it.
+   /**
+    * Put the message into a notification and post it.
+    */
    static void showNotification(NotificationGenerationJob notifJob) {
       int notificationId = notifJob.getAndroidId();
       JSONObject gcmBundle = notifJob.jsonPayload;
@@ -414,9 +416,8 @@ class GenerateNotification {
       }
    }
 
-   private static void applyNotificationExtender(
-           NotificationGenerationJob notifJob,
-           NotificationCompat.Builder notifBuilder) {
+   private static void applyNotificationExtender(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
+
       if (notifJob.overrideSettings == null || notifJob.overrideSettings.extender == null)
          return;
 

@@ -55,8 +55,8 @@ public class NotificationGenerationJob {
    NotificationGenerationJob(Context context) {
       this.context = context;
    }
-   
-   NotificationExtenderService.OverrideSettings overrideSettings;
+
+   OSNotificationIntentService.OverrideSettings overrideSettings;
    
    CharSequence getTitle() {
       if (overriddenTitleFromExtender != null)
@@ -72,7 +72,7 @@ public class NotificationGenerationJob {
    
    Integer getAndroidId() {
       if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
+         overrideSettings = new OSNotificationIntentService.OverrideSettings();
       if (overrideSettings.androidNotificationId == null)
          overrideSettings.androidNotificationId = new SecureRandom().nextInt();
       
@@ -105,7 +105,7 @@ public class NotificationGenerationJob {
          return;
 
       if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
+         overrideSettings = new OSNotificationIntentService.OverrideSettings();
       overrideSettings.androidNotificationId = id;
    }
 
@@ -113,4 +113,8 @@ public class NotificationGenerationJob {
       return overrideSettings != null && overrideSettings.extender != null;
    }
 
+   public void showNotification(OneSignal.OSInFocusDisplay inFocusDisplayType) {
+      this.inFocusDisplayType = inFocusDisplayType;
+      OSNotificationExtensionService.showNotification(this, inFocusDisplayType);
+   }
 }

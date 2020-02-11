@@ -2,9 +2,6 @@ package com.onesignal.sdktest.application;
 
 import android.app.Application;
 
-import com.onesignal.NotificationExtenderService;
-import com.onesignal.NotificationGenerationJob;
-import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Text;
@@ -17,26 +14,24 @@ public class MainApplication extends Application {
 
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
-        // OneSignal Initialization
+        // OneSignal init
         String appId = getString(R.string.onesignal_app_id);
-        OneSignal.setAppId(appId);
         OneSignal.setAppContext(this);
-
-        OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
-            @Override
-            public void notificationWillShowInForeground(NotificationGenerationJob notifJob) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification received!!!");
-
-                NotificationExtenderService.showNotification(notifJob, OneSignal.OSInFocusDisplay.NOTIFICATION);
-            }
-        });
-
-        OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
-            @Override
-            public void notificationOpened(OSNotificationOpenResult result) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification opened!!!");
-            }
-        });
+//        OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+//            @Override
+//            public void notificationWillShowInForeground(NotificationGenerationJob notifJob) {
+//                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification received!!!");
+//
+//                notifJob.showNotification(OneSignal.OSInFocusDisplay.NOTIFICATION);
+//            }
+//        });
+//
+//        OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
+//            @Override
+//            public void notificationOpened(OSNotificationOpenResult result) {
+//                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification opened!!!");
+//            }
+//        });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.pauseInAppMessages(true);

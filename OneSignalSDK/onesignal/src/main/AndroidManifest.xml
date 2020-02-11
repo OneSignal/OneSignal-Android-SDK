@@ -76,10 +76,9 @@
         <service android:name="com.onesignal.SyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <activity android:name="com.onesignal.PermissionsActivity"
-                  android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
         <service android:name="com.onesignal.NotificationRestoreService" />
+
+        <service android:name=".OSNotificationIntentService" />
 
         <receiver android:name="com.onesignal.BootUpReceiver">
             <intent-filter>
@@ -93,9 +92,10 @@
             </intent-filter>
         </receiver>
 
+        <activity android:name="com.onesignal.PermissionsActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
-        <activity
-          android:name="com.onesignal.NotificationOpenedActivity"/>
+        <activity android:name="com.onesignal.NotificationOpenedActivity"/>
 
     </application>
 

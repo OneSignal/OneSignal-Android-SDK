@@ -21,7 +21,7 @@ package com.onesignal;
 
 // Modified by OneSignal to add useWakefulService option
 // This allows using ether a IntentService even for Android 8.0 (API 26) when needed.
-//    - This allows starting NotificationExtenderService on a high priority FCM message
+//    - This allows starting OSNotificationExtensionService on a high priority FCM message
 //    - Even when the device is in doze mode.
 // Has fallback handling to job service if IllegalStateException is thrown when starting service.
 // ==== Testing ====
