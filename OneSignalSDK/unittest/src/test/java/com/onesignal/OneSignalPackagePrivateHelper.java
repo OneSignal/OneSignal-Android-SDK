@@ -307,8 +307,6 @@ public class OneSignalPackagePrivateHelper {
          return parsedTriggers;
       }
 
-
-
       @Override
       public void setDisplayDuration(double displayDuration) {
          super.setDisplayDuration(displayDuration);
@@ -494,7 +492,7 @@ public class OneSignalPackagePrivateHelper {
          return sharedInstance;
       }
 
-      public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
+      public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
          com.onesignal.OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionJson);
       }
 

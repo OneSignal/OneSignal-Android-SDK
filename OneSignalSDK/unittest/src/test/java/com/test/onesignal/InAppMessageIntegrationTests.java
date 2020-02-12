@@ -79,8 +79,11 @@ import static junit.framework.Assert.assertTrue;
 
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessageIntegrationTests {
-    private static final String IAM_CLICK_ID = "button_id_123";
+
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+    private static final String IAM_CLICK_ID = "button_id_123";
+    private static final String IAM_OUTCOME_NAME = "outcome_name";
+    private static final float IAM_OUTCOME_WEIGHT = 5;
     private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
     private static final int LIMIT = 5;
     private static final int DELAY = 60;
@@ -475,6 +478,233 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
+    public void testInAppMessageClickActionOutcome() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Enable Outcomes
+        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                true
+        );
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
+        );
+
+        final JSONArray outcomes = new JSONArray();
+        outcomes.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+        }});
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+            put("outcomes", outcomes);
+        }};
+
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+
+        // 3. Ensure outcome is sent
+        ShadowOneSignalRestClient.Request iamOutcomeRequest = ShadowOneSignalRestClient.requests.get(3);
+
+        assertEquals("outcomes/measure", iamOutcomeRequest.url);
+        // Requests: Param request + Players Request + Click request + Outcome Request
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+        assertFalse(iamOutcomeRequest.payload.has("weight"));
+        assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
+        assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
+    }
+
+    @Test
+    public void testInAppMessageClickActionOutcomeWithValue() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Enable Outcomes
+        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                true
+        );
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
+        );
+
+        final JSONArray outcomesWithWeight = new JSONArray();
+        outcomesWithWeight.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+            put("weight", IAM_OUTCOME_WEIGHT);
+        }});
+        JSONObject actionWithWeight = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+            put("outcomes", outcomesWithWeight);
+        }};
+
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionWithWeight);
+
+        // 3. Ensure outcome is sent
+        ShadowOneSignalRestClient.Request iamOutcomeRequest = ShadowOneSignalRestClient.requests.get(3);
+
+        assertEquals("outcomes/measure", iamOutcomeRequest.url);
+        // Requests: Param request + Players Request + Click request + Outcome Request
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+        assertEquals(IAM_OUTCOME_WEIGHT, iamOutcomeRequest.payload.get("weight"));
+        assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
+        assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
+    }
+
+    @Test
+    public void testInAppMessageClickActionMultipleOutcomes() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Enable Outcomes
+        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                true
+        );
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
+        );
+
+        final JSONArray outcomes = new JSONArray();
+        outcomes.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+            put("weight", IAM_OUTCOME_WEIGHT);
+        }});
+        outcomes.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+        }});
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+            put("outcomes", outcomes);
+        }};
+
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+
+        // 3. Ensure outcome is sent
+        ShadowOneSignalRestClient.Request iamOutcomeRequest = ShadowOneSignalRestClient.requests.get(3);
+        ShadowOneSignalRestClient.Request secondIamOutcomeRequest = ShadowOneSignalRestClient.requests.get(4);
+
+        assertEquals("outcomes/measure", iamOutcomeRequest.url);
+        assertEquals("outcomes/measure", secondIamOutcomeRequest.url);
+        // Requests: Param request + Players Request + Click request + Outcome Request x 2
+        assertEquals(5, ShadowOneSignalRestClient.requests.size());
+
+        assertEquals(IAM_OUTCOME_WEIGHT, iamOutcomeRequest.payload.get("weight"));
+        assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
+        assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
+
+        assertFalse(secondIamOutcomeRequest.payload.has("weight"));
+        assertEquals(IAM_OUTCOME_NAME, secondIamOutcomeRequest.payload.get("id"));
+        assertEquals(1, secondIamOutcomeRequest.payload.get("device_type"));
+    }
+
+    @Test
+    public void testInAppMessageClickActionDisabledOutcomes() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Disable Outcomes
+        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                false
+        );
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
+        );
+
+        final JSONArray outcomes = new JSONArray();
+        outcomes.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+        }});
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+            put("outcomes", outcomes);
+        }};
+
+        // 3. Send IAM action
+        // With unattributed outcomes disable no outcome request should happen
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+        // Requests: Param request + Players Request + Click request
+        assertEquals(3, ShadowOneSignalRestClient.requests.size());
+        assertEquals("in_app_messages/" + message.messageId + "/click", ShadowOneSignalRestClient.requests.get(2).url);
+    }
+
+    @Test
+    public void testInAppMessageClickActionUniqueOutcome() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Enable Outcomes
+        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                true
+        );
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
+        );
+
+        final JSONArray outcomes = new JSONArray();
+        outcomes.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+            put("unique", true);
+        }});
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+            put("outcomes", outcomes);
+        }};
+
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+
+        // 3. Ensure outcome is sent
+        ShadowOneSignalRestClient.Request iamOutcomeRequest = ShadowOneSignalRestClient.requests.get(3);
+
+        assertEquals("outcomes/measure", iamOutcomeRequest.url);
+        // Requests: Param request + Players Request + Click request + Outcome Request
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+        assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
+        assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
+
+        // 4. Call IAM clicked again, ensure no 2nd outcome call is made.
+        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
+        // 5. Check no additional request was made
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+    }
+
+    @Test
     public void testInAppMessageOnlyReceivesOneClick_onColdRestart() throws Exception {
         // 1. Init OneSignal
         OneSignalInit();
@@ -587,7 +817,7 @@ public class InAppMessageIntegrationTests {
         // Init OneSignal IAM with redisplay
         OneSignalInit();
         threadAndTaskWait();
-        
+
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());

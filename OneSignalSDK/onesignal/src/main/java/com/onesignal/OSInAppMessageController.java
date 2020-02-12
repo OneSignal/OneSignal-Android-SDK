@@ -267,21 +267,38 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) {
+    void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
         fireClickAction(action);
         fireRESTCallForClick(message, action);
+        fireOutcomesForClick(action.outcomes);
     }
 
-    void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) {
+    void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
         fireClickAction(action);
+    }
+
+    //TODO This is a temporal solution for IAMs outcomes
+    //     and will potentially change when we track IAMs
+    private void fireOutcomesForClick(@NonNull final List<OSInAppMessageOutcome> outcomes) {
+        for (OSInAppMessageOutcome outcome : outcomes) {
+            String name = outcome.getName();
+
+            if (outcome.isUnique()) {
+                OneSignal.sendClickActionUniqueOutcome(name);
+            } else if (outcome.getWeight() > 0) {
+                OneSignal.sendClickActionOutcomeWithValue(name, outcome.getWeight());
+            } else {
+                OneSignal.sendClickActionOutcome(name);
+            }
+        }
     }
 
     private void firePublicClickHandler(@NonNull final OSInAppMessageAction action) {
