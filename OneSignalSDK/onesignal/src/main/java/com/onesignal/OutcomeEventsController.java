@@ -5,7 +5,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 
 import java.util.List;
 import java.util.Set;
@@ -78,42 +77,38 @@ class OutcomeEventsController {
         }, OS_SEND_SAVED_OUTCOMES).start();
     }
 
-    private void sendSavedOutcomeEvent(@NonNull final OutcomeEvent event) {
-        OSSessionManager.Session session = event.getSession();
-        int deviceType = new OSUtils().getDeviceType();
-        String appId = OneSignal.appId;
+    void sendUniqueOutcomeEvent(@NonNull final String name, @Nullable OneSignal.OutcomeCallback callback) {
+        OSSessionManager.SessionResult sessionResult = osSessionManager.getSessionResult();
+        sendUniqueOutcomeEvent(name, sessionResult, osSessionManager.getSession(), callback);
+    }
 
-        OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
-            @Override
-            void onSuccess(String response) {
-                super.onSuccess(response);
-                outcomeEventsRepository.removeEvent(event);
-            }
-        };
-
-        switch (session) {
-            case DIRECT:
-                outcomeEventsRepository.requestMeasureDirectOutcomeEvent(appId, deviceType, event, responseHandler);
-                break;
-            case INDIRECT:
-                outcomeEventsRepository.requestMeasureIndirectOutcomeEvent(appId, deviceType, event, responseHandler);
-                break;
-            case UNATTRIBUTED:
-                outcomeEventsRepository.requestMeasureUnattributedOutcomeEvent(appId, deviceType, event, responseHandler);
-                break;
-        }
+    void sendUniqueClickOutcomeEvent(@NonNull final String name) {
+        OSSessionManager.SessionResult sessionResult = osSessionManager.getIAMSessionResult();
+        sendUniqueOutcomeEvent(name, sessionResult, OSSessionManager.Session.UNATTRIBUTED, null);
     }
 
     void sendOutcomeEvent(@NonNull final String name, @Nullable final OneSignal.OutcomeCallback callback) {
-        final JSONArray notificationIds = osSessionManager.getSessionResult().notificationIds;
-        sendOutcomeEvent(name, notificationIds, 0, callback);
+        OSSessionManager.SessionResult sessionResult = osSessionManager.getSessionResult();
+        sendAndCreateOutcomeEvent(name, 0, sessionResult.notificationIds, sessionResult.session, callback);
     }
 
-    void sendUniqueOutcomeEvent(@NonNull final String name, @Nullable OneSignal.OutcomeCallback callback) {
-        final JSONArray notificationIds = osSessionManager.getSessionResult().notificationIds;
+    void sendOutcomeEventWithValue(@NonNull String name, float weight, @Nullable final OneSignal.OutcomeCallback callback) {
+        OSSessionManager.SessionResult sessionResult = osSessionManager.getSessionResult();
+        sendAndCreateOutcomeEvent(name, weight, sessionResult.notificationIds, sessionResult.session, callback);
+    }
+
+    void sendClickOutcomeEventWithValue(@NonNull final String name, float weight) {
+        OSSessionManager.SessionResult sessionResult = osSessionManager.getIAMSessionResult();
+        sendAndCreateOutcomeEvent(name, weight, sessionResult.notificationIds, sessionResult.session, null);
+    }
+
+    private void sendUniqueOutcomeEvent(@NonNull final String name, @NonNull OSSessionManager.SessionResult sessionResult,
+                                        OSSessionManager.Session currentSession, @Nullable OneSignal.OutcomeCallback callback) {
+        OSSessionManager.Session session = sessionResult.session;
+        final JSONArray notificationIds = sessionResult.notificationIds;
 
         // Special handling for unique outcomes in the attributed and unattributed scenarios
-        if (osSessionManager.getSession().isAttributed()) {
+        if (currentSession.isAttributed()) {
             // Make sure unique notificationIds exist before trying to make measure request
             final JSONArray uniqueNotificationIds = getUniqueNotificationIds(name, notificationIds);
             if (uniqueNotificationIds == null) {
@@ -130,9 +125,9 @@ class OutcomeEventsController {
                 return;
             }
 
-            sendOutcomeEvent(name, uniqueNotificationIds, 0, callback);
+            sendAndCreateOutcomeEvent(name, 0, uniqueNotificationIds, session, callback);
 
-        } else if (osSessionManager.getSession().isUnattributed()) {
+        } else if (currentSession.isUnattributed()) {
             // Make sure unique outcome has not been sent for current unattributed session
             if (unattributedUniqueOutcomeEventsSentSet.contains(name)) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
@@ -148,23 +143,31 @@ class OutcomeEventsController {
             }
 
             unattributedUniqueOutcomeEventsSentSet.add(name);
-            sendOutcomeEvent(name, null, 0, callback);
+            sendAndCreateOutcomeEvent(name, 0, null, session, callback);
+        } else {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
+                    "Unique Outcome for current session is disabled");
         }
     }
 
-    void sendOutcomeEventWithValue(@NonNull String name, float weight, @Nullable final OneSignal.OutcomeCallback callback) {
-        final JSONArray notificationIds = osSessionManager.getSessionResult().notificationIds;
-        sendOutcomeEvent(name, notificationIds, weight, callback);
+    private void sendSavedOutcomeEvent(@NonNull final OutcomeEvent event) {
+        OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onSuccess(String response) {
+                super.onSuccess(response);
+                outcomeEventsRepository.removeEvent(event);
+            }
+        };
+
+        sendOutcomeEvent(event, responseHandler);
     }
 
-    private void sendOutcomeEvent(@NonNull final String name, @Nullable final JSONArray notificationIds, final float weight, @Nullable final OneSignal.OutcomeCallback callback) {
-        OSSessionManager.SessionResult sessionResult = osSessionManager.getSessionResult();
-
-        final OSSessionManager.Session session = sessionResult.session;
-        final String appId = OneSignal.appId;
+    private void sendAndCreateOutcomeEvent(@NonNull final String name,
+                                           @NonNull final float weight,
+                                           @Nullable final JSONArray notificationIds,
+                                           @NonNull final OSSessionManager.Session session,
+                                           @Nullable final OneSignal.OutcomeCallback callback) {
         final long timestampSeconds = System.currentTimeMillis() / 1000;
-        final int deviceType = new OSUtils().getDeviceType();
-
         final OutcomeEvent outcomeEvent = new OutcomeEvent(session, notificationIds, name, timestampSeconds, weight);
 
         OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
@@ -204,7 +207,14 @@ class OutcomeEventsController {
             }
         };
 
-        switch (session) {
+        sendOutcomeEvent(outcomeEvent, responseHandler);
+    }
+
+    private void sendOutcomeEvent(@NonNull OutcomeEvent outcomeEvent, OneSignalRestClient.ResponseHandler responseHandler) {
+        final String appId = OneSignal.appId;
+        final int deviceType = new OSUtils().getDeviceType();
+
+        switch (outcomeEvent.getSession()) {
             case DIRECT:
                 outcomeEventsRepository.requestMeasureDirectOutcomeEvent(appId, deviceType, outcomeEvent, responseHandler);
                 break;

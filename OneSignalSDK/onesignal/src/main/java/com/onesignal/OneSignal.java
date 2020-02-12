@@ -3098,6 +3098,19 @@ public class OneSignal {
       return sessionManager;
    }
 
+   static void sendClickActionOutcome(@NonNull String name) {
+      sendClickActionOutcomeWithValue(name, 0);
+   }
+
+   static void sendClickActionOutcomeWithValue(@NonNull String name, float value) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
+
+      outcomeEventsController.sendClickOutcomeEventWithValue(name, value);
+   }
+
    public static void sendOutcome(@NonNull String name) {
       sendOutcome(name, null);
    }
@@ -3112,6 +3125,15 @@ public class OneSignal {
       }
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
+   }
+
+   static void sendClickActionUniqueOutcome(@NonNull String name) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
+
+      outcomeEventsController.sendUniqueClickOutcomeEvent(name);
    }
 
    public static void sendUniqueOutcome(@NonNull String name) {

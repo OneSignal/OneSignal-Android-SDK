@@ -270,6 +270,18 @@ class OSSessionManager {
                 .build();
     }
 
+    @NonNull SessionResult getIAMSessionResult() {
+        if (OutcomesUtils.isUnattributedSessionEnabled()) {
+            return SessionResult.Builder.newInstance()
+                    .setSession(Session.UNATTRIBUTED)
+                    .build();
+        }
+
+        return SessionResult.Builder.newInstance()
+                .setSession(Session.DISABLED)
+                .build();
+    }
+
     /**
      * Attempt to override the current session before the 30 second session minimum
      * This should only be done in a upward direction:
