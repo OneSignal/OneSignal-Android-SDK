@@ -35,14 +35,15 @@ import org.json.JSONObject;
 
 import java.security.SecureRandom;
 
-class NotificationGenerationJob {
+public class NotificationGenerationJob {
+
    Context context;
    JSONObject jsonPayload;
    boolean restoring;
-   boolean isInAppPreviewPush;
-   
-   boolean showAsAlert;
-   
+   boolean isIamPreviewPush;
+   private OSNotificationExtensionService.NotificationWillShowInForegroundCompletionHandler completionHandler;
+   OneSignal.OSNotificationDisplayOption inFocusDisplayType = OneSignal.OSNotificationDisplayOption.NOTIFICATION;
+
    Long shownTimeStamp;
    
    CharSequence overriddenBodyFromExtender;
@@ -55,8 +56,8 @@ class NotificationGenerationJob {
    NotificationGenerationJob(Context context) {
       this.context = context;
    }
-   
-   NotificationExtenderService.OverrideSettings overrideSettings;
+
+   OSNotificationIntentService.OverrideSettings overrideSettings;
    
    CharSequence getTitle() {
       if (overriddenTitleFromExtender != null)
@@ -72,7 +73,7 @@ class NotificationGenerationJob {
    
    Integer getAndroidId() {
       if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
+         overrideSettings = new OSNotificationIntentService.OverrideSettings();
       if (overrideSettings.androidNotificationId == null)
          overrideSettings.androidNotificationId = new SecureRandom().nextInt();
       
@@ -105,12 +106,28 @@ class NotificationGenerationJob {
          return;
 
       if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
+         overrideSettings = new OSNotificationIntentService.OverrideSettings();
       overrideSettings.androidNotificationId = id;
    }
 
    boolean hasExtender() {
       return overrideSettings != null && overrideSettings.extender != null;
+   }
+
+   void setCompletionHandler(OSNotificationExtensionService.NotificationWillShowInForegroundCompletionHandler handler) {
+      this.completionHandler = handler;
+   }
+
+   public void setNotificationDisplayType(OneSignal.OSNotificationDisplayOption inFocusDisplayType) {
+      this.inFocusDisplayType = inFocusDisplayType;
+   }
+
+   public void complete(boolean bubble) {
+      if (completionHandler != null)
+         completionHandler.complete(this, bubble);
+
+      completionHandler = null;
+      OSNotificationExtensionService.destroyShowNotificationTimeout();
    }
 
 }

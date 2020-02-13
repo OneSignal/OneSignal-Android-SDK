@@ -70,33 +70,15 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
    static final int EXTENDER_SERVICE_JOB_ID = 2071862121;
 
-   public static class OverrideSettings {
-      public NotificationCompat.Extender extender;
-      public Integer androidNotificationId;
-
-      // Note: Make sure future fields are nullable.
-      // Possible future options
-      //    int badgeCount;
-      //   NotificationCompat.Extender summaryExtender;
-
-      void override(OverrideSettings overrideSettings) {
-         if (overrideSettings == null)
-            return;
-
-         if (overrideSettings.androidNotificationId != null)
-            androidNotificationId = overrideSettings.androidNotificationId;
-      }
-   }
-
    private OSNotificationDisplayedResult osNotificationDisplayedResult;
    private JSONObject currentJsonPayload;
    private boolean currentlyRestoring;
    private Long restoreTimestamp;
-   private OverrideSettings currentBaseOverrideSettings = null;
+   private OSNotificationIntentService.OverrideSettings currentBaseOverrideSettings = null;
 
    // Developer may call to override some notification settings.
    // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
-   protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
+   protected final OSNotificationDisplayedResult displayNotification(OSNotificationIntentService.OverrideSettings overrideSettings) {
       // Check if this method has been called already or if no override was set.
       if (osNotificationDisplayedResult != null || overrideSettings == null)
          return null;
@@ -144,7 +126,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
          currentJsonPayload = new JSONObject(jsonStrPayload);
          currentlyRestoring = bundle.getBoolean("restoring", false);
          if (bundle.containsKey("android_notif_id")) {
-            currentBaseOverrideSettings = new OverrideSettings();
+            currentBaseOverrideSettings = new OSNotificationIntentService.OverrideSettings();
             currentBaseOverrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
 
@@ -187,11 +169,11 @@ public abstract class NotificationExtenderService extends JobIntentService {
             if (!restoring) {
                NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
                notifJob.jsonPayload = currentJsonPayload;
-               notifJob.overrideSettings = new OverrideSettings();
+               notifJob.overrideSettings = new OSNotificationIntentService.OverrideSettings();
                notifJob.overrideSettings.androidNotificationId = -1;
 
                NotificationBundleProcessor.processNotification(notifJob, true);
-               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
+               OneSignal.handleNotificationReceived(notifJob, false);
             }
             // If are are not displaying a restored notification make sure we mark it as dismissed
             //   This will prevent it from being restored again.

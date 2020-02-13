@@ -28,6 +28,7 @@
 package com.onesignal;
 
 class OSPermissionChangedInternalObserver {
+
    void changed(OSPermissionState state) {
       handleInternalChanges(state);
       fireChangesToPublicObserver(state);

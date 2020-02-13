@@ -191,22 +191,23 @@ class NotificationRestorer {
       if (!cursor.moveToFirst())
          return;
 
-      boolean useExtender = (NotificationExtenderService.getIntent(context) != null);
-
+      Intent intent = addRestoreExtras(new Intent(), cursor);
       do {
-         if (useExtender) {
-            Intent intent = NotificationExtenderService.getIntent(context);
-            addRestoreExtras(intent, cursor);
-            NotificationExtenderService.enqueueWork(context,
-                  intent.getComponent(),
-                  NotificationExtenderService.EXTENDER_SERVICE_JOB_ID,
-                  intent,
-                  false);
+         if (OneSignal.hasNotificationExtensionService) {
+            ComponentName componentName = new ComponentName(context, OSNotificationIntentService.class);
+            OSNotificationIntentService.enqueueWork(context,
+                    componentName,
+                    OSNotificationExtensionService.EXTENDER_SERVICE_JOB_ID,
+                    intent,
+                    false);
          }
          else {
-            Intent intent = addRestoreExtras(new Intent(), cursor);
             ComponentName componentName = new ComponentName(context, RestoreJobService.class);
-            RestoreJobService.enqueueWork(context, componentName, RestoreJobService.RESTORE_SERVICE_JOB_ID, intent, false);
+            RestoreJobService.enqueueWork(context,
+                    componentName,
+                    RestoreJobService.RESTORE_SERVICE_JOB_ID,
+                    intent,
+                    false);
          }
 
          if (delay > 0)

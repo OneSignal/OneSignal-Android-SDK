@@ -33,4 +33,7 @@ public class OSNotificationReceivedResult {
    public boolean restoring;
    public boolean isAppInFocus;
 
+    public final OSNotificationDisplayedResult modifyNotification(OSNotificationIntentService.OverrideSettings overrideSettings) {
+        return OSNotificationExtensionService.getProcessingIntentServiceInstance().modifyNotification(overrideSettings);
+    }
 }

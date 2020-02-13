@@ -125,8 +125,9 @@ class NotificationOpenedProcessor {
       }
 
       if (!dismissed)
-         OneSignal.handleNotificationOpen(context, dataArray,
-                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromFCMJson(jsonData));
+         OneSignal.handleNotificationOpen(context,
+                 dataArray,
+                 OneSignal.getNotificationIdFromFCMJson(jsonData));
    }
 
    private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {

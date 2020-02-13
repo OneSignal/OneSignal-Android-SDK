@@ -5,7 +5,7 @@ import android.app.Activity;
 import android.os.Bundle;
 
 import com.onesignal.MockOutcomesUtils;
-import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -84,7 +84,7 @@ public class OutcomeEventIntegrationTests {
     private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
         return new OneSignal.NotificationOpenedHandler() {
             @Override
-            public void notificationOpened(OSNotificationOpenResult openedResult) {
+            public void notificationOpened(OSNotificationOpenedResult openedResult) {
                 notificationOpenedMessage = openedResult.notification.payload.body;
             }
         };
@@ -136,7 +136,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Click notification
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Foreground app
@@ -160,7 +160,7 @@ public class OutcomeEventIntegrationTests {
         advanceSystemTimeBy(31);
 
         // Click notification
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Foreground app
@@ -325,7 +325,7 @@ public class OutcomeEventIntegrationTests {
         // Init OneSignal with a custom opened handler
         OneSignalInit(new OneSignal.NotificationOpenedHandler() {
             @Override
-            public void notificationOpened(OSNotificationOpenResult result) {
+            public void notificationOpened(OSNotificationOpenedResult result) {
                 OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
             }
         });
@@ -336,7 +336,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Receive and open a notification
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
         threadAndTaskWait();
 
         // Foreground the application
@@ -356,7 +356,7 @@ public class OutcomeEventIntegrationTests {
         assertNull(notificationOpenedMessage);
 
         // Click notification
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
         threadAndTaskWait();
 
         // Check message String matches data sent in open handler
@@ -410,7 +410,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Click notification before new session
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Foreground app
@@ -443,7 +443,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Click notification before new session
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Check directNotificationId is set to clicked notification
@@ -718,7 +718,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Click notification before new session
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "1");
         threadAndTaskWait();
 
         // App opened after clicking notification, but Robolectric needs this to simulate onAppFocus() code after a click

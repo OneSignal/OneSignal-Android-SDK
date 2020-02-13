@@ -28,13 +28,10 @@
 package com.onesignal;
 
 import android.R.drawable;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.database.Cursor;
@@ -44,12 +41,13 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import androidx.annotation.RequiresApi;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -66,8 +64,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-
-import static com.onesignal.OSUtils.getResourceString;
 
 class GenerateNotification {
 
@@ -88,15 +84,25 @@ class GenerateNotification {
       contextResources = inContext.getResources();
    }
 
-   static void fromJsonPayload(NotificationGenerationJob notifJob) {
+   /**
+    * Accepts a NotificationGenerationJob as only param and creates a notification and shows it based on the contents
+    * This is also where the OSNotificationDisplayOption param is processed and it is decide how the notification
+    *    will show on the device
+    * @param notifJob - {@link NotificationGenerationJob} used to create and show the notification
+    */
+   static void fromJsonPayload(final NotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
-      if (!notifJob.restoring && notifJob.showAsAlert && ActivityLifecycleHandler.curActivity != null) {
-         showNotificationAsAlert(notifJob.jsonPayload, ActivityLifecycleHandler.curActivity, notifJob.getAndroidId());
+      // Notification set to OSNotificationDisplayOption SILENT
+      if (notifJob.inFocusDisplayType.isSilent())
          return;
-      }
 
-      showNotification(notifJob);
+      // Notification set to OSNotificationDisplayOption NOTIFICATION
+      String notifId = notifJob.getApiNotificationId();
+      if (notifJob.inFocusDisplayType.isNotification() && !OneSignal.shownNotificationIds.contains(notifId)) {
+         OneSignal.shownNotificationIds.add(notifId);
+         showNotification(notifJob);
+      }
    }
 
    static void updateSummaryNotification(NotificationGenerationJob notifJob) {
@@ -104,73 +110,8 @@ class GenerateNotification {
       createSummaryNotification(notifJob, null);
    }
 
-   private static void showNotificationAsAlert(final JSONObject fcmJson, final Activity activity, final int notificationId) {
-      activity.runOnUiThread(new Runnable() {
-         @Override
-         public void run() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle(getTitle(activity, fcmJson));
-            builder.setMessage(fcmJson.optString("alert"));
-
-            List<String> buttonsLabels = new ArrayList<>();
-            List<String> buttonIds = new ArrayList<>();
-
-            addAlertButtons(activity, fcmJson, buttonsLabels, buttonIds);
-
-            final List<String> finalButtonIds = buttonIds;
-
-            Intent buttonIntent = getNewBaseIntent(activity, notificationId);
-            buttonIntent.putExtra("action_button", true);
-            buttonIntent.putExtra("from_alert", true);
-            buttonIntent.putExtra("onesignal_data", fcmJson.toString());
-            if (fcmJson.has("grp"))
-               buttonIntent.putExtra("grp", fcmJson.optString("grp"));
-
-            final Intent finalButtonIntent = buttonIntent;
-
-            DialogInterface.OnClickListener buttonListener = new DialogInterface.OnClickListener() {
-               public void onClick(DialogInterface dialog, int which) {
-                  int index = which + 3;
-
-                  if (finalButtonIds.size() > 1) {
-                     try {
-                        JSONObject newJsonData = new JSONObject(fcmJson.toString());
-                        newJsonData.put("actionSelected", finalButtonIds.get(index));
-                        finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
-
-                        NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-                     } catch (Throwable t) {}
-                  } else // No action buttons, close button simply pressed.
-                     NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            };
-
-            // Back button pressed
-            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-               @Override
-               public void onCancel(DialogInterface dialogInterface) {
-                  NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            });
-
-            for (int i = 0; i < buttonsLabels.size(); i++) {
-               if (i == 0)
-                  builder.setNeutralButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 1)
-                  builder.setNegativeButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 2)
-                  builder.setPositiveButton(buttonsLabels.get(i), buttonListener);
-            }
-
-            AlertDialog alertDialog = builder.create();
-            alertDialog.setCanceledOnTouchOutside(false);
-            alertDialog.show();
-         }
-      });
-   }
-   
-   private static CharSequence getTitle(Context context, JSONObject fcmJson) {
-      CharSequence title = fcmJson.optString("title", null);
+   private static CharSequence getTitle(Context context, JSONObject gcmBundle) {
+      CharSequence title = gcmBundle.optString("title", null);
 
       if (title != null)
          return title;
@@ -403,9 +344,7 @@ class GenerateNotification {
       }
    }
 
-   private static void applyNotificationExtender(
-           NotificationGenerationJob notifJob,
-           NotificationCompat.Builder notifBuilder) {
+   private static void applyNotificationExtender(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
       if (notifJob.overrideSettings == null || notifJob.overrideSettings.extender == null)
          return;
 
@@ -1047,21 +986,8 @@ class GenerateNotification {
       }
    }
 
-   private static void addAlertButtons(Context context, JSONObject fcmJson, List<String> buttonsLabels, List<String> buttonsIds) {
-      try {
-         addCustomAlertButtons(fcmJson, buttonsLabels, buttonsIds);
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse JSON for custom buttons for alert dialog.", t);
-      }
-
-      if (buttonsLabels.size() == 0 || buttonsLabels.size() < 3) {
-         buttonsLabels.add(getResourceString(context, "onesignal_in_app_alert_ok_button_text", "Ok"));
-         buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
-      }
-   }
-
-   private static void addCustomAlertButtons(JSONObject fcmJson, List<String> buttonsLabels, List<String> buttonsIds) throws JSONException {
-      JSONObject customJson = new JSONObject(fcmJson.optString("custom"));
+   private static void addCustomAlertButtons(JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) throws JSONException {
+      JSONObject customJson = new JSONObject(gcmBundle.optString("custom"));
 
       if (!customJson.has("a"))
          return;

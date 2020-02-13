@@ -46,7 +46,7 @@ import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
-import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
+import static com.onesignal.OSNotificationExtensionService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
@@ -60,7 +60,7 @@ class NotificationBundleProcessor {
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
 
-   static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, OSNotificationIntentService.OverrideSettings overrideSettings) {
       OneSignal.setAppContext(context);
       try {
          String jsonStrPayload = bundle.getString("json_payload");
@@ -73,16 +73,16 @@ class NotificationBundleProcessor {
          notifJob.restoring = bundle.getBoolean("restoring", false);
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
          notifJob.jsonPayload = new JSONObject(jsonStrPayload);
-         notifJob.isInAppPreviewPush = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
+         notifJob.isIamPreviewPush = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
 
          if (!notifJob.restoring &&
-             !notifJob.isInAppPreviewPush &&
+             !notifJob.isIamPreviewPush &&
              OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
             return;
 
          if (bundle.containsKey("android_notif_id")) {
             if (overrideSettings == null)
-               overrideSettings = new NotificationExtenderService.OverrideSettings();
+               overrideSettings = new OSNotificationIntentService.OverrideSettings();
             overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
          
@@ -99,19 +99,18 @@ class NotificationBundleProcessor {
    }
 
    static int ProcessJobForDisplay(NotificationGenerationJob notifJob) {
-      notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
       processCollapseKey(notifJob);
 
       boolean doDisplay = shouldDisplayNotif(notifJob);
       if (doDisplay)
             GenerateNotification.fromJsonPayload(notifJob);
 
-      if (!notifJob.restoring && !notifJob.isInAppPreviewPush) {
+      if (!notifJob.restoring && !notifJob.isIamPreviewPush) {
          processNotification(notifJob, false);
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
             jsonObject.put("notificationId", notifJob.getAndroidId());
-            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
+            OneSignal.handleNotificationReceived(notifJob, true);
          } catch(Throwable t) {}
       }
 
@@ -121,7 +120,7 @@ class NotificationBundleProcessor {
    private static boolean shouldDisplayNotif(NotificationGenerationJob notifJob) {
       // Validate that the current Android device is Android 4.4 or higher and the current job is a
       //    preview push
-      if (notifJob.isInAppPreviewPush && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
+      if (notifJob.isIamPreviewPush && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
          return false;
 
       // Otherwise, this is a normal notification and should be shown
@@ -135,13 +134,15 @@ class NotificationBundleProcessor {
       return jsonArray;
    }
 
-   private static void saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+   private static NotificationGenerationJob saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
-      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+      notifJob.overrideSettings = new OSNotificationIntentService.OverrideSettings();
       notifJob.overrideSettings.androidNotificationId = notificationId;
 
       processNotification(notifJob, opened);
+
+      return notifJob;
    }
 
    /**
@@ -483,12 +484,12 @@ class NotificationBundleProcessor {
 
       // Save as a opened notification to prevent duplicates.
       if (!shouldDisplay(alert)) {
-         saveAndProcessNotification(context, bundle, true, -1);
+         final NotificationGenerationJob notifJob = saveAndProcessNotification(context, bundle, true, -1);
          // Current thread is meant to be short lived.
          //    Make a new thread to do our OneSignal work on.
          new Thread(new Runnable() {
             public void run() {
-               OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false, false);
+               OneSignal.handleNotificationReceived(notifJob, false);
             }
          }, "OS_PROC_BUNDLE").start();
       }
@@ -515,10 +516,7 @@ class NotificationBundleProcessor {
 
    // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
    private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
-      Intent intent = NotificationExtenderService.getIntent(context);
-      if (intent == null)
-         return false;
-
+      Intent intent = new Intent();
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
@@ -541,12 +539,8 @@ class NotificationBundleProcessor {
 
    static boolean shouldDisplay(String body) {
       boolean hasBody = body != null && !"".equals(body);
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
       boolean isActive = OneSignal.isAppActive();
-      return hasBody &&
-                (OneSignal.getNotificationsWhenActiveEnabled()
-              || showAsAlert
-              || !isActive);
+      return hasBody && !isActive;
    }
 
    static @NonNull JSONArray newJsonArray(JSONObject jsonObject) {
