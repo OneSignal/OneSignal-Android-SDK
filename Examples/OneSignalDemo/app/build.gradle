@@ -29,19 +29,20 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    implementation 'com.google.android.material:material:1.1.0'
+    implementation 'com.google.android.material:material:[1.0.0, 1.99.99]'
 
-    implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
+    implementation 'androidx.cardview:cardview:[1.0.0, 1.99.99]'
+    implementation 'androidx.appcompat:appcompat:[1.0.0, 1.99.99]'
+    implementation 'androidx.legacy:legacy-support-v4:[1.0.0, 1.99.99]'
+    implementation 'androidx.vectordrawable:vectordrawable:[1.0.0, 1.99.99]'
 
     // Test local OneSignal SDK
     implementation(project(':onesignal'))
 
     // Test public release OneSignal SDK
-    // This will not work until 4.0.0 is publicly released because of manifest placeholders
-//    implementation 'com.onesignal:OneSignal:3.12.5'
+    // This will not work until 4.0.0 is publicly released because of manifest placeholders causing
+    //  manifest merger conflicts
+//    implementation 'com.onesignal:OneSignal:3.12.6'
 
     // glide:4.9.0 is the last version before going to AndroidX
     // glide:4.10.0 is the first version using AndroidX
