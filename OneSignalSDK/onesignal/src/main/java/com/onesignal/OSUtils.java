@@ -128,30 +128,16 @@ class OSUtils {
       }
    }
 
-   private static boolean hasGCMLibrary() {
-      try {
-         // noinspection ConstantConditions
-         return com.google.android.gms.gcm.GoogleCloudMessaging.class != null;
-      } catch (Throwable e) {
-         return false;
-      }
-   }
-
    Integer checkForGooglePushLibrary() {
       boolean hasFCMLibrary = hasFCMLibrary();
-      boolean hasGCMLibrary = hasGCMLibrary();
 
-      if (!hasFCMLibrary && !hasGCMLibrary) {
+      if (!hasFCMLibrary) {
          Log(OneSignal.LOG_LEVEL.FATAL, "The Firebase FCM library is missing! Please make sure to include it in your project.");
          return UserState.PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY;
       }
 
-      if (hasGCMLibrary && !hasFCMLibrary)
-         Log(OneSignal.LOG_LEVEL.WARN, "GCM Library detected, please upgrade to Firebase FCM library as GCM is deprecated!");
-
-      if (hasGCMLibrary && hasFCMLibrary)
-         Log(OneSignal.LOG_LEVEL.WARN, "Both GCM & FCM Libraries detected! Please remove the deprecated GCM library.");
-
+      Log(OneSignal.LOG_LEVEL.FATAL, "The Firebase FCM library exists, moving on!");
+      // null represents not missing any important Google push libs
       return null;
    }
 

@@ -5,7 +5,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.onesignal.sdktest"
-        minSdkVersion 21
+        minSdkVersion 16
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -16,6 +16,12 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    // Forced downgrade to Java 1.8 for compiling the application due to Android X limitation
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
@@ -36,7 +42,9 @@ dependencies {
     // This will not work until 4.0.0 is publicly released because of manifest placeholders
 //    implementation 'com.onesignal:OneSignal:3.12.5'
 
-    implementation 'com.github.bumptech.glide:glide:4.9.0'
+    // glide:4.9.0 is the last version before going to AndroidX
+    // glide:4.10.0 is the first version using AndroidX
+    implementation 'com.github.bumptech.glide:glide:[4.10.0, 4.99.99]'
 }
 
 apply plugin: 'com.google.gms.google-services'

@@ -763,8 +763,6 @@ public class OneSignal {
                 if (TrackFirebaseAnalytics.CanTrack())
                     trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
 
-                PushRegistratorFCM.disableFirebaseInstanceIdService(appContext);
-
                 initDone = true;
 
                 outcomeEventsController.sendSavedOutcomes();
@@ -1004,8 +1002,8 @@ public class OneSignal {
             mPushRegistrator = new PushRegistratorADM();
         else if (OSUtils.hasFCMLibrary())
             mPushRegistrator = new PushRegistratorFCM();
-        else
-            mPushRegistrator = new PushRegistratorGCM();
+
+        // TODO: Do we need a else case here? Can mPushRegistrator be null?
 
         return mPushRegistrator;
     }
