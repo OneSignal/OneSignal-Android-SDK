@@ -28,7 +28,7 @@
 package com.onesignal;
 
 import android.app.Activity;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 import com.onesignal.OneSignal;
 import java.lang.reflect.Method;
 import org.json.JSONException;

@@ -3,7 +3,7 @@ package com.onesignal.sdktest.model;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 
 import com.onesignal.OSEmailSubscriptionStateChanges;

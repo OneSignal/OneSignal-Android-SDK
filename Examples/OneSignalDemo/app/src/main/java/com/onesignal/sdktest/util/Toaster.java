@@ -3,7 +3,7 @@ package com.onesignal.sdktest.util;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.support.v7.widget.CardView;
+import androidx.cardview.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageView;

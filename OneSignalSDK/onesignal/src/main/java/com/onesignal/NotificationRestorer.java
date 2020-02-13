@@ -39,7 +39,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.WorkerThread;
 import android.text.TextUtils;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -191,11 +191,11 @@ class NotificationRestorer {
       if (!cursor.moveToFirst())
          return;
 
-      boolean useExtender = (OSNotificationIntentService.getIntent(context) != null);
+      boolean useExtender = false; //OSNotificationIntentService.getIntent(context) != null;
 
       do {
           if (useExtender) {
-              Intent intent = OSNotificationIntentService.getIntent(context);
+              Intent intent = new Intent(); //OSNotificationIntentService.getIntent(context);
               addRestoreExtras(intent, cursor);
               OSNotificationIntentService.enqueueWork(
                       context,

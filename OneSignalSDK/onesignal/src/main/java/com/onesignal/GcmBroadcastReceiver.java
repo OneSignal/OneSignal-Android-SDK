@@ -35,9 +35,9 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.os.PersistableBundle;
-import android.support.annotation.Nullable;
-import android.support.v4.content.WakefulBroadcastReceiver;
+
+import androidx.annotation.Nullable;
+import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 

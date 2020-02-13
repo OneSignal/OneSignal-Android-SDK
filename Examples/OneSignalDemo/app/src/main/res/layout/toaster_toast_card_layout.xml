@@ -8,7 +8,7 @@
     android:clipToPadding="false"
     android:background="@android:color/transparent">
 
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:id="@+id/toaster_toast_card_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -46,6 +46,6 @@
 
         </LinearLayout>
 
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
 
 </LinearLayout>

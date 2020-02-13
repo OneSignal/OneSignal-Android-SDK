@@ -1,6 +1,6 @@
  package com.onesignal.sdktest.notification;
 
- import android.support.v4.app.NotificationCompat;
+ import androidx.core.app.NotificationCompat;
 
  import com.onesignal.NotificationGenerationJob;
  import com.onesignal.OSInAppMessageAction;

@@ -1,6 +1,6 @@
 package com.test.onesignal;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.onesignal.ShadowOneSignalRestClient.Request;
 

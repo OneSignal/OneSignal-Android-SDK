@@ -41,8 +41,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -510,7 +510,7 @@ class NotificationBundleProcessor {
 
    // OSNotificationExtensionService still makes additional checks such as notValidOrDuplicated
    private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
-       Intent intent = OSNotificationIntentService.getIntent(context);
+       Intent intent = new Intent(); //OSNotificationIntentService.getIntent(context);
        if (intent == null)
            return false;
 

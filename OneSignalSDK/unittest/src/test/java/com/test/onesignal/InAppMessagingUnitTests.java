@@ -2,7 +2,7 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OSInAppMessageAction;

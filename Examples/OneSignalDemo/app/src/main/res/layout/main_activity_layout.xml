@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -7,7 +7,7 @@
     android:fitsSystemWindows="true"
     tools:context=".activity.MainActivity">
 
-    <android.support.design.widget.AppBarLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/main_activity_app_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -16,7 +16,7 @@
         android:clipToPadding="false"
         app:layout_behavior="com.onesignal.sdktest.ui.FixAppBarLayoutBehavior">
 
-        <android.support.v7.widget.Toolbar
+        <androidx.appcompat.widget.Toolbar
             android:id="@+id/main_activity_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
@@ -44,9 +44,9 @@
 
             </RelativeLayout>
 
-        </android.support.v7.widget.Toolbar>
+        </androidx.appcompat.widget.Toolbar>
 
-    </android.support.design.widget.AppBarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
         android:id="@+id/main_activity_privacy_consent_linear_layout"
@@ -83,7 +83,7 @@
             android:textSize="12dp"
             android:textColor="@color/colorDarkText"/>
 
-        <android.support.v7.widget.CardView
+        <androidx.cardview.widget.CardView
             android:layout_width="172dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
@@ -113,28 +113,28 @@
 
             </LinearLayout>
 
-        </android.support.v7.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 
     <!-- Main ScrollView -->
 
-    <android.support.v4.widget.NestedScrollView
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/main_activity_nested_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_behavior="android.support.design.widget.AppBarLayout$ScrollingViewBehavior">
+        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:paddingTop="10dp"
-            android:paddingBottom="12dp"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:descendantFocusability="blocksDescendants"
-            android:orientation="vertical">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:paddingTop="10dp"
+                android:paddingBottom="12dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:descendantFocusability="blocksDescendants"
+                android:orientation="vertical">
 
             <LinearLayout
                 android:id="@+id/main_activity_account_linear_layout"
@@ -155,7 +155,7 @@
                     android:text="@string/app"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -295,7 +295,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -321,7 +321,7 @@
                     android:text="@string/location"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -411,7 +411,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -437,7 +437,7 @@
                     android:text="@string/settings"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -586,7 +586,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -613,7 +613,7 @@
                     android:text="@string/tags"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -628,7 +628,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <android.support.v7.widget.RecyclerView
+                        <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/main_activity_tags_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -638,7 +638,7 @@
 
                             <!-- Populated with the Tags added -->
 
-                        </android.support.v7.widget.RecyclerView>
+                        </androidx.recyclerview.widget.RecyclerView>
 
                         <TextView
                             android:id="@+id/main_activity_tags_no_tags_text_view"
@@ -674,7 +674,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -700,7 +700,7 @@
                     android:text="@string/push_notification"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.RecyclerView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_push_notification_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -712,7 +712,7 @@
 
                     <!-- Populated with the Notification enum -->
 
-                </android.support.v7.widget.RecyclerView>
+                </androidx.recyclerview.widget.RecyclerView>
 
             </LinearLayout>
 
@@ -739,7 +739,7 @@
                     android:text="@string/outcomes"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -776,7 +776,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -803,7 +803,7 @@
                     android:text="@string/triggers"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -818,7 +818,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <android.support.v7.widget.RecyclerView
+                        <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/main_activity_in_app_messages_triggers_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -828,7 +828,7 @@
 
                             <!-- Populated with the Triggers added -->
 
-                        </android.support.v7.widget.RecyclerView>
+                        </androidx.recyclerview.widget.RecyclerView>
 
                         <TextView
                             android:id="@+id/main_activity_in_app_messages_triggers_no_triggers_text_view"
@@ -864,7 +864,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -890,7 +890,7 @@
                     android:text="@string/in_app_messaging"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.RecyclerView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_in_app_messaging_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -902,12 +902,12 @@
 
                     <!-- Populated with the In App Message enum -->
 
-                </android.support.v7.widget.RecyclerView>
+                </androidx.recyclerview.widget.RecyclerView>
 
             </LinearLayout>
 
         </LinearLayout>
 
-    </android.support.v4.widget.NestedScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-</android.support.design.widget.CoordinatorLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
