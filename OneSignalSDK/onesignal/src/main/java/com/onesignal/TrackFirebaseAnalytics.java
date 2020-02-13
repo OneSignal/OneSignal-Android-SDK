@@ -95,7 +95,7 @@ class TrackFirebaseAnalytics {
       }
    }
 
-   void trackOpenedEvent(OSNotificationOpenResult openResult) {
+   void trackOpenedEvent(OSNotificationOpenedResult openResult) {
       if(lastOpenedTime == null)
          lastOpenedTime = new AtomicLong();
       lastOpenedTime.set(System.currentTimeMillis());
@@ -122,7 +122,7 @@ class TrackFirebaseAnalytics {
 
    }
 
-   void trackReceivedEvent(OSNotificationOpenResult receivedResult) {
+   void trackReceivedEvent(OSNotificationOpenedResult receivedResult) {
       try {
          //get the source, medium, campaign params from the openResult
          Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);

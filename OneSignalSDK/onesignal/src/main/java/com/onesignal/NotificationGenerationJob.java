@@ -41,8 +41,9 @@ public class NotificationGenerationJob {
    JSONObject jsonPayload;
    boolean restoring;
    boolean isIamPreviewPush;
-   OneSignal.OSInFocusDisplay inFocusDisplayType = OneSignal.OSInFocusDisplay.NOTIFICATION;
-   
+   private OSNotificationExtensionService.NotificationWillShowInForegroundCompletionHandler completionHandler;
+   OneSignal.OSNotificationDisplayOption inFocusDisplayType = OneSignal.OSNotificationDisplayOption.NOTIFICATION;
+
    Long shownTimeStamp;
    
    CharSequence overriddenBodyFromExtender;
@@ -113,8 +114,20 @@ public class NotificationGenerationJob {
       return overrideSettings != null && overrideSettings.extender != null;
    }
 
-   public void showNotification(OneSignal.OSInFocusDisplay inFocusDisplayType) {
-      this.inFocusDisplayType = inFocusDisplayType;
-      OSNotificationExtensionService.showNotification(this, inFocusDisplayType);
+   void setCompletionHandler(OSNotificationExtensionService.NotificationWillShowInForegroundCompletionHandler handler) {
+      this.completionHandler = handler;
    }
+
+   public void setNotificationDisplayType(OneSignal.OSNotificationDisplayOption inFocusDisplayType) {
+      this.inFocusDisplayType = inFocusDisplayType;
+   }
+
+   public void complete(boolean bubble) {
+      if (completionHandler != null)
+         completionHandler.complete(this, bubble);
+
+      completionHandler = null;
+      OSNotificationExtensionService.destroyShowNotificationTimeout();
+   }
+
 }

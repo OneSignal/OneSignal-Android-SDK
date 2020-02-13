@@ -48,7 +48,7 @@ import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
-import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
@@ -187,7 +187,7 @@ public class MainOneSignalClassRunner {
    private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
       return new OneSignal.NotificationOpenedHandler() {
          @Override
-         public void notificationOpened(OSNotificationOpenResult openedResult) {
+         public void notificationOpened(OSNotificationOpenedResult openedResult) {
             notificationOpenedMessage = openedResult.notification.payload.body;
          }
       };
@@ -829,7 +829,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
 
-      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.removeNotificationOpenedHandlers();
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(notificationOpenedMessage);
 
@@ -2493,8 +2493,8 @@ public class MainOneSignalClassRunner {
          public void onFailure(JSONObject response) {}
       });
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.removeNotificationOpenedHandlers();
+      OneSignal.removeNotificationWillShowInForegroundHandlers();
       threadAndTaskWait();
 
       assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
@@ -2527,8 +2527,8 @@ public class MainOneSignalClassRunner {
          public void onFailure(JSONObject response) {}
       });
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.removeNotificationOpenedHandlers();
+      OneSignal.removeNotificationWillShowInForegroundHandlers();
       threadAndTaskWait();
 
       assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
@@ -2559,8 +2559,8 @@ public class MainOneSignalClassRunner {
          public void onFailure(JSONObject response) {}
       });
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.removeNotificationOpenedHandlers();
+      OneSignal.removeNotificationWillShowInForegroundHandlers();
       threadAndTaskWait();
 
       assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
@@ -2592,8 +2592,8 @@ public class MainOneSignalClassRunner {
          public void onFailure(JSONObject response) {}
       });
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.removeNotificationOpenedHandlers();
+      OneSignal.removeNotificationWillShowInForegroundHandlers();
       threadAndTaskWait();
 
       assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
@@ -3432,7 +3432,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOSNotificationOpenResultToJSONObject() throws Exception {
-      OSNotificationOpenResult osNotificationOpenResult = new OSNotificationOpenResult();
+      OSNotificationOpenedResult osNotificationOpenResult = new OSNotificationOpenedResult();
       osNotificationOpenResult.notification = createTestOSNotification();
       osNotificationOpenResult.action = new OSNotificationAction();
       osNotificationOpenResult.action.type = OSNotificationAction.ActionType.Opened;
@@ -4062,7 +4062,7 @@ public class MainOneSignalClassRunner {
       actionButton.id = "id";
       osNotification.payload.actionButtons.add(actionButton);
 
-      osNotification.inFocusDisplayType = OneSignal.OSInFocusDisplay.SILENT;
+      osNotification.inFocusDisplayType = OneSignal.OSNotificationDisplayOption.SILENT;
 
       osNotification.groupedNotifications = new ArrayList<>();
       OSNotificationPayload groupedPayload = new OSNotificationPayload();

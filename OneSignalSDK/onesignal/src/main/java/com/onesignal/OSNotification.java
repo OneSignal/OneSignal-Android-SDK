@@ -45,9 +45,8 @@ import org.json.JSONObject;
  * {@link #payload} - Payload received from OneSignal
  * <br/>
  * {@link #inFocusDisplayType} - How the notification was displayed ot the user. Can be set to
- * {@link com.onesignal.OneSignal.OSInFocusDisplay#NOTIFICATION},
- * {@link com.onesignal.OneSignal.OSInFocusDisplay#IN_APP_ALERT}, or
- * {@link com.onesignal.OneSignal.OSInFocusDisplay#SILENT} if it was not displayed.
+ * {@link OneSignal.OSNotificationDisplayOption#NOTIFICATION} or
+ * {@link OneSignal.OSNotificationDisplayOption#SILENT} if it was not displayed.
  * <br/>
  * {@link #groupedNotifications} - If the notification is a summary notification for a group, this will contain
  * all notification payloads it was created from.
@@ -61,7 +60,7 @@ public class OSNotification {
       isAppInFocus = jsonObject.optBoolean("isAppInFocus");
       shown = jsonObject.optBoolean("shown", shown);
       androidNotificationId = jsonObject.optInt("androidNotificationId");
-      inFocusDisplayType = OneSignal.OSInFocusDisplay.values()[jsonObject.optInt("inFocusDisplayType")];
+      inFocusDisplayType = OneSignal.OSNotificationDisplayOption.values()[jsonObject.optInt("inFocusDisplayType")];
 
       if (jsonObject.has("groupedNotifications")) {
          JSONArray jsonArray = jsonObject.optJSONArray("groupedNotifications");
@@ -87,7 +86,7 @@ public class OSNotification {
    public OSNotificationPayload payload;
 
    // How the notification will show on the device
-   public OneSignal.OSInFocusDisplay inFocusDisplayType;
+   public OneSignal.OSNotificationDisplayOption inFocusDisplayType;
 
    // Will be set if a summary notification is opened.
    //    The payload will be the most recent notification received.

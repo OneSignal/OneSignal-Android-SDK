@@ -1,30 +1,23 @@
-package com.onesignal.sdktest.notification;
+ package com.onesignal.sdktest.notification;
 
-import com.onesignal.NotificationGenerationJob;
-import com.onesignal.OSInAppMessageAction;
-import com.onesignal.OSNotificationDisplayedResult;
-import com.onesignal.OSNotificationExtensionService;
-import com.onesignal.OSNotificationIntentService;
-import com.onesignal.OSNotificationOpenResult;
-import com.onesignal.OSNotificationPayload;
-import com.onesignal.OSNotificationReceivedResult;
-import com.onesignal.OneSignal;
+ import android.support.v4.app.NotificationCompat;
 
-public class AppNotificationExtensionService implements
-        OSNotificationExtensionService.NotificationProcessingHandler,
-        OSNotificationExtensionService.NotificationWillShowInForegroundHandler,
-        OSNotificationExtensionService.NotificationOpenedHandler,
+ import com.onesignal.NotificationGenerationJob;
+ import com.onesignal.OSInAppMessageAction;
+ import com.onesignal.OSNotificationDisplayedResult;
+ import com.onesignal.OSNotificationIntentService;
+ import com.onesignal.OSNotificationOpenedResult;
+ import com.onesignal.OSNotificationPayload;
+ import com.onesignal.OSNotificationReceivedResult;
+ import com.onesignal.OneSignal;
+
+ import java.math.BigInteger;
+
+ public class AppNotificationExtensionService implements
+        OneSignal.NotificationProcessingHandler,
+        OneSignal.NotificationWillShowInForegroundHandler,
+        OneSignal.NotificationOpenedHandler,
         OneSignal.InAppMessageClickHandler {
-
-    public AppNotificationExtensionService() {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "AppNotificationExtensionService constructor called!!!");
-        OSNotificationExtensionService.setNotificationProcessingHandler(this);
-
-        // Example using public OneSignal handler setters
-        OneSignal.setNotificationWillShowInForegroundHandler(this);
-        OneSignal.setNotificationOpenedHandler(this);
-        OneSignal.setInAppMessageClickHandler(this);
-    }
 
     @Override
     public boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
@@ -35,12 +28,12 @@ public class AppNotificationExtensionService implements
       }
 
       OSNotificationIntentService.OverrideSettings overrideSettings = new OSNotificationIntentService.OverrideSettings();
-//      overrideSettings.extender = new NotificationCompat.Extender() {
-//         @Override
-//         public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
-//            return builder.setColor(getResources().getColor(R.color.colorPrimary));
-//         }
-//      };
+      overrideSettings.extender = new NotificationCompat.Extender() {
+         @Override
+         public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
+            return builder.setColor(new BigInteger("00FF0000", 16).intValue());
+         }
+      };
 
       OSNotificationDisplayedResult displayedResult = notification.modifyNotification(overrideSettings);
       if (displayedResult != null)
@@ -51,22 +44,23 @@ public class AppNotificationExtensionService implements
 
     @Override
     public void notificationWillShowInForeground(NotificationGenerationJob notifJob) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification received!!!");
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ext notification received!!!");
 
-        // This must be called in order to specify the type of OSInFocusDisplay for the
+        // This must be called in order to specify the type of OSNotificationDisplayOption for the
         //      notification.
         //  Otherwise, the SDK will resort to the 30 second timeout and show the notification in the shade
-        notifJob.showNotification(OneSignal.OSInFocusDisplay.NOTIFICATION);
+        notifJob.setNotificationDisplayType(OneSignal.OSNotificationDisplayOption.NOTIFICATION);
+        notifJob.complete(true);
     }
 
     @Override
-    public void notificationOpened(OSNotificationOpenResult result) {
+    public void notificationOpened(OSNotificationOpenedResult result) {
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification opened!!!");
 
     }
 
     @Override
     public void inAppMessageClicked(OSInAppMessageAction result) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Notification opened!!!");
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "In app message clicked!!!");
     }
 }

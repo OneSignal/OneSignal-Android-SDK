@@ -510,9 +510,9 @@ class NotificationBundleProcessor {
 
    // OSNotificationExtensionService still makes additional checks such as notValidOrDuplicated
    private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
-      Intent intent = OSNotificationIntentService.getInstance().getIntent(context);
-      if (intent == null)
-         return false;
+       Intent intent = OSNotificationIntentService.getIntent(context);
+       if (intent == null)
+           return false;
 
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);

@@ -72,7 +72,9 @@
         <service android:name="com.onesignal.RestoreKickoffJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <service android:name="com.onesignal.SyncService" android:stopWithTask="true" />
+        <service android:name="com.onesignal.SyncService"
+            android:stopWithTask="true" />
+
         <service android:name="com.onesignal.SyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
@@ -86,6 +88,7 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+
         <receiver android:name="com.onesignal.UpgradeReceiver" >
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />

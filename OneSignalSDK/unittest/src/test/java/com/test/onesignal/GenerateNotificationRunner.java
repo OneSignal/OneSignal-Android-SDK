@@ -55,7 +55,7 @@ import com.onesignal.OSNotificationExtensionService;
 import com.onesignal.NotificationGenerationJob;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationDisplayedResult;
-import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
@@ -239,7 +239,7 @@ public class GenerateNotificationRunner {
    }
    
    
-   private static OSNotificationOpenResult lastOpenResult;
+   private static OSNotificationOpenedResult lastOpenResult;
    
    @Test
    public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() {
@@ -248,7 +248,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
          @Override
-         public void notificationOpened(OSNotificationOpenResult result) {
+         public void notificationOpened(OSNotificationOpenedResult result) {
             lastOpenResult = result;
          }
       });

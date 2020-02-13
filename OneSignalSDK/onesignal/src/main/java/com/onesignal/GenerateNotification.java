@@ -90,24 +90,23 @@ class GenerateNotification {
 
    /**
     * Accepts a NotificationGenerationJob as only param and creates a notification and shows it based on the contents
-    * This is also where the OSInFocusDisplay param is processed and it is decide how the notification with show on the device
+    * This is also where the OSNotificationDisplayOption param is processed and it is decide how the notification
+    *    will show on the device
+    * @param notifJob - {@link NotificationGenerationJob} used to create and show the notification
     */
-   static void fromJsonPayload(NotificationGenerationJob notifJob) {
+   static void fromJsonPayload(final NotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
-      // Notification set to OSInFocusDisplay SILENT
+      // Notification set to OSNotificationDisplayOption SILENT
       if (notifJob.inFocusDisplayType.isSilent())
          return;
 
-      // Notification set to OSInFocusDisplay IN_APP_ALERT
-      if (notifJob.inFocusDisplayType.isInAppAlert() && !notifJob.restoring && ActivityLifecycleHandler.curActivity != null) {
-         showNotificationAsAlert(notifJob.jsonPayload, ActivityLifecycleHandler.curActivity, notifJob.getAndroidId());
-         return;
-      }
-
-      // Notification set to OSInFocusDisplay NOTIFICATION
-      if (notifJob.inFocusDisplayType.isNotification())
+      // Notification set to OSNotificationDisplayOption NOTIFICATION
+      String notifId = notifJob.getApiNotificationId();
+      if (notifJob.inFocusDisplayType.isNotification() && !OneSignal.shownNotificationIds.contains(notifId)) {
+         OneSignal.shownNotificationIds.add(notifId);
          showNotification(notifJob);
+      }
    }
 
    static void updateSummaryNotification(NotificationGenerationJob notifJob) {
@@ -115,71 +114,6 @@ class GenerateNotification {
       createSummaryNotification(notifJob, null);
    }
 
-   private static void showNotificationAsAlert(final JSONObject gcmJson, final Activity activity, final int notificationId) {
-      activity.runOnUiThread(new Runnable() {
-         @Override
-         public void run() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle(getTitle(activity, gcmJson));
-            builder.setMessage(gcmJson.optString("alert"));
-
-            List<String> buttonsLabels = new ArrayList<>();
-            List<String> buttonIds = new ArrayList<>();
-
-            addAlertButtons(activity, gcmJson, buttonsLabels, buttonIds);
-
-            final List<String> finalButtonIds = buttonIds;
-
-            Intent buttonIntent = getNewBaseIntent(activity, notificationId);
-            buttonIntent.putExtra("action_button", true);
-            buttonIntent.putExtra("from_alert", true);
-            buttonIntent.putExtra("onesignal_data", gcmJson.toString());
-            if (gcmJson.has("grp"))
-               buttonIntent.putExtra("grp", gcmJson.optString("grp"));
-
-            final Intent finalButtonIntent = buttonIntent;
-
-            DialogInterface.OnClickListener buttonListener = new DialogInterface.OnClickListener() {
-               public void onClick(DialogInterface dialog, int which) {
-                  int index = which + 3;
-
-                  if (finalButtonIds.size() > 1) {
-                     try {
-                        JSONObject newJsonData = new JSONObject(gcmJson.toString());
-                        newJsonData.put("actionSelected", finalButtonIds.get(index));
-                        finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
-
-                        NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-                     } catch (Throwable t) {}
-                  } else // No action buttons, close button simply pressed.
-                     NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            };
-
-            // Back button pressed
-            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-               @Override
-               public void onCancel(DialogInterface dialogInterface) {
-                  NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            });
-
-            for (int i = 0; i < buttonsLabels.size(); i++) {
-               if (i == 0)
-                  builder.setNeutralButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 1)
-                  builder.setNegativeButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 2)
-                  builder.setPositiveButton(buttonsLabels.get(i), buttonListener);
-            }
-
-            AlertDialog alertDialog = builder.create();
-            alertDialog.setCanceledOnTouchOutside(false);
-            alertDialog.show();
-         }
-      });
-   }
-   
    private static CharSequence getTitle(Context context, JSONObject gcmBundle) {
       CharSequence title = gcmBundle.optString("title", null);
 
@@ -417,7 +351,6 @@ class GenerateNotification {
    }
 
    private static void applyNotificationExtender(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
-
       if (notifJob.overrideSettings == null || notifJob.overrideSettings.extender == null)
          return;
 
@@ -1057,19 +990,6 @@ class GenerateNotification {
          }
       } catch (Throwable t) {
          t.printStackTrace();
-      }
-   }
-
-   private static void addAlertButtons(Context context, JSONObject gcmBundle, List<String> buttonsLabels, List<String> buttonsIds) {
-      try {
-         addCustomAlertButtons(gcmBundle, buttonsLabels, buttonsIds);
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Failed to parse JSON for custom buttons for alert dialog.", t);
-      }
-
-      if (buttonsLabels.size() == 0 || buttonsLabels.size() < 3) {
-         buttonsLabels.add(getResourceString(context, "onesignal_in_app_alert_ok_button_text", "Ok"));
-         buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION);
       }
    }
 

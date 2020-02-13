@@ -194,14 +194,15 @@ class NotificationRestorer {
       boolean useExtender = (OSNotificationIntentService.getIntent(context) != null);
 
       do {
-         if (useExtender) {
-            Intent intent = OSNotificationIntentService.getIntent(context);
-            addRestoreExtras(intent, cursor);
-            OSNotificationIntentService.enqueueWork(context,
-                  intent.getComponent(),
-                  OSNotificationExtensionService.EXTENDER_SERVICE_JOB_ID,
-                  intent,
-                  false);
+          if (useExtender) {
+              Intent intent = OSNotificationIntentService.getIntent(context);
+              addRestoreExtras(intent, cursor);
+              OSNotificationIntentService.enqueueWork(
+                      context,
+                      intent.getComponent(),
+                      OSNotificationExtensionService.EXTENDER_SERVICE_JOB_ID,
+                      intent,
+                      false);
          }
          else {
             Intent intent = addRestoreExtras(new Intent(), cursor);

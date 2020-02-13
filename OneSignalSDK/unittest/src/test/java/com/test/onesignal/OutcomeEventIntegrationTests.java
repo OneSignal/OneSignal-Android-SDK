@@ -5,7 +5,7 @@ import android.app.Activity;
 import android.os.Bundle;
 
 import com.onesignal.MockOutcomesUtils;
-import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -84,7 +84,7 @@ public class OutcomeEventIntegrationTests {
     private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
         return new OneSignal.NotificationOpenedHandler() {
             @Override
-            public void notificationOpened(OSNotificationOpenResult openedResult) {
+            public void notificationOpened(OSNotificationOpenedResult openedResult) {
                 notificationOpenedMessage = openedResult.notification.payload.body;
             }
         };
@@ -325,7 +325,7 @@ public class OutcomeEventIntegrationTests {
         // Init OneSignal with a custom opened handler
         OneSignalInit(new OneSignal.NotificationOpenedHandler() {
             @Override
-            public void notificationOpened(OSNotificationOpenResult result) {
+            public void notificationOpened(OSNotificationOpenedResult result) {
                 OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
             }
         });
