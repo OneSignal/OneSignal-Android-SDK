@@ -97,6 +97,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
                    InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY + INT_TYPE + COMMA_SEP +
                    InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + INT_TYPE + COMMA_SEP +
                    InAppMessageTable.COLUMN_NAME_MESSAGE_ID + TEXT_TYPE + COMMA_SEP +
+                   InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION + INT_TYPE + COMMA_SEP +
                    InAppMessageTable.COLUMN_CLICK_IDS + TEXT_TYPE +
                    ");";
 

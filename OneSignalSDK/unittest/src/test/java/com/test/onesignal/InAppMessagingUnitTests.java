@@ -44,6 +44,7 @@ import java.util.UUID;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator;
+import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
@@ -204,12 +205,13 @@ public class InAppMessagingUnitTests {
         );
 
         assertTrue(message.getDisplayStats().isDelayTimeSatisfied());
-        final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
 
-        message.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - DELAY);
+        message.getDisplayStats().setLastDisplayTimeToCurrent();
+        advanceSystemTimeBy(DELAY);
         assertTrue(message.getDisplayStats().isDelayTimeSatisfied());
 
-        message.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - DELAY + 1);
+        message.getDisplayStats().setLastDisplayTimeToCurrent();
+        advanceSystemTimeBy(DELAY - 1);
         assertFalse(message.getDisplayStats().isDelayTimeSatisfied());
     }
 

@@ -54,6 +54,7 @@ class OSInAppMessage {
     private OSInAppMessageDisplayStats displayStats = new OSInAppMessageDisplayStats();
 
     private double displayDuration;
+    private boolean displayedInSession = false;
     private boolean triggerChanged = false;
     private boolean actionTaken;
     boolean isPreview;
@@ -62,15 +63,14 @@ class OSInAppMessage {
         this.isPreview = isPreview;
     }
 
-    OSInAppMessage(@NonNull String messageId, @NonNull Set<String> clickIds, OSInAppMessageDisplayStats displayStats) {
+    OSInAppMessage(@NonNull String messageId, @NonNull Set<String> clickIds, boolean displayedInSession, OSInAppMessageDisplayStats displayStats) {
         this.messageId = messageId;
         this.clickedClickIds = clickIds;
-
+        this.displayedInSession = displayedInSession;
         this.displayStats = displayStats;
     }
 
     OSInAppMessage(JSONObject json) throws JSONException {
-
         // initialize simple root properties
         this.messageId = json.getString(IAM_ID);
         this.variants = parseVariants(json.getJSONObject(IAM_VARIANTS));
@@ -187,6 +187,14 @@ class OSInAppMessage {
 
     void setTriggerChanged(boolean triggerChanged) {
         this.triggerChanged = triggerChanged;
+    }
+
+    public boolean isDisplayedInSession() {
+        return displayedInSession;
+    }
+
+    public void setDisplayedInSession(boolean displayedInSession) {
+        this.displayedInSession = displayedInSession;
     }
 
     @NonNull

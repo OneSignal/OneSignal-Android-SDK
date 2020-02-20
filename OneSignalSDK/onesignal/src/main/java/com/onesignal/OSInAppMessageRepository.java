@@ -46,6 +46,7 @@ class OSInAppMessageRepository {
         values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayStats().getDisplayQuantity());
         values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getDisplayStats().getLastDisplayTime());
         values.put(OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
+        values.put(OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
         int rowsUpdated = writableDb.update(OneSignalDbContract.InAppMessageTable.TABLE_NAME, values,
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID + " = ?", new String[]{inAppMessage.messageId});
@@ -77,6 +78,7 @@ class OSInAppMessageRepository {
                     String clickIds = cursor.getString(cursor.getColumnIndex(OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS));
                     int displayQuantity = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY));
                     long lastDisplay = cursor.getLong(cursor.getColumnIndex(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY));
+                    boolean displayed = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION)) == 1;
 
                     JSONArray clickIdsArray = new JSONArray(clickIds);
                     Set<String> clickIdsSet = new HashSet<>();
@@ -85,7 +87,7 @@ class OSInAppMessageRepository {
                         clickIdsSet.add(clickIdsArray.getString(i));
                     }
 
-                    OSInAppMessage inAppMessage = new OSInAppMessage(messageId, clickIdsSet, new OSInAppMessageDisplayStats(displayQuantity, lastDisplay));
+                    OSInAppMessage inAppMessage = new OSInAppMessage(messageId, clickIdsSet, displayed, new OSInAppMessageDisplayStats(displayQuantity, lastDisplay));
                     iams.add(inAppMessage);
                 } while (cursor.moveToNext());
             }
