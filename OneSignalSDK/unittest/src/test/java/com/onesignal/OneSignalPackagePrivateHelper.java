@@ -272,8 +272,8 @@ public class OneSignalPackagePrivateHelper {
 
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
-      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, Set<String> clickIds) {
-         super(messageId, clickIds, new OSInAppMessageDisplayStats(displaysQuantity, lastDisplayTime));
+      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
+         super(messageId, clickIds, displayed, new OSInAppMessageDisplayStats(displaysQuantity, lastDisplayTime));
       }
 
       OSTestInAppMessage(JSONObject json) throws JSONException {
@@ -369,6 +369,10 @@ public class OneSignalPackagePrivateHelper {
       @Override
       public void setLastDisplayTime(long lastDisplayTime) {
          this.displayStats.setLastDisplayTime(lastDisplayTime);
+      }
+
+      public void setLastDisplayTimeToCurrent() {
+         this.displayStats.setLastDisplayTime(System.currentTimeMillis() / 1000);
       }
 
       @Override
