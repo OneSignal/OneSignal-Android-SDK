@@ -271,11 +271,14 @@ public class DatabaseRunner {
               OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
               null);
 
+      inAppMessage.setDisplayedInSession(true);
+      
       ContentValues values = new ContentValues();
       values.put(InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
       values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayStats().getDisplayQuantity());
       values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getDisplayStats().getLastDisplayTime());
       values.put(InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
+      values.put(InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
       // 3. Clear the cache of the DB so it reloads the file.
       ShadowOneSignalDbHelper.restSetStaticFields();
@@ -294,5 +297,10 @@ public class DatabaseRunner {
       List<OSTestInAppMessage> savedInAppMessagesAfterCreation = TestHelpers.getAllInAppMessages();
 
       assertEquals(savedInAppMessagesAfterCreation.size(), 1);
+      OSTestInAppMessage savedInAppMessage = savedInAppMessagesAfterCreation.get(0);
+      assertEquals(savedInAppMessage.getDisplayStats().getDisplayQuantity(), inAppMessage.getDisplayStats().getDisplayQuantity());
+      assertEquals(savedInAppMessage.getDisplayStats().getLastDisplayTime(), inAppMessage.getDisplayStats().getLastDisplayTime());
+      assertEquals(savedInAppMessage.getClickedClickIds().toString(), inAppMessage.getClickedClickIds().toString());
+      assertEquals(savedInAppMessage.isDisplayedInSession(), inAppMessage.isDisplayedInSession());
    }
 }
