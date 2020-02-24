@@ -199,11 +199,11 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
                params.put("delegate_id", new JSONObject().put("success", delegateIdSuccess).put("failure", delegateIdFailure).toString());
                if (response == null) {
                   params.put("response", "");
-                  OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+                  OneSignalUnityProxy.unitySafeInvoke("onPostNotificationSuccess", params.toString());
                   return;
                }
                params.put("response", response.toString());
-               OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+               OneSignalUnityProxy.unitySafeInvoke("onPostNotificationSuccess", params.toString());
             } catch (JSONException e) {
                e.printStackTrace();
             }
@@ -215,11 +215,11 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
                params.put("delegate_id", new JSONObject().put("success", delegateIdSuccess).put("failure", delegateIdFailure));
                if (response == null) {
                   params.put("response", "");
-                  OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+                  OneSignalUnityProxy.unitySafeInvoke("onPostNotificationFailed", params.toString());
                   return;
                }
                params.put("response", response.toString());
-               OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+               OneSignalUnityProxy.unitySafeInvoke("onPostNotificationFailed", params.toString());
             } catch (JSONException e) {
                e.printStackTrace();
             }
