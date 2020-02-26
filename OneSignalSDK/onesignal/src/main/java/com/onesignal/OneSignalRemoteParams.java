@@ -1,6 +1,7 @@
 package com.onesignal;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -9,6 +10,12 @@ import org.json.JSONObject;
 import java.net.HttpURLConnection;
 
 class OneSignalRemoteParams {
+
+   static class FCMParams {
+      @Nullable String projectId;
+      @Nullable String appId;
+      @Nullable String apiKey;
+   }
 
    static class OutcomesParams {
       //in minutes
@@ -29,6 +36,7 @@ class OneSignalRemoteParams {
       boolean clearGroupOnSummaryClick;
       boolean receiveReceiptEnabled;
       OutcomesParams outcomesParams;
+      FCMParams fcmParams;
    }
 
    interface CallBack {
@@ -43,6 +51,11 @@ class OneSignalRemoteParams {
    private static final String INDIRECT_PARAM = "indirect";
    private static final String NOTIFICATION_ATTRIBUTION_PARAM = "notification_attribution";
    private static final String UNATTRIBUTED_PARAM = "unattributed";
+
+   private static final String FCM_PARENT_PARAM = "fcm";
+   private static final String FCM_PROJECT_ID = "project_id";
+   private static final String FCM_APP_ID = "app_id";
+   private static final String FCM_API_KEY = "api_key";
 
    private static final int INCREASE_BETWEEN_RETRIES = 10_000;
    private static final int MIN_WAIT_BETWEEN_RETRIES = 30_000;
@@ -109,8 +122,8 @@ class OneSignalRemoteParams {
          googleProjectNumber = responseJson.optString("android_sender_id", null);
          clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
          receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
-         outcomesParams = new OutcomesParams();
 
+         outcomesParams = new OutcomesParams();
          // Process outcomes params
          if (responseJson.has(OUTCOME_PARAM)) {
             JSONObject outcomes = responseJson.optJSONObject(OUTCOME_PARAM);
@@ -133,6 +146,14 @@ class OneSignalRemoteParams {
                JSONObject unattributed = outcomes.optJSONObject(UNATTRIBUTED_PARAM);
                outcomesParams.unattributedEnabled = unattributed.optBoolean(ENABLED_PARAM);
             }
+         }
+
+         fcmParams = new FCMParams();
+         if (responseJson.has(FCM_PARENT_PARAM)) {
+            JSONObject fcm = responseJson.optJSONObject(FCM_PARENT_PARAM);
+            fcmParams.apiKey = fcm.optString(FCM_API_KEY, null);
+            fcmParams.appId = fcm.optString(FCM_APP_ID, null);
+            fcmParams.projectId = fcm.optString(FCM_PROJECT_ID, null);
          }
       }};
 
