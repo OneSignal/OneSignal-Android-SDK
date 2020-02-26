@@ -30,6 +30,7 @@ package com.onesignal;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.support.annotation.NonNull;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -42,6 +43,10 @@ import com.google.firebase.messaging.FirebaseMessaging;
 //   used instead.
 
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
+
+   private static final String FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public"; // project_info.project_id
+   private static final String FCM_DEFAULT_APP_ID = "1:754795614042:android:c682b8144a8dd52bc1ad63"; // client.client_info.mobilesdk_app_id
+   private static final String FCM_DEFAULT_API_KEY = "AIzaSyAnTLn5-_4Mc2a2P-dKUeE-aBtgyCrjlYU"; // client.api_key.current_key
 
    private static final String FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME";
 
@@ -92,9 +97,28 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       FirebaseOptions firebaseOptions =
          new FirebaseOptions.Builder()
             .setGcmSenderId(senderId)
-            .setApplicationId("OMIT_ID")
-            .setApiKey("OMIT_KEY")
+            .setApplicationId(getAppId())
+            .setApiKey(getApiKey())
+            .setProjectId(getProjectId())
             .build();
       firebaseApp = FirebaseApp.initializeApp(OneSignal.appContext, firebaseOptions, FCM_APP_NAME);
+   }
+
+   private static @NonNull String getAppId() {
+      if (OneSignal.remoteParams.fcmParams.appId != null)
+         return OneSignal.remoteParams.fcmParams.appId;
+      return FCM_DEFAULT_APP_ID;
+   }
+
+   private static @NonNull String getApiKey() {
+      if (OneSignal.remoteParams.fcmParams.apiKey != null)
+         return OneSignal.remoteParams.fcmParams.apiKey;
+      return FCM_DEFAULT_API_KEY;
+   }
+
+   private static @NonNull String getProjectId() {
+      if (OneSignal.remoteParams.fcmParams.projectId != null)
+         return OneSignal.remoteParams.fcmParams.projectId;
+      return FCM_DEFAULT_PROJECT_ID;
    }
 }
