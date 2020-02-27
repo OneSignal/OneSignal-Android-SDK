@@ -1,6 +1,9 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+    ext {
+        kotlin_version = '1.3.61'
+    }
     repositories {
         google()
         jcenter()
@@ -14,6 +17,7 @@ buildscript {
         classpath 'com.android.tools.build:gradle:3.5.0'
 
         classpath 'com.google.gms:google-services:4.3.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // OneSignal-Gradle-Plugin - Local testing
         // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
