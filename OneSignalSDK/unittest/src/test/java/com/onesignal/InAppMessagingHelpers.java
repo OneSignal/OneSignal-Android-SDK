@@ -32,9 +32,7 @@ public class InAppMessagingHelpers {
 
     public static void clearTestState() {
         OneSignal.pauseInAppMessages(false);
-        ShadowOSInAppMessageController.displayedMessages.clear();
-        ShadowOSInAppMessageController.dismissedMessages.clear();
-        OSInAppMessageController.getController().messageDisplayQueue.clear();
+        OSInAppMessageController.getController().getInAppMessageDisplayQueue().clear();
     }
 
     // Convenience method that wraps an object in a JSON Array

@@ -16,6 +16,8 @@ import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -458,7 +460,24 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
-      return com.onesignal.OSInAppMessageController.getController().messageDisplayQueue;
+      return com.onesignal.OSInAppMessageController.getController().getInAppMessageDisplayQueue();
+   }
+
+   public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
+      List<OSInAppMessage> messages = com.onesignal.OSInAppMessageController.getController().getRedisplayedInAppMessages();
+      List<OSTestInAppMessage> testMessages = new ArrayList<>();
+
+      for (OSInAppMessage message : messages) {
+         try {
+            OSTestInAppMessage testInAppMessage = new OSTestInAppMessage(message);
+            testInAppMessage.getDisplayStats().setDisplayStats(message.getDisplayStats());
+            testMessages.add(testInAppMessage);
+
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+      }
+      return testMessages;
    }
 
    public static class OSInAppMessageController {

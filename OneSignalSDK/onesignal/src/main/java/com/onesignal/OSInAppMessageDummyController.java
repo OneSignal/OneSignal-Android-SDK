@@ -22,7 +22,7 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
     }
 
     @Override
-    void initRedisplayData(OneSignalDbHelper dbInstance) {
+    public void initRedisplayData(OneSignalDbHelper dbHelper) {
     }
 
     @Override
