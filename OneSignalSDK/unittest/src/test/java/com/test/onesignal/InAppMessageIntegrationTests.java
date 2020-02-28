@@ -16,7 +16,6 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
-import com.onesignal.ShadowOSInAppMessageController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
@@ -585,13 +584,13 @@ public class InAppMessageIntegrationTests {
             add(message);
         }});
 
-        // Init OneSignal with IAM with redisplay
+        // Init OneSignal IAM with redisplay
         OneSignalInit();
         threadAndTaskWait();
         
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Check impression request
         int requestSize = ShadowOneSignalRestClient.requests.size();
@@ -600,19 +599,19 @@ public class InAppMessageIntegrationTests {
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
-
+        // Check IAMs was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Check if data after dismiss is set correctly
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        long lastDisplayTime =  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
-        // Wait for the delay between redisplay
+        // Change time for delay to be covered
         advanceSystemTimeBy(DELAY);
-
         // Set same trigger, should display again
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Check impression request is sent again
         int requestSizeAfterRedisplay = ShadowOneSignalRestClient.requests.size();
@@ -620,11 +619,12 @@ public class InAppMessageIntegrationTests {
         assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequestAfterRedisplay.url);
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
-
+        // Check IAMs was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Check if data after dismiss is set correctly
-        assertEquals(2, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(2, ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getDisplayQuantity());
-        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getLastDisplayTime() - lastDisplayTime == DELAY);
+        assertEquals(1,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(2,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        assertTrue( OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
     }
 
     @Test
@@ -636,15 +636,16 @@ public class InAppMessageIntegrationTests {
         message.getDisplayStats().setLastDisplayTime(currentTimeInSeconds);
         message.getDisplayStats().setDisplayQuantity(1);
         message.setDisplayedInSession(true);
+        // Save IAM on DB
         TestHelpers.saveIAM(message);
-
         // Save IAM for dismiss
         OneSignalPrefs.saveStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_DISPLAYED_IAMS,
+                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
                 new HashSet<>(Collections.singletonList(message.messageId))
         );
 
+        // Check IAM was saved correctly
         List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages();
         assertEquals(savedInAppMessages.size(), 1);
         assertTrue(savedInAppMessages.get(0).isDisplayedInSession());
@@ -652,7 +653,7 @@ public class InAppMessageIntegrationTests {
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
         }});
-
+        // Change time for delay to be covered
         advanceSystemTimeBy(DELAY);
 
         // Init OneSignal with IAM with redisplay
@@ -660,11 +661,12 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // First init will start a new session, then the IAM should be shown
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
-
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
-
+        // Check IAM was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Restart OneSignal
         fastColdRestartApp();
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -672,12 +674,12 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        // Wait for the delay between redisplay
+        // Change time for delay to be covered
         advanceSystemTimeBy(DELAY * 2);
         // Add trigger to call evaluateInAppMessage
         OneSignal.addTrigger("test_1", 2);
         // IAM shouldn't display again because It don't have triggers
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     @Test
@@ -688,31 +690,31 @@ public class InAppMessageIntegrationTests {
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
         }});
-
         // Init OneSignal with IAM with redisplay
         OneSignalInit();
         threadAndTaskWait();
 
         // Because trigger doesn't exist IAM will be shown immediately
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
-
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
-
+        // Check IAM was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Check if data after dismiss is set correctly
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime() > 0);
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertTrue(lastDisplayTime > 0);
 
         OneSignal.addTrigger("test_1", 2);
-
         // Wait for the delay between redisplay
         advanceSystemTimeBy(DELAY);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Remove trigger, IAM should display again
         OneSignal.removeTriggerForKey("test_1");
-        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+        // Check that IAM is queue for redisplay
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     @Test
@@ -730,20 +732,23 @@ public class InAppMessageIntegrationTests {
 
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
-
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
 
         // Check if data after dismiss is set correctly
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        double lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
-        // Set trigger, should display again
+        // Set trigger, will evaluate IAMs again
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+
+        // Check that the IAM was not displayed again because time between display is not covered
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        assertEquals(lastDisplayTime, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime());
     }
 
     @Test
@@ -761,22 +766,27 @@ public class InAppMessageIntegrationTests {
 
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
 
         // Check if data after dismiss is set correctly
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime() > 0);
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
         advanceSystemTimeBy(DELAY);
 
-        // Set trigger, should no display again because limit is 1
+        // Set trigger, will evaluate IAMs again
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+
+        // Check that the IAM was not displayed again because Limit of display is 1
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        assertEquals(lastDisplayTime, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime());
     }
 
     @Test
@@ -794,7 +804,7 @@ public class InAppMessageIntegrationTests {
 
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Check impression request
         int requestSize = ShadowOneSignalRestClient.requests.size();
@@ -803,11 +813,13 @@ public class InAppMessageIntegrationTests {
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        // Check IAM removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Check if data after dismiss is set correctly
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(1, ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime = ShadowOSInAppMessageController.dismissedMessages.get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
@@ -821,12 +833,12 @@ public class InAppMessageIntegrationTests {
 
         OneSignalInit();
         threadAndTaskWait();
-
-        assertEquals(1, ShadowOSInAppMessageController.displayedMessages.size());
+        // Check No IAMs
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Set same trigger, should display again
         OneSignal.addTrigger("test_1", 2);
-        assertEquals(2, ShadowOSInAppMessageController.displayedMessages.size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Check impression request is sent again
         int requestSizeAfterRedisplay = ShadowOneSignalRestClient.requests.size();
@@ -834,11 +846,10 @@ public class InAppMessageIntegrationTests {
         assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequestAfterRedisplay.url);
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
-
         // Check if data after dismiss is set correctly
-        assertEquals(2, ShadowOSInAppMessageController.dismissedMessages.size());
-        assertEquals(2, ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getDisplayQuantity());
-        assertTrue(ShadowOSInAppMessageController.dismissedMessages.get(1).getDisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(2, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
+        assertTrue(OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
     }
 
     @Test
@@ -861,7 +872,7 @@ public class InAppMessageIntegrationTests {
         assertEquals("in_app_messages/" + message.messageId + "/click", firstIAMClickRequest.url);
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
-        // Call IAM clicked again, ensure a 2nd network call is not made.
+        // Call IAM clicked again, ensure a 2nd network call isn't made.
         OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
@@ -899,7 +910,7 @@ public class InAppMessageIntegrationTests {
         assertEquals(1, message.getClickedClickIds().size());
         assertTrue(message.getClickedClickIds().contains(IAM_CLICK_ID));
 
-        // Call IAM clicked again, must not be made
+        // Call IAM clicked again
         OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, action);
 
         // Call IAM clicked again, ensure a 3nd network call isn't made.

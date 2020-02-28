@@ -48,16 +48,16 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // IAM clicks that have been successfully posted to our backend and should not be counted again
     @NonNull final private Set<String> clickedClickIds;
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
-    @NonNull final ArrayList<OSInAppMessage> messageDisplayQueue;
+    @NonNull final private ArrayList<OSInAppMessage> messageDisplayQueue;
     // IAMs displayed with last displayed time and quantity of displays data
     // This is retrieved from a DB Table that take care of each object to be unique
     @NonNull private List<OSInAppMessage> redisplayedInAppMessages;
 
-    boolean inAppMessagingEnabled = true;
-    boolean inAppMessageShowing = false;
+    private boolean inAppMessagingEnabled = true;
+    private boolean inAppMessageShowing = false;
 
     @Nullable Date lastTimeInAppDismissed;
-    int htmlNetworkRequestAttemptCount = 0;
+    private int htmlNetworkRequestAttemptCount = 0;
 
     @Nullable private static OSInAppMessageController sharedInstance;
     public static OSInAppMessageController getController() {
@@ -74,7 +74,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return sharedInstance;
     }
 
-    protected OSInAppMessageController(OneSignalDbHelper dbInstance) {
+    protected OSInAppMessageController(OneSignalDbHelper dbHelper) {
         messages = new ArrayList<>();
         dismissedMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
@@ -107,11 +107,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (tempClickedMessageIdsSet != null)
             clickedClickIds.addAll(tempClickedMessageIdsSet);
 
-        initRedisplayData(dbInstance);
+        initRedisplayData(dbHelper);
     }
 
-    void initRedisplayData(OneSignalDbHelper dbInstance) {
-        inAppMessageRepository = new OSInAppMessageRepository(dbInstance);
+    protected void initRedisplayData(OneSignalDbHelper dbHelper) {
+        inAppMessageRepository = new OSInAppMessageRepository(dbHelper);
         redisplayedInAppMessages = inAppMessageRepository.getRedisplayedInAppMessages();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
@@ -143,7 +143,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     /**
      * Called after the device is registered from UserStateSynchronizer
-     *  which is the REST call to create the player record on_session
+     * which is the REST call to create the player record on_session
      */
     void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException {
         // Cache copy for quick cold starts
@@ -402,7 +402,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void queueMessageForDisplay(@NonNull OSInAppMessage message) {
         synchronized (messageDisplayQueue) {
             // Make sure no message is ever added to the queue more than once
-            if (!isInAppMessageQueued(message)) {
+            if (!messageDisplayQueue.contains(message)) {
                 messageDisplayQueue.add(message);
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + message.messageId + ", added to the queue");
             }
@@ -418,17 +418,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message is currently showing or there are no IAMs left in the queue!");
         }
-    }
-
-    /**
-     * Check the messageDisplayQueue for the message by messageId
-     */
-    private boolean isInAppMessageQueued(OSInAppMessage message) {
-        for (OSInAppMessage inAppMessage : messageDisplayQueue) {
-            if (message.messageId.equals(inAppMessage.messageId))
-                return true;
-        }
-        return false;
     }
 
     boolean isInAppMessageShowing() {
@@ -467,8 +456,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void dismissCurrentMessage() {
         synchronized (messageDisplayQueue) {
             if (messageDisplayQueue.size() > 0) {
-                String removedMessageId = messageDisplayQueue.get(0).messageId;
-                messageDisplayQueue.remove(0);
+                String removedMessageId = messageDisplayQueue.remove(0).messageId;
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
             }
 
@@ -522,7 +510,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
     }
 
-    public void displayMessage(@NonNull final OSInAppMessage message) {
+    private void displayMessage(@NonNull final OSInAppMessage message) {
         if (!inAppMessagingEnabled) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "In app messaging is currently paused, iam will not be shown!");
             return;
@@ -614,9 +602,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     /**
-     *  Part of redisplay logic
+     * Part of redisplay logic
      *
-     *  Make all messages with redisplay available if:
+     * Make all messages with redisplay available if:
      *   - Already displayed
      *   - At least one Trigger has changed
      */
@@ -630,10 +618,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     /**
-     *  Trigger logic
-     *  These methods mostly pass data to the Trigger Controller, but also cause the SDK to
-     *  re-evaluate messages to see if we should display a message now that the trigger
-     *  conditions have changed.
+     * Trigger logic
+     *
+     * These methods mostly pass data to the Trigger Controller, but also cause the SDK to
+     * re-evaluate messages to see if we should display/redisplay a message now that the trigger
+     * conditions have changed.
      */
     void addTriggers(Map<String, Object> newTriggers) {
         triggerController.addTriggers(newTriggers);
@@ -656,5 +645,15 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     @Nullable
     Object getTriggerValue(String key) {
         return triggerController.getTriggerValue(key);
+    }
+
+    @NonNull
+    public ArrayList<OSInAppMessage> getInAppMessageDisplayQueue() {
+        return messageDisplayQueue;
+    }
+
+    @NonNull
+    public List<OSInAppMessage> getRedisplayedInAppMessages() {
+        return redisplayedInAppMessages;
     }
 }
