@@ -24,6 +24,7 @@ import java.util.Set;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
+   public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
 
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
@@ -461,6 +462,14 @@ public class OneSignalPackagePrivateHelper {
       return com.onesignal.OSInAppMessageController.getController().getInAppMessageDisplayQueue();
    }
 
+   public static void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
+      com.onesignal.OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionJson);
+   }
+
+   public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+      com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
+   }
+
    public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
       List<OSInAppMessage> messages = com.onesignal.OSInAppMessageController.getController().getRedisplayedInAppMessages();
       List<OSTestInAppMessage> testMessages = new ArrayList<>();
@@ -476,29 +485,6 @@ public class OneSignalPackagePrivateHelper {
          }
       }
       return testMessages;
-   }
-
-   public static class OSInAppMessageController {
-      public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
-      private static OSInAppMessageController sharedInstance;
-
-      OSInAppMessageController() {
-      }
-
-      public static OSInAppMessageController getController() {
-         if (sharedInstance == null)
-            sharedInstance = new OSInAppMessageController();
-
-         return sharedInstance;
-      }
-
-      public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
-         com.onesignal.OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionJson);
-      }
-
-      public void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
-         com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
-      }
    }
 
    public static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
@@ -527,5 +513,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
 
-   public static class JSONUtils extends com.onesignal.JSONUtils {}
+   public static class JSONUtils extends com.onesignal.JSONUtils {
+
+
+   }
 }

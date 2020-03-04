@@ -30,4 +30,9 @@ class JsonAsserts {
          );
       }
    }
+
+   static void equals(@NonNull JSONObject expected, @NonNull JSONObject actual) throws JSONException {
+      assertEquals(expected.length(), actual.length());
+      containsSubset(actual, expected);
+   }
 }
