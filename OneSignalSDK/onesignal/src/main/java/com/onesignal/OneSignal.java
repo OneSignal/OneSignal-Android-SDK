@@ -1858,13 +1858,20 @@ public class OneSignal {
    }
 
    public static void deleteTags(String jsonArrayString, ChangeTagsUpdateHandler handler) {
+      try {
+         deleteTags(new JSONArray(jsonArrayString), handler);
+      } catch (Throwable t) {
+         Log(LOG_LEVEL.ERROR, "Failed to generate JSON for deleteTags.", t);
+      }
+   }
+
+   public static void deleteTags(JSONArray jsonArray, ChangeTagsUpdateHandler handler) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTags()"))
          return;
 
       try {
          JSONObject jsonTags = new JSONObject();
-         JSONArray jsonArray = new JSONArray(jsonArrayString);
 
          for (int i = 0; i < jsonArray.length(); i++)
             jsonTags.put(jsonArray.getString(i), "");

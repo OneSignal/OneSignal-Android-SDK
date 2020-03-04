@@ -458,7 +458,6 @@ abstract class UserStateSynchronizer {
         return getUserStateForModification().dependValues.optBoolean("session" );
     }
 
-
     void sendTags(JSONObject tags, @Nullable ChangeTagsUpdateHandler handler) {
         if (handler != null)
             this.sendTagsHandlers.add(handler);

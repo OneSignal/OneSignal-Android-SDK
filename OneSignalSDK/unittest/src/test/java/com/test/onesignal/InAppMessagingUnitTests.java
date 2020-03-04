@@ -7,7 +7,7 @@ import android.support.annotation.Nullable;
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
-import com.onesignal.OneSignalPackagePrivateHelper.OSInAppMessageController;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
@@ -561,7 +561,7 @@ public class InAppMessagingUnitTests {
         });
         threadAndTaskWait();
 
-        OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message,
+        OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message,
            new JSONObject() {{
                 put("id", "button_id_123");
                 put("name", "my_click_name");
@@ -586,7 +586,7 @@ public class InAppMessagingUnitTests {
     public void testOnMessageWasShown() throws Exception {
         threadAndTaskWait();
 
-        OSInAppMessageController.getController().onMessageWasShown(message);
+        OneSignalPackagePrivateHelper.onMessageWasShown(message);
 
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
 
