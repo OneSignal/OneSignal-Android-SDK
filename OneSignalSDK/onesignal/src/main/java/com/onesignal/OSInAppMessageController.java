@@ -272,6 +272,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
+        firePrompt(message, action.prompts);
         fireClickAction(action);
         fireRESTCallForClick(message, action);
         fireTagCallForClick(action);
@@ -284,6 +285,19 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
         firePublicClickHandler(action);
         fireClickAction(action);
+    }
+
+    private void firePrompt(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+        for (OSInAppMessagePrompt prompt : prompts) {
+            // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
+            messageWasDismissed(message);
+            prompt.handlePrompt(new OneSignal.OperationCompletedCallback() {
+                @Override
+                public void completed(boolean result) {
+                    // TODO take care of multiple prompts
+                }
+            });
+        }
     }
 
     //TODO This is a temporal solution for IAMs outcomes

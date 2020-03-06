@@ -2486,7 +2486,10 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
     */
    public static void promptLocation() {
+      promptLocation(null);
+   }
 
+   static void promptLocation(@Nullable final OperationCompletedCallback callback) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
          return;
@@ -2501,6 +2504,9 @@ public class OneSignal {
                }
                @Override
                public void complete(LocationGMS.LocationPoint point) {
+                  if (callback != null) {
+                     callback.completed(point != null);
+                  }
                   //if applicable, check if the user provided privacy consent
                   if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
                      return;
@@ -3226,4 +3232,7 @@ public class OneSignal {
     * End OneSignalOutcome module
     */
 
+   interface OperationCompletedCallback {
+      void completed(boolean result);
+   }
 }

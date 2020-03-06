@@ -10,6 +10,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.onesignal.OSInAppMessageLocationPrompt.LOCATION_PROMPT_KEY;
+
 public class OSInAppMessageAction {
 
     private static final String ID = "id";
@@ -25,6 +27,8 @@ public class OSInAppMessageAction {
     private static final String OUTCOMES = "outcomes";
     //TODO when backend is ready check if key match
     private static final String TAGS = "tags";
+    //TODO when backend is ready check if key match
+    private static final String PROMPTS = "prompts";
 
     /**
      * UUID assigned by OneSignal for internal use.
@@ -57,6 +61,12 @@ public class OSInAppMessageAction {
     @NonNull
     public List<OSInAppMessageOutcome> outcomes = new ArrayList<>();
 
+    /**
+     * Prompts for action
+     */
+    @NonNull
+    public List<OSInAppMessagePrompt> prompts = new ArrayList<>();
+
     /** Tags for action */
     public OSInAppMessageTag tags;
 
@@ -80,15 +90,30 @@ public class OSInAppMessageAction {
 
         closesMessage = json.optBoolean(CLOSE, true);
 
-        if (json.has(OUTCOMES)) {
-            JSONArray outcomesJsonArray = json.getJSONArray(OUTCOMES);
-            for (int i = 0; i < outcomesJsonArray.length(); i++) {
-                outcomes.add(new OSInAppMessageOutcome((JSONObject) outcomesJsonArray.get(i)));
-            }
-        }
+        if (json.has(OUTCOMES))
+            parseOutcomes(json);
 
         if (json.has(TAGS))
             tags = new OSInAppMessageTag(json.getJSONObject(TAGS));
+
+        if (json.has(PROMPTS))
+            parsePrompts(json);
+    }
+
+    private void parseOutcomes(JSONObject json) throws JSONException {
+        JSONArray outcomesJsonArray = json.getJSONArray(OUTCOMES);
+        for (int i = 0; i < outcomesJsonArray.length(); i++) {
+            outcomes.add(new OSInAppMessageOutcome((JSONObject) outcomesJsonArray.get(i)));
+        }
+    }
+
+    private void parsePrompts(JSONObject json) throws JSONException {
+        JSONArray promptsJsonArray = json.getJSONArray(PROMPTS);
+        for (int i = 0; i < promptsJsonArray.length(); i++) {
+            if (promptsJsonArray.get(i).equals(LOCATION_PROMPT_KEY) ) {
+                prompts.add(new OSInAppMessageLocationPrompt());
+            }
+        }
     }
 
     public JSONObject toJSONObject() {

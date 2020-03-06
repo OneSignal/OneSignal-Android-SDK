@@ -334,8 +334,7 @@ class LocationGMS {
          fireFailedComplete();
       }
    }
-   
-   
+
    static class LocationUpdateListener implements LocationListener {
       
       private GoogleApiClient mGoogleApiClient;
