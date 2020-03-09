@@ -44,6 +44,8 @@ abstract class UserStateSynchronizer {
 
     abstract GetTagsResult getTags(boolean fromServer);
 
+    abstract String getExternalId(boolean fromServer);
+
     private AtomicBoolean runningSyncUserState = new AtomicBoolean();
 
     // Maintain a list of handlers so that if the user calls
@@ -214,15 +216,7 @@ abstract class UserStateSynchronizer {
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
                 sendTagsHandlersPerformOnSuccess();
-
-                if (jsonBody.has("external_user_id")) {
-                    try {
-                        externalUserIdUpdateHandlersPerformOnSuccess(jsonBody.getString("external_user_id"));
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-
+                externalUserIdUpdateHandlersPerformOnSuccess();
                 return;
             }
             getToSyncUserState().persistState();
@@ -326,9 +320,8 @@ abstract class UserStateSynchronizer {
                 if (jsonBody.has("tags"))
                    sendTagsHandlersPerformOnSuccess();
 
-                if (jsonBody.has("external_user_id")) {
+                if (jsonBody.has("external_user_id"))
                     externalUserIdUpdateHandlersPerformOnSuccess();
-                }
             }
         });
     }
@@ -541,10 +534,12 @@ abstract class UserStateSynchronizer {
     }
 
     private void externalUserIdUpdateHandlersPerformOnSuccess() {
-        String externalUserId = OneSignalStateSynchronizer.getExternalUserId();
+        // fromServer will be 'false', no implementation for 'true' yet!
+        String externalUserId = OneSignalStateSynchronizer.getExternalUserId(false);
+
         OneSignal.ExternalUserIdUpdateHandler handler;
         while ((handler = updateExternalUserIdHandlers.poll()) != null)
-            handler.onSuccess(newExternalUserId);
+            handler.onSuccess(externalUserId);
     }
 
     private void externalUserIdUpdateHandlersPerformOnFailure(OneSignal.ExternalUserIdError error) {

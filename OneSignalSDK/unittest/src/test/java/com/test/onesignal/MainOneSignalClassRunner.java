@@ -41,7 +41,6 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
-import com.onesignal.BuildConfig;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
@@ -77,7 +76,6 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
-import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -89,7 +87,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -196,6 +193,22 @@ public class MainOneSignalClassRunner {
       };
    }
 
+   private static String lastUpdatedExternalUserId;
+   private static OneSignal.ExternalUserIdError lastExternalUserIdError;
+   private static OneSignal.ExternalUserIdUpdateHandler getExternalUserIdUpdateHandler() {
+      return new OneSignal.ExternalUserIdUpdateHandler() {
+         @Override
+         public void onSuccess(String newExternalUserId) {
+            lastUpdatedExternalUserId = newExternalUserId;
+         }
+
+         @Override
+         public void onFailure(OneSignal.ExternalUserIdError error) {
+            lastExternalUserIdError = error;
+         }
+      };
+   }
+
    private static void GetTags() {
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
          @Override
@@ -210,6 +223,8 @@ public class MainOneSignalClassRunner {
 
       notificationOpenedMessage = null;
       lastGetTags = null;
+      lastUpdatedExternalUserId = null;
+      lastExternalUserIdError = null;
 
       TestHelpers.beforeTestInitAndCleanup();
    }
@@ -3818,6 +3833,49 @@ public class MainOneSignalClassRunner {
       }
 
       assertEquals(externalIdRequests, 2);
+   }
+
+   @Test
+   public void sendExternalUserId_withCallbackSuccess() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
+      threadAndTaskWait();
+
+      assertNull(lastExternalUserIdError);
+      assertEquals(testExternalId, lastUpdatedExternalUserId);
+   }
+
+   @Test
+   public void sendSameExternalUserId_withCallbackSuccess() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
+      threadAndTaskWait();
+
+      assertNull(lastExternalUserIdError);
+      assertEquals(testExternalId, lastUpdatedExternalUserId);
+   }
+
+   @Test
+   public void sendExternalUserId_withCallbackFailure() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
+      ShadowOneSignalRestClient.failAll = true;
+      threadAndTaskWait();
+
+      assertNull(lastUpdatedExternalUserId);
+      assertNotNull(lastExternalUserIdError);
    }
 
    @Test

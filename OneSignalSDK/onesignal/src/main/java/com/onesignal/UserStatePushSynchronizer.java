@@ -64,6 +64,13 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
+    String getExternalId(boolean fromServer) {
+        synchronized(syncLock) {
+            return toSyncUserState.syncValues.optString("external_user_id", null);
+        }
+    }
+
+    @Override
     protected void scheduleSyncToServer() {
         getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJobDelayed();
     }

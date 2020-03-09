@@ -22,6 +22,12 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         return null;
     }
 
+    // Email external id not readable from SDK
+    @Override
+    String getExternalId(boolean fromServer) {
+        return null;
+    }
+
     // Email subscription not settable from SDK
     @Override
     void setSubscription(boolean enable) {}

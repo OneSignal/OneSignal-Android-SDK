@@ -132,8 +132,8 @@ class OneSignalStateSynchronizer {
       return getPushStateSynchronizer().getTags(fromServer);
    }
 
-   public static String getExternalUserId() {
-      return getPushStateSynchronizer().get;
+   public static String getExternalUserId(boolean fromServer) {
+      return getPushStateSynchronizer().getExternalId(fromServer);
    }
 
    static void resetCurrentState() {
