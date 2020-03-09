@@ -3839,26 +3839,68 @@ public class MainOneSignalClassRunner {
    public void sendExternalUserId_withCallbackSuccess() throws Exception {
       String testExternalId = "test_ext_id";
 
+      // 1. Init OneSignal
       OneSignalInit();
       threadAndTaskWait();
 
+      // 2. Attempt to set external user id with callback
       OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
       threadAndTaskWait();
 
+      // 3. Make sure lastExternalUserIdError is null and lastUpdatedExternalUserId is equal to test external user id
       assertNull(lastExternalUserIdError);
       assertEquals(testExternalId, lastUpdatedExternalUserId);
    }
+
+    @Test
+    public void sendDifferentExternalUserId_withCallbackSuccess() throws Exception {
+        String testExternalId = "test_ext_id_1";
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Attempt to set external user id with callback
+        OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
+        threadAndTaskWait();
+
+        // 3. Make sure lastExternalUserIdError is null and lastUpdatedExternalUserId is equal to test external user id
+        assertNull(lastExternalUserIdError);
+        assertEquals(testExternalId, lastUpdatedExternalUserId);
+
+        // 4. Change test external user id to send
+        testExternalId = "test_ext_id_2";
+
+        // 5. Attempt to set same exact external user id with callback
+        OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
+        threadAndTaskWait();
+
+        // 6. Make sure lastExternalUserIdError is null and lastUpdatedExternalUserId is still equal to test external user id
+        assertNull(lastExternalUserIdError);
+        assertEquals(testExternalId, lastUpdatedExternalUserId);
+    }
 
    @Test
    public void sendSameExternalUserId_withCallbackSuccess() throws Exception {
       String testExternalId = "test_ext_id";
 
+      // 1. Init OneSignal
       OneSignalInit();
       threadAndTaskWait();
 
+      // 2. Attempt to set external user id with callback
       OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
       threadAndTaskWait();
 
+      // 3. Make sure lastExternalUserIdError is null and lastUpdatedExternalUserId is equal to test external user id
+      assertNull(lastExternalUserIdError);
+      assertEquals(testExternalId, lastUpdatedExternalUserId);
+
+      // 4. Attempt to set same exact external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
+      threadAndTaskWait();
+
+      // 5. Make sure lastExternalUserIdError is null and lastUpdatedExternalUserId is still equal to test external user id
       assertNull(lastExternalUserIdError);
       assertEquals(testExternalId, lastUpdatedExternalUserId);
    }
@@ -3867,13 +3909,16 @@ public class MainOneSignalClassRunner {
    public void sendExternalUserId_withCallbackFailure() throws Exception {
       String testExternalId = "test_ext_id";
 
+      // 1. Init OneSignal
       OneSignalInit();
       threadAndTaskWait();
 
+      // 2. Attempt to set external user id with callback and force failure on the network requests
       OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateHandler());
       ShadowOneSignalRestClient.failAll = true;
       threadAndTaskWait();
 
+      // 3. Make sure lastExternalUserIdError is not null and lastUpdatedExternalUserId is null since no external id was set successfully
       assertNull(lastUpdatedExternalUserId);
       assertNotNull(lastExternalUserIdError);
    }
