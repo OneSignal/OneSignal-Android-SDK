@@ -49,6 +49,7 @@ abstract class UserStateSynchronizer {
     // Maintain a list of handlers so that if the user calls
     //    sendTags() multiple times it will call each callback
     final private Queue<ChangeTagsUpdateHandler> sendTagsHandlers = new ConcurrentLinkedQueue<>();
+    final private Queue<OneSignal.ExternalUserIdUpdateHandler> updateExternalUserIdHandlers = new ConcurrentLinkedQueue<>();
 
     class NetworkHandlerThread extends HandlerThread {
         protected static final int NETWORK_HANDLER_USERSTATE = 0;
@@ -213,6 +214,15 @@ abstract class UserStateSynchronizer {
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
                 sendTagsHandlersPerformOnSuccess();
+
+                if (jsonBody.has("external_user_id")) {
+                    try {
+                        externalUserIdUpdateHandlersPerformOnSuccess(jsonBody.getString("external_user_id"));
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 return;
             }
             getToSyncUserState().persistState();
@@ -301,6 +311,9 @@ abstract class UserStateSynchronizer {
 
                 if (jsonBody.has("tags"))
                     sendTagsHandlersPerformOnFailure(new SendTagsError(statusCode, response));
+
+                if (jsonBody.has("external_user_id"))
+                    externalUserIdUpdateHandlersPerformOnFailure(new OneSignal.ExternalUserIdError(statusCode, response));
             }
 
             @Override
@@ -312,6 +325,10 @@ abstract class UserStateSynchronizer {
 
                 if (jsonBody.has("tags"))
                    sendTagsHandlersPerformOnSuccess();
+
+                if (jsonBody.has("external_user_id")) {
+                    externalUserIdUpdateHandlersPerformOnSuccess();
+                }
             }
         });
     }
@@ -470,7 +487,9 @@ abstract class UserStateSynchronizer {
         generateJsonDiff(syncValues, emailFields, syncValues, null);
     }
 
-    void setExternalUserId(final String externalId) throws JSONException {
+    void setExternalUserId(final String externalId, OneSignal.ExternalUserIdUpdateHandler handler) throws JSONException {
+        if (handler != null)
+            this.updateExternalUserIdHandlers.add(handler);
         getUserStateForModification().syncValues.put("external_user_id", externalId);
     }
 
@@ -520,4 +539,18 @@ abstract class UserStateSynchronizer {
         while ((handler = sendTagsHandlers.poll()) != null)
             handler.onFailure(error);
     }
+
+    private void externalUserIdUpdateHandlersPerformOnSuccess() {
+        String externalUserId = OneSignalStateSynchronizer.getExternalUserId();
+        OneSignal.ExternalUserIdUpdateHandler handler;
+        while ((handler = updateExternalUserIdHandlers.poll()) != null)
+            handler.onSuccess(newExternalUserId);
+    }
+
+    private void externalUserIdUpdateHandlersPerformOnFailure(OneSignal.ExternalUserIdError error) {
+        OneSignal.ExternalUserIdUpdateHandler handler;
+        while ((handler = updateExternalUserIdHandlers.poll()) != null)
+            handler.onFailure(error);
+    }
+
 }

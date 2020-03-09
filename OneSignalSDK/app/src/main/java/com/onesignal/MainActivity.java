@@ -268,6 +268,18 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
    public void onSendTagsClicked(View v) {
       try {
+         OneSignal.setExternalUserId("mikechoch_" + sendTagsCounter, new OneSignal.ExternalUserIdUpdateHandler() {
+            @Override
+            public void onSuccess(String newExternalUserId) {
+               OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, newExternalUserId + " was set SUCCESS");
+            }
+
+            @Override
+            public void onFailure(OneSignal.ExternalUserIdError error) {
+               OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Error setting external id: " + error.getMessage() + " with code: " + error.getCode());
+            }
+         });
+
          OneSignal.sendTags(new JSONObject("{\"counter\" : " + sendTagsCounter + ", \"test_value\" : \"test_key\"}"), new OneSignal.ChangeTagsUpdateHandler() {
             @Override
             public void onSuccess(JSONObject tags) {

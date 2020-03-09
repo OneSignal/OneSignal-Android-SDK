@@ -132,6 +132,10 @@ class OneSignalStateSynchronizer {
       return getPushStateSynchronizer().getTags(fromServer);
    }
 
+   public static String getExternalUserId() {
+      return getPushStateSynchronizer().get;
+   }
+
    static void resetCurrentState() {
       getPushStateSynchronizer().resetCurrentState();
       getEmailStateSynchronizer().resetCurrentState();
@@ -174,9 +178,9 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().logoutEmail();
    }
 
-   static void setExternalUserId(String externalId) throws JSONException {
-      getPushStateSynchronizer().setExternalUserId(externalId);
-      getEmailStateSynchronizer().setExternalUserId(externalId);
+   static void setExternalUserId(String externalId, OneSignal.ExternalUserIdUpdateHandler handler) throws JSONException {
+      getPushStateSynchronizer().setExternalUserId(externalId, handler);
+      getEmailStateSynchronizer().setExternalUserId(externalId, handler);
    }
 
    // This is to indicate that StateSynchronizer can start making REST API calls
@@ -186,4 +190,5 @@ class OneSignalStateSynchronizer {
       getPushStateSynchronizer().readyToUpdate(canMakeUpdates);
       getEmailStateSynchronizer().readyToUpdate(canMakeUpdates);
    }
+
 }
