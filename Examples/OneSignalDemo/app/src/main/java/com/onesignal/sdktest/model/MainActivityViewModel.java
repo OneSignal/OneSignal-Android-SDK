@@ -364,6 +364,8 @@ public class MainActivityViewModel implements ActivityViewModel {
                     @Override
                     public void onSuccess(String update) {
                         appIdTextView.setText(update);
+                        OneSignalPrefs.cacheOneSignalAppId(getActivity(), update);
+                        intentTo.resetApplication();
                     }
 
                     @Override
