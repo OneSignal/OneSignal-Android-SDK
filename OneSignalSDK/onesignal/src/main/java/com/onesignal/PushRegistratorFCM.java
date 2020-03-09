@@ -31,6 +31,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
+import android.util.Base64;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -38,17 +39,26 @@ import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.FirebaseInstanceIdService;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import java.util.Arrays;
+
 // TODO: 4.0.0 - Switch to using <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
 // Note: Starting with Firebase Messaging 17.1.0 onNewToken in FirebaseMessagingService should be
 //   used instead.
 
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
+
+
    private static final String FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public"; // project_info.project_id
    private static final String FCM_DEFAULT_APP_ID = "1:754795614042:android:c682b8144a8dd52bc1ad63"; // client.client_info.mobilesdk_app_id
-   private static final String FCM_DEFAULT_API_KEY = "AIzaSyAnTLn5-_4Mc2a2P-dKUeE-aBtgyCrjlYU"; // client.api_key.current_key
+   private static final String FCM_DEFAULT_API_KEY = getDecodedApiKEY.getSplitedDecodedApiKey(); // client.api_key.current_key
 
    private static final String FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME";
+
+
+
+
+
 
    private FirebaseApp firebaseApp;
 
@@ -62,9 +72,9 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    static void disableFirebaseInstanceIdService(Context context) {
       String senderId = OSUtils.getResourceString(context, "gcm_defaultSenderId", null);
       int componentState =
-         senderId == null ?
-         PackageManager.COMPONENT_ENABLED_STATE_DISABLED :
-         PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+              senderId == null ?
+                      PackageManager.COMPONENT_ENABLED_STATE_DISABLED :
+                      PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
 
       PackageManager pm = context.getPackageManager();
       try {
@@ -95,12 +105,12 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
          return;
 
       FirebaseOptions firebaseOptions =
-         new FirebaseOptions.Builder()
-            .setGcmSenderId(senderId)
-            .setApplicationId(getAppId())
-            .setApiKey(getApiKey())
-            .setProjectId(getProjectId())
-            .build();
+              new FirebaseOptions.Builder()
+                      .setGcmSenderId(senderId)
+                      .setApplicationId(getAppId())
+                      .setApiKey(getApiKey())
+                      .setProjectId(getProjectId())
+                      .build();
       firebaseApp = FirebaseApp.initializeApp(OneSignal.appContext, firebaseOptions, FCM_APP_NAME);
    }
 
@@ -113,7 +123,12 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    private static @NonNull String getApiKey() {
       if (OneSignal.remoteParams.fcmParams.apiKey != null)
          return OneSignal.remoteParams.fcmParams.apiKey;
-      return FCM_DEFAULT_API_KEY;
+      return
+              Arrays.toString(Base64.encode(
+                      Base64.encode(FCM_DEFAULT_API_KEY.getBytes(),
+                              Base64.DEFAULT),
+                      Base64.DEFAULT));
+
    }
 
    private static @NonNull String getProjectId() {
