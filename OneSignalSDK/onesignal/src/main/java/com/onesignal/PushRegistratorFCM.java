@@ -30,6 +30,8 @@ package com.onesignal;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.util.Base64;
+
 import android.support.annotation.NonNull;
 
 import com.google.firebase.FirebaseApp;
@@ -44,9 +46,12 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
-   private static final String FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public"; // project_info.project_id
-   private static final String FCM_DEFAULT_APP_ID = "1:754795614042:android:c682b8144a8dd52bc1ad63"; // client.client_info.mobilesdk_app_id
-   private static final String FCM_DEFAULT_API_KEY = "AIzaSyAnTLn5-_4Mc2a2P-dKUeE-aBtgyCrjlYU"; // client.api_key.current_key
+   // project_info.project_id
+   private static final String FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public";
+   // client.client_info.mobilesdk_app_id
+   private static final String FCM_DEFAULT_APP_ID = "1:754795614042:android:c682b8144a8dd52bc1ad63";
+   // client.api_key.current_key
+   private static final String FCM_DEFAULT_API_KEY_BASE64 = "QUl6YVN5QW5UTG41LV80TWMyYTJQLWRLVWVFLWFCdGd5Q3JqbFlV";
 
    private static final String FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME";
 
@@ -113,7 +118,7 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    private static @NonNull String getApiKey() {
       if (OneSignal.remoteParams.fcmParams.apiKey != null)
          return OneSignal.remoteParams.fcmParams.apiKey;
-      return FCM_DEFAULT_API_KEY;
+      return new String(Base64.decode(FCM_DEFAULT_API_KEY_BASE64, Base64.DEFAULT));
    }
 
    private static @NonNull String getProjectId() {
