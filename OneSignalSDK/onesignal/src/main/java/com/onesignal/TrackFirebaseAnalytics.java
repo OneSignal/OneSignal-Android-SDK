@@ -56,7 +56,7 @@ class TrackFirebaseAnalytics {
       try {
          FirebaseAnalyticsClass = Class.forName("com.google.firebase.analytics.FirebaseAnalytics");
          return true;
-      } catch (Throwable t) {
+      } catch (ClassNotFoundException e) {
          return false;
       }
    }

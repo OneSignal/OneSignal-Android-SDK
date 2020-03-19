@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OSEmailSubscriptionStateChanges {
@@ -46,9 +47,8 @@ public class OSEmailSubscriptionStateChanges {
         try {
             mainObj.put("from", from.toJSONObject());
             mainObj.put("to", to.toJSONObject());
-        }
-        catch(Throwable t) {
-            t.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
 
         return mainObj;

@@ -8,6 +8,8 @@ import android.support.v4.app.NotificationManagerCompat;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
+import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowNotificationLimitManager;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -39,7 +41,9 @@ import static junit.framework.Assert.assertEquals;
             ShadowPushRegistratorGCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
-            ShadowOneSignalRestClient.class
+            ShadowOneSignalRestClient.class,
+            ShadowCustomTabsClient.class,
+            ShadowCustomTabsSession.class,
         },
         sdk = 26
 )

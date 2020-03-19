@@ -398,8 +398,8 @@ abstract class UserStateSynchronizer {
                             OSInAppMessageController.getController().receivedInAppMessageJson(jsonResponse.getJSONArray(IN_APP_MESSAGES_JSON_KEY));
 
                         onSuccessfulSync(jsonBody);
-                    } catch (Throwable t) {
-                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", t);
+                    } catch (JSONException e) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR parsing on_session or create JSON Response.", e);
                     }
                 }
             }
@@ -439,8 +439,8 @@ abstract class UserStateSynchronizer {
             try {
                 JSONObject responseJson = new JSONObject(response);
                 return responseJson.has("errors") && responseJson.optString("errors").contains(contains);
-            } catch (Throwable t) {
-                t.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         }
 

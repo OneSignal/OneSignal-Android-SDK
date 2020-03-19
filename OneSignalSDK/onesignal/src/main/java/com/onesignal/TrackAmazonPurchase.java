@@ -28,11 +28,13 @@
 package com.onesignal;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.Context;
@@ -72,9 +74,23 @@ class TrackAmazonPurchase {
 
          canTrack = true;
          setListener();
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding Amazon IAP listener.", t);
+         // Can replace all catches with ReflectiveOperationException win min API is 19
+      } catch (ClassNotFoundException e) {
+         logAmazonIAPListenerError(e);
+      } catch (IllegalAccessException e) {
+         logAmazonIAPListenerError(e);
+      } catch (InvocationTargetException e) {
+         logAmazonIAPListenerError(e);
+      } catch (NoSuchMethodException e) {
+         logAmazonIAPListenerError(e);
+      } catch (NoSuchFieldException e) {
+         logAmazonIAPListenerError(e);
       }
+   }
+
+   private static void logAmazonIAPListenerError(Exception e) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding Amazon IAP listener.", e);
+      e.printStackTrace();
    }
 
    private void setListener() {
@@ -90,7 +106,8 @@ class TrackAmazonPurchase {
             osPurchasingListener.orgPurchasingListener = curPurchasingListener;
             setListener();
          }
-      } catch (Throwable t) {
+      } catch (IllegalAccessException e) {
+         e.printStackTrace();
       }
    }
 
@@ -149,8 +166,8 @@ class TrackAmazonPurchase {
                   OneSignal.sendPurchases(purchasesToReport, false, null);
                   break;
                }
-            } catch (Throwable t) {
-               t.printStackTrace();
+            } catch (JSONException e) {
+               e.printStackTrace();
             }
          } else if (orgPurchasingListener != null)
             orgPurchasingListener.onProductDataResponse(response);
@@ -158,18 +175,14 @@ class TrackAmazonPurchase {
 
       @Override
       public void onPurchaseResponse(PurchaseResponse response) {
-         try {
-            final PurchaseResponse.RequestStatus status = response.getRequestStatus();
+         final PurchaseResponse.RequestStatus status = response.getRequestStatus();
 
-            if (status == PurchaseResponse.RequestStatus.SUCCESSFUL) {
-               currentMarket = response.getUserData().getMarketplace();
+         if (status == PurchaseResponse.RequestStatus.SUCCESSFUL) {
+            currentMarket = response.getUserData().getMarketplace();
 
-               Set<String> productSkus = new HashSet<String>();
-               productSkus.add(response.getReceipt().getSku());
-               lastRequestId = PurchasingService.getProductData(productSkus);
-            }
-         } catch (Throwable t) {
-            t.printStackTrace();
+            Set<String> productSkus = new HashSet<>();
+            productSkus.add(response.getReceipt().getSku());
+            lastRequestId = PurchasingService.getProductData(productSkus);
          }
 
          if (orgPurchasingListener != null)

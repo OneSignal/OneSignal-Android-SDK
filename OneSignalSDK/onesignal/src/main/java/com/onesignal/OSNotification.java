@@ -141,8 +141,8 @@ public class OSNotification {
 
          mainObj.put("payload", payload.toJSONObject());
       }
-      catch(Throwable t) {
-         t.printStackTrace();
+      catch(JSONException e) {
+         e.printStackTrace();
       }
 
       return mainObj;

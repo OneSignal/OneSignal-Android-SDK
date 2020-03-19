@@ -3,6 +3,7 @@ package com.onesignal;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.support.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
@@ -28,14 +29,14 @@ class OutcomeEventsCache {
             writableDb.delete(OutcomeEventsTable.TABLE_NAME,
                     OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?", new String[]{String.valueOf(event.getTimestamp())});
             writableDb.setTransactionSuccessful();
-        } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old outcome event records! ", t);
+        } catch (SQLiteException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old outcome event records! ", e);
         } finally {
             if (writableDb != null) {
                 try {
                     writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-                } catch (Throwable t) {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+                } catch (SQLiteException e) {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", e);
                 }
             }
         }

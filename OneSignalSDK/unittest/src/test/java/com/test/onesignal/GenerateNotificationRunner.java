@@ -65,6 +65,8 @@ import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
 import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
+import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -129,7 +131,9 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowBadgeCountUpdater.class,
             ShadowNotificationManagerCompat.class,
             ShadowOSUtils.class,
-            ShadowOSViewUtils.class
+            ShadowOSViewUtils.class,
+            ShadowCustomTabsClient.class,
+            ShadowCustomTabsSession.class
         },
         sdk = 21
 )

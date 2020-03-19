@@ -30,8 +30,10 @@ class GooglePlayServicesUpgradePrompt {
          PackageManager pm = OneSignal.appContext.getPackageManager();
          PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
          String label = (String) info.applicationInfo.loadLabel(pm);
-         return (label != null && !label.equals("Market"));
-      } catch (Throwable e) {}
+         return (!label.equals("Market"));
+      } catch (PackageManager.NameNotFoundException e) {
+         // Google Play Store might not be installed, ignore exception if so
+      }
 
       return false;
    }
@@ -86,13 +88,15 @@ class GooglePlayServicesUpgradePrompt {
          GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
          int resultCode = apiAvailability.isGooglePlayServicesAvailable(OneSignal.appContext);
          // Send the Intent to trigger opening the store
-         apiAvailability.getErrorResolutionPendingIntent(
-            activity,
-            resultCode,
-            PLAY_SERVICES_RESOLUTION_REQUEST
-         ).send();
+         PendingIntent pendingIntent =
+             apiAvailability.getErrorResolutionPendingIntent(
+                 activity,
+                 resultCode,
+                 PLAY_SERVICES_RESOLUTION_REQUEST
+             );
+         if (pendingIntent != null)
+            pendingIntent.send();
       } catch (PendingIntent.CanceledException e) {
-      } catch (Throwable e) {
          e.printStackTrace();
       }
    }
