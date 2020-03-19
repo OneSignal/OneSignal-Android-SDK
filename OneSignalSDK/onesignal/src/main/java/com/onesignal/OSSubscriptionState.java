@@ -30,6 +30,7 @@ package com.onesignal;
 
 import android.support.annotation.Nullable;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OSSubscriptionState implements Cloneable {
@@ -139,8 +140,9 @@ public class OSSubscriptionState implements Cloneable {
    protected Object clone() {
       try {
          return super.clone();
-      } catch (Throwable t) {}
-      return null;
+      } catch (CloneNotSupportedException e) {
+         return null;
+      }
    }
    
    public JSONObject toJSONObject() {
@@ -160,8 +162,8 @@ public class OSSubscriptionState implements Cloneable {
          mainObj.put("userSubscriptionSetting", userSubscriptionSetting);
          mainObj.put("subscribed", getSubscribed());
       }
-      catch(Throwable t) {
-         t.printStackTrace();
+      catch(JSONException e) {
+         e.printStackTrace();
       }
       
       return mainObj;

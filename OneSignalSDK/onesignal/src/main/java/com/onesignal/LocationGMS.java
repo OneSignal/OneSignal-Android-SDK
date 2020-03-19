@@ -164,8 +164,8 @@ class LocationGMS {
                   startGetLocation();
                else
                   fireFailedComplete();
-            } catch (Throwable t) {
-               t.printStackTrace();
+            } catch (PackageManager.NameNotFoundException e) {
+               e.printStackTrace();
             }
          }
          else

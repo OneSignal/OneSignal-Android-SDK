@@ -29,6 +29,7 @@ package com.onesignal;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteCantOpenDatabaseException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -134,9 +135,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       while(true) {
          try {
             return getWritableDatabase();
-         } catch (Throwable t) {
+         } catch (SQLiteCantOpenDatabaseException e) {
             if (++count >= DB_OPEN_RETRY_MAX)
-               throw t;
+               throw e;
             SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
          }
       }
@@ -147,9 +148,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       while(true) {
          try {
             return getReadableDatabase();
-         } catch (Throwable t) {
+         } catch (SQLiteCantOpenDatabaseException e) {
             if (++count >= DB_OPEN_RETRY_MAX)
-               throw t;
+               throw e;
             SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
          }
       }
