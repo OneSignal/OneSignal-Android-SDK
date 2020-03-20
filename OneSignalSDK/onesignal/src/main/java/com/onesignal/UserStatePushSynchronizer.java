@@ -1,9 +1,15 @@
 package com.onesignal;
 
+import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 class UserStatePushSynchronizer extends UserStateSynchronizer {
+
+    UserStatePushSynchronizer() {
+        super(UserStateSynchronizerType.PUSH);
+    }
 
     @Override
     protected UserState newUserState(String inPersistKey, boolean load) {

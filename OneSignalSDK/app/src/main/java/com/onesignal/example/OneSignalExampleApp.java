@@ -71,7 +71,7 @@ public class OneSignalExampleApp extends Application {
          new ExampleNotificationReceivedHandler()
       );
 
-      OneSignal.sendTag("test1", "test1");
+//      OneSignal.sendTag("test1", "test1");
    }
 
    public static void setOneSignalAppId(@NonNull Context context, @NonNull String id) {

@@ -36,6 +36,46 @@
             android:onClick="onConsentButtonClicked"
             android:text="Provide Consent" />
 
+        <EditText
+            android:id="@+id/emailEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Email" />
+
+        <Button
+            android:id="@+id/setEmailButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="onSetEmailClicked"
+            android:text="Set Email" />
+
+        <Button
+            android:id="@+id/logoutEmailButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="onLogoutEmailClicked"
+            android:text="Logout Email" />
+
+        <EditText
+            android:id="@+id/externalUserIdEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="External user id" />
+
+        <Button
+            android:id="@+id/setExternalUserId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="onSetExternalUserId"
+            android:text="Set External User Id" />
+
+        <Button
+            android:id="@+id/removeExternalUserId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="onRemoveExternalUserId"
+            android:text="Remove External User Id" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -128,13 +168,6 @@
             android:layout_height="wrap_content"
             android:onClick="onSendOutcomeWithValueClicked"
             android:text="Send Outcome With Value" />
-
-        <Button
-            android:id="@+id/logoutEmail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="onLogoutEmailClicked"
-            android:text="Logout Email" />
 
         <LinearLayout
             android:layout_width="0px"
