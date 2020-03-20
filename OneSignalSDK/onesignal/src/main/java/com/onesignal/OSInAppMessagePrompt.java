@@ -2,18 +2,27 @@ package com.onesignal;
 
 abstract class OSInAppMessagePrompt {
 
-    private boolean didAppear = false;
+    private boolean prompted = false;
 
     OSInAppMessagePrompt() {
     }
 
-    abstract void handlePrompt(OneSignal.OperationCompletedCallback callback);
+    abstract void handlePrompt(OneSignal.OSPromptActionCompletionCallback callback);
+    abstract String getPromptKey();
 
-    public boolean didAppear() {
-        return didAppear;
+    boolean hasPrompted() {
+        return prompted;
     }
 
-    public void setDidAppear(boolean didAppear) {
-        this.didAppear = didAppear;
+    void setPrompted(boolean prompted) {
+        this.prompted = prompted;
+    }
+
+    @Override
+    public String toString() {
+        return "OSInAppMessagePrompt{" +
+                "key=" + getPromptKey() +
+                " prompted=" + prompted +
+                '}';
     }
 }
