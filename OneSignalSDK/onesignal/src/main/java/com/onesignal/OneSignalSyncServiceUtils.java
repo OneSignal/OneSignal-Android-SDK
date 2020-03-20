@@ -220,8 +220,8 @@ class OneSignalSyncServiceUtils {
             final BlockingQueue<Object> queue = new ArrayBlockingQueue<>(1);
             LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
                @Override
-               public LocationGMS.CALLBACK_TYPE getType() {
-                  return LocationGMS.CALLBACK_TYPE.SYNC_SERVICE;
+               public LocationGMS.PermissionType getType() {
+                  return LocationGMS.PermissionType.SYNC_SERVICE;
                }
 
                @Override

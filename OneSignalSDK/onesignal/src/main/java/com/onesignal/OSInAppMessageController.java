@@ -53,6 +53,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // This is retrieved from a DB Table that take care of each object to be unique
     @NonNull private List<OSInAppMessage> redisplayedInAppMessages;
 
+    private OSInAppMessagePrompt currentPrompt = null;
     private boolean inAppMessagingEnabled = true;
     private boolean inAppMessageShowing = false;
 
@@ -272,7 +273,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
-        firePrompt(message, action.prompts);
+        showPrompts(message, action.prompts);
         fireClickAction(action);
         fireRESTCallForClick(message, action);
         fireTagCallForClick(action);
@@ -287,16 +288,38 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         fireClickAction(action);
     }
 
-    private void firePrompt(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
-        for (OSInAppMessagePrompt prompt : prompts) {
+    private void showPrompts(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+        if (prompts.size() > 0) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM showing prompts from IAM: " + message.toString());
             // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
-            messageWasDismissed(message);
-            prompt.handlePrompt(new OneSignal.OperationCompletedCallback() {
+            WebViewManager.dismissCurrentInAppMessage();
+            handleMultiplePrompts(message, prompts);
+        }
+    }
+
+    private void handleMultiplePrompts(final OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+        for (OSInAppMessagePrompt prompt : prompts) {
+            // Don't show prompt twice
+            if (!prompt.hasPrompted()) {
+                currentPrompt = prompt;
+                break;
+            }
+        }
+
+        if (currentPrompt != null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle: " + currentPrompt.toString());
+            currentPrompt.setPrompted(true);
+            currentPrompt.handlePrompt(new OneSignal.OSPromptActionCompletionCallback() {
                 @Override
-                public void completed(boolean result) {
-                    // TODO take care of multiple prompts
+                public void completed(boolean accepted) {
+                    currentPrompt = null;
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle finished accepted: " + accepted);
+                    handleMultiplePrompts(message, prompts);
                 }
             });
+        } else {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM prompt to handle, dismiss message: " + message.messageId);
+            messageWasDismissed(message);
         }
     }
 
@@ -451,7 +474,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             }
 
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "queueMessageForDisplay: " + messageDisplayQueue);
-
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (messageDisplayQueue.size() > 0 && !isInAppMessageShowing()) {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM showing currently, showing first item in the queue!");
@@ -476,8 +498,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * Called after an In-App message is closed and it's dismiss animation has completed
      */
     void messageWasDismissed(@NonNull OSInAppMessage message) {
-        inAppMessageShowing = false;
-
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             OneSignalPrefs.saveStringSet(
@@ -488,26 +508,43 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             // Don't keep track of last displayed time for a preview
             lastTimeInAppDismissed = new Date();
             persistInAppMessageForRedisplay(message);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed dismissedMessages: " + dismissedMessages.toString());
         }
 
-        dismissCurrentMessage();
+        dismissCurrentMessage(message);
     }
 
     /**
      * Removes first item from the queue and attempts to show the next IAM in the queue
+     *
+     * @param message The message dismissed, preview messages are null
      */
-    private void dismissCurrentMessage() {
+    private void dismissCurrentMessage(@Nullable OSInAppMessage message) {
+        if (currentPrompt != null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Stop evaluateMessageDisplayQueue because prompt is currently displayed");
+            return;
+        }
+
+        inAppMessageShowing = false;
         synchronized (messageDisplayQueue) {
             if (messageDisplayQueue.size() > 0) {
-                String removedMessageId = messageDisplayQueue.remove(0).messageId;
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
+                if (message != null && !messageDisplayQueue.contains(message)) {
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Message already removed from the queue!");
+                    return;
+                } else {
+                    String removedMessageId = messageDisplayQueue.remove(0).messageId;
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
+                }
             }
 
             // Display the next message in the queue, or attempt to add more IAMs to the queue
-            if (messageDisplayQueue.size() > 0)
+            if (messageDisplayQueue.size() > 0) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message on queue available: " + messageDisplayQueue.get(0).messageId);
                 displayMessage(messageDisplayQueue.get(0));
-            else
+            } else {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message dismissed evaluating messages");
                 evaluateInAppMessages();
+            }
         }
     }
 
@@ -611,11 +648,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OneSignalRestClient.get(htmlPath, new ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
-                inAppMessageShowing = false;
-
                 printHttpErrorForInAppMessageRequest("html", statusCode, response);
 
-                dismissCurrentMessage();
+                dismissCurrentMessage(null);
             }
 
             @Override
