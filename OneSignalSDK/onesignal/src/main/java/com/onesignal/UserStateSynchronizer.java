@@ -59,7 +59,7 @@ abstract class UserStateSynchronizer {
 
     abstract GetTagsResult getTags(boolean fromServer);
 
-    abstract String getExternalId(boolean fromServer);
+    abstract @Nullable String getExternalId(boolean fromServer);
 
     private AtomicBoolean runningSyncUserState = new AtomicBoolean();
 

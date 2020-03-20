@@ -40,9 +40,20 @@ import java.util.Set;
 
 class OneSignalPrefs {
 
-    // TODO:
+    // TODO: Remove this once the tasks below have been finished...
     //  1. Fix all of the SharedPreference Keys so they are organized by usage with comments
-    //  2.
+    //  ex.
+    //   // In-App Messaging
+    //   public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
+    //   public static final String PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
+    //   public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
+    //   public static final String PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS";
+    //  2. Match keys with value names
+    //  ex.
+    //   public static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
+    //  3. Follow syntax and make new names relevant (specific and as short as possible)
+    //  ex.
+    //   Start with prefix "PREFS_OS_" + "LAST_LOCATION_TIME"
 
     // SharedPreferences Instances
     public static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
@@ -50,6 +61,7 @@ class OneSignalPrefs {
     public static final String PREFS_TRIGGERS = "OneSignalTriggers";
 
     // SharedPreference Keys
+    // Unorganized Keys
     public static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
     public static final String PREFS_GT_SOUND_ENABLED = "GT_SOUND_ENABLED";
     public static final String PREFS_OS_LAST_SESSION_TIME = "OS_LAST_SESSION_TIME";
@@ -85,7 +97,7 @@ class OneSignalPrefs {
     public static final String PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
     public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
     public static final String PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS";
-    // Receive Receipts (Confirmed Deliveries)
+    // Receive Receipts (aka Confirmed Deliveries)
     public static final String PREFS_OS_RECEIVE_RECEIPTS_ENABLED = "PREFS_OS_RECEIVE_RECEIPTS_ENABLED";
     // Outcomes
     public static final String PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN = "PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN";
@@ -98,7 +110,7 @@ class OneSignalPrefs {
     public static final String PREFS_OS_OUTCOMES_CURRENT_SESSION = "PREFS_OS_OUTCOMES_CURRENT_SESSION";
     public static final String PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT";
 
-    // PLAYER PURCHASE KEYS
+    // Player Purchase Keys
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
     static final String PREFS_EXISTING_PURCHASES = "ExistingPurchases";
 
