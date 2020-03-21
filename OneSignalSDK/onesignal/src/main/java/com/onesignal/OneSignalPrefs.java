@@ -40,12 +40,28 @@ import java.util.Set;
 
 class OneSignalPrefs {
 
+    // TODO: Remove this once the tasks below have been finished...
+    //  1. Fix all of the SharedPreference Keys so they are organized by usage with comments
+    //  ex.
+    //   // In-App Messaging
+    //   public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
+    //   public static final String PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
+    //   public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
+    //   public static final String PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS";
+    //  2. Match keys with value names
+    //  ex.
+    //   public static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
+    //  3. Follow syntax and make new names relevant (specific and as short as possible)
+    //  ex.
+    //   Start with prefix "PREFS_OS_" + "LAST_LOCATION_TIME"
+
     // SharedPreferences Instances
     public static final String PREFS_ONESIGNAL = OneSignal.class.getSimpleName();
     public static final String PREFS_PLAYER_PURCHASES = "GTPlayerPurchases";
     public static final String PREFS_TRIGGERS = "OneSignalTriggers";
 
-    // PREFERENCES KEYS
+    // SharedPreference Keys
+    // Unorganized Keys
     public static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
     public static final String PREFS_GT_SOUND_ENABLED = "GT_SOUND_ENABLED";
     public static final String PREFS_OS_LAST_SESSION_TIME = "OS_LAST_SESSION_TIME";
@@ -56,7 +72,6 @@ class OneSignalPrefs {
     public static final String PREFS_OS_FILTER_OTHER_GCM_RECEIVERS = "OS_FILTER_OTHER_GCM_RECEIVERS";
     public static final String PREFS_GT_APP_ID = "GT_APP_ID";
     public static final String PREFS_GT_PLAYER_ID = "GT_PLAYER_ID";
-    public static final String PREFS_OS_EMAIL_ID = "OS_EMAIL_ID";
     public static final String PREFS_GT_UNSENT_ACTIVE_TIME = "GT_UNSENT_ACTIVE_TIME";
     public static final String PREFS_OS_UNSENT_ATTRIBUTED_ACTIVE_TIME = "OS_UNSENT_ATTRIBUTED_ACTIVE_TIME";
     public static final String PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_ = "ONESIGNAL_USERSTATE_DEPENDVALYES_";
@@ -66,8 +81,6 @@ class OneSignalPrefs {
     public static final String PREFS_ONESIGNAL_PLAYER_ID_LAST = "ONESIGNAL_PLAYER_ID_LAST";
     public static final String PREFS_ONESIGNAL_PUSH_TOKEN_LAST = "ONESIGNAL_PUSH_TOKEN_LAST";
     public static final String PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST = "ONESIGNAL_PERMISSION_ACCEPTED_LAST";
-    public static final String PREFS_ONESIGNAL_EMAIL_ID_LAST = "PREFS_ONESIGNAL_EMAIL_ID_LAST";
-    public static final String PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST = "PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST";
     public static final String PREFS_GT_DO_NOT_SHOW_MISSING_GPS = "GT_DO_NOT_SHOW_MISSING_GPS";
     public static final String PREFS_ONESIGNAL_SUBSCRIPTION = "ONESIGNAL_SUBSCRIPTION";
     public static final String PREFS_ONESIGNAL_SYNCED_SUBSCRIPTION = "ONESIGNAL_SYNCED_SUBSCRIPTION";
@@ -75,11 +88,18 @@ class OneSignalPrefs {
     public static final String PREFS_ONESIGNAL_USER_PROVIDED_CONSENT = "ONESIGNAL_USER_PROVIDED_CONSENT";
     public static final String PREFS_OS_ETAG_PREFIX = "PREFS_OS_ETAG_PREFIX_";
     public static final String PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_";
+    // Email
+    public static final String PREFS_OS_EMAIL_ID = "OS_EMAIL_ID";
+    public static final String PREFS_ONESIGNAL_EMAIL_ID_LAST = "PREFS_ONESIGNAL_EMAIL_ID_LAST";
+    public static final String PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST = "PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST";
+    // In-App Messaging
     public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
     public static final String PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
     public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
     public static final String PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS";
+    // Receive Receipts (aka Confirmed Deliveries)
     public static final String PREFS_OS_RECEIVE_RECEIPTS_ENABLED = "PREFS_OS_RECEIVE_RECEIPTS_ENABLED";
+    // Outcomes
     public static final String PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN = "PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN";
     public static final String PREFS_OS_LAST_NOTIFICATIONS_RECEIVED = "PREFS_OS_LAST_NOTIFICATIONS_RECEIVED";
     public static final String PREFS_OS_NOTIFICATION_LIMIT = "PREFS_OS_NOTIFICATION_LIMIT";
@@ -90,7 +110,7 @@ class OneSignalPrefs {
     public static final String PREFS_OS_OUTCOMES_CURRENT_SESSION = "PREFS_OS_OUTCOMES_CURRENT_SESSION";
     public static final String PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT";
 
-    // PLAYER PURCHASE KEYS
+    // Player Purchase Keys
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
     static final String PREFS_EXISTING_PURCHASES = "ExistingPurchases";
 

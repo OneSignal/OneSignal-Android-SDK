@@ -1,9 +1,17 @@
 package com.onesignal;
 
+import android.support.annotation.Nullable;
+
+import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 class UserStateEmailSynchronizer extends UserStateSynchronizer {
+
+    UserStateEmailSynchronizer() {
+        super(UserStateSynchronizerType.EMAIL);
+    }
 
     @Override
     protected UserState newUserState(String inPersistKey, boolean load) {
@@ -19,6 +27,12 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     // Email tags not readable from SDK
     @Override
     GetTagsResult getTags(boolean fromServer) {
+        return null;
+    }
+
+    // Email external id not readable from SDK
+    @Override
+    @Nullable String getExternalId(boolean fromServer) {
         return null;
     }
 
@@ -119,6 +133,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         getToSyncUserState().syncValues.remove("identifier");
         toSyncUserState.syncValues.remove("email_auth_hash");
         toSyncUserState.syncValues.remove("device_player_id");
+        toSyncUserState.syncValues.remove("external_user_id");
         toSyncUserState.persistState();
 
         OneSignal.getPermissionSubscriptionState().emailSubscriptionStatus.clearEmailAndId();

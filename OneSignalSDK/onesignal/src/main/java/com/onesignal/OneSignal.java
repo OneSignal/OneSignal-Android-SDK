@@ -43,6 +43,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -138,7 +139,6 @@ public class OneSignal {
       void inAppMessageClicked(OSInAppMessageAction result);
    }
 
-
    /**
     * An interface used to handle notifications that are received.
     * <br/>
@@ -194,6 +194,13 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
+   public interface OSExternalUserIdUpdateCompletionHandler {
+      void onComplete(JSONObject results);
+   }
+
+   interface OSInternalExternalUserIdUpdateCompletionHandler {
+      void onComplete(String channel, boolean success);
+   }
 
    public enum EmailErrorType {
       VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
@@ -1492,18 +1499,27 @@ public class OneSignal {
       emailLogout.run();
    }
 
-   public static void setExternalUserId(final String externalId) {
+   public static void setExternalUserId(@NonNull final String externalId) {
+      setExternalUserId(externalId, null);
+   }
 
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalId()"))
+   public static void setExternalUserId(@NonNull final String externalId, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalUserId()"))
          return;
 
       Runnable runSetExternalUserId = new Runnable() {
          @Override
          public void run() {
+            if (externalId == null) {
+               OneSignal.Log(LOG_LEVEL.WARN, "External id can't be null, set an empty string to remove an external id");
+               return;
+            }
+
             try {
-               OneSignalStateSynchronizer.setExternalUserId(externalId);
+               OneSignalStateSynchronizer.setExternalUserId(externalId, completionCallback);
             } catch (JSONException exception) {
-               String operation = externalId == "" ? "remove" : "set";
+               String operation = externalId.equals("") ? "remove" : "set";
                onesignalLog(LOG_LEVEL.ERROR, "Attempted to " + operation + " external ID but encountered a JSON exception");
                exception.printStackTrace();
             }
@@ -1523,8 +1539,15 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeExternalUserId()"))
          return;
 
+      removeExternalUserId(null);
+   }
+
+   public static void removeExternalUserId(final OSExternalUserIdUpdateCompletionHandler completionHandler) {
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeExternalUserId()"))
+         return;
+
       // to remove the external user ID, the API requires an empty string
-      setExternalUserId("");
+      setExternalUserId("", completionHandler);
    }
 
    /**
@@ -2226,14 +2249,11 @@ public class OneSignal {
    }
 
    static boolean hasEmailId() {
-      return getEmailId() != null;
+      return !TextUtils.isEmpty(emailId);
    }
 
    static String getEmailId() {
-      if ("".equals(emailId))
-         return null;
-
-      if (emailId == null && appContext != null) {
+      if (TextUtils.isEmpty(emailId) && appContext != null) {
          emailId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_OS_EMAIL_ID,null);
       }

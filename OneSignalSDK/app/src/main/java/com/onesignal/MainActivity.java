@@ -42,6 +42,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,6 +63,12 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    private int[] interactiveViewIds = new int[]{
            R.id.subscribe,
            R.id.unsubscribe,
+           R.id.emailEditText,
+           R.id.setEmailButton,
+           R.id.logoutEmailButton,
+           R.id.externalUserIdEditText,
+           R.id.setExternalUserId,
+           R.id.removeExternalUserId,
            R.id.sendTags,
            R.id.getTags,
            R.id.sendEvent,
@@ -70,16 +77,17 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
            R.id.postNotificationGroupCheckBox,
            R.id.postNotificationAsyncGroupCheckBox};
 
+   private EditText externalUserIdEditText;
    private TextView debugTextView;
-   private TextView emailTextView;
    private TextView outcomeName;
    private TextView outcomeValueName;
    private TextView outcomeValue;
    private TextView outcomeUnique;
    private Button consentButton;
+   private EditText emailEditText;
    private Button setEmailButton;
-   private Button sendEvent;
    private Button logoutEmailButton;
+   private Button sendEvent;
    private Button postNotifButton;
    private Button postNotifAsyncButton;
    private CheckBox postNotifGroupCheckBox;
@@ -118,14 +126,16 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       setContentView(com.onesignal.example.R.layout.activity_main);
 
       this.consentButton = this.findViewById(R.id.consentButton);
-      this.logoutEmailButton = this.findViewById(R.id.logoutEmail);
+      this.emailEditText = findViewById(R.id.emailEditText);
+      this.setEmailButton = findViewById(R.id.setEmailButton);
+      this.logoutEmailButton = this.findViewById(R.id.logoutEmailButton);
+      this.externalUserIdEditText = this.findViewById(R.id.externalUserIdEditText);
       this.postNotifButton = this.findViewById(R.id.postNotification);
       this.postNotifAsyncButton = this.findViewById(R.id.postNotificationAsync);
       this.postNotifGroupCheckBox = this.findViewById(R.id.postNotificationGroupCheckBox);
       this.postNotifAsyncGroupCheckBox = this.findViewById(R.id.postNotificationAsyncGroupCheckBox);
-      this.consentButton = (Button)this.findViewById(com.onesignal.example.R.id.consentButton);
-      this.logoutEmailButton = (Button)this.findViewById(com.onesignal.example.R.id.logoutEmail);
-      this.sendEvent = (Button)this.findViewById(R.id.sendEvent);
+      this.consentButton = this.findViewById(R.id.consentButton);
+      this.sendEvent = this.findViewById(R.id.sendEvent);
       this.iamHost = this.findViewById(R.id.iamHost);
       this.triggerKeyTextView = this.findViewById(R.id.triggerKey);
       this.triggerValueTextView = this.findViewById(R.id.triggerValue);
@@ -246,6 +256,26 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       nMgr.cancelAll();
    }
 
+   public void onSetExternalUserId(View view) {
+      String externalUserId = this.externalUserIdEditText.getText().toString().trim();
+
+      OneSignal.setExternalUserId(externalUserId, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(JSONObject results) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Set external user id done with results: " + results.toString());
+         }
+      });
+   }
+
+   public void onRemoveExternalUserId(View view) {
+      OneSignal.removeExternalUserId(new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(JSONObject results) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Remove external user id done with results: " + results.toString());
+         }
+      });
+   }
+
    public void onSetTrigger(View v) {
       String triggerKey = this.triggerKeyTextView.getText().toString();
       String triggerValue = this.triggerValueTextView.getText().toString();
@@ -308,12 +338,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    }
 
    public void onSetEmailClicked(View v) {
-      String email = emailTextView.getText().toString();
-
-      if (email.length() == 0) {
-         Log.d("onesingal", "email not set");
-         return;
-      }
+      String email = emailEditText.getText().toString();
 
       OneSignal.setEmail(email, new OneSignal.EmailUpdateHandler() {
          @Override
@@ -324,6 +349,20 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
          @Override
          public void onFailure(OneSignal.EmailUpdateError error) {
             updateTextView("Failed to set email with error: " + error.getMessage());
+         }
+      });
+   }
+
+   public void onLogoutEmailClicked(View v) {
+      OneSignal.logoutEmail(new OneSignal.EmailUpdateHandler() {
+         @Override
+         public void onSuccess() {
+            updateTextView("Successfully logged out of email");
+         }
+
+         @Override
+         public void onFailure(OneSignal.EmailUpdateError error) {
+            updateTextView("Failed to logout of email with error: " + error.getMessage());
          }
       });
    }
@@ -357,20 +396,6 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
          public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
             if (outcomeEvent != null)
                updateTextView(outcomeEvent.toString());
-         }
-      });
-   }
-
-   public void onLogoutEmailClicked(View v) {
-      OneSignal.logoutEmail(new OneSignal.EmailUpdateHandler() {
-         @Override
-         public void onSuccess() {
-            updateTextView("Successfully logged out of email");
-         }
-
-         @Override
-         public void onFailure(OneSignal.EmailUpdateError error) {
-            updateTextView("Failed to logout of email with error: " + error.getMessage());
          }
       });
    }
