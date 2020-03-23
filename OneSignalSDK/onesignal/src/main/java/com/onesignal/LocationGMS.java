@@ -208,6 +208,13 @@ class LocationGMS {
                      requestPermission = "android.permission.ACCESS_COARSE_LOCATION";
                }
 
+               // We handle the following cases:
+               //  1 - If needed and available then prompt for permissions
+               //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
+               //  2 - If the permission were already granted then start getting location
+               //  3 - If permission wasn't granted then trigger fail flow
+               //
+               // For each case, we call the prompt handlers
                if (requestPermission != null && promptLocation) {
                   PermissionsActivity.startPrompt();
                } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {

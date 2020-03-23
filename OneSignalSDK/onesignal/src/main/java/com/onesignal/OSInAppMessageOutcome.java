@@ -60,4 +60,13 @@ public class OSInAppMessageOutcome {
     public void setUnique(boolean unique) {
         this.unique = unique;
     }
+
+    @Override
+    public String toString() {
+        return "OSInAppMessageOutcome{" +
+                "name='" + name + '\'' +
+                ", weight=" + weight +
+                ", unique=" + unique +
+                '}';
+    }
 }

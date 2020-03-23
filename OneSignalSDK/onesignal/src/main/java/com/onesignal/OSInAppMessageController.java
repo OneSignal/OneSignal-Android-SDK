@@ -273,7 +273,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
-        showPrompts(message, action.prompts);
+        beginProcessingPrompts(message, action.prompts);
         fireClickAction(action);
         fireRESTCallForClick(message, action);
         fireTagCallForClick(action);
@@ -285,19 +285,31 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         action.firstClick = message.takeActionAsUnique();
 
         firePublicClickHandler(action);
+        beginProcessingPrompts(message, action.prompts);
         fireClickAction(action);
+        logInAppMessagePreviewActions(action);
     }
 
-    private void showPrompts(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+    private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
+        if (action.tags != null)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString());
+
+        if (action.outcomes.size() > 0)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString());
+
+        // TODO: Add more action payload preview logs here in future
+    }
+
+    private void beginProcessingPrompts(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
         if (prompts.size() > 0) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM showing prompts from IAM: " + message.toString());
             // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
             WebViewManager.dismissCurrentInAppMessage();
-            handleMultiplePrompts(message, prompts);
+            showMultiplePrompts(message, prompts);
         }
     }
 
-    private void handleMultiplePrompts(final OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+    private void showMultiplePrompts(final OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
         for (OSInAppMessagePrompt prompt : prompts) {
             // Don't show prompt twice
             if (!prompt.hasPrompted()) {
@@ -314,7 +326,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 public void completed(boolean accepted) {
                     currentPrompt = null;
                     OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle finished accepted: " + accepted);
-                    handleMultiplePrompts(message, prompts);
+                    showMultiplePrompts(message, prompts);
                 }
             });
         } else {
