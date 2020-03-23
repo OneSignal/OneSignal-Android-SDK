@@ -49,8 +49,10 @@ class OneSignalRestClient {
 
    static final String CACHE_KEY_GET_TAGS = "CACHE_KEY_GET_TAGS";
    static final String CACHE_KEY_REMOTE_PARAMS = "CACHE_KEY_REMOTE_PARAMS";
-   
-   private static final String BASE_URL = "https://onesignal.com/api/v1/";
+
+   private static final String OS_API_VERSION = "1";
+   private static final String OS_ACCEPT_HEADER = "application/vnd.onesignal.v" + OS_API_VERSION + "+json";
+   private static final String BASE_URL = "https://api.onesignal.com/";
    
    private static final int THREAD_ID = 10000;
    private static final int TIMEOUT = 120_000;
@@ -140,6 +142,7 @@ class OneSignalRestClient {
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
          con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.VERSION);
+         con.setRequestProperty("Accept", OS_ACCEPT_HEADER);
 
          if (jsonBody != null)
             con.setDoInput(true);
