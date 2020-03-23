@@ -134,7 +134,7 @@ class OneSignalPrefs {
 
         synchronized void startDelayedWrite() {
             if (mHandler == null) {
-                start();
+                startThread();
                 mHandler = new Handler(getLooper());
             }
 
@@ -146,6 +146,41 @@ class OneSignalPrefs {
                 long delay = lastSyncTime - System.currentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
 
                 mHandler.postDelayed(getNewRunnable(), delay);
+            }
+        }
+
+        /**
+         * Attempt to start the thread used by this HandlerThread
+         * It may fail due to the following:
+         *   - InternalError - Thread starting during runtime shutdown
+         *   - OutOfMemoryError - pthread_create (####KB stack) failed: Try again
+         * If it does throw we want to catch then save the error and rethrow
+         * If startThread is called a 2nd time we will rethrowing the first exception
+         *   - Otherwise Thread.start will just throw IllegalThreadStateException
+         * Normally this catch and rethrow would not be needed however somewhere in this
+         *   SDK code base or a consumer of this SDK is catching first exception and
+         *   silently ignoring it. Resulting in the true causing of a crash being unknown.
+         * See https://github.com/OneSignal/OneSignal-Android-SDK/issues/917#issuecomment-600472976
+         *
+         * Future: We may want to use this strategy for all Thread.start calls.
+         *         And limit thread usages, using mostly coroutines instead.
+         */
+        private VirtualMachineError threadStartError;
+        private void startThread() {
+            if (threadStartError != null)
+                throw threadStartError;
+
+            try {
+                start();
+            } catch (InternalError e) {
+                // Thread starting during runtime shutdown
+                threadStartError = e;
+                throw e;
+            }
+            catch (OutOfMemoryError e) {
+                // pthread_create (1040KB stack) failed: Try again
+                threadStartError = e;
+                throw e;
             }
         }
 
