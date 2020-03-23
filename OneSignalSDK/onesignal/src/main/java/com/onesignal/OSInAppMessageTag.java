@@ -50,4 +50,12 @@ public class OSInAppMessageTag {
     public void setTagsToRemove(JSONArray tagsToRemove) {
         this.tagsToRemove = tagsToRemove;
     }
+
+    @Override
+    public String toString() {
+        return "OSInAppMessageTag{" +
+                "adds=" + tagsToAdd +
+                ", removes=" + tagsToRemove +
+                '}';
+    }
 }
