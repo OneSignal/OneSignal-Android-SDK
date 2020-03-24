@@ -28,7 +28,9 @@ public class OSWebView extends WebView {
    }
 
    public static Context getFixedContext(Context context) {
-      return context.createConfigurationContext(new Configuration());
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+         return context.createConfigurationContext(new Configuration());
+      } else return context;
    }
 
    // The method overrides below; overScrollBy, scrollTo, and computeScroll prevent page scrolling
