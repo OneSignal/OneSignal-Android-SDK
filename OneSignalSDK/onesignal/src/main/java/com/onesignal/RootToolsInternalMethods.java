@@ -30,11 +30,15 @@ class RootToolsInternalMethods {
                          "/system/sd/xbin/", "/system/bin/failsafe/",
                          "/data/local/"};
 
-      for (String where : places) {
-         if (new java.io.File(where + "su").exists())
-            return true;
+      try {
+         for (String where : places) {
+            if (new java.io.File(where + "su").exists())
+               return true;
+         }
+      } catch (Throwable ignore) {
+         // workaround crash issue in Lenovo devices
+         // issues #857
       }
-
       return false;
    }
 }
