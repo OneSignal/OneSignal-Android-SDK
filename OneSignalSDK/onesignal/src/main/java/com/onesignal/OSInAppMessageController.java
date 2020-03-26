@@ -187,12 +187,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void evaluateInAppMessages() {
-        if (systemConditionController.systemConditionsAvailable()) {
-            for (OSInAppMessage message : messages) {
-                setDataForRedisplay(message);
-                if (!dismissedMessages.contains(message.messageId) && triggerController.evaluateMessageTriggers(message))
-                    queueMessageForDisplay(message);
-            }
+        for (OSInAppMessage message : messages) {
+            setDataForRedisplay(message);
+            if (!dismissedMessages.contains(message.messageId) && triggerController.evaluateMessageTriggers(message))
+                queueMessageForDisplay(message);
         }
     }
 
@@ -485,7 +483,19 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + message.messageId + ", added to the queue");
             }
 
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "queueMessageForDisplay: " + messageDisplayQueue);
+            attemptToShowInAppMessage();
+        }
+    }
+
+    private void attemptToShowInAppMessage() {
+        synchronized (messageDisplayQueue) {
+            // We need to wait for system conditions to be the correct ones
+            if (!systemConditionController.systemConditionsAvailable()) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "In app message not showing due to system condition not correct");
+                return;
+            }
+
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "displayFirstIAMOnQueue: " + messageDisplayQueue);
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (messageDisplayQueue.size() > 0 && !isInAppMessageShowing()) {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM showing currently, showing first item in the queue!");
@@ -689,6 +699,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         // This method is called when a time-based trigger timer fires, meaning the message can
         //  probably be shown now. So the current message conditions should be re-evaluated
         evaluateInAppMessages();
+    }
+
+    /**
+     * If this method is called a system condition has changed to success
+     *   - Keyboard is down
+     *   - No DialogFragment visible
+     *   - Activity is on focus, this mean no prompt permissions visible
+     */
+    @Override
+    public void systemConditionChanged() {
+        attemptToShowInAppMessage();
     }
 
     /**
