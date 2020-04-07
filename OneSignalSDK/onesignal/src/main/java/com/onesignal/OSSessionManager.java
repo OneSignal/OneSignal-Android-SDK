@@ -3,9 +3,16 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.onesignal.influence.OSChannelTracker;
+import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.model.OSInfluenceType;
+
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Manager in charge to check what type of session is active
@@ -15,292 +22,216 @@ import org.json.JSONObject;
  * - Indirect: the session occurred on a time frame less than 24hrs
  * - Unattributed: the session was not influenced nor was on the time frame os a push
  */
+public class OSSessionManager {
 
-class OSSessionManager {
-
-    private static final String DIRECT_TAG = "direct";
-
-    public static class SessionResult {
-        // Value will be Session.DISABLED only if the outcome type is disabled.
-        @NonNull Session session;
-        @Nullable JSONArray notificationIds;
-
-        SessionResult(@NonNull SessionResult.Builder builder) {
-            this.notificationIds = builder.notificationIds;
-            this.session = builder.session;
-        }
-
-        public static class Builder {
-
-            private JSONArray notificationIds;
-            private Session session;
-
-            public static SessionResult.Builder newInstance() {
-                return new SessionResult.Builder();
-            }
-
-            private Builder() {
-            }
-
-            public SessionResult.Builder setNotificationIds(@Nullable JSONArray notificationIds) {
-                this.notificationIds = notificationIds;
-                return this;
-            }
-
-            public SessionResult.Builder setSession(@NonNull Session session) {
-                this.session = session;
-                return this;
-            }
-
-            public SessionResult build() {
-                return new SessionResult(this);
-            }
-        }
+    public interface SessionListener {
+        // Fire with the last OSInfluence that just ended.
+        void onSessionEnding(@NonNull List<OSInfluence> lastInfluences);
     }
 
-    interface SessionListener {
-        // Fire with the SessionResult that just ended.
-        void onSessionEnding(@NonNull SessionResult lastSessionResult);
-    }
+    protected OSTrackerFactory trackerFactory;
+    private SessionListener sessionListener;
+    private OSLogger logger;
 
-    public enum Session {
-        DIRECT,
-        INDIRECT,
-        UNATTRIBUTED,
-        DISABLED,
-        ;
-
-        public boolean isDirect() {
-            return this.equals(DIRECT);
-        }
-
-        public boolean isIndirect() {
-            return this.equals(INDIRECT);
-        }
-
-        public boolean isAttributed() {
-            return this.isDirect() || this.isIndirect();
-        }
-
-        public boolean isUnattributed() {
-            return this.equals(UNATTRIBUTED);
-        }
-
-        public boolean isDisabled() {
-            return this.equals(DISABLED);
-        }
-
-        public static @NonNull Session fromString(String value) {
-            if (value == null || value.isEmpty())
-                return UNATTRIBUTED;
-
-            for (Session type : Session.values()) {
-                if (type.name().equalsIgnoreCase(value))
-                    return type;
-            }
-            return UNATTRIBUTED;
-        }
-    }
-
-    @NonNull protected Session session;
-    @Nullable private String directNotificationId;
-    @Nullable private JSONArray indirectNotificationIds;
-    @NonNull private SessionListener sessionListener;
-
-    public OSSessionManager(@NonNull SessionListener sessionListener) {
+    public OSSessionManager(@NonNull SessionListener sessionListener, OSTrackerFactory trackerFactory, OSLogger logger) {
         this.sessionListener = sessionListener;
-        this.initSessionFromCache();
+        this.trackerFactory = trackerFactory;
+        this.logger = logger;
     }
 
-    private void initSessionFromCache() {
-        session = OutcomesUtils.getCachedSession();
-        if (session.isIndirect())
-            indirectNotificationIds = getLastNotificationsReceivedIds();
-        else if (session.isDirect())
-            directNotificationId = OutcomesUtils.getCachedNotificationOpenId();
+    void initSessionFromCache() {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager initSessionFromCache");
+        trackerFactory.initFromCache();
     }
 
-    void addSessionNotificationsIds(@NonNull JSONObject jsonObject) {
-        if (session.isUnattributed())
+    void addSessionIds(@NonNull JSONObject jsonObject, List<OSInfluence> endingInfluences) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager addSessionData with influences: " + endingInfluences.toString());
+        trackerFactory.addSessionData(jsonObject, endingInfluences);
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager addSessionIds on jsonObject: " + jsonObject);
+    }
+
+    void restartSessionIfNeeded(OneSignal.AppEntryAction entryAction) {
+        List<OSChannelTracker> channelTrackers = trackerFactory.getChannelToResetByEntryAction(entryAction);
+        List<OSInfluence> updatedInfluences = new ArrayList<>();
+
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager restartSessionIfNeeded with entryAction: " + entryAction + "\n channelTrackers: " + channelTrackers.toString());
+        for (OSChannelTracker channelTracker : channelTrackers) {
+            JSONArray lastIds = channelTracker.getLastReceivedIds();
+            logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager restartSessionIfNeeded lastIds: " + lastIds);
+
+            OSInfluence influence = channelTracker.getCurrentSessionInfluence();
+            boolean updated;
+            if (lastIds != null && lastIds.length() > 0)
+                updated = setSession(channelTracker, OSInfluenceType.INDIRECT, null, lastIds);
+            else
+                updated = setSession(channelTracker, OSInfluenceType.UNATTRIBUTED, null, null);
+
+            if (updated)
+                updatedInfluences.add(influence);
+        }
+
+        sendSessionEndingWithInfluences(updatedInfluences);
+    }
+
+    void onInAppMessageReceived(@NonNull String messageId) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onInAppMessageReceived messageId: " + messageId);
+        OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
+        inAppMessageTracker.saveLastId(messageId);
+    }
+
+    void onDirectInfluenceFromIAMClick(@NonNull String messageId) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onDirectInfluenceFromIAMClick messageId: " + messageId);
+        OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
+        // We don't care about ending the session duration because IAM doesn't influence a session
+        setSession(inAppMessageTracker, OSInfluenceType.DIRECT, messageId, null);
+    }
+
+    void onDirectInfluenceFromIAMClickFinished() {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onDirectInfluenceFromIAMClickFinished");
+        OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
+        inAppMessageTracker.resetAndInitInfluence();
+    }
+
+    void onNotificationReceived(@Nullable String notificationId) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onNotificationReceived notificationId: " + notificationId);
+        if (notificationId == null || notificationId.isEmpty())
+            return;
+        OSChannelTracker notificationTracker = trackerFactory.getNotificationChannelTracker();
+        notificationTracker.saveLastId(notificationId);
+    }
+
+    void onDirectInfluenceFromNotificationOpen(OneSignal.AppEntryAction entryAction, @Nullable String notificationId) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onDirectInfluenceFromNotificationOpen notificationId: " + notificationId);
+        if (notificationId == null || notificationId.isEmpty())
             return;
 
-        try {
-            if (session.isDirect()) {
-                jsonObject.put(DIRECT_TAG, true);
-                jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, new JSONArray().put(directNotificationId));
-            }
-            else if (session.isIndirect()) {
-                jsonObject.put(DIRECT_TAG, false);
-                jsonObject.put(OutcomesUtils.NOTIFICATIONS_IDS, indirectNotificationIds);
-            }
-        } catch (JSONException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating addNotificationId:JSON Failed.", e);
-        }
-    }
-
-    void restartSessionIfNeeded() {
-        // Avoid reset session if app was focused due to a notification click (direct session recently set)
-        if (OneSignal.getAppEntryState().isNotificationClick())
-            return;
-
-        JSONArray lastNotifications = getLastNotificationsReceivedIds();
-        if (lastNotifications.length() > 0)
-            setSession(Session.INDIRECT, null, lastNotifications);
-        else
-            setSession(Session.UNATTRIBUTED, null, null);
-    }
-
-    @NonNull Session getSession() {
-        return session;
-    }
-
-    @Nullable String getDirectNotificationId() {
-        return directNotificationId;
-    }
-
-    @Nullable JSONArray getIndirectNotificationIds() {
-        return indirectNotificationIds;
-    }
-
-    void onDirectSessionFromNotificationOpen(@NonNull String notificationId) {
-        setSession(Session.DIRECT, notificationId, null);
-    }
-
-    // Call when the session for the app changes, caches the state, and broadcasts the session that just ended
-    private void setSession(@NonNull Session session, @Nullable String directNotificationId, @Nullable JSONArray indirectNotificationIds) {
-        if (!willChangeSession(session, directNotificationId, indirectNotificationIds))
-            return;
-
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
-           "OSSession changed" +
-              "\nfrom:\n" +
-              "session: " + this.session +
-              ", directNotificationId: " + this.directNotificationId +
-              ", indirectNotificationIds: " + this.indirectNotificationIds +
-              "\nto:\n" +
-              "session: " + session +
-              ", directNotificationId: " + directNotificationId +
-              ", indirectNotificationIds: " + indirectNotificationIds);
-
-        OutcomesUtils.cacheCurrentSession(session);
-        OutcomesUtils.cacheNotificationOpenId(directNotificationId);
-
-        // Broadcast the session that just ended before finalizing the state change
-        sessionListener.onSessionEnding(getSessionResult());
-
-        this.session = session;
-        this.directNotificationId = directNotificationId;
-        this.indirectNotificationIds = indirectNotificationIds;
-    }
-
-    private boolean willChangeSession(@NonNull Session session, @Nullable String directNotificationId, @Nullable JSONArray indirectNotificationIds) {
-        if (!session.equals(this.session))
-            return true;
-
-        // Allow updating a direct session to a new direct when a new notification is clicked
-        if (this.session.isDirect() &&
-                this.directNotificationId != null &&
-                !this.directNotificationId.equals(directNotificationId)) {
-            return true;
-        }
-
-        // Allow updating an indirect session to a new indirect when a new notification is received
-        if (this.session.isIndirect() &&
-           this.indirectNotificationIds != null &&
-           this.indirectNotificationIds.length() > 0 &&
-           !JSONUtils.compareJSONArrays(this.indirectNotificationIds, indirectNotificationIds)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Set the notifications ids that influenced the session
-     */
-    @NonNull protected JSONArray getLastNotificationsReceivedIds() {
-        JSONArray notificationsReceived = OutcomesUtils.getLastNotificationsReceivedData();
-        JSONArray notificationsIds = new JSONArray();
-
-        long attributionWindow = OutcomesUtils.getIndirectAttributionWindow() * 60 * 1_000L;
-        long currentTime = System.currentTimeMillis();
-        for (int i = 0; i < notificationsReceived.length(); i++) {
-            try {
-                JSONObject jsonObject = notificationsReceived.getJSONObject(i);
-                long time = jsonObject.getLong(OutcomesUtils.TIME);
-                long difference = currentTime - time;
-
-                if (difference <= attributionWindow) {
-                    String notificationId = jsonObject.getString(OutcomesUtils.NOTIFICATION_ID);
-                    notificationsIds.put(notificationId);
-                }
-            } catch (JSONException e) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "From getting notification from array:JSON Failed.", e);
-            }
-        }
-
-        return notificationsIds;
+        attemptSessionUpgrade(entryAction, notificationId);
     }
 
     // Get the current session based on state + if outcomes features are enabled.
-    @NonNull SessionResult getSessionResult() {
-        if (session.isDirect()) {
-            if (OutcomesUtils.isDirectSessionEnabled()) {
-                JSONArray directNotificationIds = new JSONArray().put(directNotificationId);
-                return SessionResult.Builder.newInstance()
-                        .setNotificationIds(directNotificationIds)
-                        .setSession(Session.DIRECT)
-                        .build();
-            }
-        } else if (session.isIndirect()) {
-            if (OutcomesUtils.isIndirectSessionEnabled()) {
-                return SessionResult.Builder.newInstance()
-                        .setNotificationIds(indirectNotificationIds)
-                        .setSession(Session.INDIRECT)
-                        .build();
-            }
-        } else if (OutcomesUtils.isUnattributedSessionEnabled()) {
-            return SessionResult.Builder.newInstance()
-                    .setSession(Session.UNATTRIBUTED)
-                    .build();
-        }
-
-        return SessionResult.Builder.newInstance()
-                .setSession(Session.DISABLED)
-                .build();
-    }
-
-    @NonNull SessionResult getIAMSessionResult() {
-        if (OutcomesUtils.isUnattributedSessionEnabled()) {
-            return SessionResult.Builder.newInstance()
-                    .setSession(Session.UNATTRIBUTED)
-                    .build();
-        }
-
-        return SessionResult.Builder.newInstance()
-                .setSession(Session.DISABLED)
-                .build();
+    @NonNull
+    List<OSInfluence> getInfluences() {
+        return trackerFactory.getInfluences();
     }
 
     /**
      * Attempt to override the current session before the 30 second session minimum
      * This should only be done in a upward direction:
-     *   * UNATTRIBUTED can become INDIRECT or DIRECT
-     *   * INDIRECT can become DIRECT
-     *   * DIRECT can become DIRECT
+     * * UNATTRIBUTED can become INDIRECT or DIRECT
+     * * INDIRECT can become DIRECT
+     * * DIRECT can become DIRECT
      */
-    void attemptSessionUpgrade() {
+    void attemptSessionUpgrade(OneSignal.AppEntryAction entryAction) {
+        attemptSessionUpgrade(entryAction, null);
+    }
+
+    private void attemptSessionUpgrade(OneSignal.AppEntryAction entryAction, @Nullable String directId) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager attemptSessionUpgrade with entryAction: " + entryAction);
+        OSChannelTracker channelTrackerByAction = trackerFactory.getChannelByEntryAction(entryAction);
+        List<OSChannelTracker> channelTrackersToReset = trackerFactory.getChannelToResetByEntryAction(entryAction);
+        List<OSInfluence> influencesToEnd = new ArrayList<>();
+        OSInfluence lastInfluence = null;
+
         // We will try to override any session with DIRECT
-        if (OneSignal.getAppEntryState().isNotificationClick()) {
-            setSession(Session.DIRECT, directNotificationId, null);
-            return;
+        boolean updated = false;
+        if (channelTrackerByAction != null) {
+            lastInfluence = channelTrackerByAction.getCurrentSessionInfluence();
+            updated = setSession(channelTrackerByAction,
+                    OSInfluenceType.DIRECT,
+                    directId == null ? channelTrackerByAction.getDirectId() : directId,
+                    null);
         }
 
-        // We will try to override the UNATTRIBUTED session with INDIRECT
-        if (session.isUnattributed()) {
-            JSONArray lastNotificationIds = getLastNotificationsReceivedIds();
-            if (lastNotificationIds.length() > 0 && OneSignal.getAppEntryState().isAppOpen())
-                setSession(Session.INDIRECT, null, lastNotificationIds);
+        if (updated) {
+            logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager attemptSessionUpgrade channel updated, search for ending direct influences on channels: " + channelTrackersToReset);
+            influencesToEnd.add(lastInfluence);
+            // Only one session influence channel can be DIRECT at the same time
+            // Reset other DIRECT channels, they will init an INDIRECT influence
+            // In that way we finish the session duration time for the last influenced session
+            for (OSChannelTracker tracker : channelTrackersToReset) {
+                if (tracker.getInfluenceType().isDirect()) {
+                    influencesToEnd.add(tracker.getCurrentSessionInfluence());
+                    tracker.resetAndInitInfluence();
+                }
+            }
         }
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager attemptSessionUpgrade try UNATTRIBUTED to INDIRECT upgrade");
+        // We will try to override the UNATTRIBUTED session with INDIRECT
+        for (OSChannelTracker channelTracker : channelTrackersToReset) {
+            if (channelTracker.getInfluenceType().isUnattributed()) {
+                JSONArray lastIds = channelTracker.getLastReceivedIds();
+                // There are new ids for attribution and the application was open again without resetting session
+                if (lastIds != null && lastIds.length() > 0 && !entryAction.isAppClose()) {
+                    // Save influence to ended it later if needed
+                    // This influence will be unattributed
+                    OSInfluence influence = channelTracker.getCurrentSessionInfluence();
+                    updated = setSession(channelTracker, OSInfluenceType.INDIRECT, null, lastIds);
+                    // Changed from UNATTRIBUTED to INDIRECT
+                    if (updated)
+                        influencesToEnd.add(influence);
+                }
+            }
+        }
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Trackers after update attempt: " + trackerFactory.getChannels().toString());
+        sendSessionEndingWithInfluences(influencesToEnd);
+    }
+
+    // Call when the session for the app changes, caches the state, and broadcasts the session that just ended
+    private boolean setSession(@NonNull OSChannelTracker channelTracker,
+                               @NonNull OSInfluenceType influenceType,
+                               @Nullable String directNotificationId,
+                               @Nullable JSONArray indirectNotificationIds) {
+        if (!willChangeSession(channelTracker, influenceType, directNotificationId, indirectNotificationIds))
+            return false;
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
+                "OSChannelTracker changed: " + channelTracker.getIdTag() +
+                        "\nfrom:\n" +
+                        "influenceType: " + channelTracker.getInfluenceType() +
+                        ", directNotificationId: " + channelTracker.getDirectId() +
+                        ", indirectNotificationIds: " + channelTracker.getIndirectIds() +
+                        "\nto:\n" +
+                        "influenceType: " + influenceType +
+                        ", directNotificationId: " + directNotificationId +
+                        ", indirectNotificationIds: " + indirectNotificationIds);
+
+        channelTracker.setInfluenceType(influenceType);
+        channelTracker.setDirectId(directNotificationId);
+        channelTracker.setIndirectIds(indirectNotificationIds);
+        channelTracker.cacheState();
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Trackers changed to: " + trackerFactory.getChannels().toString());
+        // Session changed
+        return true;
+    }
+
+    private boolean willChangeSession(@NonNull OSChannelTracker channelTracker,
+                                      @NonNull OSInfluenceType influenceType,
+                                      @Nullable String directNotificationId,
+                                      @Nullable JSONArray indirectNotificationIds) {
+        if (!influenceType.equals(channelTracker.getInfluenceType()))
+            return true;
+
+        OSInfluenceType channelInfluenceType = channelTracker.getInfluenceType();
+        // Allow updating a direct session to a new direct when a new notification is clicked
+        if (channelInfluenceType.isDirect() &&
+                channelTracker.getDirectId() != null &&
+                !channelTracker.getDirectId().equals(directNotificationId)) {
+            return true;
+        }
+
+        // Allow updating an indirect session to a new indirect when a new notification is received
+        return channelInfluenceType.isIndirect() &&
+                channelTracker.getIndirectIds() != null &&
+                channelTracker.getIndirectIds().length() > 0 &&
+                !JSONUtils.compareJSONArrays(channelTracker.getIndirectIds(), indirectNotificationIds);
+    }
+
+    private void sendSessionEndingWithInfluences(List<OSInfluence> endingInfluences) {
+        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager sendSessionEndingWithInfluences with influences: " + endingInfluences);
+        // Only end session if there are influences available to end
+        if (endingInfluences.size() > 0)
+            sessionListener.onSessionEnding(endingInfluences);
     }
 }

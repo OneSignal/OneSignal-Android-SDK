@@ -11,13 +11,13 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 
+import com.onesignal.MockOneSignalDBHelper;
+import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
-import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
+import com.onesignal.OneSignalPackagePrivateHelper.OSCachedUniqueOutcome;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
-import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
@@ -33,6 +33,12 @@ import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
+import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
+import com.onesignal.outcomes.MockOSOutcomeEventsTable;
+import com.onesignal.outcomes.OSOutcomeEventDB;
+import com.onesignal.outcomes.model.OSOutcomeEvent;
+import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import junit.framework.Assert;
 
@@ -100,7 +106,7 @@ public class TestHelpers {
       lastException = null;
    }
 
-   static void afterTestCleanup() throws Exception {
+   public static void afterTestCleanup() throws Exception {
       try {
          stopAllOSThreads();
       } catch (Exception e) {
@@ -109,9 +115,6 @@ public class TestHelpers {
 
       if (lastException != null)
          throw lastException;
-
-      // TODO: Do we need this here?
-      OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application).close();
    }
 
    static void stopAllOSThreads() {
@@ -195,7 +198,7 @@ public class TestHelpers {
    }
 
    private static boolean ranBeforeTestSuite;
-   static void beforeTestSuite() throws Exception {
+   public static void beforeTestSuite() throws Exception {
       if (ranBeforeTestSuite)
          return;
 
@@ -230,8 +233,8 @@ public class TestHelpers {
       advanceSystemTimeBy(31);
    }
 
-   static ArrayList<HashMap<String, Object>> getAllNotificationRecords() {
-      SQLiteDatabase readableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
+   static ArrayList<HashMap<String, Object>> getAllNotificationRecords(OneSignalDb db) {
+      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
          OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME,
          null,
@@ -265,10 +268,10 @@ public class TestHelpers {
       return mapList;
    }
 
-   static List<OutcomeEvent>  getAllOutcomesRecords() {
-      SQLiteDatabase readableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
+   static List<OSOutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) {
+      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
-              OneSignalPackagePrivateHelper.OutcomeEventsTable.TABLE_NAME,
+              MockOSOutcomeEventsTable.TABLE_NAME,
               null,
               null,
               null,
@@ -278,18 +281,18 @@ public class TestHelpers {
               null // limit
       );
 
-      List<OutcomeEvent> events = new ArrayList<>();
+      List<OSOutcomeEvent> events = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
-            String notificationIds = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
-            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_NAME));
-            String sessionString = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_SESSION));
-            OSSessionManager.Session session = OSSessionManager.Session.fromString(sessionString);
-            long timestamp = cursor.getLong(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
-            float weight = cursor.getFloat(cursor.getColumnIndex(OneSignalPackagePrivateHelper.OutcomeEventsTable.COLUMN_NAME_WEIGHT));
+            String notificationIds = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
+            String name = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NAME));
+            String sessionString = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_SESSION));
+            OSInfluenceType session = OSInfluenceType.fromString(sessionString);
+            long timestamp = cursor.getLong(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+            float weight = cursor.getFloat(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT));
 
             try {
-               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
+               OSOutcomeEvent event = new OSOutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
                events.add(event);
 
             } catch (JSONException e) {
@@ -304,10 +307,10 @@ public class TestHelpers {
       return events;
    }
 
-   static ArrayList<CachedUniqueOutcomeNotification> getAllUniqueOutcomeNotificationRecords() {
-      SQLiteDatabase readableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
+   static List<OSOutcomeEventDB> getAllOutcomesRecords(OneSignalDb db) {
+      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
-              OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable.TABLE_NAME,
+              MockOSOutcomeEventsTable.TABLE_NAME,
               null,
               null,
               null,
@@ -317,14 +320,59 @@ public class TestHelpers {
               null // limit
       );
 
-      ArrayList<CachedUniqueOutcomeNotification> notifications = new ArrayList<>();
+      List<OSOutcomeEventDB> events = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
-            String notificationId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID));
-            String name = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME));
+            String name = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NAME));
+            String iamIds = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_IAM_IDS));
+            String iamInfluenceTypeString = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE));
+            String notificationIds = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
+            String notificationInfluenceTypeString = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE));
+            OSInfluenceType iamInfluenceType = OSInfluenceType.fromString(iamInfluenceTypeString);
+            OSInfluenceType notificationInfluenceType = OSInfluenceType.fromString(notificationInfluenceTypeString);
 
-            CachedUniqueOutcomeNotification notification = new CachedUniqueOutcomeNotification(notificationId, name);
-            notifications.add(notification);
+            long timestamp = cursor.getLong(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+            float weight = cursor.getFloat(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT));
+
+            try {
+               OSOutcomeEventDB event = new OSOutcomeEventDB(iamInfluenceType, notificationInfluenceType,
+                       new JSONArray(iamIds != null ? iamIds : "[]"), new JSONArray(notificationIds != null ? notificationIds : "[]"),
+                       name, timestamp, weight);
+               events.add(event);
+
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+      readableDatabase.close();
+
+      return events;
+   }
+
+   static ArrayList<OSCachedUniqueOutcome> getAllUniqueOutcomeNotificationRecordsDBv5(OneSignalDb db) {
+      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
+      Cursor cursor = readableDatabase.query(
+              MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME,
+              null,
+              null,
+              null,
+              null, // group by
+              null, // filter by row groups
+              null, // sort order, new to old
+              null // limit
+      );
+
+      ArrayList<OSCachedUniqueOutcome> cachedUniqueOutcomes = new ArrayList<>();
+      if (cursor.moveToFirst()) {
+         do {
+            String name = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME));
+            String influenceId = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID));
+
+            OSCachedUniqueOutcome uniqueOutcome = new OSCachedUniqueOutcome(name, influenceId);
+            cachedUniqueOutcomes.add(uniqueOutcome);
 
          } while (cursor.moveToNext());
       }
@@ -332,11 +380,43 @@ public class TestHelpers {
       cursor.close();
       readableDatabase.close();
 
-      return notifications;
+      return cachedUniqueOutcomes;
    }
 
-   synchronized static void saveIAM(OSTestInAppMessage inAppMessage) {
-      SQLiteDatabase writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
+   static ArrayList<OSCachedUniqueOutcome> getAllUniqueOutcomeNotificationRecordsDB(OneSignalDb db) {
+      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
+      Cursor cursor = readableDatabase.query(
+              MockOSCachedUniqueOutcomeTable.TABLE_NAME,
+              null,
+              null,
+              null,
+              null, // group by
+              null, // filter by row groups
+              null, // sort order, new to old
+              null // limit
+      );
+
+      ArrayList<OSCachedUniqueOutcome> cachedUniqueOutcomes = new ArrayList<>();
+      if (cursor.moveToFirst()) {
+         do {
+            String name = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME));
+            String influenceId = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID));
+            String channelType = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE));
+
+            OSCachedUniqueOutcome uniqueOutcome = new OSCachedUniqueOutcome(name, influenceId, channelType);
+            cachedUniqueOutcomes.add(uniqueOutcome);
+
+         } while (cursor.moveToNext());
+      }
+
+      cursor.close();
+      readableDatabase.close();
+
+      return cachedUniqueOutcomes;
+   }
+
+   synchronized static void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
+      SQLiteDatabase writableDatabase = db.getSQLiteDatabaseWithRetries();
 
       ContentValues values = new ContentValues();
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
@@ -349,8 +429,8 @@ public class TestHelpers {
       writableDatabase.close();
    }
 
-   synchronized static List<OSTestInAppMessage> getAllInAppMessages() throws JSONException {
-      SQLiteDatabase readableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
+   synchronized static List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
+      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
               OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,
               null,

@@ -3,6 +3,7 @@ package com.test.onesignal;
 import android.support.annotation.NonNull;
 
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
+import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import com.onesignal.ShadowOneSignalRestClient.Request;
@@ -153,6 +154,13 @@ class RestClientAsserts {
               .put("direct", isDirect)
               .put("id", outcomeName)
               .put("notification_ids", notificationIds)
+      );
+   }
+
+   static void assertMeasureOnV2AtIndex(int index, @NonNull String outcomeName, @NonNull JSONObject sources) throws JSONException {
+      assertMeasureAtIndex(index, new JSONObject()
+              .put("id", outcomeName)
+              .put("sources", sources)
       );
    }
 

@@ -88,6 +88,8 @@ class OneSignalPrefs {
     public static final String PREFS_ONESIGNAL_USER_PROVIDED_CONSENT = "ONESIGNAL_USER_PROVIDED_CONSENT";
     public static final String PREFS_OS_ETAG_PREFIX = "PREFS_OS_ETAG_PREFIX_";
     public static final String PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_";
+    // On Focus Influence
+    public static final String PREFS_OS_ATTRIBUTED_INFLUENCES = "PREFS_OS_ATTRIBUTED_INFLUENCES";
     // Email
     public static final String PREFS_OS_EMAIL_ID = "OS_EMAIL_ID";
     public static final String PREFS_ONESIGNAL_EMAIL_ID_LAST = "PREFS_ONESIGNAL_EMAIL_ID_LAST";
@@ -100,16 +102,7 @@ class OneSignalPrefs {
     // Receive Receipts (aka Confirmed Deliveries)
     public static final String PREFS_OS_RECEIVE_RECEIPTS_ENABLED = "PREFS_OS_RECEIVE_RECEIPTS_ENABLED";
     // Outcomes
-    public static final String PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN = "PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN";
-    public static final String PREFS_OS_LAST_NOTIFICATIONS_RECEIVED = "PREFS_OS_LAST_NOTIFICATIONS_RECEIVED";
-    public static final String PREFS_OS_NOTIFICATION_LIMIT = "PREFS_OS_NOTIFICATION_LIMIT";
-    public static final String PREFS_OS_INDIRECT_ATTRIBUTION_WINDOW = "PREFS_OS_INDIRECT_ATTRIBUTION_WINDOW";
-    public static final String PREFS_OS_DIRECT_ENABLED = "PREFS_OS_DIRECT_ENABLED";
-    public static final String PREFS_OS_INDIRECT_ENABLED = "PREFS_OS_INDIRECT_ENABLED";
-    public static final String PREFS_OS_UNATTRIBUTED_ENABLED = "PREFS_OS_UNATTRIBUTED_ENABLED";
-    public static final String PREFS_OS_OUTCOMES_CURRENT_SESSION = "PREFS_OS_OUTCOMES_CURRENT_SESSION";
-    public static final String PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT";
-
+    public static final String PREFS_OS_OUTCOMES_V2 = "PREFS_OS_OUTCOMES_V2";
     // Player Purchase Keys
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
     static final String PREFS_EXISTING_PURCHASES = "ExistingPurchases";
@@ -313,7 +306,7 @@ class OneSignalPrefs {
         return defValue;
     }
 
-    private static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
+    static synchronized SharedPreferences getSharedPrefsByName(String prefsName) {
         if (OneSignal.appContext == null) {
             String msg = "OneSignal.appContext null, could not read " + prefsName + " from getSharedPreferences.";
             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, msg, new Throwable());

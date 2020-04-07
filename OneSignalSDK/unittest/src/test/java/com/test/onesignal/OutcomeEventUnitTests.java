@@ -27,20 +27,26 @@
 
 package com.test.onesignal;
 
+import android.support.annotation.NonNull;
+
+import com.onesignal.MockOSLog;
+import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOneSignalAPIClient;
+import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
-import com.onesignal.MockOutcomeEventsRepository;
-import com.onesignal.MockOutcomeEventsService;
-import com.onesignal.MockOutcomesUtils;
+import com.onesignal.MockOutcomeEventsFactory;
 import com.onesignal.MockSessionManager;
+import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
-import com.onesignal.OutcomeEvent;
+import com.onesignal.OneSignalRemoteParams;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
+import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
+import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
-import org.json.JSONArray;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -55,9 +61,9 @@ import java.util.List;
 
 import static com.test.onesignal.TestHelpers.lockTimeTo;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
-import static junit.framework.Assert.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
         instrumentedPackages = {"com.onesignal"},
@@ -70,25 +76,34 @@ public class OutcomeEventUnitTests {
 
     private static final String OUTCOME_NAME = "testing";
     private static final String NOTIFICATION_ID = "testing";
-    private static final int NOTIFICATION_LIMIT = 10;
 
     private MockOutcomeEventsController controller;
-    private MockOutcomeEventsRepository repository;
-    private MockOutcomeEventsService service;
+    private MockOneSignalAPIClient service;
+    private OSOutcomeEventsRepository repository;
+    private MockOSSharedPreferences preferences;
+    private OSTrackerFactory trackerFactory;
     private MockSessionManager sessionManager;
-    private MockOutcomesUtils notificationData;
-    private OneSignalDbHelper dbHelper;
+    private MockOneSignalDBHelper dbHelper;
+    private MockOSLog logWrapper = new MockOSLog();
+    private OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
+        @Override
+        public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
 
-    private static List<OutcomeEvent> outcomeEvents;
+        }
+    };
+
+    private OneSignalRemoteParams.InfluenceParams disabledInfluenceParams = new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false);
+
+    private static List<OSOutcomeEventParams> outcomeEvents;
 
     public interface OutcomeEventsHandler {
 
-        void setOutcomes(List<OutcomeEvent> outcomes);
+        void setOutcomes(List<OSOutcomeEventParams> outcomes);
     }
 
     private OutcomeEventsHandler handler = new OutcomeEventsHandler() {
         @Override
-        public void setOutcomes(List<OutcomeEvent> outcomes) {
+        public void setOutcomes(List<OSOutcomeEventParams> outcomes) {
             outcomeEvents = outcomes;
         }
     };
@@ -107,22 +122,28 @@ public class OutcomeEventUnitTests {
     public void beforeEachTest() throws Exception {
         outcomeEvents = null;
 
-        sessionManager = new MockSessionManager();
-        notificationData = new MockOutcomesUtils();
-        dbHelper = OneSignalDbHelper.getInstance(RuntimeEnvironment.application);
-        service = new MockOutcomeEventsService();
-        repository = new MockOutcomeEventsRepository(service, dbHelper);
-        controller = new MockOutcomeEventsController(sessionManager, repository);
+        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        preferences = new MockOSSharedPreferences();
+        // Mock on a custom HashMap in order to not use custom context
+        preferences.mock = true;
+
+        trackerFactory = new OSTrackerFactory(preferences, logWrapper);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
+        service = new MockOneSignalAPIClient();
+        MockOutcomeEventsFactory factory = new MockOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
+        controller = new MockOutcomeEventsController(sessionManager, factory);
 
         TestHelpers.beforeTestInitAndCleanup();
+        repository = factory.getRepository();
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
     }
 
     @After
     public void tearDown() throws Exception {
-        OneSignalPackagePrivateHelper.OneSignal_cleanOutcomeDatabaseTable(RuntimeEnvironment.application);
+        trackerFactory.clearInfluenceData();
+        preferences.reset();
+//        dbHelper.cleanOutcomeDatabase();
         dbHelper.close();
-        notificationData.clearNotificationSharedPreferences();
-        sessionManager.resetMock();
         StaticResetHelper.restSetStaticFields();
         threadAndTaskWait();
     }
@@ -130,10 +151,9 @@ public class OutcomeEventUnitTests {
     @Test
     public void testDirectOutcomeSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setNotificationIds(new JSONArray().put(NOTIFICATION_ID))
-                .setSession(OSSessionManager.Session.DIRECT)
-                .build());
+        sessionManager.initSessionFromCache();
+        // Set DIRECT notification id influence
+        sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
@@ -153,10 +173,12 @@ public class OutcomeEventUnitTests {
     @Test
     public void testIndirectOutcomeSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setNotificationIds(new JSONArray().put(NOTIFICATION_ID))
-                .setSession(OSSessionManager.Session.INDIRECT)
-                .build());
+        sessionManager.initSessionFromCache();
+        sessionManager.onNotificationReceived(NOTIFICATION_ID);
+        // Set DIRECT notification id influence
+        sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
+        // Restart session by app open should set INDIRECT influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
@@ -176,9 +198,8 @@ public class OutcomeEventUnitTests {
     @Test
     public void testUnattributedOutcomeSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Init session should set UNATTRIBUTED influence
+        sessionManager.initSessionFromCache();
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
@@ -198,9 +219,10 @@ public class OutcomeEventUnitTests {
     @Test
     public void testDisabledOutcomeSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.DISABLED)
-                .build());
+        // DISABLED influence
+        trackerFactory.saveInfluenceParams(disabledInfluenceParams);
+        // Init session should set UNATTRIBUTED influence but is DISABLED
+        sessionManager.initSessionFromCache();
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
@@ -218,11 +240,10 @@ public class OutcomeEventUnitTests {
     }
 
     @Test
-    public void testOutcomeWithValueSuccess() throws Exception {
+    public void testUnattributedOutcomeWithValueSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Init session should set UNATTRIBUTED influence
+        sessionManager.initSessionFromCache();
 
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
@@ -242,9 +263,8 @@ public class OutcomeEventUnitTests {
     @Test
     public void testDisableOutcomeWithValueSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.DISABLED)
-                .build());
+        // DISABLED influence
+        trackerFactory.saveInfluenceParams(disabledInfluenceParams);
 
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
@@ -264,10 +284,10 @@ public class OutcomeEventUnitTests {
     @Test
     public void testDirectOutcomeWithValueSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setNotificationIds(new JSONArray().put(NOTIFICATION_ID))
-                .setSession(OSSessionManager.Session.DIRECT)
-                .build());
+        sessionManager.initSessionFromCache();
+        sessionManager.onNotificationReceived(NOTIFICATION_ID);
+        // Set DIRECT notification id influence
+        sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
 
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
@@ -287,10 +307,12 @@ public class OutcomeEventUnitTests {
     @Test
     public void testIndirectOutcomeWithValueSuccess() throws Exception {
         service.setSuccess(true);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setNotificationIds(new JSONArray().put(NOTIFICATION_ID))
-                .setSession(OSSessionManager.Session.INDIRECT)
-                .build());
+        sessionManager.initSessionFromCache();
+        sessionManager.onNotificationReceived(NOTIFICATION_ID);
+        // Set DIRECT notification id influence
+        sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
+        // Restart session by app open should set INDIRECT influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
@@ -310,9 +332,8 @@ public class OutcomeEventUnitTests {
     @Test
     public void testUniqueOutcomeFailSavedOnDBResetSession() throws Exception {
         service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Init session should set UNATTRIBUTED influence
+        sessionManager.initSessionFromCache();
 
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
@@ -328,7 +349,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
-        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
+        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getOutcomeId());
         assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
 
         controller.cleanOutcomes();
@@ -346,16 +367,15 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(2, outcomeEvents.size());
-        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
-        assertEquals(OUTCOME_NAME, outcomeEvents.get(1).getName());
+        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getOutcomeId());
+        assertEquals(OUTCOME_NAME, outcomeEvents.get(1).getOutcomeId());
     }
 
     @Test
     public void testUniqueOutcomeFailSavedOnDB() throws Exception {
         service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Restart session by app open should set UNATTRIBUTED influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
@@ -372,15 +392,14 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
-        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
+        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getOutcomeId());
     }
 
     @Test
     public void testOutcomeFailSavedOnDB() throws Exception {
         service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Restart session by app open should set UNATTRIBUTED influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
@@ -394,7 +413,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() > 0);
-        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getName());
+        assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getOutcomeId());
     }
 
     @Test
@@ -402,21 +421,17 @@ public class OutcomeEventUnitTests {
         lockTimeTo(0);
         service.setSuccess(false);
 
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Restart session by app open should set UNATTRIBUTED influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
         controller.sendOutcomeEvent(OUTCOME_NAME);
 
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setNotificationIds(new JSONArray().put(NOTIFICATION_ID))
-                .setSession(OSSessionManager.Session.DIRECT)
-                .build());
+        sessionManager.onNotificationReceived(NOTIFICATION_ID);
+        // Set DIRECT notification id influence
+        sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
         controller.sendOutcomeEvent(OUTCOME_NAME + "1");
 
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setNotificationIds(new JSONArray().put(NOTIFICATION_ID))
-                .setSession(OSSessionManager.Session.INDIRECT)
-                .build());
+        // Restart session by app open should set INDIRECT influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
         controller.sendOutcomeEvent(OUTCOME_NAME + "2");
         threadAndTaskWait();
 
@@ -430,9 +445,8 @@ public class OutcomeEventUnitTests {
 
         assertEquals(3, outcomeEvents.size());
 
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.DISABLED)
-                .build());
+        // DISABLED influence
+        trackerFactory.saveInfluenceParams(disabledInfluenceParams);
         controller.sendOutcomeEvent(OUTCOME_NAME + "3");
         controller.sendOutcomeEvent(OUTCOME_NAME + "4");
         threadAndTaskWait();
@@ -446,23 +460,23 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(3, outcomeEvents.size());
-        for (OutcomeEvent outcomeEvent : outcomeEvents) {
-            if (outcomeEvent.getSession().isDirect()) {
-                assertEquals("OutcomeEvent{session=DIRECT, notificationIds=[\"testing\"], name='testing1', timestamp=0, weight=0.0}", outcomeEvent.toString());
-            } else if (outcomeEvent.getSession().isIndirect()) {
-                assertEquals("OutcomeEvent{session=INDIRECT, notificationIds=[\"testing\"], name='testing2', timestamp=0, weight=0.0}", outcomeEvent.toString());
-            } else {
-                assertEquals("OutcomeEvent{session=UNATTRIBUTED, notificationIds=[], name='testing', timestamp=0, weight=0.0}", outcomeEvent.toString());
-            }
+        for (OSOutcomeEventParams outcomeEvent : outcomeEvents) {
+            // UNATTRIBUTED Case
+            if (outcomeEvent.isUnattributed()) {
+                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=null, weight=0.0, timestamp=0}", outcomeEvent.toString());
+            } else if (outcomeEvent.getOutcomeSource().getIndirectBody() != null) { // INDIRECT Case
+                assertEquals("OSOutcomeEventParams{outcomeId='testing2', outcomeSource=OSOutcomeSource{directBody=null, indirectBody=OSOutcomeSourceBody{notificationIds=[\"testing\"], inAppMessagesIds=[]}}, weight=0.0, timestamp=0}", outcomeEvent.toString());
+            } else { // DIRECT Case
+                assertEquals("OSOutcomeEventParams{outcomeId='testing1', outcomeSource=OSOutcomeSource{directBody=OSOutcomeSourceBody{notificationIds=[\"testing\"], inAppMessagesIds=[]}, indirectBody=null}, weight=0.0, timestamp=0}", outcomeEvent.toString());
+            } // DISABLED Case should not be save
         }
     }
 
     @Test
     public void testSendFailedOutcomesOnDB() throws Exception {
         service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Restart session by app open should set UNATTRIBUTED influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
         controller.sendOutcomeEvent(OUTCOME_NAME);
         controller.sendOutcomeEvent(OUTCOME_NAME + "1");
@@ -501,9 +515,8 @@ public class OutcomeEventUnitTests {
     public void testSendFailedOutcomeWithValueOnDB() throws Exception {
         lockTimeTo(0);
         service.setSuccess(false);
-        sessionManager.setSessionResult(OSSessionManager.SessionResult.Builder.newInstance()
-                .setSession(OSSessionManager.Session.UNATTRIBUTED)
-                .build());
+        // Restart session by app open should set UNATTRIBUTED influence
+        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
@@ -534,51 +547,6 @@ public class OutcomeEventUnitTests {
 
         assertEquals(0, outcomeEvents.size());
         assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
-    }
-
-    @Test
-    public void testIndirectSession() throws Exception {
-        notificationData.markLastNotificationReceived(NOTIFICATION_ID);
-
-        sessionManager.startSession();
-        threadAndTaskWait();
-        assertTrue(sessionManager.getSession().isIndirect());
-        threadAndTaskWait();
-        assertEquals(1, sessionManager.getLastNotificationsReceivedIds().length());
-    }
-
-    @Test
-    public void testIndirectQuantitySession() throws Exception {
-        for (int i = 0; i < NOTIFICATION_LIMIT + 5; i++) {
-            notificationData.markLastNotificationReceived(NOTIFICATION_ID + i);
-        }
-
-        sessionManager.startSession();
-        assertTrue(sessionManager.getSession().isIndirect());
-        assertNull(sessionManager.getDirectNotificationId());
-        assertEquals(NOTIFICATION_LIMIT, sessionManager.getLastNotificationsReceivedIds().length());
-        assertEquals(NOTIFICATION_ID + "5", sessionManager.getLastNotificationsReceivedIds().get(0));
-    }
-
-    @Test
-    public void testDirectSession() {
-        for (int i = 0; i < NOTIFICATION_LIMIT + 5; i++) {
-            notificationData.markLastNotificationReceived(NOTIFICATION_ID + i);
-        }
-
-        sessionManager.onDirectSessionFromNotificationOpen(NOTIFICATION_ID);
-        assertTrue(sessionManager.getSession().isDirect());
-        assertNull(sessionManager.getIndirectNotificationIds());
-        assertEquals(NOTIFICATION_ID, sessionManager.getDirectNotificationId());
-    }
-
-    @Test
-    public void testUnattributedSession() {
-        sessionManager.startSession();
-
-        assertTrue(sessionManager.getSession().isUnattributed());
-        assertEquals(new JSONArray(), sessionManager.getLastNotificationsReceivedIds());
-        assertNull(sessionManager.getDirectNotificationId());
     }
 
 }
