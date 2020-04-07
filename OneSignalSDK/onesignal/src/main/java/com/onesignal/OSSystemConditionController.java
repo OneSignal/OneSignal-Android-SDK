@@ -30,9 +30,13 @@ class OSSystemConditionController {
             return false;
         }
 
-        if (isDialogFragmentShowing(ActivityLifecycleHandler.curActivity)) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "OSSystemConditionObserver dialog fragment detected");
-            return false;
+        try {
+            if (isDialogFragmentShowing(ActivityLifecycleHandler.curActivity)) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "OSSystemConditionObserver dialog fragment detected");
+                return false;
+            }
+        } catch (NoClassDefFoundError exception) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: " + exception);
         }
 
         boolean keyboardUp = OSViewUtils.isKeyboardUp(new WeakReference<>(ActivityLifecycleHandler.curActivity));
@@ -43,7 +47,7 @@ class OSSystemConditionController {
         return !keyboardUp;
     }
 
-    boolean isDialogFragmentShowing(Context context) {
+    boolean isDialogFragmentShowing(Context context) throws NoClassDefFoundError {
         // Detect if user has a dialog fragment showing
         if (context instanceof AppCompatActivity) {
             final FragmentManager manager = ((AppCompatActivity) context).getSupportFragmentManager();
@@ -67,7 +71,6 @@ class OSSystemConditionController {
                 return fragment.isVisible() && fragment instanceof DialogFragment;
             }
         }
-
         // We already have Activity lifecycle listener, that listener will handle Activity focus/unFocus state
         //   - Permission prompts will make activity loose focus
         // We cannot detect AlertDialogs because they are added to the decor view as linear layout without an identification

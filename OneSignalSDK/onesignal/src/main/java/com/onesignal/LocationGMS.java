@@ -206,6 +206,8 @@ class LocationGMS {
                else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
                   if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED)
                      requestPermission = "android.permission.ACCESS_COARSE_LOCATION";
+               } else {
+                  OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Location permissions not added on AndroidManifest file");
                }
 
                // We handle the following cases:
