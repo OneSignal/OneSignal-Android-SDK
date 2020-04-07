@@ -9,7 +9,7 @@ import org.json.JSONObject;
 
 import java.net.HttpURLConnection;
 
-class OneSignalRemoteParams {
+public class OneSignalRemoteParams {
 
    static class FCMParams {
       @Nullable String projectId;
@@ -17,13 +17,59 @@ class OneSignalRemoteParams {
       @Nullable String apiKey;
    }
 
-   static class OutcomesParams {
-      //in minutes
-      int indirectAttributionWindow = DEFAULT_INDIRECT_ATTRIBUTION_WINDOW;
+   public static class InfluenceParams {
+      // In minutes
+      int indirectNotificationAttributionWindow = DEFAULT_INDIRECT_ATTRIBUTION_WINDOW;
       int notificationLimit = DEFAULT_NOTIFICATION_LIMIT;
+      // In minutes
+      int indirectIAMAttributionWindow = DEFAULT_INDIRECT_ATTRIBUTION_WINDOW;
+      int iamLimit = DEFAULT_NOTIFICATION_LIMIT;
+
       boolean directEnabled = false;
       boolean indirectEnabled = false;
       boolean unattributedEnabled = false;
+      boolean v2Enabled = false;
+
+      public int getIndirectNotificationAttributionWindow() {
+         return indirectNotificationAttributionWindow;
+      }
+
+      public int getNotificationLimit() {
+         return notificationLimit;
+      }
+
+      public int getIndirectIAMAttributionWindow() {
+         return indirectIAMAttributionWindow;
+      }
+
+      public int getIamLimit() {
+         return iamLimit;
+      }
+
+      public boolean isDirectEnabled() {
+         return directEnabled;
+      }
+
+      public boolean isIndirectEnabled() {
+         return indirectEnabled;
+      }
+
+      public boolean isUnattributedEnabled() {
+         return unattributedEnabled;
+      }
+
+      @Override
+      public String toString() {
+         return "InfluenceParams{" +
+                 "indirectNotificationAttributionWindow=" + indirectNotificationAttributionWindow +
+                 ", notificationLimit=" + notificationLimit +
+                 ", indirectIAMAttributionWindow=" + indirectIAMAttributionWindow +
+                 ", iamLimit=" + iamLimit +
+                 ", directEnabled=" + directEnabled +
+                 ", indirectEnabled=" + indirectEnabled +
+                 ", unattributedEnabled=" + unattributedEnabled +
+                 '}';
+      }
    }
 
    static class Params {
@@ -35,7 +81,7 @@ class OneSignalRemoteParams {
       boolean restoreTTLFilter;
       boolean clearGroupOnSummaryClick;
       boolean receiveReceiptEnabled;
-      OutcomesParams outcomesParams;
+      InfluenceParams influenceParams;
       FCMParams fcmParams;
    }
 
@@ -46,10 +92,12 @@ class OneSignalRemoteParams {
    private static int androidParamsRetries = 0;
 
    private static final String OUTCOME_PARAM = "outcomes";
+   private static final String V2_PARAM = "v2_active";
    private static final String ENABLED_PARAM = "enabled";
    private static final String DIRECT_PARAM = "direct";
    private static final String INDIRECT_PARAM = "indirect";
    private static final String NOTIFICATION_ATTRIBUTION_PARAM = "notification_attribution";
+   private static final String IAM_ATTRIBUTION_PARAM = "iam_attribution";
    private static final String UNATTRIBUTED_PARAM = "unattributed";
 
    private static final String FCM_PARENT_PARAM = "fcm";
@@ -61,8 +109,8 @@ class OneSignalRemoteParams {
    private static final int MIN_WAIT_BETWEEN_RETRIES = 30_000;
    private static final int MAX_WAIT_BETWEEN_RETRIES = 90_000;
 
-   static final int DEFAULT_INDIRECT_ATTRIBUTION_WINDOW = 24 * 60;
-   static final int DEFAULT_NOTIFICATION_LIMIT = 10;
+   public static final int DEFAULT_INDIRECT_ATTRIBUTION_WINDOW = 24 * 60;
+   public static final int DEFAULT_NOTIFICATION_LIMIT = 10;
 
    static void makeAndroidParamsRequest(final @NonNull CallBack callBack) {
       OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
@@ -123,30 +171,10 @@ class OneSignalRemoteParams {
          clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
          receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
 
-         outcomesParams = new OutcomesParams();
+         influenceParams = new InfluenceParams();
          // Process outcomes params
-         if (responseJson.has(OUTCOME_PARAM)) {
-            JSONObject outcomes = responseJson.optJSONObject(OUTCOME_PARAM);
-
-            if (outcomes.has(DIRECT_PARAM)) {
-               JSONObject direct = outcomes.optJSONObject(DIRECT_PARAM);
-               outcomesParams.directEnabled = direct.optBoolean(ENABLED_PARAM);
-            }
-            if (outcomes.has(INDIRECT_PARAM)) {
-               JSONObject indirect = outcomes.optJSONObject(INDIRECT_PARAM);
-               outcomesParams.indirectEnabled = indirect.optBoolean(ENABLED_PARAM);
-
-               if (indirect.has(NOTIFICATION_ATTRIBUTION_PARAM)) {
-                  JSONObject indirectNotificationAttribution = indirect.optJSONObject(NOTIFICATION_ATTRIBUTION_PARAM);
-                  outcomesParams.indirectAttributionWindow = indirectNotificationAttribution.optInt("minutes_since_displayed", DEFAULT_INDIRECT_ATTRIBUTION_WINDOW);
-                  outcomesParams.notificationLimit = indirectNotificationAttribution.optInt("limit", DEFAULT_NOTIFICATION_LIMIT);
-               }
-            }
-            if (outcomes.has(UNATTRIBUTED_PARAM)) {
-               JSONObject unattributed = outcomes.optJSONObject(UNATTRIBUTED_PARAM);
-               outcomesParams.unattributedEnabled = unattributed.optBoolean(ENABLED_PARAM);
-            }
-         }
+         if (responseJson.has(OUTCOME_PARAM))
+            processOutcomeJson(responseJson.optJSONObject(OUTCOME_PARAM), influenceParams);
 
          fcmParams = new FCMParams();
          if (responseJson.has(FCM_PARENT_PARAM)) {
@@ -158,5 +186,35 @@ class OneSignalRemoteParams {
       }};
 
       callBack.complete(params);
+   }
+
+   static private void processOutcomeJson(JSONObject outcomeJson, InfluenceParams influenceParams) {
+      if (outcomeJson.has(V2_PARAM))
+         influenceParams.v2Enabled = outcomeJson.optBoolean(V2_PARAM);;
+
+      if (outcomeJson.has(DIRECT_PARAM)) {
+         JSONObject direct = outcomeJson.optJSONObject(DIRECT_PARAM);
+         influenceParams.directEnabled = direct.optBoolean(ENABLED_PARAM);
+      }
+      if (outcomeJson.has(INDIRECT_PARAM)) {
+         JSONObject indirect = outcomeJson.optJSONObject(INDIRECT_PARAM);
+         influenceParams.indirectEnabled = indirect.optBoolean(ENABLED_PARAM);
+
+         if (indirect.has(NOTIFICATION_ATTRIBUTION_PARAM)) {
+            JSONObject indirectNotificationAttribution = indirect.optJSONObject(NOTIFICATION_ATTRIBUTION_PARAM);
+            influenceParams.indirectNotificationAttributionWindow = indirectNotificationAttribution.optInt("minutes_since_displayed", DEFAULT_INDIRECT_ATTRIBUTION_WINDOW);
+            influenceParams.notificationLimit = indirectNotificationAttribution.optInt("limit", DEFAULT_NOTIFICATION_LIMIT);
+         }
+
+         if (indirect.has(IAM_ATTRIBUTION_PARAM)) {
+            JSONObject indirectIAMAttribution = indirect.optJSONObject(IAM_ATTRIBUTION_PARAM);
+            influenceParams.indirectIAMAttributionWindow = indirectIAMAttribution.optInt("minutes_since_displayed", DEFAULT_INDIRECT_ATTRIBUTION_WINDOW);
+            influenceParams.iamLimit = indirectIAMAttribution.optInt("limit", DEFAULT_NOTIFICATION_LIMIT);
+         }
+      }
+      if (outcomeJson.has(UNATTRIBUTED_PARAM)) {
+         JSONObject unattributed = outcomeJson.optJSONObject(UNATTRIBUTED_PARAM);
+         influenceParams.unattributedEnabled = unattributed.optBoolean(ENABLED_PARAM);
+      }
    }
 }

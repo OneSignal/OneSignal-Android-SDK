@@ -24,6 +24,9 @@ android {
             maxParallelForks 1
             maxHeapSize '2048m'
         }
+        unitTests {
+            includeAndroidResources = true
+        }
     }
 }
 
