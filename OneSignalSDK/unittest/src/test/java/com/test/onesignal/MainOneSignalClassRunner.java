@@ -41,7 +41,10 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
-import com.onesignal.MockOutcomesUtils;
+import com.onesignal.MockOSLog;
+import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOneSignalDBHelper;
+import com.onesignal.MockSessionManager;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -56,7 +59,6 @@ import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.PermissionsActivity;
@@ -83,6 +85,7 @@ import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.example.MainActivity;
+import com.onesignal.influence.OSTrackerFactory;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -117,6 +120,9 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppId;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
@@ -177,7 +183,9 @@ public class MainOneSignalClassRunner {
    private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
    private static ActivityController<BlankActivity> blankActivityController;
-   private MockOutcomesUtils notificationData;
+   private OSTrackerFactory trackerFactory;
+   private MockSessionManager sessionManager;
+   private MockOneSignalDBHelper dbHelper;
 
    private static void GetIdsAvailable() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
@@ -244,14 +252,16 @@ public class MainOneSignalClassRunner {
    public void beforeEachTest() throws Exception {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
-      notificationData = new MockOutcomesUtils();
+      trackerFactory = new OSTrackerFactory(new MockOSSharedPreferences(), new MockOSLog());
+      sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
+      dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
 
       cleanUp();
    }
 
    @After
    public void afterEachTest() throws Exception {
-      notificationData.clearNotificationSharedPreferences();
+      trackerFactory.clearInfluenceData();
       afterTestCleanup();
    }
 
@@ -482,16 +492,16 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       advanceSystemTimeBy(31);
 
-      notificationData.markLastNotificationReceived("notification_id");
+      sessionManager.onNotificationReceived("notification_id");
       blankActivityController.resume();
       threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
-      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-
-      notificationData.saveOutcomesParams(params);
       advanceSystemTimeBy(61);
+
+      OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+      trackerFactory.saveInfluenceParams(params);
 
       blankActivityController.pause();
       threadAndTaskWait();
@@ -514,7 +524,7 @@ public class MainOneSignalClassRunner {
 
       // Disable all outcome flags
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-      notificationData.saveOutcomesParams(params);
+      trackerFactory.saveInfluenceParams(params);
 
       // Background app for 31 seconds
       blankActivityController.pause();
@@ -557,7 +567,7 @@ public class MainOneSignalClassRunner {
 
       // Disable all outcome flags
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false);
-      notificationData.saveOutcomesParams(params);
+      trackerFactory.saveInfluenceParams(params);
 
       // Background app for 31 seconds
       blankActivityController.pause();
@@ -600,11 +610,11 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      notificationData.markLastNotificationReceived("notification_id");
+      sessionManager.onDirectInfluenceFromNotificationOpen("notification_id");
 
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
 
-      notificationData.saveOutcomesParams(params);
+      trackerFactory.saveInfluenceParams(params);
       advanceSystemTimeBy(10);
 
       ShadowOneSignalRestClient.lastUrl = null;
@@ -623,14 +633,16 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       advanceSystemTimeBy(31);
 
-      notificationData.markLastNotificationReceived("notification_id");
+      final String notificationId = "notification_id";
+      sessionManager.onNotificationReceived(notificationId);
+      sessionManager.onDirectInfluenceFromNotificationOpen(notificationId);
       blankActivityController.resume();
       threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
 
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-      notificationData.saveOutcomesParams(params);
+      trackerFactory.saveInfluenceParams(params);
 
       advanceSystemTimeBy(61);
 
@@ -647,7 +659,7 @@ public class MainOneSignalClassRunner {
       assertOnFocusAtIndex(3, new JSONObject() {{
          put("active_time", 61);
          put("direct", false);
-         put("notification_ids", new JSONArray().put("notification_id"));
+         put("notification_ids", new JSONArray().put(notificationId));
       }});
 
       // Doing a quick 1 second focus should NOT trigger another network call
@@ -660,7 +672,7 @@ public class MainOneSignalClassRunner {
       assertRestCalls(4);
    }
 
-   private static void setOneSignalContextOpenAppThenBackgroundAndResume() throws Exception {
+   private void setOneSignalContextOpenAppThenBackgroundAndResume() throws Exception {
       // 1. Context could be set by the app like this; Or on it's own when a push or other event happens
       OneSignal.setAppContext(blankActivity.getApplication());
 
@@ -685,6 +697,9 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testStillRegistersIfInitCalledAfterIgnoredFocusEvents() throws Exception {
+      OneSignal_setTrackerFactory(trackerFactory);
+      OneSignal_setSessionManager(sessionManager);
+
       setOneSignalContextOpenAppThenBackgroundAndResume();
 
       OneSignalInit();
@@ -3371,7 +3386,7 @@ public class MainOneSignalClassRunner {
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
 
       // Make sure they are marked dismissed.
-      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
+      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDb.query(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, new String[] { "created_time" },
           OneSignalPackagePrivateHelper.NotificationTable.COLUMN_NAME_DISMISSED + " = 1", null, null, null, null);
       assertEquals(2, cursor.getCount());
@@ -4234,7 +4249,11 @@ public class MainOneSignalClassRunner {
 
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      ShadowOSUtils.subscribableStatus = 1;
+      OneSignal_setTrackerFactory(trackerFactory);
+      OneSignal_setSessionManager(sessionManager);
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
+      trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
       blankActivityController.resume();
    }
 

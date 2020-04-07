@@ -47,6 +47,10 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -61,6 +65,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -90,21 +95,21 @@ public class OneSignal {
       None, InAppAlert, Notification
    }
 
-   enum AppEntryAction {
+   public enum AppEntryAction {
       NOTIFICATION_CLICK,
       APP_OPEN,
       APP_CLOSE,
       ;
 
-      boolean isNotificationClick() {
+      public boolean isNotificationClick() {
           return this.equals(NOTIFICATION_CLICK);
       }
 
-      boolean isAppOpen() {
+      public boolean isAppOpen() {
           return this.equals(APP_OPEN);
       }
 
-      boolean isAppClose() {
+      public boolean isAppClose() {
           return this.equals(APP_CLOSE);
       }
    }
@@ -429,17 +434,24 @@ public class OneSignal {
 
    public static final String VERSION = "031302";
 
-   private static OSSessionManager.SessionListener getNewSessionListener() {
-      return new OSSessionManager.SessionListener() {
+   private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
-         public void onSessionEnding(@NonNull OSSessionManager.SessionResult lastSessionResult) {
-            outcomeEventsController.cleanOutcomes();
-            FocusTimeController.getInstance().onSessionEnded(lastSessionResult);
+         public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
+            if (outcomeEventsController == null)
+               OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before initZ");
+            if (outcomeEventsController != null)
+               outcomeEventsController.cleanOutcomes();
+            FocusTimeController.getInstance().onSessionEnded(lastInfluences);
          }
       };
-   }
-   @Nullable private static OSSessionManager sessionManager;
-   @Nullable private static OutcomeEventsController outcomeEventsController;
+
+   private static OSLogger logger = new OSLogWrapper();
+   private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
+   private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
+   private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger);
+   private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
+   @Nullable private static OSOutcomeEventsController outcomeEventsController;
+   @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
@@ -603,8 +615,11 @@ public class OneSignal {
       ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application)appContext);
 
       if (wasAppContextNull) {
-         sessionManager = new OSSessionManager(getNewSessionListener());
-         outcomeEventsController = new OutcomeEventsController(sessionManager, getDBHelperInstance());
+         if (outcomeEventsFactory == null)
+            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
+
+         sessionManager.initSessionFromCache();
+         outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
@@ -816,11 +831,11 @@ public class OneSignal {
           OneSignalStateSynchronizer.setNewSession();
          if (foreground) {
             outcomeEventsController.cleanOutcomes();
-            sessionManager.restartSessionIfNeeded();
+            sessionManager.restartSessionIfNeeded(getAppEntryState());
          }
       } else if (foreground) {
          OSInAppMessageController.getController().initWithCachedInAppMessages();
-         sessionManager.attemptSessionUpgrade();
+         sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
 
       // We still want register the user to OneSignal if the SDK was initialized
@@ -1028,8 +1043,13 @@ public class OneSignal {
                OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
                remoteParams.receiveReceiptEnabled
             );
-           
-            OutcomesUtils.saveOutcomesParams(params.outcomesParams);
+            OneSignalPrefs.saveBool(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               OneSignalPrefs.PREFS_OS_OUTCOMES_V2,
+                    params.influenceParams.v2Enabled
+            );
+            logger.log(LOG_LEVEL.DEBUG, "OneSignal saveInfluenceParams: " + params.influenceParams.toString());
+            trackerFactory.saveInfluenceParams(params.influenceParams);
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
@@ -2108,7 +2128,7 @@ public class OneSignal {
    }
 
    // Called when opening a notification
-   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert, String notificationId) {
+   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert, @Nullable String notificationId) {
 
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
@@ -2129,7 +2149,7 @@ public class OneSignal {
       if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
-         sessionManager.onDirectSessionFromNotificationOpen(notificationId);
+         sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
       }
 
       runNotificationOpenedCallback(data, true, fromAlert);
@@ -3076,6 +3096,14 @@ public class OneSignal {
       return id == null || OneSignal.isDuplicateNotification(id, context);
    }
 
+   private static String getNotificationIdFromGCMJsonPayload(JSONObject jsonPayload) {
+      try {
+         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
+         return customJSON.optString("i", null);
+      } catch(Throwable t) {}
+      return null;
+   }
+
    static boolean isAppActive() {
       return initDone && isForeground();
    }
@@ -3120,23 +3148,41 @@ public class OneSignal {
    }
 
    /*
+    * Start Mock Injection module
+    */
+   static void setTrackerFactory(OSTrackerFactory trackerFactory) {
+      OneSignal.trackerFactory = trackerFactory;
+   }
+
+   static void setSessionManager(OSSessionManager sessionManager) {
+      OneSignal.sessionManager = sessionManager;
+   }
+
+   static void setSharedPreferences(OSSharedPreferences preferences) {
+      OneSignal.preferences = preferences;
+   }
+
+   static OSSessionManager.SessionListener getSessionListener() {
+      return sessionListener;
+   }
+   /*
+    * End Mock Injection module
+    */
+
+   /*
     * Start OneSignalOutcome module
     */
    static OSSessionManager getSessionManager() {
       return sessionManager;
    }
 
-   static void sendClickActionOutcome(@NonNull String name) {
-      sendClickActionOutcomeWithValue(name, 0);
-   }
-
-   static void sendClickActionOutcomeWithValue(@NonNull String name, float value) {
+   static void sendClickActionOutcomes(@NonNull List<OSInAppMessageOutcome> outcomes) {
       if (outcomeEventsController == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
          return;
       }
 
-      outcomeEventsController.sendClickOutcomeEventWithValue(name, value);
+      outcomeEventsController.sendClickActionOutcomes(outcomes);
    }
 
    public static void sendOutcome(@NonNull String name) {
@@ -3153,15 +3199,6 @@ public class OneSignal {
       }
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
-   }
-
-   static void sendClickActionUniqueOutcome(@NonNull String name) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
-         return;
-      }
-
-      outcomeEventsController.sendUniqueClickOutcomeEvent(name);
    }
 
    public static void sendUniqueOutcome(@NonNull String name) {
@@ -3216,12 +3253,12 @@ public class OneSignal {
 
    /**
     * OutcomeEvent will be null in cases where the request was not sent:
-    *    1. OutcomeEvent cached already for re-attempt in future
-    *    2. Unique OutcomeEvent already sent for ATTRIBUTED session and notification(s)
-    *    3. Unique OutcomeEvent already sent for UNATTRIBUTED session during session
+    *    1. OutcomeEventParams cached already for re-attempt in future
+    *    2. Unique OutcomeEventParams already sent for ATTRIBUTED session and notification(s)
+    *    3. Unique OutcomeEventParams already sent for UNATTRIBUTED session during session
     */
    public interface OutcomeCallback {
-      void onSuccess(@Nullable OutcomeEvent outcomeEvent);
+      void onSuccess(@Nullable OSOutcomeEventParams outcomeEvent);
    }
    /*
     * End OneSignalOutcome module

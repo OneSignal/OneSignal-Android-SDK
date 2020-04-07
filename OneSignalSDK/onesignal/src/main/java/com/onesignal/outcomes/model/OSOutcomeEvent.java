@@ -1,13 +1,15 @@
-package com.onesignal;
+package com.onesignal.outcomes.model;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
+import com.onesignal.influence.model.OSInfluenceType;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class OutcomeEvent {
+public class OSOutcomeEvent {
 
     private static final String SESSION = "session";
     private static final String NOTIFICATION_IDS = "notification_ids";
@@ -15,13 +17,13 @@ public class OutcomeEvent {
     private static final String TIMESTAMP = "timestamp";
     private static final String WEIGHT = "weight";
 
-    private OSSessionManager.Session session;
+    private OSInfluenceType session;
     private JSONArray notificationIds;
     private String name;
     private long timestamp;
     private Float weight;
 
-    public OutcomeEvent(@NonNull OSSessionManager.Session session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, float weight) {
+    public OSOutcomeEvent(@NonNull OSInfluenceType session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, float weight) {
         this.session = session;
         this.notificationIds = notificationIds;
         this.name = name;
@@ -29,7 +31,24 @@ public class OutcomeEvent {
         this.weight = weight;
     }
 
-    public OSSessionManager.Session getSession() {
+    public static OSOutcomeEvent fromOutcomeEventParams(OSOutcomeEventParams outcomeEventParams) {
+        OSInfluenceType session = OSInfluenceType.UNATTRIBUTED;
+        JSONArray notificationId = null;
+        if (outcomeEventParams.getOutcomeSource() != null) {
+            OSOutcomeSource source = outcomeEventParams.getOutcomeSource();
+            if (source.getDirectBody() != null && source.getDirectBody().getNotificationIds() != null && source.getDirectBody().getNotificationIds().length() > 0) {
+                session = OSInfluenceType.DIRECT;
+                notificationId = source.getDirectBody().getNotificationIds();
+            } else if (source.getIndirectBody() != null && source.getIndirectBody().getNotificationIds() != null && source.getIndirectBody().getNotificationIds().length() > 0) {
+                session = OSInfluenceType.INDIRECT;
+                notificationId = source.getIndirectBody().getNotificationIds();
+            }
+        }
+
+        return new OSOutcomeEvent(session, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
+    }
+
+    public OSInfluenceType getSession() {
         return session;
     }
 
@@ -49,38 +68,25 @@ public class OutcomeEvent {
         return weight;
     }
 
-    public JSONObject toJSONObject() {
+    public JSONObject toJSONObject() throws JSONException {
         JSONObject json = new JSONObject();
-
-        try {
-            json.put(SESSION, session);
-            json.put(NOTIFICATION_IDS, notificationIds);
-            json.put(OUTCOME_ID, name);
-            json.put(TIMESTAMP, timestamp);
-            json.put(WEIGHT, weight);
-        } catch (JSONException exception) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating OutcomeEvent toJSONObject ", exception);
-        }
-
+        json.put(SESSION, session);
+        json.put(NOTIFICATION_IDS, notificationIds);
+        json.put(OUTCOME_ID, name);
+        json.put(TIMESTAMP, timestamp);
+        json.put(WEIGHT, weight);
         return json;
     }
 
-    JSONObject toJSONObjectForMeasure() {
+    public JSONObject toJSONObjectForMeasure() throws JSONException {
         JSONObject json = new JSONObject();
-
-        try {
-            if (notificationIds != null && notificationIds.length() > 0)
-                json.put(NOTIFICATION_IDS, notificationIds);
-
-            json.put(OUTCOME_ID, name);
-
-            if (weight > 0)
-                json.put(WEIGHT, weight);
-
-        } catch (JSONException exception) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Generating OutcomeEvent toJSONObject ", exception);
-        }
-
+        if (notificationIds != null && notificationIds.length() > 0)
+            json.put(NOTIFICATION_IDS, notificationIds);
+        json.put(OUTCOME_ID, name);
+        if (weight > 0)
+            json.put(WEIGHT, weight);
+        if (timestamp > 0)
+            json.put(TIMESTAMP, timestamp);
         return json;
     }
 
@@ -92,7 +98,7 @@ public class OutcomeEvent {
         if (o == null || this.getClass() != o.getClass())
             return false;
 
-        OutcomeEvent event = (OutcomeEvent) o;
+        OSOutcomeEvent event = (OSOutcomeEvent) o;
         return this.session.equals(event.session) &&
                 this.notificationIds.equals(event.notificationIds) &&
                 this.name.equals(event.name) &&

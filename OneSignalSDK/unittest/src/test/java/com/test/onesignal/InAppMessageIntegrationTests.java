@@ -4,6 +4,10 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 
 import com.onesignal.InAppMessagingHelpers;
+import com.onesignal.MockOSLog;
+import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOneSignalDBHelper;
+import com.onesignal.MockSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
@@ -22,6 +26,8 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
+import com.onesignal.influence.MockOSInfluenceData;
+import com.onesignal.influence.OSTrackerFactory;
 
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
@@ -36,6 +42,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
@@ -51,6 +58,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -59,19 +70,19 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
+        instrumentedPackages = {"com.onesignal"},
         shadows = {
-            ShadowOneSignalRestClient.class,
-            ShadowPushRegistratorGCM.class,
-            ShadowOSUtils.class,
-            ShadowAdvertisingIdProviderGPS.class,
-            ShadowCustomTabsClient.class,
-            ShadowCustomTabsSession.class,
-            ShadowNotificationManagerCompat.class,
-            ShadowJobService.class,
-            ShadowDynamicTimer.class,
-            ShadowOSWebView.class,
-            ShadowOSViewUtils.class
+                ShadowOneSignalRestClient.class,
+                ShadowPushRegistratorGCM.class,
+                ShadowOSUtils.class,
+                ShadowAdvertisingIdProviderGPS.class,
+                ShadowCustomTabsClient.class,
+                ShadowCustomTabsSession.class,
+                ShadowNotificationManagerCompat.class,
+                ShadowJobService.class,
+                ShadowDynamicTimer.class,
+                ShadowOSWebView.class,
+                ShadowOSViewUtils.class
         },
         sdk = 21
 )
@@ -87,10 +98,14 @@ public class InAppMessageIntegrationTests {
     private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
     private static final int LIMIT = 5;
     private static final int DELAY = 60;
-
+    private MockOSSharedPreferences preferences;
+    private OSTrackerFactory trackerFactory;
+    private MockSessionManager sessionManager;
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
     private static ActivityController<BlankActivity> blankActivityController;
+
+    private MockOneSignalDBHelper dbHelper;
 
     @BeforeClass
     public static void setupClass() throws Exception {
@@ -108,10 +123,12 @@ public class InAppMessageIntegrationTests {
     @Before
     public void beforeEachTest() throws Exception {
         ShadowDynamicTimer.shouldScheduleTimers = true;
-
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
+        sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
-
+        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
         TestHelpers.beforeTestInitAndCleanup();
     }
 
@@ -120,6 +137,8 @@ public class InAppMessageIntegrationTests {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
+        trackerFactory.clearInfluenceData();
+        preferences.reset();
 
         TestHelpers.afterTestCleanup();
 
@@ -128,7 +147,7 @@ public class InAppMessageIntegrationTests {
 
     @Test
     public void testDisableInAppMessagingPreventsMessageDisplay() throws Exception {
-        final OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
+        final OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(testMessage);
@@ -160,7 +179,7 @@ public class InAppMessageIntegrationTests {
 
         OneSignal.addTriggers(new HashMap<String, Object>() {{
             put("test_1", 3);
-            put("test_2", 2); 
+            put("test_2", 2);
         }});
         threadAndTaskWait();
 
@@ -223,8 +242,8 @@ public class InAppMessageIntegrationTests {
 
 
     private void nextResponseMultiplePendingMessages() throws JSONException {
-        final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
-        final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM,"test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2);
+        final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
+        final OSTestInAppMessage testSecondMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(testFirstMessage);
@@ -261,26 +280,26 @@ public class InAppMessageIntegrationTests {
                 .atMost(new Duration(150, TimeUnit.MILLISECONDS))
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
                 .until(new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
-                return OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1;
-            }
-        });
+                    @Override
+                    public Boolean call() throws Exception {
+                        return OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1;
+                    }
+                });
     }
 
 
     @Test
     public void testAfterLastInAppTimeIsDisplayed() throws Exception {
         final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
-           OSTriggerKind.SESSION_TIME,
-           null,
-           OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(),
-           0.05
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(),
+                0.05
         );
 
         ArrayList<ArrayList<OSTestTrigger>> triggers2 = new ArrayList<ArrayList<OSTestTrigger>>() {{
             add(new ArrayList<OSTestTrigger>() {{
-                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.SESSION_TIME,null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.1));
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.SESSION_TIME, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.1));
                 add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.TIME_SINCE_LAST_IN_APP, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05));
             }});
         }};
@@ -301,36 +320,36 @@ public class InAppMessageIntegrationTests {
         // for the correct amount of time, so all we are doing here is checking to
         // make sure the message actually gets displayed once the timer fires
         Awaitility.await()
-           .atMost(new Duration(150, TimeUnit.MILLISECONDS))
-           .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
-           .untilAsserted(new ThrowingRunnable() {
-               @Override
-               public void run() {
-                   assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                   assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
-               }
-           });
+                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                        assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    }
+                });
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
 
         // Second in app should now display
         Awaitility.await()
-          .atMost(new Duration(1, TimeUnit.SECONDS))
-          .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
-          .untilAsserted(new ThrowingRunnable() {
-              @Override
-              public void run() {
-                  assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                  assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
-              }
-          });
+                .atMost(new Duration(1, TimeUnit.SECONDS))
+                .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                        assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    }
+                });
     }
 
     /**
      * If an in-app message should only be shown if (A) session_duration is > 30 seconds and
      * (B) a key/value trigger is set, and it should not set up a timer until all of the non-timer
      * based triggers for that message evaluate to true
-     *
+     * <p>
      * For this test, a timer should never be scheduled because the key/value 'test_key' trigger
      * will not be set until the session duration has already exceeded the minimum (0.05 seconds)
      */
@@ -338,7 +357,7 @@ public class InAppMessageIntegrationTests {
     public void testTimedMessageDisplayedAfterAllTriggersValid() throws Exception {
         ArrayList<ArrayList<OSTestTrigger>> triggers = new ArrayList<ArrayList<OSTestTrigger>>() {{
             add(new ArrayList<OSTestTrigger>() {{
-                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.CUSTOM,"test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), "squirrel"));
+                add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.CUSTOM, "test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), "squirrel"));
                 add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.SESSION_TIME, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.01));
             }});
         }};
@@ -449,14 +468,16 @@ public class InAppMessageIntegrationTests {
 
         // 2. Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
-           OSTriggerKind.SESSION_TIME,
-           null,
-           OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
-           null
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
         );
 
         // 2. Count IAM as clicked
-        JSONObject action = new JSONObject() {{ put("id", IAM_CLICK_ID); }};
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+        }};
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
 
         // 3. Ensure click is sent
@@ -483,12 +504,55 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        // Enable Outcomes
-        TestOneSignalPrefs.saveBool(
-                TestOneSignalPrefs.PREFS_ONESIGNAL,
-                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
-                true
+        // Enable influence outcomes
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
+
+        // 2. Create an IAM
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null
         );
+
+        final JSONArray outcomes = new JSONArray();
+        outcomes.put(new JSONObject() {{
+            put("name", IAM_OUTCOME_NAME);
+        }});
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+            put("outcomes", outcomes);
+        }};
+
+        OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
+
+        // 3. Ensure outcome is sent
+        ShadowOneSignalRestClient.Request iamOutcomeRequest = ShadowOneSignalRestClient.requests.get(3);
+
+        assertEquals("outcomes/measure", iamOutcomeRequest.url);
+        // Requests: Param request + Players Request + Click request + Outcome Request
+        assertEquals(4, ShadowOneSignalRestClient.requests.size());
+        assertFalse(iamOutcomeRequest.payload.has("weight"));
+        assertFalse(iamOutcomeRequest.payload.has("direct"));
+        assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
+        assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
+    }
+
+    @Test
+    public void testInAppMessageClickActionOutcomeV2() throws Exception {
+        // Enable IAM v2
+        preferences.mock = true;
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+        OneSignal_setTrackerFactory(trackerFactory);
+        OneSignal_setSessionManager(sessionManager);
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Enable influence outcomes
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         // 2. Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
@@ -518,6 +582,13 @@ public class InAppMessageIntegrationTests {
         assertFalse(iamOutcomeRequest.payload.has("weight"));
         assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
         assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
+        JSONObject sources = iamOutcomeRequest.payload.getJSONObject("sources");
+        JSONObject direct = sources.getJSONObject("direct");
+        JSONArray iamIds = direct.getJSONArray("in_app_message_ids");
+        assertEquals(0, direct.getJSONArray("notification_ids").length());
+        assertEquals(1, iamIds.length());
+        assertEquals(message.messageId, iamIds.get(0));
+        assertFalse(sources.has("indirect"));
     }
 
     @Test
@@ -526,12 +597,8 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        // Enable Outcomes
-        TestOneSignalPrefs.saveBool(
-                TestOneSignalPrefs.PREFS_ONESIGNAL,
-                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
-                true
-        );
+        // Enable influence outcomes
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         // 2. Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
@@ -561,6 +628,7 @@ public class InAppMessageIntegrationTests {
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
         assertEquals(IAM_OUTCOME_WEIGHT, iamOutcomeRequest.payload.get("weight"));
         assertEquals(IAM_OUTCOME_NAME, iamOutcomeRequest.payload.get("id"));
+        assertFalse(iamOutcomeRequest.payload.has("direct"));
         assertEquals(1, iamOutcomeRequest.payload.get("device_type"));
     }
 
@@ -570,12 +638,8 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        // Enable Outcomes
-        TestOneSignalPrefs.saveBool(
-                TestOneSignalPrefs.PREFS_ONESIGNAL,
-                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
-                true
-        );
+        // Enable influence outcomes
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         // 2. Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
@@ -627,7 +691,7 @@ public class InAppMessageIntegrationTests {
         // Disable Outcomes
         TestOneSignalPrefs.saveBool(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
-                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                MockOSInfluenceData.PREFS_OS_UNATTRIBUTED_ENABLED,
                 false
         );
 
@@ -665,7 +729,7 @@ public class InAppMessageIntegrationTests {
         // Enable Outcomes
         TestOneSignalPrefs.saveBool(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
-                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+                MockOSInfluenceData.PREFS_OS_UNATTRIBUTED_ENABLED,
                 true
         );
 
@@ -718,7 +782,7 @@ public class InAppMessageIntegrationTests {
                 null
         );
 
-        final JSONObject addTags =  new JSONObject() {{
+        final JSONObject addTags = new JSONObject() {{
             put(IAM_TAG_KEY, IAM_TAG_KEY);
         }};
         JSONObject action = new JSONObject() {{
@@ -792,7 +856,7 @@ public class InAppMessageIntegrationTests {
                 null
         );
 
-        final JSONObject addTags =  new JSONObject() {{
+        final JSONObject addTags = new JSONObject() {{
             put(IAM_TAG_KEY, IAM_TAG_KEY);
         }};
         JSONObject action = new JSONObject() {{
@@ -844,13 +908,15 @@ public class InAppMessageIntegrationTests {
 
         // 2. Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
-           OSTriggerKind.SESSION_TIME,
-           null,
-           OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
-           null);
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
+                null);
 
         // 2. Count IAM as clicked
-        JSONObject action = new JSONObject() {{ put("id", IAM_CLICK_ID); }};
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+        }};
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
 
         // 3. Cold restart app and re-init OneSignal
@@ -940,7 +1006,7 @@ public class InAppMessageIntegrationTests {
     @Test
     public void testInAppMessageDisplayMultipleTimes() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -999,7 +1065,7 @@ public class InAppMessageIntegrationTests {
         message.getRedisplayStats().setDisplayQuantity(1);
         message.setDisplayedInSession(true);
         // Save IAM on DB
-        TestHelpers.saveIAM(message);
+        TestHelpers.saveIAM(message, dbHelper);
         // Save IAM for dismiss
         TestOneSignalPrefs.saveStringSet(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
@@ -1008,7 +1074,7 @@ public class InAppMessageIntegrationTests {
         );
 
         // Check IAM was saved correctly
-        List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages();
+        List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages(dbHelper);
         assertEquals(savedInAppMessages.size(), 1);
         assertTrue(savedInAppMessages.get(0).isDisplayedInSession());
 
@@ -1047,7 +1113,7 @@ public class InAppMessageIntegrationTests {
     @Test
     public void testInAppMessageDisplayMultipleTimes_RemoveTrigger() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(), 2, LIMIT, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -1082,7 +1148,7 @@ public class InAppMessageIntegrationTests {
     @Test
     public void testInAppMessageNoDisplayMultipleTimes_Delay() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -1116,7 +1182,7 @@ public class InAppMessageIntegrationTests {
     @Test
     public void testInAppMessageNoDisplayMultipleTimes_Limit() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, 1, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, 1, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -1154,7 +1220,7 @@ public class InAppMessageIntegrationTests {
     @Test
     public void testInAppMessageDisplayMultipleTimes_onColdRestart() throws Exception {
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -1222,11 +1288,13 @@ public class InAppMessageIntegrationTests {
 
         // Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
         assertTrue(message.getClickedClickIds().isEmpty());
         // Count IAM as clicked
-        JSONObject action = new JSONObject() {{ put("id", IAM_CLICK_ID); }};
+        JSONObject action = new JSONObject() {{
+            put("id", IAM_CLICK_ID);
+        }};
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
 
         // Ensure click is sent
@@ -1290,14 +1358,14 @@ public class InAppMessageIntegrationTests {
         iam1.setRedisplayStats(1, currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
         String clickId1 = "iam1_click_id_1";
         iam1.addClickId(clickId1);
-        TestHelpers.saveIAM(iam1);
+        TestHelpers.saveIAM(iam1, dbHelper);
 
         // Create an IAM older than 6 months
         final OSTestInAppMessage iam2 = InAppMessagingHelpers.buildTestMessage(null);
         iam2.setRedisplayStats(1, currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
         String clickId2 = "iam2_click_id_1";
         iam2.addClickId(clickId2);
-        TestHelpers.saveIAM(iam2);
+        TestHelpers.saveIAM(iam2, dbHelper);
 
         // 2. Cache IAMs as dismissed, impressioned, and clicked
         Set<String> messageIds = new HashSet<String>() {{
@@ -1350,7 +1418,7 @@ public class InAppMessageIntegrationTests {
         assertTrue(testClickedClickIds.contains(clickId1));
 
         // 5. Make sure only IAM left is the IAM younger than 6 months
-        List<OSTestInAppMessage> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages();
+        List<OSTestInAppMessage> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages(dbHelper);
         assertEquals(1, savedInAppMessagesAfterInit.size());
         assertEquals(iam1.messageId, savedInAppMessagesAfterInit.get(0).messageId);
     }
@@ -1360,25 +1428,25 @@ public class InAppMessageIntegrationTests {
         final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
 
         final OSTestInAppMessage inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_saved", OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_saved", OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
         String firstID = inAppMessage.messageId + "_test";
         inAppMessage.messageId = firstID;
         inAppMessage.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
-        TestHelpers.saveIAM(inAppMessage);
+        TestHelpers.saveIAM(inAppMessage, dbHelper);
 
         inAppMessage.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
         inAppMessage.messageId += "1";
-        TestHelpers.saveIAM(inAppMessage);
+        TestHelpers.saveIAM(inAppMessage, dbHelper);
 
-        List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages();
+        List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages(dbHelper);
 
         assertEquals(2, savedInAppMessages.size());
 
         final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
         final OSTestInAppMessage message2 = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
-                OSTriggerKind.CUSTOM,"test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+                OSTriggerKind.CUSTOM, "test_2", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message1);
@@ -1389,7 +1457,7 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        List<OSTestInAppMessage> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages();
+        List<OSTestInAppMessage> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages(dbHelper);
         // Message with old display time should be removed
         assertEquals(1, savedInAppMessagesAfterInit.size());
         assertEquals(firstID, savedInAppMessagesAfterInit.get(0).messageId);
@@ -1408,6 +1476,35 @@ public class InAppMessageIntegrationTests {
 
         // Check no messages exist
         assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+    }
+
+    @Test
+    public void testInAppMessageIdTracked() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // For mocking behaviour
+        OneSignal_setTrackerFactory(trackerFactory);
+        OneSignal_setSessionManager(sessionManager);
+        // Init OneSignal IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Check no influence id saved
+        JSONArray lastReceivedIds = trackerFactory.getIAMChannelTracker().getLastReceivedIds();
+        assertEquals(0, lastReceivedIds.length());
+
+        // Add trigger to make IAM display
+        OneSignal.addTrigger("test_1", 2);
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+
+        // Check influence id saved
+        lastReceivedIds = trackerFactory.getIAMChannelTracker().getLastReceivedIds();
+        assertEquals(1, lastReceivedIds.length());
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {
