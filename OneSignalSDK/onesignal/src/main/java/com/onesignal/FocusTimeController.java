@@ -136,15 +136,15 @@ class FocusTimeController {
 
       private List<OSInfluence> getInfluences() {
          List<OSInfluence> influences = new ArrayList<>();
-         Set<String> influencesString = OneSignalPrefs.getStringSet(
+         Set<String> influenceJSONs = OneSignalPrefs.getStringSet(
                  OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_OS_ATTRIBUTED_INFLUENCES,
                  new HashSet<String>()
          );
 
-         for (String influenceJSONString : influencesString) {
+         for (String influenceJSON : influenceJSONs) {
             try {
-               influences.add(new OSInfluence(influenceJSONString));
+               influences.add(new OSInfluence(influenceJSON));
             } catch (JSONException exception) {
                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, this.getClass().getSimpleName() + ": error generation OSInfluence from json object: " + exception);
             }

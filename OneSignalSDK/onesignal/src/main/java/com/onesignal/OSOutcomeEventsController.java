@@ -57,7 +57,8 @@ class OSOutcomeEventsController {
     }
 
     /**
-     * Send all the outcomes that from some reason failed
+     * Any outcomes cached in local DB will be reattempted to be sent again
+     * Cached outcomes come from the failure callback of the network request
      */
     void sendSavedOutcomes() {
         new Thread(new Runnable() {
@@ -127,21 +128,21 @@ class OSOutcomeEventsController {
      * If one channel is attributed is enough reason to cache attribution
      */
     private void sendUniqueOutcomeEvent(@NonNull final String name, @NonNull List<OSInfluence> sessionInfluences, @Nullable OneSignal.OutcomeCallback callback) {
-        List<OSInfluence> influences = removeDisableInfluences(sessionInfluences);
+        List<OSInfluence> influences = removeDisabledInfluences(sessionInfluences);
         if (influences.isEmpty()) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Unique Outcome disabled for current session");
             return;
         }
 
         boolean attributed = false;
-        boolean unAttributed = false;
+        boolean unattributed = false;
         for (OSInfluence influence : influences) {
             if (influence.getInfluenceType().isAttributed()) {
                 // At least one channel attributed this outcome
                 attributed = true;
                 break;
             } else if (influence.getInfluenceType().isUnattributed()) {
-                unAttributed = true;
+                unattributed = true;
             } // else DISABLED
         }
 
@@ -163,7 +164,7 @@ class OSOutcomeEventsController {
             }
 
             sendAndCreateOutcomeEvent(name, 0, uniqueInfluences, callback);
-        } else if (unAttributed) {
+        } else if (unattributed) {
             // Make sure unique outcome has not been sent for current unattributed session
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
@@ -200,10 +201,10 @@ class OSOutcomeEventsController {
         for (OSInfluence influence : influences) {
             switch (influence.getInfluenceType()) {
                 case DIRECT:
-                    directSourceBody = setIdsOnSourceByChannel(influence, directSourceBody == null ? new OSOutcomeSourceBody() : directSourceBody);
+                    directSourceBody = setSourceChannelIds(influence, directSourceBody == null ? new OSOutcomeSourceBody() : directSourceBody);
                     break;
                 case INDIRECT:
-                    indirectSourceBody = setIdsOnSourceByChannel(influence, indirectSourceBody == null ? new OSOutcomeSourceBody() : indirectSourceBody);
+                    indirectSourceBody = setSourceChannelIds(influence, indirectSourceBody == null ? new OSOutcomeSourceBody() : indirectSourceBody);
                     break;
                 case UNATTRIBUTED:
                     unattributed = true;
@@ -259,7 +260,7 @@ class OSOutcomeEventsController {
         outcomeEventsFactory.getRepository().requestMeasureOutcomeEvent(appId, deviceType, eventParams, responseHandler);
     }
 
-    private OSOutcomeSourceBody setIdsOnSourceByChannel(OSInfluence influence, OSOutcomeSourceBody sourceBody) {
+    private OSOutcomeSourceBody setSourceChannelIds(OSInfluence influence, OSOutcomeSourceBody sourceBody) {
         switch (influence.getInfluenceChannel()) {
             case IAM:
                 sourceBody.setInAppMessagesIds(influence.getIds());
@@ -272,17 +273,17 @@ class OSOutcomeEventsController {
         return sourceBody;
     }
 
-    private List<OSInfluence> removeDisableInfluences(List<OSInfluence> influences) {
-        List<OSInfluence> influencesCopy = new ArrayList<>(influences);
+    private List<OSInfluence> removeDisabledInfluences(List<OSInfluence> influences) {
+        List<OSInfluence> availableInfluences = new ArrayList<>(influences);
         for (OSInfluence influence : influences) {
             if (influence.getInfluenceType().isDisabled()) {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG,
                         "Outcomes disabled for channel: " + influence.getInfluenceChannel().toString());
-                influencesCopy.remove(influence);
+                availableInfluences.remove(influence);
             }
         }
 
-        return influencesCopy;
+        return availableInfluences;
     }
 
     private void saveUniqueOutcome(OSOutcomeEventParams eventParams) {

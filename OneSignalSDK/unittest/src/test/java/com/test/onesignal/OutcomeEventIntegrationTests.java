@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 
 import com.onesignal.MockOSLog;
-import com.onesignal.MockOSPreferences;
+import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSNotificationOpenResult;
@@ -96,7 +96,7 @@ public class OutcomeEventIntegrationTests {
     private MockOneSignalDBHelper dbHelper;
     private MockOSLog logger = new MockOSLog();
     private MockSessionManager sessionManager;
-    private MockOSPreferences preferences;
+    private MockOSSharedPreferences preferences;
     private OSTrackerFactory trackerFactory;
     private static List<OSInfluence> lastInfluencesEnding;
 
@@ -138,7 +138,7 @@ public class OutcomeEventIntegrationTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSPreferences();
+        preferences = new MockOSSharedPreferences();
         trackerFactory = new OSTrackerFactory(preferences, logger);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         cleanUp();

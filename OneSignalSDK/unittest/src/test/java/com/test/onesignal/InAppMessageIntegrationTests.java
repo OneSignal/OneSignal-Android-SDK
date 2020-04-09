@@ -5,7 +5,7 @@ import android.app.Activity;
 
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOSLog;
-import com.onesignal.MockOSPreferences;
+import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OneSignal;
@@ -98,7 +98,7 @@ public class InAppMessageIntegrationTests {
     private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
     private static final int LIMIT = 5;
     private static final int DELAY = 60;
-    private MockOSPreferences preferences;
+    private MockOSSharedPreferences preferences;
     private OSTrackerFactory trackerFactory;
     private MockSessionManager sessionManager;
     @SuppressLint("StaticFieldLeak")
@@ -123,7 +123,7 @@ public class InAppMessageIntegrationTests {
     @Before
     public void beforeEachTest() throws Exception {
         ShadowDynamicTimer.shouldScheduleTimers = true;
-        preferences = new MockOSPreferences();
+        preferences = new MockOSSharedPreferences();
         trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();

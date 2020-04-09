@@ -5,7 +5,7 @@ import android.support.annotation.Nullable;
 
 import java.util.Set;
 
-class OSPreferencesWrapper implements OSSharedPreferences {
+class OSSharedPreferencesWrapper implements OSSharedPreferences {
 
     @Override
     public String getOutcomesV2KeyName() {

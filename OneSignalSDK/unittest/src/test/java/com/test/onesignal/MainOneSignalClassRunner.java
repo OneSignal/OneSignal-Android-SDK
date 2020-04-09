@@ -42,7 +42,7 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 
 import com.onesignal.MockOSLog;
-import com.onesignal.MockOSPreferences;
+import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSEmailSubscriptionObserver;
@@ -252,7 +252,7 @@ public class MainOneSignalClassRunner {
    public void beforeEachTest() throws Exception {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
-      trackerFactory = new OSTrackerFactory(new MockOSPreferences(), new MockOSLog());
+      trackerFactory = new OSTrackerFactory(new MockOSSharedPreferences(), new MockOSLog());
       sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
       dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
 

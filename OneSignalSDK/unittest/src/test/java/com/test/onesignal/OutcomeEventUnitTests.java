@@ -30,7 +30,7 @@ package com.test.onesignal;
 import android.support.annotation.NonNull;
 
 import com.onesignal.MockOSLog;
-import com.onesignal.MockOSPreferences;
+import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
@@ -80,7 +80,7 @@ public class OutcomeEventUnitTests {
     private MockOutcomeEventsController controller;
     private MockOneSignalAPIClient service;
     private OSOutcomeEventsRepository repository;
-    private MockOSPreferences preferences;
+    private MockOSSharedPreferences preferences;
     private OSTrackerFactory trackerFactory;
     private MockSessionManager sessionManager;
     private MockOneSignalDBHelper dbHelper;
@@ -123,7 +123,7 @@ public class OutcomeEventUnitTests {
         outcomeEvents = null;
 
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSPreferences();
+        preferences = new MockOSSharedPreferences();
         // Mock on a custom HashMap in order to not use custom context
         preferences.mock = true;
 

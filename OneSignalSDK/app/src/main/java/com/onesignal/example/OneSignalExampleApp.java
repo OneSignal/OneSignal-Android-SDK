@@ -60,8 +60,8 @@ public class OneSignalExampleApp extends Application {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
       String currentAppId = getOneSignalAppId(this);
-//      if (currentAppId == null)
-         setOneSignalAppId(this, "380dc082-5231-4cc2-ab51-a03da5a0e4c2");
+      if (currentAppId == null)
+         setOneSignalAppId(this, "0ba9731b-33bd-43f4-8b59-61172e27447d");
 
       OneSignal.init(
          this,

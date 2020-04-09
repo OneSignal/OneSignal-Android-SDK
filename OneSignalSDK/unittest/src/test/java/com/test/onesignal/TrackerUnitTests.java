@@ -28,7 +28,7 @@
 package com.test.onesignal;
 
 import com.onesignal.MockOSLog;
-import com.onesignal.MockOSPreferences;
+import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowOSUtils;
@@ -67,7 +67,7 @@ public class TrackerUnitTests {
     private static final String IAM_ID = "iam_id";
 
     private OSTrackerFactory trackerFactory;
-    private MockOSPreferences preferences;
+    private MockOSSharedPreferences preferences;
 
     @BeforeClass // Runs only once, before any tests
     public static void setUpClass() throws Exception {
@@ -82,7 +82,7 @@ public class TrackerUnitTests {
     @Before // Before each test
     public void beforeEachTest() throws Exception {
         MockOSLog logger = new MockOSLog();
-        preferences = new MockOSPreferences();
+        preferences = new MockOSSharedPreferences();
         trackerFactory = new OSTrackerFactory(preferences, logger);
 
         TestHelpers.beforeTestInitAndCleanup();

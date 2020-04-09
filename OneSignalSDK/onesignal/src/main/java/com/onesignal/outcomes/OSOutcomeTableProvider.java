@@ -14,7 +14,6 @@ public class OSOutcomeTableProvider {
     private static final String INT_TYPE = " INTEGER";
     private static final String FLOAT_TYPE = " FLOAT";
     private static final String TIMESTAMP_TYPE = " TIMESTAMP";
-    private static final String COMMA_SEP = ",";
 
     public static final String OUTCOME_EVENT_TABLE = OutcomeEventsTable.TABLE_NAME;
     public static final String CACHE_UNIQUE_OUTCOME_TABLE = CachedUniqueOutcomeTable.TABLE_NAME;
@@ -23,22 +22,22 @@ public class OSOutcomeTableProvider {
 
     private static final String SQL_CREATE_OUTCOME_ENTRIES =
             "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
-                    OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
-                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE + TEXT_TYPE + COMMA_SEP +
-                    OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE + TEXT_TYPE + COMMA_SEP +
-                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + COMMA_SEP +
-                    OutcomeEventsTable.COLUMN_NAME_IAM_IDS + TEXT_TYPE + COMMA_SEP +
-                    OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + COMMA_SEP +
-                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + COMMA_SEP +
+                    OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_IAM_IDS + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," +
                     // "params TEXT" Added in v4, removed in v5.
                     OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
                     ");";
 
     private static final String SQL_CREATE_UNIQUE_OUTCOME_ENTRIES =
             "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME + " (" +
-                    CachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
-                    CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + TEXT_TYPE + COMMA_SEP +
-                    CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + TEXT_TYPE + COMMA_SEP +
+                    CachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+                    CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + TEXT_TYPE + "," +
+                    CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + TEXT_TYPE + "," +
                     CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
                     ");";
 

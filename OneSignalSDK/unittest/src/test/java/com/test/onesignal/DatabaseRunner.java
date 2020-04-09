@@ -361,7 +361,7 @@ public class DatabaseRunner {
 
     @Test
     public void shouldUpgradeDbFromV7ToV8CacheUniqueOutcomeTable() throws JSONException {
-        // 1. Init DB as version 6
+        // 1. Init DB as version 7
         ShadowOneSignalDbHelper.DATABASE_VERSION = 7;
         // Mock table with the schema we had in DB v7
         outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
@@ -420,7 +420,7 @@ public class DatabaseRunner {
 
     @Test
     public void shouldUpgradeDbFromV7ToV8OutcomesTable() throws JSONException {
-        // 1. Init DB as version 6
+        // 1. Init DB as version 7
         ShadowOneSignalDbHelper.DATABASE_VERSION = 7;
         // Mock table with the schema we had in DB v7
         outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);

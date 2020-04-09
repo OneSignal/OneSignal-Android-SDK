@@ -6,12 +6,12 @@ import android.support.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Set;
 
-public class MockOSPreferences extends OSPreferencesWrapper {
+public class MockOSSharedPreferences extends OSSharedPreferencesWrapper {
 
     private HashMap<String, Object> preferences = new HashMap<>();
     public boolean mock = false;
 
-    public MockOSPreferences() {
+    public MockOSSharedPreferences() {
     }
 
     public void reset() {

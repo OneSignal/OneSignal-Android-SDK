@@ -447,7 +447,7 @@ public class OneSignal {
 
    private static OSLogger logger = new OSLogWrapper();
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
-   private static OSSharedPreferences preferences = new OSPreferencesWrapper();
+   private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
    private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger);
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
