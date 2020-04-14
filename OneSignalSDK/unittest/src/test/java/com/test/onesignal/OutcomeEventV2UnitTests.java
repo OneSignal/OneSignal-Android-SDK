@@ -34,7 +34,6 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
-import com.onesignal.MockOutcomeEventsFactory;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
@@ -44,6 +43,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.outcomes.OSOutcomeEventsFactory;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
@@ -76,7 +76,6 @@ import static org.junit.Assert.assertNull;
 public class OutcomeEventV2UnitTests {
 
     private static final String OUTCOME_NAME = "testing";
-    private static final String GENERIC_ID = "generic_id";
     private static final String IAM_ID = "iam_id";
     private static final String NOTIFICATION_ID = "notification_id";
 
@@ -126,9 +125,8 @@ public class OutcomeEventV2UnitTests {
         outcomeEvents = null;
 
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSSharedPreferences();
         // Mock on a custom HashMap in order to not use custom context
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
         // Save v2 flag
         String v2Name = preferences.getOutcomesV2KeyName();
         preferences.saveBool(preferences.getPreferencesName(), v2Name, true);
@@ -136,7 +134,7 @@ public class OutcomeEventV2UnitTests {
         trackerFactory = new OSTrackerFactory(preferences, logWrapper);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
         service = new MockOneSignalAPIClient();
-        MockOutcomeEventsFactory factory = new MockOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
+        OSOutcomeEventsFactory factory = new OSOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
         controller = new MockOutcomeEventsController(sessionManager, factory);
 
         TestHelpers.beforeTestInitAndCleanup();
@@ -146,10 +144,6 @@ public class OutcomeEventV2UnitTests {
 
     @After
     public void tearDown() throws Exception {
-        trackerFactory.clearInfluenceData();
-        preferences.reset();
-//        dbHelper.cleanOutcomeDatabase();
-        dbHelper.close();
         StaticResetHelper.restSetStaticFields();
         threadAndTaskWait();
     }
@@ -164,12 +158,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -186,12 +175,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -210,12 +194,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -235,12 +214,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -253,18 +227,10 @@ public class OutcomeEventV2UnitTests {
         sessionManager.initSessionFromCache();
         sessionManager.onInAppMessageReceived(IAM_ID);
 
-        // Restart session by app open should set INDIRECT influence
-        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
-
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -284,12 +250,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -305,12 +266,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -328,12 +284,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -349,12 +300,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -370,12 +316,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -394,12 +335,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -418,12 +354,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -441,12 +372,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
@@ -459,12 +385,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendUniqueOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(2, outcomeEvents.size());
@@ -484,12 +405,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
@@ -508,12 +424,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() > 0);
@@ -542,12 +453,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() > 0);
@@ -574,12 +480,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertTrue(outcomeEvents.size() > 0);
@@ -608,12 +509,8 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME + "2");
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAIL").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
+
         threadAndTaskWait();
 
         assertEquals(3, outcomeEvents.size());
@@ -624,12 +521,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME + "4");
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         // Disables outcomes should not be sent
@@ -661,12 +553,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEventWithValue(OUTCOME_NAME + "4", 1.1f);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(5, outcomeEvents.size());
@@ -676,12 +563,8 @@ public class OutcomeEventV2UnitTests {
         controller.sendSavedOutcomes();
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
+
         threadAndTaskWait();
 
         assertEquals(0, outcomeEvents.size());
@@ -696,12 +579,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
@@ -713,12 +591,8 @@ public class OutcomeEventV2UnitTests {
         controller.sendSavedOutcomes();
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_FAILS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
+
         threadAndTaskWait();
 
         assertEquals(0, outcomeEvents.size());

@@ -25,7 +25,7 @@ class JsonAsserts {
       while (iterator.hasNext()) {
          String key = iterator.next();
          if (contains.get(key) instanceof JSONObject && subject.get(key) instanceof JSONObject)
-            equals((JSONObject) contains.get(key), (JSONObject) subject.get(key));
+            equals(contains.getJSONObject(key), subject.getJSONObject(key));
          else
             assertEquals(
                     normalizeType(contains.get(key)),

@@ -28,7 +28,7 @@ public class OneSignalRemoteParams {
       boolean directEnabled = false;
       boolean indirectEnabled = false;
       boolean unattributedEnabled = false;
-      boolean v2Enabled = false;
+      boolean outcomesV2ServiceEnabled = false;
 
       public int getIndirectNotificationAttributionWindow() {
          return indirectNotificationAttributionWindow;
@@ -92,12 +92,12 @@ public class OneSignalRemoteParams {
    private static int androidParamsRetries = 0;
 
    private static final String OUTCOME_PARAM = "outcomes";
-   private static final String V2_PARAM = "v2_active";
+   private static final String OUTCOMES_V2_SERVICE_PARAM = "v2_enabled";
    private static final String ENABLED_PARAM = "enabled";
    private static final String DIRECT_PARAM = "direct";
    private static final String INDIRECT_PARAM = "indirect";
    private static final String NOTIFICATION_ATTRIBUTION_PARAM = "notification_attribution";
-   private static final String IAM_ATTRIBUTION_PARAM = "iam_attribution";
+   private static final String IAM_ATTRIBUTION_PARAM = "in_app_message_attribution";
    private static final String UNATTRIBUTED_PARAM = "unattributed";
 
    private static final String FCM_PARENT_PARAM = "fcm";
@@ -189,8 +189,8 @@ public class OneSignalRemoteParams {
    }
 
    static private void processOutcomeJson(JSONObject outcomeJson, InfluenceParams influenceParams) {
-      if (outcomeJson.has(V2_PARAM))
-         influenceParams.v2Enabled = outcomeJson.optBoolean(V2_PARAM);;
+      if (outcomeJson.has(OUTCOMES_V2_SERVICE_PARAM))
+         influenceParams.outcomesV2ServiceEnabled = outcomeJson.optBoolean(OUTCOMES_V2_SERVICE_PARAM);
 
       if (outcomeJson.has(DIRECT_PARAM)) {
          JSONObject direct = outcomeJson.optJSONObject(DIRECT_PARAM);

@@ -9,8 +9,8 @@ import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.InAppMessageTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
-import com.onesignal.OneSignalPackagePrivateHelper.OSCachedUniqueOutcome;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.model.OSInfluenceChannel;
@@ -19,7 +19,7 @@ import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.MockOSOutcomeTableProvider;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.model.OSOutcomeEvent;
+import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -86,7 +86,6 @@ public class DatabaseRunner {
 
     @After
     public void afterEachTest() throws Exception {
-        outcomeTableProvider.clean();
         TestHelpers.afterTestCleanup();
     }
 
@@ -142,7 +141,7 @@ public class DatabaseRunner {
         writableDatabase.setVersion(3);
         writableDatabase.close();
 
-        OSOutcomeEvent event = new OSOutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
+        OutcomeEvent event = new OutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
         ContentValues values = new ContentValues();
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
@@ -156,7 +155,7 @@ public class DatabaseRunner {
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
         // 4. Opening the DB will auto trigger the update.
-        List<OSOutcomeEvent> events = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OutcomeEvent> events = getAllOutcomesRecordsDBv5(dbHelper);
 
         assertEquals(events.size(), 0);
 
@@ -165,7 +164,7 @@ public class DatabaseRunner {
         writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, values);
         writableDatabase.close();
 
-        List<OSOutcomeEvent> outcomeEvents = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OutcomeEvent> outcomeEvents = getAllOutcomesRecordsDBv5(dbHelper);
 
         assertEquals(outcomeEvents.size(), 1);
     }
@@ -212,7 +211,7 @@ public class DatabaseRunner {
         writableDatabase.setVersion(4);
         writableDatabase.close();
 
-        OSCachedUniqueOutcome notification = new OSCachedUniqueOutcome("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
+        OSCachedUniqueOutcomeName notification = new OSCachedUniqueOutcomeName("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
         ContentValues values = new ContentValues();
         values.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID, notification.getInfluenceId());
         values.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, notification.getName());
@@ -222,7 +221,7 @@ public class DatabaseRunner {
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
         outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
         // 4. Opening the DB will auto trigger the update.
-        List<OSCachedUniqueOutcome> notifications = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
+        List<OSCachedUniqueOutcomeName> notifications = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
         assertEquals(notifications.size(), 0);
 
         // 5. Table now must exist
@@ -230,7 +229,7 @@ public class DatabaseRunner {
         writableDatabase.insert(MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME, null, values);
         writableDatabase.close();
 
-        List<OSCachedUniqueOutcome> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
+        List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
 
         assertEquals(1, uniqueOutcomeNotifications.size());
     }
@@ -384,17 +383,18 @@ public class DatabaseRunner {
         assertFalse(exist);
 
         // Set data to check that modification on table keep data
-        OSCachedUniqueOutcome cachedOutcomeBeforeUpdate = new OSCachedUniqueOutcome("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
+        OSCachedUniqueOutcomeName cachedOutcomeBeforeUpdate = new OSCachedUniqueOutcomeName("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
         ContentValues uniqueOutcomeValuesBeforeUpdate = new ContentValues();
         uniqueOutcomeValuesBeforeUpdate.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID, cachedOutcomeBeforeUpdate.getInfluenceId());
         uniqueOutcomeValuesBeforeUpdate.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, cachedOutcomeBeforeUpdate.getName());
 
         writableDatabase.insert(MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME, null, uniqueOutcomeValuesBeforeUpdate);
 
-        List<OSCachedUniqueOutcome> cachedOutcomesBeforeUpdate = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
+        List<OSCachedUniqueOutcomeName> cachedOutcomesBeforeUpdate = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
         assertEquals(1, cachedOutcomesBeforeUpdate.size());
 
-        outcomeTableProvider.clean();
+        outcomeTableProvider = new MockOSOutcomeTableProvider();
+        dbHelper.setOutcomeTableProvider(outcomeTableProvider);
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
         writableDatabase.setVersion(7);
         writableDatabase.close();
@@ -411,7 +411,7 @@ public class DatabaseRunner {
         // 4. Opening the DB will auto trigger the update.
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
-        List<OSCachedUniqueOutcome> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
+        List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
         assertEquals(1, uniqueOutcomeNotifications.size());
         assertEquals(cachedOutcomeBeforeUpdate.getInfluenceId(), uniqueOutcomeNotifications.get(0).getInfluenceId());
         assertEquals(cachedOutcomeBeforeUpdate.getChannel(), uniqueOutcomeNotifications.get(0).getChannel());
@@ -455,10 +455,11 @@ public class DatabaseRunner {
 
         writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
 
-        List<OSOutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
         assertEquals(1, outcomesSavedBeforeUpdate.size());
 
-        outcomeTableProvider.clean();
+        outcomeTableProvider = new MockOSOutcomeTableProvider();
+        dbHelper.setOutcomeTableProvider(outcomeTableProvider);
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
         writableDatabase.setVersion(7);
         writableDatabase.close();

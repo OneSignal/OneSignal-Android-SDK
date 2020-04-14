@@ -109,7 +109,6 @@ public class SessionManagerUnitTests {
 
     @After
     public void tearDown() throws Exception {
-        trackerFactory.clearInfluenceData();
         lastInfluencesBySessionEnding = null;
 
         StaticResetHelper.restSetStaticFields();
@@ -118,7 +117,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testUnattributedInitInfluence() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -131,7 +129,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectInfluence() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
         sessionManager.onInAppMessageReceived(GENERIC_ID);
@@ -142,13 +139,11 @@ public class SessionManagerUnitTests {
             assertTrue(influence.getInfluenceType().isIndirect());
             assertEquals(1, influence.getIds().length());
             assertEquals(GENERIC_ID, influence.getIds().get(0));
-            break;
         }
     }
 
     @Test
     public void testIndirectNotificationInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -170,7 +165,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectNotificationInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -192,7 +186,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectIAMInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -200,7 +193,6 @@ public class SessionManagerUnitTests {
         assertEquals(0, iamTracker.getLastReceivedIds().length());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
-        sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_OPEN);
 
         iamTracker = trackerFactory.getIAMChannelTracker();
         OSInfluence influence = iamTracker.getCurrentSessionInfluence();
@@ -215,7 +207,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectIAMInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -238,7 +229,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectIAMResetInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -262,7 +252,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testUnattributedAddSessionData() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -274,7 +263,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectAddSessionData() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -295,7 +283,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectAddSessionData() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -316,7 +303,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDisabledAddSessionData() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false));
         sessionManager.initSessionFromCache();
 
@@ -328,7 +314,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectWithNullNotification() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onNotificationReceived(null);
@@ -342,7 +327,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectWithEmptyNotification() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onNotificationReceived("");
@@ -356,7 +340,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromAppClosed() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -369,13 +352,37 @@ public class SessionManagerUnitTests {
 
         sessionManager.onNotificationReceived(GENERIC_ID);
         sessionManager.onInAppMessageReceived(GENERIC_ID);
+
+        influences = sessionManager.getInfluences();
+
+        for (OSInfluence influence : influences) {
+            switch (influence.getInfluenceChannel()) {
+                case NOTIFICATION:
+                    assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+                    assertNull(influence.getIds());
+                    break;
+                case IAM:
+                    assertEquals(OSInfluenceType.INDIRECT, influence.getInfluenceType());
+                    assertEquals(1, influence.getIds().length());
+                    break;
+            }
+        }
+
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_CLOSE);
 
         influences = sessionManager.getInfluences();
 
         for (OSInfluence influence : influences) {
-            assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
-            assertNull(influence.getIds());
+            switch (influence.getInfluenceChannel()) {
+                case NOTIFICATION:
+                    assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+                    assertNull(influence.getIds());
+                    break;
+                case IAM:
+                    assertEquals(OSInfluenceType.INDIRECT, influence.getInfluenceType());
+                    assertEquals(1, influence.getIds().length());
+                    break;
+            }
         }
 
         // We test that channel ending is working
@@ -384,7 +391,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromUnattributedToIndirect() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -397,6 +403,22 @@ public class SessionManagerUnitTests {
 
         sessionManager.onNotificationReceived(GENERIC_ID);
         sessionManager.onInAppMessageReceived(GENERIC_ID);
+
+        influences = sessionManager.getInfluences();
+
+        for (OSInfluence influence : influences) {
+            switch (influence.getInfluenceChannel()) {
+                case NOTIFICATION:
+                    assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+                    assertNull(influence.getIds());
+                    break;
+                case IAM:
+                    assertEquals(OSInfluenceType.INDIRECT, influence.getInfluenceType());
+                    assertEquals(1, influence.getIds().length());
+                    break;
+            }
+        }
+
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_OPEN);
 
         influences = sessionManager.getInfluences();
@@ -408,22 +430,16 @@ public class SessionManagerUnitTests {
         }
 
         // We test that channel ending is working for both IAM and Notification
-        assertEquals(2, lastInfluencesBySessionEnding.size());
+        assertEquals(1, lastInfluencesBySessionEnding.size());
         OSInfluence endingNotificationInfluence = lastInfluencesBySessionEnding.get(0);
-        OSInfluence endingIAMInfluence = lastInfluencesBySessionEnding.get(1);
 
         assertEquals(OSInfluenceChannel.NOTIFICATION, endingNotificationInfluence.getInfluenceChannel());
         assertEquals(OSInfluenceType.UNATTRIBUTED, endingNotificationInfluence.getInfluenceType());
         assertNull(endingNotificationInfluence.getIds());
-
-        assertEquals(OSInfluenceChannel.IAM, endingIAMInfluence.getInfluenceChannel());
-        assertEquals(OSInfluenceType.UNATTRIBUTED, endingIAMInfluence.getInfluenceType());
-        assertNull(endingIAMInfluence.getIds());
     }
 
     @Test
     public void testSessionUpgradeFromUnattributedToDirectNotification() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -448,23 +464,17 @@ public class SessionManagerUnitTests {
         assertEquals(1, notificationInfluences.getIds().length());
         assertEquals(GENERIC_ID, notificationInfluences.getIds().get(0));
 
-        // We test that channel ending is working for both IAM and Notification
-        assertEquals(2, lastInfluencesBySessionEnding.size());
+        // We test that channel ending is working for Notification
+        assertEquals(1, lastInfluencesBySessionEnding.size());
         OSInfluence endingNotificationInfluence = lastInfluencesBySessionEnding.get(0);
-        OSInfluence endingIAMInfluence = lastInfluencesBySessionEnding.get(1);
 
         assertEquals(OSInfluenceChannel.NOTIFICATION, endingNotificationInfluence.getInfluenceChannel());
         assertEquals(OSInfluenceType.UNATTRIBUTED, endingNotificationInfluence.getInfluenceType());
         assertNull(endingNotificationInfluence.getIds());
-
-        assertEquals(OSInfluenceChannel.IAM, endingIAMInfluence.getInfluenceChannel());
-        assertEquals(OSInfluenceType.UNATTRIBUTED, endingIAMInfluence.getInfluenceType());
-        assertNull(endingIAMInfluence.getIds());
     }
 
     @Test
     public void testSessionUpgradeFromIndirectToDirect() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -504,7 +514,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromDirectToDirectDifferentID() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -535,7 +544,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromDirectToDirectSameID() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -564,7 +572,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromDirectToDirectEndChannelsDirect() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -610,15 +617,18 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testRestartSessionIfNeededFromOpen() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
 
+        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
+
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
-        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
         assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
@@ -629,34 +639,40 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testRestartSessionIfNeededFromClose() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
 
+        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
+
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_CLOSE);
 
-        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
-        assertEquals(OSInfluenceType.UNATTRIBUTED, iamInfluences.getInfluenceType());
-        assertNull(iamInfluences.getIds());
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
         assertEquals(OSInfluenceType.UNATTRIBUTED, notificationInfluences.getInfluenceType());
         assertNull(notificationInfluences.getIds());
     }
 
     @Test
     public void testRestartSessionIfNeededFromNotification() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
 
+        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
+
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.NOTIFICATION_CLICK);
 
-        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
         assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
@@ -667,7 +683,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectNotificationQuantityInfluence() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         for (int i = 0; i < INFLUENCE_ID_LIMIT + 5; i++) {
@@ -684,7 +699,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectIAMQuantityInfluence() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         for (int i = 0; i < INFLUENCE_ID_LIMIT + 5; i++) {

@@ -11,13 +11,12 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 
-import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.OSCachedUniqueOutcome;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
+import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
@@ -37,8 +36,7 @@ import com.onesignal.influence.model.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.model.OSOutcomeEvent;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
+import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
 
 import junit.framework.Assert;
 
@@ -268,7 +266,7 @@ public class TestHelpers {
       return mapList;
    }
 
-   static List<OSOutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) {
+   static List<OutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
               MockOSOutcomeEventsTable.TABLE_NAME,
@@ -281,7 +279,7 @@ public class TestHelpers {
               null // limit
       );
 
-      List<OSOutcomeEvent> events = new ArrayList<>();
+      List<OutcomeEvent> events = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
             String notificationIds = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
@@ -292,7 +290,7 @@ public class TestHelpers {
             float weight = cursor.getFloat(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT));
 
             try {
-               OSOutcomeEvent event = new OSOutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
+               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
                events.add(event);
 
             } catch (JSONException e) {
@@ -352,7 +350,7 @@ public class TestHelpers {
       return events;
    }
 
-   static ArrayList<OSCachedUniqueOutcome> getAllUniqueOutcomeNotificationRecordsDBv5(OneSignalDb db) {
+   static ArrayList<OSCachedUniqueOutcomeName> getAllUniqueOutcomeNotificationRecordsDBv5(OneSignalDb db) {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
               MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME,
@@ -365,13 +363,13 @@ public class TestHelpers {
               null // limit
       );
 
-      ArrayList<OSCachedUniqueOutcome> cachedUniqueOutcomes = new ArrayList<>();
+      ArrayList<OSCachedUniqueOutcomeName> cachedUniqueOutcomes = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
             String name = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME));
             String influenceId = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID));
 
-            OSCachedUniqueOutcome uniqueOutcome = new OSCachedUniqueOutcome(name, influenceId);
+            OSCachedUniqueOutcomeName uniqueOutcome = new OSCachedUniqueOutcomeName(name, influenceId);
             cachedUniqueOutcomes.add(uniqueOutcome);
 
          } while (cursor.moveToNext());
@@ -383,7 +381,7 @@ public class TestHelpers {
       return cachedUniqueOutcomes;
    }
 
-   static ArrayList<OSCachedUniqueOutcome> getAllUniqueOutcomeNotificationRecordsDB(OneSignalDb db) {
+   static ArrayList<OSCachedUniqueOutcomeName> getAllUniqueOutcomeNotificationRecordsDB(OneSignalDb db) {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
               MockOSCachedUniqueOutcomeTable.TABLE_NAME,
@@ -396,14 +394,14 @@ public class TestHelpers {
               null // limit
       );
 
-      ArrayList<OSCachedUniqueOutcome> cachedUniqueOutcomes = new ArrayList<>();
+      ArrayList<OSCachedUniqueOutcomeName> cachedUniqueOutcomes = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
             String name = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME));
             String influenceId = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID));
             String channelType = cursor.getString(cursor.getColumnIndex(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE));
 
-            OSCachedUniqueOutcome uniqueOutcome = new OSCachedUniqueOutcome(name, influenceId, channelType);
+            OSCachedUniqueOutcomeName uniqueOutcome = new OSCachedUniqueOutcomeName(name, influenceId, channelType);
             cachedUniqueOutcomes.add(uniqueOutcome);
 
          } while (cursor.moveToNext());

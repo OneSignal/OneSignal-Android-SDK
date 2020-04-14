@@ -1,15 +1,17 @@
-package com.onesignal.outcomes.model;
+package com.onesignal;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.outcomes.model.OSOutcomeEventParams;
+import com.onesignal.outcomes.model.OSOutcomeSource;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class OSOutcomeEvent {
+public class OutcomeEvent {
 
     private static final String SESSION = "session";
     private static final String NOTIFICATION_IDS = "notification_ids";
@@ -23,7 +25,7 @@ public class OSOutcomeEvent {
     private long timestamp;
     private Float weight;
 
-    public OSOutcomeEvent(@NonNull OSInfluenceType session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, float weight) {
+    public OutcomeEvent(@NonNull OSInfluenceType session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, float weight) {
         this.session = session;
         this.notificationIds = notificationIds;
         this.name = name;
@@ -31,21 +33,24 @@ public class OSOutcomeEvent {
         this.weight = weight;
     }
 
-    public static OSOutcomeEvent fromOutcomeEventParams(OSOutcomeEventParams outcomeEventParams) {
-        OSInfluenceType session = OSInfluenceType.UNATTRIBUTED;
+    /**
+     * Creates an OutcomeEvent from an OSOutcomeEventParams in order to work on V1 from V2
+     * */
+    public static OutcomeEvent fromOutcomeEventParamsV2toOutcomeEventV1(OSOutcomeEventParams outcomeEventParams) {
+        OSInfluenceType influenceType = OSInfluenceType.UNATTRIBUTED;
         JSONArray notificationId = null;
         if (outcomeEventParams.getOutcomeSource() != null) {
             OSOutcomeSource source = outcomeEventParams.getOutcomeSource();
             if (source.getDirectBody() != null && source.getDirectBody().getNotificationIds() != null && source.getDirectBody().getNotificationIds().length() > 0) {
-                session = OSInfluenceType.DIRECT;
+                influenceType = OSInfluenceType.DIRECT;
                 notificationId = source.getDirectBody().getNotificationIds();
             } else if (source.getIndirectBody() != null && source.getIndirectBody().getNotificationIds() != null && source.getIndirectBody().getNotificationIds().length() > 0) {
-                session = OSInfluenceType.INDIRECT;
+                influenceType = OSInfluenceType.INDIRECT;
                 notificationId = source.getIndirectBody().getNotificationIds();
             }
         }
 
-        return new OSOutcomeEvent(session, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
+        return new OutcomeEvent(influenceType, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
     }
 
     public OSInfluenceType getSession() {
@@ -98,7 +103,7 @@ public class OSOutcomeEvent {
         if (o == null || this.getClass() != o.getClass())
             return false;
 
-        OSOutcomeEvent event = (OSOutcomeEvent) o;
+        OutcomeEvent event = (OutcomeEvent) o;
         return this.session.equals(event.session) &&
                 this.notificationIds.equals(event.notificationIds) &&
                 this.name.equals(event.name) &&

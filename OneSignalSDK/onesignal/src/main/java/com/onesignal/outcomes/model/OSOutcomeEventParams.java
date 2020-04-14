@@ -9,7 +9,7 @@ import org.json.JSONObject;
 public class OSOutcomeEventParams {
 
     private static final String OUTCOME_ID = "id";
-    private static final String OUTCOME_SOURCE = "sources";
+    private static final String OUTCOME_SOURCES = "sources";
     private static final String WEIGHT = "weight";
     private static final String TIMESTAMP = "timestamp";
 
@@ -37,7 +37,7 @@ public class OSOutcomeEventParams {
         JSONObject json = new JSONObject();
         json.put(OUTCOME_ID, outcomeId);
         if (outcomeSource != null)
-            json.put(OUTCOME_SOURCE, outcomeSource.toJSONObject());
+            json.put(OUTCOME_SOURCES, outcomeSource.toJSONObject());
         if (weight > 0)
             json.put(WEIGHT, weight);
         if (timestamp > 0)

@@ -28,15 +28,6 @@ public class OSTrackerFactory {
         trackers.put(OSNotificationTracker.TAG, new OSNotificationTracker(dataRepository, logger));
     }
 
-    /**
-     * Test method
-     */
-    public void clearInfluenceData() {
-        for (OSChannelTracker tracker : trackers.values()) {
-            tracker.clearInfluenceData();
-        }
-    }
-
     public void saveInfluenceParams(OneSignalRemoteParams.InfluenceParams influenceParams) {
         dataRepository.saveInfluenceParams(influenceParams);
     }
@@ -59,11 +50,11 @@ public class OSTrackerFactory {
     }
 
     public List<OSInfluence> getInfluences() {
-        List<OSInfluence> influenceList = new ArrayList<>();
+        List<OSInfluence> influences = new ArrayList<>();
         for (OSChannelTracker tracker : trackers.values()) {
-            influenceList.add(tracker.getCurrentSessionInfluence());
+            influences.add(tracker.getCurrentSessionInfluence());
         }
-        return influenceList;
+        return influences;
     }
 
     public OSChannelTracker getIAMChannelTracker() {
@@ -83,38 +74,38 @@ public class OSTrackerFactory {
     }
 
     public List<OSChannelTracker> getChannels() {
-        List<OSChannelTracker> influenceList = new ArrayList<>();
+        List<OSChannelTracker> channels = new ArrayList<>();
 
         OSChannelTracker notificationChannel = getNotificationChannelTracker();
         if (notificationChannel != null)
-            influenceList.add(notificationChannel);
+            channels.add(notificationChannel);
 
         OSChannelTracker iamChannel = getIAMChannelTracker();
         if (iamChannel != null)
-            influenceList.add(iamChannel);
+            channels.add(iamChannel);
 
-        return influenceList;
+        return channels;
     }
 
-    public List<OSChannelTracker> getChannelToResetByEntryAction(OneSignal.AppEntryAction entryAction) {
-        List<OSChannelTracker> influenceList = new ArrayList<>();
+    public List<OSChannelTracker> getChannelsToResetByEntryAction(OneSignal.AppEntryAction entryAction) {
+        List<OSChannelTracker> channels = new ArrayList<>();
 
         // Avoid reset session if application is closed
         if (entryAction.isAppClose())
-            return influenceList;
+            return channels;
 
         // Avoid reset session if app was focused due to a notification click (direct session recently set)
         if (entryAction.isAppOpen()) {
             OSChannelTracker notificationChannel = getNotificationChannelTracker();
             if (notificationChannel != null)
-                influenceList.add(notificationChannel);
+                channels.add(notificationChannel);
         }
 
         OSChannelTracker iamChannel = getIAMChannelTracker();
         if (iamChannel != null)
-            influenceList.add(iamChannel);
+            channels.add(iamChannel);
 
-        return influenceList;
+        return channels;
     }
 
 }

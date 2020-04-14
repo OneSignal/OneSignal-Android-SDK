@@ -271,7 +271,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.firstClick = message.takeActionAsUnique();
 
-        firePublicClickHandler(action);
+        firePublicClickHandler(message.messageId, action);
         beginProcessingPrompts(message, action.prompts);
         fireClickAction(action);
         fireRESTCallForClick(message, action);
@@ -283,7 +283,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.firstClick = message.takeActionAsUnique();
 
-        firePublicClickHandler(action);
+        firePublicClickHandler(message.messageId, action);
         beginProcessingPrompts(message, action.prompts);
         fireClickAction(action);
         logInAppMessagePreviewActions(action);
@@ -369,13 +369,18 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void firePublicClickHandler(@NonNull final OSInAppMessageAction action) {
+    private void firePublicClickHandler(@NonNull final String messageId, @NonNull final OSInAppMessageAction action) {
         if (OneSignal.mInitBuilder.mInAppMessageClickHandler == null)
             return;
 
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
+                // Send public outcome from handler
+                // Send public outcome not from handler
+                // Check that only on the handler
+                // Any outcome sent on this callback should count as DIRECT from this IAM
+                OneSignal.getSessionManager().onDirectInfluenceFromIAMClick(messageId);
                 OneSignal.mInitBuilder.mInAppMessageClickHandler.inAppMessageClicked(action);
             }
         });
@@ -531,6 +536,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     void messageWasDismissed(@NonNull OSInAppMessage message, boolean failed) {
+        // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
+        OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
+
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             // If failed we will retry on next session

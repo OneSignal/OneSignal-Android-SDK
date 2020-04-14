@@ -39,17 +39,6 @@ class OSInfluenceDataRepository {
         this.preferences = preferences;
     }
 
-    void clearNotificationData() {
-        cacheNotificationOpenId(null);
-        saveNotifications(new JSONArray());
-        cacheNotificationInfluenceType(OSInfluenceType.UNATTRIBUTED);
-    }
-
-    void clearIAMData() {
-        saveIAMs(new JSONArray());
-        cacheIAMInfluenceType(OSInfluenceType.UNATTRIBUTED);
-    }
-
     /**
      * Cache a influence type enum for Notification as a string
      */

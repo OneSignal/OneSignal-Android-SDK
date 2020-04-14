@@ -50,7 +50,6 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -1045,10 +1044,10 @@ public class OneSignal {
             );
             OneSignalPrefs.saveBool(
                OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_OUTCOMES_V2,
-                    params.influenceParams.v2Enabled
+               preferences.getOutcomesV2KeyName(),
+               params.influenceParams.outcomesV2ServiceEnabled
             );
-            logger.log(LOG_LEVEL.DEBUG, "OneSignal saveInfluenceParams: " + params.influenceParams.toString());
+            logger.debug("OneSignal saveInfluenceParams: " + params.influenceParams.toString());
             trackerFactory.saveInfluenceParams(params.influenceParams);
 
             NotificationChannelManager.processChannelList(
@@ -3258,7 +3257,7 @@ public class OneSignal {
     *    3. Unique OutcomeEventParams already sent for UNATTRIBUTED session during session
     */
    public interface OutcomeCallback {
-      void onSuccess(@Nullable OSOutcomeEventParams outcomeEvent);
+      void onSuccess(@Nullable OutcomeEvent outcomeEvent);
    }
    /*
     * End OneSignalOutcome module
