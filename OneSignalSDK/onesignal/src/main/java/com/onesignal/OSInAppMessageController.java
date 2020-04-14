@@ -368,6 +368,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
+                // Send public outcome from handler
+                // Send public outcome not from handler
+                // Check that only on the handler
                 OneSignal.mInitBuilder.mInAppMessageClickHandler.inAppMessageClicked(action);
             }
         });
