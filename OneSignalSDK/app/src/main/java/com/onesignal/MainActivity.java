@@ -51,7 +51,6 @@ import com.onesignal.example.OneSignalExampleApp;
 import com.onesignal.example.R;
 import com.onesignal.example.iap.IabHelper;
 import com.onesignal.example.iap.IabResult;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -371,7 +370,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    public void onSendOutcomeClicked(View view) {
       OneSignal.sendOutcome(outcomeName.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
-         public void onSuccess(@Nullable OSOutcomeEventParams outcomeEvent) {
+         public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
             if (outcomeEvent != null)
                updateTextView(outcomeEvent.toString());
          }
@@ -381,7 +380,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    public void onSendUniqueOutcomeClicked(View view) {
       OneSignal.sendUniqueOutcome(outcomeUnique.getText().toString(), new OneSignal.OutcomeCallback() {
          @Override
-         public void onSuccess(@Nullable OSOutcomeEventParams outcomeEvent) {
+         public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
             if (outcomeEvent != null)
                updateTextView(outcomeEvent.toString());
          }
@@ -394,7 +393,7 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
       OneSignal.sendOutcomeWithValue(outcomeValueName.getText().toString(), Float.parseFloat(outcomeValue.getText().toString()), new OneSignal.OutcomeCallback() {
          @Override
-         public void onSuccess(@Nullable OSOutcomeEventParams outcomeEvent) {
+         public void onSuccess(@Nullable OutcomeEvent outcomeEvent) {
             if (outcomeEvent != null)
                updateTextView(outcomeEvent.toString());
          }

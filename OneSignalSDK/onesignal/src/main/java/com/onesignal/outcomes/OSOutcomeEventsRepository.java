@@ -1,7 +1,6 @@
 package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalApiResponseHandler;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
@@ -40,25 +39,25 @@ abstract class OSOutcomeEventsRepository implements com.onesignal.outcomes.domai
     }
 
     public void saveUniqueOutcomeNotifications(OSOutcomeEventParams eventParams) {
-        outcomeEventsCache.saveUniqueOutcomeNotifications(eventParams);
+        outcomeEventsCache.saveUniqueOutcomeEventParams(eventParams);
     }
 
     public List<OSInfluence> getNotCachedUniqueOutcome(String name, List<OSInfluence> influences) {
         List<OSInfluence> influencesNotCached =  outcomeEventsCache.getNotCachedUniqueInfluencesForOutcome(name, influences);
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal getNotCachedUniqueOutcome influences: " + influencesNotCached);
+        logger.debug("OneSignal getNotCachedUniqueOutcome influences: " + influencesNotCached);
         return influencesNotCached;
     }
 
     @Override
     public Set<String> getUnattributedUniqueOutcomeEventsSent() {
         Set<String> unattributedUniqueOutcomeEvents = outcomeEventsCache.getUnattributedUniqueOutcomeEventsSentByChannel();
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal getUnattributedUniqueOutcomeEventsSentByChannel: " + unattributedUniqueOutcomeEvents);
+        logger.debug("OneSignal getUnattributedUniqueOutcomeEventsSentByChannel: " + unattributedUniqueOutcomeEvents);
         return unattributedUniqueOutcomeEvents;
     }
 
     @Override
     public void saveUnattributedUniqueOutcomeEventsSent(Set<String> unattributedUniqueOutcomeEvents) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal save unattributedUniqueOutcomeEvents: " + unattributedUniqueOutcomeEvents);
+        logger.debug("OneSignal save unattributedUniqueOutcomeEvents: " + unattributedUniqueOutcomeEvents);
         outcomeEventsCache.saveUnattributedUniqueOutcomeEventsSentByChannel(unattributedUniqueOutcomeEvents);
     }
 }

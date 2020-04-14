@@ -3,7 +3,6 @@ package com.test.onesignal;
 import android.support.annotation.NonNull;
 
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
-import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import com.onesignal.ShadowOneSignalRestClient.Request;
@@ -20,6 +19,7 @@ import static com.test.onesignal.TypeAsserts.assertIsUUID;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -144,31 +144,64 @@ class RestClientAsserts {
    }
 
    static void assertMeasureAtIndex(int index, @NonNull String outcomeName) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure", index, new JSONObject()
               .put("id", outcomeName)
       );
    }
 
    static void assertMeasureAtIndex(int index, @NonNull boolean isDirect, @NonNull String outcomeName, @NonNull JSONArray notificationIds) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure", index, new JSONObject()
               .put("direct", isDirect)
               .put("id", outcomeName)
               .put("notification_ids", notificationIds)
       );
    }
 
-   static void assertMeasureOnV2AtIndex(int index, @NonNull String outcomeName, @NonNull JSONObject sources) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+   static void assertMeasureOnV2AtIndex(int index, @NonNull String outcomeName,
+                                        JSONArray directIAMs, JSONArray directNotifications,
+                                        JSONArray indirectIAMs, JSONArray indirectNotifications) throws JSONException {
+      JSONObject sources = new JSONObject();
+      boolean direct = false;
+      boolean indirect = false;
+      if (directIAMs != null || directNotifications != null) {
+         direct = true;
+         JSONObject directBody = new JSONObject();
+         if (directNotifications != null)
+            directBody.put("notification_ids", directNotifications);
+         if (directIAMs != null)
+            directBody.put("in_app_message_ids", directIAMs);
+         sources.put("direct", directBody);
+      }
+
+      if (indirectIAMs != null || indirectNotifications != null) {
+         indirect = true;
+         JSONObject indirectBody = new JSONObject();
+         if (indirectNotifications != null)
+            indirectBody.put("notification_ids", indirectNotifications);
+         if (indirectIAMs != null)
+            indirectBody.put("in_app_message_ids", indirectIAMs);
+         sources.put("indirect", indirectBody);
+      }
+
+      assertMeasureAtIndex("measure_sources", index, new JSONObject()
               .put("id", outcomeName)
               .put("sources", sources)
       );
+
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+      if (!direct)
+         assertFalse(request.payload.getJSONObject("sources").has("direct"));
+      if (!indirect)
+         assertFalse(request.payload.getJSONObject("sources").has("indirect"));
+
+      assertFalse(request.payload.has("weight"));
    }
 
-   private static void assertMeasureAtIndex(int index, JSONObject containsPayload) throws JSONException {
+   private static void assertMeasureAtIndex(String measureKey, int index, JSONObject containsPayload) throws JSONException {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 
       assertEquals(REST_METHOD.POST, request.method);
-      assertMeasureUrl(request.url);
+      assertMeasureUrl(measureKey, request.url);
       JsonAsserts.containsSubset(request.payload, containsPayload);
    }
 
@@ -208,10 +241,10 @@ class RestClientAsserts {
       assertEquals(3, parts.length);
    }
 
-   private static void assertMeasureUrl(String url) {
+   private static void assertMeasureUrl(String measureKey, String url) {
       String[] parts = url.split("/");
       assertEquals("outcomes", parts[0]);
-      assertEquals("measure", parts[1]);
+      assertEquals(measureKey, parts[1]);
    }
 
    static void assertRestCalls(int expected) {

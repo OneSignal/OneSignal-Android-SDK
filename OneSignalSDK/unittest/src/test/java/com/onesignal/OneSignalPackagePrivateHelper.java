@@ -10,7 +10,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluenceChannel;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.onesignal.influence.model.OSInfluenceChannel.NOTIFICATION;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
@@ -123,37 +121,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_setTrackerFactory(OSTrackerFactory trackerFactory) {
       OneSignal.setTrackerFactory(trackerFactory);
-   }
-
-   public static class OSCachedUniqueOutcome extends com.onesignal.outcomes.model.OSCachedUniqueOutcome {
-      private String name;
-
-      public OSCachedUniqueOutcome(String name, String notificationId) {
-         this(name, notificationId, NOTIFICATION);
-      }
-
-      public OSCachedUniqueOutcome(String name, String notificationId, String channel) {
-         this(name, notificationId, OSInfluenceChannel.fromString(channel));
-      }
-
-      public OSCachedUniqueOutcome(String name, String notificationId, OSInfluenceChannel channel) {
-         super(notificationId, channel);
-         this.name = name;
-      }
-
-      @Override
-      public String getInfluenceId() {
-         return super.getInfluenceId();
-      }
-
-      public String getName() {
-         return name;
-      }
-
-      @Override
-      public OSInfluenceChannel getChannel() {
-         return super.getChannel();
-      }
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -261,6 +228,8 @@ public class OneSignalPackagePrivateHelper {
    public static void OneSignal_setAppId(String appId) {
       OneSignal.appId = appId;
    }
+
+   static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}
 
    static public class RemoteOutcomeParams extends OneSignalRemoteParams.InfluenceParams {
 

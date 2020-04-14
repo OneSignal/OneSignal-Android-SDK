@@ -34,7 +34,6 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
-import com.onesignal.MockOutcomeEventsFactory;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
@@ -44,6 +43,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.outcomes.OSOutcomeEventsFactory;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
@@ -63,7 +63,6 @@ import static com.test.onesignal.TestHelpers.lockTimeTo;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
         instrumentedPackages = {"com.onesignal"},
@@ -123,14 +122,13 @@ public class OutcomeEventUnitTests {
         outcomeEvents = null;
 
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSSharedPreferences();
         // Mock on a custom HashMap in order to not use custom context
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
 
         trackerFactory = new OSTrackerFactory(preferences, logWrapper);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
         service = new MockOneSignalAPIClient();
-        MockOutcomeEventsFactory factory = new MockOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
+        OSOutcomeEventsFactory factory = new OSOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
         controller = new MockOutcomeEventsController(sessionManager, factory);
 
         TestHelpers.beforeTestInitAndCleanup();
@@ -140,9 +138,6 @@ public class OutcomeEventUnitTests {
 
     @After
     public void tearDown() throws Exception {
-        trackerFactory.clearInfluenceData();
-        preferences.reset();
-//        dbHelper.cleanOutcomeDatabase();
         dbHelper.close();
         StaticResetHelper.restSetStaticFields();
         threadAndTaskWait();

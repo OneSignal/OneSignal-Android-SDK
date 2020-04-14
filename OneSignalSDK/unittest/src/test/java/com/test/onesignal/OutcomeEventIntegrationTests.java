@@ -96,7 +96,7 @@ public class OutcomeEventIntegrationTests {
     private MockOneSignalDBHelper dbHelper;
     private MockOSLog logger = new MockOSLog();
     private MockSessionManager sessionManager;
-    private MockOSSharedPreferences preferences;
+    private OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper preferences;
     private OSTrackerFactory trackerFactory;
     private static List<OSInfluence> lastInfluencesEnding;
 
@@ -138,7 +138,7 @@ public class OutcomeEventIntegrationTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSSharedPreferences();
+        preferences = new OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper();
         trackerFactory = new OSTrackerFactory(preferences, logger);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         cleanUp();
@@ -146,9 +146,7 @@ public class OutcomeEventIntegrationTests {
 
     @After
     public void afterEachTest() throws Exception {
-        trackerFactory.clearInfluenceData();
         lastInfluencesEnding = null;
-        preferences.reset();
         afterTestCleanup();
     }
 
@@ -264,26 +262,22 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2UniqueOutcomeMeasureOnlySentOncePerClickedNotification_whenSendingMultipleUniqueOutcomes_inDirectSession() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
         foregroundAppAfterClickingNotification();
 
         // Send unique outcome event
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
         threadAndTaskWait();
 
-        JSONObject sources = new JSONObject();
-        JSONObject direct = new JSONObject();
         JSONArray notificationIds = new JSONArray();
         notificationIds.put(ONESIGNAL_NOTIFICATION_ID + "1");
 
-        direct.put("notification_ids", notificationIds);
-        direct.put("in_app_message_ids", new JSONArray());
-        sources.put("direct", direct);
-
         // Check measure end point was most recent request and contains clicked notification
-        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, new JSONArray(), notificationIds, null, null);
         // Only 4 requests have been made
         assertRestCalls(4);
 
@@ -353,9 +347,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2UniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
         foregroundAppAfterReceivingNotification();
 
         // Check notificationIds equal indirectNotificationIds from OSSessionManager
@@ -368,15 +364,8 @@ public class OutcomeEventIntegrationTests {
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
         threadAndTaskWait();
 
-        JSONObject sources = new JSONObject();
-        JSONObject indirect = new JSONObject();
-
-        indirect.put("notification_ids", notificationIds);
-        indirect.put("in_app_message_ids", new JSONArray());
-        sources.put("indirect", indirect);
-
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, null, null, new JSONArray(), notificationIds);
         // Only 3 requests have been made
         assertRestCalls(3);
 
@@ -412,14 +401,8 @@ public class OutcomeEventIntegrationTests {
         // Make sure session is INDIRECT
         assertNotificationChannelIndirectInfluence(2);
 
-        sources = new JSONObject();
-        indirect = new JSONObject();
-
-        indirect.put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
-        indirect.put("in_app_message_ids", new JSONArray());
-        sources.put("indirect", indirect);
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, null, null, new JSONArray(),  new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
     }
 
     @Test
@@ -471,9 +454,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2OutcomeNameSentWithMeasureOncePerSession_whenSendingMultipleUniqueOutcomes_inUnattributedSession() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
 
         OneSignalInit();
         threadAndTaskWait();
@@ -486,7 +471,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, new JSONObject());
+        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
         // Only 3 requests have been made
         assertRestCalls(3);
 
@@ -516,7 +501,7 @@ public class OutcomeEventIntegrationTests {
         assertNotificationChannelUnattributedInfluence();
 
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, new JSONObject());
+        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
     }
 
     @Test
@@ -549,9 +534,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2CorrectOutcomeSent_fromNotificationOpenedHandler() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
 
         // Init OneSignal with a custom opened handler
         OneSignalInit(new OneSignal.NotificationOpenedHandler() {
@@ -574,17 +561,11 @@ public class OutcomeEventIntegrationTests {
         blankActivityController.resume();
         threadAndTaskWait();
 
-        JSONObject sources = new JSONObject();
-        JSONObject direct = new JSONObject();
         JSONArray notificationIds = new JSONArray();
         notificationIds.put(ONESIGNAL_NOTIFICATION_ID);
 
-        direct.put("notification_ids", notificationIds);
-        direct.put("in_app_message_ids", new JSONArray());
-        sources.put("direct", direct);
-
         // Make sure a measure request is made with the correct session and notifications
-        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, new JSONArray(), notificationIds, null, null);
     }
 
     @Test

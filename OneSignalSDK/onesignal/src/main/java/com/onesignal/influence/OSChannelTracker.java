@@ -1,11 +1,9 @@
 package com.onesignal.influence;
 
-import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.influence.model.OSInfluenceChannel;
 import com.onesignal.influence.model.OSInfluenceType;
@@ -16,7 +14,6 @@ import org.json.JSONObject;
 
 abstract public class OSChannelTracker {
 
-    static final String DIRECT_TAG = "direct";
     private static final String TIME = "time";
 
     protected OSLogger logger;
@@ -38,6 +35,8 @@ abstract public class OSChannelTracker {
 
     abstract OSInfluenceChannel getChannelType();
 
+    abstract JSONArray getLastChannelObjectsReceivedByNewId(String id);
+
     abstract JSONArray getLastChannelObjects() throws JSONException;
 
     abstract int getChannelLimit();
@@ -50,19 +49,15 @@ abstract public class OSChannelTracker {
 
     abstract void addSessionData(@NonNull JSONObject jsonObject, OSInfluence influence);
 
-    abstract void clearInfluenceData();
-
-    abstract JSONArray getLastChannelObjectsReceivedByNewId(String id);
-
     public abstract void cacheState();
 
     public void resetAndInitInfluence() {
-        indirectIds = null;
         directId = null;
         indirectIds = getLastReceivedIds();
-        influenceType = indirectIds != null && indirectIds.length() > 0 ? OSInfluenceType.INDIRECT : OSInfluenceType.UNATTRIBUTED;
+        influenceType = indirectIds.length() > 0 ? OSInfluenceType.INDIRECT : OSInfluenceType.UNATTRIBUTED;
 
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal OSChannelTracker resetAndInitInfluence: " + getIdTag() + " finish with influenceType: " + influenceType);
+        cacheState();
+        logger.debug("OneSignal OSChannelTracker resetAndInitInfluence: " + getIdTag() + " finish with influenceType: " + influenceType);
     }
 
     /**
@@ -74,7 +69,7 @@ abstract public class OSChannelTracker {
         JSONArray ids = new JSONArray();
         try {
             JSONArray lastChannelObjectReceived = getLastChannelObjects();
-            logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal ChannelTracker getLastReceivedIds lastChannelObjectReceived: " + lastChannelObjectReceived);
+            logger.debug("OneSignal ChannelTracker getLastReceivedIds lastChannelObjectReceived: " + lastChannelObjectReceived);
 
             long attributionWindow = getIndirectAttributionWindow() * 60 * 1_000L;
             long currentTime = System.currentTimeMillis();
@@ -89,7 +84,7 @@ abstract public class OSChannelTracker {
                 }
             }
         } catch (JSONException exception) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating tracker getLastReceivedIds JSONObject ", exception);
+            logger.error("Generating tracker getLastReceivedIds JSONObject ", exception);
         }
 
         return ids;
@@ -99,49 +94,44 @@ abstract public class OSChannelTracker {
      * Save state of last ids received
      */
     public void saveLastId(String id) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal OSChannelTracker for: " + getIdTag() + " saveLastId: " + id);
+        logger.debug("OneSignal OSChannelTracker for: " + getIdTag() + " saveLastId: " + id);
         if (id == null || id.isEmpty())
             return;
 
-        JSONArray lastChannelObjectReceived = getLastChannelObjectsReceivedByNewId(id);
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal OSChannelTracker for: " + getIdTag() + " saveLastId with lastChannelObjectReceived: " + lastChannelObjectReceived);
+        JSONArray lastChannelObjectsReceived = getLastChannelObjectsReceivedByNewId(id);
+        logger.debug("OneSignal OSChannelTracker for: " + getIdTag() + " saveLastId with lastChannelObjectsReceived: " + lastChannelObjectsReceived);
 
         try {
             JSONObject newInfluenceId = new JSONObject()
                     .put(getIdTag(), id)
                     .put(TIME, System.currentTimeMillis());
-            lastChannelObjectReceived.put(newInfluenceId);
+            lastChannelObjectsReceived.put(newInfluenceId);
         } catch (JSONException exception) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating tracker newInfluenceId JSONObject ", exception);
+            logger.error("Generating tracker newInfluenceId JSONObject ", exception);
             // We don't have new data, stop logic
             return;
         }
 
         int channelLimit = getChannelLimit();
-        JSONArray channelObjectToSave = lastChannelObjectReceived;
+        JSONArray channelObjectToSave = lastChannelObjectsReceived;
 
         // Only save the last ids without surpassing the limit
         // Always keep the max quantity of ids possible
         // If the attribution window increases, old ids might influence
-        if (lastChannelObjectReceived.length() > channelLimit) {
-            int lengthDifference = lastChannelObjectReceived.length() - channelLimit;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                for (int i = 0; i < lengthDifference; i++) {
-                    lastChannelObjectReceived.remove(i);
-                }
-            } else {
-                channelObjectToSave = new JSONArray();
-                for (int i = lengthDifference; i < lastChannelObjectReceived.length(); i++) {
-                    try {
-                        channelObjectToSave.put(lastChannelObjectReceived.get(i));
-                    } catch (JSONException exception) {
-                        logger.log(OneSignal.LOG_LEVEL.ERROR, "Before KITKAT API, Generating tracker lastChannelObjectReceived get JSONObject ", exception);
-                    }
+        if (lastChannelObjectsReceived.length() > channelLimit) {
+            int lengthDifference = lastChannelObjectsReceived.length() - channelLimit;
+            // If min sdk is greater than KITKAT we can refactor this logic to removeObject from JSONArray
+            channelObjectToSave = new JSONArray();
+            for (int i = lengthDifference; i < lastChannelObjectsReceived.length(); i++) {
+                try {
+                    channelObjectToSave.put(lastChannelObjectsReceived.get(i));
+                } catch (JSONException exception) {
+                    logger.error("Before KITKAT API, Generating tracker lastChannelObjectsReceived get JSONObject ", exception);
                 }
             }
         }
 
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal OSChannelTracker for: " + getIdTag() + " with channelObjectToSave: " + channelObjectToSave);
+        logger.debug("OneSignal OSChannelTracker for: " + getIdTag() + " with channelObjectToSave: " + channelObjectToSave);
         saveChannelObjects(channelObjectToSave);
     }
 

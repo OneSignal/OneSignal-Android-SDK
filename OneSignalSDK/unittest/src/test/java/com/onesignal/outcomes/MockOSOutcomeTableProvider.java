@@ -8,12 +8,6 @@ public class MockOSOutcomeTableProvider extends OSOutcomeTableProvider {
     private String mockedSqlCreateOutcomeEntries = null;
     private String mockedSqlCreateUniqueOutcomeEntries = null;
 
-    public void clean() {
-        mockedSqlCreateOutcomeEntries = null;
-        mockedSqlCreateUniqueOutcomeEntries = null;
-        upgradeAvailable = true;
-    }
-
     public void disableUpgrade() {
         upgradeAvailable = false;
     }

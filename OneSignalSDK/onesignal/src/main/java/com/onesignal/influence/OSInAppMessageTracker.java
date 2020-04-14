@@ -1,11 +1,8 @@
 package com.onesignal.influence;
 
-import android.os.Build;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.influence.model.OSInfluenceChannel;
 import com.onesignal.influence.model.OSInfluenceType;
@@ -34,6 +31,35 @@ class OSInAppMessageTracker extends OSChannelTracker {
     }
 
     @Override
+    JSONArray getLastChannelObjectsReceivedByNewId(String id) {
+        JSONArray lastChannelObjectReceived;
+        try {
+            lastChannelObjectReceived = getLastChannelObjects();
+        } catch (JSONException exception) {
+            logger.error("Generating IAM tracker getLastChannelObjects JSONObject ", exception);
+            return new JSONArray();
+        }
+
+        // For IAM we handle redisplay, we need to remove duplicates for new influence Id
+        // If min sdk is greater than KITKAT we can refactor this logic to removeObject from JSONArray
+        try {
+            JSONArray auxLastChannelObjectReceived = new JSONArray();
+            for (int i = 0; i < lastChannelObjectReceived.length(); i++) {
+                String objectId = lastChannelObjectReceived.getJSONObject(i).getString(getIdTag());
+                if (!id.equals(objectId)) {
+                    auxLastChannelObjectReceived.put(lastChannelObjectReceived.getJSONObject(i));
+                }
+            }
+            lastChannelObjectReceived = auxLastChannelObjectReceived;
+        } catch (JSONException exception) {
+            logger.error("Before KITKAT API, Generating tracker lastChannelObjectReceived get JSONObject ", exception);
+
+        }
+
+        return lastChannelObjectReceived;
+    }
+
+    @Override
     JSONArray getLastChannelObjects() throws JSONException {
         return dataRepository.getLastIAMsReceivedData();
     }
@@ -59,59 +85,12 @@ class OSInAppMessageTracker extends OSChannelTracker {
         if (influenceType != null && influenceType.isIndirect())
             setIndirectIds(getLastReceivedIds());
 
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal InAppMessageTracker initInfluencedTypeFromCache: " + this.toString());
+        logger.debug("OneSignal InAppMessageTracker initInfluencedTypeFromCache: " + this.toString());
     }
 
     @Override
     void addSessionData(@NonNull JSONObject jsonObject, OSInfluence influence) {
         // In app message don't influence the session
-    }
-
-    @Override
-    void clearInfluenceData() {
-        dataRepository.clearIAMData();
-    }
-
-    @Override
-    JSONArray getLastChannelObjectsReceivedByNewId(String id) {
-        JSONArray lastChannelObjectReceived;
-        try {
-            lastChannelObjectReceived = getLastChannelObjects();
-        } catch (JSONException exception) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating IAM tracker getLastChannelObjects JSONObject ", exception);
-            return new JSONArray();
-        }
-
-        // For IAM we handle redisplay, we need to remove duplicates for new influence Id
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            for (int i = 0; i < lastChannelObjectReceived.length(); i++) {
-                try {
-                    String objectId = lastChannelObjectReceived.getJSONObject(i).getString(getIdTag());
-                    if (id.equals(objectId)) {
-                        // We call this method for each id saved, it can only have 1 duplicate
-                        lastChannelObjectReceived.remove(i);
-                        break;
-                    }
-                } catch (JSONException exception) {
-                    logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating tracker lastChannelObjectReceived get JSONObject ", exception);
-                }
-            }
-        } else {
-            try {
-                JSONArray auxLastChannelObjectReceived = new JSONArray();
-                for (int i = 0; i < lastChannelObjectReceived.length(); i++) {
-                    String objectId = lastChannelObjectReceived.getJSONObject(i).getString(getIdTag());
-                    if (!id.equals(objectId)) {
-                        auxLastChannelObjectReceived.put(lastChannelObjectReceived.getJSONObject(i));
-                    }
-                }
-                lastChannelObjectReceived = auxLastChannelObjectReceived;
-            } catch (JSONException exception) {
-                logger.log(OneSignal.LOG_LEVEL.ERROR, "Before KITKAT API, Generating tracker lastChannelObjectReceived get JSONObject ", exception);
-            }
-        }
-
-        return lastChannelObjectReceived;
     }
 
     @Override

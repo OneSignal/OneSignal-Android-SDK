@@ -3,9 +3,11 @@ package com.onesignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.onesignal.outcomes.OSOutcomeEventsFactory;
+
 public class MockOutcomeEventsController extends OSOutcomeEventsController {
 
-    public MockOutcomeEventsController(MockSessionManager sessionManager, MockOutcomeEventsFactory factory) {
+    public MockOutcomeEventsController(MockSessionManager sessionManager, OSOutcomeEventsFactory factory) {
         super(sessionManager, factory);
     }
 

@@ -1,7 +1,6 @@
 package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalApiResponseHandler;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
@@ -24,7 +23,7 @@ class OSOutcomeEventsV2Repository extends OSOutcomeEventsRepository {
 
             outcomeEventsService.sendOutcomeEvent(jsonObject, responseHandler);
         } catch (JSONException e) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating indirect outcome:JSON Failed.", e);
+            logger.error("Generating indirect outcome:JSON Failed.", e);
         }
     }
 }

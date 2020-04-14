@@ -56,7 +56,7 @@ public class OSInfluence {
 
     @Nullable
     public String getDirectId() throws JSONException {
-        return ids.length() > 0 ? ids.getString(0) : null;
+        return ids != null && ids.length() > 0 ? ids.getString(0) : null;
     }
 
     public void setIds(@NonNull JSONArray ids) {

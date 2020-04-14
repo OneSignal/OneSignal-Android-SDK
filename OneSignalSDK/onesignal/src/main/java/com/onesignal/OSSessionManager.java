@@ -40,28 +40,28 @@ public class OSSessionManager {
     }
 
     void initSessionFromCache() {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager initSessionFromCache");
+        logger.debug("OneSignal SessionManager initSessionFromCache");
         trackerFactory.initFromCache();
     }
 
     void addSessionIds(@NonNull JSONObject jsonObject, List<OSInfluence> endingInfluences) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager addSessionData with influences: " + endingInfluences.toString());
+        logger.debug("OneSignal SessionManager addSessionData with influences: " + endingInfluences.toString());
         trackerFactory.addSessionData(jsonObject, endingInfluences);
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager addSessionIds on jsonObject: " + jsonObject);
+        logger.debug("OneSignal SessionManager addSessionIds on jsonObject: " + jsonObject);
     }
 
     void restartSessionIfNeeded(OneSignal.AppEntryAction entryAction) {
-        List<OSChannelTracker> channelTrackers = trackerFactory.getChannelToResetByEntryAction(entryAction);
+        List<OSChannelTracker> channelTrackers = trackerFactory.getChannelsToResetByEntryAction(entryAction);
         List<OSInfluence> updatedInfluences = new ArrayList<>();
 
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager restartSessionIfNeeded with entryAction: " + entryAction + "\n channelTrackers: " + channelTrackers.toString());
+        logger.debug("OneSignal SessionManager restartSessionIfNeeded with entryAction: " + entryAction + "\n channelTrackers: " + channelTrackers.toString());
         for (OSChannelTracker channelTracker : channelTrackers) {
             JSONArray lastIds = channelTracker.getLastReceivedIds();
-            logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager restartSessionIfNeeded lastIds: " + lastIds);
+            logger.debug("OneSignal SessionManager restartSessionIfNeeded lastIds: " + lastIds);
 
             OSInfluence influence = channelTracker.getCurrentSessionInfluence();
             boolean updated;
-            if (lastIds != null && lastIds.length() > 0)
+            if (lastIds.length() > 0)
                 updated = setSession(channelTracker, OSInfluenceType.INDIRECT, null, lastIds);
             else
                 updated = setSession(channelTracker, OSInfluenceType.UNATTRIBUTED, null, null);
@@ -74,26 +74,27 @@ public class OSSessionManager {
     }
 
     void onInAppMessageReceived(@NonNull String messageId) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onInAppMessageReceived messageId: " + messageId);
+        logger.debug("OneSignal SessionManager onInAppMessageReceived messageId: " + messageId);
         OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
         inAppMessageTracker.saveLastId(messageId);
+        inAppMessageTracker.resetAndInitInfluence();
     }
 
     void onDirectInfluenceFromIAMClick(@NonNull String messageId) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onDirectInfluenceFromIAMClick messageId: " + messageId);
+        logger.debug("OneSignal SessionManager onDirectInfluenceFromIAMClick messageId: " + messageId);
         OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
         // We don't care about ending the session duration because IAM doesn't influence a session
         setSession(inAppMessageTracker, OSInfluenceType.DIRECT, messageId, null);
     }
 
     void onDirectInfluenceFromIAMClickFinished() {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onDirectInfluenceFromIAMClickFinished");
+        logger.debug("OneSignal SessionManager onDirectInfluenceFromIAMClickFinished");
         OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
         inAppMessageTracker.resetAndInitInfluence();
     }
 
     void onNotificationReceived(@Nullable String notificationId) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onNotificationReceived notificationId: " + notificationId);
+        logger.debug("OneSignal SessionManager onNotificationReceived notificationId: " + notificationId);
         if (notificationId == null || notificationId.isEmpty())
             return;
         OSChannelTracker notificationTracker = trackerFactory.getNotificationChannelTracker();
@@ -101,7 +102,7 @@ public class OSSessionManager {
     }
 
     void onDirectInfluenceFromNotificationOpen(OneSignal.AppEntryAction entryAction, @Nullable String notificationId) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager onDirectInfluenceFromNotificationOpen notificationId: " + notificationId);
+        logger.debug("OneSignal SessionManager onDirectInfluenceFromNotificationOpen notificationId: " + notificationId);
         if (notificationId == null || notificationId.isEmpty())
             return;
 
@@ -126,9 +127,9 @@ public class OSSessionManager {
     }
 
     private void attemptSessionUpgrade(OneSignal.AppEntryAction entryAction, @Nullable String directId) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager attemptSessionUpgrade with entryAction: " + entryAction);
+        logger.debug("OneSignal SessionManager attemptSessionUpgrade with entryAction: " + entryAction);
         OSChannelTracker channelTrackerByAction = trackerFactory.getChannelByEntryAction(entryAction);
-        List<OSChannelTracker> channelTrackersToReset = trackerFactory.getChannelToResetByEntryAction(entryAction);
+        List<OSChannelTracker> channelTrackersToReset = trackerFactory.getChannelsToResetByEntryAction(entryAction);
         List<OSInfluence> influencesToEnd = new ArrayList<>();
         OSInfluence lastInfluence = null;
 
@@ -143,7 +144,7 @@ public class OSSessionManager {
         }
 
         if (updated) {
-            logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager attemptSessionUpgrade channel updated, search for ending direct influences on channels: " + channelTrackersToReset);
+            logger.debug("OneSignal SessionManager attemptSessionUpgrade channel updated, search for ending direct influences on channels: " + channelTrackersToReset);
             influencesToEnd.add(lastInfluence);
             // Only one session influence channel can be DIRECT at the same time
             // Reset other DIRECT channels, they will init an INDIRECT influence
@@ -155,13 +156,13 @@ public class OSSessionManager {
                 }
             }
         }
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager attemptSessionUpgrade try UNATTRIBUTED to INDIRECT upgrade");
+        logger.debug("OneSignal SessionManager attemptSessionUpgrade try UNATTRIBUTED to INDIRECT upgrade");
         // We will try to override the UNATTRIBUTED session with INDIRECT
         for (OSChannelTracker channelTracker : channelTrackersToReset) {
             if (channelTracker.getInfluenceType().isUnattributed()) {
                 JSONArray lastIds = channelTracker.getLastReceivedIds();
                 // There are new ids for attribution and the application was open again without resetting session
-                if (lastIds != null && lastIds.length() > 0 && !entryAction.isAppClose()) {
+                if (lastIds.length() > 0 && !entryAction.isAppClose()) {
                     // Save influence to ended it later if needed
                     // This influence will be unattributed
                     OSInfluence influence = channelTracker.getCurrentSessionInfluence();
@@ -229,7 +230,7 @@ public class OSSessionManager {
     }
 
     private void sendSessionEndingWithInfluences(List<OSInfluence> endingInfluences) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal SessionManager sendSessionEndingWithInfluences with influences: " + endingInfluences);
+        logger.debug("OneSignal SessionManager sendSessionEndingWithInfluences with influences: " + endingInfluences);
         // Only end session if there are influences available to end
         if (endingInfluences.size() > 0)
             sessionListener.onSessionEnding(endingInfluences);

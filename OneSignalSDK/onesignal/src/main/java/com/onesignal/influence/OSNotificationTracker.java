@@ -3,7 +3,6 @@ package com.onesignal.influence;
 import android.support.annotation.NonNull;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.influence.model.OSInfluenceChannel;
 import com.onesignal.influence.model.OSInfluenceType;
@@ -15,6 +14,7 @@ import org.json.JSONObject;
 class OSNotificationTracker extends OSChannelTracker {
 
     public static final String TAG = OSNotificationTracker.class.getCanonicalName();
+    private static final String DIRECT_TAG = "direct";
     private static final String NOTIFICATIONS_IDS = "notification_ids";
     private static final String NOTIFICATION_ID = "notification_id";
 
@@ -25,6 +25,16 @@ class OSNotificationTracker extends OSChannelTracker {
     @Override
     public String getIdTag() {
         return NOTIFICATION_ID;
+    }
+
+    @Override
+    JSONArray getLastChannelObjectsReceivedByNewId(String id) {
+        try {
+            return getLastChannelObjects();
+        } catch (JSONException exception) {
+            logger.error("Generating Notification tracker getLastChannelObjects JSONObject ", exception);
+            return new JSONArray();
+        }
     }
 
     @Override
@@ -62,7 +72,7 @@ class OSNotificationTracker extends OSChannelTracker {
         else if (influenceType.isDirect())
             setDirectId(dataRepository.getCachedNotificationOpenId());
 
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal NotificationTracker initInfluencedTypeFromCache: " + this.toString());
+        logger.debug("OneSignal NotificationTracker initInfluencedTypeFromCache: " + this.toString());
     }
 
     @Override
@@ -72,23 +82,8 @@ class OSNotificationTracker extends OSChannelTracker {
                 jsonObject.put(DIRECT_TAG, influence.getInfluenceType().isDirect());
                 jsonObject.put(NOTIFICATIONS_IDS, influence.getIds());
             } catch (JSONException exception) {
-                logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating notification tracker addSessionData JSONObject ", exception);
+                logger.error("Generating notification tracker addSessionData JSONObject ", exception);
             }
-    }
-
-    @Override
-    void clearInfluenceData() {
-        dataRepository.clearNotificationData();
-    }
-
-    @Override
-    JSONArray getLastChannelObjectsReceivedByNewId(String id) {
-        try {
-            return getLastChannelObjects();
-        } catch (JSONException exception) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating Notification tracker getLastChannelObjects JSONObject ", exception);
-            return new JSONArray();
-        }
     }
 
     @Override
