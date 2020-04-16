@@ -26,7 +26,6 @@ import com.onesignal.sdktest.adapter.EnumSelectionRecyclerViewAdapter;
 import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
 import com.onesignal.sdktest.callback.EmailUpdateCallback;
 import com.onesignal.sdktest.callback.EnumSelectionCallback;
-import com.onesignal.sdktest.callback.SendOutcomeAlertDialogCallback;
 import com.onesignal.sdktest.callback.UpdateAlertDialogCallback;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
@@ -35,6 +34,9 @@ import com.onesignal.sdktest.type.ToastType;
 import com.onesignal.sdktest.ui.CustomAlertDialogBuilder;
 import com.onesignal.sdktest.ui.RecyclerViewBuilder;
 import com.onesignal.sdktest.user.CurrentUser;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Dialog {
 
@@ -177,13 +179,71 @@ public class Dialog {
             /**
              * Set external id attached to the user/email of the device
              */
-            private void updateExternalUserId(DialogInterface dialog, String externalUserId) {
-                OneSignal.setExternalUserId(externalUserId);
-                OneSignalPrefs.cacheUserExternalUserId(context, externalUserId);
+            private void updateExternalUserId(final DialogInterface dialog, final String externalUserId) {
+                OneSignal.setExternalUserId(externalUserId, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+                    @Override
+                    public void onComplete(JSONObject results) {
+                        // Default success to falser
+                        boolean successful = false;
 
-                toggleUpdateAlertDialogAttributes(false);
-                dialog.dismiss();
-                callback.onSuccess(externalUserId);
+                        // Completed setting external user, push exists with success status and success status is true
+                        if (isExternalUserIdPushSuccessful(results)) {
+                            OneSignalPrefs.cacheUserExternalUserId(context, externalUserId);
+                            successful = true;
+                        }
+
+                        // Completed setting external user, email exists with success status and success status is true
+                        if (isExternalUserIdEmailSuccessful(results)) {
+                            // We only care about ush right now but this is here so we can use it eventually
+                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Email external user id set successfully");
+                        }
+
+                        // Currently we base success on the push success existing, call success callback for AlertDialog callback
+                        if (successful)
+                            callback.onSuccess(externalUserId);
+                        else
+                            callback.onFailure();
+
+                        toggleUpdateAlertDialogAttributes(false);
+                        dialog.dismiss();
+                    }
+
+                    private boolean isExternalUserIdPushSuccessful(JSONObject status) {
+                        boolean successful = false;
+                        try {
+                            if (!status.has("push"))
+                                return false;
+
+                            JSONObject pushStatus = status.getJSONObject("push");
+                            if (!pushStatus.has("success"))
+                                return false;
+
+                            JSONObject pushSuccessStatus = pushStatus.getJSONObject("success");
+                            successful = pushSuccessStatus.getBoolean("success");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        return successful;
+                    }
+
+                    private boolean isExternalUserIdEmailSuccessful(JSONObject status) {
+                        boolean successful = false;
+                        try {
+                            if (!status.has("email"))
+                                return false;
+
+                            JSONObject emailStatus = status.getJSONObject("email");
+                            if (!emailStatus.has("success"))
+                                return false;
+
+                            JSONObject emailSuccessStatus = emailStatus.getJSONObject("success");
+                            successful = emailSuccessStatus.getBoolean("success");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        return successful;
+                    }
+                });
             }
 
         }).setNegativeButton(Text.BUTTON_CANCEL, null);
