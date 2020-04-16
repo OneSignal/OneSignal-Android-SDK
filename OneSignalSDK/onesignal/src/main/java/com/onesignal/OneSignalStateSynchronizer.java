@@ -33,21 +33,46 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
+import java.util.HashMap;
+import java.util.Iterator;
+
 class OneSignalStateSynchronizer {
 
-   private static UserStatePushSynchronizer userStatePushSynchronizer;
-   private static UserStateEmailSynchronizer userStateEmailSynchronizer;
+   enum UserStateSynchronizerType {
+      PUSH,
+      EMAIL;
 
-   static UserStatePushSynchronizer getPushStateSynchronizer() {
-      if (userStatePushSynchronizer == null)
-         userStatePushSynchronizer = new UserStatePushSynchronizer();
-      return userStatePushSynchronizer;
+      public boolean isPush() {
+         return this.equals(PUSH);
+      }
+
+      public boolean isEmail() {
+         return this.equals(EMAIL);
+      }
    }
 
+   // Each class abstracts from UserStateSynchronizer and this will allow us to handle different channels for specific method calls and requests
+   // Each time we create a new UserStateSynchronizer we should add it to the userStateSynchronizers HashMap
+   // Currently we have 2 channels:
+   //    1. Push
+   //    2. Email
+   //    Add more channels...
+   private static HashMap<UserStateSynchronizerType, UserStateSynchronizer> userStateSynchronizers =  new HashMap<>();
+
+   // #1 UserStateSynchronizer -> Push Channel
+   static UserStatePushSynchronizer getPushStateSynchronizer() {
+      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.PUSH) || userStateSynchronizers.get(UserStateSynchronizerType.PUSH) == null)
+         userStateSynchronizers.put(UserStateSynchronizerType.PUSH, new UserStatePushSynchronizer());
+
+      return (UserStatePushSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.PUSH);
+   }
+
+   // #2 UserStateSynchronizer -> Email Channel
    static UserStateEmailSynchronizer getEmailStateSynchronizer() {
-      if (userStateEmailSynchronizer == null)
-         userStateEmailSynchronizer = new UserStateEmailSynchronizer();
-      return userStateEmailSynchronizer;
+      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.EMAIL) || userStateSynchronizers.get(UserStateSynchronizerType.EMAIL) == null)
+         userStateSynchronizers.put(UserStateSynchronizerType.EMAIL, new UserStateEmailSynchronizer());
+
+      return (UserStateEmailSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.EMAIL);
    }
    
    static boolean persist() {
@@ -174,9 +199,46 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().logoutEmail();
    }
 
-   static void setExternalUserId(String externalId) throws JSONException {
-      getPushStateSynchronizer().setExternalUserId(externalId);
-      getEmailStateSynchronizer().setExternalUserId(externalId);
+   static void setExternalUserId(String externalId, final OneSignal.OSExternalUserIdUpdateCompletionHandler completionHandler) throws JSONException {
+      final JSONObject responses = new JSONObject();
+      // Create a handler for internal usage, this is where the developers completion handler will be called,
+      //  which happens once all handlers for each channel have been processed
+      OneSignal.OSInternalExternalUserIdUpdateCompletionHandler handler = new OneSignal.OSInternalExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(String channel, boolean success) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Completed request to update external user id for channel: " + channel + " and success: " + success);
+            try {
+               // Latest channel success status will be overwriting previous ones since we only care about latest request status
+               // That way the completion handler is allowing the developer to handle the most recent scenario
+               responses.put(channel, new JSONObject().put("success", success));
+            } catch (JSONException e) {
+               OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error while adding the success status of external id for channel: " + channel);
+               e.printStackTrace();
+            }
+
+            for (UserStateSynchronizer userStateSynchronizer : userStateSynchronizers.values()) {
+               if (userStateSynchronizer.hasQueuedHandlers()) {
+                  OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "External user id handlers are still being processed for channel: " + userStateSynchronizer.getChannelString() + " , wait until finished before proceeding");
+                  return;
+               }
+            }
+
+            // Need to call completion handler on main thread since the request response came from an async PUT
+            OSUtils.runOnMainUIThread(new Runnable() {
+               @Override
+               public void run() {
+                  if (completionHandler != null)
+                     completionHandler.onComplete(responses);
+               }
+            });
+         }
+      };
+
+      getPushStateSynchronizer().setExternalUserId(externalId, handler);
+
+      // Make sure we are only setting external user id for email when an email is actually set
+      if (OneSignal.hasEmailId())
+         getEmailStateSynchronizer().setExternalUserId(externalId, handler);
    }
 
    // This is to indicate that StateSynchronizer can start making REST API calls
@@ -186,4 +248,5 @@ class OneSignalStateSynchronizer {
       getPushStateSynchronizer().readyToUpdate(canMakeUpdates);
       getEmailStateSynchronizer().readyToUpdate(canMakeUpdates);
    }
+
 }

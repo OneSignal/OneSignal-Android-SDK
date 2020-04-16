@@ -199,11 +199,11 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
                params.put("delegate_id", new JSONObject().put("success", delegateIdSuccess).put("failure", delegateIdFailure).toString());
                if (response == null) {
                   params.put("response", "");
-                  OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+                  OneSignalUnityProxy.unitySafeInvoke("onPostNotificationSuccess", params.toString());
                   return;
                }
                params.put("response", response.toString());
-               OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+               OneSignalUnityProxy.unitySafeInvoke("onPostNotificationSuccess", params.toString());
             } catch (JSONException e) {
                e.printStackTrace();
             }
@@ -215,11 +215,11 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
                params.put("delegate_id", new JSONObject().put("success", delegateIdSuccess).put("failure", delegateIdFailure));
                if (response == null) {
                   params.put("response", "");
-                  OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+                  OneSignalUnityProxy.unitySafeInvoke("onPostNotificationFailed", params.toString());
                   return;
                }
                params.put("response", response.toString());
-               OneSignalUnityProxy.unitySafeInvoke("onSendOutcomeSuccess", params.toString());
+               OneSignalUnityProxy.unitySafeInvoke("onPostNotificationFailed", params.toString());
             } catch (JSONException e) {
                e.printStackTrace();
             }
@@ -287,8 +287,50 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
       OneSignal.setExternalUserId(externalId);
    }
 
+   public void setExternalUserId(final String delegateId, String externalId) {
+      OneSignal.setExternalUserId(externalId, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(JSONObject results) {
+            try {
+               JSONObject params = new JSONObject();
+               params.put("delegate_id", new JSONObject().put("completion", delegateId).toString());
+               if (results == null) {
+                  params.put("response", "");
+                  OneSignalUnityProxy.unitySafeInvoke("onExternalUserIdUpdateCompletion", params.toString());
+                  return;
+               }
+               params.put("response", results.toString());
+               OneSignalUnityProxy.unitySafeInvoke("onExternalUserIdUpdateCompletion", params.toString());
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         }
+      });
+   }
+
    public void removeExternalUserId() {
       OneSignal.removeExternalUserId();
+   }
+
+   public void removeExternalUserId(final String delegateId) {
+      OneSignal.removeExternalUserId(new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(JSONObject results) {
+             try {
+                 JSONObject params = new JSONObject();
+                 params.put("delegate_id", new JSONObject().put("completion", delegateId).toString());
+                 if (results == null) {
+                     params.put("response", "");
+                     OneSignalUnityProxy.unitySafeInvoke("onExternalUserIdUpdateCompletion", params.toString());
+                     return;
+                 }
+                 params.put("response", results.toString());
+                 OneSignalUnityProxy.unitySafeInvoke("onExternalUserIdUpdateCompletion", params.toString());
+             } catch (JSONException e) {
+                 e.printStackTrace();
+             }
+         }
+      });
    }
 
    public String getPermissionSubscriptionState() {

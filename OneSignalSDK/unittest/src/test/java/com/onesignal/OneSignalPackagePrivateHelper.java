@@ -16,12 +16,15 @@ import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
+   public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
 
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
@@ -178,6 +181,7 @@ public class OneSignalPackagePrivateHelper {
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
    public static class CachedUniqueOutcomeNotificationTable extends OneSignalDbContract.CachedUniqueOutcomeNotificationTable { }
+   public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
       NotificationGenerationJob(Context context) {
@@ -269,21 +273,29 @@ public class OneSignalPackagePrivateHelper {
 
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
-      public OSTestInAppMessage(JSONObject json) throws JSONException {
+      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
+         super(messageId, clickIds, displayed, new OSInAppMessageDisplayStats(displaysQuantity, lastDisplayTime));
+      }
+
+      OSTestInAppMessage(JSONObject json) throws JSONException {
          super(json);
       }
 
+      OSTestInAppMessage(com.onesignal.OSInAppMessage inAppMessage) throws JSONException {
+         super(inAppMessage.toJSONObject());
+      }
+
       @Override
-      ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
+      protected ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
          ArrayList<ArrayList<OSTrigger>> parsedTriggers = new ArrayList<>();
 
          for (int i = 0; i < triggersJson.length(); i++) {
             JSONArray ands = triggersJson.getJSONArray(i);
 
-            ArrayList parsed = new ArrayList();
+            ArrayList<OSTrigger> parsed = new ArrayList<>();
 
             for (int j = 0; j < ands.length(); j++) {
-               OSTestTrigger trig = new OSTestTrigger(ands.getJSONObject(j));
+               OSTrigger trig = new OSTestTrigger(ands.getJSONObject(j));
 
                parsed.add(trig);
             }
@@ -294,8 +306,122 @@ public class OneSignalPackagePrivateHelper {
          return parsedTriggers;
       }
 
+      @Override
+      public void setDisplayDuration(double displayDuration) {
+         super.setDisplayDuration(displayDuration);
+      }
+
+      @NonNull
+      @Override
+      public Set<String> getClickedClickIds() {
+         return super.getClickedClickIds();
+      }
+
+      @Override
+      public boolean isClickAvailable(String clickId) {
+         return super.isClickAvailable(clickId);
+      }
+
+      @Override
+      public  void clearClickIds() {
+         super.clearClickIds();
+      }
+
+      @Override
+      public  void addClickId(String clickId) {
+         super.addClickId(clickId);
+      }
+
+      @Override
+      public double getDisplayDuration() {
+         return super.getDisplayDuration();
+      }
+
+      @Override
+      public OSTestInAppMessageDisplayStats getDisplayStats() {
+         return new OSTestInAppMessageDisplayStats(super.getDisplayStats());
+      }
+
       public JSONObject toJSONObject() {
          return super.toJSONObject();
+      }
+   }
+
+   public static class OSTestInAppMessageDisplayStats extends com.onesignal.OSInAppMessageDisplayStats {
+
+      private OSInAppMessageDisplayStats displayStats;
+
+      OSTestInAppMessageDisplayStats(OSInAppMessageDisplayStats displayStats) {
+         this.displayStats = displayStats;
+      }
+
+      @Override
+      public void setDisplayStats(OSInAppMessageDisplayStats displayStats) {
+         this.displayStats.setDisplayStats(displayStats);
+      }
+
+      @Override
+      public long getLastDisplayTime() {
+         return this.displayStats.getLastDisplayTime();
+      }
+
+      @Override
+      public void setLastDisplayTime(long lastDisplayTime) {
+         this.displayStats.setLastDisplayTime(lastDisplayTime);
+      }
+
+      public void setLastDisplayTimeToCurrent() {
+         this.displayStats.setLastDisplayTime(System.currentTimeMillis() / 1000);
+      }
+
+      @Override
+      public void incrementDisplayQuantity() {
+         this.displayStats.incrementDisplayQuantity();
+      }
+
+      @Override
+      public int getDisplayQuantity() {
+         return this.displayStats.getDisplayQuantity();
+      }
+
+      @Override
+      public void setDisplayQuantity(int displayQuantity) {
+         this.displayStats.setDisplayQuantity(displayQuantity);
+      }
+
+      @Override
+      public int getDisplayLimit() {
+         return this.displayStats.getDisplayLimit();
+      }
+
+      @Override
+      public void setDisplayLimit(int displayLimit) {
+         this.displayStats.setDisplayLimit(displayLimit);
+      }
+
+      @Override
+      public long getDisplayDelay() {
+         return this.displayStats.getDisplayDelay();
+      }
+
+      @Override
+      public void setDisplayDelay(long displayDelay) {
+         this.displayStats.setDisplayDelay(displayDelay);
+      }
+
+      @Override
+      public boolean shouldDisplayAgain() {
+         return this.displayStats.shouldDisplayAgain();
+      }
+
+      @Override
+      public boolean isDelayTimeSatisfied() {
+         return this.displayStats.isDelayTimeSatisfied();
+      }
+
+      @Override
+      public boolean isRedisplayEnabled() {
+         return this.displayStats.isRedisplayEnabled();
       }
    }
 
@@ -318,31 +444,45 @@ public class OneSignalPackagePrivateHelper {
 
    public static void dismissCurrentMessage() {
       com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage();
-      com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
+      if (message != null)
+         com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
    }
 
-   public static class OSInAppMessageController extends com.onesignal.OSInAppMessageController {
-      private static OSInAppMessageController sharedInstance;
-
-      public static OSInAppMessageController getController() {
-         if (sharedInstance == null)
-            sharedInstance = new OSInAppMessageController();
-
-         return sharedInstance;
-      }
-      public void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) {
-         super.onMessageActionOccurredOnMessage(message, actionJson);
-      }
-
-      public void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
-         com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
-      }
+   public static boolean isInAppMessageShowing() {
+      return com.onesignal.OSInAppMessageController.getController().isInAppMessageShowing();
    }
 
-   public static class OSInAppMessage extends com.onesignal.OSInAppMessage {
-      public OSInAppMessage(JSONObject json) throws JSONException {
-         super(json);
+   public static String getShowingInAppMessageId() {
+      return com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage().messageId;
+   }
+
+   public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
+      return com.onesignal.OSInAppMessageController.getController().getInAppMessageDisplayQueue();
+   }
+
+   public static void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
+      com.onesignal.OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionJson);
+   }
+
+   public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+      com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
+   }
+
+   public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
+      List<OSInAppMessage> messages = com.onesignal.OSInAppMessageController.getController().getRedisplayedInAppMessages();
+      List<OSTestInAppMessage> testMessages = new ArrayList<>();
+
+      for (OSInAppMessage message : messages) {
+         try {
+            OSTestInAppMessage testInAppMessage = new OSTestInAppMessage(message);
+            testInAppMessage.getDisplayStats().setDisplayStats(message.getDisplayStats());
+            testMessages.add(testInAppMessage);
+
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
       }
+      return testMessages;
    }
 
    public static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {
@@ -371,5 +511,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
 
-   public static class JSONUtils extends com.onesignal.JSONUtils {}
+   public static class JSONUtils extends com.onesignal.JSONUtils {
+
+
+   }
 }

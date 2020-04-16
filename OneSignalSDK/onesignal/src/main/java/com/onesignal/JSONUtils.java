@@ -125,7 +125,7 @@ class JSONUtils {
         try {
             for (int i = 0; i < jsonArray.length(); i++)
                 strArray += "\"" + jsonArray.getString(i) + "\"";
-        } catch (Throwable t) {}
+        } catch (JSONException ignored) {}
 
         return strArray + "]";
     }
@@ -148,7 +148,7 @@ class JSONUtils {
                 value = keyValues.get(key);
                 if (!"".equals(value))
                     toReturn.put(key, value);
-            } catch (Throwable t) {}
+            } catch (JSONException ignored) {}
         }
 
         return toReturn;

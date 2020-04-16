@@ -441,7 +441,8 @@ class InAppMessageView {
      * IAM has been fully dismissed, remove all views and call the onMessageWasDismissed callback
      */
     private void cleanupViewsAfterDismiss() {
-       removeAllViews();
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "InAppMessageView cleanupViewsAfterDismiss");
+        removeAllViews();
         if (messageController != null)
             messageController.onMessageWasDismissed();
     }

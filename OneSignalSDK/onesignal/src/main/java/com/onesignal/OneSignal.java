@@ -43,6 +43,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -193,6 +194,14 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
+   public interface OSExternalUserIdUpdateCompletionHandler {
+      void onComplete(JSONObject results);
+   }
+
+   interface OSInternalExternalUserIdUpdateCompletionHandler {
+      void onComplete(String channel, boolean success);
+   }
+
    public enum EmailErrorType {
       VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
    }
@@ -289,7 +298,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031205";
+   public static final String VERSION = "031301";
 
    private static OSSessionManager.SessionListener getNewSessionListener() {
       return new OSSessionManager.SessionListener() {
@@ -857,8 +866,8 @@ public class OneSignal {
    private static void startLocationUpdate() {
       LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
          @Override
-         public LocationGMS.CALLBACK_TYPE getType() {
-            return LocationGMS.CALLBACK_TYPE.STARTUP;
+         public LocationGMS.PermissionType getType() {
+            return LocationGMS.PermissionType.STARTUP;
          }
          @Override
          public void complete(LocationGMS.LocationPoint point) {
@@ -1429,18 +1438,27 @@ public class OneSignal {
       emailLogout.run();
    }
 
-   public static void setExternalUserId(final String externalId) {
+   public static void setExternalUserId(@NonNull final String externalId) {
+      setExternalUserId(externalId, null);
+   }
 
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalId()"))
+   public static void setExternalUserId(@NonNull final String externalId, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalUserId()"))
          return;
 
       Runnable runSetExternalUserId = new Runnable() {
          @Override
          public void run() {
+            if (externalId == null) {
+               OneSignal.Log(LOG_LEVEL.WARN, "External id can't be null, set an empty string to remove an external id");
+               return;
+            }
+
             try {
-               OneSignalStateSynchronizer.setExternalUserId(externalId);
+               OneSignalStateSynchronizer.setExternalUserId(externalId, completionCallback);
             } catch (JSONException exception) {
-               String operation = externalId == "" ? "remove" : "set";
+               String operation = externalId.equals("") ? "remove" : "set";
                onesignalLog(LOG_LEVEL.ERROR, "Attempted to " + operation + " external ID but encountered a JSON exception");
                exception.printStackTrace();
             }
@@ -1460,8 +1478,15 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeExternalUserId()"))
          return;
 
+      removeExternalUserId(null);
+   }
+
+   public static void removeExternalUserId(final OSExternalUserIdUpdateCompletionHandler completionHandler) {
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("removeExternalUserId()"))
+         return;
+
       // to remove the external user ID, the API requires an empty string
-      setExternalUserId("");
+      setExternalUserId("", completionHandler);
    }
 
    /**
@@ -1795,13 +1820,20 @@ public class OneSignal {
    }
 
    public static void deleteTags(String jsonArrayString, ChangeTagsUpdateHandler handler) {
+      try {
+         deleteTags(new JSONArray(jsonArrayString), handler);
+      } catch (Throwable t) {
+         Log(LOG_LEVEL.ERROR, "Failed to generate JSON for deleteTags.", t);
+      }
+   }
+
+   public static void deleteTags(JSONArray jsonArray, ChangeTagsUpdateHandler handler) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("deleteTags()"))
          return;
 
       try {
          JSONObject jsonTags = new JSONObject();
-         JSONArray jsonArray = new JSONArray(jsonArrayString);
 
          for (int i = 0; i < jsonArray.length(); i++)
             jsonTags.put(jsonArray.getString(i), "");
@@ -2156,14 +2188,11 @@ public class OneSignal {
    }
 
    static boolean hasEmailId() {
-      return getEmailId() != null;
+      return !TextUtils.isEmpty(emailId);
    }
 
    static String getEmailId() {
-      if ("".equals(emailId))
-         return null;
-
-      if (emailId == null && appContext != null) {
+      if (TextUtils.isEmpty(emailId) && appContext != null) {
          emailId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_OS_EMAIL_ID,null);
       }
@@ -2394,7 +2423,10 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
     */
    public static void promptLocation() {
+      promptLocation(null);
+   }
 
+   static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
          return;
@@ -2402,10 +2434,10 @@ public class OneSignal {
       Runnable runPromptLocation = new Runnable() {
          @Override
          public void run() {
-            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationPromptCompletionHandler() {
                @Override
-               public LocationGMS.CALLBACK_TYPE getType() {
-                  return LocationGMS.CALLBACK_TYPE.PROMPT_LOCATION;
+               public LocationGMS.PermissionType getType() {
+                  return LocationGMS.PermissionType.PROMPT_LOCATION;
                }
                @Override
                public void complete(LocationGMS.LocationPoint point) {
@@ -2415,6 +2447,13 @@ public class OneSignal {
 
                   if (point != null)
                      OneSignalStateSynchronizer.updateLocation(point);
+               }
+
+               @Override
+               void onAnswered(boolean accepted) {
+                  super.onAnswered(accepted);
+                  if (callback != null)
+                     callback.completed(accepted);
                }
             };
 
@@ -3029,6 +3068,19 @@ public class OneSignal {
       return sessionManager;
    }
 
+   static void sendClickActionOutcome(@NonNull String name) {
+      sendClickActionOutcomeWithValue(name, 0);
+   }
+
+   static void sendClickActionOutcomeWithValue(@NonNull String name, float value) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
+
+      outcomeEventsController.sendClickOutcomeEventWithValue(name, value);
+   }
+
    public static void sendOutcome(@NonNull String name) {
       sendOutcome(name, null);
    }
@@ -3043,6 +3095,15 @@ public class OneSignal {
       }
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
+   }
+
+   static void sendClickActionUniqueOutcome(@NonNull String name) {
+      if (outcomeEventsController == null) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         return;
+      }
+
+      outcomeEventsController.sendUniqueClickOutcomeEvent(name);
    }
 
    public static void sendUniqueOutcome(@NonNull String name) {
@@ -3106,4 +3167,7 @@ public class OneSignal {
    }
    // End OneSignalOutcome module
 
+   interface OSPromptActionCompletionCallback {
+      void completed(boolean accepted);
+   }
 }

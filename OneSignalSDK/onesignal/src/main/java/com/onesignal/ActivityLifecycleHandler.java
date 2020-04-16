@@ -288,7 +288,7 @@ class ActivityLifecycleHandler {
                     }
                 }
                 ActivityLifecycleHandler.removeSystemConditionObserver(key);
-                observer.messageTriggerConditionChanged();
+                observer.systemConditionChanged();
             }
         }
     }
