@@ -48,6 +48,7 @@ dependencies {
     api 'androidx.cardview:cardview:[1.0.0, 1.99.99]'
     api 'androidx.legacy:legacy-support-v4:[1.0.0, 1.99.99]'
     api 'androidx.browser:browser:[1.0.0, 1.99.99]'
+    api 'androidx.appcompat:appcompat:[1.0.0, 1.99.99]'
 }
 
 apply from: 'maven-push.gradle'
