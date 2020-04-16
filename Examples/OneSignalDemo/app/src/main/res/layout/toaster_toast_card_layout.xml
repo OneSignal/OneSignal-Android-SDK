@@ -8,7 +8,7 @@
     android:clipToPadding="false"
     android:background="@android:color/transparent">
 
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:id="@+id/toaster_toast_card_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -39,13 +39,15 @@
                 android:id="@+id/toaster_toast_text_view"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="4dp"
                 android:textSize="14sp"
                 android:textColor="@color/colorTextLight"
-                android:textAlignment="center"/>
+                android:textAlignment="center" />
 
         </LinearLayout>
 
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
 
 </LinearLayout>
