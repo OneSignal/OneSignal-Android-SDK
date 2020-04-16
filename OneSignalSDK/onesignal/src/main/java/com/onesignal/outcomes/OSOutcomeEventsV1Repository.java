@@ -1,10 +1,9 @@
 package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalApiResponseHandler;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
-import com.onesignal.outcomes.model.OSOutcomeEvent;
+import com.onesignal.OSOutcomeEvent;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.json.JSONException;
@@ -20,7 +19,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
 
     @Override
     public void requestMeasureOutcomeEvent(String appId, int deviceType, OSOutcomeEventParams eventParams, OneSignalApiResponseHandler responseHandler) {
-        OSOutcomeEvent event = OSOutcomeEvent.fromOutcomeEventParams(eventParams);
+        OSOutcomeEvent event = OSOutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams);
         switch (event.getSession()) {
             case DIRECT:
                 requestMeasureDirectOutcomeEvent(appId, deviceType, event, responseHandler);
@@ -45,7 +44,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
 
             outcomeEventsService.sendOutcomeEvent(jsonObject, responseHandler);
         } catch (JSONException e) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating direct outcome:JSON Failed.", e);
+            logger.error("Generating direct outcome:JSON Failed.", e);
         }
     }
 
@@ -58,7 +57,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
 
             outcomeEventsService.sendOutcomeEvent(jsonObject, responseHandler);
         } catch (JSONException e) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating indirect outcome:JSON Failed.", e);
+            logger.error("Generating indirect outcome:JSON Failed.", e);
         }
     }
 
@@ -70,7 +69,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
 
             outcomeEventsService.sendOutcomeEvent(jsonObject, responseHandler);
         } catch (JSONException e) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating unattributed outcome:JSON Failed.", e);
+            logger.error("Generating unattributed outcome:JSON Failed.", e);
         }
     }
 

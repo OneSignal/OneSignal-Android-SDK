@@ -262,6 +262,8 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.appId = appId;
    }
 
+   static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}
+
    static public class RemoteOutcomeParams extends OneSignalRemoteParams.InfluenceParams {
 
       public RemoteOutcomeParams() {

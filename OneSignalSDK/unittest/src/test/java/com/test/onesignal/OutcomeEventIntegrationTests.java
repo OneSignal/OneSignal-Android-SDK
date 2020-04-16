@@ -96,7 +96,7 @@ public class OutcomeEventIntegrationTests {
     private MockOneSignalDBHelper dbHelper;
     private MockOSLog logger = new MockOSLog();
     private MockSessionManager sessionManager;
-    private MockOSSharedPreferences preferences;
+    private OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper preferences;
     private OSTrackerFactory trackerFactory;
     private static List<OSInfluence> lastInfluencesEnding;
 
@@ -138,7 +138,7 @@ public class OutcomeEventIntegrationTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSSharedPreferences();
+        preferences = new OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper();
         trackerFactory = new OSTrackerFactory(preferences, logger);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         cleanUp();
@@ -146,9 +146,7 @@ public class OutcomeEventIntegrationTests {
 
     @After
     public void afterEachTest() throws Exception {
-        trackerFactory.clearInfluenceData();
         lastInfluencesEnding = null;
-        preferences.reset();
         afterTestCleanup();
     }
 
@@ -264,9 +262,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2UniqueOutcomeMeasureOnlySentOncePerClickedNotification_whenSendingMultipleUniqueOutcomes_inDirectSession() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
         foregroundAppAfterClickingNotification();
 
         // Send unique outcome event
@@ -353,9 +353,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2UniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
         foregroundAppAfterReceivingNotification();
 
         // Check notificationIds equal indirectNotificationIds from OSSessionManager
@@ -471,9 +473,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2OutcomeNameSentWithMeasureOncePerSession_whenSendingMultipleUniqueOutcomes_inUnattributedSession() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
 
         OneSignalInit();
         threadAndTaskWait();
@@ -549,9 +553,11 @@ public class OutcomeEventIntegrationTests {
     @Test
     public void testOnV2CorrectOutcomeSent_fromNotificationOpenedHandler() throws Exception {
         // Enable IAM v2
-        OneSignal_setSharedPreferences(preferences);
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
 
         // Init OneSignal with a custom opened handler
         OneSignalInit(new OneSignal.NotificationOpenedHandler() {

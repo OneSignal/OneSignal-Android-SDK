@@ -19,7 +19,7 @@ import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.MockOSOutcomeTableProvider;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.model.OSOutcomeEvent;
+import com.onesignal.OSOutcomeEvent;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -86,7 +86,6 @@ public class DatabaseRunner {
 
     @After
     public void afterEachTest() throws Exception {
-        outcomeTableProvider.clean();
         TestHelpers.afterTestCleanup();
     }
 
@@ -394,7 +393,7 @@ public class DatabaseRunner {
         List<OSCachedUniqueOutcome> cachedOutcomesBeforeUpdate = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
         assertEquals(1, cachedOutcomesBeforeUpdate.size());
 
-        outcomeTableProvider.clean();
+        outcomeTableProvider = new MockOSOutcomeTableProvider();
         writableDatabase = dbHelper.getWritableDatabase();
         writableDatabase.setVersion(7);
         writableDatabase.close();
@@ -458,7 +457,7 @@ public class DatabaseRunner {
         List<OSOutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
         assertEquals(1, outcomesSavedBeforeUpdate.size());
 
-        outcomeTableProvider.clean();
+        outcomeTableProvider = new MockOSOutcomeTableProvider();
         writableDatabase = dbHelper.getWritableDatabase();
         writableDatabase.setVersion(7);
         writableDatabase.close();

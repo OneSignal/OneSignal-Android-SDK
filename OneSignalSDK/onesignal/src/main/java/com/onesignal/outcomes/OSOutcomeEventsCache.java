@@ -77,13 +77,13 @@ class OSOutcomeEventsCache {
                     OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?", new String[]{String.valueOf(event.getTimestamp())});
             writableDb.setTransactionSuccessful();
         } catch (SQLiteException e) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Error deleting old outcome event records! ", e);
+            logger.error("Error deleting old outcome event records! ", e);
         } finally {
             if (writableDb != null) {
                 try {
                     writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
                 } catch (SQLiteException e) {
-                    logger.log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", e);
+                    logger.error("Error closing transaction! ", e);
                 }
             }
         }
@@ -201,15 +201,15 @@ class OSOutcomeEventsCache {
                                 directSourceBody.setNotificationIds(new JSONArray(notificationIds));
                                 source = new OSOutcomeSource(directSourceBody, null);
                                 break;
-                            case DISABLED:
-                                // We should not save disable
-                                break;
                             case INDIRECT:
                                 indirectSourceBody.setNotificationIds(new JSONArray(notificationIds));
                                 source = new OSOutcomeSource(null, indirectSourceBody);
                                 break;
                             case UNATTRIBUTED:
                                 // Keep source as null, no source mean unattributed
+                                break;
+                            case DISABLED:
+                                // We should not save disable
                                 break;
                         }
 
@@ -218,9 +218,6 @@ class OSOutcomeEventsCache {
                                 directSourceBody.setInAppMessagesIds(new JSONArray(iamIds));
                                 source = source == null ? new OSOutcomeSource(directSourceBody, null) : source.setDirectBody(directSourceBody);
                                 break;
-                            case DISABLED:
-                                // We should not save disable
-                                break;
                             case INDIRECT:
                                 indirectSourceBody.setInAppMessagesIds(new JSONArray(iamIds));
                                 source = source == null ? new OSOutcomeSource(null, indirectSourceBody) : source.setIndirectBody(indirectSourceBody);
@@ -228,12 +225,15 @@ class OSOutcomeEventsCache {
                             case UNATTRIBUTED:
                                 // Keep source as null, no source mean unattributed
                                 break;
+                            case DISABLED:
+                                // We should not save disable
+                                break;
                         }
 
                         OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight, timestamp);
                         events.add(eventParams);
                     } catch (JSONException e) {
-                        logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating JSONArray from notifications ids outcome:JSON Failed.", e);
+                        logger.error("Generating JSONArray from notifications ids outcome:JSON Failed.", e);
                     }
                 } while (cursor.moveToNext());
             }
@@ -273,7 +273,7 @@ class OSOutcomeEventsCache {
      */
     @WorkerThread
     synchronized void saveUniqueOutcomeNotifications(@NonNull OSOutcomeEventParams eventParams) {
-        logger.log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal saveUniqueOutcomeNotifications: " + eventParams.toString());
+        logger.debug("OneSignal saveUniqueOutcomeNotifications: " + eventParams.toString());
         if (eventParams.getOutcomeSource() == null)
             return;
 

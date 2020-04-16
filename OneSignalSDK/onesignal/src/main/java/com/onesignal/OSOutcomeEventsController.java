@@ -135,15 +135,12 @@ class OSOutcomeEventsController {
         }
 
         boolean attributed = false;
-        boolean unattributed = false;
         for (OSInfluence influence : influences) {
             if (influence.getInfluenceType().isAttributed()) {
                 // At least one channel attributed this outcome
                 attributed = true;
                 break;
-            } else if (influence.getInfluenceType().isUnattributed()) {
-                unattributed = true;
-            } // else DISABLED
+            }
         }
 
         // Special handling for unique outcomes in the attributed and unattributed scenarios
@@ -164,7 +161,7 @@ class OSOutcomeEventsController {
             }
 
             sendAndCreateOutcomeEvent(name, 0, uniqueInfluences, callback);
-        } else if (unattributed) {
+        } else {
             // Make sure unique outcome has not been sent for current unattributed session
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG,
@@ -181,8 +178,6 @@ class OSOutcomeEventsController {
 
             unattributedUniqueOutcomeEventsSentOnSession.add(name);
             sendAndCreateOutcomeEvent(name, 0, influences, callback);
-        } else {
-            OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes disabled");
         }
     }
 
@@ -232,7 +227,7 @@ class OSOutcomeEventsController {
 
                 // The only case where an actual success has occurred and the OutcomeEvent should be sent back
                 if (callback != null)
-                    callback.onSuccess(eventParams);
+                    callback.onSuccess(OSOutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams));
             }
 
             @Override

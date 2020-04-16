@@ -27,10 +27,9 @@ public class OSOutcomeEventsFactory {
     }
 
     private void createRepository() {
-        if (outcomeEventsCache.isOutcomesV2Available()) {
+        if (outcomeEventsCache.isOutcomesV2Available())
             repository = new OSOutcomeEventsV2Repository(logger, outcomeEventsCache, new OSOutcomeEventsV2Service(apiClient));
-        } else {
+        else
             repository = new OSOutcomeEventsV1Repository(logger, outcomeEventsCache, new OSOutcomeEventsV1Service(apiClient));
-        }
     }
 }

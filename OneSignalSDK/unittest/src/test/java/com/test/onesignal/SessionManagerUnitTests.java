@@ -109,7 +109,6 @@ public class SessionManagerUnitTests {
 
     @After
     public void tearDown() throws Exception {
-        trackerFactory.clearInfluenceData();
         lastInfluencesBySessionEnding = null;
 
         StaticResetHelper.restSetStaticFields();
@@ -118,7 +117,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testUnattributedInitInfluence() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -131,7 +129,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectInfluence() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
         sessionManager.onInAppMessageReceived(GENERIC_ID);
@@ -148,7 +145,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectNotificationInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -170,7 +166,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectNotificationInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -192,7 +187,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectIAMInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -215,7 +209,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectIAMInitInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -238,7 +231,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectIAMResetInfluence() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -262,7 +254,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testUnattributedAddSessionData() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -274,7 +265,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectAddSessionData() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -295,7 +285,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectAddSessionData() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -316,7 +305,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDisabledAddSessionData() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false));
         sessionManager.initSessionFromCache();
 
@@ -328,7 +316,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectWithNullNotification() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onNotificationReceived(null);
@@ -342,7 +329,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testDirectWithEmptyNotification() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onNotificationReceived("");
@@ -356,7 +342,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromAppClosed() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -384,7 +369,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromUnattributedToIndirect() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -423,7 +407,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromUnattributedToDirectNotification() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -464,7 +447,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromIndirectToDirect() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -504,7 +486,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromDirectToDirectDifferentID() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -535,7 +516,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromDirectToDirectSameID() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -564,7 +544,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testSessionUpgradeFromDirectToDirectEndChannelsDirect() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -610,7 +589,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testRestartSessionIfNeededFromOpen() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
@@ -629,7 +607,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testRestartSessionIfNeededFromClose() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
@@ -648,7 +625,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testRestartSessionIfNeededFromNotification() throws JSONException {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
@@ -667,7 +643,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectNotificationQuantityInfluence() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         for (int i = 0; i < INFLUENCE_ID_LIMIT + 5; i++) {
@@ -684,7 +659,6 @@ public class SessionManagerUnitTests {
 
     @Test
     public void testIndirectIAMQuantityInfluence() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         for (int i = 0; i < INFLUENCE_ID_LIMIT + 5; i++) {

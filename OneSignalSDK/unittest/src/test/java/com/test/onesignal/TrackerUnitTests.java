@@ -90,15 +90,12 @@ public class TrackerUnitTests {
 
     @After
     public void tearDown() throws Exception {
-        trackerFactory.clearInfluenceData();
-
         StaticResetHelper.restSetStaticFields();
         threadAndTaskWait();
     }
 
     @Test
     public void testUnattributedInitInfluence() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         trackerFactory.initFromCache();
         List<OSInfluence> influences = trackerFactory.getInfluences();
@@ -110,7 +107,6 @@ public class TrackerUnitTests {
 
     @Test
     public void testInfluenceIdsSaved() throws Exception {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         assertEquals(0, trackerFactory.getNotificationChannelTracker().getLastReceivedIds().length());
@@ -130,7 +126,6 @@ public class TrackerUnitTests {
 
     @Test
     public void testDisabledInitInfluence() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false));
         trackerFactory.initFromCache();
         List<OSInfluence> influences = trackerFactory.getInfluences();
@@ -142,7 +137,6 @@ public class TrackerUnitTests {
 
     @Test
     public void testUnattributedAddSessionData() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         trackerFactory.initFromCache();
 
@@ -154,7 +148,6 @@ public class TrackerUnitTests {
 
     @Test
     public void testDisabledAddSessionData() {
-        preferences.mock = true;
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams(false, false, false));
         trackerFactory.initFromCache();
 
@@ -173,10 +166,10 @@ public class TrackerUnitTests {
 
     @Test
     public void testGetChannelToResetByEntryAction() {
-        assertEquals(2, trackerFactory.getChannelToResetByEntryAction(OneSignal.AppEntryAction.APP_OPEN).size());
-        assertEquals(0, trackerFactory.getChannelToResetByEntryAction(OneSignal.AppEntryAction.APP_CLOSE).size());
-        assertEquals(1, trackerFactory.getChannelToResetByEntryAction(OneSignal.AppEntryAction.NOTIFICATION_CLICK).size());
-        assertEquals(IAM_ID, trackerFactory.getChannelToResetByEntryAction(OneSignal.AppEntryAction.NOTIFICATION_CLICK).get(0).getIdTag());
+        assertEquals(2, trackerFactory.getChannelsToResetByEntryAction(OneSignal.AppEntryAction.APP_OPEN).size());
+        assertEquals(0, trackerFactory.getChannelsToResetByEntryAction(OneSignal.AppEntryAction.APP_CLOSE).size());
+        assertEquals(1, trackerFactory.getChannelsToResetByEntryAction(OneSignal.AppEntryAction.NOTIFICATION_CLICK).size());
+        assertEquals(IAM_ID, trackerFactory.getChannelsToResetByEntryAction(OneSignal.AppEntryAction.NOTIFICATION_CLICK).get(0).getIdTag());
     }
 
 }

@@ -26,7 +26,7 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
-import com.onesignal.influence.MockOSInfluenceData;
+import com.onesignal.influence.MockOSInfluenceDataRepository;
 import com.onesignal.influence.OSTrackerFactory;
 
 import org.awaitility.Awaitility;
@@ -98,7 +98,7 @@ public class InAppMessageIntegrationTests {
     private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
     private static final int LIMIT = 5;
     private static final int DELAY = 60;
-    private MockOSSharedPreferences preferences;
+    private OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper preferences;
     private OSTrackerFactory trackerFactory;
     private MockSessionManager sessionManager;
     @SuppressLint("StaticFieldLeak")
@@ -123,7 +123,7 @@ public class InAppMessageIntegrationTests {
     @Before
     public void beforeEachTest() throws Exception {
         ShadowDynamicTimer.shouldScheduleTimers = true;
-        preferences = new MockOSSharedPreferences();
+        preferences = new OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper();
         trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
@@ -137,8 +137,6 @@ public class InAppMessageIntegrationTests {
         // reset back to the default
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
-        trackerFactory.clearInfluenceData();
-        preferences.reset();
 
         TestHelpers.afterTestCleanup();
 
@@ -541,8 +539,11 @@ public class InAppMessageIntegrationTests {
     @Test
     public void testInAppMessageClickActionOutcomeV2() throws Exception {
         // Enable IAM v2
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
+        sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
+
         OneSignal_setSharedPreferences(preferences);
         OneSignal_setTrackerFactory(trackerFactory);
         OneSignal_setSessionManager(sessionManager);
@@ -691,7 +692,7 @@ public class InAppMessageIntegrationTests {
         // Disable Outcomes
         OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
                 OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                MockOSInfluenceData.PREFS_OS_UNATTRIBUTED_ENABLED,
+                MockOSInfluenceDataRepository.PREFS_OS_UNATTRIBUTED_ENABLED,
                 false
         );
 
@@ -729,7 +730,7 @@ public class InAppMessageIntegrationTests {
         // Enable Outcomes
         OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
                 OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                MockOSInfluenceData.PREFS_OS_UNATTRIBUTED_ENABLED,
+                MockOSInfluenceDataRepository.PREFS_OS_UNATTRIBUTED_ENABLED,
                 true
         );
 

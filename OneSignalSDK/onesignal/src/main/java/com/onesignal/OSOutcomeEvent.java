@@ -1,9 +1,11 @@
-package com.onesignal.outcomes.model;
+package com.onesignal;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.outcomes.model.OSOutcomeEventParams;
+import com.onesignal.outcomes.model.OSOutcomeSource;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,21 +33,21 @@ public class OSOutcomeEvent {
         this.weight = weight;
     }
 
-    public static OSOutcomeEvent fromOutcomeEventParams(OSOutcomeEventParams outcomeEventParams) {
-        OSInfluenceType session = OSInfluenceType.UNATTRIBUTED;
+    public static OSOutcomeEvent fromOutcomeEventParamsV2toOutcomeEventV1(OSOutcomeEventParams outcomeEventParams) {
+        OSInfluenceType influenceType = OSInfluenceType.UNATTRIBUTED;
         JSONArray notificationId = null;
         if (outcomeEventParams.getOutcomeSource() != null) {
             OSOutcomeSource source = outcomeEventParams.getOutcomeSource();
             if (source.getDirectBody() != null && source.getDirectBody().getNotificationIds() != null && source.getDirectBody().getNotificationIds().length() > 0) {
-                session = OSInfluenceType.DIRECT;
+                influenceType = OSInfluenceType.DIRECT;
                 notificationId = source.getDirectBody().getNotificationIds();
             } else if (source.getIndirectBody() != null && source.getIndirectBody().getNotificationIds() != null && source.getIndirectBody().getNotificationIds().length() > 0) {
-                session = OSInfluenceType.INDIRECT;
+                influenceType = OSInfluenceType.INDIRECT;
                 notificationId = source.getIndirectBody().getNotificationIds();
             }
         }
 
-        return new OSOutcomeEvent(session, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
+        return new OSOutcomeEvent(influenceType, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
     }
 
     public OSInfluenceType getSession() {

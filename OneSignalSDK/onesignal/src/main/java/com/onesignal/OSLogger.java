@@ -5,8 +5,12 @@ import android.support.annotation.Nullable;
 
 public interface OSLogger {
 
-    void log(@NonNull OneSignal.LOG_LEVEL level, @NonNull String message);
+    void verbose(@NonNull String message);
 
-    void log(@NonNull final OneSignal.LOG_LEVEL level, @NonNull String message, @Nullable Throwable throwable);
+    void debug(@NonNull String message);
+
+    void warning(@NonNull String message);
+
+    void error(@NonNull String message, @Nullable Throwable throwable);
 
 }

@@ -34,7 +34,6 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
-import com.onesignal.MockOutcomeEventsFactory;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
@@ -44,6 +43,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.outcomes.OSOutcomeEventsFactory;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
@@ -126,9 +126,8 @@ public class OutcomeEventV2UnitTests {
         outcomeEvents = null;
 
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        preferences = new MockOSSharedPreferences();
         // Mock on a custom HashMap in order to not use custom context
-        preferences.mock = true;
+        preferences = new MockOSSharedPreferences();
         // Save v2 flag
         String v2Name = preferences.getOutcomesV2KeyName();
         preferences.saveBool(preferences.getPreferencesName(), v2Name, true);
@@ -136,7 +135,7 @@ public class OutcomeEventV2UnitTests {
         trackerFactory = new OSTrackerFactory(preferences, logWrapper);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
         service = new MockOneSignalAPIClient();
-        MockOutcomeEventsFactory factory = new MockOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
+        OSOutcomeEventsFactory factory = new OSOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
         controller = new MockOutcomeEventsController(sessionManager, factory);
 
         TestHelpers.beforeTestInitAndCleanup();
@@ -146,8 +145,6 @@ public class OutcomeEventV2UnitTests {
 
     @After
     public void tearDown() throws Exception {
-        trackerFactory.clearInfluenceData();
-        preferences.reset();
         dbHelper.cleanOutcomeDatabase();
         dbHelper.close();
         StaticResetHelper.restSetStaticFields();
@@ -164,12 +161,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
@@ -186,12 +178,7 @@ public class OutcomeEventV2UnitTests {
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                handler.setOutcomes(repository.getSavedOutcomeEvents());
-            }
-        }, "OS_GET_SAVED_OUTCOMES_SUCCESS").start();
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());

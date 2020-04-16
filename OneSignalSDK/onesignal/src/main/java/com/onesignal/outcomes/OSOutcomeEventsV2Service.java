@@ -12,10 +12,9 @@ class OSOutcomeEventsV2Service extends OSOutcomeEventsClient {
     }
 
     /***
-     * API endpoint /api/v1/outcomes/outcomes/measure
-     * TODO define new endpoint for v2
+     * API endpoint /api/v1/outcomes/measure_sources
      */
     public void sendOutcomeEvent(JSONObject object, OneSignalApiResponseHandler responseHandler) {
-        client.post("outcomes/measure", object, responseHandler);
+        client.post("outcomes/measure_sources", object, responseHandler);
     }
 }

@@ -190,7 +190,7 @@ public class OneSignalRemoteParams {
 
    static private void processOutcomeJson(JSONObject outcomeJson, InfluenceParams influenceParams) {
       if (outcomeJson.has(V2_PARAM))
-         influenceParams.v2Enabled = outcomeJson.optBoolean(V2_PARAM);;
+         influenceParams.v2Enabled = outcomeJson.optBoolean(V2_PARAM);
 
       if (outcomeJson.has(DIRECT_PARAM)) {
          JSONObject direct = outcomeJson.optJSONObject(DIRECT_PARAM);

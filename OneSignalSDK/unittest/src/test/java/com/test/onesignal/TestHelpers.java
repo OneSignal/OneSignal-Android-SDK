@@ -37,8 +37,7 @@ import com.onesignal.influence.model.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.model.OSOutcomeEvent;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
+import com.onesignal.OSOutcomeEvent;
 
 import junit.framework.Assert;
 

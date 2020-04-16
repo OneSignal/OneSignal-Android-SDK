@@ -261,7 +261,6 @@ public class MainOneSignalClassRunner {
 
    @After
    public void afterEachTest() throws Exception {
-      trackerFactory.clearInfluenceData();
       afterTestCleanup();
    }
 

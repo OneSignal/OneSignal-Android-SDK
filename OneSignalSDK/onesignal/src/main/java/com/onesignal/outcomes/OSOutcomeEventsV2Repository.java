@@ -24,7 +24,7 @@ class OSOutcomeEventsV2Repository extends OSOutcomeEventsRepository {
 
             outcomeEventsService.sendOutcomeEvent(jsonObject, responseHandler);
         } catch (JSONException e) {
-            logger.log(OneSignal.LOG_LEVEL.ERROR, "Generating indirect outcome:JSON Failed.", e);
+            logger.error("Generating indirect outcome:JSON Failed.", e);
         }
     }
 }
