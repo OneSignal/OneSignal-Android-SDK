@@ -41,8 +41,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -50,7 +50,7 @@ import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
- *   - Entry points are processBundleFromReceiver or ProcessFromGCMIntentService respectively
+ *   - Entry points are processBundleFromReceiver or ProcessFromFCMIntentService respectively
  * NOTE: Could split up this class since it does a number of different things
  * */
 class NotificationBundleProcessor {
@@ -60,12 +60,12 @@ class NotificationBundleProcessor {
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
 
-   static void ProcessFromGCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       OneSignal.setAppContext(context);
       try {
          String jsonStrPayload = bundle.getString("json_payload");
          if (jsonStrPayload == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from mBundle passed to ProcessFromGCMIntentService: " + bundle);
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from mBundle passed to ProcessFromFCMIntentService: " + bundle);
             return;
          }
    
@@ -286,12 +286,12 @@ class NotificationBundleProcessor {
    }
 
    // Format our short keys into more readable ones.
-   private static void unMinifyBundle(Bundle gcmBundle) {
-      if (!gcmBundle.containsKey("o"))
+   private static void maximizeBundle(Bundle fcmBundle) {
+      if (!fcmBundle.containsKey("o"))
          return;
       
       try {
-         JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
+         JSONObject customJSON = new JSONObject(fcmBundle.getString("custom"));
          JSONObject additionalDataJSON;
 
          if (customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
@@ -299,8 +299,8 @@ class NotificationBundleProcessor {
          else
             additionalDataJSON = new JSONObject();
 
-         JSONArray buttons = new JSONArray(gcmBundle.getString("o"));
-         gcmBundle.remove("o");
+         JSONArray buttons = new JSONArray(fcmBundle.getString("o"));
+         fcmBundle.remove("o");
          for (int i = 0; i < buttons.length(); i++) {
             JSONObject button = buttons.getJSONObject(i);
 
@@ -327,7 +327,7 @@ class NotificationBundleProcessor {
          if (!customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
             customJSON.put(PUSH_ADDITIONAL_DATE_KEY, additionalDataJSON);
 
-         gcmBundle.putString("custom", customJSON.toString());
+         fcmBundle.putString("custom", customJSON.toString());
       } catch (JSONException e) {
          e.printStackTrace();
       }
@@ -446,16 +446,16 @@ class NotificationBundleProcessor {
       }
    }
 
-   //  Process bundle passed from gcm / adm broadcast receiver.
+   //  Process bundle passed from fcm / adm broadcast receiver.
    static @NonNull ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
       ProcessedBundleResult result = new ProcessedBundleResult();
       
-      // Not a OneSignal GCM message
-      if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
+      // Not a OneSignal FCM message
+      if (OneSignal.getNotificationIdFromFCMBundle(bundle) == null)
          return result;
       result.isOneSignalPayload = true;
 
-      unMinifyBundle(bundle);
+      maximizeBundle(bundle);
 
       JSONObject pushPayloadJson = bundleAsJSONObject(bundle);
 
@@ -474,7 +474,7 @@ class NotificationBundleProcessor {
       if (startExtenderService(context, bundle, result))
          return result;
 
-      // We already ran a getNotificationIdFromGCMBundle == null check above so this will only be true for dups
+      // We already ran a getNotificationIdFromFCMBundle == null check above so this will only be true for dups
       result.isDup = OneSignal.notValidOrDuplicated(context, pushPayloadJson);
       if (result.isDup)
          return result;

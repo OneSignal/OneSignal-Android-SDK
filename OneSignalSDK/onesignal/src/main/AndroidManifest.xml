@@ -4,12 +4,8 @@
     <!-- OneSignal SDK has runtime checks Android version. -->
     <!--<uses-sdk tools:overrideLibrary="android.support.customtabs"/>-->
 
-    <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages through Google's GCM. -->
+    <!-- INTERNET permission requirement -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
-
-    <!-- Required, makes sure notifications are delivered on time. -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Required so the device vibrates on receiving a push notification.
          Vibration settings of the device still apply. -->
@@ -61,9 +57,9 @@
 
     <application>
 
-        <service android:name="com.onesignal.GcmIntentService" />
+        <service android:name="com.onesignal.FCMIntentService" />
 
-        <service android:name="com.onesignal.GcmIntentJobService"
+        <service android:name="com.onesignal.FCMIntentJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
         <service android:name="com.onesignal.RestoreJobService"
