@@ -166,7 +166,7 @@ public class OneSignalPackagePrivateHelper {
    public static void FCMBroadcastReceiver_onReceived(Context context, Bundle bundle) {
       FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
       Intent intent = new Intent();
-      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intent.setAction("com.google.firebase.MESSAGING_EVENT");
       intent.putExtras(bundle);
       receiver.onReceive(context,intent);
    }
