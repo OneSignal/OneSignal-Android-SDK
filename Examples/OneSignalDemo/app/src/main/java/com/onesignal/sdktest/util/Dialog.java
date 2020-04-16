@@ -183,22 +183,23 @@ public class Dialog {
                 OneSignal.setExternalUserId(externalUserId, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
                     @Override
                     public void onComplete(JSONObject results) {
-                        // Default success to falser
+                        // Default success to false until we know push came back successful
                         boolean successful = false;
 
-                        // Completed setting external user, push exists with success status and success status is true
+                        // Check push exists with success status and success status is true
                         if (isExternalUserIdPushSuccessful(results)) {
+                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Push channel external user id set successfully");
                             OneSignalPrefs.cacheUserExternalUserId(context, externalUserId);
                             successful = true;
                         }
 
-                        // Completed setting external user, email exists with success status and success status is true
+                        // Check email exists with success status and success status is true
                         if (isExternalUserIdEmailSuccessful(results)) {
-                            // We only care about ush right now but this is here so we can use it eventually
-                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Email external user id set successfully");
+                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Email channel external user id set successfully");
                         }
 
-                        // Currently we base success on the push success existing, call success callback for AlertDialog callback
+                        // We base success on the push success existing and being true, call success callback for AlertDialog callback
+                        // We could eventually check email also but not important for now
                         if (successful)
                             callback.onSuccess(externalUserId);
                         else
@@ -208,6 +209,9 @@ public class Dialog {
                         dialog.dismiss();
                     }
 
+                    /**
+                     * Parse the results of the external user id completion callback and make sure push.success = true
+                     */
                     private boolean isExternalUserIdPushSuccessful(JSONObject status) {
                         boolean successful = false;
                         try {
@@ -226,6 +230,9 @@ public class Dialog {
                         return successful;
                     }
 
+                    /**
+                     * Parse the results of the external user id completion callback and make sure email.success = true
+                     */
                     private boolean isExternalUserIdEmailSuccessful(JSONObject status) {
                         boolean successful = false;
                         try {
