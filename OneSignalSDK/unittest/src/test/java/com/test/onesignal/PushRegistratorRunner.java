@@ -29,7 +29,7 @@ package com.test.onesignal;
 
 import android.app.Activity;
 
-import com.onesignal.OneSignalPackagePrivateHelper.PushRegistratorGCM;
+import com.onesignal.OneSignalPackagePrivateHelper.PushRegistratorFCM;
 import com.onesignal.PushRegistrator;
 import com.onesignal.ShadowFirebaseCloudMessaging;
 import com.onesignal.ShadowGooglePlayServicesUtil;
@@ -74,7 +74,7 @@ public class PushRegistratorRunner {
 
    @Test
    public void testGooglePlayServicesAPKMissingOnDevice() {
-      PushRegistratorGCM pushReg = new PushRegistratorGCM();
+      PushRegistratorFCM pushReg = new PushRegistratorFCM();
       final Thread testThread = Thread.currentThread();
 
       pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
@@ -90,8 +90,8 @@ public class PushRegistratorRunner {
    }
 
    @Test
-   public void testGCMPartOfGooglePlayServicesMissing() {
-      PushRegistratorGCM pushReg = new PushRegistratorGCM();
+   public void testFCMPartOfGooglePlayServicesMissing() {
+      PushRegistratorFCM pushReg = new PushRegistratorFCM();
       ShadowFirebaseCloudMessaging.exists = false;
 
       final Thread testThread = Thread.currentThread();

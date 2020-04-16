@@ -32,7 +32,7 @@ import android.content.BroadcastReceiver;
 import org.robolectric.annotation.Implements;
 
 @Implements(BroadcastReceiver.class)
-public class ShadowGcmBroadcastReceiver {
+public class ShadowFCMBroadcastReceiver {
    
    public static boolean calledAbortBroadcast;
    public static Integer lastResultCode;
