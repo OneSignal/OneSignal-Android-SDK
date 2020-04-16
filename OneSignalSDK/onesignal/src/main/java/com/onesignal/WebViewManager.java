@@ -115,6 +115,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }, IN_APP_MESSAGE_INIT_DELAY);
     }
 
+    static void dismissCurrentInAppMessage() {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "WebViewManager IAM dismissAndAwaitNextMessage lastInstance: " + lastInstance);
+        if (lastInstance != null) {
+            lastInstance.dismissAndAwaitNextMessage(null);
+        }
+    }
+
     private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessage message, @NonNull String htmlStr) {
         try {
             final String base64Str = Base64.encodeToString(
@@ -344,7 +351,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             public void onMessageWasDismissed() {
                 OSInAppMessageController.getController().messageWasDismissed(message);
                 ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
-                lastInstance = null;
             }
         });
 

@@ -28,6 +28,7 @@
 package com.onesignal;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,30 +73,39 @@ class OSObservable<ObserverType, StateType> {
             strongRefObserver = observer;
          
          if (strongRefObserver != null) {
+            Class<?> clazz = strongRefObserver.getClass();
             try {
-               Class<?> clazz = strongRefObserver.getClass();
                final Method method = clazz.getDeclaredMethod(methodName, state.getClass());
                method.setAccessible(true);
                if (fireOnMainThread) {
                   OSUtils.runOnMainUIThread(
-                     new Runnable() {
-                        @Override
-                        public void run() {
-                           try {
-                              method.invoke(strongRefObserver, state);
-                           }
-                           catch (Throwable t) {
-                              t.printStackTrace();
-                           }
-                        }
-                     });
-                  
+                      new Runnable() {
+                          @Override
+                          public void run() {
+                              try {
+                                  method.invoke(strongRefObserver, state);
+                              } catch (IllegalAccessException e) {
+                                  e.printStackTrace();
+                              } catch (InvocationTargetException e) {
+                                  e.printStackTrace();
+                              }
+                          }
+                      }
+                 );
                }
-               else
-                  method.invoke(strongRefObserver, state);
+               else {
+                  try {
+                     method.invoke(strongRefObserver, state);
+                  } catch (IllegalAccessException e) {
+                     e.printStackTrace();
+                  } catch (InvocationTargetException e) {
+                     e.printStackTrace();
+                  }
+               }
+
                notified = true;
-            } catch (Throwable t) {
-               t.printStackTrace();
+            } catch (NoSuchMethodException e) {
+               e.printStackTrace();
             }
          }
       }

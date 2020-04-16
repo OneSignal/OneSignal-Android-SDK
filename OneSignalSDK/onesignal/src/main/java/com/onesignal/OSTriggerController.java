@@ -167,6 +167,26 @@ class OSTriggerController {
     }
 
     /**
+     * Part of redisplay logic
+     *
+     * If trigger key is part of message triggers, then return true, otherwise false
+     * */
+    boolean isTriggerOnMessage(OSInAppMessage message, Collection<String> newTriggersKeys) {
+        for (String triggerKey : newTriggersKeys) {
+            for (ArrayList<OSTrigger> andConditions : message.triggers) {
+                for (OSTrigger trigger : andConditions) {
+                    if (triggerKey.equals(trigger.property)) {
+                        // At least one trigger has changed
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Trigger Set/Delete/Persist Logic
      */
     void addTriggers(Map<String, Object> newTriggers) {

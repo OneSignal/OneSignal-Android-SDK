@@ -192,6 +192,16 @@ public class MainOneSignalClassRunner {
       };
    }
 
+   private static JSONObject lastExternalUserIdResponse;
+   private static OneSignal.OSExternalUserIdUpdateCompletionHandler getExternalUserIdUpdateCompletionHandler() {
+      return new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(JSONObject results) {
+            lastExternalUserIdResponse = results;
+         }
+      };
+   }
+
    private static void GetTags() {
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
          @Override
@@ -206,6 +216,7 @@ public class MainOneSignalClassRunner {
 
       notificationOpenedMessage = null;
       lastGetTags = null;
+      lastExternalUserIdResponse = null;
 
       TestHelpers.beforeTestInitAndCleanup();
    }
@@ -242,7 +253,6 @@ public class MainOneSignalClassRunner {
    public static void afterEverything() throws Exception {
       cleanUp();
    }
-
 
    @Test
    public void testInitFromApplicationContext() throws Exception {
@@ -3955,6 +3965,211 @@ public class MainOneSignalClassRunner {
       }
 
       assertEquals(externalIdRequests, 2);
+   }
+
+   @Test
+   public void sendExternalUserId_withCompletionHandler() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      // 1. Init OneSignal
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Attempt to set external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 3. Make sure lastExternalUserIdResponse is equal to the expected response
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : true" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+   }
+
+    @Test
+    public void sendDifferentExternalUserId_withCompletionHandler() throws Exception {
+        String testExternalId = "test_ext_id_1";
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Attempt to set external user id with callback
+        OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+       // 3. Make sure lastExternalUserIdResponse is equal to the expected response
+       JSONObject expectedExternalUserIdResponse = new JSONObject(
+               "{" +
+               "   \"push\" : {" +
+               "      \"success\" : true" +
+               "   }" +
+               "}"
+       );
+       assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+        // 4. Change test external user id to send
+        testExternalId = "test_ext_id_2";
+
+        // 5. Attempt to set same exact external user id with callback
+        OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+       // 6. Make sure lastExternalUserIdResponse is equal to the expected response
+       assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+    }
+
+   @Test
+   public void sendSameExternalUserId_withCompletionHandler() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      // 1. Init OneSignal
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Attempt to set external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 3. Make sure lastExternalUserIdResponse is equal to the expected response
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : true" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+      // 4. Attempt to set same exact external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 5. Make sure lastExternalUserIdResponse is equal to the expected response
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+   }
+
+   @Test
+   public void sendExternalUserId_withFailure_withCompletionHandler() throws Exception {
+      String testExternalId = "test_ext_id";
+
+      // 1. Init OneSignal
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Attempt to set external user id with callback and force failure on the network requests
+      ShadowOneSignalRestClient.failAll = true;
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 3. Make sure lastExternalUserIdResponse is equal to the expected response
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : false" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+      // 4. Flip ShadowOneSignalRestClient.failAll flag back to false
+      ShadowOneSignalRestClient.failAll = false;
+
+      // 5. Attempt a second set external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 6. Make sure lastExternalUserIdResponse is equal to the expected response
+      expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : true" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+   }
+
+   @Test
+   public void sendExternalUserId_forPushAndEmail_withFailure_withCompletionHandler() throws Exception {
+      String testEmail = "test@onesignal.com";
+      String testExternalId = "test_ext_id";
+
+      // 1. Init OneSignal
+      OneSignalInit();
+      OneSignal.setEmail(testEmail);
+      threadAndTaskWait();
+
+      // 2. Attempt to set external user id with callback and force failure on the network requests
+      ShadowOneSignalRestClient.failAll = true;
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 3. Make sure lastExternalUserIdResponse has push and email with success : false
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : false" +
+              "   }," +
+              "   \"email\" : {" +
+              "      \"success\" : false" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+      // 4. Flip ShadowOneSignalRestClient.failAll flag back to false
+      ShadowOneSignalRestClient.failAll = false;
+
+      // 5. Attempt a second set external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 6. Make sure lastExternalUserIdResponse has push and email with success : true
+      expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : true" +
+              "   }," +
+              "   \"email\" : {" +
+              "      \"success\" : true" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+   }
+
+   @Test
+   public void sendExternalUserId_forPush_afterLoggingOutEmail_withCompletion() throws Exception {
+      String testEmail = "test@onesignal.com";
+      String testExternalId = "test_ext_id";
+
+      // 1. Init OneSignal and set email
+      OneSignalInit();
+      OneSignal.setEmail(testEmail);
+      threadAndTaskWait();
+
+      // 2. Logout Email
+      OneSignal.logoutEmail();
+      threadAndTaskWait();
+
+      // 4. Attempt a set external user id with callback
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      // 5. Make sure lastExternalUserIdResponse has push with success : true
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+              "   \"push\" : {" +
+              "      \"success\" : true" +
+              "   }" +
+              "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
    }
 
    @Test

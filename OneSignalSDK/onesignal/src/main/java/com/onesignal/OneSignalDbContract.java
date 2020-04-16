@@ -75,4 +75,12 @@ class OneSignalDbContract {
       public static final String COLUMN_NAME_NAME = "name";
    }
 
+   static abstract class InAppMessageTable implements BaseColumns {
+      public static final String TABLE_NAME = "in_app_message";
+      public static final String COLUMN_NAME_MESSAGE_ID = "message_id"; // OneSignal IAM Ids
+      public static final String COLUMN_NAME_DISPLAY_QUANTITY = "display_quantity";
+      public static final String COLUMN_NAME_LAST_DISPLAY = "last_display";
+      public static final String COLUMN_CLICK_IDS = "click_ids";
+      public static final String COLUMN_DISPLAYED_IN_SESSION = "displayed_in_session";
+   }
 }

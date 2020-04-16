@@ -17,8 +17,12 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
      * This is a dummy controller that will be used for Android 4.3 and older devices
      * All methods should be overridden and as empty as possible (few return exceptions)
      */
-    OSInAppMessageDummyController() {
+    OSInAppMessageDummyController(OneSignalDbHelper dbHelper) {
+        super(dbHelper);
+    }
 
+    @Override
+    public void initRedisplayData(OneSignalDbHelper dbHelper) {
     }
 
     @Override
@@ -34,14 +38,14 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
     void onMessageActionOccurredOnPreview(@NonNull OSInAppMessage message, @NonNull JSONObject actionJson) { }
 
     @Override
-    boolean isDisplayingInApp() { return false; }
+    boolean isInAppMessageShowing() { return false; }
 
     @Nullable
     @Override
     OSInAppMessage getCurrentDisplayedInAppMessage() { return null; }
 
     @Override
-    void messageWasDismissed(@NonNull OSInAppMessage message) { }
+    public void messageWasDismissed(@NonNull OSInAppMessage message) { }
 
     @Override
     void displayPreviewMessage(@NonNull String previewUUID) { }

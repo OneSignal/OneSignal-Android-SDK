@@ -1,9 +1,17 @@
 package com.onesignal;
 
+import android.support.annotation.Nullable;
+
+import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 class UserStatePushSynchronizer extends UserStateSynchronizer {
+
+    UserStatePushSynchronizer() {
+        super(UserStateSynchronizerType.PUSH);
+    }
 
     @Override
     protected UserState newUserState(String inPersistKey, boolean load) {
@@ -60,6 +68,13 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
 
         synchronized(syncLock) {
             return new GetTagsResult(serverSuccess, JSONUtils.getJSONObjectWithoutBlankValues(toSyncUserState.syncValues, "tags"));
+        }
+    }
+
+    @Override
+    @Nullable String getExternalId(boolean fromServer) {
+        synchronized(syncLock) {
+            return toSyncUserState.syncValues.optString("external_user_id", null);
         }
     }
 
