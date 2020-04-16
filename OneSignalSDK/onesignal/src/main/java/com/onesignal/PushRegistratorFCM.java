@@ -36,6 +36,9 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+// TODO: 4.0.0 - Switch to using <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
+// Note: Starting with Firebase Messaging 17.1.0 onNewToken in FirebaseMessagingService should be
+//   used instead.
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
    // project_info.project_id
