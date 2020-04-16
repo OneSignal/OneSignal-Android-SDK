@@ -490,6 +490,10 @@ public class OneSignal {
       mDisplayOption = displayOption;
    }
 
+   static OneSignalDbHelper getDBHelperInstance() {
+      return OneSignalDbHelper.getInstance(appContext);
+   }
+
    /**
     * If notifications are disabled for your app, unsubscribe the user from OneSignal.
     * This will happen when your users go to <i>Settings</i> > <i>Apps</i> and turn off notifications or
@@ -1443,7 +1447,6 @@ public class OneSignal {
    }
 
    public static void setExternalUserId(@NonNull final String externalId, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
-
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalUserId()"))
          return;
 
