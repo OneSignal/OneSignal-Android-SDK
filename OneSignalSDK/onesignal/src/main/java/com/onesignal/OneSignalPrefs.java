@@ -123,7 +123,7 @@ class OneSignalPrefs {
     }
 
     public static class WritePrefHandlerThread extends HandlerThread {
-        public Handler mHandler;
+        private Handler mHandler;
 
         private static final int WRITE_CALL_DELAY_TO_BUFFER_MS = 200;
         private long lastSyncTime = 0L;
@@ -132,7 +132,7 @@ class OneSignalPrefs {
             super(name);
         }
 
-        synchronized void startDelayedWrite() {
+        private synchronized void startDelayedWrite() {
             // A Context is required to write,
             //   if not available now later OneSignal.setContext will call this again.
             if (OneSignal.appContext == null)
@@ -143,15 +143,12 @@ class OneSignalPrefs {
                 mHandler = new Handler(getLooper());
             }
 
-            synchronized (mHandler) {
-                mHandler.removeCallbacksAndMessages(null);
-                if (lastSyncTime == 0)
-                    lastSyncTime = System.currentTimeMillis();
+            mHandler.removeCallbacksAndMessages(null);
+            if (lastSyncTime == 0)
+                lastSyncTime = System.currentTimeMillis();
 
-                long delay = lastSyncTime - System.currentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
-
-                mHandler.postDelayed(getNewRunnable(), delay);
-            }
+            long delay = lastSyncTime - System.currentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
+            mHandler.postDelayed(getNewRunnable(), delay);
         }
 
         /**
