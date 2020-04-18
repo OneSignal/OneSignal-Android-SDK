@@ -133,6 +133,11 @@ class OneSignalPrefs {
         }
 
         synchronized void startDelayedWrite() {
+            // A Context is required to write,
+            //   if not available now later OneSignal.setContext will call this again.
+            if (OneSignal.appContext == null)
+                return;
+
             if (mHandler == null) {
                 startThread();
                 mHandler = new Handler(getLooper());
@@ -194,10 +199,6 @@ class OneSignalPrefs {
         }
 
         private void flushBufferToDisk() {
-            // A flush will be triggered later once a context is set via OneSignal.setAppContext(...)
-            if (OneSignal.appContext == null)
-                return;
-
             for (String pref : prefsToApply.keySet()) {
                 SharedPreferences prefsToWrite = getSharedPrefsByName(pref);
                 SharedPreferences.Editor editor = prefsToWrite.edit();
