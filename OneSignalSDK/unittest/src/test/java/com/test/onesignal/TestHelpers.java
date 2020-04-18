@@ -130,15 +130,10 @@ public class TestHelpers {
    static void flushBufferedSharedPrefs() {
       OneSignalPrefs.WritePrefHandlerThread handlerThread = OneSignalPackagePrivateHelper.OneSignalPrefs.prefsHandler;
 
-      if (handlerThread.mHandler == null)
+      if (handlerThread.getLooper() == null)
          return;
-
-      synchronized (handlerThread.mHandler) {
-         if (handlerThread.getLooper() == null)
-            return;
-         Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
-         while (scheduler.runOneTask());
-      }
+      Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
+      while (scheduler.runOneTask());
    }
 
    // Join all OS_ threads
