@@ -167,10 +167,35 @@ class OneSignalPrefs {
          * Future: We may want to use this strategy for all Thread.start calls.
          *         And limit thread usages, using mostly coroutines instead.
          */
-        private VirtualMachineError threadStartError;
+
+        private Error threadStartError;
+        private RuntimeException threadStartRuntimeException;
+        private Throwable threadStartThrowable;
+
         private void startThread() {
             if (threadStartError != null)
                 throw threadStartError;
+
+            if (threadStartRuntimeException != null)
+                throw threadStartRuntimeException;
+
+            // Ideally we would just throw threadStartThrowable here,
+            //   however we can't without adding throws to this method's signature.
+            // If this is done we would have to add throws all the way up the stack to
+            //   to public SDK methods which can't be done at this time nor would
+            //   "throws Throwable" be a good public signature.
+            if (threadStartThrowable != null) {
+                // The following lines turn a Throwable into a RuntimeException
+                //   to workaround the the throwable signature noted above.
+                RuntimeException exception = new RuntimeException(
+                        threadStartThrowable.getClass().getName() +
+                            ": " +
+                            threadStartThrowable.getMessage(),
+                        threadStartThrowable
+                );
+                exception.setStackTrace(threadStartThrowable.getStackTrace());
+                throw exception;
+            }
 
             try {
                 start();
@@ -183,6 +208,27 @@ class OneSignalPrefs {
                 // pthread_create (1040KB stack) failed: Try again
                 threadStartError = e;
                 throw e;
+            }
+            catch (Error t) {
+                // Possibly some other error we didn't expect Thread.start() to throw
+                threadStartError = t;
+                throw t;
+            }
+            catch (IllegalThreadStateException e) {
+                // Adds the state of the thread to IllegalThreadStateException to provide more details
+                IllegalThreadStateException exception =
+                    new IllegalThreadStateException("Thread has state: " + this.getState());
+                exception.setStackTrace(e.getStackTrace());
+                threadStartRuntimeException = exception;
+                throw exception;
+            }
+            catch (RuntimeException e) {
+                threadStartRuntimeException = e;
+                throw e;
+            }
+            catch (Throwable t) {
+                threadStartThrowable = t;
+                throw t;
             }
         }
 
