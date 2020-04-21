@@ -1343,7 +1343,7 @@ public class OneSignal {
       pushState.put("identifier", lastRegistrationId);
       pushState.put("subscribableStatus", subscribableStatus);
       pushState.put("androidPermission", areNotificationsEnabledForSubscribedState());
-      pushState.put("device_type ", osUtils.getDeviceType());
+      pushState.put("device_type", osUtils.getDeviceType());
       OneSignalStateSynchronizer.updatePushState(pushState);
 
       if (shareLocation && lastLocationPoint != null)
