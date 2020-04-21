@@ -440,7 +440,6 @@ public class OneSignal {
 
    private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
 
-   private static int deviceType;
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
 
@@ -684,8 +683,7 @@ public class OneSignal {
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
-      deviceType = osUtils.getDeviceType();
-      subscribableStatus = osUtils.initializationChecker(context, deviceType, oneSignalAppId);
+      subscribableStatus = osUtils.initializationChecker(context, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
          return;
 
@@ -955,6 +953,7 @@ public class OneSignal {
       if (mPushRegistrator != null)
          return mPushRegistrator;
 
+      int deviceType = osUtils.getDeviceType();
       if (deviceType == UserState.DEVICE_TYPE_FIREOS)
          mPushRegistrator = new PushRegistratorADM();
       else if (OSUtils.hasFCMLibrary())
@@ -1344,7 +1343,7 @@ public class OneSignal {
       pushState.put("identifier", lastRegistrationId);
       pushState.put("subscribableStatus", subscribableStatus);
       pushState.put("androidPermission", areNotificationsEnabledForSubscribedState());
-      pushState.put("device_type", deviceType);
+      pushState.put("device_type ", osUtils.getDeviceType());
       OneSignalStateSynchronizer.updatePushState(pushState);
 
       if (shareLocation && lastLocationPoint != null)
@@ -2177,7 +2176,7 @@ public class OneSignal {
             jsonBody.put("app_id", getSavedAppId(inContext));
             jsonBody.put("player_id", getSavedUserId(inContext));
             jsonBody.put("opened", true);
-            jsonBody.put("device_type", deviceType);
+            jsonBody.put("device_type", osUtils.getDeviceType());
 
             OneSignalRestClient.put("notifications/" + notificationId, jsonBody, new OneSignalRestClient.ResponseHandler() {
                @Override
