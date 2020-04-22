@@ -281,25 +281,17 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testDeviceTypeIsAndroid_withDelayedOneSignalInit() throws Exception {
+   public void testDeviceTypeIsAndroid_forPlayerCreate() throws Exception {
       // 1. Init OneSignal so the app id is cached
       OneSignalInit();
       threadAndTaskWait();
 
-      // 2. Background app for 31 seconds to cause a new session
-      fastColdRestartApp();
-      advanceSystemTimeBy(31);
-
-      // 3. Foreground app
-      blankActivityController.resume();
-      threadAndTaskWait();
-
-      // 4. Make sure device_type is Android (1) in player create
+      // 2. Make sure device_type is Android (1) in player create
       assertAndroidPlayerCreateAtIndex(1);
    }
 
    @Test
-   public void testDeviceTypeIsAmazon_withDelayedOneSignalInit() throws Exception {
+   public void testDeviceTypeIsAmazon_forPlayerCreate() throws Exception {
       // 1. Mock Amazon device type for this test
       ShadowOSUtils.mockAmazonDevice();
 
@@ -307,15 +299,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      // 3. Background app for 31 seconds to cause a new session
-      fastColdRestartApp();
-      advanceSystemTimeBy(31);
-
-      // 4. Foreground app
-      blankActivityController.resume();
-      threadAndTaskWait();
-
-      // 5. Make sure device_type is Amazon (2) in player create
+      // 3. Make sure device_type is Amazon (2) in player create
       assertAmazonPlayerCreateAtIndex(1);
    }
 
