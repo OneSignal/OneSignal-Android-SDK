@@ -303,6 +303,31 @@ public class MainOneSignalClassRunner {
       assertAmazonPlayerCreateAtIndex(1);
    }
 
+   @Test
+   public void testValidDeviceType_withoutOneSignalInit() throws Exception {
+      // 1. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. restart app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession();
+      ShadowPushRegistratorADM.resetStatics();
+      threadAndTaskWait();
+
+      // 3. Set OneSignal.appId and context simulating a background sync doing so
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
+      OneSignal.appId = ONESIGNAL_APP_ID;
+
+      // 4. App is then launched by the user
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // TODO add the correct Asserts
+   }
+
    /**
     * 1. User opens app to MainActivity
     * 2. Comparison of MainActivity to dummy PermissionsActivity (1st Test Case)

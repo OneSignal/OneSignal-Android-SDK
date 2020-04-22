@@ -35,7 +35,12 @@ import org.robolectric.annotation.Implements;
 public class ShadowPushRegistratorADM {
 
    private static PushRegistrator.RegisteredHandler registeredCallback;
-   private static boolean callbackSuccessful = false;
+   private static boolean callbackSuccessful;
+
+   public static void resetStatics() {
+      registeredCallback = null;
+      callbackSuccessful = false;
+   }
 
    public void registerForPush(final Context context, String noKeyNeeded, final PushRegistrator.RegisteredHandler callback) {
       registeredCallback = callback;
