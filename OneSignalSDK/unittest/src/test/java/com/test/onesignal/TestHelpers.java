@@ -75,8 +75,6 @@ public class TestHelpers {
 
       ShadowNotificationManagerCompat.enabled = true;
 
-      ShadowOSUtils.subscribableStatus = 1;
-
       ShadowCustomTabsClient.resetStatics();
       ShadowGcmBroadcastReceiver.resetStatics();
 
@@ -95,6 +93,8 @@ public class TestHelpers {
       ShadowOSWebView.resetStatics();
 
       OneSignalShadowPackageManager.resetStatics();
+
+      ShadowOSUtils.resetStatics();
 
       lastException = null;
    }

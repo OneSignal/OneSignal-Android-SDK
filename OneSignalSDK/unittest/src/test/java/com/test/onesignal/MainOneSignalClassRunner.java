@@ -41,7 +41,6 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
-import com.google.android.gms.common.util.JsonUtils;
 import com.onesignal.MockOutcomesUtils;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
@@ -76,6 +75,7 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
@@ -120,6 +120,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
+import static com.test.onesignal.RestClientAsserts.assertAmazonPlayerCreateAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertAndroidPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
@@ -139,7 +141,6 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
@@ -148,6 +149,7 @@ import static org.robolectric.Shadows.shadowOf;
         instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowOneSignalRestClient.class,
+            ShadowPushRegistratorADM.class,
             ShadowPushRegistratorGCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
@@ -276,6 +278,45 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       assertNotNull(ShadowOneSignalRestClient.lastPost);
+   }
+
+   @Test
+   public void testDeviceTypeIsAndroid_withDelayedOneSignalInit() throws Exception {
+      // 1. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 2. Background app for 31 seconds to cause a new session
+      fastColdRestartApp();
+      advanceSystemTimeBy(31);
+
+      // 3. Foreground app
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 4. Make sure device_type is Android (1) in player create
+      assertAndroidPlayerCreateAtIndex(1);
+   }
+
+   @Test
+   public void testDeviceTypeIsAmazon_withDelayedOneSignalInit() throws Exception {
+      // 1. Mock Amazon device type for this test
+      ShadowOSUtils.mockAmazonDevice();
+
+      // 2. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 3. Background app for 31 seconds to cause a new session
+      fastColdRestartApp();
+      advanceSystemTimeBy(31);
+
+      // 4. Foreground app
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 5. Make sure device_type is Amazon (2) in player create
+      assertAmazonPlayerCreateAtIndex(1);
    }
 
    /**
@@ -4150,7 +4191,6 @@ public class MainOneSignalClassRunner {
 
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-      ShadowOSUtils.subscribableStatus = 1;
       OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
       blankActivityController.resume();
    }

@@ -1350,7 +1350,6 @@ public class InAppMessageIntegrationTests {
 
     private void OneSignalInit() {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-        ShadowOSUtils.subscribableStatus = 1;
         OneSignal.init(blankActivity, "123456789", ONESIGNAL_APP_ID);
         blankActivityController.resume();
     }
