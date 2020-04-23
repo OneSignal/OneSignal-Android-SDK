@@ -232,13 +232,21 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.onAppLostFocus();
    }
 
-   public static DelayedConsentInitializationParameters OneSignal_delayedInitParams() { return OneSignal.delayedInitParams; }
+   public static DelayedConsentInitializationParameters OneSignal_delayedInitParams() {
+      return OneSignal.delayedInitParams;
+   }
 
-   public static boolean OneSignal_requiresUserPrivacyConsent() { return OneSignal.requiresUserPrivacyConsent; }
+   public static boolean OneSignal_requiresUserPrivacyConsent() {
+      return OneSignal.requiresUserPrivacyConsent;
+   }
 
-   public static String OneSignal_appId() { return OneSignal.appId; }
+   public static String OneSignal_appId() {
+      return OneSignal.appId;
+   }
 
-   public static void OneSignal_setAppContext(Context context) { OneSignal.setAppContext(context); }
+   public static void OneSignal_setAppId(String appId) {
+      OneSignal.appId = appId;
+   }
 
    static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 

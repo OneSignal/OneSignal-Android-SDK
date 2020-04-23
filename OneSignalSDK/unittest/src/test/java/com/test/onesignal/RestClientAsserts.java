@@ -1,12 +1,11 @@
 package com.test.onesignal;
 
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowOneSignalRestClient.Request;
 import com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
+import com.onesignal.ShadowOneSignalRestClient.Request;
 
 import org.hamcrest.core.AnyOf;
 import org.json.JSONArray;
@@ -54,6 +53,26 @@ class RestClientAsserts {
       assertPlayerCreatePush(ShadowOneSignalRestClient.requests.get(index));
    }
 
+   static void assertAndroidPlayerCreateAtIndex(int index) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertPlayerCreateMethodAndUrl(request);
+      assertDeviceTypeIsAndroid(request.payload);
+   }
+
+   static void assertAmazonPlayerCreateAtIndex(int index) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertPlayerCreateMethodAndUrl(request);
+      assertDeviceTypeIsAmazon(request.payload);
+   }
+
+   static void assertOnSessionAtIndex(int index) {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertOnSessionUrl(request.url);
+   }
+
    static void assertOnFocusAtIndex(int index, int focusTimeSec) throws JSONException {
       assertOnFocusAtIndex(index, new JSONObject().put("active_time", focusTimeSec));
    }
@@ -92,6 +111,14 @@ class RestClientAsserts {
 
    private static void assertValidDeviceType(@NonNull JSONObject payload) throws JSONException {
       assertThat(payload.getInt("device_type"), ANY_OF_VALID_DEVICE_TYPES);
+   }
+
+   private static void assertDeviceTypeIsAndroid(@NonNull JSONObject payload) throws JSONException {
+      assertEquals(UserState.DEVICE_TYPE_ANDROID, payload.getInt("device_type"));
+   }
+
+   private static void assertDeviceTypeIsAmazon(@NonNull JSONObject payload) throws JSONException {
+      assertEquals(UserState.DEVICE_TYPE_FIREOS, payload.getInt("device_type"));
    }
 
    static void assertReportReceivedAtIndex(int index, @NonNull String notificationId, @NonNull JSONObject payload) {
@@ -140,6 +167,13 @@ class RestClientAsserts {
    static void assertOnFocusUrlWithPlayerId(@NonNull String url, @NonNull String id) {
       assertOnFocusUrl(url);
       assertEquals(id, url.split("/")[1]);
+   }
+
+   static void assertOnSessionUrl(String url) {
+      String[] parts = url.split("/");
+      assertEquals("players", parts[0]);
+      assertIsUUID(parts[1]);
+      assertEquals("on_session", parts[2]);
    }
 
    static void assertOnFocusUrl(@NonNull String url) {

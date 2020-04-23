@@ -29,63 +29,34 @@ package com.onesignal;
 
 import android.content.Context;
 
-import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
-import org.robolectric.annotation.RealObject;
 
-import static org.robolectric.shadow.api.Shadow.directlyOn;
+import static com.onesignal.ShadowPushRegistratorGCM.regId;
 
-@Implements(PushRegistratorAbstractGoogle.class)
-public class ShadowPushRegistratorGCM {
+@Implements(PushRegistratorADM.class)
+public class ShadowPushRegistratorADM {
 
-    @RealObject
-    private PushRegistratorAbstractGoogle realInstance;
-
-    public static final String regId = "aspdfoh0fhj02hr-2h";
-
-    public static boolean fail;
-    public static boolean skipComplete;
-    public static String lastProjectNumber;
+    private static boolean skipComplete;
 
     private static PushRegistrator.RegisteredHandler lastCallback;
 
     public static void resetStatics() {
         skipComplete = false;
-        fail = false;
-        lastProjectNumber = null;
 
         lastCallback = null;
     }
 
-    public static void manualFireRegisterForPush() {
-        lastCallback.complete(regId, UserState.PUSH_STATUS_SUBSCRIBED);
-    }
-
-    @Implementation
-    public void registerForPush(Context context, String senderId, PushRegistrator.RegisteredHandler callback) {
-        PushRegistratorAbstractGoogle pushRegistrator = directlyOn(realInstance, PushRegistratorAbstractGoogle.class);
-        pushRegistrator.registerForPush(context, senderId, callback);
-
-        lastProjectNumber = senderId;
+    public void registerForPush(final Context context, String noKeyNeeded, final PushRegistrator.RegisteredHandler callback) {
         lastCallback = callback;
 
         if (!skipComplete)
-            fireLastCallback();
+            fireCallback(regId);
     }
 
-    @Implementation
-    public void internalRegisterForPush(String senderId) {
-
-    }
-
-    public static void fireLastCallback() {
+    public static void fireCallback(String id) {
         if (lastCallback == null)
             return;
 
-        lastCallback.complete(
-                fail ? null : regId,
-                fail ? UserState.PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP : UserState.PUSH_STATUS_SUBSCRIBED
-        );
+        lastCallback.complete(id, 1);
     }
-
 }
