@@ -34,7 +34,6 @@ class OSInAppMessageRepository {
         writableDb.delete(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + "< ?",
                 new String[]{String.valueOf(sixMonthsAgo)});
-        writableDb.close();
     }
 
     @WorkerThread
@@ -52,7 +51,6 @@ class OSInAppMessageRepository {
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID + " = ?", new String[]{inAppMessage.messageId});
         if (rowsUpdated == 0)
             writableDb.insert(OneSignalDbContract.InAppMessageTable.TABLE_NAME, null, values);
-        writableDb.close();
     }
 
     @WorkerThread
