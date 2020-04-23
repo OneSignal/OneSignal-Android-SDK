@@ -297,7 +297,7 @@ class GenerateNotification {
       else
          notificationDefaults |= Notification.DEFAULT_LIGHTS;
 
-      if (OneSignal.getVibrate(currentContext) && gcmBundle.optInt("vib", 1) == 1) {
+      if (OneSignal.getVibrate() && gcmBundle.optInt("vib", 1) == 1) {
          if (gcmBundle.has("vib_pt")) {
             long[] vibrationPattern = OSUtils.parseVibrationPattern(gcmBundle);
             if (vibrationPattern != null)
@@ -1007,7 +1007,7 @@ class GenerateNotification {
       String sound = gcmBundle.optString("sound", null);
       if ("null".equals(sound) || "nil".equals(sound))
          return false;
-      return OneSignal.getSoundEnabled(currentContext);
+      return OneSignal.getSoundEnabled();
    }
 
    // Android 5.0 accent color to use, only works when AndroidManifest.xml is targetSdkVersion >= 21

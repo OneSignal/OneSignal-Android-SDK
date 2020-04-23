@@ -117,6 +117,7 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppId;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
@@ -124,6 +125,7 @@ import static com.test.onesignal.RestClientAsserts.assertAmazonPlayerCreateAtInd
 import static com.test.onesignal.RestClientAsserts.assertAndroidPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
+import static com.test.onesignal.RestClientAsserts.assertOnSessionAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
@@ -304,28 +306,60 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testValidDeviceType_withoutOneSignalInit() throws Exception {
+   public void testDeviceTypeIsAndroid_withoutOneSignalInit() throws Exception {
       // 1. Init OneSignal so the app id is cached
       OneSignalInit();
       threadAndTaskWait();
 
-      // 2. restart app
+      // 2. Background app
       blankActivityController.pause();
       threadAndTaskWait();
 
+      // 3. Restart OneSignal and clear the ShadowPushRegistratorADM statics
       restartAppAndElapseTimeToNextSession();
-      ShadowPushRegistratorADM.resetStatics();
       threadAndTaskWait();
 
-      // 3. Set OneSignal.appId and context simulating a background sync doing so
+      // 4. Set OneSignal.appId and context simulating a background sync doing so
       OneSignal.setAppContext(blankActivity.getApplicationContext());
-      OneSignal.appId = ONESIGNAL_APP_ID;
+      OneSignal_setAppId(ONESIGNAL_APP_ID);
 
-      // 4. App is then launched by the user
+      // 5. Foreground app and trigger new session
       blankActivityController.resume();
       threadAndTaskWait();
 
-      // TODO add the correct Asserts
+      // 6. Make sure device_type is Android (1) in player create and on_session
+      assertAndroidPlayerCreateAtIndex(1);
+      assertOnSessionAtIndex(3);
+   }
+
+   @Test
+   public void testDeviceTypeIsAmazon_withoutOneSignalInit() throws Exception {
+      // 1. Mock Amazon device type for this test
+      ShadowOSUtils.mockAmazonDevice();
+
+      // 2. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 3. Background the app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // 4. Restart the entire OneSignal and clear the ShadowPushRegistratorADM statics
+      restartAppAndElapseTimeToNextSession();
+      threadAndTaskWait();
+
+      // 5. Set OneSignal.appId and context simulating a background sync doing so
+      OneSignal.setAppContext(blankActivity.getApplicationContext());
+      OneSignal_setAppId(ONESIGNAL_APP_ID);
+
+      // 6. Foreground app and trigger new session
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 7. Make sure device_type is Android (1) in player create and on_session
+      assertAmazonPlayerCreateAtIndex(1);
+      assertOnSessionAtIndex(3);
    }
 
    /**
