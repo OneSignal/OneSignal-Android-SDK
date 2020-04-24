@@ -3,7 +3,6 @@ package com.onesignal.influence;
 import android.support.annotation.NonNull;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.influence.model.OSInfluenceChannel;
 import com.onesignal.influence.model.OSInfluenceType;

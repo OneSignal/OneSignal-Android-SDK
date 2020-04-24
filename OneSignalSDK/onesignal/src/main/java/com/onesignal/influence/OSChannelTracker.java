@@ -1,11 +1,9 @@
 package com.onesignal.influence;
 
-import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.influence.model.OSInfluenceChannel;
 import com.onesignal.influence.model.OSInfluenceType;
@@ -16,7 +14,6 @@ import org.json.JSONObject;
 
 abstract public class OSChannelTracker {
 
-    static final String DIRECT_TAG = "direct";
     private static final String TIME = "time";
 
     protected OSLogger logger;

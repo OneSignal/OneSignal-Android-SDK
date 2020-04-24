@@ -2,8 +2,8 @@ package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
 import com.onesignal.OneSignalApiResponseHandler;
+import com.onesignal.OutcomeEvent;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
-import com.onesignal.OSOutcomeEvent;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.json.JSONException;
@@ -19,7 +19,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
 
     @Override
     public void requestMeasureOutcomeEvent(String appId, int deviceType, OSOutcomeEventParams eventParams, OneSignalApiResponseHandler responseHandler) {
-        OSOutcomeEvent event = OSOutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams);
+        OutcomeEvent event = OutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams);
         switch (event.getSession()) {
             case DIRECT:
                 requestMeasureDirectOutcomeEvent(appId, deviceType, event, responseHandler);
@@ -35,7 +35,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
         }
     }
 
-    private void requestMeasureDirectOutcomeEvent(String appId, int deviceType, OSOutcomeEvent event, OneSignalApiResponseHandler responseHandler) {
+    private void requestMeasureDirectOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalApiResponseHandler responseHandler) {
         try {
             JSONObject jsonObject = event.toJSONObjectForMeasure();
             jsonObject.put(APP_ID, appId);
@@ -48,7 +48,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
         }
     }
 
-    private void requestMeasureIndirectOutcomeEvent(String appId, int deviceType, OSOutcomeEvent event, OneSignalApiResponseHandler responseHandler) {
+    private void requestMeasureIndirectOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalApiResponseHandler responseHandler) {
         try {
             JSONObject jsonObject = event.toJSONObjectForMeasure();
             jsonObject.put(APP_ID, appId);
@@ -61,7 +61,7 @@ class OSOutcomeEventsV1Repository extends OSOutcomeEventsRepository {
         }
     }
 
-    private void requestMeasureUnattributedOutcomeEvent(String appId, int deviceType, OSOutcomeEvent event, OneSignalApiResponseHandler responseHandler) {
+    private void requestMeasureUnattributedOutcomeEvent(String appId, int deviceType, OutcomeEvent event, OneSignalApiResponseHandler responseHandler) {
         try {
             JSONObject jsonObject = event.toJSONObjectForMeasure();
             jsonObject.put(APP_ID, appId);

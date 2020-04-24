@@ -3257,7 +3257,7 @@ public class OneSignal {
     *    3. Unique OutcomeEventParams already sent for UNATTRIBUTED session during session
     */
    public interface OutcomeCallback {
-      void onSuccess(@Nullable OSOutcomeEvent outcomeEvent);
+      void onSuccess(@Nullable OutcomeEvent outcomeEvent);
    }
    /*
     * End OneSignalOutcome module

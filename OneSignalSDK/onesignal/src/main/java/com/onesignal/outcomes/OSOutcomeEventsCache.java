@@ -9,7 +9,6 @@ import android.support.annotation.WorkerThread;
 
 import com.onesignal.OSLogger;
 import com.onesignal.OSSharedPreferences;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.influence.model.OSInfluenceChannel;
@@ -147,7 +146,6 @@ class OSOutcomeEventsCache {
         values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.getTimestamp());
 
         writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
-        writableDb.close();
     }
 
     /**
@@ -272,8 +270,8 @@ class OSOutcomeEventsCache {
      * Save a JSONArray of notification ids as separate items with the unique outcome name
      */
     @WorkerThread
-    synchronized void saveUniqueOutcomeNotifications(@NonNull OSOutcomeEventParams eventParams) {
-        logger.debug("OneSignal saveUniqueOutcomeNotifications: " + eventParams.toString());
+    synchronized void saveUniqueOutcomeEventParams(@NonNull OSOutcomeEventParams eventParams) {
+        logger.debug("OneSignal saveUniqueOutcomeEventParams: " + eventParams.toString());
         if (eventParams.getOutcomeSource() == null)
             return;
 
@@ -297,8 +295,6 @@ class OSOutcomeEventsCache {
 
             writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values);
         }
-
-        writableDb.close();
     }
 
     /**

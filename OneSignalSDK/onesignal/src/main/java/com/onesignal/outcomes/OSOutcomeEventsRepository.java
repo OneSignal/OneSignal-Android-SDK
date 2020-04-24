@@ -1,7 +1,6 @@
 package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalApiResponseHandler;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
@@ -40,7 +39,7 @@ abstract class OSOutcomeEventsRepository implements com.onesignal.outcomes.domai
     }
 
     public void saveUniqueOutcomeNotifications(OSOutcomeEventParams eventParams) {
-        outcomeEventsCache.saveUniqueOutcomeNotifications(eventParams);
+        outcomeEventsCache.saveUniqueOutcomeEventParams(eventParams);
     }
 
     public List<OSInfluence> getNotCachedUniqueOutcome(String name, List<OSInfluence> influences) {

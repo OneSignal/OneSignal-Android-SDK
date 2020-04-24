@@ -577,7 +577,7 @@ public class InAppMessageIntegrationTests {
         // 3. Ensure outcome is sent
         ShadowOneSignalRestClient.Request iamOutcomeRequest = ShadowOneSignalRestClient.requests.get(3);
 
-        assertEquals("outcomes/measure", iamOutcomeRequest.url);
+        assertEquals("outcomes/measure_sources", iamOutcomeRequest.url);
         // Requests: Param request + Players Request + Click request + Outcome Request
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
         assertFalse(iamOutcomeRequest.payload.has("weight"));

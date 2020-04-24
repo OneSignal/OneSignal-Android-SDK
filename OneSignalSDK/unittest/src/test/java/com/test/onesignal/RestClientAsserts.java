@@ -143,13 +143,13 @@ class RestClientAsserts {
    }
 
    static void assertMeasureAtIndex(int index, @NonNull String outcomeName) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure", index, new JSONObject()
               .put("id", outcomeName)
       );
    }
 
    static void assertMeasureAtIndex(int index, @NonNull boolean isDirect, @NonNull String outcomeName, @NonNull JSONArray notificationIds) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure", index, new JSONObject()
               .put("direct", isDirect)
               .put("id", outcomeName)
               .put("notification_ids", notificationIds)
@@ -157,17 +157,17 @@ class RestClientAsserts {
    }
 
    static void assertMeasureOnV2AtIndex(int index, @NonNull String outcomeName, @NonNull JSONObject sources) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure_sources", index, new JSONObject()
               .put("id", outcomeName)
               .put("sources", sources)
       );
    }
 
-   private static void assertMeasureAtIndex(int index, JSONObject containsPayload) throws JSONException {
+   private static void assertMeasureAtIndex(String measureKey, int index, JSONObject containsPayload) throws JSONException {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 
       assertEquals(REST_METHOD.POST, request.method);
-      assertMeasureUrl(request.url);
+      assertMeasureUrl(measureKey, request.url);
       JsonAsserts.containsSubset(request.payload, containsPayload);
    }
 
@@ -207,10 +207,10 @@ class RestClientAsserts {
       assertEquals(3, parts.length);
    }
 
-   private static void assertMeasureUrl(String url) {
+   private static void assertMeasureUrl(String measureKey, String url) {
       String[] parts = url.split("/");
       assertEquals("outcomes", parts[0]);
-      assertEquals("measure", parts[1]);
+      assertEquals(measureKey, parts[1]);
    }
 
    static void assertRestCalls(int expected) {

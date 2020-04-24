@@ -1,10 +1,10 @@
 package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
-import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 import com.onesignal.OSSharedPreferences;
 import com.onesignal.OneSignalAPIClient;
 import com.onesignal.OneSignalDb;
+import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 
 public class OSOutcomeEventsFactory {
 

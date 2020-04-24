@@ -124,7 +124,7 @@ class FocusTimeController {
 
       @Override
       protected void saveInfluences(List<OSInfluence> influences) {
-         // We don't save influences for unattributed
+         // We don't save influences for unattributed, there is no session duration influenced
       }
    }
 

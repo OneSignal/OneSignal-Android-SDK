@@ -14,6 +14,7 @@ import org.json.JSONObject;
 class OSNotificationTracker extends OSChannelTracker {
 
     public static final String TAG = OSNotificationTracker.class.getCanonicalName();
+    private static final String DIRECT_TAG = "direct";
     private static final String NOTIFICATIONS_IDS = "notification_ids";
     private static final String NOTIFICATION_ID = "notification_id";
 

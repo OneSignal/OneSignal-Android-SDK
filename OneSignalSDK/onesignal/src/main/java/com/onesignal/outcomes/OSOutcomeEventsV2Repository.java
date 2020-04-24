@@ -1,7 +1,6 @@
 package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalApiResponseHandler;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
