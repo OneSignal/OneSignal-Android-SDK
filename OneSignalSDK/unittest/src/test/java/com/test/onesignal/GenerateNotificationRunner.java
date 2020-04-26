@@ -104,6 +104,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTONS_LIST;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_TEXT;
@@ -196,7 +197,7 @@ public class GenerateNotificationRunner {
    private static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
           .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifId)
-          .putExtra("onesignal_data", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
+          .putExtra(BUNDLE_KEY_ONESIGNAL_DATA, OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
    }
    
    private Intent createOpenIntent(Bundle bundle) {
@@ -1059,7 +1060,7 @@ public class GenerateNotificationRunner {
       PostedNotification lastNotification = postedNotifsIterator.next().getValue();
       
       assertEquals(1, lastNotification.notif.actions.length);
-      String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra("onesignal_data");
+      String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA);
       assertEquals("id1", new JSONObject(json_data).optString(BUNDLE_KEY_ACTION_ID));
    }
 
