@@ -55,7 +55,7 @@ import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
  * */
 class NotificationBundleProcessor {
 
-   private static final String PUSH_ADDITIONAL_DATE_KEY = "a";
+   private static final String PUSH_ADDITIONAL_DATA_KEY = "a";
    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
@@ -294,8 +294,8 @@ class NotificationBundleProcessor {
          JSONObject customJSON = new JSONObject(gcmBundle.getString("custom"));
          JSONObject additionalDataJSON;
 
-         if (customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
-            additionalDataJSON = customJSON.getJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+         if (customJSON.has(PUSH_ADDITIONAL_DATA_KEY))
+            additionalDataJSON = customJSON.getJSONObject(PUSH_ADDITIONAL_DATA_KEY);
          else
             additionalDataJSON = new JSONObject();
 
@@ -324,8 +324,8 @@ class NotificationBundleProcessor {
 
          additionalDataJSON.put("actionButtons", buttons);
          additionalDataJSON.put("actionSelected", DEFAULT_ACTION);
-         if (!customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
-            customJSON.put(PUSH_ADDITIONAL_DATE_KEY, additionalDataJSON);
+         if (!customJSON.has(PUSH_ADDITIONAL_DATA_KEY))
+            customJSON.put(PUSH_ADDITIONAL_DATA_KEY, additionalDataJSON);
 
          gcmBundle.putString("custom", customJSON.toString());
       } catch (JSONException e) {
@@ -341,7 +341,7 @@ class NotificationBundleProcessor {
          notification.templateId = customJson.optString("ti");
          notification.templateName = customJson.optString("tn");
          notification.rawPayload = currentJsonPayload.toString();
-         notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+         notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
          notification.launchURL = customJson.optString("u", null);
 
          notification.body = currentJsonPayload.optString("alert", null);
@@ -504,10 +504,10 @@ class NotificationBundleProcessor {
          return null;
       }
 
-      if (!osCustom.has(PUSH_ADDITIONAL_DATE_KEY))
+      if (!osCustom.has(PUSH_ADDITIONAL_DATA_KEY))
          return null;
 
-      JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+      JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
       if (additionalData.has(IAM_PREVIEW_KEY))
          return additionalData.optString(IAM_PREVIEW_KEY);
       return null;
