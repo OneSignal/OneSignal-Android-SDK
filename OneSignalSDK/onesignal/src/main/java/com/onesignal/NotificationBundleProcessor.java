@@ -47,6 +47,7 @@ import android.support.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Set;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
@@ -325,7 +326,7 @@ class NotificationBundleProcessor {
          }
 
          additionalDataJSON.put("actionButtons", buttons);
-         additionalDataJSON.put("actionSelected", DEFAULT_ACTION);
+         additionalDataJSON.put(BUNDLE_KEY_ACTION_ID, DEFAULT_ACTION);
          if (!customJSON.has(PUSH_ADDITIONAL_DATA_KEY))
             customJSON.put(PUSH_ADDITIONAL_DATA_KEY, additionalDataJSON);
 
@@ -397,7 +398,7 @@ class NotificationBundleProcessor {
             actionButton.icon = jsonActionButton.optString("icon", null);
             notification.actionButtons.add(actionButton);
          }
-         notification.additionalData.remove("actionSelected");
+         notification.additionalData.remove(BUNDLE_KEY_ACTION_ID);
          notification.additionalData.remove("actionButtons");
       }
    }

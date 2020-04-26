@@ -103,6 +103,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
@@ -1055,7 +1056,7 @@ public class GenerateNotificationRunner {
       
       assertEquals(1, lastNotification.notif.actions.length);
       String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra("onesignal_data");
-      assertEquals("id1", new JSONObject(json_data).optString("actionSelected"));
+      assertEquals("id1", new JSONObject(json_data).optString(BUNDLE_KEY_ACTION_ID));
    }
 
    @Test
@@ -1471,7 +1472,7 @@ public class GenerateNotificationRunner {
                      "        \"actionButtons\": [{\"id\": \"id1\", \"text\": \"button1\", \"icon\": \"ic_menu_share\"}," +
                      "                            {\"id\": \"id2\", \"text\": \"button2\", \"icon\": \"ic_menu_send\"}" +
                      "        ]," +
-                     "         \"actionSelected\": \"__DEFAULT__\"" +
+                     "         \"actionId\": \"__DEFAULT__\"" +
                      "      }," +
                      "\"u\":\"http://google.com\"," +
                      "\"i\":\"9764eaeb-10ce-45b1-a66d-8f95938aaa51\"" +
