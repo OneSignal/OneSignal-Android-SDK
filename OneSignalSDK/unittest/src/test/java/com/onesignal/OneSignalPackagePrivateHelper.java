@@ -527,4 +527,6 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static class GenerateNotification extends com.onesignal.GenerateNotification {}
+
+   public static class NotificationBundleProcessor extends com.onesignal.NotificationBundleProcessor {}
 }
