@@ -72,6 +72,9 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import static com.onesignal.OSUtils.getResourceString;
 
 class GenerateNotification {
+
+   public static final String BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId";
+
    private static Context currentContext = null;
    private static String packageName = null;
    private static Resources contextResources = null;
@@ -192,7 +195,7 @@ class GenerateNotification {
 
    private static Intent getNewBaseIntent(int notificationId) {
       Intent intent = new Intent(currentContext, notificationOpenedClass)
-                        .putExtra("notificationId", notificationId);
+                        .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId);
 
       if (openerIsBroadcast)
          return intent;
@@ -201,7 +204,7 @@ class GenerateNotification {
 
    private static Intent getNewBaseDeleteIntent(int notificationId) {
       Intent intent = new Intent(currentContext, notificationOpenedClass)
-          .putExtra("notificationId", notificationId)
+          .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
           .putExtra("dismissed", true);
       
       if (openerIsBroadcast)

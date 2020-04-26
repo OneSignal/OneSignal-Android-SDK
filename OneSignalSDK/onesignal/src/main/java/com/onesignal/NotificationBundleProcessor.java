@@ -46,6 +46,8 @@ import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
+
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
@@ -110,7 +112,7 @@ class NotificationBundleProcessor {
          processNotification(notifJob, false);
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
-            jsonObject.put("notificationId", notifJob.getAndroidId());
+            jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
             OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
          } catch(Throwable t) {}
       }

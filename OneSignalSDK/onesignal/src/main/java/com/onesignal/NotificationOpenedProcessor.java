@@ -42,6 +42,8 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
+
 // Process both notifications opens and dismisses.
 class NotificationOpenedProcessor {
 
@@ -59,13 +61,13 @@ class NotificationOpenedProcessor {
    }
 
    private static boolean isOneSignalIntent(Intent intent) {
-      return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra("notificationId");
+      return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
    }
 
    private static void handleDismissFromActionButtonPress(Context context, Intent intent) {
       // Pressed an action button, need to clear the notification and close the notification area manually.
       if (intent.getBooleanExtra("action_button", false)) {
-         NotificationManagerCompat.from(context).cancel(intent.getIntExtra("notificationId", 0));
+         NotificationManagerCompat.from(context).cancel(intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
          context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
       }
    }
@@ -84,7 +86,7 @@ class NotificationOpenedProcessor {
             if (handleIAMPreviewOpen(context, jsonData))
                return;
 
-            jsonData.put("notificationId", intent.getIntExtra("notificationId", 0));
+            jsonData.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
             intent.putExtra("onesignal_data", jsonData.toString());
             dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
          } catch (Throwable t) {
@@ -196,7 +198,7 @@ class NotificationOpenedProcessor {
             }
          }
       } else
-         whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra("notificationId", 0);
+         whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0);
 
 
       clearStatusBarNotifications(context, writableDb, summaryGroup);
