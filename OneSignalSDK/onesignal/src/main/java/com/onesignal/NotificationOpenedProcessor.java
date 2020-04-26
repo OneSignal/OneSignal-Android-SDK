@@ -43,6 +43,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA;
 
 // Process both notifications opens and dismisses.
 class NotificationOpenedProcessor {
@@ -61,7 +62,7 @@ class NotificationOpenedProcessor {
    }
 
    private static boolean isOneSignalIntent(Intent intent) {
-      return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
+      return intent.hasExtra(BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
    }
 
    private static void handleDismissFromActionButtonPress(Context context, Intent intent) {
@@ -81,14 +82,14 @@ class NotificationOpenedProcessor {
       JSONObject jsonData = null;
       if (!dismissed) {
          try {
-            jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
+            jsonData = new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA));
 
             if (handleIAMPreviewOpen(context, jsonData))
                return;
 
             jsonData.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
-            intent.putExtra("onesignal_data", jsonData.toString());
-            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
+            intent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString());
+            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA)));
          } catch (Throwable t) {
             t.printStackTrace();
          }
