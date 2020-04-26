@@ -74,6 +74,7 @@ import static com.onesignal.OSUtils.getResourceString;
 class GenerateNotification {
 
    public static final String BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId";
+   public static final String BUNDLE_KEY_ACTION_ID = "actionId";
 
    private static Context currentContext = null;
    private static String packageName = null;
@@ -144,7 +145,7 @@ class GenerateNotification {
                   if (finalButtonIds.size() > 1) {
                      try {
                         JSONObject newJsonData = new JSONObject(gcmJson.toString());
-                        newJsonData.put("actionSelected", finalButtonIds.get(index));
+                        newJsonData.put(BUNDLE_KEY_ACTION_ID, finalButtonIds.get(index));
                         finalButtonIntent.putExtra("onesignal_data", newJsonData.toString());
 
                         NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
@@ -1049,7 +1050,7 @@ class GenerateNotification {
             Intent buttonIntent = getNewBaseIntent(notificationId);
             buttonIntent.setAction("" + i); // Required to keep each action button from replacing extras of each other
             buttonIntent.putExtra("action_button", true);
-            bundle.put("actionSelected", button.optString("id"));
+            bundle.put(BUNDLE_KEY_ACTION_ID, button.optString("id"));
             buttonIntent.putExtra("onesignal_data", bundle.toString());
             if (groupSummary != null)
                buttonIntent.putExtra("summary", groupSummary);

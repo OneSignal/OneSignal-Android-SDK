@@ -70,6 +70,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 
 /**
@@ -2056,8 +2057,8 @@ public class OneSignal {
             JSONObject data = dataArray.getJSONObject(i);
 
             notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
-            if (actionSelected == null && data.has("actionSelected"))
-               actionSelected = data.optString("actionSelected", null);
+            if (actionSelected == null && data.has(BUNDLE_KEY_ACTION_ID))
+               actionSelected = data.optString(BUNDLE_KEY_ACTION_ID, null);
 
             if (firstMessage)
                firstMessage = false;
