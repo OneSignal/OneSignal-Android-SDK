@@ -462,7 +462,7 @@ class NotificationBundleProcessor {
       ProcessedBundleResult result = new ProcessedBundleResult();
       
       // Not a OneSignal GCM message
-      if (OneSignal.getNotificationIdFromGCMBundle(bundle) == null)
+      if (!OSNotificationFormatHelper.isOneSignalBundle(bundle))
          return result;
       result.isOneSignalPayload = true;
 

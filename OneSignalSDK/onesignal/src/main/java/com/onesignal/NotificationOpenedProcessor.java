@@ -129,10 +129,10 @@ class NotificationOpenedProcessor {
 
       if (!dismissed)
          OneSignal.handleNotificationOpen(context, dataArray,
-                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromGCMJson(jsonData));
+                 intent.getBooleanExtra("from_alert", false), OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData));
    }
 
-   private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {
+   static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {
       String previewUUID = NotificationBundleProcessor.inAppPreviewPushUUID(jsonData);
       if (previewUUID == null)
          return false;
