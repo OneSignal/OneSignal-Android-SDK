@@ -3072,55 +3072,8 @@ public class OneSignal {
    }
 
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
-      String id = getNotificationIdFromGCMJsonPayload(jsonPayload);
+      String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
       return id == null || OneSignal.isDuplicateNotification(id, context);
-   }
-
-   static String getNotificationIdFromGCMJson(@Nullable JSONObject jsonObject) {
-      if (jsonObject == null)
-         return null;
-      try {
-         JSONObject customJSON = new JSONObject(jsonObject.getString("custom"));
-
-         if (customJSON.has("i"))
-            return customJSON.optString("i", null);
-         else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
-      } catch (JSONException e) {
-         Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the JSONObject.");
-      }
-
-      return null;
-   }
-
-    static String getNotificationIdFromGCMBundle(@Nullable Bundle bundle) {
-        if (bundle == null || bundle.isEmpty())
-            return null;
-
-      try {
-         if (bundle.containsKey("custom")) {
-            JSONObject customJSON = new JSONObject(bundle.getString("custom"));
-
-            if (customJSON.has("i"))
-               return customJSON.optString("i", null);
-            else
-               Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
-         }
-         else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the bundle.");
-      } catch (Throwable t) {
-         Log(LOG_LEVEL.DEBUG, "Could not parse bundle, probably not a OneSignal notification.", t);
-      }
-
-      return null;
-   }
-
-   private static String getNotificationIdFromGCMJsonPayload(JSONObject jsonPayload) {
-      try {
-         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
-         return customJSON.optString("i", null);
-      } catch(Throwable t) {}
-      return null;
    }
 
    static boolean isAppActive() {
