@@ -1046,7 +1046,7 @@ public class GenerateNotificationRunner {
    @Config(shadows = {ShadowFCMBroadcastReceiver.class})
    public void shouldSetButtonsCorrectly() throws Exception {
       Intent intent = new Intent();
-      intent.setAction("com.google.firebase.MESSAGING_EVENT");
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtra("message_type", "fcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
@@ -1114,7 +1114,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       Intent intent = new Intent();
-      intent.setAction("com.google.firebase.MESSAGING_EVENT");
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtra("message_type", "fcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
@@ -1155,7 +1155,7 @@ public class GenerateNotificationRunner {
    public void shouldStartFCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
       
       Intent intentFCM = new Intent();
-      intentFCM.setAction("com.google.firebase.MESSAGING_EVENT");
+      intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
       intentFCM.putExtra("message_type", "fcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "10");
@@ -1190,7 +1190,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       Intent intent = new Intent();
-      intent.setAction("com.google.firebase.MESSAGING_EVENT");
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtra("message_type", "fcm");
       intent.putExtras(inAppPreviewMockPayloadBundle());
 

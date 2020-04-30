@@ -111,14 +111,6 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          //    pkg=com.onesignal.example (has extras)
          // }
 
-         // TODO: FCM version if this makes any sense or if it is even possible...
-         // RESULT_OK prevents the following confusing logcat entry;
-         // W/FCM: broadcast intent callback: result=CANCELLED forIntent {
-         //    act=com.google.firebase.MESSAGING_EVENT
-         //    flg=?
-         //    pkg=com.onesignal.example (has extras)
-         // }
-
          setResultCode(Activity.RESULT_OK);
       }
    }
