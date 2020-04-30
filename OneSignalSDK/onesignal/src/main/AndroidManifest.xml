@@ -7,6 +7,9 @@
     <!-- INTERNET permission requirement -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- c2dm RECEIVE are basic requirements for push messages through Google's FCM -->
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
     <!-- Required so the device vibrates on receiving a push notification.
          Vibration settings of the device still apply. -->
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -88,7 +91,6 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-
 
         <activity
           android:name="com.onesignal.NotificationOpenedActivity"/>

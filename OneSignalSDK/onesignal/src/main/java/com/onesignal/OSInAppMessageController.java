@@ -1,6 +1,8 @@
 package com.onesignal;
 
 import android.os.Build;
+import android.os.Process;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
