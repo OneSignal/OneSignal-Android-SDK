@@ -1141,7 +1141,6 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = {ShadowFCMBroadcastReceiver.class}, sdk = 26)
    public void shouldStartFCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
-      
       Intent intentFCM = new Intent();
       intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
       intentFCM.putExtra("message_type", "fcm");

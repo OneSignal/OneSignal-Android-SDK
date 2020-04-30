@@ -122,7 +122,6 @@ public class MainActivityViewModel implements ActivityViewModel {
     private Switch locationSharedSwitch;
     private Button promptLocationButton;
 
-
     // Settings
     private TextView settingTitleTextView;
     private RelativeLayout subscriptionRelativeLayout;
@@ -231,6 +230,8 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         triggerSet = new HashMap<>();
         triggerArrayList = new ArrayList<>();
+
+        OneSignal.setAppId(getActivity().getString(R.string.onesignal_app_id));
 
         return this;
     }
