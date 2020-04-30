@@ -542,7 +542,7 @@ public class OneSignal {
       }
 
       appId = newAppId;
-      SaveAppId(newAppId);
+      saveAppId(newAppId);
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) finished, checking if appContext has been set before proceeding...");
       if (appContext == null) {
@@ -620,7 +620,7 @@ public class OneSignal {
          return;
       }
 
-      subscribableStatus = osUtils.initializationChecker(context, oneSignalAppId);
+      subscribableStatus = osUtils.initializationChecker(appContext, appId);
       if (isSubscriptionStatusUninitializable())
           return;
 

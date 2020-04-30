@@ -222,8 +222,7 @@ public class Dialog {
                             if (!pushStatus.has("success"))
                                 return false;
 
-                            JSONObject pushSuccessStatus = pushStatus.getJSONObject("success");
-                            successful = pushSuccessStatus.getBoolean("success");
+                            successful = pushStatus.getBoolean("success");
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -243,8 +242,7 @@ public class Dialog {
                             if (!emailStatus.has("success"))
                                 return false;
 
-                            JSONObject emailSuccessStatus = emailStatus.getJSONObject("success");
-                            successful = emailSuccessStatus.getBoolean("success");
+                            successful = emailStatus.getBoolean("success");
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
