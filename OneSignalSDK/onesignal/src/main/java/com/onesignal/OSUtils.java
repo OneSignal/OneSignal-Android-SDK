@@ -99,8 +99,9 @@ class OSUtils {
       return true;
    }
 
-   int initializationChecker(Context context, int deviceType, String oneSignalAppId) {
+   int initializationChecker(Context context, String oneSignalAppId) {
       int subscribableStatus = 1;
+      int deviceType = getDeviceType();
 
       try {
          //noinspection ResultOfMethodCallIgnored

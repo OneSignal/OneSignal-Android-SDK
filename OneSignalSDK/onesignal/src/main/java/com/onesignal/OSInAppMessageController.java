@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.onesignal.OneSignal.getSavedAppId;
+
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
@@ -400,7 +402,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
         try {
             JSONObject json = new JSONObject() {{
-                put("app_id", OneSignal.appId);
+                put("app_id", OneSignal.getSavedAppId());
                 put("device_type", new OSUtils().getDeviceType());
                 put("player_id", OneSignal.getUserId());
                 put("click_id", clickId);

@@ -60,7 +60,6 @@ class OutcomeEventsCache {
         values.put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, event.getWeight());
 
         writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
-        writableDb.close();
     }
 
     /**
@@ -133,8 +132,6 @@ class OutcomeEventsCache {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
-        writableDb.close();
     }
 
     /**

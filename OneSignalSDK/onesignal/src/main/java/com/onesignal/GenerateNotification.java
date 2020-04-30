@@ -282,7 +282,7 @@ class GenerateNotification {
       else
          notificationDefaults |= Notification.DEFAULT_LIGHTS;
 
-      if (OneSignal.getVibrate(context) && gcmBundle.optInt("vib", 1) == 1) {
+      if (OneSignal.getVibrate() && gcmBundle.optInt("vib", 1) == 1) {
          if (gcmBundle.has("vib_pt")) {
             long[] vibrationPattern = OSUtils.parseVibrationPattern(gcmBundle);
             if (vibrationPattern != null)
@@ -481,7 +481,7 @@ class GenerateNotification {
          extraNotificationField.set(notification, miuiNotification);
       } catch (Throwable t) {} // Ignore if not a Xiaomi device
    }
-   
+
    // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
    private static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notifJob.restoring;
@@ -989,7 +989,7 @@ class GenerateNotification {
       String sound = gcmBundle.optString("sound", null);
       if ("null".equals(sound) || "nil".equals(sound))
          return false;
-      return OneSignal.getSoundEnabled(context);
+      return OneSignal.getSoundEnabled();
    }
 
    // Android 5.0 accent color to use, only works when AndroidManifest.xml is targetSdkVersion >= 21

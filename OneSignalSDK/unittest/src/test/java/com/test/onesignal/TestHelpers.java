@@ -31,6 +31,7 @@ import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
+import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorGCM;
 import com.onesignal.StaticResetHelper;
 
@@ -72,10 +73,9 @@ public class TestHelpers {
       ShadowOneSignalRestClient.resetStatics();
 
       ShadowPushRegistratorGCM.resetStatics();
+      ShadowPushRegistratorADM.resetStatics();
 
       ShadowNotificationManagerCompat.enabled = true;
-
-      ShadowOSUtils.subscribableStatus = 1;
 
       ShadowCustomTabsClient.resetStatics();
       ShadowGcmBroadcastReceiver.resetStatics();
@@ -95,6 +95,8 @@ public class TestHelpers {
       ShadowOSWebView.resetStatics();
 
       OneSignalShadowPackageManager.resetStatics();
+
+      ShadowOSUtils.resetStatics();
 
       lastException = null;
    }
@@ -130,15 +132,10 @@ public class TestHelpers {
    static void flushBufferedSharedPrefs() {
       OneSignalPrefs.WritePrefHandlerThread handlerThread = OneSignalPackagePrivateHelper.OneSignalPrefs.prefsHandler;
 
-      if (handlerThread.mHandler == null)
+      if (handlerThread.getLooper() == null)
          return;
-
-      synchronized (handlerThread.mHandler) {
-         if (handlerThread.getLooper() == null)
-            return;
-         Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
-         while (scheduler.runOneTask());
-      }
+      Scheduler scheduler = shadowOf(handlerThread.getLooper()).getScheduler();
+      while (scheduler.runOneTask());
    }
 
    // Join all OS_ threads
