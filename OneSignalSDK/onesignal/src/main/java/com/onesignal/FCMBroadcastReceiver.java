@@ -41,11 +41,12 @@ import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
-// This is the entry point when a FCM payload is received from the Google Play services app
+// This is the entry point when a FCM / GCM payload is received from the Google Play services app
+// TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
 public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
 
    private static final String FCM_RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE";
-   private static final String FCM_TYPE = "fcm";
+   private static final String FCM_TYPE = "gcm";
    private static final String MESSAGE_TYPE_EXTRA_KEY = "message_type";
 
    private static boolean isFCMMessage(Intent intent) {
@@ -75,13 +76,10 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       }
 
       // Prevent other FCM receivers from firing if:
-      //    1. This is a duplicated FCM message
-      //    2. OR app developer setup a extender service to handle the notification
-      //    3. OR this is a OneSignal payload
-      if (processedResult.isDup
-              || processedResult.hasExtenderService
-              || processedResult.isOneSignalPayload) {
-         // Abort to prevent other FCM receivers from process this Intent.
+      //   1. This is a duplicated GCM message
+      //   2. OR app developer setup a extender service to handle the notification.
+      if (processedResult.isDup || processedResult.hasExtenderService) {
+         // Abort to prevent other GCM receivers from process this Intent.
          setAbort();
          return;
       }
@@ -98,9 +96,6 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       if (isOrderedBroadcast()) {
          // Prevents other BroadcastReceivers from firing
          abortBroadcast();
-
-         // TODO: Is this an issue with FCM too?
-         //  If so what should we expect from the FCM logcat entry?
 
          // TODO: Previous error and related to this Github issue ticket
          //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307

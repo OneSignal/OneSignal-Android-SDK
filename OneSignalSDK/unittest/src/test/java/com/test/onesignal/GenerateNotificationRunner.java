@@ -1047,7 +1047,7 @@ public class GenerateNotificationRunner {
    public void shouldSetButtonsCorrectly() throws Exception {
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intent.putExtra("message_type", "fcm");
+      intent.putExtra("message_type", "gcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
       intent.putExtras(bundle);
@@ -1115,7 +1115,7 @@ public class GenerateNotificationRunner {
 
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intent.putExtra("message_type", "fcm");
+      intent.putExtra("message_type", "gcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
       intent.putExtras(bundle);
@@ -1156,7 +1156,7 @@ public class GenerateNotificationRunner {
       
       Intent intentFCM = new Intent();
       intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intentFCM.putExtra("message_type", "fcm");
+      intentFCM.putExtra("message_type", "gcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "10");
       bundle.putString("licon", "http://domain.com/image.jpg");
@@ -1191,7 +1191,7 @@ public class GenerateNotificationRunner {
 
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intent.putExtra("message_type", "fcm");
+      intent.putExtra("message_type", "gcm");
       intent.putExtras(inAppPreviewMockPayloadBundle());
 
       new FCMBroadcastReceiver().onReceive(blankActivity, intent);
