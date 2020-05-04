@@ -1107,27 +1107,6 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFCMBroadcastReceiver.class})
-   public void shouldPreventOtherFCMReceiversWhenSettingEnabled() throws Exception {
-      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-      OneSignal.setAppContext(blankActivity);
-      threadAndTaskWait();
-
-      Intent intent = new Intent();
-      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intent.putExtra("message_type", "gcm");
-      Bundle bundle = getBaseNotifBundle();
-      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
-      intent.putExtras(bundle);
-      
-      FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
-      broadcastReceiver.onReceive(blankActivity, intent);
-      
-      assertEquals(Activity.RESULT_OK, (int) ShadowFCMBroadcastReceiver.lastResultCode);
-      assertTrue(ShadowFCMBroadcastReceiver.calledAbortBroadcast);
-   }
-
-   @Test
    public void shouldSetExpireTimeCorrectlyFromGoogleTTL() {
       long sentTime = 1_553_035_338_000L;
       long ttl = 60L;
