@@ -1,15 +1,13 @@
 package com.onesignal;
 
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.RequiresApi;
+import androidx.annotation.RequiresApi;
 
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;

@@ -15,7 +15,7 @@ import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -35,7 +35,7 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.Arrays;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_onReceived;
+import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDirectNotification;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
@@ -59,7 +59,7 @@ import static junit.framework.Assert.assertTrue;
 @Config(packageName = "com.onesignal.example",
         shadows = {
             ShadowOneSignalRestClient.class,
-            ShadowPushRegistratorGCM.class,
+            ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,
@@ -251,7 +251,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Wait 31 seconds to start new session
         advanceSystemTimeBy(31);
@@ -387,7 +387,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Make sure not indirect notifications exist
         assertNull(OneSignal_getSessionIndirectNotificationIds());
@@ -467,7 +467,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
         threadAndTaskWait();
 
         // Wait 31 seconds
@@ -502,7 +502,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -526,7 +526,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive another notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -630,7 +630,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
         indirectNotificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
 
         // App in background for 31 seconds to trigger new session
@@ -671,7 +671,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Foreground app through icon
         blankActivityController.resume();
@@ -741,7 +741,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "1");
-        GcmBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
         // Foreground app through icon
         blankActivityController.resume();

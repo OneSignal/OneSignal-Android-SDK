@@ -2,7 +2,7 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OSInAppMessageAction;
@@ -19,7 +19,7 @@ import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -56,7 +56,7 @@ import static junit.framework.Assert.assertTrue;
         instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowOneSignalRestClient.class,
-            ShadowPushRegistratorGCM.class,
+            ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,

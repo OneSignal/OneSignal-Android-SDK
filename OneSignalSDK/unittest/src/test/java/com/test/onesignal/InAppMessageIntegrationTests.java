@@ -19,7 +19,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -62,7 +62,7 @@ import static junit.framework.Assert.assertTrue;
         instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowOneSignalRestClient.class,
-            ShadowPushRegistratorGCM.class,
+            ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,

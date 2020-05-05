@@ -40,9 +40,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -251,23 +251,18 @@ public class OneSignal {
    private static String emailId = null;
    private static int subscribableStatus;
 
-   // TODO: These should be cleaned up and managed else where maybe?
+   // TODO: Start of old mInitBuilder params
+   //    These should be cleaned up and managed else where maybe?
    //    These have been ripped out of mInitBuilder since it was deleted and placed here for now
    static NotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static NotificationOpenedHandler notificationOpenedHandler;
    static InAppMessageClickHandler inAppMessageClickHandler;
    static boolean mPromptLocation;
    static boolean mDisableGmsMissingPrompt;
-   // Default true in 4.0.0 release.
-   static boolean mUnsubscribeWhenNotificationsAreDisabled;
-   static boolean mFilterOtherGCMReceivers;
-   // Exists to make wrapper SDKs simpler so they don't need to store their own variable before
-   //  calling startInit().init()
-   // mDisplayOptionCarryOver is used if setInFocusDisplaying is called but inFocusDisplaying wasn't
-   static boolean mDisplayOptionCarryOver;
-   // Default Notification in 4.0.0 release.
-   static OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.InAppAlert;
-   // TODOEnd OF mInitBuilder params
+   static boolean mUnsubscribeWhenNotificationsAreDisabled = true;
+   // TODO: Will be apart of NotificationWillShowInForegroundHandler
+   static OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.Notification;
+   // TODO: End of old mInitBuilder params
 
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
@@ -452,10 +447,6 @@ public class OneSignal {
    }
    private static IAPUpdateJob iapUpdateJob;
 
-   private static void setDisplayOptionCarryOver(boolean carryOver) {
-      mDisplayOptionCarryOver = carryOver;
-   }
-
    /**
     * Prompts the user for location permissions.
     * This allows for geotagging so you can send notifications to users based on location.
@@ -474,26 +465,6 @@ public class OneSignal {
    }
 
    /**
-    * Prompts the user to update/enable Google Play Services if it's disabled on the device.
-    *
-    * @param disable if {@code false}, prompt users. if {@code true}, never show the out of date prompt.
-    *                Default is {@code false}
-    * @return
-    */
-   public static void disableGmsMissingPrompt(boolean disable) {
-      mDisableGmsMissingPrompt = disable;
-   }
-
-   public static void inFocusDisplaying(OSInFocusDisplayOption displayOption) {
-      mDisplayOptionCarryOver = false;
-      mDisplayOption = displayOption;
-   }
-
-   static OneSignalDbHelper getDBHelperInstance() {
-      return OneSignalDbHelper.getInstance(appContext);
-   }
-
-   /**
     * If notifications are disabled for your app, unsubscribe the user from OneSignal.
     * This will happen when your users go to <i>Settings</i> > <i>Apps</i> and turn off notifications or
     * they long press your notifications and select "block notifications". This is {@code false} by default.
@@ -504,22 +475,6 @@ public class OneSignal {
     */
    public static void unsubscribeWhenNotificationsAreDisabled(boolean set) {
       mUnsubscribeWhenNotificationsAreDisabled = set;
-   }
-
-   /**
-    * Enable to prevent other broadcast receivers from receiving OneSignal FCM/GCM payloads.
-    * Prevent thrown exceptions or double notifications from other libraries/SDKs that implement
-    * notifications. Other non-OneSignal payloads will still be passed through so your app can
-    * handle FCM/GCM payloads from other back-ends.
-    * <br/><br/>
-    * <b>Note:</b> You can't use multiple
-    * Google Project numbers/Sender IDs. They must be the same if you are using multiple providers,
-    * otherwise there will be unexpected subscribes.
-    * @param set
-    * @return
-    */
-   public static void filterOtherGCMReceivers(boolean set) {
-      mFilterOtherGCMReceivers = set;
    }
 
    /**
@@ -631,8 +586,6 @@ public class OneSignal {
          return;
       }
 
-      saveFilterOtherGCMReceivers(mFilterOtherGCMReceivers);
-
       handleActivityLifecycleHandler(appContext);
 
       OneSignalStateSynchronizer.initUserState();
@@ -657,8 +610,6 @@ public class OneSignal {
 
       if (TrackFirebaseAnalytics.CanTrack())
          trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
-
-      PushRegistratorFCM.disableFirebaseInstanceIdService(appContext);
 
       initDone = true;
 
@@ -895,8 +846,6 @@ public class OneSignal {
          mPushRegistrator = new PushRegistratorADM();
       else if (OSUtils.hasFCMLibrary())
          mPushRegistrator = new PushRegistratorFCM();
-      else
-         mPushRegistrator = new PushRegistratorGCM();
 
       return mPushRegistrator;
    }
@@ -2033,7 +1982,7 @@ public class OneSignal {
       });
    }
 
-   // Called when receiving GCM/ADM message after it has been displayed.
+   // Called when receiving FCM/ADM message after it has been displayed.
    // Or right when it is received if it is a silent one
    //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
    static void handleNotificationReceived(JSONArray data, boolean displayed, boolean fromAlert) {
@@ -2228,23 +2177,6 @@ public class OneSignal {
               "".equals(emailId) ? null : emailId);
    }
 
-   static boolean getFilterOtherGCMReceivers(Context context) {
-      return OneSignalPrefs.getBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_OS_FILTER_OTHER_GCM_RECEIVERS,
-              false);
-   }
-
-   static void saveFilterOtherGCMReceivers(boolean set) {
-      if (appContext == null)
-         return;
-
-      OneSignalPrefs.saveBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              "OS_FILTER_OTHER_GCM_RECEIVERS",
-              set);
-   }
-
    // Called when a player id is returned from OneSignal
    // Updates anything else that might have been waiting for this id.
    static void updateUserIdDependents(String userId) {
@@ -2367,12 +2299,7 @@ public class OneSignal {
     * @param displayOption the {@link OneSignal.OSInFocusDisplayOption OSInFocusDisplayOption} to set
     */
    public static void setInFocusDisplaying(OSInFocusDisplayOption displayOption) {
-      mDisplayOptionCarryOver = true;
       mDisplayOption = displayOption;
-   }
-
-   public static void setInFocusDisplaying(int displayOption) {
-      setInFocusDisplaying(getInFocusDisplaying(displayOption));
    }
 
    public static OSInFocusDisplayOption currentInFocusDisplayOption() {
@@ -2998,7 +2925,7 @@ public class OneSignal {
       }
 
       if (exists) {
-         Log(LOG_LEVEL.DEBUG, "Duplicate GCM message received, skip processing of " + id);
+         Log(LOG_LEVEL.DEBUG, "Duplicate FCM message received, skip processing of " + id);
          return true;
       }
 
@@ -3006,42 +2933,42 @@ public class OneSignal {
    }
 
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
-      String id = getNotificationIdFromGCMJsonPayload(jsonPayload);
+      String id = getNotificationIdFromFCMJsonPayload(jsonPayload);
       return id == null || OneSignal.isDuplicateNotification(id, context);
    }
 
-   static String getNotificationIdFromGCMJson(@Nullable JSONObject jsonObject) {
-      if (jsonObject == null)
+   static String getNotificationIdFromFCMJson(@Nullable JSONObject fcmJson) {
+      if (fcmJson == null)
          return null;
       try {
-         JSONObject customJSON = new JSONObject(jsonObject.getString("custom"));
+         JSONObject customJSON = new JSONObject(fcmJson.getString("custom"));
 
          if (customJSON.has("i"))
             return customJSON.optString("i", null);
          else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
+            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'i' field in custom.");
       } catch (JSONException e) {
-         Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the JSONObject.");
+         Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'custom' field in the JSONObject.");
       }
 
       return null;
    }
 
-    static String getNotificationIdFromGCMBundle(@Nullable Bundle bundle) {
-        if (bundle == null || bundle.isEmpty())
+    static String getNotificationIdFromFCMBundle(@Nullable Bundle fcmBundle) {
+        if (fcmBundle == null || fcmBundle.isEmpty())
             return null;
 
       try {
-         if (bundle.containsKey("custom")) {
-            JSONObject customJSON = new JSONObject(bundle.getString("custom"));
+         if (fcmBundle.containsKey("custom")) {
+            JSONObject customJSON = new JSONObject(fcmBundle.getString("custom"));
 
             if (customJSON.has("i"))
                return customJSON.optString("i", null);
             else
-               Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'i' field in custom.");
+               Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'i' field in custom.");
          }
          else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted GCM message. No 'custom' field in the bundle.");
+            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'custom' field in the bundle.");
       } catch (Throwable t) {
          Log(LOG_LEVEL.DEBUG, "Could not parse bundle, probably not a OneSignal notification.", t);
       }
@@ -3049,9 +2976,9 @@ public class OneSignal {
       return null;
    }
 
-   private static String getNotificationIdFromGCMJsonPayload(JSONObject jsonPayload) {
+   private static String getNotificationIdFromFCMJsonPayload(JSONObject fcmJson) {
       try {
-         JSONObject customJSON = new JSONObject(jsonPayload.optString("custom"));
+         JSONObject customJSON = new JSONObject(fcmJson.optString("custom"));
          return customJSON.optString("i", null);
       } catch(Throwable t) {}
       return null;

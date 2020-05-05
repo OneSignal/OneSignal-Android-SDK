@@ -33,9 +33,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.os.Build;
-import android.support.v4.app.NotificationManagerCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -126,7 +126,7 @@ class NotificationOpenedProcessor {
 
       if (!dismissed)
          OneSignal.handleNotificationOpen(context, dataArray,
-                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromGCMJson(jsonData));
+                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromFCMJson(jsonData));
    }
 
    private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {

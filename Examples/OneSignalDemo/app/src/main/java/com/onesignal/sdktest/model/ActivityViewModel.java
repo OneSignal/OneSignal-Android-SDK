@@ -2,13 +2,11 @@ package com.onesignal.sdktest.model;
 
 import android.app.Activity;
 import android.content.Context;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSPermissionObserver;
-import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSSubscriptionObserver;
-import com.onesignal.OneSignal;
 
 /**
  * This is the interface created with a few generic methods for setting a ViewModel

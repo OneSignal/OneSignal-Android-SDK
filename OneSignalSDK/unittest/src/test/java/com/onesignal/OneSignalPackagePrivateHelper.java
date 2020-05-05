@@ -6,8 +6,8 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -150,21 +150,21 @@ public class OneSignalPackagePrivateHelper {
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromGCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromGCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.ProcessFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
    }
 
-   public static void NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromGCMIntentService(context, bundle, overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.ProcessFromFCMIntentService(context, bundle, overrideSettings);
    }
 
-   public static boolean GcmBroadcastReceiver_processBundle(Context context, Bundle bundle) {
+   public static boolean FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
       NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
       return processedResult.processed();
    }
 
-   public static void GcmBroadcastReceiver_onReceived(Context context, Bundle bundle) {
-      GCMBroadcastReceiver receiver = new GCMBroadcastReceiver();
+   public static void FCMBroadcastReceiver_onReceived(Context context, Bundle bundle) {
+      FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtras(bundle);
@@ -175,6 +175,7 @@ public class OneSignalPackagePrivateHelper {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;
+      notifJob.restoring = restoring;
       return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
@@ -195,9 +196,9 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   public static class GCMBroadcastReceiver extends com.onesignal.GcmBroadcastReceiver {}
+   public static class FCMBroadcastReceiver extends com.onesignal.FCMBroadcastReceiver {}
 
-   public static class PushRegistratorGCM extends com.onesignal.PushRegistratorGCM {}
+   public static class PushRegistratorFCM extends com.onesignal.PushRegistratorFCM {}
 
    public static class OneSignalRestClient extends com.onesignal.OneSignalRestClient {
       public static abstract class ResponseHandler extends com.onesignal.OneSignalRestClient.ResponseHandler {

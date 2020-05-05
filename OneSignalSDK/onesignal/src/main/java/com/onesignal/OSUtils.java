@@ -41,10 +41,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationManagerCompat;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
+
+import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -138,29 +140,13 @@ class OSUtils {
       }
    }
 
-   private static boolean hasGCMLibrary() {
-      try {
-         // noinspection ConstantConditions
-         return com.google.android.gms.gcm.GoogleCloudMessaging.class != null;
-      } catch (Throwable e) {
-         return false;
-      }
-   }
-
    Integer checkForGooglePushLibrary() {
       boolean hasFCMLibrary = hasFCMLibrary();
-      boolean hasGCMLibrary = hasGCMLibrary();
 
-      if (!hasFCMLibrary && !hasGCMLibrary) {
+      if (!hasFCMLibrary) {
          Log(OneSignal.LOG_LEVEL.FATAL, "The Firebase FCM library is missing! Please make sure to include it in your project.");
          return UserState.PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY;
       }
-
-      if (hasGCMLibrary && !hasFCMLibrary)
-         Log(OneSignal.LOG_LEVEL.WARN, "GCM Library detected, please upgrade to Firebase FCM library as GCM is deprecated!");
-
-      if (hasGCMLibrary && hasFCMLibrary)
-         Log(OneSignal.LOG_LEVEL.WARN, "Both GCM & FCM Libraries detected! Please remove the deprecated GCM library.");
 
       return null;
    }
@@ -168,7 +154,7 @@ class OSUtils {
    private static boolean hasWakefulBroadcastReceiver() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.content.WakefulBroadcastReceiver.class != null;
+         return WakefulBroadcastReceiver.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -177,7 +163,7 @@ class OSUtils {
    private static boolean hasNotificationManagerCompat() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.app.NotificationManagerCompat.class != null;
+         return androidx.core.app.NotificationManagerCompat.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -186,7 +172,7 @@ class OSUtils {
    private static boolean hasJobIntentService() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.app.JobIntentService.class != null;
+         return androidx.core.app.JobIntentService.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -365,9 +351,9 @@ class OSUtils {
       return null;
    }
 
-   static long[] parseVibrationPattern(JSONObject gcmBundle) {
+   static long[] parseVibrationPattern(JSONObject fcmBundle) {
       try {
-         Object patternObj = gcmBundle.opt("vib_pt");
+         Object patternObj = fcmBundle.opt("vib_pt");
          JSONArray jsonVibArray;
          if (patternObj instanceof String)
             jsonVibArray = new JSONArray((String)patternObj);

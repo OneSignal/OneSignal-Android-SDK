@@ -39,7 +39,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.WorkerThread;
 import android.text.TextUtils;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;

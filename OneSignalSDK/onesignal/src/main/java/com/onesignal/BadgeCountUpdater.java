@@ -27,7 +27,6 @@
 
 package com.onesignal;
 
-import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -36,7 +35,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.RequiresApi;
+import androidx.annotation.RequiresApi;
 
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.shortcutbadger.ShortcutBadger;

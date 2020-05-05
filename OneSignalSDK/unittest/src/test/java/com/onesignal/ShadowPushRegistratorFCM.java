@@ -36,10 +36,9 @@ import org.robolectric.annotation.RealObject;
 import static org.robolectric.shadow.api.Shadow.directlyOn;
 
 @Implements(PushRegistratorAbstractGoogle.class)
-public class ShadowPushRegistratorGCM {
+public class ShadowPushRegistratorFCM {
 
-    @RealObject
-    private PushRegistratorAbstractGoogle realInstance;
+    @RealObject private PushRegistratorAbstractGoogle realInstance;
 
     public static final String regId = "aspdfoh0fhj02hr-2h";
 
@@ -53,7 +52,6 @@ public class ShadowPushRegistratorGCM {
         skipComplete = false;
         fail = false;
         lastProjectNumber = null;
-
         lastCallback = null;
     }
 
@@ -70,22 +68,14 @@ public class ShadowPushRegistratorGCM {
         lastCallback = callback;
 
         if (!skipComplete)
-            fireLastCallback();
+            callback.complete(fail ? null : regId, fail ? -7 : 1);
     }
 
     @Implementation
-    public void internalRegisterForPush(String senderId) {
+    public void internalRegisterForPush(String senderId) {}
 
-    }
 
     public static void fireLastCallback() {
-        if (lastCallback == null)
-            return;
-
-        lastCallback.complete(
-                fail ? null : regId,
-                fail ? UserState.PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP : UserState.PUSH_STATUS_SUBSCRIBED
-        );
+        lastCallback.complete(fail ? null : regId, fail ? -7 : 1);
     }
-
 }

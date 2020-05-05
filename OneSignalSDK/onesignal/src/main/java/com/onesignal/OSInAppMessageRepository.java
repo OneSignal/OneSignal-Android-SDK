@@ -3,7 +3,8 @@ package com.onesignal;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.annotation.WorkerThread;
+
+import androidx.annotation.WorkerThread;
 
 import org.json.JSONArray;
 import org.json.JSONException;

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -7,7 +7,7 @@
     android:fitsSystemWindows="true"
     tools:context=".activity.MainActivity">
 
-    <android.support.design.widget.AppBarLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/main_activity_app_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -16,7 +16,7 @@
         android:clipToPadding="false"
         app:layout_behavior="com.onesignal.sdktest.ui.FixAppBarLayoutBehavior">
 
-        <android.support.v7.widget.Toolbar
+        <androidx.appcompat.widget.Toolbar
             android:id="@+id/main_activity_toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
@@ -37,16 +37,18 @@
                     android:layout_width="148dp"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
+                    android:layout_alignParentLeft="true"
                     android:layout_centerVertical="true"
                     android:layout_marginStart="-8dp"
+                    android:layout_marginLeft="-8dp"
                     android:src="@drawable/onesignal_rectangle"
-                    android:tint="@android:color/white"/>
+                    android:tint="@android:color/white" />
 
             </RelativeLayout>
 
-        </android.support.v7.widget.Toolbar>
+        </androidx.appcompat.widget.Toolbar>
 
-    </android.support.design.widget.AppBarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
         android:id="@+id/main_activity_privacy_consent_linear_layout"
@@ -83,7 +85,7 @@
             android:textSize="12dp"
             android:textColor="@color/colorDarkText"/>
 
-        <android.support.v7.widget.CardView
+        <androidx.cardview.widget.CardView
             android:layout_width="172dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
@@ -113,17 +115,17 @@
 
             </LinearLayout>
 
-        </android.support.v7.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 
     <!-- Main ScrollView -->
 
-    <android.support.v4.widget.NestedScrollView
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/main_activity_nested_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_behavior="android.support.design.widget.AppBarLayout$ScrollingViewBehavior">
+        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -152,10 +154,11 @@
                     android:gravity="start|center_vertical"
                     android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/app"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -193,20 +196,23 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentStart="true"
+                                    android:layout_alignParentLeft="true"
                                     android:layout_centerVertical="true"
                                     android:layout_toStartOf="@id/main_activity_account_details_app_id_text_view"
+                                    android:layout_toLeftOf="@id/main_activity_account_details_app_id_text_view"
                                     android:text="@string/id_colon"
                                     android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText" />
 
                                 <TextView
                                     android:id="@+id/main_activity_account_details_app_id_text_view"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentEnd="true"
+                                    android:layout_alignParentRight="true"
                                     android:layout_centerVertical="true"
                                     android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText" />
 
                             </RelativeLayout>
 
@@ -233,20 +239,23 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentStart="true"
+                                    android:layout_alignParentLeft="true"
                                     android:layout_centerVertical="true"
                                     android:layout_toStartOf="@id/main_activity_account_details_user_email_text_view"
+                                    android:layout_toLeftOf="@id/main_activity_account_details_user_email_text_view"
                                     android:text="@string/email_colon"
                                     android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText" />
 
                                 <TextView
                                     android:id="@+id/main_activity_account_details_user_email_text_view"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentEnd="true"
+                                    android:layout_alignParentRight="true"
                                     android:layout_centerVertical="true"
                                     android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText" />
 
                             </RelativeLayout>
 
@@ -273,20 +282,23 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentStart="true"
+                                    android:layout_alignParentLeft="true"
                                     android:layout_centerVertical="true"
                                     android:layout_toStartOf="@id/main_activity_account_details_user_external_user_id_text_view"
+                                    android:layout_toLeftOf="@id/main_activity_account_details_user_external_user_id_text_view"
                                     android:text="@string/external_user_id_colon"
                                     android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText" />
 
                                 <TextView
                                     android:id="@+id/main_activity_account_details_user_external_user_id_text_view"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_alignParentEnd="true"
+                                    android:layout_alignParentRight="true"
                                     android:layout_centerVertical="true"
                                     android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText" />
 
                             </RelativeLayout>
 
@@ -295,7 +307,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -318,10 +330,11 @@
                     android:gravity="start|center_vertical"
                     android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/location"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -354,9 +367,12 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/main_activity_location_shared_switch"
+                                android:layout_toLeftOf="@id/main_activity_location_shared_switch"
                                 android:paddingEnd="6dp"
+                                android:paddingRight="6dp"
                                 android:clipChildren="false"
                                 android:clipToPadding="false"
                                 android:orientation="vertical">
@@ -384,8 +400,9 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
-                                android:theme="@style/SwitchTheme"/>
+                                android:theme="@style/SwitchTheme" />
 
                         </RelativeLayout>
 
@@ -411,7 +428,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -434,10 +451,11 @@
                     android:gravity="start|center_vertical"
                     android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/settings"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -470,9 +488,12 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/main_activity_settings_subscription_switch"
+                                android:layout_toLeftOf="@id/main_activity_settings_subscription_switch"
                                 android:paddingEnd="6dp"
+                                android:paddingRight="6dp"
                                 android:clipChildren="false"
                                 android:clipToPadding="false"
                                 android:orientation="vertical">
@@ -500,8 +521,9 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
-                                android:theme="@style/SwitchTheme"/>
+                                android:theme="@style/SwitchTheme" />
 
                         </RelativeLayout>
 
@@ -529,9 +551,12 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/main_activity_settings_pause_in_app_messages_switch"
+                                android:layout_toLeftOf="@id/main_activity_settings_pause_in_app_messages_switch"
                                 android:paddingEnd="6dp"
+                                android:paddingRight="6dp"
                                 android:clipChildren="false"
                                 android:clipToPadding="false"
                                 android:orientation="vertical">
@@ -558,9 +583,10 @@
                                 android:id="@+id/main_activity_settings_pause_in_app_messages_switch"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_alignParentRight="true"
                                 android:layout_alignParentEnd="true"
                                 android:layout_centerVertical="true"
-                                android:theme="@style/SwitchTheme"/>
+                                android:theme="@style/SwitchTheme" />
 
                         </RelativeLayout>
 
@@ -586,7 +612,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -610,10 +636,11 @@
                     android:gravity="start|center_vertical"
                     android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/tags"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -628,7 +655,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <android.support.v7.widget.RecyclerView
+                        <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/main_activity_tags_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -638,7 +665,7 @@
 
                             <!-- Populated with the Tags added -->
 
-                        </android.support.v7.widget.RecyclerView>
+                        </androidx.recyclerview.widget.RecyclerView>
 
                         <TextView
                             android:id="@+id/main_activity_tags_no_tags_text_view"
@@ -674,7 +701,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -697,10 +724,11 @@
                     android:layout_gravity="start|center_vertical"
                     android:gravity="start|center_vertical"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/push_notification"
                     android:textColor="@color/colorDarkText"/>
 
-                <android.support.v7.widget.RecyclerView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_push_notification_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -712,7 +740,7 @@
 
                     <!-- Populated with the Notification enum -->
 
-                </android.support.v7.widget.RecyclerView>
+                </androidx.recyclerview.widget.RecyclerView>
 
             </LinearLayout>
 
@@ -736,10 +764,11 @@
                     android:gravity="start|center_vertical"
                     android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/outcomes"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -776,7 +805,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -800,10 +829,11 @@
                     android:gravity="start|center_vertical"
                     android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/triggers"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
-                <android.support.v7.widget.CardView
+                <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
@@ -818,7 +848,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <android.support.v7.widget.RecyclerView
+                        <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/main_activity_in_app_messages_triggers_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -828,7 +858,7 @@
 
                             <!-- Populated with the Triggers added -->
 
-                        </android.support.v7.widget.RecyclerView>
+                        </androidx.recyclerview.widget.RecyclerView>
 
                         <TextView
                             android:id="@+id/main_activity_in_app_messages_triggers_no_triggers_text_view"
@@ -864,7 +894,7 @@
 
                     </LinearLayout>
 
-                </android.support.v7.widget.CardView>
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
@@ -887,10 +917,11 @@
                     android:layout_gravity="start|center_vertical"
                     android:gravity="start|center_vertical"
                     android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
                     android:text="@string/in_app_messaging"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
-                <android.support.v7.widget.RecyclerView
+                <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_in_app_messaging_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -902,12 +933,12 @@
 
                     <!-- Populated with the In App Message enum -->
 
-                </android.support.v7.widget.RecyclerView>
+                </androidx.recyclerview.widget.RecyclerView>
 
             </LinearLayout>
 
         </LinearLayout>
 
-    </android.support.v4.widget.NestedScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-</android.support.design.widget.CoordinatorLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

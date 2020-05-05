@@ -19,21 +19,24 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
             android:layout_toStartOf="@id/pair_recycler_view_item_value_text_view"
+            android:layout_toLeftOf="@id/pair_recycler_view_item_value_text_view"
             android:textSize="16sp"
             android:textColor="@color/colorDarkText"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/pair_recycler_view_item_value_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:textSize="16sp"
             android:textColor="@color/colorDarkText"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
     </RelativeLayout>
 

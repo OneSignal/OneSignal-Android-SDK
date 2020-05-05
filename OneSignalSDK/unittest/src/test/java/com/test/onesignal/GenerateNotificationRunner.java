@@ -43,14 +43,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationCompat;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 import android.widget.Button;
 
 import com.onesignal.BundleCompat;
-import com.onesignal.GcmBroadcastReceiver;
-import com.onesignal.GcmIntentService;
+import com.onesignal.FCMBroadcastReceiver;
+import com.onesignal.FCMIntentService;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
@@ -67,7 +67,7 @@ import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
-import com.onesignal.ShadowGcmBroadcastReceiver;
+import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
@@ -103,8 +103,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
-import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
@@ -201,13 +201,13 @@ public class GenerateNotificationRunner {
    public void shouldSetTitleCorrectly() {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
       
-      // Should allow title from GCM payload.
+      // Should allow title from FCM payload.
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("title", "title123");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       assertEquals("title123", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
    }
    
@@ -218,7 +218,7 @@ public class GenerateNotificationRunner {
       bundle.putInt("android_notif_id", 0);
       bundle.putBoolean("restoring", true);
       
-      NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(blankActivity, bundle, null);
       assertEquals("UnitTestApp", ShadowRoboNotificationManager.getLastShadowNotif().getContentTitle());
    }
 
@@ -228,7 +228,7 @@ public class GenerateNotificationRunner {
       // Display a notification
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       //try to restore notifs
       NotificationRestorer.restore(blankActivity);
@@ -258,17 +258,17 @@ public class GenerateNotificationRunner {
       // Display 2 notifications that will be grouped together.
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       // Go forward 4 weeks
       advanceSystemTimeBy(2_419_202);
       
       // Display a 3 normal notification.
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
    
    
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -295,7 +295,7 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
       bundle.putString("custom", "{\"i\": \"some_UUID\", \"a\": {\"actionButtons\": [{\"text\": \"test\"} ]}}");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
    
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -316,14 +316,14 @@ public class GenerateNotificationRunner {
       
       // Setup - Display 3 notifications, 2 of which that will be grouped together.
       Bundle bundle = getBaseNotifBundle("UUID0");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       
       bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       
       assertEquals(4, ShadowRoboNotificationManager.notifications.size());
       
@@ -523,7 +523,7 @@ public class GenerateNotificationRunner {
           bundle = getBaseNotifBundle("UUID" + i);
           bundle.putString("grp", group);
 
-          NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+          NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
        }
        return bundle;
     }
@@ -567,15 +567,15 @@ public class GenerateNotificationRunner {
       // Setup - Display 3 notifications that will be grouped together.
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       bundle = getBaseNotifBundle("UUID3");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -648,7 +648,7 @@ public class GenerateNotificationRunner {
    @Test
    public void shouldUpdateBadgesWhenDismissingNotification() {
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    
@@ -669,13 +669,13 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
       
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
    public void shouldSetBadgesWhenRestoringNotifications() {
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
       ShadowBadgeCountUpdater.lastCount = 0;
 
       NotificationRestorer.restore(blankActivity);
@@ -684,7 +684,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test public void shouldNotRestoreNotificationsIfPermissionIsDisabled() {
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       ShadowNotificationManagerCompat.enabled = false;
       NotificationRestorer.restore(blankActivity);
@@ -696,13 +696,13 @@ public class GenerateNotificationRunner {
    public void shouldNotShowNotificationWhenAlertIsBlankOrNull() {
       Bundle bundle = getBaseNotifBundle();
       bundle.remove("alert");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       assertNoNotifications();
    
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("alert", "");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       assertNoNotifications();
 
@@ -721,12 +721,12 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
       bundle.putString("collapse_key", "1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
       bundle.putString("collapse_key", "1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       
       // Test - Summary created and sub notification. Summary will look the same as the normal notification.
@@ -744,7 +744,7 @@ public class GenerateNotificationRunner {
       BundleCompat bundle2 = createInternalPayloadBundle(bundle);
       bundle2.putInt("android_notif_id", lastNotifId);
       bundle2.putBoolean("restoring", true);
-      NotificationBundleProcessor_ProcessFromGCMIntentService_NoWrap(blankActivity, bundle2, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(blankActivity, bundle2, null);
       
       // Test - Restored notifications display exactly the same as they did when received.
       postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -759,7 +759,7 @@ public class GenerateNotificationRunner {
    public void shouldHandleBasicNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
@@ -782,7 +782,7 @@ public class GenerateNotificationRunner {
       cursor.close();
 
       // Should not display a duplicate notification, count should still be 1
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(1, cursor.getCount());
@@ -791,7 +791,7 @@ public class GenerateNotificationRunner {
 
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       // Go forward 4 weeks
       // Note: Does not effect the SQL function strftime
@@ -805,7 +805,7 @@ public class GenerateNotificationRunner {
       // Should of been added for a total of 2 records now.
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { }, null, null, null, null, null);
 
@@ -818,7 +818,7 @@ public class GenerateNotificationRunner {
    public void shouldRestoreNotifications() {
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
 
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
@@ -851,7 +851,7 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       bundle.putLong("google.sent_time", System.currentTimeMillis());
       bundle.putLong("google.ttl", ttl);
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       restoreNotifications();
       assertRestoreRan();
@@ -878,7 +878,7 @@ public class GenerateNotificationRunner {
 
    @Test
    public void badgeCountShouldNotIncludeOldNotifications() {
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       // Go forward 1 week
       advanceSystemTimeBy(604_801);
@@ -894,7 +894,7 @@ public class GenerateNotificationRunner {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(2, postedNotifs.size());
@@ -925,7 +925,7 @@ public class GenerateNotificationRunner {
       bundle.putString("alert", "Notif test 2");
       bundle.putString("custom", "{\"i\": \"UUID2\"}");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(2, postedNotifs.size());
@@ -962,7 +962,7 @@ public class GenerateNotificationRunner {
       bundle.putString("alert", "Notif test 3");
       bundle.putString("custom", "{\"i\": \"UUID3\"}");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       postedNotifsIterator = postedNotifs.entrySet().iterator();
       postedNotification = postedNotifsIterator.next().getValue();
@@ -990,7 +990,7 @@ public class GenerateNotificationRunner {
       // Setup1 - Display a notification with a group set
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       // Test1 - Manually trigger a refresh on grouped notification.
       SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
@@ -1001,7 +1001,7 @@ public class GenerateNotificationRunner {
       // Setup2 - Display a 2nd notification with the same group key
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       // Test2 - Manually trigger a refresh on grouped notification.
       writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
@@ -1021,7 +1021,7 @@ public class GenerateNotificationRunner {
       // Setup - Display a notification with a group set
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    
@@ -1032,10 +1032,10 @@ public class GenerateNotificationRunner {
       // Setup - Send 2 more notifications with the same group
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       bundle = getBaseNotifBundle("UUID3");
       bundle.putString("grp", "test1");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       // Test - equals 3 - Should be 2 notifications + 1 summary.
       //         Alert should stay as an in-app alert.
@@ -1043,17 +1043,17 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowGcmBroadcastReceiver.class})
+   @Config(shadows = {ShadowFCMBroadcastReceiver.class})
    public void shouldSetButtonsCorrectly() throws Exception {
-      Intent intentGcm = new Intent();
-      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intentGcm.putExtra("message_type", "gcm");
+      Intent intent = new Intent();
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intent.putExtra("message_type", "gcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
-      intentGcm.putExtras(bundle);
+      intent.putExtras(bundle);
 
-      GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
-      gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
+      FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
+      broadcastReceiver.onReceive(blankActivity, intent);
       
       // Normal notifications should be generated right from the BroadcastReceiver
       //   without creating a service.
@@ -1072,7 +1072,7 @@ public class GenerateNotificationRunner {
    public void shouldSetAlertnessFieldsOnNormalPriority() {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "5"); // Notifications from dashboard have priority 5 by default
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       assertEquals(NotificationCompat.PRIORITY_DEFAULT, ShadowRoboNotificationManager.getLastNotif().priority);
       final int alertnessFlags = Notification.DEFAULT_SOUND | Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE;
@@ -1083,7 +1083,7 @@ public class GenerateNotificationRunner {
    public void shouldNotSetAlertnessFieldsOnLowPriority() {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "4");
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       assertEquals(NotificationCompat.PRIORITY_LOW, ShadowRoboNotificationManager.getLastNotif().priority);
       assertEquals(0, ShadowRoboNotificationManager.getLastNotif().defaults);
@@ -1099,36 +1099,11 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       AlertDialog alert = ShadowAlertDialog.getLatestAlertDialog();
       Button button = alert.getButton(AlertDialog.BUTTON_NEUTRAL);
       assertEquals(button.getText(), "Ok");
-   }
-
-   // TODO: Fails because of no appId being set because manifest placeholders removed
-   @Test
-   @Config(shadows = {ShadowGcmBroadcastReceiver.class})
-   public void shouldPreventOtherGCMReceiversWhenSettingEnabled() throws Exception {
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
-//      OneSignal.startInit(blankActivity).filterOtherGCMReceivers(true).init();
-      OneSignal.filterOtherGCMReceivers(true);
-      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-      OneSignal.setAppContext(blankActivity);
-      threadAndTaskWait();
-
-      Intent intentGcm = new Intent();
-      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intentGcm.putExtra("message_type", "gcm");
-      Bundle bundle = getBaseNotifBundle();
-      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
-      intentGcm.putExtras(bundle);
-      
-      GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
-      gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
-      
-      assertEquals(Activity.RESULT_OK, (int) ShadowGcmBroadcastReceiver.lastResultCode);
-      assertTrue(ShadowGcmBroadcastReceiver.calledAbortBroadcast);
    }
 
    @Test
@@ -1139,7 +1114,7 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       bundle.putLong("google.sent_time", sentTime);
       bundle.putLong("google.ttl", ttl);
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       HashMap<String, Object> notification = TestHelpers.getAllNotificationRecords().get(0);
       long expireTime = (Long)notification.get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
@@ -1148,30 +1123,30 @@ public class GenerateNotificationRunner {
 
    @Test
    public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() {
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       long expireTime = (Long)TestHelpers.getAllNotificationRecords().get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
       assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);
    }
    
    @Test
-   @Config(shadows = {ShadowGcmBroadcastReceiver.class}, sdk = 26)
-   public void shouldStartGCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
+   @Config(shadows = {ShadowFCMBroadcastReceiver.class}, sdk = 26)
+   public void shouldStartFCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
       
-      Intent intentGcm = new Intent();
-      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intentGcm.putExtra("message_type", "gcm");
+      Intent intentFCM = new Intent();
+      intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intentFCM.putExtra("message_type", "gcm");
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "10");
       bundle.putString("licon", "http://domain.com/image.jpg");
       bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
-      intentGcm.putExtras(bundle);
+      intentFCM.putExtras(bundle);
       
-      GcmBroadcastReceiver gcmBroadcastReceiver = new GcmBroadcastReceiver();
-      gcmBroadcastReceiver.onReceive(blankActivity, intentGcm);
+      FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
+      broadcastReceiver.onReceive(blankActivity, intentFCM);
       
-      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      assertEquals(GcmIntentService.class.getName(), intent.getComponent().getClassName());
+      Intent blankActivityIntent = Shadows.shadowOf(blankActivity).getNextStartedService();
+      assertEquals(FCMIntentService.class.getName(), blankActivityIntent.getComponent().getClassName());
    }
 
    private static @NonNull Bundle inAppPreviewMockPayloadBundle() throws JSONException {
@@ -1190,16 +1165,15 @@ public class GenerateNotificationRunner {
    public void shouldShowInAppPreviewWhenInFocus() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-//      OneSignal_setGoogleProjectNumber("123456789");
       blankActivityController.resume();
       threadAndTaskWait();
 
-      Intent intentGcm = new Intent();
-      intentGcm.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intentGcm.putExtra("message_type", "gcm");
-      intentGcm.putExtras(inAppPreviewMockPayloadBundle());
+      Intent intent = new Intent();
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      intent.putExtra("message_type", "gcm");
+      intent.putExtras(inAppPreviewMockPayloadBundle());
 
-      new GcmBroadcastReceiver().onReceive(blankActivity, intentGcm);
+      new FCMBroadcastReceiver().onReceive(blankActivity, intent);
       threadAndTaskWait();
 
       assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);
@@ -1208,7 +1182,6 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenOpeningPreviewNotification() throws Exception {
-//      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
       blankActivityController.resume();
@@ -1235,7 +1208,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId(appId);
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
       threadAndTaskWait();
 
       assertReportReceivedAtIndex(
@@ -1251,7 +1224,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId(appId);
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
       threadAndTaskWait();
 
       assertRestCalls(2);
@@ -1396,7 +1369,7 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = {ShadowOneSignal.class})
    public void shouldFireNotificationExtenderService() throws Exception {
-      // Test that GCM receiver starts the NotificationExtenderServiceTest when it is in the AndroidManifest.xml
+      // Test that FCM receiver starts the NotificationExtenderServiceTest when it is in the AndroidManifest.xml
       Bundle bundle = getBaseNotifBundle();
 
       Intent serviceIntent = new Intent();
@@ -1407,7 +1380,7 @@ public class GenerateNotificationRunner {
       resolveInfo.serviceInfo.name = "com.onesignal.example.NotificationExtenderServiceTest";
       shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(serviceIntent, resolveInfo);
 
-      boolean ret = OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle(blankActivity, bundle);
+      boolean ret = OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       assertTrue(ret);
       
       // Test that all options are set.
@@ -1485,7 +1458,7 @@ public class GenerateNotificationRunner {
       bundle.putString("sicon", "small_icon");
       bundle.putString("sound", "test_sound");
       bundle.putString("grp_msg", "You test $[notif_count] MSGs!");
-      bundle.putString("collapse_key", "a_key"); // GCM sets this to 'do_not_collapse' when not set.
+      bundle.putString("collapse_key", "a_key"); // GCM sets this to 'do_not_collapse' when not set. TODO: Does this apply to FCM too?
       bundle.putString("bg_img", "{\"img\": \"test_image_url\"," +
                                   "\"tc\": \"FF000000\"," +
                                   "\"bc\": \"FFFFFFFF\"}");

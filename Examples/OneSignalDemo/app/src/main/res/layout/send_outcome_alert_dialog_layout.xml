@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <android.support.v7.widget.CardView
+        <androidx.cardview.widget.CardView
             android:id="@+id/send_outcome_alert_dialog_selection_card_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -25,7 +25,9 @@
                 android:paddingTop="16dp"
                 android:paddingBottom="16dp"
                 android:paddingStart="24dp"
+                android:paddingLeft="24dp"
                 android:paddingEnd="28dp"
+                android:paddingRight="28dp"
                 android:background="@drawable/ripple_selector_red_white">
 
                 <TextView
@@ -33,9 +35,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
+                    android:layout_alignParentLeft="true"
                     android:layout_centerVertical="true"
                     android:layout_toStartOf="@id/send_outcome_alert_dialog_selection_arrow_image_view"
+                    android:layout_toLeftOf="@id/send_outcome_alert_dialog_selection_arrow_image_view"
                     android:layout_marginEnd="8dp"
+                    android:layout_marginRight="8dp"
                     android:textColor="@color/colorDarkText"
                     android:theme="@style/TextLabelDark">
 
@@ -46,6 +51,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_alignParentEnd="true"
+                    android:layout_alignParentRight="true"
                     android:layout_centerVertical="true"
                     android:src="@drawable/ic_chevron_up_white_48dp"
                     android:tint="@color/colorDarkText">
@@ -54,14 +60,14 @@
 
             </RelativeLayout>
 
-        </android.support.v7.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/colorDivider"/>
 
-        <android.support.v7.widget.RecyclerView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/send_outcome_alert_dialog_selection_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -73,7 +79,7 @@
 
             <!-- Populated with OutcomeEvent enum types for selection -->
 
-        </android.support.v7.widget.RecyclerView>
+        </androidx.recyclerview.widget.RecyclerView>
 
     </LinearLayout>
 
@@ -84,7 +90,7 @@
         android:visibility="gone"
         android:orientation="vertical">
 
-        <android.support.design.widget.TextInputLayout
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/send_outcome_alert_dialog_name_text_input_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -103,9 +109,9 @@
                 android:textColorHint="@color/colorDarkHintText"
                 android:singleLine="true"/>
 
-        </android.support.design.widget.TextInputLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <android.support.design.widget.TextInputLayout
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/send_outcome_alert_dialog_value_text_input_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -123,7 +129,7 @@
                 android:textColorHint="@color/colorDarkHintText"
                 android:singleLine="true"/>
 
-        </android.support.design.widget.TextInputLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <ProgressBar
             android:id="@+id/send_outcome_alert_dialog_progress_bar"

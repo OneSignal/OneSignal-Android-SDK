@@ -33,7 +33,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
+import androidx.core.app.NotificationCompat;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -121,7 +121,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
          return;
       
       processIntent(intent);
-      GcmBroadcastReceiver.completeWakefulIntent(intent);
+      FCMBroadcastReceiver.completeWakefulIntent(intent);
    }
 
    private void processIntent(Intent intent) {

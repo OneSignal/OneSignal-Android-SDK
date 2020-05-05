@@ -33,7 +33,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.os.PersistableBundle;
-import android.support.annotation.RequiresApi;
+import androidx.annotation.RequiresApi;
 
 public interface BundleCompat<T> {
    void putString(String key, String value);

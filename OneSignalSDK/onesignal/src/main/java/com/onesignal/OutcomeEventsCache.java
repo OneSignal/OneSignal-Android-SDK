@@ -4,7 +4,8 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
-import android.support.annotation.WorkerThread;
+
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
 import com.onesignal.OneSignalDbContract.CachedUniqueOutcomeNotificationTable;

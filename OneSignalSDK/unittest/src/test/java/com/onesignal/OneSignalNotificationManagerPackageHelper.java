@@ -5,7 +5,7 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.RequiresApi;
+import androidx.annotation.RequiresApi;
 
 public class OneSignalNotificationManagerPackageHelper {
 

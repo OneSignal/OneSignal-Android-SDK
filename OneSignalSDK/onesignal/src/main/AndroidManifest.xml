@@ -4,8 +4,10 @@
     <!-- OneSignal SDK has runtime checks Android version. -->
     <!--<uses-sdk tools:overrideLibrary="android.support.customtabs"/>-->
 
-    <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages through Google's GCM. -->
+    <!-- Required so the device can access the internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- c2dm RECEIVE are basic requirements for push messages through Google's FCM -->
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
 
     <!-- Required, makes sure notifications are delivered on time. -->
@@ -61,9 +63,9 @@
 
     <application>
 
-        <service android:name="com.onesignal.GcmIntentService" />
+        <service android:name="com.onesignal.FCMIntentService" />
 
-        <service android:name="com.onesignal.GcmIntentJobService"
+        <service android:name="com.onesignal.FCMIntentJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
         <service android:name="com.onesignal.RestoreJobService"
@@ -92,7 +94,6 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-
 
         <activity
           android:name="com.onesignal.NotificationOpenedActivity"/>

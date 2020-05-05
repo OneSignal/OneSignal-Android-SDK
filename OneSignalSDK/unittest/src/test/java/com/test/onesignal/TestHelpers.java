@@ -9,7 +9,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -21,9 +22,9 @@ import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
+import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -32,7 +33,7 @@ import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 
 import junit.framework.Assert;
@@ -72,13 +73,13 @@ public class TestHelpers {
 
       ShadowOneSignalRestClient.resetStatics();
 
-      ShadowPushRegistratorGCM.resetStatics();
+      ShadowPushRegistratorFCM.resetStatics();
       ShadowPushRegistratorADM.resetStatics();
 
       ShadowNotificationManagerCompat.enabled = true;
 
       ShadowCustomTabsClient.resetStatics();
-      ShadowGcmBroadcastReceiver.resetStatics();
+      ShadowFCMBroadcastReceiver.resetStatics();
 
       ShadowFusedLocationApiWrapper.resetStatics();
 

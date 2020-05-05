@@ -8,9 +8,9 @@
     <application>
 
         <receiver
-            android:name="com.onesignal.GcmBroadcastReceiver"
+            android:name="com.onesignal.FCMBroadcastReceiver"
             android:permission="com.google.android.c2dm.permission.SEND" >
-            <!-- High priority so OneSignal payloads can be filtered from other GCM receivers if filterOtherGCMReceivers is enabled. -->
+            <!-- High priority so OneSignal payloads can be filtered from other FCM receivers -->
             <intent-filter android:priority="999" >
                 <action android:name="com.google.android.c2dm.intent.RECEIVE" />
                 <category android:name="${applicationId}" />
