@@ -103,7 +103,8 @@ public class PermissionsActivity extends Activity {
             @Override
             public void run() {
                boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-               LocationGMS.sendAndClearPromptHandlers(true, granted);
+               OneSignal.PromptActionResult result = granted ? OneSignal.PromptActionResult.PERMISSION_GRANTED : OneSignal.PromptActionResult.PERMISSION_DENIED;
+               LocationGMS.sendAndClearPromptHandlers(true, result);
                if (granted)
                   LocationGMS.startGetLocation();
                else

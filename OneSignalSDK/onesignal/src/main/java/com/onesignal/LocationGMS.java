@@ -27,10 +27,6 @@
 
 package com.onesignal;
 
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.onesignal.AndroidSupportV4Compat.ContextCompat;
-
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -43,7 +39,10 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -83,11 +82,11 @@ class LocationGMS {
    }
    interface LocationHandler {
       PermissionType getType();
-      void complete(LocationPoint point);
+      void onComplete(LocationPoint point);
    }
 
    abstract static class LocationPromptCompletionHandler implements LocationHandler {
-      void onAnswered(boolean accepted) {}
+      void onAnswered(OneSignal.PromptActionResult result) {}
    }
 
    private static ConcurrentHashMap<PermissionType, LocationHandler> locationHandlers = new ConcurrentHashMap<>();
@@ -135,7 +134,7 @@ class LocationGMS {
       }
    }
 
-   static void sendAndClearPromptHandlers(boolean promptLocation, boolean accepted) {
+   static void sendAndClearPromptHandlers(boolean promptLocation, OneSignal.PromptActionResult result) {
       if (!promptLocation) {
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationGMS sendAndClearPromptHandlers from non prompt flow");
          return;
@@ -144,7 +143,7 @@ class LocationGMS {
       synchronized (promptHandlers) {
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationGMS calling prompt handlers");
          for (LocationPromptCompletionHandler promptHandler : promptHandlers) {
-            promptHandler.onAnswered(accepted);
+            promptHandler.onAnswered(result);
          }
          // We only call the prompt handlers once
          promptHandlers.clear();
@@ -174,7 +173,7 @@ class LocationGMS {
       locationHandlers.put(handler.getType(), handler);
 
       if (!OneSignal.shareLocation) {
-         sendAndClearPromptHandlers(promptLocation, false);
+         sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
          fireFailedComplete();
          return;
       }
@@ -189,11 +188,13 @@ class LocationGMS {
 
       if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
-            sendAndClearPromptHandlers(promptLocation,false);
-            handler.complete(null);
+            // Permission missing on manifest
+            sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST);
+
+            handler.onComplete(null);
             return;
          }
-         sendAndClearPromptHandlers(promptLocation, true);
+         sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
          startGetLocation();
       }
       else { // Android 6.0+
@@ -201,13 +202,20 @@ class LocationGMS {
             try {
                PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
                List<String> permissionList = Arrays.asList(packageInfo.requestedPermissions);
+               OneSignal.PromptActionResult result = OneSignal.PromptActionResult.PERMISSION_DENIED;
                if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION"))
+                  // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
+                  // If permission already given prompt will return positive, otherwise will prompt again or show settings
                   requestPermission = "android.permission.ACCESS_FINE_LOCATION";
                else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
-                  if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED)
+                  if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
+                     // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
+                     // If permission already given prompt will return positive, otherwise will prompt again or show settings
                      requestPermission = "android.permission.ACCESS_COARSE_LOCATION";
+                  }
                } else {
                   OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Location permissions not added on AndroidManifest file");
+                  result = OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST;
                }
 
                // We handle the following cases:
@@ -220,19 +228,19 @@ class LocationGMS {
                if (requestPermission != null && promptLocation) {
                   PermissionsActivity.startPrompt();
                } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
-                  sendAndClearPromptHandlers(promptLocation, true);
+                  sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
                   startGetLocation();
                } else {
-                  sendAndClearPromptHandlers(promptLocation, false);
+                  sendAndClearPromptHandlers(promptLocation, result);
                   fireFailedComplete();
                }
             } catch (PackageManager.NameNotFoundException e) {
-                  sendAndClearPromptHandlers(promptLocation, false);
+               sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
                e.printStackTrace();
             }
          }
          else {
-            sendAndClearPromptHandlers(promptLocation, true);
+            sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
             startGetLocation();
          }
       }
@@ -315,7 +323,7 @@ class LocationGMS {
 
       // execute race-independent logic
       for(PermissionType type : _locationHandlers.keySet())
-         _locationHandlers.get(type).complete(point);
+         _locationHandlers.get(type).onComplete(point);
       if (_fallbackFailThread != null && !Thread.currentThread().equals(_fallbackFailThread))
           _fallbackFailThread.interrupt();
 

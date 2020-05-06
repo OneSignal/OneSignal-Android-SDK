@@ -937,7 +937,7 @@ public class OneSignal {
             return LocationGMS.PermissionType.STARTUP;
          }
          @Override
-         public void complete(LocationGMS.LocationPoint point) {
+         public void onComplete(LocationGMS.LocationPoint point) {
             lastLocationPoint = point;
             locationFired = true;
             registerUser();
@@ -2541,7 +2541,7 @@ public class OneSignal {
                   return LocationGMS.PermissionType.PROMPT_LOCATION;
                }
                @Override
-               public void complete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationGMS.LocationPoint point) {
                   //if applicable, check if the user provided privacy consent
                   if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
                      return;
@@ -2551,10 +2551,10 @@ public class OneSignal {
                }
 
                @Override
-               void onAnswered(boolean accepted) {
-                  super.onAnswered(accepted);
+               void onAnswered(OneSignal.PromptActionResult result) {
+                  super.onAnswered(result);
                   if (callback != null)
-                     callback.completed(accepted);
+                     callback.onCompleted(result);
                }
             };
 
@@ -3228,6 +3228,14 @@ public class OneSignal {
     */
 
    interface OSPromptActionCompletionCallback {
-      void completed(boolean accepted);
+      void onCompleted(PromptActionResult result);
+   }
+
+   enum PromptActionResult {
+      PERMISSION_GRANTED,
+      PERMISSION_DENIED,
+      LOCATION_PERMISSIONS_MISSING_MANIFEST,
+      ERROR,
+      ;
    }
 }
