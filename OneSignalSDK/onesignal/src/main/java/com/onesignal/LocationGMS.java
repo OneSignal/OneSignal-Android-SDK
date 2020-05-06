@@ -40,6 +40,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -87,7 +88,7 @@ class LocationGMS {
    }
 
    abstract static class LocationPromptCompletionHandler implements LocationHandler {
-      void onAnswered(boolean accepted) {}
+      void onAnswered(@Nullable String messageTitle, @Nullable String message, boolean accepted) {}
    }
 
    private static ConcurrentHashMap<PermissionType, LocationHandler> locationHandlers = new ConcurrentHashMap<>();
@@ -136,6 +137,10 @@ class LocationGMS {
    }
 
    static void sendAndClearPromptHandlers(boolean promptLocation, boolean accepted) {
+      sendAndClearPromptHandlers(promptLocation, accepted, null, null);
+   }
+
+   static void sendAndClearPromptHandlers(boolean promptLocation, boolean accepted, String messageTitle, String message) {
       if (!promptLocation) {
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationGMS sendAndClearPromptHandlers from non prompt flow");
          return;
@@ -144,7 +149,7 @@ class LocationGMS {
       synchronized (promptHandlers) {
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationGMS calling prompt handlers");
          for (LocationPromptCompletionHandler promptHandler : promptHandlers) {
-            promptHandler.onAnswered(accepted);
+            promptHandler.onAnswered(messageTitle, message, accepted);
          }
          // We only call the prompt handlers once
          promptHandlers.clear();
@@ -189,7 +194,10 @@ class LocationGMS {
 
       if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
-            sendAndClearPromptHandlers(promptLocation,false);
+            String alertDialogTitle = context.getString(R.string.location_not_available_title);
+            String alertDialogMessage = context.getString(R.string. location_not_available_message);
+            sendAndClearPromptHandlers(promptLocation, false, alertDialogTitle, alertDialogMessage);
+
             handler.complete(null);
             return;
          }
@@ -223,11 +231,13 @@ class LocationGMS {
                   sendAndClearPromptHandlers(promptLocation, true);
                   startGetLocation();
                } else {
-                  sendAndClearPromptHandlers(promptLocation, false);
+                  String alertDialogTitle = context.getString(R.string.location_not_available_title);
+                  String alertDialogMessage = context.getString(R.string. location_not_available_message);
+                  sendAndClearPromptHandlers(promptLocation, false, alertDialogTitle, alertDialogMessage);
                   fireFailedComplete();
                }
             } catch (PackageManager.NameNotFoundException e) {
-                  sendAndClearPromptHandlers(promptLocation, false);
+               sendAndClearPromptHandlers(promptLocation, false);
                e.printStackTrace();
             }
          }

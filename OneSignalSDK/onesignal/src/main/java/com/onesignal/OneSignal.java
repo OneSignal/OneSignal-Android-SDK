@@ -2551,10 +2551,10 @@ public class OneSignal {
                }
 
                @Override
-               void onAnswered(boolean accepted) {
-                  super.onAnswered(accepted);
+               void onAnswered(@Nullable String messageTitle, @Nullable String message, boolean accepted) {
+                  super.onAnswered(messageTitle, message, accepted);
                   if (callback != null)
-                     callback.completed(accepted);
+                     callback.completed(messageTitle, message, accepted);
                }
             };
 
@@ -3228,6 +3228,6 @@ public class OneSignal {
     */
 
    interface OSPromptActionCompletionCallback {
-      void completed(boolean accepted);
+      void completed(@Nullable String messageTitle, @Nullable String message, boolean accepted);
    }
 }

@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Process;
 import android.support.annotation.NonNull;
@@ -19,8 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static com.onesignal.OneSignal.getSavedAppId;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
@@ -309,7 +309,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void showMultiplePrompts(final OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+    private void showMultiplePrompts(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
         for (OSInAppMessagePrompt prompt : prompts) {
             // Don't show prompt twice
             if (!prompt.hasPrompted()) {
@@ -323,16 +323,33 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             currentPrompt.setPrompted(true);
             currentPrompt.handlePrompt(new OneSignal.OSPromptActionCompletionCallback() {
                 @Override
-                public void completed(boolean accepted) {
+                public void completed(@Nullable String messageTitle, @Nullable String message, boolean accepted) {
                     currentPrompt = null;
                     OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle finished accepted: " + accepted);
-                    showMultiplePrompts(message, prompts);
+
+                    // On preview mode we show informative alert dialogs
+                    if (inAppMessage.isPreview && messageTitle != null && message != null)
+                        showAlertDialogMessage(messageTitle, message, inAppMessage, prompts);
+                    else
+                        showMultiplePrompts(inAppMessage, prompts);
                 }
             });
         } else {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM prompt to handle, dismiss message: " + message.messageId);
-            messageWasDismissed(message);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM prompt to handle, dismiss message: " + inAppMessage.messageId);
+            messageWasDismissed(inAppMessage);
         }
+    }
+
+    private void showAlertDialogMessage(final String messageTitle, final String message, final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
+        new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+                .setTitle(messageTitle)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        showMultiplePrompts(inAppMessage, prompts);
+                    }
+                })
+                .show();
     }
 
     //TODO This is a temporal solution for IAMs outcomes
