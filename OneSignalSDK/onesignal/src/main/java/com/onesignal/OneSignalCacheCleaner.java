@@ -89,6 +89,11 @@ class OneSignalCacheCleaner {
                             null,
                             null);
 
+                    if (cursor == null || cursor.getCount() == 0) {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Attempted to clean 6 month old IAM data, but none exists!");
+                        return;
+                    }
+
                     // From cursor get all of the old message ids and old clicked click ids
                     if (cursor.moveToFirst()) {
                         do {
@@ -169,23 +174,18 @@ class OneSignalCacheCleaner {
      */
     private static void cleanCachedSharedPreferenceIamData(Set<String> oldMessageIds, Set<String> oldClickedClickIds) {
         // IAMs without redisplay on with pile up and we need to clean these for dismissing, impressions, and clicks
-        Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                OSUtils.<String>newConcurrentSet());
+        if (oldMessageIds != null && oldMessageIds.size() > 0) {
+            Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
+                    OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                    OSUtils.<String>newConcurrentSet());
 
-        Set<String> impressionedMessages = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                OSUtils.<String>newConcurrentSet());
+            Set<String> impressionedMessages = OneSignalPrefs.getStringSet(
+                    OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                    OSUtils.<String>newConcurrentSet());
 
-        Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                OSUtils.<String>newConcurrentSet());
-
-        if (oldMessageIds != null) {
-            if (dismissedMessages != null) {
+            if (dismissedMessages != null && dismissedMessages.size() > 0) {
                 dismissedMessages.removeAll(oldMessageIds);
                 OneSignalPrefs.saveStringSet(
                         OneSignalPrefs.PREFS_ONESIGNAL,
@@ -193,7 +193,7 @@ class OneSignalCacheCleaner {
                         dismissedMessages);
             }
 
-            if (impressionedMessages != null) {
+            if (impressionedMessages != null && impressionedMessages.size() > 0) {
                 impressionedMessages.removeAll(oldMessageIds);
                 OneSignalPrefs.saveStringSet(
                         OneSignalPrefs.PREFS_ONESIGNAL,
@@ -202,12 +202,19 @@ class OneSignalCacheCleaner {
             }
         }
 
-        if (clickedClickIds != null && oldClickedClickIds != null) {
-            clickedClickIds.removeAll(oldClickedClickIds);
-            OneSignalPrefs.saveStringSet(
+        if (oldClickedClickIds != null && oldClickedClickIds.size() > 0) {
+            Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
                     OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                    clickedClickIds);
+                    OSUtils.<String>newConcurrentSet());
+
+            if (clickedClickIds != null && clickedClickIds.size() > 0) {
+                clickedClickIds.removeAll(oldClickedClickIds);
+                OneSignalPrefs.saveStringSet(
+                        OneSignalPrefs.PREFS_ONESIGNAL,
+                        OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                        clickedClickIds);
+            }
         }
     }
 
