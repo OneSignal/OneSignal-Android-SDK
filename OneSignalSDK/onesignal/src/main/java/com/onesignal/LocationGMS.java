@@ -167,7 +167,7 @@ class LocationGMS {
     *
     *  For all cases we are calling prompt listeners.
     */
-   static void getLocation(Context context, boolean promptLocation, LocationHandler handler) {
+   static void getLocation(Context context, boolean promptLocation, boolean fallbackToSettings, LocationHandler handler) {
       addPromptHandlerIfAvailable(handler);
       classContext = context;
       locationHandlers.put(handler.getType(), handler);
@@ -226,7 +226,7 @@ class LocationGMS {
                //
                // For each case, we call the prompt handlers
                if (requestPermission != null && promptLocation) {
-                  PermissionsActivity.startPrompt();
+                  PermissionsActivity.startPrompt(fallbackToSettings);
                } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
                   sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
                   startGetLocation();
