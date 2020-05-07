@@ -230,7 +230,7 @@ class OneSignalSyncServiceUtils {
                   queue.offer(object);
                }
             };
-            LocationGMS.getLocation(OneSignal.appContext, false, locationHandler);
+            LocationGMS.getLocation(OneSignal.appContext, false, false, locationHandler);
 
             // The take() will return the offered point once the callback for the locationHandler is completed
             Object point = queue.take();

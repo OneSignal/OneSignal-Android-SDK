@@ -947,7 +947,7 @@ public class OneSignal {
       // Prompted so we don't ask for permissions more than once
       promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
 
-      LocationGMS.getLocation(appContext, doPrompt, locationHandler);
+      LocationGMS.getLocation(appContext, doPrompt, false, locationHandler);
    }
    private static PushRegistrator mPushRegistrator;
 
@@ -2524,10 +2524,10 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
     */
    public static void promptLocation() {
-      promptLocation(null);
+      promptLocation(null, false);
    }
 
-   static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback) {
+   static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback, final boolean fallbackToSettings) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
          return;
@@ -2558,7 +2558,7 @@ public class OneSignal {
                }
             };
 
-            LocationGMS.getLocation(appContext, true, locationHandler);
+            LocationGMS.getLocation(appContext, true, fallbackToSettings, locationHandler);
             promptedLocation = true;
          }
       };
