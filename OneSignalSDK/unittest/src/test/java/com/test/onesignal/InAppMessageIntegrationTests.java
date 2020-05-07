@@ -1281,7 +1281,7 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
-    public void testInAppMessageRedisplayCacheUpdate() throws Exception {
+    public void testInAppMessageRedisplayCacheCleaning() throws Exception {
         final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
 
         final OSTestInAppMessage inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(

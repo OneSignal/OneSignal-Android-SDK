@@ -20,8 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.onesignal.OneSignal.getSavedAppId;
-
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
@@ -157,7 +155,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
         resetRedisplayMessagesBySession();
         processInAppMessageJson(json);
-        deleteOldRedisplayedInAppMessages();
     }
 
     private void resetRedisplayMessagesBySession() {
@@ -176,16 +173,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         messages = newMessages;
 
         evaluateInAppMessages();
-    }
-
-    private void deleteOldRedisplayedInAppMessages() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                inAppMessageRepository.deleteOldRedisplayedInAppMessages();
-            }
-        }, OS_DELETE_IN_APP_MESSAGE).start();
     }
 
     private void evaluateInAppMessages() {
@@ -531,7 +518,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
             // Don't keep track of last displayed time for a preview
             lastTimeInAppDismissed = new Date();
-            persistInAppMessageForRedisplay(message);
+            persistInAppMessage(message);
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed dismissedMessages: " + dismissedMessages.toString());
         }
 
@@ -572,11 +559,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void persistInAppMessageForRedisplay(final OSInAppMessage message) {
-        //If the IAM doesn't have the re display configuration then no need to save it
-        if (!message.getDisplayStats().isRedisplayEnabled())
-            return;
-
+    private void persistInAppMessage(final OSInAppMessage message) {
         long displayTimeSeconds = System.currentTimeMillis() / 1000;
         message.getDisplayStats().setLastDisplayTime(displayTimeSeconds);
         message.getDisplayStats().incrementDisplayQuantity();

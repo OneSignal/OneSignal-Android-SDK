@@ -30,7 +30,7 @@ public class OneSignalPackagePrivateHelper {
       abstract void run(T object) throws Exception;
    }
 
-   static private void processNetworkHandles(RunnableArg runnable) throws Exception {
+   private static void processNetworkHandles(RunnableArg runnable) throws Exception {
       Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
 
       entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
@@ -248,7 +248,7 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.appId = appId;
    }
 
-   static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
+   public static class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 
       public RemoteOutcomeParams() {
          this(true, true, true);
@@ -261,13 +261,22 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
+   public static SQLiteDatabase OneSignal_getSQLiteDatabase(Context context) {
+      return OneSignalDbHelper.getInstance(context).getSQLiteDatabase();
+   }
+
+   public static void OneSignal_cleanOutcomeDatabaseTable(Context context) {
+      OneSignalDbHelper.cleanOutcomeDatabaseTable(
+              OneSignal_getSQLiteDatabase(context));
+   }
+
+   public static class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
       public static void update(SQLiteDatabase readableDb, Context context) {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);
       }
    }
 
-   static public class NotificationLimitManager extends com.onesignal.NotificationLimitManager {
+   public static class NotificationLimitManager extends com.onesignal.NotificationLimitManager {
       public static void clearOldestOverLimitFallback(Context context, int notifsToMakeRoomFor) {
          com.onesignal.NotificationLimitManager.clearOldestOverLimitFallback(context, notifsToMakeRoomFor);
       }

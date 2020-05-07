@@ -24,21 +24,9 @@ class OSInAppMessageRepository {
         this.dbHelper = dbHelper;
     }
 
-    /**
-     * Remove IAMs that the last display time was six month ago
-     */
-    @WorkerThread
-    synchronized void deleteOldRedisplayedInAppMessages() {
-        long sixMonthsAgo = System.currentTimeMillis() / 1000 - OS_IAM_MAX_CACHE_TIME;
-        SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
-        writableDb.delete(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + "< ?",
-                new String[]{String.valueOf(sixMonthsAgo)});
-    }
-
     @WorkerThread
     synchronized void saveInAppMessage(OSInAppMessage inAppMessage) {
-        SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
         ContentValues values = new ContentValues();
         values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
@@ -59,7 +47,7 @@ class OSInAppMessageRepository {
         Cursor cursor = null;
 
         try {
-            SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+            SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
             cursor = readableDb.query(
                     OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                     null,

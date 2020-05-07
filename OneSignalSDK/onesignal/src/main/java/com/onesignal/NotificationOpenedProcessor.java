@@ -99,7 +99,7 @@ class NotificationOpenedProcessor {
       SQLiteDatabase writableDb = null;
 
       try {
-         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb = dbHelper.getSQLiteDatabaseWithRetries();
          writableDb.beginTransaction();
 
          // We just opened a summary notification.

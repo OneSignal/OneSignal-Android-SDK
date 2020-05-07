@@ -164,7 +164,6 @@ class OSInAppMessage {
 
     /**
      * Called when an action is taken to track uniqueness
-     *
      * @return true if action taken was unique
      */
     boolean takeActionAsUnique() {
@@ -243,4 +242,5 @@ class OSInAppMessage {
         int result = messageId.hashCode();
         return result;
     }
+
 }

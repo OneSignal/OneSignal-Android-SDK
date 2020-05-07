@@ -31,6 +31,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteCantOpenDatabaseException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.SystemClock;
@@ -128,27 +129,41 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       return sInstance;
    }
 
-   // Retry in-case of rare device issues with opening database.
-   // https://github.com/OneSignal/OneSignal-Android-SDK/issues/136
-   synchronized SQLiteDatabase getWritableDbWithRetries() {
+   /**
+    * Should be used in the event that we don't want to retry getting the a {@link SQLiteDatabase} instance
+    * Replaced all {@link SQLiteOpenHelper#getReadableDatabase()} with {@link SQLiteOpenHelper#getWritableDatabase()}
+    *    as the internals call the same method and not much of a performance benefit between them
+    * <br/><br/>
+    * {@link OneSignalDbHelper#getSQLiteDatabaseWithRetries()} has similar logic and throws the same Exceptions
+    * <br/><br/>
+    * @see <a href="https://stackoverflow.com/questions/2493331/what-are-the-best-practices-for-sqlite-on-android/3689883#3689883">StackOverflow | What are best practices for SQLite on Android</a>
+    */
+   synchronized SQLiteDatabase getSQLiteDatabase() {
+      try {
+         return getWritableDatabase();
+      } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
+         // SQLiteCantOpenDatabaseException
+         // Retry in-case of rare device issues with opening database.
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/136
+         // SQLiteDatabaseLockedException
+         // Retry in-case of rare device issues with locked database.
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/988
+         throw e;
+      }
+   }
+
+   /**
+    * Retry backoff logic based attempt to call {@link SQLiteOpenHelper#getWritableDatabase()} until too many attempts or
+    *    until {@link SQLiteCantOpenDatabaseException} or {@link SQLiteDatabaseLockedException} aren't thrown
+    * <br/><br/>
+    * @see OneSignalDbHelper#getSQLiteDatabase()
+    */
+   synchronized SQLiteDatabase getSQLiteDatabaseWithRetries() {
       int count = 0;
       while(true) {
          try {
             return getWritableDatabase();
-         } catch (SQLiteCantOpenDatabaseException e) {
-            if (++count >= DB_OPEN_RETRY_MAX)
-               throw e;
-            SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
-         }
-      }
-   }
-
-   synchronized SQLiteDatabase getReadableDbWithRetries() {
-      int count = 0;
-      while(true) {
-         try {
-            return getReadableDatabase();
-         } catch (SQLiteCantOpenDatabaseException e) {
+         } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
             if (++count >= DB_OPEN_RETRY_MAX)
                throw e;
             SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
@@ -325,13 +340,18 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       );
 
       boolean useTtl = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,true);
-      if (useTtl)
-         where.append(" AND " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec);
+      if (useTtl) {
+         String expireTimeWhere = " AND " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec;
+         where.append(expireTimeWhere);
+      }
 
       return where;
    }
 
-   public void cleanOutcomeDatabase() {
-      this.getWritableDatabase().delete(OneSignalDbContract.OutcomeEventsTable.TABLE_NAME, null, null);
+   static void cleanOutcomeDatabaseTable(SQLiteDatabase writeableDb) {
+      writeableDb.delete(
+              OneSignalDbContract.OutcomeEventsTable.TABLE_NAME,
+              null,
+              null);
    }
 }
