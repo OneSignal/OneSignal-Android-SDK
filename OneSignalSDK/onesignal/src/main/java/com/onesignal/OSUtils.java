@@ -447,9 +447,16 @@ class OSUtils {
       return Collections.newSetFromMap(new ConcurrentHashMap<T, Boolean>());
    }
 
-   // Creates a new Set<String> from a String
-   static Set<String> newStringSetFromString(String setString) {
-      return new HashSet<>(Collections.singletonList(setString));
+   // Creates a new Set<String> from a Set String by converting and iterating a JSONArray
+   static Set<String> newStringSetFromString(String setString) throws JSONException {
+      Set<String> stringSet = new HashSet<>();
+
+      JSONArray clickIdsArray = new JSONArray(setString);
+      for (int i = 0; i < clickIdsArray.length(); i++) {
+         stringSet.add(clickIdsArray.getString(i));
+      }
+
+      return stringSet;
    }
 
    static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {

@@ -11,12 +11,11 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowCustomTabsClient;
@@ -60,7 +59,7 @@ public class TestHelpers {
    static Exception lastException;
 
    static void beforeTestInitAndCleanup() throws Exception {
-      OneSignalPackagePrivateHelper.OneSignalPrefs.initializePool();
+      TestOneSignalPrefs.initializePool();
       if (!ranBeforeTestSuite)
          return;
 
@@ -131,7 +130,7 @@ public class TestHelpers {
    }
 
    static void flushBufferedSharedPrefs() {
-      OneSignalPrefs.WritePrefHandlerThread handlerThread = OneSignalPackagePrivateHelper.OneSignalPrefs.prefsHandler;
+      TestOneSignalPrefs.WritePrefHandlerThread handlerThread = TestOneSignalPrefs.prefsHandler;
 
       if (handlerThread.getLooper() == null)
          return;
@@ -341,8 +340,8 @@ public class TestHelpers {
 
       ContentValues values = new ContentValues();
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
-      values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayStats().getDisplayQuantity());
-      values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getDisplayStats().getLastDisplayTime());
+      values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
+      values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getRedisplayStats().getLastDisplayTime());
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 

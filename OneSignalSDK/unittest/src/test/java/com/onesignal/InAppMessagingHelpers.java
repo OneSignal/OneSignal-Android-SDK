@@ -104,7 +104,7 @@ public class InAppMessagingHelpers {
         return new OSTestInAppMessage(json);
     }
 
-    private static OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
+    public static OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
         return new OSTestInAppMessage(basicIAMJSONObject(triggerJson));
     }
 

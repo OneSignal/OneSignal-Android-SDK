@@ -5,7 +5,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.onesignal.InAppMessagingHelpers;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable;
@@ -275,8 +274,8 @@ public class DatabaseRunner {
       
       ContentValues values = new ContentValues();
       values.put(InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
-      values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayStats().getDisplayQuantity());
-      values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getDisplayStats().getLastDisplayTime());
+      values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
+      values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getRedisplayStats().getLastDisplayTime());
       values.put(InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
       values.put(InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
@@ -298,8 +297,8 @@ public class DatabaseRunner {
 
       assertEquals(savedInAppMessagesAfterCreation.size(), 1);
       OSTestInAppMessage savedInAppMessage = savedInAppMessagesAfterCreation.get(0);
-      assertEquals(savedInAppMessage.getDisplayStats().getDisplayQuantity(), inAppMessage.getDisplayStats().getDisplayQuantity());
-      assertEquals(savedInAppMessage.getDisplayStats().getLastDisplayTime(), inAppMessage.getDisplayStats().getLastDisplayTime());
+      assertEquals(savedInAppMessage.getRedisplayStats().getDisplayQuantity(), inAppMessage.getRedisplayStats().getDisplayQuantity());
+      assertEquals(savedInAppMessage.getRedisplayStats().getLastDisplayTime(), inAppMessage.getRedisplayStats().getLastDisplayTime());
       assertEquals(savedInAppMessage.getClickedClickIds().toString(), inAppMessage.getClickedClickIds().toString());
       assertEquals(savedInAppMessage.isDisplayedInSession(), inAppMessage.isDisplayedInSession());
    }

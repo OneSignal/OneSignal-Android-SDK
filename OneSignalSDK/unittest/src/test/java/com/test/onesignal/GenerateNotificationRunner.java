@@ -57,12 +57,11 @@ import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
@@ -476,7 +475,7 @@ public class GenerateNotificationRunner {
    }
 
    private void setClearGroupSummaryClick(boolean shouldDismissAll) {
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK, shouldDismissAll);
+      TestOneSignalPrefs.saveBool(TestOneSignalPrefs.PREFS_ONESIGNAL, TestOneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK, shouldDismissAll);
    }
 
 
@@ -865,7 +864,7 @@ public class GenerateNotificationRunner {
 
    @Test
    public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() {
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
+      TestOneSignalPrefs.saveBool(TestOneSignalPrefs.PREFS_ONESIGNAL, TestOneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
       helperShouldRestoreNotificationsPastExpireTime(true);
    }
 

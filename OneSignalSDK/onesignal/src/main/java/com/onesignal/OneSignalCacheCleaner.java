@@ -9,12 +9,14 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Process;
 import android.support.annotation.WorkerThread;
 
+import org.json.JSONException;
+
 import java.util.Set;
 
 class OneSignalCacheCleaner {
 
-    private final static long ONE_WEEK_IN_MILLIS = 604_800L;
-    private final static long SIX_MONTHS_IN_MILLIS = 15_552_000L;
+    private final static long ONE_WEEK_IN_SECONDS = 604_800L;
+    private final static long SIX_MONTHS_IN_SECONDS = 15_552_000L;
 
     private final static String OS_DELETE_CACHED_NOTIFICATIONS_THREAD = "OS_DELETE_CACHED_NOTIFICATIONS_THREAD";
     private final static String OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD = "OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD";
@@ -53,7 +55,7 @@ class OneSignalCacheCleaner {
             private void cleanCachedNotifications(SQLiteDatabase writableDb) {
                 String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
 
-                String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - ONE_WEEK_IN_MILLIS);
+                String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - ONE_WEEK_IN_SECONDS);
                 String[] whereArgs = new String[]{ sevenDaysAgoInSeconds };
 
                 writableDb.delete(
@@ -66,10 +68,9 @@ class OneSignalCacheCleaner {
              * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
              */
             private void cleanCachedUniqueOutcomeEventNotifications(SQLiteDatabase writableDb) {
-                String whereStr = "NOT EXISTS(SELECT NULL FROM " + NotificationTable.TABLE_NAME +
-                        " n WHERE" +
-                        " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID +
-                        " = " + CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + ")";
+                String whereStr = "NOT EXISTS(" +
+                        "SELECT NULL FROM " + NotificationTable.TABLE_NAME + " n " +
+                        "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + ")";
 
                 writableDb.delete(
                         CachedUniqueOutcomeNotificationTable.TABLE_NAME,
@@ -101,34 +102,42 @@ class OneSignalCacheCleaner {
 
                 String whereStr = OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + " < ?";
 
-                String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - SIX_MONTHS_IN_MILLIS);
+                String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - SIX_MONTHS_IN_SECONDS);
                 String[] whereArgs = new String[]{sixMonthsAgoInSeconds};
 
-                Cursor cursor = writableDb.query(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
-                        retColumns,
-                        whereStr,
-                        whereArgs,
-                        null,
-                        null,
-                        null);
-
-                // From cursor get all of the old message ids and old clicked click ids
                 Set<String> oldMessageIds = OSUtils.newConcurrentSet();
                 Set<String> oldClickedClickIds = OSUtils.newConcurrentSet();
-                if (cursor.moveToFirst()) {
-                    do {
-                        String oldMessageId = cursor.getString(
-                                cursor.getColumnIndex(
-                                        OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
-                        String oldClickIds = cursor.getString(
-                                cursor.getColumnIndex(
-                                        OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
 
-                        oldMessageIds.add(oldMessageId);
-                        oldClickedClickIds.addAll(OSUtils.newStringSetFromString(oldClickIds));
-                    } while (cursor.moveToNext());
+                Cursor cursor = null;
+                try {
+                    cursor = writableDb.query(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
+                            retColumns,
+                            whereStr,
+                            whereArgs,
+                            null,
+                            null,
+                            null);
+
+                    // From cursor get all of the old message ids and old clicked click ids
+                    if (cursor.moveToFirst()) {
+                        do {
+                            String oldMessageId = cursor.getString(
+                                    cursor.getColumnIndex(
+                                            OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
+                            String oldClickIds = cursor.getString(
+                                    cursor.getColumnIndex(
+                                            OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS));
+
+                            oldMessageIds.add(oldMessageId);
+                            oldClickedClickIds.addAll(OSUtils.newStringSetFromString(oldClickIds));
+                        } while (cursor.moveToNext());
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (cursor != null & !cursor.isClosed())
+                        cursor.close();
                 }
-                cursor.close();
 
                 // 2. Delete old IAMs from SQL
                 writableDb.delete(

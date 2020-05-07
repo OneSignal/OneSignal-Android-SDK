@@ -113,7 +113,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     protected void initRedisplayData(OneSignalDbHelper dbHelper) {
         inAppMessageRepository = new OSInAppMessageRepository(dbHelper);
-        redisplayedInAppMessages = inAppMessageRepository.getRedisplayedInAppMessages();
+        redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
     }
@@ -377,7 +377,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
         final String clickId = action.clickId;
         // If IAM has redisplay the clickId may be available
-        boolean clickAvailableByRedisplay = message.getDisplayStats().isRedisplayEnabled() && message.isClickAvailable(clickId);
+        boolean clickAvailableByRedisplay = message.getRedisplayStats().isRedisplayEnabled() && message.isClickAvailable(clickId);
 
         // Never count multiple clicks for the same click UUID unless that click is from an IAM with redisplay
         if (!clickAvailableByRedisplay && clickedClickIds.contains(clickId))
@@ -435,9 +435,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * For click counting, every message has it click id array
      * */
     private void setDataForRedisplay(OSInAppMessage message) {
-        if (!message.getDisplayStats().isRedisplayEnabled())
-            return;
-
         boolean messageDismissed = dismissedMessages.contains(message.messageId);
         int index = redisplayedInAppMessages.indexOf(message);
 
@@ -445,14 +442,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.messageId);
 
             OSInAppMessage savedIAM = redisplayedInAppMessages.get(index);
-            message.getDisplayStats().setDisplayStats(savedIAM.getDisplayStats());
+            message.getRedisplayStats().setDisplayStats(savedIAM.getRedisplayStats());
 
             // Message that don't have triggers should display only once per session
             boolean triggerHasChanged = message.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
             // Check if conditions are correct for redisplay
             if (triggerHasChanged &&
-                    message.getDisplayStats().isDelayTimeSatisfied() &&
-                    message.getDisplayStats().shouldDisplayAgain()) {
+                    message.getRedisplayStats().isDelayTimeSatisfied() &&
+                    message.getRedisplayStats().shouldDisplayAgain()) {
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
                 message.clearClickIds();
@@ -561,8 +558,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     private void persistInAppMessage(final OSInAppMessage message) {
         long displayTimeSeconds = System.currentTimeMillis() / 1000;
-        message.getDisplayStats().setLastDisplayTime(displayTimeSeconds);
-        message.getDisplayStats().incrementDisplayQuantity();
+        message.getRedisplayStats().setLastDisplayTime(displayTimeSeconds);
+        message.getRedisplayStats().incrementDisplayQuantity();
         message.setTriggerChanged(false);
         message.setDisplayedInSession(true);
 

@@ -3,31 +3,31 @@ package com.onesignal;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-class OSInAppMessageDisplayStats {
+class OSInAppMessageRedisplayStats {
 
     private static final String DISPLAY_LIMIT = "limit";
     private static final String DISPLAY_DELAY = "delay";
 
-    //Last IAM display time in seconds
+    // Last IAM display time in seconds
     private long lastDisplayTime = -1;
-    //Current quantity of displays
+    // Current quantity of displays
     private int displayQuantity = 0;
-    //Quantity of displays limit
-    private int displayLimit = Integer.MAX_VALUE;
-    //Delay between displays in seconds
+    // Quantity of displays limit
+    private int displayLimit = 1;
+    // Delay between displays in seconds
     private long displayDelay = 0;
 
     private boolean redisplayEnabled = false;
 
-    OSInAppMessageDisplayStats() {
+    OSInAppMessageRedisplayStats() {
     }
 
-    OSInAppMessageDisplayStats(int displayQuantity, long lastDisplayTime) {
+    OSInAppMessageRedisplayStats(int displayQuantity, long lastDisplayTime) {
         this.displayQuantity = displayQuantity;
         this.lastDisplayTime = lastDisplayTime;
     }
 
-    OSInAppMessageDisplayStats(JSONObject json) throws JSONException {
+    OSInAppMessageRedisplayStats(JSONObject json) throws JSONException {
         this.redisplayEnabled = true;
         Object displayLimit = json.get(DISPLAY_LIMIT);
         Object displayDelay = json.get(DISPLAY_DELAY);
@@ -41,7 +41,7 @@ class OSInAppMessageDisplayStats {
             this.displayDelay = (Integer) displayDelay;
     }
 
-    void setDisplayStats(OSInAppMessageDisplayStats displayStats) {
+    void setDisplayStats(OSInAppMessageRedisplayStats displayStats) {
         setLastDisplayTime(displayStats.getLastDisplayTime());
         setDisplayQuantity(displayStats.getDisplayQuantity());
     }
