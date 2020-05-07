@@ -49,35 +49,6 @@ class OneSignalCacheCleaner {
                 cleanCachedUniqueOutcomeEventNotifications(writableDb);
             }
 
-            /**
-             * Deletes notifications with created timestamps older than 7 days
-             */
-            private void cleanCachedNotifications(SQLiteDatabase writableDb) {
-                String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
-
-                String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - ONE_WEEK_IN_SECONDS);
-                String[] whereArgs = new String[]{ sevenDaysAgoInSeconds };
-
-                writableDb.delete(
-                        NotificationTable.TABLE_NAME,
-                        whereStr,
-                        whereArgs);
-            }
-
-            /**
-             * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
-             */
-            private void cleanCachedUniqueOutcomeEventNotifications(SQLiteDatabase writableDb) {
-                String whereStr = "NOT EXISTS(" +
-                        "SELECT NULL FROM " + NotificationTable.TABLE_NAME + " n " +
-                        "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + ")";
-
-                writableDb.delete(
-                        CachedUniqueOutcomeNotificationTable.TABLE_NAME,
-                        whereStr,
-                        null);
-            }
-
         }, OS_DELETE_CACHED_NOTIFICATIONS_THREAD).start();
     }
 
@@ -149,52 +120,95 @@ class OneSignalCacheCleaner {
                 cleanCachedSharedPreferenceIamData(oldMessageIds, oldClickedClickIds);
             }
 
-            private void cleanCachedSharedPreferenceIamData(Set<String> oldMessageIds, Set<String> oldClickedClickIds) {
-                // IAMs without redisplay on with pile up and we need to clean these for dismissing, impressions, and clicks
-                Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
+        }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
+    }
+
+    /**
+     * Deletes notifications with created timestamps older than 7 days
+     * <br/><br/>
+     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)}
+     * <br/><br/>
+     * @see OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)
+     */
+    private static void cleanCachedNotifications(SQLiteDatabase writableDb) {
+        String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
+
+        String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - ONE_WEEK_IN_SECONDS);
+        String[] whereArgs = new String[]{ sevenDaysAgoInSeconds };
+
+        writableDb.delete(
+                NotificationTable.TABLE_NAME,
+                whereStr,
+                whereArgs);
+    }
+
+    /**
+     * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
+     * <br/><br/>
+     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)}
+     * <br/><br/>
+     * @see OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)
+     */
+    private static void cleanCachedUniqueOutcomeEventNotifications(SQLiteDatabase writableDb) {
+        String whereStr = "NOT EXISTS(" +
+                "SELECT NULL FROM " + NotificationTable.TABLE_NAME + " n " +
+                "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + ")";
+
+        writableDb.delete(
+                CachedUniqueOutcomeNotificationTable.TABLE_NAME,
+                whereStr,
+                null);
+    }
+
+    /**
+     * Deletes old IAM SharedPreference dismissed and impressioned message ids as well as clicked click ids
+     * <br/><br/>
+     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)}
+     * <br/><br/>
+     * @see OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)
+     */
+    private static void cleanCachedSharedPreferenceIamData(Set<String> oldMessageIds, Set<String> oldClickedClickIds) {
+        // IAMs without redisplay on with pile up and we need to clean these for dismissing, impressions, and clicks
+        Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                OSUtils.<String>newConcurrentSet());
+
+        Set<String> impressionedMessages = OneSignalPrefs.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                OSUtils.<String>newConcurrentSet());
+
+        Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                OSUtils.<String>newConcurrentSet());
+
+        if (oldMessageIds != null) {
+            if (dismissedMessages != null) {
+                dismissedMessages.removeAll(oldMessageIds);
+                OneSignalPrefs.saveStringSet(
                         OneSignalPrefs.PREFS_ONESIGNAL,
                         OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                        OSUtils.<String>newConcurrentSet());
-
-                Set<String> impressionedMessages = OneSignalPrefs.getStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                        OSUtils.<String>newConcurrentSet());
-
-                Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                        OSUtils.<String>newConcurrentSet());
-
-                if (oldMessageIds != null) {
-                    if (dismissedMessages != null) {
-                        dismissedMessages.removeAll(oldMessageIds);
-                        OneSignalPrefs.saveStringSet(
-                                OneSignalPrefs.PREFS_ONESIGNAL,
-                                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                                dismissedMessages);
-                    }
-
-                    if (impressionedMessages != null) {
-                        impressionedMessages.removeAll(oldMessageIds);
-                        OneSignalPrefs.saveStringSet(
-                                OneSignalPrefs.PREFS_ONESIGNAL,
-                                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                                impressionedMessages);
-                    }
-                }
-
-                if (clickedClickIds != null && oldClickedClickIds != null) {
-                    clickedClickIds.removeAll(oldClickedClickIds);
-                    OneSignalPrefs.saveStringSet(
-                            OneSignalPrefs.PREFS_ONESIGNAL,
-                            OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                            clickedClickIds);
-                }
-
+                        dismissedMessages);
             }
 
-        }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
+            if (impressionedMessages != null) {
+                impressionedMessages.removeAll(oldMessageIds);
+                OneSignalPrefs.saveStringSet(
+                        OneSignalPrefs.PREFS_ONESIGNAL,
+                        OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                        impressionedMessages);
+            }
+        }
+
+        if (clickedClickIds != null && oldClickedClickIds != null) {
+            clickedClickIds.removeAll(oldClickedClickIds);
+            OneSignalPrefs.saveStringSet(
+                    OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                    clickedClickIds);
+        }
     }
 
 }
