@@ -35,6 +35,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
 // Designed as a compat for use of Android Support v4 revision 23.+ methods when an older revision of the library is included with the app developer's project.
@@ -68,6 +69,10 @@ class AndroidSupportV4Compat {
          // OneSignal SDK code already checks that device is Android M, omit else code from the support library.
          ActivityCompatApi23.requestPermissions(activity, permissions, requestCode);
       }
+
+      static boolean shouldShowRequestPermissionRationale(Activity activity, String permission) {
+         return ActivityCompatApi23.shouldShowRequestPermissionRationale(activity, permission);
+      }
    }
 
    @TargetApi(23)
@@ -76,6 +81,10 @@ class AndroidSupportV4Compat {
          if (activity instanceof RequestPermissionsRequestCodeValidator)
             ((RequestPermissionsRequestCodeValidator) activity).validateRequestPermissionsRequestCode(requestCode);
          activity.requestPermissions(permissions, requestCode);
+      }
+
+      static boolean shouldShowRequestPermissionRationale(Activity activity, String permission) {
+         return android.support.v4.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, permission);
       }
    }
 }
