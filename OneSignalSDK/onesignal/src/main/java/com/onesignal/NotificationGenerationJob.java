@@ -38,13 +38,11 @@ import java.security.SecureRandom;
 class NotificationGenerationJob {
    Context context;
    JSONObject jsonPayload;
-   boolean restoring;
-   boolean isInAppPreviewPush;
-   
-   boolean showAsAlert;
-   
+   boolean isRestoring;
+   boolean isIamPreview;
+
    Long shownTimeStamp;
-   
+
    CharSequence overriddenBodyFromExtender;
    CharSequence overriddenTitleFromExtender;
    Uri overriddenSound;

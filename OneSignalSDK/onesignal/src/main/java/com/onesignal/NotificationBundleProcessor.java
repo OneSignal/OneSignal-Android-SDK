@@ -79,13 +79,13 @@ class NotificationBundleProcessor {
          }
    
          NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
-         notifJob.restoring = bundle.getBoolean("restoring", false);
+         notifJob.isRestoring = bundle.getBoolean("restoring", false);
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
          notifJob.jsonPayload = new JSONObject(jsonStrPayload);
-         notifJob.isInAppPreviewPush = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
+         notifJob.isIamPreview = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
 
-         if (!notifJob.restoring &&
-             !notifJob.isInAppPreviewPush &&
+         if (!notifJob.isRestoring &&
+             !notifJob.isIamPreview &&
              OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
             return;
 
@@ -100,7 +100,7 @@ class NotificationBundleProcessor {
 
          // Delay to prevent CPU spikes.
          //    Normally more than one notification is restored at a time.
-         if (notifJob.restoring)
+         if (notifJob.isRestoring)
             OSUtils.sleep(100);
       } catch (JSONException e) {
          e.printStackTrace();
@@ -108,19 +108,18 @@ class NotificationBundleProcessor {
    }
 
    static int ProcessJobForDisplay(NotificationGenerationJob notifJob) {
-      notifJob.showAsAlert = OneSignal.getInAppAlertNotificationEnabled() && OneSignal.isAppActive();
       processCollapseKey(notifJob);
 
       boolean doDisplay = shouldDisplayNotif(notifJob);
       if (doDisplay)
             GenerateNotification.fromJsonPayload(notifJob);
 
-      if (!notifJob.restoring && !notifJob.isInAppPreviewPush) {
+      if (!notifJob.isRestoring && !notifJob.isIamPreview) {
          processNotification(notifJob, false);
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
             jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
-            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
+             OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true);
          } catch(Throwable t) {}
       }
 
@@ -130,7 +129,7 @@ class NotificationBundleProcessor {
    private static boolean shouldDisplayNotif(NotificationGenerationJob notifJob) {
       // Validate that the current Android device is Android 4.4 or higher and the current job is a
       //    preview push
-      if (notifJob.isInAppPreviewPush && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
+      if (notifJob.isIamPreview && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
          return false;
 
       // Otherwise, this is a normal notification and should be shown
@@ -422,7 +421,7 @@ class NotificationBundleProcessor {
    }
 
    private static void processCollapseKey(NotificationGenerationJob notifJob) {
-      if (notifJob.restoring)
+      if (notifJob.isRestoring)
          return;
       if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
          return;
@@ -498,7 +497,7 @@ class NotificationBundleProcessor {
          //    Make a new thread to do our OneSignal work on.
          new Thread(new Runnable() {
             public void run() {
-               OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false, false);
+               OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false);
             }
          }, "OS_PROC_BUNDLE").start();
       }
@@ -551,12 +550,8 @@ class NotificationBundleProcessor {
 
    static boolean shouldDisplay(String body) {
       boolean hasBody = body != null && !"".equals(body);
-      boolean showAsAlert = OneSignal.getInAppAlertNotificationEnabled();
       boolean isActive = OneSignal.isAppActive();
-      return hasBody &&
-                (OneSignal.getNotificationsWhenActiveEnabled()
-              || showAsAlert
-              || !isActive);
+      return hasBody && !isActive;
    }
 
    static @NonNull JSONArray newJsonArray(JSONObject jsonObject) {
