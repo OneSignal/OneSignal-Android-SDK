@@ -171,7 +171,7 @@ public class OneSignalPackagePrivateHelper {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;
-      notifJob.restoring = restoring;
+      notifJob.isRestoring = restoring;
       return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 

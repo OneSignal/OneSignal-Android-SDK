@@ -110,7 +110,7 @@ class NotificationSummaryManager {
             return cursor;
          
          NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
-         notifJob.restoring = true;
+         notifJob.isRestoring = true;
          notifJob.shownTimeStamp = datetime;
       
          JSONObject payload = new JSONObject();

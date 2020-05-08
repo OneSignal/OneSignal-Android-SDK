@@ -1142,7 +1142,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
 
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
@@ -1158,7 +1158,7 @@ public class MainOneSignalClassRunner {
       // Don't fire for duplicates
       notificationOpenedMessage = null;
       notificationReceivedBody = null;
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
       assertNull(notificationOpenedMessage);
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
@@ -1167,7 +1167,7 @@ public class MainOneSignalClassRunner {
       assertNull(notificationReceivedBody);
 
       // Test that only NotificationReceivedHandler fires
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.None);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
       bundle = getBaseNotifBundle("UUID2");
       notificationOpenedMessage = null;
       notificationReceivedBody = null;
@@ -2708,19 +2708,19 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       // Permission subscription wont return until OneSignal init is done
       assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
@@ -2743,19 +2743,19 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       // Permission subscription wont return until OneSignal init is done
-      assertNull(OneSignal.getPermissionSubscriptionState());
+      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
@@ -2776,19 +2776,19 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
@@ -2809,19 +2809,19 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSInFocusDisplayOption.Notification, OneSignal.currentInFocusDisplayOption());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
@@ -4768,7 +4768,7 @@ public class MainOneSignalClassRunner {
       actionButton.id = "id";
       osNotification.payload.actionButtons.add(actionButton);
 
-      osNotification.displayType = OSNotification.DisplayType.None;
+      osNotification.displayOption = OneSignal.OSNotificationDisplay.SILENT;
 
       osNotification.groupedNotifications = new ArrayList<>();
       OSNotificationPayload groupedPayload = new OSNotificationPayload();

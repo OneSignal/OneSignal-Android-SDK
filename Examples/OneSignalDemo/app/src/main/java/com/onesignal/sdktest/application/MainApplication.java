@@ -27,7 +27,8 @@ public class MainApplication extends Application {
         OneSignal.setAppId(appId);
         OneSignal.setAppContext(this);
 
-        OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+        OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+        OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.pauseInAppMessages(true);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);

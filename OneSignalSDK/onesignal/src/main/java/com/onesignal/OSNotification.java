@@ -34,38 +34,23 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.onesignal.OneSignal.OSNotificationDisplay;
+
 /**
  * The notification the user received
  * <br/><br/>
  * {@link #isAppInFocus} - Was app in focus.
- * <br/>
  * {@link #shown} - Was notification shown to the user. Will be {@code false} for silent notifications.
- * <br/>
  * {@link #androidNotificationId} - Android Notification ID assigned to the notification. Can be used to cancel or replace the notification
- * <br/>
  * {@link #payload} - Payload received from OneSignal
- * <br/>
- * {@link #displayType} - How the notification was displayed ot the user. Can be set to {@link DisplayType#Notification Notification},
- * {@link DisplayType#InAppAlert InAppAlert}, or {@link DisplayType#None None} if it was not displayed.
- * <br/>
+ * {@link #displayOption} - How the notification will be displayed to the user, includes options:
+ *    {@link OSNotificationDisplay#SILENT}
+ *    {@link OSNotificationDisplay#NOTIFICATION}
+ * <br/><br/>
  * {@link #groupedNotifications} - If the notification is a summary notification for a group, this will contain
  * all notification payloads it was created from.
  */
 public class OSNotification {
-
-   /**
-    * How the notification was displayed to the user. Part of {@link OSNotification}.
-    */
-   public enum DisplayType {
-      // Notification shown in the notification shade.
-      Notification,
-
-      // Notification shown as an in app alert.
-      InAppAlert,
-
-      // Notification was silent and not displayed.
-      None
-   }
    
    public OSNotification() {
    }
@@ -74,7 +59,7 @@ public class OSNotification {
       isAppInFocus = jsonObject.optBoolean("isAppInFocus");
       shown = jsonObject.optBoolean("shown", shown);
       androidNotificationId = jsonObject.optInt("androidNotificationId");
-      displayType = DisplayType.values()[jsonObject.optInt("displayType")];
+      displayOption = OSNotificationDisplay.values()[jsonObject.optInt("displayType")];
 
       if (jsonObject.has("groupedNotifications")) {
          JSONArray jsonArray = jsonObject.optJSONArray("groupedNotifications");
@@ -99,7 +84,7 @@ public class OSNotification {
    // Notification payload received from OneSignal
    public OSNotificationPayload payload;
 
-   public DisplayType displayType;
+   public OSNotificationDisplay displayOption;
 
    // Will be set if a summary notification is opened.
    //    The payload will be the most recent notification received.
@@ -112,7 +97,7 @@ public class OSNotification {
          mainObj.put("isAppInFocus", isAppInFocus);
          mainObj.put("shown", shown);
          mainObj.put("androidNotificationId", androidNotificationId);
-         mainObj.put("displayType", displayType.ordinal());
+         mainObj.put("displayType", displayOption.ordinal());
 
          if (groupedNotifications != null) {
             JSONArray payloadJsonArray = new JSONArray();
