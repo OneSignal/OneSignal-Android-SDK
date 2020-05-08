@@ -192,10 +192,11 @@ class LocationGMS {
          locationCoarse = true;
       }
 
+      String alertDialogTitle = context.getString(R.string.location_not_available_title);
+      String alertDialogMessage = context.getString(R.string.location_not_available_message);
+
       if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
-            String alertDialogTitle = context.getString(R.string.location_not_available_title);
-            String alertDialogMessage = context.getString(R.string. location_not_available_message);
             sendAndClearPromptHandlers(promptLocation, false, alertDialogTitle, alertDialogMessage);
 
             handler.complete(null);
@@ -231,8 +232,6 @@ class LocationGMS {
                   sendAndClearPromptHandlers(promptLocation, true);
                   startGetLocation();
                } else {
-                  String alertDialogTitle = context.getString(R.string.location_not_available_title);
-                  String alertDialogMessage = context.getString(R.string. location_not_available_message);
                   sendAndClearPromptHandlers(promptLocation, false, alertDialogTitle, alertDialogMessage);
                   fireFailedComplete();
                }
