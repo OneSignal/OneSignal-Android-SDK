@@ -191,7 +191,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
                notifJob.overrideSettings.androidNotificationId = -1;
 
                NotificationBundleProcessor.processNotification(notifJob, true);
-               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false, false);
+               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false);
             }
             // If are are not displaying a restored notification make sure we mark it as dismissed
             //   This will prevent it from being restored again.
@@ -222,7 +222,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
    private NotificationGenerationJob createNotifJobFromCurrent() {
       NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
-      notifJob.restoring = currentlyRestoring;
+      notifJob.isRestoring = currentlyRestoring;
       notifJob.jsonPayload = currentJsonPayload;
       notifJob.shownTimeStamp = restoreTimestamp;
       notifJob.overrideSettings = currentBaseOverrideSettings;

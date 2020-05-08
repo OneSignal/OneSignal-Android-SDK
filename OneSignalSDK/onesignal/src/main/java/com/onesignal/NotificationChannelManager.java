@@ -69,7 +69,7 @@ class NotificationChannelManager {
 
       NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
 
-      if (notifJob.restoring)
+      if (notifJob.isRestoring)
          return createRestoreChannel(notificationManager);
       
       // Allow channels created outside the SDK
