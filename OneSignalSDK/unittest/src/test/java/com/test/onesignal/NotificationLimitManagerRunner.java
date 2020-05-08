@@ -69,7 +69,7 @@ public class NotificationLimitManagerRunner {
 
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       threadAndTaskWait();
    }
 

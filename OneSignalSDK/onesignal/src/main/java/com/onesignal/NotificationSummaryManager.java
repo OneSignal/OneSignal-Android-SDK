@@ -6,8 +6,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import androidx.annotation.RequiresApi;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -112,7 +110,7 @@ class NotificationSummaryManager {
             return cursor;
          
          NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
-         notifJob.restoring = true;
+         notifJob.isRestoring = true;
          notifJob.shownTimeStamp = datetime;
       
          JSONObject payload = new JSONObject();
