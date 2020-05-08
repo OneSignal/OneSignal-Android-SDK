@@ -2084,10 +2084,6 @@ public class OneSignal {
       runNotificationOpenedCallback(data, true);
    }
 
-   static OneSignalDbHelper getDBHelperInstance() {
-      return OneSignalDbHelper.getInstance(appContext);
-   }
-
    static boolean startOrResumeApp(Context inContext) {
       Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
       // Make sure we have a launcher intent.
