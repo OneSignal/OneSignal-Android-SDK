@@ -119,7 +119,7 @@ class NotificationBundleProcessor {
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
             jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
-             OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true);
+            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true);
          } catch(Throwable t) {}
       }
 
