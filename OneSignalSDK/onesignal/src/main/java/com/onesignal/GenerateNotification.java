@@ -442,7 +442,7 @@ class GenerateNotification {
 
    // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
    private static void createSummaryNotification(OSNotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
-      boolean updateSummary = notifJob.isRestoring;
+       boolean updateSummary = notifJob.isRestoring;
       JSONObject fcmJson = notifJob.jsonPayload;
 
       String group = fcmJson.optString("grp", null);
