@@ -428,7 +428,7 @@ class NotificationBundleProcessor {
    }
 
     private static void processCollapseKey(OSNotificationGenerationJob notifJob) {
-        if (notifJob.isRestoring)
+      if (notifJob.isRestoring)
          return;
       if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
          return;
