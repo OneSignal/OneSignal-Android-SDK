@@ -102,7 +102,7 @@ class OneSignalPrefs {
     // Receive Receipts (aka Confirmed Deliveries)
     public static final String PREFS_OS_RECEIVE_RECEIPTS_ENABLED = "PREFS_OS_RECEIVE_RECEIPTS_ENABLED";
     // Outcomes
-    public static final String PREFS_OS_OUTCOMES_V2 = "PREFS_OS_OUTCOMES_V2";
+    static final String PREFS_OS_OUTCOMES_V2 = "PREFS_OS_OUTCOMES_V2";
     // Player Purchase Keys
     static final String PREFS_PURCHASE_TOKENS = "purchaseTokens";
     static final String PREFS_EXISTING_PURCHASES = "ExistingPurchases";

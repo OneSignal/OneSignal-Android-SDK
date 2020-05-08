@@ -273,17 +273,11 @@ public class OutcomeEventIntegrationTests {
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
         threadAndTaskWait();
 
-        JSONObject sources = new JSONObject();
-        JSONObject direct = new JSONObject();
         JSONArray notificationIds = new JSONArray();
         notificationIds.put(ONESIGNAL_NOTIFICATION_ID + "1");
 
-        direct.put("notification_ids", notificationIds);
-        direct.put("in_app_message_ids", new JSONArray());
-        sources.put("direct", direct);
-
         // Check measure end point was most recent request and contains clicked notification
-        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, new JSONArray(), notificationIds, null, null);
         // Only 4 requests have been made
         assertRestCalls(4);
 
@@ -370,15 +364,8 @@ public class OutcomeEventIntegrationTests {
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
         threadAndTaskWait();
 
-        JSONObject sources = new JSONObject();
-        JSONObject indirect = new JSONObject();
-
-        indirect.put("notification_ids", notificationIds);
-        indirect.put("in_app_message_ids", new JSONArray());
-        sources.put("indirect", indirect);
-
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, null, null, new JSONArray(), notificationIds);
         // Only 3 requests have been made
         assertRestCalls(3);
 
@@ -414,14 +401,8 @@ public class OutcomeEventIntegrationTests {
         // Make sure session is INDIRECT
         assertNotificationChannelIndirectInfluence(2);
 
-        sources = new JSONObject();
-        indirect = new JSONObject();
-
-        indirect.put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
-        indirect.put("in_app_message_ids", new JSONArray());
-        sources.put("indirect", indirect);
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, null, null, new JSONArray(),  new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
     }
 
     @Test
@@ -490,7 +471,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, new JSONObject());
+        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
         // Only 3 requests have been made
         assertRestCalls(3);
 
@@ -520,7 +501,7 @@ public class OutcomeEventIntegrationTests {
         assertNotificationChannelUnattributedInfluence();
 
         // Check measure end point was most recent request and contains received notification
-        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, new JSONObject());
+        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
     }
 
     @Test
@@ -580,17 +561,11 @@ public class OutcomeEventIntegrationTests {
         blankActivityController.resume();
         threadAndTaskWait();
 
-        JSONObject sources = new JSONObject();
-        JSONObject direct = new JSONObject();
         JSONArray notificationIds = new JSONArray();
         notificationIds.put(ONESIGNAL_NOTIFICATION_ID);
 
-        direct.put("notification_ids", notificationIds);
-        direct.put("in_app_message_ids", new JSONArray());
-        sources.put("direct", direct);
-
         // Make sure a measure request is made with the correct session and notifications
-        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, sources);
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, new JSONArray(), notificationIds, null, null);
     }
 
     @Test

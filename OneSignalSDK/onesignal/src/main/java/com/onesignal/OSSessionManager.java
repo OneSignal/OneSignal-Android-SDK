@@ -77,6 +77,7 @@ public class OSSessionManager {
         logger.debug("OneSignal SessionManager onInAppMessageReceived messageId: " + messageId);
         OSChannelTracker inAppMessageTracker = trackerFactory.getIAMChannelTracker();
         inAppMessageTracker.saveLastId(messageId);
+        inAppMessageTracker.resetAndInitInfluence();
     }
 
     void onDirectInfluenceFromIAMClick(@NonNull String messageId) {
