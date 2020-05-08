@@ -104,8 +104,6 @@ class OSOutcomeEventsController {
                 sendOutcomeEvent(name, null);
             }
         }
-        // Requests are sent or cached at this point
-        osSessionManager.onDirectInfluenceFromIAMClickFinished();
     }
 
     void sendUniqueOutcomeEvent(@NonNull final String name, @Nullable OneSignal.OutcomeCallback callback) {

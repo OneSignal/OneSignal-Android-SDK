@@ -41,7 +41,7 @@ class OSOutcomeEventsCache {
         this.preferences = preferences;
     }
 
-    boolean isOutcomesV2Available() {
+    boolean isOutcomesV2ServiceEnabled() {
         return preferences.getBool(
                 preferences.getPreferencesName(),
                 preferences.getOutcomesV2KeyName(),

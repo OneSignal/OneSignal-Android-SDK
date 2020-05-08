@@ -23,11 +23,22 @@ public class OSOutcomeEventsFactory {
     public OSOutcomeEventsRepository getRepository() {
         if (repository == null)
             createRepository();
+        else
+            validateRepositoryVersion();
         return repository;
     }
 
+    private void validateRepositoryVersion() {
+        if (!outcomeEventsCache.isOutcomesV2ServiceEnabled() && repository instanceof OSOutcomeEventsV1Repository)
+            return;
+        if (outcomeEventsCache.isOutcomesV2ServiceEnabled() && repository instanceof OSOutcomeEventsV2Repository)
+            return;
+
+        createRepository();
+    }
+
     private void createRepository() {
-        if (outcomeEventsCache.isOutcomesV2Available())
+        if (outcomeEventsCache.isOutcomesV2ServiceEnabled())
             repository = new OSOutcomeEventsV2Repository(logger, outcomeEventsCache, new OSOutcomeEventsV2Service(apiClient));
         else
             repository = new OSOutcomeEventsV1Repository(logger, outcomeEventsCache, new OSOutcomeEventsV1Service(apiClient));

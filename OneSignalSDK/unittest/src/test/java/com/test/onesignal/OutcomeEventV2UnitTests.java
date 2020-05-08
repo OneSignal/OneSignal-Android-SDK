@@ -230,9 +230,6 @@ public class OutcomeEventV2UnitTests {
         sessionManager.initSessionFromCache();
         sessionManager.onInAppMessageReceived(IAM_ID);
 
-        // Restart session by app open should set INDIRECT influence
-        sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
-
         controller.sendOutcomeEvent(OUTCOME_NAME);
         threadAndTaskWait();
 

@@ -139,7 +139,6 @@ public class SessionManagerUnitTests {
             assertTrue(influence.getInfluenceType().isIndirect());
             assertEquals(1, influence.getIds().length());
             assertEquals(GENERIC_ID, influence.getIds().get(0));
-            break;
         }
     }
 
@@ -194,7 +193,6 @@ public class SessionManagerUnitTests {
         assertEquals(0, iamTracker.getLastReceivedIds().length());
 
         sessionManager.onInAppMessageReceived(IAM_ID);
-        sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_OPEN);
 
         iamTracker = trackerFactory.getIAMChannelTracker();
         OSInfluence influence = iamTracker.getCurrentSessionInfluence();
@@ -354,13 +352,37 @@ public class SessionManagerUnitTests {
 
         sessionManager.onNotificationReceived(GENERIC_ID);
         sessionManager.onInAppMessageReceived(GENERIC_ID);
+
+        influences = sessionManager.getInfluences();
+
+        for (OSInfluence influence : influences) {
+            switch (influence.getInfluenceChannel()) {
+                case NOTIFICATION:
+                    assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+                    assertNull(influence.getIds());
+                    break;
+                case IAM:
+                    assertEquals(OSInfluenceType.INDIRECT, influence.getInfluenceType());
+                    assertEquals(1, influence.getIds().length());
+                    break;
+            }
+        }
+
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_CLOSE);
 
         influences = sessionManager.getInfluences();
 
         for (OSInfluence influence : influences) {
-            assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
-            assertNull(influence.getIds());
+            switch (influence.getInfluenceChannel()) {
+                case NOTIFICATION:
+                    assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+                    assertNull(influence.getIds());
+                    break;
+                case IAM:
+                    assertEquals(OSInfluenceType.INDIRECT, influence.getInfluenceType());
+                    assertEquals(1, influence.getIds().length());
+                    break;
+            }
         }
 
         // We test that channel ending is working
@@ -381,6 +403,22 @@ public class SessionManagerUnitTests {
 
         sessionManager.onNotificationReceived(GENERIC_ID);
         sessionManager.onInAppMessageReceived(GENERIC_ID);
+
+        influences = sessionManager.getInfluences();
+
+        for (OSInfluence influence : influences) {
+            switch (influence.getInfluenceChannel()) {
+                case NOTIFICATION:
+                    assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+                    assertNull(influence.getIds());
+                    break;
+                case IAM:
+                    assertEquals(OSInfluenceType.INDIRECT, influence.getInfluenceType());
+                    assertEquals(1, influence.getIds().length());
+                    break;
+            }
+        }
+
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_OPEN);
 
         influences = sessionManager.getInfluences();
@@ -392,17 +430,12 @@ public class SessionManagerUnitTests {
         }
 
         // We test that channel ending is working for both IAM and Notification
-        assertEquals(2, lastInfluencesBySessionEnding.size());
+        assertEquals(1, lastInfluencesBySessionEnding.size());
         OSInfluence endingNotificationInfluence = lastInfluencesBySessionEnding.get(0);
-        OSInfluence endingIAMInfluence = lastInfluencesBySessionEnding.get(1);
 
         assertEquals(OSInfluenceChannel.NOTIFICATION, endingNotificationInfluence.getInfluenceChannel());
         assertEquals(OSInfluenceType.UNATTRIBUTED, endingNotificationInfluence.getInfluenceType());
         assertNull(endingNotificationInfluence.getIds());
-
-        assertEquals(OSInfluenceChannel.IAM, endingIAMInfluence.getInfluenceChannel());
-        assertEquals(OSInfluenceType.UNATTRIBUTED, endingIAMInfluence.getInfluenceType());
-        assertNull(endingIAMInfluence.getIds());
     }
 
     @Test
@@ -431,18 +464,13 @@ public class SessionManagerUnitTests {
         assertEquals(1, notificationInfluences.getIds().length());
         assertEquals(GENERIC_ID, notificationInfluences.getIds().get(0));
 
-        // We test that channel ending is working for both IAM and Notification
-        assertEquals(2, lastInfluencesBySessionEnding.size());
+        // We test that channel ending is working for Notification
+        assertEquals(1, lastInfluencesBySessionEnding.size());
         OSInfluence endingNotificationInfluence = lastInfluencesBySessionEnding.get(0);
-        OSInfluence endingIAMInfluence = lastInfluencesBySessionEnding.get(1);
 
         assertEquals(OSInfluenceChannel.NOTIFICATION, endingNotificationInfluence.getInfluenceChannel());
         assertEquals(OSInfluenceType.UNATTRIBUTED, endingNotificationInfluence.getInfluenceType());
         assertNull(endingNotificationInfluence.getIds());
-
-        assertEquals(OSInfluenceChannel.IAM, endingIAMInfluence.getInfluenceChannel());
-        assertEquals(OSInfluenceType.UNATTRIBUTED, endingIAMInfluence.getInfluenceType());
-        assertNull(endingIAMInfluence.getIds());
     }
 
     @Test
@@ -594,9 +622,13 @@ public class SessionManagerUnitTests {
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
 
+        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
+
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
 
-        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
         assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
@@ -612,13 +644,17 @@ public class SessionManagerUnitTests {
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
 
+        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
+
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_CLOSE);
 
-        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
-        assertEquals(OSInfluenceType.UNATTRIBUTED, iamInfluences.getInfluenceType());
-        assertNull(iamInfluences.getIds());
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
         assertEquals(OSInfluenceType.UNATTRIBUTED, notificationInfluences.getInfluenceType());
         assertNull(notificationInfluences.getIds());
     }
@@ -630,9 +666,13 @@ public class SessionManagerUnitTests {
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
 
+        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());
+        assertEquals(IAM_ID, iamInfluences.getIds().get(0));
+
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.NOTIFICATION_CLICK);
 
-        OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
         assertEquals(OSInfluenceType.INDIRECT, iamInfluences.getInfluenceType());

@@ -1044,8 +1044,8 @@ public class OneSignal {
             );
             OneSignalPrefs.saveBool(
                OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_OUTCOMES_V2,
-                    params.influenceParams.v2Enabled
+               preferences.getOutcomesV2KeyName(),
+               params.influenceParams.outcomesV2ServiceEnabled
             );
             logger.debug("OneSignal saveInfluenceParams: " + params.influenceParams.toString());
             trackerFactory.saveInfluenceParams(params.influenceParams);
