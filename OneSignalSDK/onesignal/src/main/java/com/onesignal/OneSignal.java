@@ -271,7 +271,7 @@ public class OneSignal {
    static NotificationOpenedHandler notificationOpenedHandler;
    static InAppMessageClickHandler inAppMessageClickHandler;
 
-   static boolean mPromptLocation;
+   static boolean mAutoPromptLocation;
    static boolean mUnsubscribeWhenNotificationsAreDisabled = true;
    // TODO: Will be apart of NotificationWillShowInForegroundHandler
    static OSNotificationDisplay mDisplayOption = OSNotificationDisplay.NOTIFICATION;
@@ -474,7 +474,7 @@ public class OneSignal {
     * @return the builder object you called this method on
     */
    public static void autoPromptLocation(boolean enable) {
-      mPromptLocation = enable;
+      mAutoPromptLocation = enable;
    }
 
    /**
@@ -854,9 +854,9 @@ public class OneSignal {
             registerUser();
          }
       };
-      boolean doPrompt = mPromptLocation && !promptedLocation;
+      boolean doPrompt = mAutoPromptLocation && !promptedLocation;
       // Prompted so we don't ask for permissions more than once
-      promptedLocation = promptedLocation || mPromptLocation;
+      promptedLocation = promptedLocation || mAutoPromptLocation;
 
       LocationGMS.getLocation(appContext, doPrompt, false, locationHandler);
    }
