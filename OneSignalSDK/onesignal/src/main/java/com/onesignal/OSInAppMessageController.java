@@ -401,7 +401,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
         final String clickId = action.clickId;
         // If IAM has redisplay the clickId may be available
-        boolean clickAvailableByRedisplay = message.getDisplayStats().isRedisplayEnabled() && message.isClickAvailable(clickId);
+        boolean clickAvailableByRedisplay = message.isClickAvailable(clickId);
 
         // Never count multiple clicks for the same click UUID unless that click is from an IAM with redisplay
         if (!clickAvailableByRedisplay && clickedClickIds.contains(clickId))
@@ -459,9 +459,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * For click counting, every message has it click id array
      */
     private void setDataForRedisplay(OSInAppMessage message) {
-        if (!message.getDisplayStats().isRedisplayEnabled())
-            return;
-
         boolean messageDismissed = dismissedMessages.contains(message.messageId);
         int index = redisplayedInAppMessages.indexOf(message);
 
@@ -588,10 +585,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void persistInAppMessageForRedisplay(final OSInAppMessage message) {
-        //If the IAM doesn't have the re display configuration then no need to save it
-        if (!message.getDisplayStats().isRedisplayEnabled())
-            return;
-
         long displayTimeSeconds = System.currentTimeMillis() / 1000;
         message.getDisplayStats().setLastDisplayTime(displayTimeSeconds);
         message.getDisplayStats().incrementDisplayQuantity();

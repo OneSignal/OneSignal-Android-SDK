@@ -13,11 +13,9 @@ class OSInAppMessageDisplayStats {
     //Current quantity of displays
     private int displayQuantity = 0;
     //Quantity of displays limit
-    private int displayLimit = Integer.MAX_VALUE;
+    private int displayLimit = 1;
     //Delay between displays in seconds
     private long displayDelay = 0;
-
-    private boolean redisplayEnabled = false;
 
     OSInAppMessageDisplayStats() {
     }
@@ -28,7 +26,6 @@ class OSInAppMessageDisplayStats {
     }
 
     OSInAppMessageDisplayStats(JSONObject json) throws JSONException {
-        this.redisplayEnabled = true;
         Object displayLimit = json.get(DISPLAY_LIMIT);
         Object displayDelay = json.get(DISPLAY_DELAY);
 
@@ -96,10 +93,6 @@ class OSInAppMessageDisplayStats {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessage lastDisplayTime: " + lastDisplayTime +
                 " currentTimeInSeconds: " + currentTimeInSeconds + " diffInSeconds: " + diffInSeconds + " displayDelay: " + displayDelay);
         return diffInSeconds >= displayDelay;
-    }
-
-    public boolean isRedisplayEnabled() {
-        return redisplayEnabled;
     }
 
     JSONObject toJSONObject() {

@@ -139,9 +139,7 @@ class OSInAppMessage {
 
             json.put(IAM_VARIANTS, variants);
             json.put(DISPLAY_DURATION, this.displayDuration);
-
-            if (displayStats.isRedisplayEnabled())
-                json.put(IAM_RE_DISPLAY, displayStats.toJSONObject());
+            json.put(IAM_RE_DISPLAY, displayStats.toJSONObject());
 
             JSONArray orConditions = new JSONArray();
             for (ArrayList<OSTrigger> andArray : this.triggers) {
