@@ -225,7 +225,7 @@ class OneSignalSyncServiceUtils {
                }
 
                @Override
-               public void complete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationGMS.LocationPoint point) {
                   Object object = point != null ?  point : new Object();
                   queue.offer(object);
                }

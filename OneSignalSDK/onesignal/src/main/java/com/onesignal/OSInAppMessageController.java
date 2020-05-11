@@ -323,13 +323,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             currentPrompt.setPrompted(true);
             currentPrompt.handlePrompt(new OneSignal.OSPromptActionCompletionCallback() {
                 @Override
-                public void completed(@Nullable String messageTitle, @Nullable String message, boolean accepted) {
+                public void onCompleted(OneSignal.PromptActionResult result) {
                     currentPrompt = null;
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle finished accepted: " + accepted);
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle finished with result: " + result);
 
                     // On preview mode we show informative alert dialogs
-                    if (inAppMessage.isPreview && messageTitle != null && message != null)
-                        showAlertDialogMessage(messageTitle, message, inAppMessage, prompts);
+                    if (inAppMessage.isPreview && result == OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST)
+                        showAlertDialogMessage(inAppMessage, prompts);
                     else
                         showMultiplePrompts(inAppMessage, prompts);
                 }
@@ -340,7 +340,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void showAlertDialogMessage(final String messageTitle, final String message, final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
+    private void showAlertDialogMessage(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
+        final String messageTitle = OneSignal.appContext.getString(R.string.location_not_available_title);
+        final String message = OneSignal.appContext.getString(R.string.location_not_available_message);
         new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
                 .setTitle(messageTitle)
                 .setMessage(message)
