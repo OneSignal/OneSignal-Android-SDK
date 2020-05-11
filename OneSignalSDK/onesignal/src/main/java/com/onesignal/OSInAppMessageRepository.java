@@ -9,7 +9,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -63,7 +62,7 @@ class OSInAppMessageRepository {
                     long lastDisplay = cursor.getLong(cursor.getColumnIndex(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY));
                     boolean displayed = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION)) == 1;
 
-                    Set<String> clickIdsSet = OSUtils.newStringSetFromString(clickIds);
+                    Set<String> clickIdsSet = OSUtils.newStringSetFromJSONArray(new JSONArray(clickIds));
 
                     OSInAppMessage inAppMessage = new OSInAppMessage(messageId, clickIdsSet, displayed, new OSInAppMessageRedisplayStats(displayQuantity, lastDisplay));
                     iams.add(inAppMessage);

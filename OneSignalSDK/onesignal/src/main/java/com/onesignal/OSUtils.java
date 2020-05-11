@@ -448,12 +448,11 @@ class OSUtils {
    }
 
    // Creates a new Set<String> from a Set String by converting and iterating a JSONArray
-   static Set<String> newStringSetFromString(String setString) throws JSONException {
+   static Set<String> newStringSetFromJSONArray(JSONArray jsonArray) throws JSONException {
       Set<String> stringSet = new HashSet<>();
 
-      JSONArray clickIdsArray = new JSONArray(setString);
-      for (int i = 0; i < clickIdsArray.length(); i++) {
-         stringSet.add(clickIdsArray.getString(i));
+      for (int i = 0; i < jsonArray.length(); i++) {
+         stringSet.add(jsonArray.getString(i));
       }
 
       return stringSet;

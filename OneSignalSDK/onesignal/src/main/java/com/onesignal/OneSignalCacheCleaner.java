@@ -9,14 +9,15 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Process;
 import android.support.annotation.WorkerThread;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.util.Set;
 
 class OneSignalCacheCleaner {
 
-    private final static long ONE_WEEK_IN_SECONDS = 604_800L;
-    private final static long SIX_MONTHS_IN_SECONDS = 15_552_000L;
+    private final static long NOTIFICATION_CACHE_DATA_LIFETIME = 604_800L; // 7 days in seconds
+    private final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
 
     private final static String OS_DELETE_CACHED_NOTIFICATIONS_THREAD = "OS_DELETE_CACHED_NOTIFICATIONS_THREAD";
     private final static String OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD = "OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD";
@@ -73,7 +74,7 @@ class OneSignalCacheCleaner {
 
                 String whereStr = OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + " < ?";
 
-                String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - SIX_MONTHS_IN_SECONDS);
+                String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - IAM_CACHE_DATA_LIFETIME);
                 String[] whereArgs = new String[]{sixMonthsAgoInSeconds};
 
                 Set<String> oldMessageIds = OSUtils.newConcurrentSet();
@@ -105,7 +106,7 @@ class OneSignalCacheCleaner {
                                             OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS));
 
                             oldMessageIds.add(oldMessageId);
-                            oldClickedClickIds.addAll(OSUtils.newStringSetFromString(oldClickIds));
+                            oldClickedClickIds.addAll(OSUtils.newStringSetFromJSONArray(new JSONArray(oldClickIds)));
                         } while (cursor.moveToNext());
                     }
                 } catch (JSONException e) {
@@ -138,7 +139,7 @@ class OneSignalCacheCleaner {
     private static void cleanCachedNotifications(SQLiteDatabase writableDb) {
         String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
 
-        String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - ONE_WEEK_IN_SECONDS);
+        String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - NOTIFICATION_CACHE_DATA_LIFETIME);
         String[] whereArgs = new String[]{ sevenDaysAgoInSeconds };
 
         writableDb.delete(
