@@ -35,6 +35,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
@@ -59,9 +60,10 @@ public class OneSignalExampleApp extends Application {
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
+      String newAppId = "77e32082-ea27-42e3-a898-c72e141824ef";
       String currentAppId = getOneSignalAppId(this);
-      if (currentAppId == null)
-         setOneSignalAppId(this, "0ba9731b-33bd-43f4-8b59-61172e27447d");
+      if (!newAppId.equals(currentAppId))
+         setOneSignalAppId(this, newAppId);
 
       OneSignal.init(
          this,
@@ -70,6 +72,15 @@ public class OneSignalExampleApp extends Application {
          new ExampleNotificationOpenedHandler(),
          new ExampleNotificationReceivedHandler()
       );
+
+      OneSignal.getCurrentOrNewInitBuilder().setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+         @Override
+         public void inAppMessageClicked(OSInAppMessageAction result) {
+            OneSignal.sendOutcome("normal_1");
+         }
+      });
+
+      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
    }
 
    public static void setOneSignalAppId(@NonNull Context context, @NonNull String id) {

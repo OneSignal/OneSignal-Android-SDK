@@ -11,11 +11,15 @@ import com.onesignal.outcomes.model.OSOutcomeEventParams;
 import com.onesignal.outcomes.model.OSOutcomeSource;
 import com.onesignal.outcomes.model.OSOutcomeSourceBody;
 
+import org.json.JSONException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 class OSOutcomeEventsController {
+
+    OneSignal.Debug.Completion outcomeEventSourceCallback;
 
     private static final String OS_SAVE_OUTCOMES = "OS_SAVE_OUTCOMES";
     private static final String OS_SEND_SAVED_OUTCOMES = "OS_SEND_SAVED_OUTCOMES";
@@ -179,6 +183,38 @@ class OSOutcomeEventsController {
         }
     }
 
+    OSOutcomeSource createOutcomeEvent(@NonNull List<OSInfluence> influences) {
+
+        OSOutcomeSourceBody directSourceBody = null;
+        OSOutcomeSourceBody indirectSourceBody = null;
+        boolean unattributed = false;
+
+        for (OSInfluence influence : influences) {
+            switch (influence.getInfluenceType()) {
+                case DIRECT:
+                    directSourceBody = setSourceChannelIds(influence, directSourceBody == null ? new OSOutcomeSourceBody() : directSourceBody);
+                    break;
+                case INDIRECT:
+                    indirectSourceBody = setSourceChannelIds(influence, indirectSourceBody == null ? new OSOutcomeSourceBody() : indirectSourceBody);
+                    break;
+                case UNATTRIBUTED:
+                    unattributed = true;
+                    break;
+                case DISABLED:
+                    OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes disabled for channel: " + influence.getInfluenceChannel());
+                    return null;
+            }
+        }
+
+        if (directSourceBody == null && indirectSourceBody == null && !unattributed) {
+            // Disabled for all channels
+            OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes disabled for all channels");
+            return null;
+        }
+
+        return new OSOutcomeSource(directSourceBody, indirectSourceBody);
+    }
+
     private void sendAndCreateOutcomeEvent(@NonNull final String name,
                                            @NonNull final float weight,
                                            @NonNull List<OSInfluence> influences,
@@ -215,6 +251,13 @@ class OSOutcomeEventsController {
         }
 
         OSOutcomeSource source = new OSOutcomeSource(directSourceBody, indirectSourceBody);
+
+        try {
+            if (outcomeEventSourceCallback != null)
+                outcomeEventSourceCallback.onComplete(source.toJSONObject());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
         final OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight);
 

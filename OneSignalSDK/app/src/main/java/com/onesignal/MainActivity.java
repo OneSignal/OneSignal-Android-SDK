@@ -35,6 +35,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,6 +48,8 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -51,7 +58,9 @@ import com.onesignal.example.OneSignalExampleApp;
 import com.onesignal.example.R;
 import com.onesignal.example.iap.IabHelper;
 import com.onesignal.example.iap.IabResult;
+import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -92,6 +101,25 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
    private Button postNotifAsyncButton;
    private CheckBox postNotifGroupCheckBox;
    private CheckBox postNotifAsyncGroupCheckBox;
+
+   // Session and Focus Tracking Debug Fields
+   private TextView sessionFocusTitleTextView;
+   private ProgressBar sessionFocusProgressBar;
+   private LinearLayout sessionFocusLinearLayout;
+   private TextView onSessionForegroundTimeTextView;
+   private TextView onFocusBackgroundTimeTextView;
+
+   // Outcome V2 Debug Fields
+   private TextView outcomeV2TitleTextView;
+   private ProgressBar outcomeV2ProgressBar;
+   private LinearLayout outcomeV2LinearLayout;
+
+   // IAM V2 Debug Fields
+   private TextView iamV2TitleTextView;
+   private ProgressBar iamV2ProgressBar;
+   private LinearLayout iamV2LinearLayout;
+   private EditText iamV2TagEditText;
+   private EditText iamV2OutcomeEditText;
 
    private int sendTagsCounter = 1;
    private boolean addedObservers = false;
@@ -143,6 +171,26 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       this.outcomeValueName = this.findViewById(R.id.outcomeNameValue);
       this.outcomeValue = this.findViewById(R.id.outcomeValue);
       this.outcomeUnique = this.findViewById(R.id.outcomeUniqueName);
+
+      // Session and Focus Tracking Debug Fields
+      this.sessionFocusTitleTextView = this.findViewById(R.id.session_and_focus_text_view);
+      this.sessionFocusProgressBar = this.findViewById(R.id.session_and_focus_progress_bar);
+      this.sessionFocusLinearLayout = this.findViewById(R.id.session_and_focus_test_area_linear_layout);
+      this.onSessionForegroundTimeTextView = this.findViewById(R.id.on_session_foreground_time_value_text_view);
+      this.onFocusBackgroundTimeTextView = this.findViewById(R.id.on_focus_background_time_value_text_view);
+
+      // Outcome V2 Debug Fields
+      this.outcomeV2TitleTextView = this.findViewById(R.id.outcome_v2_text_view);
+      this.outcomeV2ProgressBar = this.findViewById(R.id.outcome_v2_progress_bar);
+      this.outcomeV2LinearLayout = this.findViewById(R.id.outcome_v2_test_area_linear_layout);
+
+      // IAM V2 Debug Fields
+      this.iamV2TitleTextView = this.findViewById(R.id.iam_v2_text_view);
+      this.iamV2ProgressBar = this.findViewById(R.id.iam_v2_progress_bar);
+      this.iamV2LinearLayout = this.findViewById(R.id.iam_v2_test_area_linear_layout);
+      this.iamV2TagEditText = this.findViewById(R.id.iam_v2_tag_edit_text);
+      this.iamV2OutcomeEditText = this.findViewById(R.id.iam_v2_outcome_edit_text);
+
       this.iamHost.setText(OneSignalExampleApp.getOneSignalAppId(this));
 
       if (OneSignal.requiresUserPrivacyConsent()) {
@@ -178,6 +226,10 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       });
 
       setupGroupingNotificationCheckBoxes();
+
+      updateSessionAndFocusData();
+      updateOutcomeData();
+      updateIamData();
    }
 
    private void updateIamhost() {
@@ -515,4 +567,184 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
       });
    }
 
+   /*
+    * ===========================================================================
+    * EVERYTHING BELOW THIS TEMPORARY AND INTENDED FOR TESTING PURPOSES ONLY
+    */
+
+   // Handles the visual representation of foreground time and accumulated foreground time
+   public void updateSessionAndFocusData() {
+      OneSignal.handlerForSessionAndFocusTracking(new OneSignal.Debug.Completion() {
+         @Override
+         public void onComplete(JSONObject data) {
+            // Session and Focus V2
+            sessionFocusTitleTextView.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            sessionFocusProgressBar.setVisibility(View.INVISIBLE);
+            sessionFocusLinearLayout.setVisibility(View.VISIBLE);
+            try {
+               onSessionForegroundTimeTextView.setText(String.valueOf(data.getInt("sum_foreground_time")));
+               onFocusBackgroundTimeTextView.setText(String.valueOf(data.getInt("foreground_time")));
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         }
+      });
+   }
+
+   // Handles the visual representation for outcomes being tracked in the notification channel and iam channel
+   public static boolean directIamSent = false;
+   public void updateOutcomeData() {
+      OneSignal.handlerForOutcomeTracking(new OneSignal.Debug.Completion() {
+         @Override
+         public void onComplete(JSONObject data) {
+            // Outcome V2
+            outcomeV2TitleTextView.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            outcomeV2ProgressBar.setVisibility(View.INVISIBLE);
+            outcomeV2LinearLayout.setVisibility(View.VISIBLE);
+
+            try {
+               JSONArray directNotifIds = new JSONArray();
+               if (data.has("direct_notif_ids"))
+                  directNotifIds = data.getJSONArray("direct_notif_ids");
+
+               JSONArray indirectNotifIds = new JSONArray();
+               if (data.has("indirect_notif_ids"))
+                  indirectNotifIds = data.getJSONArray("indirect_notif_ids");
+
+               addNewStringRecyclerViewWithTitle("Direct Notifs Ids", directNotifIds, outcomeV2LinearLayout);
+               addNewStringRecyclerViewWithTitle("Indirect Notifs Ids", indirectNotifIds, outcomeV2LinearLayout);
+
+               JSONArray directIamIds = new JSONArray();
+               if (data.has("direct_iam_ids"))
+                  directIamIds = data.getJSONArray("direct_iam_ids");
+
+               JSONArray indirectIamIds = new JSONArray();
+               if (data.has("indirect_iam_ids"))
+                  indirectIamIds = data.getJSONArray("indirect_iam_ids");
+
+               addNewStringRecyclerViewWithTitle("Direct Iam Ids", directIamIds, outcomeV2LinearLayout);
+               addNewStringRecyclerViewWithTitle("Indirect Iam Ids", indirectIamIds, outcomeV2LinearLayout);
+
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         }
+      }, new OneSignal.Debug.Completion() {
+         @Override
+         public void onComplete(JSONObject data) {
+            try {
+               JSONArray directIamIds = new JSONArray();
+               if (data.has("direct")) {
+                  JSONObject directSource = data.getJSONObject("direct");
+                  if (directSource.has("in_app_message_ids"))
+                     directIamIds = directSource.getJSONArray("in_app_message_ids");
+
+               }
+
+               JSONArray indirectIamIds = new JSONArray();
+               if (!data.has("direct") && data.has("indirect")) {
+                  JSONObject indirectSource = data.getJSONObject("indirect");
+                  if (indirectSource.has("in_app_message_ids"))
+                     indirectIamIds = indirectSource.getJSONArray("in_app_message_ids");
+               }
+
+               addNewStringRecyclerViewWithTitle("Direct Iam Ids", directIamIds, outcomeV2LinearLayout);
+               addNewStringRecyclerViewWithTitle("Indirect Iam Ids", indirectIamIds, outcomeV2LinearLayout);
+
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         }
+      });
+   }
+
+   // Handles the hijacking of the IAM data and this method being called signifies that IAM data
+   // has now been successfully pulled down or from cache
+   // A new session (30+ secs in background) will pull latest IAMs down and reentering the app by
+   // force quitting and reopening it will use the cached IAMs form most recent new session
+   public void onAttachIamV2Data(View v) {
+      OneSignal.iamV2Tag = iamV2TagEditText.getText().toString().trim();
+      OneSignal.iamV2Outcome = iamV2OutcomeEditText.getText().toString().trim();
+
+      OneSignal.pauseInAppMessages(false);
+
+      if (OneSignal.iamV2Tag == null)
+         OneSignal.iamV2Tag = "";
+      if (OneSignal.iamV2Outcome == null)
+         OneSignal.iamV2Outcome = "";
+
+      OneSignal.Debug.receiveInAppMessages();
+   }
+
+   private void addNewStringRecyclerViewWithTitle(String title, final JSONArray ids, LinearLayout parent) {
+      boolean isNew = parent.findViewWithTag(title) == null;
+
+      View view = this.getLayoutInflater().inflate(R.layout.string_recycler_view_layout, null, false);
+      if (!isNew)
+         view = parent.findViewWithTag(title);
+
+      view.setTag(title);
+
+      TextView titleTextView = view.findViewById(R.id.string_recycler_view_title_text_view);
+      final RecyclerView recyclerView = view.findViewById(R.id.string_recycler_view_recycler_view);
+
+      // Setup titleTextView layout
+      String titleText = title + ": " + ids.length();
+      titleTextView.setText(titleText);
+
+      if (isNew || recyclerView.getAdapter() == null) {
+         // Setup recyclerView layout only in event that this is new
+         buildRecyclerViewClasses(recyclerView, ids);
+         parent.addView(view);
+      } else {
+         if (recyclerView.getAdapter() != null) {
+            final View finalView = view;
+            runOnUiThread(new Runnable() {
+               @Override
+               public void run() {
+                  ((StringRecyclerViewAdapter) recyclerView.getAdapter()).setIds(ids);
+                  int vis = ids.length() == 0 ? View.GONE : View.VISIBLE;
+                  finalView.setVisibility(vis);
+               }
+            });
+         }
+      }
+   }
+
+   private void buildRecyclerViewClasses(RecyclerView recyclerView, JSONArray ids) {
+      DefaultItemAnimator defaultItemAnimator = new DefaultItemAnimator();
+
+      int orientation = true ? DividerItemDecoration.VERTICAL : DividerItemDecoration.HORIZONTAL;
+      DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(this, orientation);
+
+      int divider = false ? R.drawable.divider : R.drawable.no_divider;
+      dividerItemDecoration.setDrawable(getResources().getDrawable(divider));
+
+      recyclerView.setItemAnimator(defaultItemAnimator);
+      recyclerView.addItemDecoration(dividerItemDecoration);
+      recyclerView.setHasFixedSize(false);
+
+      LinearLayoutManager layoutManager = new LinearLayoutManager(this, orientation, false);
+      recyclerView.setLayoutManager(layoutManager);
+
+      StringRecyclerViewAdapter adapter = new StringRecyclerViewAdapter(this, ids);
+      recyclerView.setAdapter(adapter);
+   }
+
+   public void updateIamData() {
+      OneSignal.handlerForIamTracking(new OneSignal.Debug.Completion() {
+         @Override
+         public void onComplete(JSONObject data) {
+            // IAM V2
+            iamV2TitleTextView.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            iamV2ProgressBar.setVisibility(View.INVISIBLE);
+            iamV2LinearLayout.setVisibility(View.VISIBLE);
+         }
+      });
+   }
+
+   /*
+    * DON'T PLACE ANYTHING UNDER HERE, THIS IS END OF TEMP DEBUG TESTING CODE
+    * ===========================================================================
+    */
 }

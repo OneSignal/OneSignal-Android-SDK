@@ -40,6 +40,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
@@ -50,6 +51,7 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.model.OSOutcomeSource;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -85,6 +87,147 @@ import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION
  * @see <a href="https://documentation.onesignal.com/docs/android-sdk-setup#section-1-gradle-setup">OneSignal Gradle Setup</a>
  */
 public class OneSignal {
+
+   /**
+    * EVERYTHING BELOW IS TEMPORARY AND ONLY BEING USED FOR HACKY VISUAL TESTING
+    * Hacky refers to making things that aren't usually intended for the control and access being provided
+    * TODO: Never commit or merge this branch into anything
+    */
+   public static String iamV2Tag = "";
+   public static String iamV2Outcome = "";
+
+   static boolean iamDataCached = false;
+
+   public static class Debug {
+
+      public interface Completion {
+         void onComplete(JSONObject data);
+      }
+
+      static long getForegroundSessionTimeInSecs() {
+         FocusTimeController focusTimeController = FocusTimeController.getInstance();
+
+         if (sessionManager != null)
+            return focusTimeController.focusTimeProcessors.get(1).getUnsentActiveTime();
+
+
+         return focusTimeController.focusTimeProcessors.get(0).getUnsentActiveTime();
+      }
+
+      static long getBackgroundSessionTimeInSecs() {
+         FocusTimeController focusTimeController = FocusTimeController.getInstance();
+
+         if (focusTimeController.getTimeFocusedElapsed() == null)
+            return 0;
+
+         return focusTimeController.getTimeFocusedElapsed();
+      }
+
+      static JSONObject getOutcomeNotificationTracking() {
+         JSONObject jsonObject = new JSONObject();
+
+         try {
+            if (outcomeEventsController != null) {
+               OSOutcomeSource source = outcomeEventsController.createOutcomeEvent(sessionManager.getInfluences());
+
+               jsonObject.put("direct_notif_ids", new JSONArray());
+               jsonObject.put("indirect_notif_ids", new JSONArray());
+               jsonObject.put("direct_iam_ids", new JSONArray());
+               jsonObject.put("indirect_iam_ids", new JSONArray());
+
+               if (source != null) {
+                  if (source.getDirectBody() != null && source.getDirectBody().getNotificationIds() != null && source.getDirectBody().getNotificationIds().length() > 0)
+                     jsonObject.put("direct_notif_ids", source.getDirectBody().getNotificationIds());
+
+                  if (source.getIndirectBody() != null && source.getIndirectBody().getNotificationIds() != null && source.getIndirectBody().getNotificationIds().length() > 0)
+                     jsonObject.put("indirect_notif_ids", source.getIndirectBody().getNotificationIds());
+
+                  if (source.getDirectBody() != null && source.getDirectBody().getInAppMessagesIds() != null && source.getDirectBody().getInAppMessagesIds().length() > 0)
+                     jsonObject.put("direct_iam_ids", source.getDirectBody().getInAppMessagesIds());
+
+                  if (source.getIndirectBody() != null && source.getIndirectBody().getInAppMessagesIds() != null && source.getIndirectBody().getInAppMessagesIds().length() > 0)
+                     jsonObject.put("indirect_iam_ids", source.getIndirectBody().getInAppMessagesIds());
+
+               }
+            }
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+
+         return jsonObject;
+      }
+
+      public static void receiveInAppMessages() {
+         try {
+            JSONArray jsonArray = new JSONArray(OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                    OneSignalPrefs.PREFS_OS_CACHED_IAMS,
+                    null));
+
+            if (!iamDataCached || jsonArray == null || jsonArray.length() == 0)
+               return;
+
+            OneSignal.pauseInAppMessages(false);
+            OSInAppMessageController.getController().receivedInAppMessageJson(jsonArray);
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+      }
+
+   }
+
+   static Handler sessionFocusDebugHandler = new Handler();
+   public static void handlerForSessionAndFocusTracking(final Debug.Completion completion) {
+      sessionFocusDebugHandler.postDelayed(new Runnable() {
+         @Override
+         public void run() {
+            try {
+               completion.onComplete(new JSONObject()
+                       .put("sum_foreground_time", Debug.getForegroundSessionTimeInSecs())
+                       .put("foreground_time", Debug.getBackgroundSessionTimeInSecs())
+               );
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+
+            sessionFocusDebugHandler.postDelayed(this, 1000);
+         }
+      }, 1000);
+   }
+
+   static Handler outcomeDebugHandler = new Handler();
+   public static void handlerForOutcomeTracking(final Debug.Completion completion, final Debug.Completion completion2) {
+      outcomeDebugHandler.postDelayed(new Runnable() {
+         @Override
+         public void run() {
+            completion.onComplete(Debug.getOutcomeNotificationTracking());
+            outcomeDebugHandler.postDelayed(this, 1000);
+         }
+      }, 1000);
+
+      if (outcomeEventsController != null) {
+         outcomeEventsController.outcomeEventSourceCallback = completion2;
+      }
+   }
+
+   static Handler iamDebugHandler = new Handler();
+   public static void handlerForIamTracking(final Debug.Completion completion) {
+      iamDebugHandler.postDelayed(new Runnable() {
+         @Override
+         public void run() {
+            if (iamDataCached) {
+               completion.onComplete(null);
+               iamDebugHandler.removeCallbacks(null);
+            }
+            iamDebugHandler.postDelayed(this, 1000);
+         }
+      }, 1000);
+   }
+
+   /**
+    * TEMPORARY TESTING CODE ENDS HERE
+    * TODO: Never commit or merge this branch into anything
+    */
+
 
    public enum LOG_LEVEL {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE

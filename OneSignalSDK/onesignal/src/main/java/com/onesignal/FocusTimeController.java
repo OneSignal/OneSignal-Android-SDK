@@ -30,7 +30,7 @@ class FocusTimeController {
 
    private static FocusTimeController sInstance;
 
-   private List<FocusTimeProcessorBase> focusTimeProcessors =
+   List<FocusTimeProcessorBase> focusTimeProcessors =
       Arrays.asList(new FocusTimeProcessorUnattributed(), new FocusTimeProcessorAttributed());
 
    private enum FocusEventType {
@@ -85,7 +85,7 @@ class FocusTimeController {
 
    // Get time past since app was put into focus.
    // Will be null if time is invalid or 0
-   private @Nullable Long getTimeFocusedElapsed() {
+   @Nullable Long getTimeFocusedElapsed() {
       // timeFocusedAtMs is cleared when the app goes into the background so we don't have a focus time
       if (timeFocusedAtMs == null)
          return null;
@@ -191,7 +191,7 @@ class FocusTimeController {
       }
    }
 
-   private static abstract class FocusTimeProcessorBase {
+   static abstract class FocusTimeProcessorBase {
 
       // These values are set by child classes that inherit this base class
       protected long MIN_ON_FOCUS_TIME_SEC;
@@ -203,7 +203,7 @@ class FocusTimeController {
 
       @Nullable private Long unsentActiveTime = null;
 
-      private long getUnsentActiveTime() {
+      long getUnsentActiveTime() {
          if (unsentActiveTime == null) {
             unsentActiveTime = OneSignalPrefs.getLong(
                OneSignalPrefs.PREFS_ONESIGNAL,

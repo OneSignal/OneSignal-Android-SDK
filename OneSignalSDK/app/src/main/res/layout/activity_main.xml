@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:scrollbarStyle="outsideOverlay"
+    android:background="@android:color/white"
     tools:context="com.onesignal.MainActivity">
 
     <LinearLayout
@@ -12,6 +13,8 @@
         android:paddingTop="@dimen/activity_vertical_margin"
         android:paddingRight="@dimen/activity_horizontal_margin"
         android:paddingBottom="@dimen/activity_vertical_margin"
+        android:clipToPadding="false"
+        android:clipChildren="false"
         android:orientation="vertical">
 
         <EditText
@@ -277,6 +280,224 @@
             android:id="@+id/debugTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+
+
+        <!-- Session and Focus Test Area -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/session_and_focus_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Session and Focus Data:"
+                android:textColor="@android:color/holo_red_dark"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginRight="8dp"/>
+
+            <ProgressBar
+                android:id="@+id/session_and_focus_progress_bar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="@android:color/holo_red_dark"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/session_and_focus_test_area_linear_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:orientation="horizontal"
+                android:weightSum="1">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:orientation="vertical"
+                    android:layout_weight="0.49">
+
+                    <TextView
+                        android:id="@+id/on_session_foreground_time_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_gravity="center"
+                        android:layout_marginBottom="4dp"
+                        android:text="Accumulated Time\nin Foreground:"
+                        android:textColor="@android:color/black"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:textAlignment="center" />
+
+                    <TextView
+                        android:id="@+id/on_session_foreground_time_value_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_gravity="center"
+                        android:textColor="@android:color/black"
+                        android:textSize="14sp"
+                        android:textAlignment="center" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="0.5dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:alpha="0.7"
+                    android:background="@android:color/black"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:orientation="vertical"
+                    android:layout_weight="0.59">
+
+                    <TextView
+                        android:id="@+id/on_focus_background_time_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_gravity="center"
+                        android:layout_marginBottom="4dp"
+                        android:text="Time in\nForeground:"
+                        android:textColor="@android:color/black"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:textAlignment="center" />
+
+                    <TextView
+                        android:id="@+id/on_focus_background_time_value_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_gravity="center"
+                        android:textColor="@android:color/black"
+                        android:textSize="14sp"
+                        android:textAlignment="center" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+        <!-- Outcome V2 Test Area -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/outcome_v2_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Outcome V2 Bug Bash"
+                android:textColor="@android:color/holo_red_dark"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginRight="8dp"/>
+
+            <ProgressBar
+                android:id="@+id/outcome_v2_progress_bar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="@android:color/holo_red_dark"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/outcome_v2_test_area_linear_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:clipChildren="false"
+            android:visibility="gone"
+            android:orientation="vertical">
+
+        </LinearLayout>
+
+        <!-- IAM V2 Test Area -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/iam_v2_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="IAM V2 Bug Bash"
+                android:textColor="@android:color/holo_red_dark"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginRight="8dp"/>
+
+            <ProgressBar
+                android:id="@+id/iam_v2_progress_bar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="@android:color/holo_red_dark"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/iam_v2_test_area_linear_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:orientation="vertical">
+
+            <EditText
+                android:id="@+id/iam_v2_tag_edit_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Tag"/>
+
+            <EditText
+                android:id="@+id/iam_v2_outcome_edit_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Outcome"/>
+
+            <Button
+                android:id="@+id/iam_v2_attach_data_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Attach Iam Data to Next Preview"
+                android:onClick="onAttachIamV2Data"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
