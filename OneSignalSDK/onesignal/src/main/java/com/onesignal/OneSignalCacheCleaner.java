@@ -123,7 +123,8 @@ class OneSignalCacheCleaner {
                         whereArgs);
 
                 // 3. Use queried data to clean SharedPreferences
-                cleanCachedSharedPreferenceIamData(oldMessageIds, oldClickedClickIds);
+                cleanInAppMessageIds(oldMessageIds);
+                cleanInAppMessageClickedClickIds(oldClickedClickIds);
             }
 
         }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
@@ -167,14 +168,15 @@ class OneSignalCacheCleaner {
     }
 
     /**
-     * Deletes old IAM SharedPreference dismissed and impressioned message ids as well as clicked click ids
+     * Clean up 6 month old IAM ids in {@link android.content.SharedPreferences}:
+     *  1. Dismissed message ids
+     *  2. Impressioned message ids
      * <br/><br/>
      * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)}
      * <br/><br/>
      * @see OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)
      */
-    private static void cleanCachedSharedPreferenceIamData(Set<String> oldMessageIds, Set<String> oldClickedClickIds) {
-        // IAMs without redisplay on with pile up and we need to clean these for dismissing, impressions, and clicks
+    private static void cleanInAppMessageIds(Set<String> oldMessageIds) {
         if (oldMessageIds != null && oldMessageIds.size() > 0) {
             Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
                     OneSignalPrefs.PREFS_ONESIGNAL,
@@ -202,7 +204,17 @@ class OneSignalCacheCleaner {
                         impressionedMessages);
             }
         }
+    }
 
+    /**
+     * Clean up 6 month old IAM clicked click ids in {@link android.content.SharedPreferences}:
+     *  1. Clicked click ids from elements within IAM
+     * <br/><br/>
+     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)}
+     * <br/><br/>
+     * @see OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)
+     */
+    private static void cleanInAppMessageClickedClickIds(Set<String> oldClickedClickIds) {
         if (oldClickedClickIds != null && oldClickedClickIds.size() > 0) {
             Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
                     OneSignalPrefs.PREFS_ONESIGNAL,
