@@ -5,7 +5,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.onesignal.InAppMessagingHelpers;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotificationTable;
@@ -78,7 +77,7 @@ public class DatabaseRunner {
    public void shouldUpgradeDbFromV2ToV3() {
       // 1. Init DB as version 2 and add one notification record
       ShadowOneSignalDbHelper.DATABASE_VERSION = 2;
-      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
       writableDatabase.beginTransaction();
       ContentValues values = new ContentValues();
       values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, 1);
@@ -103,7 +102,7 @@ public class DatabaseRunner {
    public void shouldUpgradeDbFromV3ToV4() throws Exception {
       // 1. Init DB as version 3
       ShadowOneSignalDbHelper.DATABASE_VERSION = 3;
-      SQLiteDatabase readableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getReadableDatabase();
+      SQLiteDatabase readableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
 
       Cursor cursor = readableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + OutcomeEventsTable.TABLE_NAME + "'", null);
 
@@ -134,7 +133,7 @@ public class DatabaseRunner {
 
       assertEquals(events.size(), 0);
 
-      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
       // 5. Table now must exist
       writableDatabase.insert(OutcomeEventsTable.TABLE_NAME, null, values);
       writableDatabase.close();
@@ -159,7 +158,7 @@ public class DatabaseRunner {
    public void shouldUpgradeDbFromV4ToV5() {
       // 1. Init DB as version 4
       ShadowOneSignalDbHelper.DATABASE_VERSION = 4;
-      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
       writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
 
       Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + CachedUniqueOutcomeNotificationTable.TABLE_NAME + "'", null);
@@ -188,7 +187,7 @@ public class DatabaseRunner {
 
       assertEquals(notifications.size(), 0);
 
-      writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
       // 5. Table now must exist
       writableDatabase.insert(CachedUniqueOutcomeNotificationTable.TABLE_NAME, null, values);
       writableDatabase.close();
@@ -202,7 +201,7 @@ public class DatabaseRunner {
    public void shouldUpgradeDbFromV5ToV6() {
       // 1. Init outcome table as version 5
       ShadowOneSignalDbHelper.DATABASE_VERSION = 5;
-      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
 
       // Create table with the schema we had in DB v4
       writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
@@ -216,7 +215,7 @@ public class DatabaseRunner {
 
       // 2. restSetStaticFields so the db reloads and upgrade is done to version 6
       ShadowOneSignalDbHelper.restSetStaticFields();
-      writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
 
       // 3. Ensure the upgrade kept our existing record
       Cursor cursor = writableDatabase.query(
@@ -249,7 +248,7 @@ public class DatabaseRunner {
    public void shouldUpgradeDbFromV6ToV7() throws JSONException {
       // 1. Init DB as version 6
       ShadowOneSignalDbHelper.DATABASE_VERSION = 6;
-      SQLiteDatabase writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
       writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
 
       Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + InAppMessageTable.TABLE_NAME + "'", null);
@@ -275,8 +274,8 @@ public class DatabaseRunner {
       
       ContentValues values = new ContentValues();
       values.put(InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
-      values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getDisplayStats().getDisplayQuantity());
-      values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getDisplayStats().getLastDisplayTime());
+      values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
+      values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getRedisplayStats().getLastDisplayTime());
       values.put(InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
       values.put(InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
@@ -289,7 +288,7 @@ public class DatabaseRunner {
 
       assertEquals(savedInAppMessages.size(), 0);
 
-      writableDatabase = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDatabase = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(RuntimeEnvironment.application);
       // 5. Table now must exist
       writableDatabase.insert(InAppMessageTable.TABLE_NAME, null, values);
       writableDatabase.close();
@@ -298,8 +297,8 @@ public class DatabaseRunner {
 
       assertEquals(savedInAppMessagesAfterCreation.size(), 1);
       OSTestInAppMessage savedInAppMessage = savedInAppMessagesAfterCreation.get(0);
-      assertEquals(savedInAppMessage.getDisplayStats().getDisplayQuantity(), inAppMessage.getDisplayStats().getDisplayQuantity());
-      assertEquals(savedInAppMessage.getDisplayStats().getLastDisplayTime(), inAppMessage.getDisplayStats().getLastDisplayTime());
+      assertEquals(savedInAppMessage.getRedisplayStats().getDisplayQuantity(), inAppMessage.getRedisplayStats().getDisplayQuantity());
+      assertEquals(savedInAppMessage.getRedisplayStats().getLastDisplayTime(), inAppMessage.getRedisplayStats().getLastDisplayTime());
       assertEquals(savedInAppMessage.getClickedClickIds().toString(), inAppMessage.getClickedClickIds().toString());
       assertEquals(savedInAppMessage.isDisplayedInSession(), inAppMessage.isDisplayedInSession());
    }

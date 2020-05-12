@@ -34,6 +34,7 @@ import com.onesignal.MockOutcomesUtils;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDbHelper;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSSessionManager;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOSUtils;
@@ -118,7 +119,7 @@ public class OutcomeEventUnitTests {
 
     @After
     public void tearDown() throws Exception {
-        dbHelper.cleanOutcomeDatabase();
+        OneSignalPackagePrivateHelper.OneSignal_cleanOutcomeDatabaseTable(RuntimeEnvironment.application);
         dbHelper.close();
         notificationData.clearNotificationSharedPreferences();
         sessionManager.resetMock();

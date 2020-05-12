@@ -54,7 +54,10 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -442,6 +445,17 @@ class OSUtils {
    // Creates a new Set<T> that supports reads and writes from more than one thread at a time
    static <T> Set<T> newConcurrentSet() {
       return Collections.newSetFromMap(new ConcurrentHashMap<T, Boolean>());
+   }
+
+   // Creates a new Set<String> from a Set String by converting and iterating a JSONArray
+   static Set<String> newStringSetFromJSONArray(JSONArray jsonArray) throws JSONException {
+      Set<String> stringSet = new HashSet<>();
+
+      for (int i = 0; i < jsonArray.length(); i++) {
+         stringSet.add(jsonArray.getString(i));
+      }
+
+      return stringSet;
    }
 
    static boolean hasConfigChangeFlag(Activity activity, int configChangeFlag) {

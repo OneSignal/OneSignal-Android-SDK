@@ -2588,7 +2588,7 @@ public class OneSignal {
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             Cursor cursor = null;
             try {
-               SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+               SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
                String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
 
@@ -2614,7 +2614,7 @@ public class OneSignal {
                // Mark all notifications as dismissed unless they were already opened.
                SQLiteDatabase writableDb = null;
                try {
-                  writableDb = dbHelper.getWritableDbWithRetries();
+                  writableDb = dbHelper.getSQLiteDatabaseWithRetries();
                   writableDb.beginTransaction();
 
                   String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
@@ -2668,7 +2668,7 @@ public class OneSignal {
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             SQLiteDatabase writableDb = null;
             try {
-               writableDb = dbHelper.getWritableDbWithRetries();
+               writableDb = dbHelper.getSQLiteDatabaseWithRetries();
                writableDb.beginTransaction();
 
                String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
@@ -2730,7 +2730,7 @@ public class OneSignal {
             Cursor cursor = null;
 
             try {
-               SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+               SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
                String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID };
 
@@ -2762,7 +2762,7 @@ public class OneSignal {
 
             SQLiteDatabase writableDb = null;
             try {
-               writableDb = dbHelper.getWritableDbWithRetries();
+               writableDb = dbHelper.getSQLiteDatabaseWithRetries();
                writableDb.beginTransaction();
 
                String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
@@ -3041,7 +3041,7 @@ public class OneSignal {
       Cursor cursor = null;
 
       try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
          String[] retColumn = {NotificationTable.COLUMN_NAME_NOTIFICATION_ID};
          String[] whereArgs = {id};

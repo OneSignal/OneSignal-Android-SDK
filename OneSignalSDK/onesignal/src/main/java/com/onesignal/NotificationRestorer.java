@@ -137,7 +137,7 @@ class NotificationRestorer {
 
       Cursor cursor = null;
       try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
          cursor = readableDb.query(
             NotificationTable.TABLE_NAME,
             COLUMNS_FOR_RESTORE,

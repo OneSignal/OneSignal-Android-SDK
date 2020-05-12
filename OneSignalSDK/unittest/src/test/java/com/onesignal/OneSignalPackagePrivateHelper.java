@@ -16,7 +16,6 @@ import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +29,7 @@ public class OneSignalPackagePrivateHelper {
       abstract void run(T object) throws Exception;
    }
 
-   static private void processNetworkHandles(RunnableArg runnable) throws Exception {
+   private static void processNetworkHandles(RunnableArg runnable) throws Exception {
       Set<Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread>> entrySet;
 
       entrySet = OneSignalStateSynchronizer.getPushStateSynchronizer().networkHandlerThreads.entrySet();
@@ -226,7 +225,7 @@ public class OneSignalPackagePrivateHelper {
       NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
    }
 
-   public class OneSignalPrefs extends com.onesignal.OneSignalPrefs {}
+   public class TestOneSignalPrefs extends com.onesignal.OneSignalPrefs {}
 
    public static void OneSignal_onAppLostFocus() {
       OneSignal.onAppLostFocus();
@@ -248,7 +247,7 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.appId = appId;
    }
 
-   static public class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
+   public static class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
 
       public RemoteOutcomeParams() {
          this(true, true, true);
@@ -261,13 +260,22 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   static public class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
+   public static SQLiteDatabase OneSignal_getSQLiteDatabase(Context context) {
+      return OneSignalDbHelper.getInstance(context).getSQLiteDatabase();
+   }
+
+   public static void OneSignal_cleanOutcomeDatabaseTable(Context context) {
+      OneSignalDbHelper.cleanOutcomeDatabaseTable(
+              OneSignal_getSQLiteDatabase(context));
+   }
+
+   public static class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
       public static void update(SQLiteDatabase readableDb, Context context) {
          com.onesignal.BadgeCountUpdater.update(readableDb, context);
       }
    }
 
-   static public class NotificationLimitManager extends com.onesignal.NotificationLimitManager {
+   public static class NotificationLimitManager extends com.onesignal.NotificationLimitManager {
       public static void clearOldestOverLimitFallback(Context context, int notifsToMakeRoomFor) {
          com.onesignal.NotificationLimitManager.clearOldestOverLimitFallback(context, notifsToMakeRoomFor);
       }
@@ -284,7 +292,7 @@ public class OneSignalPackagePrivateHelper {
    public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
 
       public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
-         super(messageId, clickIds, displayed, new OSInAppMessageDisplayStats(displaysQuantity, lastDisplayTime));
+         super(messageId, clickIds, displayed, new OSInAppMessageRedisplayStats(displaysQuantity, lastDisplayTime));
       }
 
       OSTestInAppMessage(JSONObject json) throws JSONException {
@@ -348,8 +356,13 @@ public class OneSignalPackagePrivateHelper {
       }
 
       @Override
-      public OSTestInAppMessageDisplayStats getDisplayStats() {
-         return new OSTestInAppMessageDisplayStats(super.getDisplayStats());
+      public OSTestInAppMessageDisplayStats getRedisplayStats() {
+         return new OSTestInAppMessageDisplayStats(super.getRedisplayStats());
+      }
+
+      @Override
+      public void setRedisplayStats(int displayQuantity, long lastDisplayTime) {
+         super.setRedisplayStats(displayQuantity, lastDisplayTime);
       }
 
       public JSONObject toJSONObject() {
@@ -357,16 +370,16 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   public static class OSTestInAppMessageDisplayStats extends com.onesignal.OSInAppMessageDisplayStats {
+   public static class OSTestInAppMessageDisplayStats extends OSInAppMessageRedisplayStats {
 
-      private OSInAppMessageDisplayStats displayStats;
+      private OSInAppMessageRedisplayStats displayStats;
 
-      OSTestInAppMessageDisplayStats(OSInAppMessageDisplayStats displayStats) {
+      OSTestInAppMessageDisplayStats(OSInAppMessageRedisplayStats displayStats) {
          this.displayStats = displayStats;
       }
 
       @Override
-      public void setDisplayStats(OSInAppMessageDisplayStats displayStats) {
+      public void setDisplayStats(OSInAppMessageRedisplayStats displayStats) {
          this.displayStats.setDisplayStats(displayStats);
       }
 
@@ -485,7 +498,7 @@ public class OneSignalPackagePrivateHelper {
       for (OSInAppMessage message : messages) {
          try {
             OSTestInAppMessage testInAppMessage = new OSTestInAppMessage(message);
-            testInAppMessage.getDisplayStats().setDisplayStats(message.getDisplayStats());
+            testInAppMessage.getRedisplayStats().setDisplayStats(message.getRedisplayStats());
             testMessages.add(testInAppMessage);
 
          } catch (JSONException e) {

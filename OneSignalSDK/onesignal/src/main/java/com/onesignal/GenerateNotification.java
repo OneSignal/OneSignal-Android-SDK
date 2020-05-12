@@ -42,7 +42,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.R.drawable;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
@@ -529,7 +528,7 @@ class GenerateNotification {
       Cursor cursor = null;
       
       try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
    
          String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
              NotificationTable.COLUMN_NAME_FULL_DATA,
@@ -772,7 +771,7 @@ class GenerateNotification {
       // Save the group summary notification id so it can be updated later.
       SQLiteDatabase writableDb = null;
       try {
-         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb = dbHelper.getSQLiteDatabaseWithRetries();
          writableDb.beginTransaction();
       
          ContentValues values = new ContentValues();
