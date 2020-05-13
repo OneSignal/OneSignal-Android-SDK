@@ -624,7 +624,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         inAppMessageShowing = true;
 
         String htmlPath = htmlPathForMessage(message);
-        OneSignalRestClient.getSync(htmlPath, new ResponseHandler() {
+        OneSignalRestClient.get(htmlPath, new ResponseHandler() {
             @Override
             void onFailure(int statusCode, String response, Throwable throwable) {
                 inAppMessageShowing = false;
