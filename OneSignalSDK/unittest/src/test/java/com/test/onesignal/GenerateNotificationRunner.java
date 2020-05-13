@@ -57,6 +57,7 @@ import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
@@ -1182,16 +1183,16 @@ public class GenerateNotificationRunner {
    }
 
    
-   private OSNotification lastNotificationReceived;
+   private OSNotificationGenerationJob lastNotificationReceived;
    @Test
    public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {
       OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotification notification) {
-            lastNotificationReceived = notification;
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastNotificationReceived = notifJob.getNotifJob();
          }
       });
       threadAndTaskWait();
