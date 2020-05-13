@@ -3,6 +3,7 @@ package com.onesignal.sdktest.application;
 import android.app.Application;
 import android.util.Log;
 
+import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -26,6 +27,16 @@ public class MainApplication extends Application {
         }
         OneSignal.setAppId(appId);
         OneSignal.setAppContext(this);
+
+        OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+            @Override
+            public void notificationWillShowInForeground(AppNotificationGenerationJob notifJob) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "App notificationWillShowInForeground fired!!!!");
+
+                notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+                notifJob.complete();
+            }
+        });
 
         OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);

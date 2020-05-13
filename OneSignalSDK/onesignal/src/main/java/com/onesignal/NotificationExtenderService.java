@@ -70,6 +70,9 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
    static final int EXTENDER_SERVICE_JOB_ID = 2071862121;
 
+   // The extension service app AndroidManifest.xml meta data tag key name
+   private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationExtensionServiceClass";
+
    public static class OverrideSettings {
       public NotificationCompat.Extender extender;
       public Integer androidNotificationId;
@@ -94,6 +97,11 @@ public abstract class NotificationExtenderService extends JobIntentService {
    private Long restoreTimestamp;
    private OverrideSettings currentBaseOverrideSettings = null;
 
+   static void showNotification(final OSNotificationGenerationJob notifJob) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Attempting to show notification with notifJob payload:\n" + notifJob.toString());
+      GenerateNotification.fromJsonPayload(notifJob);
+   }
+
    // Developer may call to override some notification settings.
    // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
    protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
@@ -104,7 +112,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
       overrideSettings.override(currentBaseOverrideSettings);
       osNotificationDisplayedResult = new OSNotificationDisplayedResult();
 
-      NotificationGenerationJob notifJob = createNotifJobFromCurrent();
+      OSNotificationGenerationJob notifJob = createNotifJobFromCurrent();
       notifJob.overrideSettings = overrideSettings;
 
       osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
@@ -185,13 +193,13 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
          if (!display) {
             if (!restoring) {
-               NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+               OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(this);
                notifJob.jsonPayload = currentJsonPayload;
                notifJob.overrideSettings = new OverrideSettings();
                notifJob.overrideSettings.androidNotificationId = -1;
 
                NotificationBundleProcessor.processNotification(notifJob, true);
-               OneSignal.handleNotificationReceived(NotificationBundleProcessor.newJsonArray(currentJsonPayload), false);
+               OneSignal.handleNotificationReceived(notifJob, false);
             }
             // If are are not displaying a restored notification make sure we mark it as dismissed
             //   This will prevent it from being restored again.
@@ -220,13 +228,55 @@ public abstract class NotificationExtenderService extends JobIntentService {
       return intent;
    }
 
-   private NotificationGenerationJob createNotifJobFromCurrent() {
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(this);
+   private OSNotificationGenerationJob createNotifJobFromCurrent() {
+      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(this);
       notifJob.isRestoring = currentlyRestoring;
       notifJob.jsonPayload = currentJsonPayload;
       notifJob.shownTimeStamp = restoreTimestamp;
       notifJob.overrideSettings = currentBaseOverrideSettings;
 
       return notifJob;
+   }
+
+   /**
+    * In addition to using the setters to set all of the handlers you can also create your own implementation
+    *  within a separate class and give your AndroidManifest.xml a special meta data tag
+    * The meta data tag looks like this:
+    *  <meta-data android:name="com.onesignal.NotificationExtensionServiceClass" android:value="com.company.ExtensionService" />
+    * <br/><br/>
+    * In the case of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} and the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
+    *  there are also setters for these handlers. So why create this new class and implement
+    *  the same handlers, won't they just overwrite each other?
+    * No, the idea here is to keep track of two separate handlers and keep them both
+    *  100% optional. The extension handlers are set using the class implementations and the app
+    *  handlers set through the setter methods.
+    * The extension handlers will always be called first and then bubble to the app handlers
+    * <br/><br/>
+    * @see OneSignal.ExtNotificationWillShowInForegroundHandler
+    */
+   static void setupNotificationExtensionServiceClass() {
+      String className = OSUtils.getManifestMeta(OneSignal.appContext, EXTENSION_SERVICE_META_DATA_TAG_NAME);
+
+      // No meta data containing extension service class name
+      if (className == null) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "No class found, not setting up OSNotificationExtensionService");
+         return;
+      }
+
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Found class: " + className + ", attempting to call constructor");
+      // Pass an instance of the given class to set any overridden handlers
+      try {
+         Class<?> clazz = Class.forName(className);
+         Object clazzInstance = clazz.newInstance();
+         if (clazzInstance instanceof OneSignal.ExtNotificationWillShowInForegroundHandler) {
+            OneSignal.setExtNotificationWillShowInForegroundHandler((OneSignal.ExtNotificationWillShowInForegroundHandler) clazzInstance);
+         }
+      } catch (IllegalAccessException e) {
+         e.printStackTrace();
+      } catch (InstantiationException e) {
+         e.printStackTrace();
+      } catch (ClassNotFoundException e) {
+         e.printStackTrace();
+      }
    }
 }

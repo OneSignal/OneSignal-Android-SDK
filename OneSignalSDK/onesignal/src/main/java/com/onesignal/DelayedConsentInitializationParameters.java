@@ -28,8 +28,6 @@ package com.onesignal;
  */
 
 import android.content.Context;
-import com.onesignal.OneSignal.NotificationOpenedHandler;
-import com.onesignal.OneSignal.NotificationWillShowInForegroundHandler;
 
 class DelayedConsentInitializationParameters {
 

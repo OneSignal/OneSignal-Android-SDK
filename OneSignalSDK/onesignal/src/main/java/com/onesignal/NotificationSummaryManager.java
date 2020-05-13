@@ -109,7 +109,7 @@ class NotificationSummaryManager {
          if (androidNotifId == null)
             return cursor;
          
-         NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+         OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
          notifJob.isRestoring = true;
          notifJob.shownTimeStamp = datetime;
       
