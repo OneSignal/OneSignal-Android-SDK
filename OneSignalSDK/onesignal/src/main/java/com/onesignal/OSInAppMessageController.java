@@ -527,16 +527,24 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * Called after an In-App message is closed and it's dismiss animation has completed
      */
     void messageWasDismissed(@NonNull OSInAppMessage message) {
+        messageWasDismissed(message, false);
+    }
+
+    void messageWasDismissed(@NonNull OSInAppMessage message, boolean failed) {
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
-            OneSignalPrefs.saveStringSet(
-                    OneSignalPrefs.PREFS_ONESIGNAL,
-                    OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                    dismissedMessages);
+            // If failed we will retry on next session
+            if (!failed) {
+                OneSignalPrefs.saveStringSet(
+                        OneSignalPrefs.PREFS_ONESIGNAL,
+                        OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                        dismissedMessages);
 
-            // Don't keep track of last displayed time for a preview
-            lastTimeInAppDismissed = new Date();
-            persistInAppMessage(message);
+                // Don't keep track of last displayed time for a preview
+                lastTimeInAppDismissed = new Date();
+                // Only increase IAM display quantity if IAM was truly displayed
+                persistInAppMessage(message);
+            }
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed dismissedMessages: " + dismissedMessages.toString());
         }
 
@@ -634,7 +642,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 if (!OSUtils.shouldRetryNetworkRequest(statusCode) || htmlNetworkRequestAttemptCount >= OSUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT) {
                     // Failure limit reached, reset
                     htmlNetworkRequestAttemptCount = 0;
-                    messageWasDismissed(message);
+                    messageWasDismissed(message, true);
                     return;
                 }
 
