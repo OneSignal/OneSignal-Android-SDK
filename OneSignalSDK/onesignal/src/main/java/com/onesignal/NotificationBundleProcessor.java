@@ -78,7 +78,7 @@ class NotificationBundleProcessor {
             return;
          }
    
-         NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+         OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
          notifJob.isRestoring = bundle.getBoolean("restoring", false);
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
          notifJob.jsonPayload = new JSONObject(jsonStrPayload);
@@ -107,26 +107,19 @@ class NotificationBundleProcessor {
       }
    }
 
-   static int ProcessJobForDisplay(NotificationGenerationJob notifJob) {
+   static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob) {
       processCollapseKey(notifJob);
 
       boolean doDisplay = shouldDisplayNotif(notifJob);
-      if (doDisplay)
-            GenerateNotification.fromJsonPayload(notifJob);
-
-      if (!notifJob.isRestoring && !notifJob.isIamPreview) {
+      if (doDisplay && !notifJob.isRestoring && !notifJob.isIamPreview) {
          processNotification(notifJob, false);
-         try {
-            JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
-            jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
-            OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true);
-         } catch(Throwable t) {}
+         OneSignal.handleNotificationReceived(notifJob, true);
       }
 
       return notifJob.getAndroidId();
    }
 
-   private static boolean shouldDisplayNotif(NotificationGenerationJob notifJob) {
+   private static boolean shouldDisplayNotif(OSNotificationGenerationJob notifJob) {
       // Validate that the current Android device is Android 4.4 or higher and the current job is a
       //    preview push
       if (notifJob.isIamPreview && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -143,24 +136,27 @@ class NotificationBundleProcessor {
       return jsonArray;
    }
 
-   private static void saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+   private static OSNotificationGenerationJob saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
+      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
       notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
       notifJob.overrideSettings.androidNotificationId = notificationId;
 
       processNotification(notifJob, opened);
+
+      return notifJob;
    }
 
    /**
     * Save notification, updates Outcomes, and sends Received Receipt if they are enabled.
     */
-   static void processNotification(NotificationGenerationJob notifiJob, boolean opened) {
-      saveNotification(notifiJob, opened);
+   static void processNotification(OSNotificationGenerationJob notifJob, boolean opened) {
+      saveNotification(notifJob, opened);
 
-      if (!notifiJob.isNotificationToDisplay())
+      if (!notifJob.isNotificationToDisplay())
          return;
-      String notificationId = notifiJob.getApiNotificationId();
+
+      String notificationId = notifJob.getApiNotificationId();
       OutcomesUtils.markLastNotificationReceived(notificationId);
       OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
    }
@@ -171,7 +167,7 @@ class NotificationBundleProcessor {
    //   * Collapse key / id support - Used to lookup the android notification id later
    //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
    //   * Future - Public API to get a list of notifications
-   private static void saveNotification(NotificationGenerationJob notifiJob, boolean opened) {
+   private static void saveNotification(OSNotificationGenerationJob notifiJob, boolean opened) {
       Context context = notifiJob.context;
       JSONObject jsonPayload = notifiJob.jsonPayload;
       
@@ -244,7 +240,7 @@ class NotificationBundleProcessor {
       }
    }
 
-   static void markRestoredNotificationAsDismissed(NotificationGenerationJob notifiJob) {
+   static void markRestoredNotificationAsDismissed(OSNotificationGenerationJob notifiJob) {
       if (notifiJob.getAndroidIdWithoutCreate() == -1)
          return;
 
@@ -420,7 +416,7 @@ class NotificationBundleProcessor {
       }
    }
 
-   private static void processCollapseKey(NotificationGenerationJob notifJob) {
+   private static void processCollapseKey(OSNotificationGenerationJob notifJob) {
       if (notifJob.isRestoring)
          return;
       if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
@@ -492,12 +488,12 @@ class NotificationBundleProcessor {
 
       // Save as a opened notification to prevent duplicates.
       if (!shouldDisplay(alert)) {
-         saveAndProcessNotification(context, bundle, true, -1);
+         final OSNotificationGenerationJob notifJob = saveAndProcessNotification(context, bundle, true, -1);
          // Current thread is meant to be short lived.
          //    Make a new thread to do our OneSignal work on.
          new Thread(new Runnable() {
             public void run() {
-               OneSignal.handleNotificationReceived(bundleAsJsonArray(bundle), false);
+               OneSignal.handleNotificationReceived(notifJob, false);
             }
          }, "OS_PROC_BUNDLE").start();
       }

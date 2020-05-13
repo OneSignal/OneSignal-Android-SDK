@@ -47,6 +47,8 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
+import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -70,6 +72,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.onesignal.NotificationBundleProcessor.newJsonArray;
+
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 
@@ -89,8 +93,33 @@ public class OneSignal {
       NONE, FATAL, ERROR, WARN, INFO, DEBUG, VERBOSE
    }
 
+   /**
+    * A display type enum for notifications when the app receives and tries shows them.
+    * <br/><br/>
+    * Used with the {@link OneSignal#setNotificationDisplayOption(OSNotificationDisplay)} and
+    *  {@link OSNotificationGenerationJob#setNotificationDisplayOption(OSNotificationDisplay)}
+    * Determines how the notification will show to the user when inside of the
+    *  {@link ExtNotificationWillShowInForegroundHandler#notificationWillShowInForeground(ExtNotificationGenerationJob)}
+    *  {@link AppNotificationWillShowInForegroundHandler#notificationWillShowInForeground(AppNotificationGenerationJob)}
+    * <br/><br/>
+    * Default for {@link OSNotificationGenerationJob#displayOption} is {@link OSNotificationDisplay#NOTIFICATION}
+    * <br/><br/>
+    * @see OSNotificationGenerationJob
+    * @see ExtNotificationWillShowInForegroundHandler
+    * @see AppNotificationWillShowInForegroundHandler
+    */
    public enum OSNotificationDisplay {
+
+      /**
+       * Notification will be a background notification (will not be shown on the device) and
+       *  offers a good option for performing work when receiving specific notifications, but not
+       *  caring for showing this notif to the user.
+       */
       SILENT,
+
+      /**
+       * Notification will show in shade of notification tray.
+       */
       NOTIFICATION;
 
       boolean isSilent() {
@@ -102,9 +131,35 @@ public class OneSignal {
       }
    }
 
+   /**
+    * An app entry type enum for knowing how the user foregrounded or backgrounded the app.
+    * <br/><br/>
+    * The enum also helps decide the type of session the user is in an is tracked in {@link OneSignal#sessionManager}
+    *  from the {@link OSSessionManager}.
+    * <br/><br/>
+    * {@link AppEntryAction#NOTIFICATION_CLICK} will always lead a overridden {@link com.onesignal.OSSessionManager.Session#DIRECT}.
+    * {@link AppEntryAction#APP_OPEN} on a new session notifications within the attribution window
+    *  parameter, this will lead to a {@link com.onesignal.OSSessionManager.Session#INDIRECT}.
+    * <br/><br/>
+    * @see OneSignal#onAppFocus
+    * @see OneSignal#onAppLostFocus
+    * @see OneSignal#handleNotificationOpen
+    */
    enum AppEntryAction {
+
+      /**
+       * Entered the app through opening a notification
+       */
       NOTIFICATION_CLICK,
+
+      /**
+       * Entered the app through clicking the icon
+       */
       APP_OPEN,
+
+      /**
+       * App came from the background
+       */
       APP_CLOSE;
 
       boolean isNotificationClick() {
@@ -121,21 +176,41 @@ public class OneSignal {
    }
 
    /**
-    * An interface used to handle notifications that are received.
-    * <br/>
-    * Set this during OneSignal init in
-    * {@link OneSignal#setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler)}
+    * Meant to be implemented within a custom made NotificationExtensionService
+    * Naming can be whatever makes the most sense to the developer, but to actually activate any
+    *    implemented interfaces, a metadata tag with a specific OneSignal key and then file path value
+    *    must be added to the apps AndroidManifest.xml
+    *       ex. <meta-data android:name="com.onesignal.NotificationExtensionServiceClass" android:value="com.company.ExtensionService" />
     * <br/><br/>
-    * TODO: Update docs with new NotificationWillShowInForegroundHandler
-    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationreceivedhandler-">NotificationReceivedHandler | OneSignal Docs</a>
+    * Call setters from the {@link ExtNotificationGenerationJob} to modify the {@link OSNotificationGenerationJob}
+    *    before the notification is shown on the device
+    * After modification is done {@link ExtNotificationGenerationJob#bubble(boolean)} should be called,
+    *    but if it is not called a default of bubbling will be decided after 30 second timeout
+    * The bubbling will lead to the {@link AppNotificationWillShowInForegroundHandler#notificationWillShowInForeground(AppNotificationGenerationJob)}
+    * <br/><br/>
+    * TODO: Update docs with new NotificationReceivedHandler
+    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationreceivedhandler">NotificationReceivedHandler | OneSignal Docs</a>
     */
-   public interface NotificationWillShowInForegroundHandler {
-      /**
-       * Fires when a notification is about to shown in the foreground. It will be fired when your app is in focus or
-       * in the background.
-       * @param notification Contains both the user's response and properties of the notification
-       */
-      void notificationWillShowInForeground(OSNotification notification);
+   public interface ExtNotificationWillShowInForegroundHandler {
+
+      void notificationWillShowInForeground(ExtNotificationGenerationJob notifJob);
+   }
+
+   /**
+    * Meant to be implemented with {@link OneSignal#setNotificationWillShowInForegroundHandler(AppNotificationWillShowInForegroundHandler)}
+    * This callback is bubbled to from the {@link ExtNotificationWillShowInForegroundHandler#notificationWillShowInForeground(ExtNotificationGenerationJob)}
+    * <br/><br/>
+    * Call setters from the {@link AppNotificationGenerationJob} to modify the {@link OSNotificationGenerationJob}
+    *    before the notification is shown on the device
+    * After modification is done {@link AppNotificationGenerationJob#complete()} should be called,
+    *    but if it is not called a default of bubbling will be decided after 30 second timeout
+    * <br/><br/>
+    * TODO: Update docs with new NotificationReceivedHandler
+    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationreceivedhandler">NotificationReceivedHandler | OneSignal Docs</a>
+    */
+   public interface AppNotificationWillShowInForegroundHandler {
+
+      void notificationWillShowInForeground(AppNotificationGenerationJob notifJob);
    }
 
    /**
@@ -145,7 +220,7 @@ public class OneSignal {
     * {@link OneSignal#setNotificationOpenedHandler(NotificationOpenedHandler)}
     * <br/><br/>
     * TODO: Update docs with new NotificationOpenedHandler
-    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#section--notificationopenedhandler-">NotificationOpenedHandler | OneSignal Docs</a>
+    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationopenedhandler">NotificationOpenedHandler | OneSignal Docs</a>
     */
    public interface NotificationOpenedHandler {
       /**
@@ -264,10 +339,12 @@ public class OneSignal {
    private static String emailId = null;
    private static int subscribableStatus;
 
+   static ExtNotificationWillShowInForegroundHandler extNotificationWillShowInForegroundHandler;
+   static AppNotificationWillShowInForegroundHandler appNotificationWillShowInForegroundHandler;
+
    // TODO: Start of old mInitBuilder params
    //    These should be cleaned up and managed else where maybe?
    //    These have been ripped out of mInitBuilder since it was deleted and placed here for now
-   static NotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static NotificationOpenedHandler notificationOpenedHandler;
    static InAppMessageClickHandler inAppMessageClickHandler;
 
@@ -491,8 +568,8 @@ public class OneSignal {
    }
 
    /**
-    * If {@link NotificationWillShowInForegroundHandler} is not set, the ability to control a
-    *    default {@link OSNotificationDisplay} should still exist
+    * If {@link ExtNotificationWillShowInForegroundHandler} or {@link AppNotificationWillShowInForegroundHandler}
+    *    are not set, the ability to control a default {@link OSNotificationDisplay} should still exist
     */
    public static void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
       mDisplayOption = displayOption;
@@ -573,8 +650,12 @@ public class OneSignal {
       init();
    }
 
-   public static void setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler callback) {
-      notificationWillShowInForegroundHandler = callback;
+   static void setExtNotificationWillShowInForegroundHandler(ExtNotificationWillShowInForegroundHandler callback) {
+      extNotificationWillShowInForegroundHandler = callback;
+   }
+
+   public static void setNotificationWillShowInForegroundHandler(AppNotificationWillShowInForegroundHandler callback) {
+      appNotificationWillShowInForegroundHandler = callback;
    }
 
    public static void setNotificationOpenedHandler(NotificationOpenedHandler callback) {
@@ -610,6 +691,8 @@ public class OneSignal {
 
          return;
       }
+
+      NotificationExtenderService.setupNotificationExtensionServiceClass();
 
       handleActivityLifecycleHandler(appContext);
 
@@ -1953,8 +2036,8 @@ public class OneSignal {
 
    // Also called for received but OSNotification is extracted from it.
    @NonNull
-   private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray dataArray, boolean shown) {
-      int jsonArraySize = dataArray.length();
+   private static OSNotificationOpenResult generateOsNotificationOpenResult(JSONArray jsonArray, boolean shown) {
+      int jsonArraySize = jsonArray.length();
 
       boolean firstMessage = true;
 
@@ -1968,7 +2051,7 @@ public class OneSignal {
 
       for (int i = 0; i < jsonArraySize; i++) {
          try {
-            JSONObject data = dataArray.getJSONObject(i);
+            JSONObject data = jsonArray.getJSONObject(i);
 
             notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
             if (actionSelected == null && data.has(BUNDLE_KEY_ACTION_ID))
@@ -2004,18 +2087,53 @@ public class OneSignal {
       });
    }
 
-   // Called when receiving FCM/ADM message after it has been displayed.
-   // Or right when it is received if it is a silent one
-   //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
-   static void handleNotificationReceived(JSONArray data, boolean displayed) {
-      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed);
-      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
-         trackFirebaseAnalytics.trackReceivedEvent(openResult);
+   /**
+    * Called when receiving FCM/ADM message after it has been displayed.
+    * Or right when it is received if it is a silent one
+    *   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
+    */
+   static void handleNotificationReceived(OSNotificationGenerationJob notifJob, boolean displayed) {
+      int androidNotificationId = notifJob.getAndroidId();
 
-      if (notificationWillShowInForegroundHandler == null)
+      try {
+         JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
+         jsonObject.put("notificationId", androidNotificationId);
+
+         OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
+         if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
+            trackFirebaseAnalytics.trackReceivedEvent(openResult);
+
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+
+      fireNotificationWillShowInForegroundHandlers(notifJob);
+   }
+
+   /**
+    * A few checks before before firing the normal expected scenario where a ExtNotificationWillShowInForegroundHandler
+    *  and AppNotificationWillShowInForegroundHandler are set
+    * <br/><br/>
+    * @see OneSignal.ExtNotificationWillShowInForegroundHandler
+    * @see OneSignal.AppNotificationWillShowInForegroundHandler
+    * <br/><br/>
+    * TODO: Enqueue this method for the extNotificationWillShowInForegroundHandler/appNotificationWillShowInForegroundHandler
+    *    with a WorkManager Worker eventually
+    */
+   private static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
+      // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
+      if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
+         NotificationExtenderService.showNotification(notifJob);
          return;
+      }
 
-      notificationWillShowInForegroundHandler.notificationWillShowInForeground(openResult.notification);
+      // No ExtNotificationWillShowInForegroundHandler was setup, use the AppNotificationWillShowInForegroundHandler to start
+      if (extNotificationWillShowInForegroundHandler == null) {
+         appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toAppNotificationGenerationJob());
+         return;
+      }
+
+      extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toExtNotificationGenerationJob());
    }
 
    // Called when opening a notification
@@ -2646,7 +2764,8 @@ public class OneSignal {
    }
 
    public static void removeNotificationWillShowInForegroundHandler() {
-      notificationWillShowInForegroundHandler = null;
+      OneSignal.extNotificationWillShowInForegroundHandler = null;
+      OneSignal.appNotificationWillShowInForegroundHandler = null;
    }
 
    public static void removeNotificationOpenedHandler() {

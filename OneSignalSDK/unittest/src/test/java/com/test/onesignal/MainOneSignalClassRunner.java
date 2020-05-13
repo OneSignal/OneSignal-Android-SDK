@@ -47,6 +47,7 @@ import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
+import com.onesignal.OSNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSPermissionObserver;
@@ -1023,11 +1024,11 @@ public class MainOneSignalClassRunner {
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotification notification) {
-            androidNotificationId = notification.androidNotificationId;
-            notificationReceivedBody = notification.payload.body;
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            androidNotificationId = notifJob.getAndroidNotificationId();
+            notificationReceivedBody = notifJob.getBody();
          }
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
@@ -3937,9 +3938,9 @@ public class MainOneSignalClassRunner {
       // Assert that another receive isn't trigger later when the unprocessed receives are fired
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotification notification) {
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
 
          }
       });

@@ -3,14 +3,16 @@ package com.onesignal.sdktest.notification;
 import androidx.core.app.NotificationCompat;
 
 import com.onesignal.NotificationExtenderService;
-import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
-public class AppNotificationExtenderService extends NotificationExtenderService implements OneSignal.NotificationWillShowInForegroundHandler, OneSignal.NotificationOpenedHandler {
+public class AppNotificationExtenderService extends NotificationExtenderService implements
+        OneSignal.ExtNotificationWillShowInForegroundHandler,
+        OneSignal.NotificationOpenedHandler {
 
    @Override
    protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
@@ -33,9 +35,14 @@ public class AppNotificationExtenderService extends NotificationExtenderService 
       return true;
    }
 
-   @Override
-   public void notificationWillShowInForeground(OSNotification notification) {
 
+   @Override
+   public void notificationWillShowInForeground(ExtNotificationGenerationJob notifJob) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ext notificationWillShowInForeground fired!!!!");
+
+
+      notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+      notifJob.bubble(true);
    }
 
    @Override
