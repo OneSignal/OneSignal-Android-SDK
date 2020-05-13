@@ -178,6 +178,11 @@ public class OneSignalPackagePrivateHelper {
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
+    public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
+        OSNotificationGenerationJob(Context context) {
+            super(context);
+        }
+    }
 
    public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
       @Override
@@ -248,10 +253,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() {
       return OneSignal.appId;
-   }
-
-   public static void OneSignal_setAppId(String appId) {
-      OneSignal.appId = appId;
    }
 
    static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}

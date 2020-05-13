@@ -56,6 +56,7 @@ import com.onesignal.FCMIntentService;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.NotificationExtenderService;
+import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
