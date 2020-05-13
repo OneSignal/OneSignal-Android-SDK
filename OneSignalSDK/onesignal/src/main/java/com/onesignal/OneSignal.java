@@ -2111,13 +2111,21 @@ public class OneSignal {
       });
    }
 
-   // Called when receiving FCM/ADM message after it has been displayed.
-   // Or right when it is received if it is a silent one
-   //   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
-   static void handleNotificationReceived(JSONArray data, boolean displayed) {
-      OSNotificationOpenResult openResult = generateOsNotificationOpenResult(data, displayed);
-      if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
-         trackFirebaseAnalytics.trackReceivedEvent(openResult);
+   /**
+    * Called when receiving FCM/ADM message after it has been displayed.
+    * Or right when it is received if it is a silent one
+    *   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
+    */
+   static void handleNotificationReceived(OSNotificationGenerationJob notifJob, boolean displayed) {
+      int androidNotificationId = notifJob.getAndroidId();
+
+      try {
+         JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
+         jsonObject.put("notificationId", androidNotificationId);
+
+         OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
+         if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
+            trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
       } catch (JSONException e) {
          e.printStackTrace();
