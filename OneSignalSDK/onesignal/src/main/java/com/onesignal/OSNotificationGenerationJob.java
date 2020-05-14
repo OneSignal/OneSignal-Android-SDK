@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2020 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,11 @@ import java.security.SecureRandom;
 
 public class OSNotificationGenerationJob {
 
+   private final String TITLE_PAYLOAD_PARAM = "title";
+   private final String ALERT_PAYLOAD_PARAM = "alert";
+   private final String CUSTOM_PAYLOAD_PARAM = "custom";
+   private final String ADDITIONAL_DATA_PAYLOAD_PARAM = "a";
+
    Context context;
    JSONObject jsonPayload;
    boolean isRestoring;
@@ -61,25 +66,8 @@ public class OSNotificationGenerationJob {
       this.context = context;
    }
 
-   CharSequence getTitle() {
-      if (overriddenTitleFromExtender != null)
-         return overriddenTitleFromExtender;
-      return jsonPayload.optString("title", null);
-   }
-   
-   CharSequence getBody() {
-      if (overriddenBodyFromExtender != null)
-         return overriddenBodyFromExtender;
-      return jsonPayload.optString("alert", null);
-   }
-   
-   Integer getAndroidId() {
-      if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
-      if (overrideSettings.androidNotificationId == null)
-         overrideSettings.androidNotificationId = new SecureRandom().nextInt();
-      
-      return overrideSettings.androidNotificationId;
+   String getApiNotificationId() {
+      return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
    }
 
    int getAndroidIdWithoutCreate() {
@@ -89,18 +77,53 @@ public class OSNotificationGenerationJob {
       return overrideSettings.androidNotificationId;
    }
 
+   Integer getAndroidId() {
+      if (overrideSettings == null)
+         overrideSettings = new NotificationExtenderService.OverrideSettings();
+      if (overrideSettings.androidNotificationId == null)
+         overrideSettings.androidNotificationId = new SecureRandom().nextInt();
+
+      return overrideSettings.androidNotificationId;
+   }
+
    /**
-    * If notificationId is -1 then the notification is a silent one
+    * Get the notification title from the payload
+    */
+   CharSequence getTitle() {
+      if (overriddenTitleFromExtender != null)
+         return overriddenTitleFromExtender;
+      return jsonPayload.optString(TITLE_PAYLOAD_PARAM, null);
+   }
+
+   /**
+    * Get the notification body from the payload
+    */
+   CharSequence getBody() {
+      if (overriddenBodyFromExtender != null)
+         return overriddenBodyFromExtender;
+      return jsonPayload.optString(ALERT_PAYLOAD_PARAM, null);
+   }
+
+   /**
+    * Get the notification additional data json from the payload
+    */
+   JSONObject getAdditionalData() {
+      return jsonPayload.optJSONObject(CUSTOM_PAYLOAD_PARAM)
+                        .optJSONObject(ADDITIONAL_DATA_PAYLOAD_PARAM);
+   }
+
+   /**
+    * If androidNotificationId is -1 then the notification is a silent one
     */
    boolean isNotificationToDisplay() {
       return getAndroidIdWithoutCreate() != -1;
    }
 
-   String getApiNotificationId() {
-      return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
+   boolean hasExtender() {
+      return overrideSettings != null && overrideSettings.extender != null;
    }
 
-   void setAndroidIdWithOutOverriding(Integer id) {
+   void setAndroidIdWithoutOverriding(Integer id) {
       if (id == null)
          return;
 
@@ -112,18 +135,22 @@ public class OSNotificationGenerationJob {
       overrideSettings.androidNotificationId = id;
    }
 
-   boolean hasExtender() {
-      return overrideSettings != null && overrideSettings.extender != null;
-   }
-
    private void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
       this.displayOption = displayOption;
    }
 
+   /**
+    * Create a {@link ExtNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
+    *  while the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} is being fired
+    */
    ExtNotificationGenerationJob toExtNotificationGenerationJob() {
       return new ExtNotificationGenerationJob(this);
    }
 
+   /**
+    * Create a {@link AppNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
+    *  while the {@link OneSignal.AppNotificationWillShowInForegroundHandler} is being fired
+    */
    AppNotificationGenerationJob toAppNotificationGenerationJob() {
       return new AppNotificationGenerationJob(this);
    }
@@ -150,6 +177,10 @@ public class OSNotificationGenerationJob {
       }
 
       void startShowNotificationTimeout(final Runnable timeoutRunnable) {
+         // If the handler isn't null we do not want to start another
+         if (timeoutHandler != null)
+            return;
+
          OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
@@ -170,12 +201,24 @@ public class OSNotificationGenerationJob {
          return notifJob;
       }
 
-      public String getBody() {
-         return notifJob.getBody().toString();
+      public String getApiNotificationId() {
+         return notifJob.getApiNotificationId();
       }
 
       public int getAndroidNotificationId() {
          return notifJob.getAndroidIdWithoutCreate();
+      }
+
+      public String getTitle() {
+         return notifJob.getTitle().toString();
+      }
+
+      public String getBody() {
+         return notifJob.getBody().toString();
+      }
+
+      public JSONObject getAdditionalData() {
+         return notifJob.getAdditionalData();
       }
 
       public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
@@ -198,7 +241,7 @@ public class OSNotificationGenerationJob {
                new Thread(new Runnable() {
                   @Override
                   public void run() {
-                     ExtNotificationGenerationJob.this.bubble(true);
+                     ExtNotificationGenerationJob.this.complete(true);
                   }
                }).start();
             }
@@ -208,7 +251,7 @@ public class OSNotificationGenerationJob {
       // Method controlling bubbling from the ExtNotificationWillShowInForegroundHandler to the AppNotificationWillShowInForegroundHandler
       //    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
       //    a 30 second timer and attempt to bubble to the AppNotificationWillShowInForegroundHandler automatically
-      public void bubble(boolean bubble) {
+      public void complete(boolean bubble) {
          destroyShowNotificationTimeout();
 
          // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists or bubbling is set false

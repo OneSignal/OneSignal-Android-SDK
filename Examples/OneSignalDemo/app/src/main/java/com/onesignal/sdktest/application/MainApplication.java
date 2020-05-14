@@ -38,7 +38,6 @@ public class MainApplication extends Application {
             }
         });
 
-        OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.pauseInAppMessages(true);
 
