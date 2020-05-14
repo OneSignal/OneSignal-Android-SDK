@@ -440,7 +440,7 @@ class NotificationBundleProcessor {
 
          if (cursor.moveToFirst()) {
             int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            notifJob.setAndroidIdWithOutOverriding(androidNotificationId);
+            notifJob.setAndroidIdWithoutOverriding(androidNotificationId);
          }
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not read DB to find existing collapse_key!", t);
