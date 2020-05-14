@@ -184,7 +184,7 @@ public class OneSignal {
     * <br/><br/>
     * Call setters from the {@link ExtNotificationGenerationJob} to modify the {@link OSNotificationGenerationJob}
     *    before the notification is shown on the device
-    * After modification is done {@link ExtNotificationGenerationJob#bubble(boolean)} should be called,
+    * After modification is done {@link ExtNotificationGenerationJob#complete(boolean)} should be called,
     *    but if it is not called a default of bubbling will be decided after 30 second timeout
     * The bubbling will lead to the {@link AppNotificationWillShowInForegroundHandler#notificationWillShowInForeground(AppNotificationGenerationJob)}
     * <br/><br/>
@@ -350,8 +350,6 @@ public class OneSignal {
 
    static boolean mAutoPromptLocation;
    static boolean mUnsubscribeWhenNotificationsAreDisabled = true;
-   // TODO: Will be apart of NotificationWillShowInForegroundHandler
-   static OSNotificationDisplay mDisplayOption = OSNotificationDisplay.NOTIFICATION;
    // TODO: End of old mInitBuilder params
 
    // Is the init() of OneSignal SDK finished yet
@@ -565,18 +563,6 @@ public class OneSignal {
     */
    public static void unsubscribeWhenNotificationsAreDisabled(boolean set) {
       mUnsubscribeWhenNotificationsAreDisabled = set;
-   }
-
-   /**
-    * If {@link ExtNotificationWillShowInForegroundHandler} or {@link AppNotificationWillShowInForegroundHandler}
-    *    are not set, the ability to control a default {@link OSNotificationDisplay} should still exist
-    */
-   public static void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
-      mDisplayOption = displayOption;
-   }
-
-   public static OSNotificationDisplay getCurrentNotificationDisplayOption() {
-      return mDisplayOption;
    }
 
    /**
@@ -2100,7 +2086,7 @@ public class OneSignal {
          jsonObject.put("notificationId", androidNotificationId);
 
          OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
-         if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
+         if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
             trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
       } catch (JSONException e) {
