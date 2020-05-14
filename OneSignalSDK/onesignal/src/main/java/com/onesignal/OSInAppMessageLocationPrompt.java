@@ -6,7 +6,7 @@ class OSInAppMessageLocationPrompt extends OSInAppMessagePrompt {
 
     @Override
     void handlePrompt(OneSignal.OSPromptActionCompletionCallback callback) {
-        OneSignal.promptLocation(callback);
+        OneSignal.promptLocation(callback, true);
     }
 
     @Override

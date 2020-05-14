@@ -23,7 +23,7 @@ class OutcomeEventsCache {
      */
     @WorkerThread
     synchronized static void deleteOldOutcomeEvent(OutcomeEvent event, OneSignalDbHelper dbHelper) {
-        SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
         try {
             writableDb.beginTransaction();
@@ -50,7 +50,7 @@ class OutcomeEventsCache {
      */
     @WorkerThread
     synchronized static void saveOutcomeEvent(OutcomeEvent event, OneSignalDbHelper dbHelper) {
-        SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
         String notificationIds = event.getNotificationIds() != null ? event.getNotificationIds().toString() : "[]";
 
         ContentValues values = new ContentValues();
@@ -74,7 +74,7 @@ class OutcomeEventsCache {
         Cursor cursor = null;
 
         try {
-            SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+            SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
             cursor = readableDb.query(
                     OutcomeEventsTable.TABLE_NAME,
                     null,
@@ -119,7 +119,7 @@ class OutcomeEventsCache {
         if (notificationIds == null)
             return;
 
-        SQLiteDatabase writableDb = dbHelper.getWritableDbWithRetries();
+        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
         try {
             for (int i = 0; i < notificationIds.length(); i++) {
                 ContentValues values = new ContentValues();
@@ -142,7 +142,7 @@ class OutcomeEventsCache {
     synchronized static JSONArray getNotCachedUniqueOutcomeNotifications(String name, JSONArray notificationIds, OneSignalDbHelper dbHelper) {
         JSONArray uniqueNotificationIds = new JSONArray();
 
-        SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+        SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
         Cursor cursor = null;
 
         try {

@@ -82,6 +82,8 @@
                   android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service android:name="com.onesignal.NotificationRestoreService" />
+        
+        <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
         <receiver android:name="com.onesignal.BootUpReceiver">
             <intent-filter>
@@ -95,8 +97,7 @@
             </intent-filter>
         </receiver>
 
-        <activity
-          android:name="com.onesignal.NotificationOpenedActivity"/>
+        <activity android:name="com.onesignal.NotificationOpenedActivity"/>
 
     </application>
 

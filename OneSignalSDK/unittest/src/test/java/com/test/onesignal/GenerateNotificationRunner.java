@@ -57,12 +57,11 @@ import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
@@ -80,6 +79,7 @@ import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.AfterClass;
@@ -103,6 +103,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTONS_LIST;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_ID;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_TEXT;
+import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
@@ -188,8 +194,8 @@ public class GenerateNotificationRunner {
 
    private static Intent createOpenIntent(int notifId, Bundle bundle) {
       return new Intent()
-          .putExtra("notificationId", notifId)
-          .putExtra("onesignal_data", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
+          .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifId)
+          .putExtra(BUNDLE_KEY_ONESIGNAL_DATA, OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
    }
    
    private Intent createOpenIntent(Bundle bundle) {
@@ -366,7 +372,7 @@ public class GenerateNotificationRunner {
         OneSignal.setAppContext(blankActivity);
         threadAndTaskWait();
 
-        SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+        SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
 
         postNotificationsAndSimulateSummaryClick(true, "test1");
 
@@ -383,7 +389,7 @@ public class GenerateNotificationRunner {
         OneSignal.setAppContext(blankActivity);
         threadAndTaskWait();
 
-        SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+        SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
 
         postNotificationsAndSimulateSummaryClick(false, "test1");
 
@@ -400,7 +406,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
 
       postNotificationsAndSimulateSummaryClick(true, "test1");
 
@@ -417,7 +423,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
 
       postNotificationsAndSimulateSummaryClick(false, "test1");
 
@@ -434,7 +440,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
 
       postNotificationsAndSimulateSummaryClick(true, null);
 
@@ -451,7 +457,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
 
       postNotificationsAndSimulateSummaryClick(false, null);
 
@@ -480,9 +486,8 @@ public class GenerateNotificationRunner {
    }
 
    private void setClearGroupSummaryClick(boolean shouldDismissAll) {
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK, shouldDismissAll);
+      TestOneSignalPrefs.saveBool(TestOneSignalPrefs.PREFS_ONESIGNAL, TestOneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK, shouldDismissAll);
    }
-
 
    @Test
    @Config(sdk = Build.VERSION_CODES.N)
@@ -506,7 +511,7 @@ public class GenerateNotificationRunner {
       count = OneSignalNotificationManagerPackageHelper.getActiveNotifications(blankActivity).length;
       assertEquals(5, count);
 
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       // Validate no DB changes occurred and this is only a runtime change to the groupless notifs
       // Check for 4 null group id notifs
       int nullGroupCount = queryNotificationCountFromGroup(readableDb, null, true);
@@ -764,7 +769,7 @@ public class GenerateNotificationRunner {
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should have 1 DB record with the correct time stamp
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
       assertEquals(1, cursor.getCount());
       // Time stamp should be set and within a small range.
@@ -783,7 +788,7 @@ public class GenerateNotificationRunner {
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-      readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(1, cursor.getCount());
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
@@ -806,7 +811,7 @@ public class GenerateNotificationRunner {
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-      readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { }, null, null, null, null, null);
 
       assertEquals(1, cursor.getCount());
@@ -872,7 +877,7 @@ public class GenerateNotificationRunner {
 
    @Test
    public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() {
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
+      TestOneSignalPrefs.saveBool(TestOneSignalPrefs.PREFS_ONESIGNAL, TestOneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
       helperShouldRestoreNotificationsPastExpireTime(true);
    }
 
@@ -884,7 +889,7 @@ public class GenerateNotificationRunner {
       advanceSystemTimeBy(604_801);
 
       // Should not count as a badge
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       OneSignalPackagePrivateHelper.BadgeCountUpdater.update(readableDb, blankActivity);
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
@@ -914,7 +919,7 @@ public class GenerateNotificationRunner {
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Should be 2 DB entries (summary and individual)
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(2, cursor.getCount());
       cursor.close();
@@ -942,7 +947,7 @@ public class GenerateNotificationRunner {
       assertEquals(0, postedNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
 
       // Should be 3 DB entries (summary and 2 individual)
-      readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(3, cursor.getCount());
 
@@ -974,7 +979,7 @@ public class GenerateNotificationRunner {
    
    @Test
    public void shouldHandleOpeningInAppAlertWithGroupKeySet() {
-      SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "some_group", false);
    }
    
@@ -993,7 +998,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       // Test1 - Manually trigger a refresh on grouped notification.
-      SQLiteDatabase writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      SQLiteDatabase writableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    
@@ -1004,7 +1009,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
    
       // Test2 - Manually trigger a refresh on grouped notification.
-      writableDb = OneSignalDbHelper.getInstance(RuntimeEnvironment.application).getWritableDatabase();
+      writableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    }
@@ -1049,7 +1054,7 @@ public class GenerateNotificationRunner {
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtra("message_type", "gcm");
       Bundle bundle = getBaseNotifBundle();
-      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
+      addButtonsToReceivedPayload(bundle);
       intent.putExtras(bundle);
 
       FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
@@ -1064,8 +1069,8 @@ public class GenerateNotificationRunner {
       PostedNotification lastNotification = postedNotifsIterator.next().getValue();
       
       assertEquals(1, lastNotification.notif.actions.length);
-      String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra("onesignal_data");
-      assertEquals("id1", new JSONObject(json_data).optString("actionSelected"));
+      String json_data = shadowOf(lastNotification.notif.actions[0].actionIntent).getSavedIntent().getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA);
+      assertEquals("id1", new JSONObject(json_data).optString(BUNDLE_KEY_ACTION_ID));
    }
 
    @Test
@@ -1089,7 +1094,6 @@ public class GenerateNotificationRunner {
       assertEquals(0, ShadowRoboNotificationManager.getLastNotif().defaults);
    }
 
-   // TODO: Fails because of no appId being set because manifest placeholders removed
    @Test
    public void shouldAddDefaultButtonToAlertDialog() throws Exception {
       OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.InAppAlert);
@@ -1139,7 +1143,7 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "10");
       bundle.putString("licon", "http://domain.com/image.jpg");
-      bundle.putString("o", "[{\"n\": \"text1\", \"i\": \"id1\"}]");
+      addButtonsToReceivedPayload(bundle);
       intentFCM.putExtras(bundle);
       
       FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
@@ -1243,7 +1247,6 @@ public class GenerateNotificationRunner {
             lastNotificationReceived = notification;
          }
       });
-      OneSignal.setNotificationOpenedHandler(null);
       threadAndTaskWait();
 
       startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()),
@@ -1458,7 +1461,7 @@ public class GenerateNotificationRunner {
       bundle.putString("sicon", "small_icon");
       bundle.putString("sound", "test_sound");
       bundle.putString("grp_msg", "You test $[notif_count] MSGs!");
-      bundle.putString("collapse_key", "a_key"); // GCM sets this to 'do_not_collapse' when not set. TODO: Does this apply to FCM too?
+      bundle.putString("collapse_key", "a_key"); // FCM sets this to 'do_not_collapse' when not set.
       bundle.putString("bg_img", "{\"img\": \"test_image_url\"," +
                                   "\"tc\": \"FF000000\"," +
                                   "\"bc\": \"FFFFFFFF\"}");
@@ -1471,7 +1474,7 @@ public class GenerateNotificationRunner {
                      "        \"actionButtons\": [{\"id\": \"id1\", \"text\": \"button1\", \"icon\": \"ic_menu_share\"}," +
                      "                            {\"id\": \"id2\", \"text\": \"button2\", \"icon\": \"ic_menu_send\"}" +
                      "        ]," +
-                     "         \"actionSelected\": \"__DEFAULT__\"" +
+                     "         \"actionId\": \"__DEFAULT__\"" +
                      "      }," +
                      "\"u\":\"http://google.com\"," +
                      "\"i\":\"9764eaeb-10ce-45b1-a66d-8f95938aaa51\"" +
@@ -1481,7 +1484,7 @@ public class GenerateNotificationRunner {
    }
 
    private void assertNotificationDbRecords(int expected) {
-      SQLiteDatabase readableDb = OneSignalDbHelper.getInstance(blankActivity).getReadableDatabase();
+      SQLiteDatabase readableDb = OneSignalPackagePrivateHelper.OneSignal_getSQLiteDatabase(blankActivity);
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
       assertEquals(expected, cursor.getCount());
       cursor.close();
@@ -1561,6 +1564,20 @@ public class GenerateNotificationRunner {
       @Override
       protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
          return false;
+      }
+   }
+
+   private void addButtonsToReceivedPayload(@NonNull Bundle bundle) {
+      try {
+         JSONArray buttonList = new JSONArray() {{
+            put(new JSONObject() {{
+               put(PUSH_MINIFIED_BUTTON_ID, "id1");
+               put(PUSH_MINIFIED_BUTTON_TEXT, "text1");
+            }});
+         }};
+         bundle.putString(PUSH_MINIFIED_BUTTONS_LIST, buttonList.toString());
+      } catch (JSONException e) {
+         e.printStackTrace();
       }
    }
 }

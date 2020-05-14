@@ -17,7 +17,7 @@ class OSInAppMessage {
     private static final String IAM_ID = "id";
     private static final String IAM_VARIANTS = "variants";
     private static final String IAM_TRIGGERS = "triggers";
-    private static final String IAM_RE_DISPLAY = "redisplay";
+    private static final String IAM_REDISPLAY_STATS = "redisplay";
     private static final String DISPLAY_DURATION = "display_duration";
 
     /**
@@ -51,7 +51,7 @@ class OSInAppMessage {
     /**
      * Reference to redisplay properties
      */
-    private OSInAppMessageDisplayStats displayStats = new OSInAppMessageDisplayStats();
+    private OSInAppMessageRedisplayStats redisplayStats = new OSInAppMessageRedisplayStats();
 
     private double displayDuration;
     private boolean displayedInSession = false;
@@ -63,11 +63,11 @@ class OSInAppMessage {
         this.isPreview = isPreview;
     }
 
-    OSInAppMessage(@NonNull String messageId, @NonNull Set<String> clickIds, boolean displayedInSession, OSInAppMessageDisplayStats displayStats) {
+    OSInAppMessage(@NonNull String messageId, @NonNull Set<String> clickIds, boolean displayedInSession, OSInAppMessageRedisplayStats redisplayStats) {
         this.messageId = messageId;
         this.clickedClickIds = clickIds;
         this.displayedInSession = displayedInSession;
-        this.displayStats = displayStats;
+        this.redisplayStats = redisplayStats;
     }
 
     OSInAppMessage(JSONObject json) throws JSONException {
@@ -77,9 +77,8 @@ class OSInAppMessage {
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
         this.clickedClickIds = new HashSet<>();
 
-        if (json.has(IAM_RE_DISPLAY)) {
-            this.displayStats = new OSInAppMessageDisplayStats(json.getJSONObject(IAM_RE_DISPLAY));
-        }
+        if (json.has(IAM_REDISPLAY_STATS))
+            this.redisplayStats = new OSInAppMessageRedisplayStats(json.getJSONObject(IAM_REDISPLAY_STATS));
     }
 
     private HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {
@@ -139,9 +138,7 @@ class OSInAppMessage {
 
             json.put(IAM_VARIANTS, variants);
             json.put(DISPLAY_DURATION, this.displayDuration);
-
-            if (displayStats.isRedisplayEnabled())
-                json.put(IAM_RE_DISPLAY, displayStats.toJSONObject());
+            json.put(IAM_REDISPLAY_STATS, this.redisplayStats.toJSONObject());
 
             JSONArray orConditions = new JSONArray();
             for (ArrayList<OSTrigger> andArray : this.triggers) {
@@ -164,7 +161,6 @@ class OSInAppMessage {
 
     /**
      * Called when an action is taken to track uniqueness
-     *
      * @return true if action taken was unique
      */
     boolean takeActionAsUnique() {
@@ -214,8 +210,12 @@ class OSInAppMessage {
         clickedClickIds.add(clickId);
     }
 
-    OSInAppMessageDisplayStats getDisplayStats() {
-        return displayStats;
+    OSInAppMessageRedisplayStats getRedisplayStats() {
+        return redisplayStats;
+    }
+
+    void setRedisplayStats(int displayQuantity, long lastDisplayTime) {
+        this.redisplayStats = new OSInAppMessageRedisplayStats(displayQuantity, lastDisplayTime);
     }
 
     @Override
@@ -224,7 +224,7 @@ class OSInAppMessage {
                 "messageId='" + messageId + '\'' +
                 ", triggers=" + triggers +
                 ", clickedClickIds=" + clickedClickIds +
-                ", displayStats=" + displayStats +
+                ", displayStats=" + redisplayStats +
                 ", actionTaken=" + actionTaken +
                 ", isPreview=" + isPreview +
                 '}';
@@ -243,4 +243,5 @@ class OSInAppMessage {
         int result = messageId.hashCode();
         return result;
     }
+
 }

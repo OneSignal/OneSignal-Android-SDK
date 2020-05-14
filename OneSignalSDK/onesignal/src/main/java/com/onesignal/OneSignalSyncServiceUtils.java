@@ -225,12 +225,12 @@ class OneSignalSyncServiceUtils {
                }
 
                @Override
-               public void complete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationGMS.LocationPoint point) {
                   Object object = point != null ?  point : new Object();
                   queue.offer(object);
                }
             };
-            LocationGMS.getLocation(OneSignal.appContext, false, locationHandler);
+            LocationGMS.getLocation(OneSignal.appContext, false, false, locationHandler);
 
             // The take() will return the offered point once the callback for the locationHandler is completed
             Object point = queue.take();

@@ -46,6 +46,9 @@ import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Set;
+
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
@@ -55,7 +58,13 @@ import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
  * */
 class NotificationBundleProcessor {
 
-   private static final String PUSH_ADDITIONAL_DATE_KEY = "a";
+   private static final String PUSH_ADDITIONAL_DATA_KEY = "a";
+
+   public static final String PUSH_MINIFIED_BUTTONS_LIST = "o";
+   public static final String PUSH_MINIFIED_BUTTON_ID = "i";
+   public static final String PUSH_MINIFIED_BUTTON_TEXT = "n";
+   public static final String PUSH_MINIFIED_BUTTON_ICON = "p";
+
    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
@@ -110,7 +119,7 @@ class NotificationBundleProcessor {
          processNotification(notifJob, false);
          try {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
-            jsonObject.put("notificationId", notifJob.getAndroidId());
+            jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
             OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
          } catch(Throwable t) {}
       }
@@ -174,7 +183,7 @@ class NotificationBundleProcessor {
          SQLiteDatabase writableDb = null;
 
          try {
-            writableDb = dbHelper.getWritableDbWithRetries();
+            writableDb = dbHelper.getSQLiteDatabaseWithRetries();
    
             writableDb.beginTransaction();
             
@@ -246,7 +255,7 @@ class NotificationBundleProcessor {
       SQLiteDatabase writableDb = null;
 
       try {
-         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb = dbHelper.getSQLiteDatabaseWithRetries();
          writableDb.beginTransaction();
 
          ContentValues values = new ContentValues();
@@ -286,7 +295,7 @@ class NotificationBundleProcessor {
    }
 
    // Format our short keys into more readable ones.
-   private static void maximizeBundle(Bundle fcmBundle) {
+   private static void maximizeButtonsFromBundle(Bundle fcmBundle) {
       if (!fcmBundle.containsKey("o"))
          return;
       
@@ -294,38 +303,39 @@ class NotificationBundleProcessor {
          JSONObject customJSON = new JSONObject(fcmBundle.getString("custom"));
          JSONObject additionalDataJSON;
 
-         if (customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
-            additionalDataJSON = customJSON.getJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+         if (customJSON.has(PUSH_ADDITIONAL_DATA_KEY))
+            additionalDataJSON = customJSON.getJSONObject(PUSH_ADDITIONAL_DATA_KEY);
          else
             additionalDataJSON = new JSONObject();
 
-         JSONArray buttons = new JSONArray(fcmBundle.getString("o"));
-         fcmBundle.remove("o");
+         JSONArray buttons = new JSONArray(fcmBundle.getString(PUSH_MINIFIED_BUTTONS_LIST));
+         fcmBundle.remove(PUSH_MINIFIED_BUTTONS_LIST);
          for (int i = 0; i < buttons.length(); i++) {
             JSONObject button = buttons.getJSONObject(i);
 
-            String buttonText = button.getString("n");
-            button.remove("n");
+            String buttonText = button.getString(PUSH_MINIFIED_BUTTON_TEXT);
+            button.remove(PUSH_MINIFIED_BUTTON_TEXT);
+
             String buttonId;
-            if (button.has("i")) {
-               buttonId = button.getString("i");
-               button.remove("i");
+            if (button.has(PUSH_MINIFIED_BUTTON_ID)) {
+               buttonId = button.getString(PUSH_MINIFIED_BUTTON_ID);
+               button.remove(PUSH_MINIFIED_BUTTON_ID);
             } else
                buttonId = buttonText;
 
             button.put("id", buttonId);
             button.put("text", buttonText);
 
-            if (button.has("p")) {
-               button.put("icon", button.getString("p"));
-               button.remove("p");
+            if (button.has(PUSH_MINIFIED_BUTTON_ICON)) {
+               button.put("icon", button.getString(PUSH_MINIFIED_BUTTON_ICON));
+               button.remove(PUSH_MINIFIED_BUTTON_ICON);
             }
          }
 
          additionalDataJSON.put("actionButtons", buttons);
-         additionalDataJSON.put("actionSelected", DEFAULT_ACTION);
-         if (!customJSON.has(PUSH_ADDITIONAL_DATE_KEY))
-            customJSON.put(PUSH_ADDITIONAL_DATE_KEY, additionalDataJSON);
+         additionalDataJSON.put(BUNDLE_KEY_ACTION_ID, DEFAULT_ACTION);
+         if (!customJSON.has(PUSH_ADDITIONAL_DATA_KEY))
+            customJSON.put(PUSH_ADDITIONAL_DATA_KEY, additionalDataJSON);
 
          fcmBundle.putString("custom", customJSON.toString());
       } catch (JSONException e) {
@@ -341,7 +351,7 @@ class NotificationBundleProcessor {
          notification.templateId = customJson.optString("ti");
          notification.templateName = customJson.optString("tn");
          notification.rawPayload = currentJsonPayload.toString();
-         notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+         notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
          notification.launchURL = customJson.optString("u", null);
 
          notification.body = currentJsonPayload.optString("alert", null);
@@ -395,7 +405,7 @@ class NotificationBundleProcessor {
             actionButton.icon = jsonActionButton.optString("icon", null);
             notification.actionButtons.add(actionButton);
          }
-         notification.additionalData.remove("actionSelected");
+         notification.additionalData.remove(BUNDLE_KEY_ACTION_ID);
          notification.additionalData.remove("actionButtons");
       }
    }
@@ -423,7 +433,7 @@ class NotificationBundleProcessor {
       Cursor cursor = null;
 
       try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
          cursor = readableDb.query(
                NotificationTable.TABLE_NAME,
                new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
@@ -450,12 +460,12 @@ class NotificationBundleProcessor {
    static @NonNull ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
       ProcessedBundleResult result = new ProcessedBundleResult();
       
-      // Not a OneSignal FCM message
-      if (OneSignal.getNotificationIdFromFCMBundle(bundle) == null)
+      // Not a OneSignal GCM message
+      if (!OSNotificationFormatHelper.isOneSignalBundle(bundle))
          return result;
       result.isOneSignalPayload = true;
 
-      maximizeBundle(bundle);
+      maximizeButtonsFromBundle(bundle);
 
       JSONObject pushPayloadJson = bundleAsJSONObject(bundle);
 
@@ -504,10 +514,10 @@ class NotificationBundleProcessor {
          return null;
       }
 
-      if (!osCustom.has(PUSH_ADDITIONAL_DATE_KEY))
+      if (!osCustom.has(PUSH_ADDITIONAL_DATA_KEY))
          return null;
 
-      JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATE_KEY);
+      JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
       if (additionalData.has(IAM_PREVIEW_KEY))
          return additionalData.optString(IAM_PREVIEW_KEY);
       return null;

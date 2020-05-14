@@ -42,6 +42,9 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA;
+
 // Process both notifications opens and dismisses.
 class NotificationOpenedProcessor {
 
@@ -59,13 +62,13 @@ class NotificationOpenedProcessor {
    }
 
    private static boolean isOneSignalIntent(Intent intent) {
-      return intent.hasExtra("onesignal_data") || intent.hasExtra("summary") || intent.hasExtra("notificationId");
+      return intent.hasExtra(BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
    }
 
    private static void handleDismissFromActionButtonPress(Context context, Intent intent) {
       // Pressed an action button, need to clear the notification and close the notification area manually.
       if (intent.getBooleanExtra("action_button", false)) {
-         NotificationManagerCompat.from(context).cancel(intent.getIntExtra("notificationId", 0));
+         NotificationManagerCompat.from(context).cancel(intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
          context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
       }
    }
@@ -79,14 +82,14 @@ class NotificationOpenedProcessor {
       JSONObject jsonData = null;
       if (!dismissed) {
          try {
-            jsonData = new JSONObject(intent.getStringExtra("onesignal_data"));
+            jsonData = new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA));
 
             if (handleIAMPreviewOpen(context, jsonData))
                return;
 
-            jsonData.put("notificationId", intent.getIntExtra("notificationId", 0));
-            intent.putExtra("onesignal_data", jsonData.toString());
-            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra("onesignal_data")));
+            jsonData.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
+            intent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString());
+            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA)));
          } catch (Throwable t) {
             t.printStackTrace();
          }
@@ -96,7 +99,7 @@ class NotificationOpenedProcessor {
       SQLiteDatabase writableDb = null;
 
       try {
-         writableDb = dbHelper.getWritableDbWithRetries();
+         writableDb = dbHelper.getSQLiteDatabaseWithRetries();
          writableDb.beginTransaction();
 
          // We just opened a summary notification.
@@ -126,10 +129,10 @@ class NotificationOpenedProcessor {
 
       if (!dismissed)
          OneSignal.handleNotificationOpen(context, dataArray,
-                 intent.getBooleanExtra("from_alert", false), OneSignal.getNotificationIdFromFCMJson(jsonData));
+                 intent.getBooleanExtra("from_alert", false), OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData));
    }
 
-   private static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {
+   static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {
       String previewUUID = NotificationBundleProcessor.inAppPreviewPushUUID(jsonData);
       if (previewUUID == null)
          return false;
@@ -196,7 +199,7 @@ class NotificationOpenedProcessor {
             }
          }
       } else
-         whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra("notificationId", 0);
+         whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0);
 
 
       clearStatusBarNotifications(context, writableDb, summaryGroup);

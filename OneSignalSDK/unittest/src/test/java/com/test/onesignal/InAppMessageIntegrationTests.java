@@ -8,7 +8,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
@@ -470,9 +470,9 @@ public class InAppMessageIntegrationTests {
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
         // Verify clickId was persisted locally
-        Set<String> testClickedMessages = OneSignalPackagePrivateHelper.OneSignalPrefs.getStringSet(
-           OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-           OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+        Set<String> testClickedMessages = TestOneSignalPrefs.getStringSet(
+           TestOneSignalPrefs.PREFS_ONESIGNAL,
+           TestOneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
            null
         );
         assertEquals(1, testClickedMessages.size());
@@ -485,9 +485,9 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Enable Outcomes
-        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+        TestOneSignalPrefs.saveBool(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
                 true
         );
 
@@ -528,9 +528,9 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Enable Outcomes
-        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+        TestOneSignalPrefs.saveBool(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
                 true
         );
 
@@ -572,9 +572,9 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Enable Outcomes
-        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+        TestOneSignalPrefs.saveBool(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
                 true
         );
 
@@ -626,9 +626,9 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Disable Outcomes
-        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+        TestOneSignalPrefs.saveBool(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
                 false
         );
 
@@ -664,9 +664,9 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Enable Outcomes
-        OneSignalPackagePrivateHelper.OneSignalPrefs.saveBool(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
+        TestOneSignalPrefs.saveBool(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_UNATTRIBUTED_ENABLED,
                 true
         );
 
@@ -897,9 +897,9 @@ public class InAppMessageIntegrationTests {
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
         // Verify impressioned messageId was persisted locally
-        Set<String> testImpressionedMessages = OneSignalPackagePrivateHelper.OneSignalPrefs.getStringSet(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+        Set<String> testImpressionedMessages = TestOneSignalPrefs.getStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
                 null
         );
         assertEquals(1, testImpressionedMessages.size());
@@ -966,8 +966,8 @@ public class InAppMessageIntegrationTests {
         assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Check if data after dismiss is set correctly
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime =  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime =  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Change time for delay to be covered
@@ -986,8 +986,8 @@ public class InAppMessageIntegrationTests {
         assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Check if data after dismiss is set correctly
         assertEquals(1,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(2,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        assertTrue( OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
+        assertEquals(2,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        assertTrue( OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
     }
 
     @Test
@@ -996,15 +996,15 @@ public class InAppMessageIntegrationTests {
 
         // Create an IAM
         final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(LIMIT, DELAY);
-        message.getDisplayStats().setLastDisplayTime(currentTimeInSeconds);
-        message.getDisplayStats().setDisplayQuantity(1);
+        message.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds);
+        message.getRedisplayStats().setDisplayQuantity(1);
         message.setDisplayedInSession(true);
         // Save IAM on DB
         TestHelpers.saveIAM(message);
         // Save IAM for dismiss
-        OneSignalPrefs.saveStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+        TestOneSignalPrefs.saveStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
                 new HashSet<>(Collections.singletonList(message.messageId))
         );
 
@@ -1065,8 +1065,8 @@ public class InAppMessageIntegrationTests {
         assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Check if data after dismiss is set correctly
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         OneSignal.addTrigger("test_1", 2);
@@ -1101,8 +1101,8 @@ public class InAppMessageIntegrationTests {
 
         // Check if data after dismiss is set correctly
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Set trigger, will evaluate IAMs again
@@ -1110,8 +1110,8 @@ public class InAppMessageIntegrationTests {
 
         // Check that the IAM was not displayed again because time between display is not covered
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        assertEquals(lastDisplayTime, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        assertEquals(lastDisplayTime, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime());
     }
 
     @Test
@@ -1136,8 +1136,8 @@ public class InAppMessageIntegrationTests {
 
         // Check if data after dismiss is set correctly
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
@@ -1148,8 +1148,8 @@ public class InAppMessageIntegrationTests {
 
         // Check that the IAM was not displayed again because Limit of display is 1
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        assertEquals(lastDisplayTime, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        assertEquals(lastDisplayTime, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime());
     }
 
     @Test
@@ -1181,8 +1181,8 @@ public class InAppMessageIntegrationTests {
 
         // Check if data after dismiss is set correctly
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime();
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime = OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
@@ -1211,8 +1211,8 @@ public class InAppMessageIntegrationTests {
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
         // Check if data after dismiss is set correctly
         assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
-        assertEquals(2, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getDisplayQuantity());
-        assertTrue(OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getDisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
+        assertEquals(2, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        assertTrue(OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
     }
 
     @Test
@@ -1240,9 +1240,9 @@ public class InAppMessageIntegrationTests {
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
         // Verify clickId was persisted locally
-        Set<String> testClickedMessages = OneSignalPackagePrivateHelper.OneSignalPrefs.getStringSet(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+        Set<String> testClickedMessages = TestOneSignalPrefs.getStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
                 null
         );
         assertEquals(1, testClickedMessages.size());
@@ -1262,9 +1262,9 @@ public class InAppMessageIntegrationTests {
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
 
         // Verify clickId was persisted locally
-        Set<String> secondRestClickedMessages = OneSignalPackagePrivateHelper.OneSignalPrefs.getStringSet(
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPackagePrivateHelper.OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+        Set<String> secondRestClickedMessages = TestOneSignalPrefs.getStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
                 null
         );
         assertEquals(1, secondRestClickedMessages.size());
@@ -1282,7 +1282,82 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
-    public void testInAppMessageRedisplayCacheUpdate() throws Exception {
+    public void testCachedIAMSharedPreferenceAndSQL_cleanedAfterSixMonths() throws Exception {
+        final long currentTimeInSeconds = System.currentTimeMillis() / 1_000L;
+
+        // 1. Setup IAMs
+        // Create an IAM younger than 6 months
+        final OSTestInAppMessage iam1 = InAppMessagingHelpers.buildTestMessage(null);
+        iam1.setRedisplayStats(1, currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
+        String clickId1 = "iam1_click_id_1";
+        iam1.addClickId(clickId1);
+        TestHelpers.saveIAM(iam1);
+
+        // Create an IAM older than 6 months
+        final OSTestInAppMessage iam2 = InAppMessagingHelpers.buildTestMessage(null);
+        iam2.setRedisplayStats(1, currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
+        String clickId2 = "iam2_click_id_1";
+        iam2.addClickId(clickId2);
+        TestHelpers.saveIAM(iam2);
+
+        // 2. Cache IAMs as dismissed, impressioned, and clicked
+        Set<String> messageIds = new HashSet<String>() {{
+            add(iam1.messageId);
+            add(iam2.messageId);
+        }};
+        TestOneSignalPrefs.saveStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                messageIds);
+
+        TestOneSignalPrefs.saveStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                messageIds);
+
+        Set<String> clickedClickIds = new HashSet<String>() {{
+            addAll(iam1.getClickedClickIds());
+            addAll(iam2.getClickedClickIds());
+        }};
+        TestOneSignalPrefs.saveStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                clickedClickIds);
+
+        // 3. Init OneSignal so it attempts to clean IAM cache
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 4. Validate all data associated with the 6 month old IAM has been deleted
+        Set<String> testDismissedMessages = TestOneSignalPrefs.getStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                null);
+        assertEquals(1, testDismissedMessages.size());
+        assertTrue(testDismissedMessages.contains(iam1.messageId));
+
+        Set<String> testImpressionedMessages = TestOneSignalPrefs.getStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                null);
+        assertEquals(1, testImpressionedMessages.size());
+        assertTrue(testImpressionedMessages.contains(iam1.messageId));
+
+        Set<String> testClickedClickIds = TestOneSignalPrefs.getStringSet(
+                TestOneSignalPrefs.PREFS_ONESIGNAL,
+                TestOneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                null);
+        assertEquals(1, testClickedClickIds.size());
+        assertTrue(testClickedClickIds.contains(clickId1));
+
+        // 5. Make sure only IAM left is the IAM younger than 6 months
+        List<OSTestInAppMessage> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages();
+        assertEquals(1, savedInAppMessagesAfterInit.size());
+        assertEquals(iam1.messageId, savedInAppMessagesAfterInit.get(0).messageId);
+    }
+
+    @Test
+    public void testInAppMessageRedisplayCacheCleaning() throws Exception {
         final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
 
         final OSTestInAppMessage inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
@@ -1290,10 +1365,10 @@ public class InAppMessageIntegrationTests {
 
         String firstID = inAppMessage.messageId + "_test";
         inAppMessage.messageId = firstID;
-        inAppMessage.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
+        inAppMessage.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
         TestHelpers.saveIAM(inAppMessage);
 
-        inAppMessage.getDisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
+        inAppMessage.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
         inAppMessage.messageId += "1";
         TestHelpers.saveIAM(inAppMessage);
 

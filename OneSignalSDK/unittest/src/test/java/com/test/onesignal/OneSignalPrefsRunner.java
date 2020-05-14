@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.onesignal.OneSignal;
-import com.onesignal.OneSignalPackagePrivateHelper.OneSignalPrefs;
+import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -40,7 +40,7 @@ public class OneSignalPrefsRunner {
 
    @Before // Before each test
    public void beforeEachTest() {
-      OneSignalPrefs.initializePool();
+      TestOneSignalPrefs.initializePool();
       ActivityController<BlankActivity> blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
    }
@@ -52,20 +52,20 @@ public class OneSignalPrefsRunner {
 
    @Test
    public void testNullContextDoesNotCrash() {
-      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
+      TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
    }
 
    @Test
    public void tesWriteWithNullAppId_andSavesAfterSetting() {
       OneSignal.setAppContext(blankActivity);
-      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
+      TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
 
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       TestHelpers.flushBufferedSharedPrefs();
 
-      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(TestOneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
       String value = prefs.getString("key", "");
       assertEquals("value", value);
    }
@@ -73,13 +73,13 @@ public class OneSignalPrefsRunner {
    @Test
    public void tesWriteWithNullContext_andSavesAfterSetting() {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
+      TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
 
       OneSignal.setAppContext(blankActivity);
       TestHelpers.flushBufferedSharedPrefs();
 
-      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(TestOneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
       String value = prefs.getString("key", "");
       assertEquals("value", value);
    }
@@ -87,13 +87,13 @@ public class OneSignalPrefsRunner {
    @Test
    public void tesWriteWithNullContextAndAppId_andSavesAfterSetting() {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-      OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
+      TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();
 
       OneSignal.setAppContext(blankActivity);
       TestHelpers.flushBufferedSharedPrefs();
 
-      final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
+      final SharedPreferences prefs = blankActivity.getSharedPreferences(TestOneSignalPrefs.PREFS_ONESIGNAL, Context.MODE_PRIVATE);
       String value = prefs.getString("key", "");
       assertEquals("value", value);
    }

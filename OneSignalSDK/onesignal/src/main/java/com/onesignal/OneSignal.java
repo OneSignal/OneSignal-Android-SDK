@@ -70,6 +70,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
+
 /**
  * The main OneSignal class - this is where you will interface with the OneSignal SDK
  * <br/><br/>
@@ -823,7 +826,7 @@ public class OneSignal {
             return LocationGMS.PermissionType.STARTUP;
          }
          @Override
-         public void complete(LocationGMS.LocationPoint point) {
+         public void onComplete(LocationGMS.LocationPoint point) {
             lastLocationPoint = point;
             locationFired = true;
             registerUser();
@@ -833,7 +836,7 @@ public class OneSignal {
       // Prompted so we don't ask for permissions more than once
       promptedLocation = promptedLocation || mPromptLocation;
 
-      LocationGMS.getLocation(appContext, doPrompt, locationHandler);
+      LocationGMS.getLocation(appContext, doPrompt, false, locationHandler);
    }
    private static PushRegistrator mPushRegistrator;
 
@@ -1937,7 +1940,7 @@ public class OneSignal {
       OSNotification notification = new OSNotification();
       notification.isAppInFocus = isAppActive();
       notification.shown = shown;
-      notification.androidNotificationId = dataArray.optJSONObject(0).optInt("notificationId");
+      notification.androidNotificationId = dataArray.optJSONObject(0).optInt(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
 
       String actionSelected = null;
 
@@ -1946,8 +1949,8 @@ public class OneSignal {
             JSONObject data = dataArray.getJSONObject(i);
 
             notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
-            if (actionSelected == null && data.has("actionSelected"))
-               actionSelected = data.optString("actionSelected", null);
+            if (actionSelected == null && data.has(BUNDLE_KEY_ACTION_ID))
+               actionSelected = data.optString(BUNDLE_KEY_ACTION_ID, null);
 
             if (firstMessage)
                firstMessage = false;
@@ -2028,7 +2031,7 @@ public class OneSignal {
       Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
       // Make sure we have a launcher intent.
       if (launchIntent != null) {
-         launchIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+         launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
          inContext.startActivity(launchIntent);
          return true;
       }
@@ -2389,10 +2392,10 @@ public class OneSignal {
     * @see <a href="https://documentation.onesignal.com/docs/permission-requests">Permission Requests | OneSignal Docs</a>
     */
    public static void promptLocation() {
-      promptLocation(null);
+      promptLocation(null, false);
    }
 
-   static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback) {
+   static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback, final boolean fallbackToSettings) {
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
          return;
@@ -2406,7 +2409,7 @@ public class OneSignal {
                   return LocationGMS.PermissionType.PROMPT_LOCATION;
                }
                @Override
-               public void complete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationGMS.LocationPoint point) {
                   //if applicable, check if the user provided privacy consent
                   if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
                      return;
@@ -2416,14 +2419,14 @@ public class OneSignal {
                }
 
                @Override
-               void onAnswered(boolean accepted) {
-                  super.onAnswered(accepted);
+               void onAnswered(OneSignal.PromptActionResult result) {
+                  super.onAnswered(result);
                   if (callback != null)
-                     callback.completed(accepted);
+                     callback.onCompleted(result);
                }
             };
 
-            LocationGMS.getLocation(appContext, true, locationHandler);
+            LocationGMS.getLocation(appContext, true, fallbackToSettings, locationHandler);
             promptedLocation = true;
          }
       };
@@ -2453,7 +2456,7 @@ public class OneSignal {
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             Cursor cursor = null;
             try {
-               SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+               SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
                String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
 
@@ -2479,7 +2482,7 @@ public class OneSignal {
                // Mark all notifications as dismissed unless they were already opened.
                SQLiteDatabase writableDb = null;
                try {
-                  writableDb = dbHelper.getWritableDbWithRetries();
+                  writableDb = dbHelper.getSQLiteDatabaseWithRetries();
                   writableDb.beginTransaction();
 
                   String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
@@ -2533,7 +2536,7 @@ public class OneSignal {
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             SQLiteDatabase writableDb = null;
             try {
-               writableDb = dbHelper.getWritableDbWithRetries();
+               writableDb = dbHelper.getSQLiteDatabaseWithRetries();
                writableDb.beginTransaction();
 
                String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
@@ -2595,7 +2598,7 @@ public class OneSignal {
             Cursor cursor = null;
 
             try {
-               SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+               SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
                String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID };
 
@@ -2627,7 +2630,7 @@ public class OneSignal {
 
             SQLiteDatabase writableDb = null;
             try {
-               writableDb = dbHelper.getWritableDbWithRetries();
+               writableDb = dbHelper.getSQLiteDatabaseWithRetries();
                writableDb.beginTransaction();
 
                String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
@@ -2902,7 +2905,7 @@ public class OneSignal {
       Cursor cursor = null;
 
       try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
          String[] retColumn = {NotificationTable.COLUMN_NAME_NOTIFICATION_ID};
          String[] whereArgs = {id};
@@ -2933,7 +2936,7 @@ public class OneSignal {
    }
 
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
-      String id = getNotificationIdFromFCMJsonPayload(jsonPayload);
+      String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
       return id == null || OneSignal.isDuplicateNotification(id, context);
    }
 
@@ -3134,6 +3137,13 @@ public class OneSignal {
    // End OneSignalOutcome module
 
    interface OSPromptActionCompletionCallback {
-      void completed(boolean accepted);
+      void onCompleted(PromptActionResult result);
+   }
+
+   enum PromptActionResult {
+      PERMISSION_GRANTED,
+      PERMISSION_DENIED,
+      LOCATION_PERMISSIONS_MISSING_MANIFEST,
+      ERROR;
    }
 }

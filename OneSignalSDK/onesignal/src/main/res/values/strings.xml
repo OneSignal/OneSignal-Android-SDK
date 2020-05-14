@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="location_not_available_title">Location Not Available</string>
+    <string name="location_not_available_message">Looks like this app doesn\'t have location services configured. Please see OneSignal docs for more information.</string>
+
+    <string name="location_not_available_open_settings_message">You have previously denied sharing your device location. Please go to settings to enable.</string>
+    <string name="location_not_available_open_settings_option">Settings</string>
+</resources>

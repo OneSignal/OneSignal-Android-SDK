@@ -82,7 +82,7 @@ class NotificationLimitManager {
 
       Cursor cursor = null;
       try {
-         SQLiteDatabase readableDb = dbHelper.getReadableDbWithRetries();
+         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
          cursor = readableDb.query(
             NotificationTable.TABLE_NAME,
             new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID },

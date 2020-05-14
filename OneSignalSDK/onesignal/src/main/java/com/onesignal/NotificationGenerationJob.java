@@ -94,7 +94,7 @@ class NotificationGenerationJob {
    }
 
    String getApiNotificationId() {
-      return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
+      return OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
    }
 
    void setAndroidIdWithOutOverriding(Integer id) {
