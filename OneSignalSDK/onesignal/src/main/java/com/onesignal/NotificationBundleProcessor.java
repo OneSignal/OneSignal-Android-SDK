@@ -549,9 +549,7 @@ class NotificationBundleProcessor {
    }
 
    static boolean shouldDisplay(String body) {
-      boolean hasBody = body != null && !"".equals(body);
-      boolean isActive = OneSignal.isAppActive();
-      return hasBody && !isActive;
+      return body != null && !"".equals(body);
    }
 
    static @NonNull JSONArray newJsonArray(JSONObject jsonObject) {
