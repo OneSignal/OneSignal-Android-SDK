@@ -78,8 +78,8 @@ class NotificationBundleProcessor {
             return;
          }
 
-          OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-          notifJob.isRestoring = bundle.getBoolean("restoring", false);
+         OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
+         notifJob.isRestoring = bundle.getBoolean("restoring", false);
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
          notifJob.jsonPayload = new JSONObject(jsonStrPayload);
          notifJob.isIamPreview = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
@@ -129,7 +129,7 @@ class NotificationBundleProcessor {
         }
 
         return notifJob.getAndroidIdWithoutCreate();
-   }
+    }
 
    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notifJob) {
       // Validate that the current Android device is Android 4.4 or higher and the current job is a
