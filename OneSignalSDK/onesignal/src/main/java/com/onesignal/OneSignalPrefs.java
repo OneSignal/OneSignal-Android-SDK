@@ -132,23 +132,43 @@ class OneSignalPrefs {
             super(name);
         }
 
+        @Override
+        protected void onLooperPrepared() {
+            super.onLooperPrepared();
+
+            // Getting handler here as onLooperPrepared guarantees getLooper() will not return null
+            mHandler = new Handler(getLooper());
+            scheduleFlushToDiskJob();
+        }
+
         private synchronized void startDelayedWrite() {
             // A Context is required to write,
             //   if not available now later OneSignal.setContext will call this again.
             if (OneSignal.appContext == null)
                 return;
 
-            if (mHandler == null) {
-                startThread();
-                mHandler = new Handler(getLooper());
-            }
+            startThread();
+            scheduleFlushToDiskJob();
+        }
+
+        private synchronized void scheduleFlushToDiskJob() {
+            // Could be null if looper thread just started
+            if (mHandler == null)
+                return;
 
             mHandler.removeCallbacksAndMessages(null);
+
             if (lastSyncTime == 0)
                 lastSyncTime = System.currentTimeMillis();
-
             long delay = lastSyncTime - System.currentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
-            mHandler.postDelayed(getNewRunnable(), delay);
+
+            Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    flushBufferToDisk();
+                }
+            };
+            mHandler.postDelayed(runnable, delay);
         }
 
         /**
@@ -172,7 +192,11 @@ class OneSignalPrefs {
         private RuntimeException threadStartRuntimeException;
         private Throwable threadStartThrowable;
 
+        private boolean threadStartCalled;
         private void startThread() {
+            if (threadStartCalled)
+                return;
+
             if (threadStartError != null)
                 throw threadStartError;
 
@@ -199,6 +223,7 @@ class OneSignalPrefs {
 
             try {
                 start();
+                threadStartCalled = true;
             } catch (InternalError e) {
                 // Thread starting during runtime shutdown
                 threadStartError = e;
@@ -230,15 +255,6 @@ class OneSignalPrefs {
                 threadStartThrowable = t;
                 throw t;
             }
-        }
-
-        private Runnable getNewRunnable() {
-            return new Runnable() {
-                @Override
-                public void run() {
-                    flushBufferToDisk();
-                }
-            };
         }
 
         private void flushBufferToDisk() {
