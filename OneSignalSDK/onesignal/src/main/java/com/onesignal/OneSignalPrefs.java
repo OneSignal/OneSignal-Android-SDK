@@ -151,6 +151,15 @@ class OneSignalPrefs {
             scheduleFlushToDiskJob();
         }
 
+        private boolean threadStartCalled;
+        private void startThread() {
+            if (threadStartCalled)
+                return;
+
+            start();
+            threadStartCalled = true;
+        }
+
         private synchronized void scheduleFlushToDiskJob() {
             // Could be null if looper thread just started
             if (mHandler == null)
@@ -169,92 +178,6 @@ class OneSignalPrefs {
                 }
             };
             mHandler.postDelayed(runnable, delay);
-        }
-
-        /**
-         * Attempt to start the thread used by this HandlerThread
-         * It may fail due to the following:
-         *   - InternalError - Thread starting during runtime shutdown
-         *   - OutOfMemoryError - pthread_create (####KB stack) failed: Try again
-         * If it does throw we want to catch then save the error and rethrow
-         * If startThread is called a 2nd time we will rethrowing the first exception
-         *   - Otherwise Thread.start will just throw IllegalThreadStateException
-         * Normally this catch and rethrow would not be needed however somewhere in this
-         *   SDK code base or a consumer of this SDK is catching first exception and
-         *   silently ignoring it. Resulting in the true causing of a crash being unknown.
-         * See https://github.com/OneSignal/OneSignal-Android-SDK/issues/917#issuecomment-600472976
-         *
-         * Future: We may want to use this strategy for all Thread.start calls.
-         *         And limit thread usages, using mostly coroutines instead.
-         */
-
-        private Error threadStartError;
-        private RuntimeException threadStartRuntimeException;
-        private Throwable threadStartThrowable;
-
-        private boolean threadStartCalled;
-        private void startThread() {
-            if (threadStartCalled)
-                return;
-
-            if (threadStartError != null)
-                throw threadStartError;
-
-            if (threadStartRuntimeException != null)
-                throw threadStartRuntimeException;
-
-            // Ideally we would just throw threadStartThrowable here,
-            //   however we can't without adding throws to this method's signature.
-            // If this is done we would have to add throws all the way up the stack to
-            //   to public SDK methods which can't be done at this time nor would
-            //   "throws Throwable" be a good public signature.
-            if (threadStartThrowable != null) {
-                // The following lines turn a Throwable into a RuntimeException
-                //   to workaround the the throwable signature noted above.
-                RuntimeException exception = new RuntimeException(
-                        threadStartThrowable.getClass().getName() +
-                            ": " +
-                            threadStartThrowable.getMessage(),
-                        threadStartThrowable
-                );
-                exception.setStackTrace(threadStartThrowable.getStackTrace());
-                throw exception;
-            }
-
-            try {
-                start();
-                threadStartCalled = true;
-            } catch (InternalError e) {
-                // Thread starting during runtime shutdown
-                threadStartError = e;
-                throw e;
-            }
-            catch (OutOfMemoryError e) {
-                // pthread_create (1040KB stack) failed: Try again
-                threadStartError = e;
-                throw e;
-            }
-            catch (Error t) {
-                // Possibly some other error we didn't expect Thread.start() to throw
-                threadStartError = t;
-                throw t;
-            }
-            catch (IllegalThreadStateException e) {
-                // Adds the state of the thread to IllegalThreadStateException to provide more details
-                IllegalThreadStateException exception =
-                    new IllegalThreadStateException("Thread has state: " + this.getState());
-                exception.setStackTrace(e.getStackTrace());
-                threadStartRuntimeException = exception;
-                throw exception;
-            }
-            catch (RuntimeException e) {
-                threadStartRuntimeException = e;
-                throw e;
-            }
-            catch (Throwable t) {
-                threadStartThrowable = t;
-                throw t;
-            }
         }
 
         private void flushBufferToDisk() {
