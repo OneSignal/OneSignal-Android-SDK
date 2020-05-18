@@ -57,7 +57,6 @@ import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
-import com.onesignal.OneSignalDbHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.PermissionsActivity;
@@ -114,6 +113,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+
+import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
+import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
@@ -174,26 +176,39 @@ public class MainOneSignalClassRunner {
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
-   private static String callBackUseId, getCallBackRegId;
-   private static String notificationOpenedMessage;
-   private static JSONObject lastGetTags;
    private MockOutcomesUtils notificationData;
 
-   private static void GetIdsAvailable() {
+   private static String lastUserId, lastRegistrationId;
+   private static void getIdsAvailableHandler() {
       OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
          @Override
          public void idsAvailable(String userId, String registrationId) {
-            callBackUseId = userId;
-            getCallBackRegId = registrationId;
+            lastUserId = userId;
+            lastRegistrationId = registrationId;
          }
       });
    }
 
+   private static AppNotificationGenerationJob lastNotificationGenerationJob;
+   private static OneSignal.AppNotificationWillShowInForegroundHandler getAppNotificationWillShowInForegroundHandler() {
+      return new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(AppNotificationGenerationJob notifJob) {
+            lastNotificationGenerationJob = notifJob;
+         }
+      };
+   }
+
+   private static OSNotificationOpenResult lastNotificationOpenResult;
+   private static String lastNotificationOpenedBody;
    private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
       return new OneSignal.NotificationOpenedHandler() {
          @Override
          public void notificationOpened(OSNotificationOpenResult openedResult) {
-            notificationOpenedMessage = openedResult.notification.payload.body;
+            lastNotificationOpenResult = openedResult;
+
+            // TODO: Double check if we should use this or not
+            lastNotificationOpenedBody = openedResult.notification.payload.body;
          }
       };
    }
@@ -208,7 +223,8 @@ public class MainOneSignalClassRunner {
       };
    }
 
-   private static void GetTags() {
+   private static JSONObject lastGetTags;
+   private static void getGetTagsHandler() {
       OneSignal.getTags(new OneSignal.GetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
@@ -218,9 +234,9 @@ public class MainOneSignalClassRunner {
    }
 
    private static void cleanUp() throws Exception {
-      callBackUseId = getCallBackRegId = null;
+      lastUserId = lastRegistrationId = null;
 
-      notificationOpenedMessage = null;
+      lastNotificationOpenedBody = null;
       lastGetTags = null;
       lastExternalUserIdResponse = null;
 
@@ -781,8 +797,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
-      GetIdsAvailable();
-      assertEquals("players/" + callBackUseId, ShadowOneSignalRestClient.lastUrl);
+      getIdsAvailableHandler();
+      assertEquals("players/" + lastUserId, ShadowOneSignalRestClient.lastUrl);
       assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
    }
 
@@ -820,8 +836,8 @@ public class MainOneSignalClassRunner {
 
       // 4. Ensure we made 4 network calls. (2 to android_params and 1 create player call)
       assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
-      GetIdsAvailable();
-      assertEquals("players/" + callBackUseId + "/on_session", ShadowOneSignalRestClient.lastUrl);
+      getIdsAvailableHandler();
+      assertEquals("players/" + lastUserId + "/on_session", ShadowOneSignalRestClient.lastUrl);
       assertEquals(REST_METHOD.POST, ShadowOneSignalRestClient.requests.get(4).method);
    }
 
@@ -868,7 +884,7 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
-      assertEquals("Robo test message", notificationOpenedMessage);
+      assertEquals("Robo test message", lastNotificationOpenedBody);
    }
 
    @Test
@@ -926,11 +942,11 @@ public class MainOneSignalClassRunner {
 
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
-      assertNull(notificationOpenedMessage);
+      assertNull(lastNotificationOpenedBody);
 
       OneSignalInit();
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
-      assertEquals("Robo test message", notificationOpenedMessage);
+      assertEquals("Robo test message", lastNotificationOpenedBody);
    }
 
    @Test
@@ -945,7 +961,7 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
-      notificationOpenedMessage = null;
+      lastNotificationOpenedBody = null;
 
       // Restart app - Should omit notification_types
       StaticResetHelper.restSetStaticFields();
@@ -955,7 +971,7 @@ public class MainOneSignalClassRunner {
 
       threadAndTaskWait();
 
-      assertEquals(null, notificationOpenedMessage);
+      assertEquals(null, lastNotificationOpenedBody);
    }
 
    @Test
@@ -1010,38 +1026,39 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
-      assertNull(notificationOpenedMessage);
+      assertNull(lastNotificationOpenedBody);
 
       OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
-      assertEquals("Test Msg", notificationOpenedMessage);
+      assertEquals("Test Msg", lastNotificationOpenedBody);
    }
 
    private static String notificationReceivedBody;
    private static int androidNotificationId;
    @Test
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
+      // 1. Init OneSignal
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+         public void notificationWillShowInForeground(AppNotificationGenerationJob notifJob) {
             androidNotificationId = notifJob.getAndroidNotificationId();
             notificationReceivedBody = notifJob.getBody();
          }
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
+
+      // 2. Foreground the app
       blankActivityController.resume();
       threadAndTaskWait();
-
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
 
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
 
-      assertNull(notificationOpenedMessage);
+      assertNull(lastNotificationOpenedBody);
       assertFalse(processResult);
       // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
@@ -1049,25 +1066,23 @@ public class MainOneSignalClassRunner {
       assertNotEquals(0, androidNotificationId);
 
       // Don't fire for duplicates
-      notificationOpenedMessage = null;
+      lastNotificationOpenedBody = null;
       notificationReceivedBody = null;
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
-      assertNull(notificationOpenedMessage);
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      assertNull(notificationOpenedMessage);
+      assertNull(lastNotificationOpenedBody);
       assertNull(notificationReceivedBody);
 
-      // Test that only NotificationReceivedHandler fires
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
-      bundle = getBaseNotifBundle("UUID2");
-      notificationOpenedMessage = null;
+      lastNotificationOpenedBody = null;
       notificationReceivedBody = null;
+
+      // Test that only NotificationReceivedHandler fires
+      bundle = getBaseNotifBundle("UUID2");
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
-      assertNull(notificationOpenedMessage);
+      assertNull(lastNotificationOpenedBody);
       assertEquals("Robo test message", notificationReceivedBody);
    }
 
@@ -1106,7 +1121,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testInvalidGoogleProjectNumberWithSuccessfulRegisterResponse() throws Exception {
-      GetIdsAvailable();
+      getIdsAvailableHandler();
       // A more real test would be "missing support library" but bad project number is an easier setup
       //   and is testing the same logic.
       ShadowPushRegistratorFCM.fail = true;
@@ -1117,14 +1132,14 @@ public class MainOneSignalClassRunner {
 
       assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
       // Test that idsAvailable still fires
-      assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
-      assertNull(getCallBackRegId); // Since FCM registration failed, this should be null
+      assertEquals(ShadowOneSignalRestClient.pushUserId, lastUserId);
+      assertNull(lastRegistrationId); // Since FCM registration failed, this should be null
 
       // We now get a push token after the device registers with Onesignal,
       //    the idsAvailable callback should fire a 2nd time with a registrationId automatically
       ShadowPushRegistratorFCM.manualFireRegisterForPush();
       threadAndTaskWait();
-      assertEquals(ShadowPushRegistratorFCM.regId, getCallBackRegId);
+      assertEquals(ShadowPushRegistratorFCM.regId, lastRegistrationId);
    }
 
    @Test
@@ -1146,7 +1161,7 @@ public class MainOneSignalClassRunner {
    public void testInvalidGoogleProjectNumberWithFailedRegisterResponse() throws Exception {
       // Ensures lower number notification_types do not over right higher numbered ones.
       ShadowPushRegistratorFCM.fail = true;
-      GetIdsAvailable();
+      getIdsAvailableHandler();
 //      OneSignalInitWithBadProjectNum();
       OneSignalInit();
       threadAndTaskWait();
@@ -1154,23 +1169,23 @@ public class MainOneSignalClassRunner {
       assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      assertEquals(ShadowOneSignalRestClient.pushUserId, callBackUseId);
+      assertEquals(ShadowOneSignalRestClient.pushUserId, lastUserId);
    }
 
    @Test
    public void testUnsubcribedShouldMakeRegIdNullToIdsAvailable() throws Exception {
-      GetIdsAvailable();
+      getIdsAvailableHandler();
       OneSignalInit();
       threadAndTaskWait();
       assertEquals(ShadowPushRegistratorFCM.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
 
       Robolectric.getForegroundThreadScheduler().runOneTask();
-      assertEquals(ShadowPushRegistratorFCM.regId, getCallBackRegId);
+      assertEquals(ShadowPushRegistratorFCM.regId, lastRegistrationId);
 
       OneSignal.setSubscription(false);
-      GetIdsAvailable();
+      getIdsAvailableHandler();
       threadAndTaskWait();
-      assertNull(getCallBackRegId);
+      assertNull(lastRegistrationId);
    }
 
    @Test
@@ -1789,7 +1804,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\"}"));
       OneSignal.sendTags(new JSONObject("{\"test2\": \"value2\"}"));
 
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals("value1", lastGetTags.getString("test1"));
@@ -1801,7 +1816,7 @@ public class MainOneSignalClassRunner {
    public void shouldNotAttemptToSendTagsBeforeGettingPlayerId() throws Exception {
       ShadowPushRegistratorFCM.skipComplete = true;
       OneSignalInit();
-      GetIdsAvailable();
+      getIdsAvailableHandler();
       threadAndTaskWait();
 
       assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
@@ -1816,7 +1831,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      assertNotNull(callBackUseId);
+      assertNotNull(lastUserId);
    }
 
    private static class TestChangeTagsUpdateHandler implements ChangeTagsUpdateHandler {
@@ -1955,7 +1970,7 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTag("int");
       threadAndTaskWait();
 
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals("{}", lastGetTags.toString());
@@ -1965,7 +1980,7 @@ public class MainOneSignalClassRunner {
    public void testSendTagNonStringValues() throws Exception {
       OneSignalInit();
       OneSignal.sendTags("{\"int\": 122, \"bool\": true, \"null\": null, \"array\": [123], \"object\": {}}");
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals(String.class, lastGetTags.get("int").getClass());
@@ -2572,7 +2587,7 @@ public class MainOneSignalClassRunner {
    public void testMethodCalls_withSetAppIdCalledBeforeMethodCalls() throws Exception {
       OneSignal.setAppId(ONESIGNAL_APP_ID);
 
-      GetTags();
+      getGetTagsHandler();
       OneSignal.sendTag("key", "value");
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
@@ -2587,18 +2602,15 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
@@ -2606,7 +2618,7 @@ public class MainOneSignalClassRunner {
    public void testMethodCalls_withSetAppContextCalledBeforeMethodCalls() throws Exception {
       OneSignal.setAppContext(blankActivity);
 
-      GetTags();
+      getGetTagsHandler();
       OneSignal.sendTag("key", "value");
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
@@ -2621,24 +2633,21 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
    @Test
    public void testMethodCalls_withSetAppContextAndSetAppId() throws Exception {
-      GetTags();
+      getGetTagsHandler();
       OneSignal.sendTag("key", "value");
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
@@ -2653,25 +2662,22 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
    @Test
    public void testMethodCalls_withSetAppIdAndSetAppContext() throws Exception {
-      GetTags();
+      getGetTagsHandler();
       OneSignal.sendTag("key", "value");
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
@@ -2686,19 +2692,16 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       OneSignal.removeNotificationOpenedHandler();
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
    }
 
@@ -2714,7 +2717,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags("{\"str\": \"str1\", \"int\": 122, \"bool\": true}");
       OneSignal.deleteTag("int");
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertFalse(lastGetTags.has("int"));
@@ -2727,7 +2730,7 @@ public class MainOneSignalClassRunner {
 
       // Make sure a single delete works.
       OneSignal.deleteTag("int");
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
       assertFalse(lastGetTags.has("int"));
 
@@ -2755,7 +2758,7 @@ public class MainOneSignalClassRunner {
       assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("foo"));
       assertEquals("", ShadowOneSignalRestClient.lastPost.getJSONObject("tags").get("fuz"));
 
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals("{}", lastGetTags.toString());
@@ -2782,7 +2785,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertNull(lastGetTags);
@@ -2801,7 +2804,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       OneSignal.sendTags(new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}"));
       threadAndTaskWait();
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals("value1", lastGetTags.getString("test1"));
@@ -2820,7 +2823,7 @@ public class MainOneSignalClassRunner {
          }});
       }});
 
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
@@ -2830,7 +2833,7 @@ public class MainOneSignalClassRunner {
       // Makes sure a 2nd call to GetTags correctly uses existing tags and merges new local changes.
       lastGetTags = null;
       OneSignal.sendTag("test3", "value3");
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
       assertEquals("value1", lastGetTags.getString("test1"));
       assertEquals("value2", lastGetTags.getString("test2"));
@@ -2856,7 +2859,7 @@ public class MainOneSignalClassRunner {
             put("test4", "RemoteShouldNotOverwriteLocalPending");
          }});
       }});
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
       assertEquals("value1", lastGetTags.getString("test1"));
       System.out.println("lastGetTags: " + lastGetTags);
@@ -2879,7 +2882,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.nextSuccessfulGETResponsePattern = Pattern.compile("players/.*");
 
       OneSignalInit();
-      GetTags();
+      getGetTagsHandler();
       threadAndTaskWait();
 
       assertEquals(3, ShadowOneSignalRestClient.networkCallCount);

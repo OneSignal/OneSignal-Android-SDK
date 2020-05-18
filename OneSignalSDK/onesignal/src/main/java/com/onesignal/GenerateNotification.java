@@ -113,71 +113,6 @@ class GenerateNotification {
 
       showNotification(notifJob);
    }
-
-   private static void showNotificationAsAlert(final JSONObject fcmJson, final Activity activity, final int notificationId) {
-      activity.runOnUiThread(new Runnable() {
-         @Override
-         public void run() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle(getTitle(fcmJson));
-            builder.setMessage(fcmJson.optString("alert"));
-
-            List<String> buttonsLabels = new ArrayList<>();
-            List<String> buttonIds = new ArrayList<>();
-
-            addAlertButtons(activity, fcmJson, buttonsLabels, buttonIds);
-
-            final List<String> finalButtonIds = buttonIds;
-
-            Intent buttonIntent = getNewBaseIntent(notificationId);
-            buttonIntent.putExtra("action_button", true);
-            buttonIntent.putExtra("from_alert", true);
-            buttonIntent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString());
-            if (fcmJson.has("grp"))
-               buttonIntent.putExtra("grp", fcmJson.optString("grp"));
-
-            final Intent finalButtonIntent = buttonIntent;
-
-            DialogInterface.OnClickListener buttonListener = new DialogInterface.OnClickListener() {
-               public void onClick(DialogInterface dialog, int which) {
-                  int index = which + 3;
-
-                  if (finalButtonIds.size() > 1) {
-                     try {
-                        JSONObject newJsonData = new JSONObject(fcmJson.toString());
-                        newJsonData.put(BUNDLE_KEY_ACTION_ID, finalButtonIds.get(index));
-                        finalButtonIntent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, newJsonData.toString());
-
-                        NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-                     } catch (Throwable t) {}
-                  } else // No action buttons, close button simply pressed.
-                     NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            };
-
-            // Back button pressed
-            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-               @Override
-               public void onCancel(DialogInterface dialogInterface) {
-                  NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            });
-
-            for (int i = 0; i < buttonsLabels.size(); i++) {
-               if (i == 0)
-                  builder.setNeutralButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 1)
-                  builder.setNegativeButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 2)
-                  builder.setPositiveButton(buttonsLabels.get(i), buttonListener);
-            }
-
-            AlertDialog alertDialog = builder.create();
-            alertDialog.setCanceledOnTouchOutside(false);
-            alertDialog.show();
-         }
-      });
-   }
    
    private static CharSequence getTitle(JSONObject fcmJson) {
       CharSequence title = fcmJson.optString("title", null);
@@ -330,7 +265,7 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   private static void showNotification(OSNotificationGenerationJob notifJob) {
+   static void showNotification(OSNotificationGenerationJob notifJob) {
       int notificationId = notifJob.getAndroidId();
       JSONObject fcmJson = notifJob.jsonPayload;
       String group = fcmJson.optString("grp", null);
@@ -500,7 +435,7 @@ class GenerateNotification {
       } catch (Throwable t) {} // Ignore if not a Xiaomi device
    }
 
-   static void updateSummaryNotification(NotificationGenerationJob notifJob) {
+   static void updateSummaryNotification(OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
       createSummaryNotification(notifJob, null);
    }
