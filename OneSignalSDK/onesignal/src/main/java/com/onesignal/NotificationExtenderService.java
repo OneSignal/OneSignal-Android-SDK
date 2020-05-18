@@ -97,11 +97,6 @@ public abstract class NotificationExtenderService extends JobIntentService {
    private Long restoreTimestamp;
    private OverrideSettings currentBaseOverrideSettings = null;
 
-   static void showNotification(final OSNotificationGenerationJob notifJob) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Attempting to show notification with notifJob payload:\n" + notifJob.toString());
-      GenerateNotification.fromJsonPayload(notifJob);
-   }
-
    // Developer may call to override some notification settings.
    // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
    protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
