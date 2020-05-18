@@ -31,6 +31,7 @@ package com.onesignal;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
+import android.text.TextUtils;
 
 import com.onesignal.OneSignal.OSNotificationDisplay;
 
@@ -197,7 +198,7 @@ public class OSNotificationGenerationJob {
          timeoutHandler = null;
       }
 
-      public OSNotificationGenerationJob getNotifJob() {
+      OSNotificationGenerationJob getNotifJob() {
          return notifJob;
       }
 
@@ -256,7 +257,7 @@ public class OSNotificationGenerationJob {
 
          // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists or bubbling is set false
          if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
-            NotificationExtenderService.showNotification(getNotifJob());
+            GenerateNotification.fromJsonPayload(getNotifJob());
             return;
          }
 
@@ -294,7 +295,7 @@ public class OSNotificationGenerationJob {
       //    a 30 second timer and complete by default
       public void complete() {
          destroyShowNotificationTimeout();
-         NotificationExtenderService.showNotification(getNotifJob());
+         GenerateNotification.fromJsonPayload(getNotifJob());
       }
    }
 

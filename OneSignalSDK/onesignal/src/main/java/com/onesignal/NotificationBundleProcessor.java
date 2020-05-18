@@ -35,6 +35,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.TextUtils;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -48,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
-import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
@@ -67,6 +68,8 @@ class NotificationBundleProcessor {
 
    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
    static final String DEFAULT_ACTION = "__DEFAULT__";
+
+   private static final String OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD = "OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD";
 
 
    static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
@@ -107,16 +110,28 @@ class NotificationBundleProcessor {
       }
    }
 
+   /**
+    * Recommended method to process notification before displaying
+    * Only use the {@link NotificationBundleProcessor#ProcessJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
+    *     in the event where you want to mark a notification as opened or displayed different than the defaults
+    */
    static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob) {
+      return ProcessJobForDisplay(notifJob, false, true);
+   }
+
+   static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
       processCollapseKey(notifJob);
 
       boolean doDisplay = shouldDisplayNotif(notifJob);
-      if (doDisplay && !notifJob.isRestoring && !notifJob.isIamPreview) {
-         processNotification(notifJob, false);
-         OneSignal.handleNotificationReceived(notifJob, true);
+      if (doDisplay)
+         OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
+
+      if (!notifJob.isRestoring && !notifJob.isIamPreview) {
+         processNotification(notifJob, opened);
+         OneSignal.handleNotificationReceived(notifJob, displayed);
       }
 
-      return notifJob.getAndroidId();
+      return notifJob.getAndroidIdWithoutCreate();
    }
 
    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notifJob) {
@@ -126,8 +141,7 @@ class NotificationBundleProcessor {
          return false;
 
       // Otherwise, this is a normal notification and should be shown
-      return notifJob.hasExtender() ||
-              shouldDisplay(notifJob.jsonPayload.optString("alert"));
+      return notifJob.hasExtender() || shouldDisplay(notifJob.jsonPayload.optString("alert"));
    }
 
    private static JSONArray bundleAsJsonArray(Bundle bundle) {
@@ -484,20 +498,29 @@ class NotificationBundleProcessor {
       if (result.isDup)
          return result;
 
-      String alert = bundle.getString("alert");
+      // Create new notifJob to be processed for display
+      final OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
+      notifJob.jsonPayload = bundleAsJSONObject(bundle);
+      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
 
-      // Save as a opened notification to prevent duplicates.
+      // Process and save as a opened notification to prevent duplicates.
+      String alert = bundle.getString("alert");
       if (!shouldDisplay(alert)) {
-         final OSNotificationGenerationJob notifJob = saveAndProcessNotification(context, bundle, true, -1);
-         // Current thread is meant to be short lived.
-         //    Make a new thread to do our OneSignal work on.
+         notifJob.overrideSettings.androidNotificationId = -1;
          new Thread(new Runnable() {
             public void run() {
-               OneSignal.handleNotificationReceived(notifJob, false);
+               NotificationBundleProcessor.ProcessJobForDisplay(notifJob, true, false);
             }
-         }, "OS_PROC_BUNDLE").start();
+         }, OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD).start();
       }
-      
+      else {
+          new Thread(new Runnable() {
+              public void run() {
+                  NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+              }
+          }, OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD).start();
+      }
+
       return result;
    }
 
@@ -545,7 +568,7 @@ class NotificationBundleProcessor {
    }
 
    static boolean shouldDisplay(String body) {
-      return body != null && !"".equals(body);
+      return !TextUtils.isEmpty(body);
    }
 
    static @NonNull JSONArray newJsonArray(JSONObject jsonObject) {

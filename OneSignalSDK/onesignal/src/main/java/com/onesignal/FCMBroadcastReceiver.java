@@ -76,10 +76,10 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       }
 
       // Prevent other FCM receivers from firing if:
-      //   1. This is a duplicated GCM message
+      //   1. This is a duplicated FCM message
       //   2. OR app developer setup a extender service to handle the notification.
       if (processedResult.isDup || processedResult.hasExtenderService) {
-         // Abort to prevent other GCM receivers from process this Intent.
+         // Abort to prevent other FCM receivers from process this Intent.
          setAbort();
          return;
       }
