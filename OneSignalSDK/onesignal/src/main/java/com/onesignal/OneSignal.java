@@ -2012,11 +2012,9 @@ public class OneSignal {
     *   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
     */
    static void handleNotificationReceived(OSNotificationGenerationJob notifJob, boolean displayed) {
-      int androidNotificationId = notifJob.getAndroidId();
-
       try {
          JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
-         jsonObject.put("notificationId", androidNotificationId);
+         jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
 
          OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
          if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
