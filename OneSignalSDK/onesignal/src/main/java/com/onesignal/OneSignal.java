@@ -2069,7 +2069,7 @@ public class OneSignal {
       OSNotification notification = new OSNotification();
       notification.isAppInFocus = isAppActive();
       notification.shown = shown;
-      notification.androidNotificationId = dataArray.optJSONObject(0).optInt(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
+      notification.androidNotificationId = jsonArray.optJSONObject(0).optInt(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
 
       String actionSelected = null;
 
@@ -2117,11 +2117,9 @@ public class OneSignal {
     *   If a NotificationExtenderService is present in the developers app this will not fire for silent notifications.
     */
    static void handleNotificationReceived(OSNotificationGenerationJob notifJob, boolean displayed) {
-      int androidNotificationId = notifJob.getAndroidId();
-
       try {
          JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
-         jsonObject.put("notificationId", androidNotificationId);
+         jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
 
          OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
          if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
@@ -2130,8 +2128,6 @@ public class OneSignal {
       } catch (JSONException e) {
          e.printStackTrace();
       }
-
-      fireNotificationWillShowInForegroundHandlers(notifJob);
    }
 
    /**
@@ -2144,10 +2140,10 @@ public class OneSignal {
     * TODO: Enqueue this method for the extNotificationWillShowInForegroundHandler/appNotificationWillShowInForegroundHandler
     *    with a WorkManager Worker eventually
     */
-   private static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
+   static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
       // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
       if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
-         NotificationExtenderService.showNotification(notifJob);
+         GenerateNotification.fromJsonPayload(notifJob);
          return;
       }
 

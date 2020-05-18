@@ -165,11 +165,6 @@ public class OneSignalPackagePrivateHelper {
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
-   public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
-      OSNotificationGenerationJob(Context context) {
-         super(context);
-      }
-   }
 
    public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
       @Override
