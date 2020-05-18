@@ -69,9 +69,6 @@ class NotificationBundleProcessor {
    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
-   private static final String OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD = "OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD";
-
-
    static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
       OneSignal.setAppContext(context);
       try {
@@ -507,18 +504,10 @@ class NotificationBundleProcessor {
       String alert = bundle.getString("alert");
       if (!shouldDisplay(alert)) {
          notifJob.overrideSettings.androidNotificationId = -1;
-         new Thread(new Runnable() {
-            public void run() {
-               NotificationBundleProcessor.ProcessJobForDisplay(notifJob, true, false);
-            }
-         }, OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD).start();
+         NotificationBundleProcessor.ProcessJobForDisplay(notifJob, true, false);
       }
       else {
-          new Thread(new Runnable() {
-              public void run() {
-                  NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
-              }
-          }, OS_NOTIFICATION_BUNDLE_PROCESSING_THREAD).start();
+         NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
       }
 
       return result;
