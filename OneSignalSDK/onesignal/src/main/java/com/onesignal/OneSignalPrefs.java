@@ -123,7 +123,7 @@ class OneSignalPrefs {
     }
 
     public static class WritePrefHandlerThread extends HandlerThread {
-        private Handler mHandler;
+        private @Nullable Handler mHandler;
 
         private static final int WRITE_CALL_DELAY_TO_BUFFER_MS = 200;
         private long lastSyncTime = 0L;
@@ -136,9 +136,11 @@ class OneSignalPrefs {
         protected void onLooperPrepared() {
             super.onLooperPrepared();
 
-            // Getting handler here as onLooperPrepared guarantees getLooper() will not return null
+            // Getting handler here as onLooperPrepared guarantees getLooper() will be non-null
             mHandler = new Handler(getLooper());
-            scheduleFlushToDiskJob();
+
+            // Kicks off our first flush, startDelayedWrite will schedule all flushes after that
+            scheduleFlushToDisk();
         }
 
         private synchronized void startDelayedWrite() {
@@ -148,7 +150,7 @@ class OneSignalPrefs {
                 return;
 
             startThread();
-            scheduleFlushToDiskJob();
+            scheduleFlushToDisk();
         }
 
         private boolean threadStartCalled;
@@ -160,7 +162,7 @@ class OneSignalPrefs {
             threadStartCalled = true;
         }
 
-        private synchronized void scheduleFlushToDiskJob() {
+        private synchronized void scheduleFlushToDisk() {
             // Could be null if looper thread just started
             if (mHandler == null)
                 return;
