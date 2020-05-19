@@ -462,7 +462,7 @@ public class OneSignal {
    private static String lastRegistrationId;
    private static boolean registerForPushFired, locationFired, promptedLocation;
 
-   private static LocationGMS.LocationPoint lastLocationPoint;
+   private static LocationController.LocationPoint lastLocationPoint;
 
    static boolean shareLocation = true;
    @NonNull static OneSignal.Builder mInitBuilder = new OneSignal.Builder();
@@ -945,13 +945,13 @@ public class OneSignal {
    }
 
    private static void startLocationUpdate() {
-      LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+      LocationController.LocationHandler locationHandler = new LocationController.LocationHandler() {
          @Override
-         public LocationGMS.PermissionType getType() {
-            return LocationGMS.PermissionType.STARTUP;
+         public LocationController.PermissionType getType() {
+            return LocationController.PermissionType.STARTUP;
          }
          @Override
-         public void onComplete(LocationGMS.LocationPoint point) {
+         public void onComplete(LocationController.LocationPoint point) {
             lastLocationPoint = point;
             locationFired = true;
             registerUser();
@@ -961,7 +961,7 @@ public class OneSignal {
       // Prompted so we don't ask for permissions more than once
       promptedLocation = promptedLocation || mInitBuilder.mPromptLocation;
 
-      LocationGMS.getLocation(appContext, doPrompt, false, locationHandler);
+      LocationController.getLocation(appContext, doPrompt, false, locationHandler);
    }
    private static PushRegistrator mPushRegistrator;
 
@@ -1233,7 +1233,7 @@ public class OneSignal {
       appEntryState = AppEntryAction.APP_CLOSE;
 
       setLastSessionTime(System.currentTimeMillis());
-      LocationGMS.onFocusChange();
+      LocationController.onFocusChange();
 
       if (!initDone)
          return;
@@ -1257,7 +1257,7 @@ public class OneSignal {
       if (unsyncedChanges)
          OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
 
-      boolean locationScheduled = LocationGMS.scheduleUpdate(appContext);
+      boolean locationScheduled = LocationController.scheduleUpdate(appContext);
       return locationScheduled || unsyncedChanges;
    }
 
@@ -1268,7 +1268,7 @@ public class OneSignal {
       if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
          appEntryState = AppEntryAction.APP_OPEN;
 
-      LocationGMS.onFocusChange();
+      LocationController.onFocusChange();
 
       // Make sure without privacy consent, onAppFocus returns early
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
@@ -2557,13 +2557,13 @@ public class OneSignal {
       Runnable runPromptLocation = new Runnable() {
          @Override
          public void run() {
-            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationPromptCompletionHandler() {
+            LocationController.LocationHandler locationHandler = new LocationController.LocationPromptCompletionHandler() {
                @Override
-               public LocationGMS.PermissionType getType() {
-                  return LocationGMS.PermissionType.PROMPT_LOCATION;
+               public LocationController.PermissionType getType() {
+                  return LocationController.PermissionType.PROMPT_LOCATION;
                }
                @Override
-               public void onComplete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationController.LocationPoint point) {
                   //if applicable, check if the user provided privacy consent
                   if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
                      return;
@@ -2580,7 +2580,7 @@ public class OneSignal {
                }
             };
 
-            LocationGMS.getLocation(appContext, true, fallbackToSettings, locationHandler);
+            LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
             promptedLocation = true;
          }
       };

@@ -17,6 +17,7 @@ import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowJobService;
+import com.onesignal.ShadowLocationController;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -74,6 +75,7 @@ import static junit.framework.Assert.assertTrue;
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowPushRegistratorGCM.class,
+                ShadowLocationController.class,
                 ShadowOSUtils.class,
                 ShadowAdvertisingIdProviderGPS.class,
                 ShadowCustomTabsClient.class,

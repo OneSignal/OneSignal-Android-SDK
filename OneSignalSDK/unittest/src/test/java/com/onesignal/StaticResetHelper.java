@@ -41,7 +41,7 @@ public class StaticResetHelper {
       
       classes.add(new ClassState(OneSignalChromeTabAndroidFrame.class, null));
       classes.add(new ClassState(OneSignalDbHelper.class, null));
-      classes.add(new ClassState(LocationGMS.class, null));
+      classes.add(new ClassState(LocationController.class, null));
       classes.add(new ClassState(OSInAppMessageController.class, null));
       classes.add(new ClassState(ActivityLifecycleListener.class, null));
       classes.add(new ClassState(OSDynamicTriggerController.class, new OtherFieldHandler() {
