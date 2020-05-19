@@ -71,7 +71,7 @@ import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowJobService;
-import com.onesignal.ShadowLocationGMS;
+import com.onesignal.ShadowLocationController;
 import com.onesignal.ShadowLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -165,6 +165,7 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowCustomTabsSession.class,
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
+            ShadowLocationController.class,
             OneSignalShadowPackageManager.class
         },
         sdk = 21
@@ -232,6 +233,7 @@ public class MainOneSignalClassRunner {
       lastGetTags = null;
       lastExternalUserIdResponse = null;
 
+      ShadowLocationController.reset();
       TestHelpers.beforeTestInitAndCleanup();
    }
 
@@ -2414,8 +2416,9 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(sdk = 26, shadows = { ShadowGoogleApiClientCompatProxy.class, ShadowLocationGMS.class })
+   @Config(sdk = 26, shadows = { ShadowGoogleApiClientCompatProxy.class })
    public void ensureSyncJobServiceRescheduleOnApiTimeout() throws Exception {
+      ShadowLocationController.apiFallbackTime = 0;
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
 
@@ -3141,7 +3144,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      Class klass = Class.forName("com.onesignal.LocationGMS");
+      Class klass = Class.forName("com.onesignal.LocationController");
       Method method = klass.getDeclaredMethod("startFallBackThread");
       method.setAccessible(true);
       method.invoke(null);
@@ -3150,7 +3153,7 @@ public class MainOneSignalClassRunner {
       method.invoke(null);
       threadAndTaskWait();
 
-      assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timedout"));
+      assertFalse(ShadowOneSignal.messages.contains("GoogleApiClient timeout"));
    }
 
    @Test
@@ -3161,7 +3164,8 @@ public class MainOneSignalClassRunner {
          sdk = 19)
    public void testLocationSchedule() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
-      ShadowFusedLocationApiWrapper.lat = 1.0d; ShadowFusedLocationApiWrapper.log = 2.0d;
+      ShadowFusedLocationApiWrapper.lat = 1.0d;
+      ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
       ShadowFusedLocationApiWrapper.time = 12345L;
 

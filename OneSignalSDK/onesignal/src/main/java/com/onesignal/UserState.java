@@ -86,7 +86,7 @@ abstract class UserState {
         return null;
     }
 
-    void setLocation(LocationGMS.LocationPoint point) {
+    void setLocation(LocationController.LocationPoint point) {
         try {
             syncValues.put("lat", point.lat);
             syncValues.put("long",point.log);
