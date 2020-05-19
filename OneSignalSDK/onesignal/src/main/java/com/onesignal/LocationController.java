@@ -35,13 +35,18 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.huawei.hms.api.HuaweiApiAvailability;
+import com.huawei.hms.location.FusedLocationProviderClient;
+import com.huawei.hms.location.LocationResult;
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
 import java.math.BigDecimal;
@@ -52,7 +57,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-class LocationGMS {
+class LocationController {
 
    static class LocationPoint {
       Double lat;
@@ -63,23 +68,31 @@ class LocationGMS {
       Long timeStamp;
    }
 
+   public static final int API_FALLBACK_TIME = 30_000;
    private static final long TIME_FOREGROUND_SEC = 5 * 60;
    private static final long TIME_BACKGROUND_SEC = 10 * 60;
    private static final long FOREGROUND_UPDATE_TIME_MS = (TIME_FOREGROUND_SEC - 30) * 1_000;
    private static final long BACKGROUND_UPDATE_TIME_MS = (TIME_BACKGROUND_SEC - 30) * 1_000;
 
-   private static GoogleApiClientCompatProxy mGoogleApiClient;
-   private static Location mLastLocation;
-   static String requestPermission;
-   private static Context classContext;
-
+   /* Start Google variables */
    private static LocationHandlerThread locationHandlerThread;
+   private static GoogleApiClientCompatProxy googleApiClient;
+   /* End */
+
+   /* Start Huawei variables */
+   private static com.huawei.hms.location.FusedLocationProviderClient huaweiFusedLocationClient;
+   /* End */
+
+   private static Context classContext;
+   private static Location lastLocation;
+   static String requestPermission;
 
    protected static final Object syncLock = new Object() {};
 
    enum PermissionType {
       STARTUP, PROMPT_LOCATION, SYNC_SERVICE
    }
+
    interface LocationHandler {
       PermissionType getType();
       void onComplete(LocationPoint point);
@@ -115,15 +128,15 @@ class LocationGMS {
 
    private static long getLastLocationTime() {
       return OneSignalPrefs.getLong(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,
-               TIME_BACKGROUND_SEC * -1_000
+              OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,
+              TIME_BACKGROUND_SEC * -1_000
       );
    }
 
    private static boolean hasLocationPermission(Context context) {
       return ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION") == PackageManager.PERMISSION_GRANTED
-          || ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION") == PackageManager.PERMISSION_GRANTED;
+              || ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION") == PackageManager.PERMISSION_GRANTED;
    }
 
    static void addPromptHandlerIfAvailable(LocationHandler handler) {
@@ -186,7 +199,7 @@ class LocationGMS {
          locationCoarse = true;
       }
 
-      if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
             // Permission missing on manifest
             sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST);
@@ -253,26 +266,12 @@ class LocationGMS {
          return;
 
       try {
-         synchronized (syncLock) {
-            startFallBackThread();
-
-            if (locationHandlerThread == null)
-               locationHandlerThread = new LocationHandlerThread();
-
-            if (mGoogleApiClient == null || mLastLocation == null) {
-               GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
-               GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
-                       .addApi(LocationServices.API)
-                       .addConnectionCallbacks(googleApiClientListener)
-                       .addOnConnectionFailedListener(googleApiClientListener)
-                       .setHandler(locationHandlerThread.mHandler)
-                       .build();
-               mGoogleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
-
-               mGoogleApiClient.connect();
-            }
-            else if (mLastLocation != null)
-               fireCompleteForLocation(mLastLocation);
+         if (isGooglePlayServicesAvailable(classContext)) {
+            initGoogleLocation();
+         } else if (isHMSAvailable(classContext)) {
+            initHuaweiLocation();
+         } else {
+            fireFailedComplete();
          }
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Location permission exists but there was an error initializing: ", t);
@@ -280,8 +279,80 @@ class LocationGMS {
       }
    }
 
+   private static void initGoogleLocation() {
+      synchronized (syncLock) {
+         startFallBackThread();
+
+         if (locationHandlerThread == null)
+            locationHandlerThread = new LocationHandlerThread();
+
+         if (googleApiClient == null || lastLocation == null) {
+            GoogleApiClientListener googleApiClientListener = new GoogleApiClientListener();
+            GoogleApiClient googleApiClient = new GoogleApiClient.Builder(classContext)
+                    .addApi(LocationServices.API)
+                    .addConnectionCallbacks(googleApiClientListener)
+                    .addOnConnectionFailedListener(googleApiClientListener)
+                    .setHandler(locationHandlerThread.mHandler)
+                    .build();
+
+            LocationController.googleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
+            LocationController.googleApiClient.connect();
+         } else if (lastLocation != null)
+            fireCompleteForLocation(lastLocation);
+      }
+   }
+
+   private static void initHuaweiLocation() {
+      synchronized (syncLock) {
+         if (huaweiFusedLocationClient == null) {
+            try {
+               huaweiFusedLocationClient = com.huawei.hms.location.LocationServices.getFusedLocationProviderClient(classContext);
+            } catch (Exception e) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Huawei LocationServices getFusedLocationProviderClient failed! " + e);
+               fireFailedComplete();
+               return;
+            }
+         }
+         if (lastLocation != null)
+            fireCompleteForLocation(lastLocation);
+         else
+            huaweiFusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(new com.huawei.hmf.tasks.OnSuccessListener<Location>() {
+                       @Override
+                       public void onSuccess(Location location) {
+                          if (location == null) {
+                             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Huawei LocationServices getLastLocation returned location null!");
+                             fireFailedComplete();
+                             return;
+                          }
+                          lastLocation = location;
+                          fireCompleteForLocation(lastLocation);
+                          locationUpdateListener = new LocationUpdateListener(huaweiFusedLocationClient);
+                       }
+                    })
+                    .addOnFailureListener(new com.huawei.hmf.tasks.OnFailureListener() {
+                       @Override
+                       public void onFailure(Exception e) {
+                          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Huawei LocationServices getLastLocation failed!", e);
+                          fireFailedComplete();
+                       }
+                    });
+      }
+   }
+
+   protected static boolean isGooglePlayServicesAvailable(Context context) {
+      GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
+      int status = googleApiAvailability.isGooglePlayServicesAvailable(context);
+      return status == ConnectionResult.SUCCESS;
+   }
+
+   protected static boolean isHMSAvailable(Context context) {
+      int status = HuaweiApiAvailability.getInstance().isHuaweiMobileServicesAvailable(context);
+      return status == ConnectionResult.SUCCESS;
+   }
+
    private static int getApiFallbackWait() {
-      return 30_000;
+      return API_FALLBACK_TIME;
    }
 
    private static void startFallBackThread() {
@@ -304,9 +375,10 @@ class LocationGMS {
       PermissionsActivity.answered = false;
 
       synchronized (syncLock) {
-         if (mGoogleApiClient != null)
-            mGoogleApiClient.disconnect();
-         mGoogleApiClient = null;
+         if (googleApiClient != null)
+            googleApiClient.disconnect();
+         googleApiClient = null;
+         huaweiFusedLocationClient = null;
       }
       fireComplete(null);
    }
@@ -315,23 +387,23 @@ class LocationGMS {
       // create local copies of fields in thread-safe way
       HashMap<PermissionType, LocationHandler> _locationHandlers = new HashMap<>();
       Thread _fallbackFailThread;
-      synchronized (LocationGMS.class) {
-         _locationHandlers.putAll(LocationGMS.locationHandlers);
-         LocationGMS.locationHandlers.clear();
-         _fallbackFailThread = LocationGMS.fallbackFailThread;
+      synchronized (LocationController.class) {
+         _locationHandlers.putAll(LocationController.locationHandlers);
+         LocationController.locationHandlers.clear();
+         _fallbackFailThread = LocationController.fallbackFailThread;
       }
 
       // execute race-independent logic
       for(PermissionType type : _locationHandlers.keySet())
          _locationHandlers.get(type).onComplete(point);
       if (_fallbackFailThread != null && !Thread.currentThread().equals(_fallbackFailThread))
-          _fallbackFailThread.interrupt();
+         _fallbackFailThread.interrupt();
 
       // clear fallbackFailThread in thread-safe way
-      if (_fallbackFailThread == LocationGMS.fallbackFailThread) {
-         synchronized (LocationGMS.class) {
-            if (_fallbackFailThread == LocationGMS.fallbackFailThread)
-               LocationGMS.fallbackFailThread = null;
+      if (_fallbackFailThread == LocationController.fallbackFailThread) {
+         synchronized (LocationController.class) {
+            if (_fallbackFailThread == LocationController.fallbackFailThread)
+               LocationController.fallbackFailThread = null;
          }
       }
       // Save last time so even if a failure we trigger the same schedule update
@@ -351,8 +423,7 @@ class LocationGMS {
       if (locationCoarse) {
          point.lat = new BigDecimal(location.getLatitude()).setScale(7, RoundingMode.HALF_UP).doubleValue();
          point.log = new BigDecimal(location.getLongitude()).setScale(7, RoundingMode.HALF_UP).doubleValue();
-      }
-      else {
+      } else {
          point.lat = location.getLatitude();
          point.log = location.getLongitude();
       }
@@ -363,15 +434,24 @@ class LocationGMS {
 
    static void onFocusChange() {
       synchronized (syncLock) {
-         if (mGoogleApiClient == null || !mGoogleApiClient.realInstance().isConnected())
+         // Google location not initialized or connected yet
+         if (isGooglePlayServicesAvailable(classContext) && (googleApiClient == null || !googleApiClient.realInstance().isConnected()))
             return;
 
-         GoogleApiClient googleApiClient = mGoogleApiClient.realInstance();
+         // Huawei location not initialized yet and not google play available
+         if (!isGooglePlayServicesAvailable(classContext) && isHMSAvailable(classContext) && huaweiFusedLocationClient == null)
+            return;
 
-         if (locationUpdateListener != null)
-            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationUpdateListener);
-
-         locationUpdateListener = new LocationUpdateListener(googleApiClient);
+         if (googleApiClient != null) {
+            GoogleApiClient googleApiClient = LocationController.googleApiClient.realInstance();
+            if (locationUpdateListener != null)
+               LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationUpdateListener);
+            locationUpdateListener = new LocationUpdateListener(googleApiClient);
+         } else {
+            if (locationUpdateListener != null)
+               huaweiFusedLocationClient.removeLocationUpdates(locationUpdateListener);
+            locationUpdateListener = new LocationUpdateListener(huaweiFusedLocationClient);
+         }
       }
    }
 
@@ -383,16 +463,16 @@ class LocationGMS {
          synchronized (syncLock) {
             PermissionsActivity.answered = false;
 
-            if (mGoogleApiClient == null || mGoogleApiClient.realInstance() == null)
+            if (googleApiClient == null || googleApiClient.realInstance() == null)
                return;
 
-            if (mLastLocation == null) {
-               mLastLocation = FusedLocationApiWrapper.getLastLocation(mGoogleApiClient.realInstance());
-               if (mLastLocation != null)
-                  fireCompleteForLocation(mLastLocation);
+            if (lastLocation == null) {
+               lastLocation = FusedLocationApiWrapper.getLastLocation(googleApiClient.realInstance());
+               if (lastLocation != null)
+                  fireCompleteForLocation(lastLocation);
             }
 
-            locationUpdateListener = new LocationUpdateListener(mGoogleApiClient.realInstance());
+            locationUpdateListener = new LocationUpdateListener(googleApiClient.realInstance());
          }
       }
 
@@ -407,30 +487,57 @@ class LocationGMS {
       }
    }
 
-   static class LocationUpdateListener implements LocationListener {
+   static class LocationUpdateListener extends com.huawei.hms.location.LocationCallback implements LocationListener {
 
-      private GoogleApiClient mGoogleApiClient;
+      private com.huawei.hms.location.FusedLocationProviderClient huaweiFusedLocationProviderClient;
+      private GoogleApiClient googleApiClient;
 
       // this initializer method is already synchronized from LocationGMS with respect to the GoogleApiClient lock
       LocationUpdateListener(GoogleApiClient googleApiClient) {
-         mGoogleApiClient = googleApiClient;
+         this.googleApiClient = googleApiClient;
+         init();
+      }
 
+      LocationUpdateListener(FusedLocationProviderClient huaweiFusedLocationProviderClient) {
+         this.huaweiFusedLocationProviderClient = huaweiFusedLocationProviderClient;
+         init();
+      }
+
+      private void init() {
          long updateInterval = BACKGROUND_UPDATE_TIME_MS;
          if (OneSignal.isForeground())
-            updateInterval =  FOREGROUND_UPDATE_TIME_MS;
+            updateInterval = FOREGROUND_UPDATE_TIME_MS;
 
-         LocationRequest locationRequest = LocationRequest.create()
-            .setFastestInterval(updateInterval)
-            .setInterval(updateInterval)
-            .setMaxWaitTime((long)(updateInterval * 1.5))
-            .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+         if (googleApiClient != null) {
+            LocationRequest locationRequest = LocationRequest.create()
+                    .setFastestInterval(updateInterval)
+                    .setInterval(updateInterval)
+                    .setMaxWaitTime((long) (updateInterval * 1.5))
+                    .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
-         FusedLocationApiWrapper.requestLocationUpdates(mGoogleApiClient, locationRequest, this);
+            FusedLocationApiWrapper.requestLocationUpdates(googleApiClient, locationRequest, this);
+         } else {
+            com.huawei.hms.location.LocationRequest locationRequest = com.huawei.hms.location.LocationRequest.create()
+                    .setFastestInterval(updateInterval)
+                    .setInterval(updateInterval)
+                    .setMaxWaitTime((long) (updateInterval * 1.5))
+                    .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+
+            huaweiFusedLocationProviderClient.requestLocationUpdates(locationRequest, this, Looper.getMainLooper());
+         }
+      }
+
+      @Override
+      public void onLocationResult(LocationResult locationResult) {
+         if (locationResult != null) {
+            lastLocation = locationResult.getLastLocation();
+            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Location Change Detected");
+         }
       }
 
       @Override
       public void onLocationChanged(Location location) {
-         mLastLocation = location;
+         lastLocation = location;
          OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Location Change Detected");
       }
    }
@@ -439,7 +546,7 @@ class LocationGMS {
       @SuppressWarnings("MissingPermission")
       static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
          try {
-            synchronized (LocationGMS.syncLock) {
+            synchronized (LocationController.syncLock) {
                if (googleApiClient.isConnected())
                   LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
             }
@@ -450,7 +557,7 @@ class LocationGMS {
 
       @SuppressWarnings("MissingPermission")
       static Location getLastLocation(GoogleApiClient googleApiClient) {
-         synchronized(LocationGMS.syncLock) {
+         synchronized(LocationController.syncLock) {
             if (googleApiClient.isConnected())
                return LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
          }
