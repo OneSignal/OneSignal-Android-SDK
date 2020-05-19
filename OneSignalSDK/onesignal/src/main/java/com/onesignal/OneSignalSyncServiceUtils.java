@@ -76,7 +76,7 @@ class OneSignalSyncServiceUtils {
 
    static synchronized void cancelSyncTask(Context context) {
       nextScheduledSyncTimeMs = 0L;
-      boolean didSchedule = LocationGMS.scheduleUpdate(context);
+      boolean didSchedule = LocationController.scheduleUpdate(context);
       if (didSchedule)
          return;
 
@@ -218,24 +218,24 @@ class OneSignalSyncServiceUtils {
          // https://github.com/OneSignal/OneSignal-Android-SDK/issues/650
          try {
             final BlockingQueue<Object> queue = new ArrayBlockingQueue<>(1);
-            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+            LocationController.LocationHandler locationHandler = new LocationController.LocationHandler() {
                @Override
-               public LocationGMS.PermissionType getType() {
-                  return LocationGMS.PermissionType.SYNC_SERVICE;
+               public LocationController.PermissionType getType() {
+                  return LocationController.PermissionType.SYNC_SERVICE;
                }
 
                @Override
-               public void onComplete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationController.LocationPoint point) {
                   Object object = point != null ?  point : new Object();
                   queue.offer(object);
                }
             };
-            LocationGMS.getLocation(OneSignal.appContext, false, false, locationHandler);
+             LocationController.getLocation(OneSignal.appContext, false, false, locationHandler);
 
             // The take() will return the offered point once the callback for the locationHandler is completed
             Object point = queue.take();
-            if (point instanceof LocationGMS.LocationPoint)
-               OneSignalStateSynchronizer.updateLocation((LocationGMS.LocationPoint) point);
+            if (point instanceof LocationController.LocationPoint)
+               OneSignalStateSynchronizer.updateLocation((LocationController.LocationPoint) point);
 
          } catch (InterruptedException e) {
             e.printStackTrace();

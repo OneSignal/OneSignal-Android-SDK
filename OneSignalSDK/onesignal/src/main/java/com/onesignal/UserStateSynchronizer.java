@@ -527,7 +527,7 @@ abstract class UserStateSynchronizer {
     public abstract boolean getUserSubscribePreference();
     public abstract void setPermission(boolean enable);
 
-    void updateLocation(LocationGMS.LocationPoint point) {
+    void updateLocation(LocationController.LocationPoint point) {
         UserState userState = getUserStateForModification();
         userState.setLocation(point);
     }
