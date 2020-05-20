@@ -56,6 +56,7 @@ abstract public class OSChannelTracker {
         indirectIds = getLastReceivedIds();
         influenceType = indirectIds.length() > 0 ? OSInfluenceType.INDIRECT : OSInfluenceType.UNATTRIBUTED;
 
+        cacheState();
         logger.debug("OneSignal OSChannelTracker resetAndInitInfluence: " + getIdTag() + " finish with influenceType: " + influenceType);
     }
 
