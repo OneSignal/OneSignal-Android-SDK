@@ -91,15 +91,9 @@ class OutcomesUtils {
             // If the attribution window increases, old notifications ids might influence the session
             if (notificationsReceived.length() > notificationLimit) {
                 int lengthDifference = notificationsReceived.length() - notificationLimit;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    for (int i = 0; i < lengthDifference; i++) {
-                        notificationsReceived.remove(i);
-                    }
-                } else {
-                    notificationsToSave = new JSONArray();
-                    for (int i = lengthDifference; i < notificationsReceived.length(); i++) {
-                        notificationsToSave.put(notificationsReceived.get(i));
-                    }
+                notificationsToSave = new JSONArray();
+                for (int i = lengthDifference; i < notificationsReceived.length(); i++) {
+                    notificationsToSave.put(notificationsReceived.get(i));
                 }
             }
 
