@@ -53,7 +53,7 @@ abstract class PushRegistratorAbstractGoogle implements PushRegistrator {
 
    private void internalRegisterForPush(String senderId) {
       try {
-         if (GooglePlayServicesUpgradePrompt.isGMSInstalledAndEnabled())
+         if (OSUtils.isGMSInstalledAndEnabled())
             registerInBackground(senderId);
          else {
             GooglePlayServicesUpgradePrompt.ShowUpdateGPSDialog();
