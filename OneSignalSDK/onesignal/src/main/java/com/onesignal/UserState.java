@@ -28,6 +28,12 @@ abstract class UserState {
     // -10 is a server side detection only from FCM that the app is no longer installed
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION = -11;
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION = -12;
+    // -13 to -24 reserved for other platforms
+    static final int PUSH_STATUS_HMS_TOKEN_TIMEOUT = -25;
+    // Most likely missing "client/app_id".
+    // Check that there is "apply plugin: 'com.huawei.agconnect'" in your app/build.gradle
+    static final int PUSH_STATUS_HMS_ARGUMENTS_INVALID = -26;
+    static final int PUSH_STATUS_HMS_API_EXCEPTION_OTHER = -27;
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
