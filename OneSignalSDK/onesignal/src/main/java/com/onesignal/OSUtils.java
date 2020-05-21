@@ -32,6 +32,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
@@ -46,6 +47,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.huawei.hms.api.HuaweiApiAvailability;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -54,10 +58,8 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -150,6 +152,24 @@ class OSUtils {
       }
    }
 
+   private static boolean hasHMSAvailability() {
+      try {
+         // noinspection ConstantConditions
+         return com.huawei.hms.api.HuaweiApiAvailability.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
+   }
+
+   private static boolean hasHMSPushKitLibrary() {
+      try {
+         // noinspection ConstantConditions
+         return com.huawei.hms.aaid.HmsInstanceId.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
+   }
+
    Integer checkForGooglePushLibrary() {
       boolean hasFCMLibrary = hasFCMLibrary();
       boolean hasGCMLibrary = hasGCMLibrary();
@@ -223,15 +243,78 @@ class OSUtils {
       return null;
    }
 
-   int getDeviceType() {
+   // TODO: Maybe able to switch to GoogleApiAvailability.isGooglePlayServicesAvailable to simplify
+   // However before doing so we need to test with an old version of the "Google Play services"
+   //   on the device to make sure it would still be counted as "SUCCESS".
+   // Or if we get back "SERVICE_VERSION_UPDATE_REQUIRED" then we may want to count that as successful too.
+   static boolean isGMSInstalledAndEnabled() {
+      try {
+         PackageManager pm = OneSignal.appContext.getPackageManager();
+         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
+         return info.applicationInfo.enabled;
+      } catch (PackageManager.NameNotFoundException e) {
+         return false;
+      }
+   }
+
+   private boolean supportsADM() {
       try {
          // Class only available on the FireOS and only when the following is in the AndroidManifest.xml.
          // <amazon:enable-feature android:name="com.amazon.device.messaging" android:required="false"/>
          Class.forName("com.amazon.device.messaging.ADM");
-         return UserState.DEVICE_TYPE_FIREOS;
+         return true;
       } catch (ClassNotFoundException e) {
-         return UserState.DEVICE_TYPE_ANDROID;
+         return false;
       }
+   }
+
+   private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
+   private boolean supportsHMS() {
+      // 1. App must have the HMSAvailability and PushKit libraries to support HMS push
+      if (!hasHMSAvailability() || !hasHMSPushKitLibrary())
+         return false;
+
+      // 2. Device must have HMS Core installed and enabled
+      HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
+      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+   }
+
+   private boolean supportsGooglePush() {
+      // 1. If app does not have the FCM or GCM library it won't support Google push
+      if (!hasFCMLibrary() && !hasGCMLibrary())
+         return false;
+
+      // 2. "Google Play services" must be installed and enabled
+      return isGMSInstalledAndEnabled();
+   }
+
+   /**
+    * Device type is determined by the push channel(s) the device supports.
+    * Since a player_id can only support one we attempt to select the one that is native to the device
+    * 1. ADM - This can NOT be side loaded on the device, if it has it then it is native
+    * 2. FCM - If this is available then most likely native.
+    *   - Prefer over HMS as FCM has more features on older Huawei devices.
+    * 3. HMS - Huawei devices only.
+    *   - New 2020 Huawei devices don't have FCM support, HMS only
+    *   - Technically works for non-Huawei devices if you side load the Huawei AppGallery.
+    *     i. "Notification Message" pushes are very bare bones. (title + body)
+    *     ii. "Data Message" works as expected.
+    */
+   int getDeviceType() {
+      if (supportsADM())
+         return UserState.DEVICE_TYPE_FIREOS;
+
+      if (supportsGooglePush())
+         return UserState.DEVICE_TYPE_ANDROID;
+      else {
+         // If the Huawei device has both FCM & HMS support we prefer FCM (Google push)
+         // HMS will only be used if it is the only option.
+         if (supportsHMS())
+            return UserState.DEVICE_TYPE_HUAWEI;
+      }
+
+      // Fallback to device_type 1 (Android) if there are no supported push channels on the device
+      return UserState.DEVICE_TYPE_ANDROID;
    }
 
    Integer getNetType () {
