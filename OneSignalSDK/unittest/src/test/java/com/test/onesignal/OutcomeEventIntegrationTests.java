@@ -36,6 +36,7 @@ import org.robolectric.shadows.ShadowLog;
 import java.util.Arrays;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived;
+import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDirectNotification;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
