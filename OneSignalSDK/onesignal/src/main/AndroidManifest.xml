@@ -63,6 +63,14 @@
 
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
+        <service
+            android:name="com.onesignal.HmsMessageServiceOneSignal"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <service android:name="com.onesignal.GcmIntentService" />
 
         <service android:name="com.onesignal.GcmIntentJobService"
