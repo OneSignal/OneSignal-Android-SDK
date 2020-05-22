@@ -170,18 +170,21 @@ public class OSNotificationGenerationJob {
       // The actual notifJob with notification payload data
       private OSNotificationGenerationJob notifJob;
 
-      // Handler used to timeout the handler if bubble or complete is not called
+      // Single Handler used to timeout the handler if bubble or complete is not called
       private Handler timeoutHandler;
+      // Single Runnable used to execute code after the handler timeout completes
+      private Runnable timeoutRunnable;
 
       NotificationGenerationJob(OSNotificationGenerationJob notifJob) {
          this.notifJob = notifJob;
       }
 
-      void startShowNotificationTimeout(final Runnable timeoutRunnable) {
-         // If the handler isn't null we do not want to start another
-         if (timeoutHandler != null)
+      void startShowNotificationTimeout(final Runnable runnable) {
+         // If the handler or runnable isn't null we do not want to start another
+         if (this.timeoutHandler != null || this.timeoutRunnable != null)
             return;
 
+         this.timeoutRunnable = runnable;
          OSUtils.runOnMainUIThread(new Runnable() {
             @Override
             public void run() {
@@ -193,9 +196,10 @@ public class OSNotificationGenerationJob {
 
       void destroyShowNotificationTimeout() {
          if (timeoutHandler != null)
-            timeoutHandler.removeCallbacks(null);
+            timeoutHandler.removeCallbacks(timeoutRunnable);
 
          timeoutHandler = null;
+         timeoutRunnable = null;
       }
 
       OSNotificationGenerationJob getNotifJob() {
@@ -229,7 +233,7 @@ public class OSNotificationGenerationJob {
 
    /**
     * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler}
-    *    without exposing internals publically
+    *    without exposing internals publicly
     */
    public static class ExtNotificationGenerationJob extends NotificationGenerationJob {
 
@@ -239,12 +243,7 @@ public class OSNotificationGenerationJob {
          startShowNotificationTimeout(new Runnable() {
             @Override
             public void run() {
-               new Thread(new Runnable() {
-                  @Override
-                  public void run() {
-                     ExtNotificationGenerationJob.this.complete(true);
-                  }
-               }).start();
+               ExtNotificationGenerationJob.this.complete(true);
             }
          });
       }
@@ -280,12 +279,7 @@ public class OSNotificationGenerationJob {
          startShowNotificationTimeout(new Runnable() {
             @Override
             public void run() {
-               new Thread(new Runnable() {
-                  @Override
-                  public void run() {
-                     AppNotificationGenerationJob.this.complete();
-                  }
-               }).start();
+               AppNotificationGenerationJob.this.complete();
             }
          });
       }
