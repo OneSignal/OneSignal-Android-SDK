@@ -55,6 +55,7 @@ import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationGenerationJob;
+import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSPermissionObserver;
@@ -126,9 +127,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-
-import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
-import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
