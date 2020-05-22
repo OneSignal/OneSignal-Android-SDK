@@ -431,7 +431,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031303";
+   public static final String VERSION = "031400";
 
    private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
