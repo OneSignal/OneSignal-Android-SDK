@@ -42,6 +42,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -61,6 +62,7 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
+import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
@@ -101,14 +103,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTONS_LIST;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_TEXT;
-import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
-import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
@@ -139,7 +140,8 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowOSUtils.class,
             ShadowOSViewUtils.class,
             ShadowCustomTabsClient.class,
-            ShadowCustomTabsSession.class
+            ShadowCustomTabsSession.class,
+            OneSignalShadowPackageManager.class
         },
         sdk = 21
 )
@@ -151,6 +153,8 @@ public class GenerateNotificationRunner {
    private Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
 
+   static OSNotificationGenerationJob.ExtNotificationGenerationJob lastExtNotifJob;
+   private OSNotificationGenerationJob.AppNotificationGenerationJob lastAppNotifJob;
    private MockOneSignalDBHelper dbHelper;
 
    @BeforeClass // Runs only once, before any tests
@@ -166,6 +170,11 @@ public class GenerateNotificationRunner {
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
       dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+
+      lastExtNotifJob = null;
+      lastAppNotifJob = null;
+
+      OneSignalShadowPackageManager.resetStatics();
 
       overrideNotificationId = -1;
       
@@ -1197,7 +1206,7 @@ public class GenerateNotificationRunner {
    
    @Test
    @Config(sdk = 17)
-   public void notificationExtenderServiceOverridePropertiesWithSummaryApi17() throws Exception {
+   public void notificationExtenderServiceOverridePropertiesWithSummaryApi17() {
       testNotificationExtenderServiceOverridePropertiesWithSummary();
       
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -1213,7 +1222,7 @@ public class GenerateNotificationRunner {
    
    @Test
    @Config(sdk = 21)
-   public void notificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
+   public void notificationExtenderServiceOverridePropertiesWithSummary() {
       testNotificationExtenderServiceOverridePropertiesWithSummary();
       
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -1266,8 +1275,134 @@ public class GenerateNotificationRunner {
             assertEquals("[Modified Tile] [Modified Body(ContentText)]", line.toString());
       }
    }
-   
 
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+   }
+
+   /**
+    * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler
+    */
+   public static class NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         lastExtNotifJob = notifJob;
+         // Complete is called with true, so bubbling to AppNotificationWillShowInForegroundHandler
+         notifJob.complete(true);
+      }
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is null
+      assertNotNull(lastExtNotifJob);
+      assertNull(lastAppNotifJob);
+   }
+
+   /**
+    * @see #testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler
+    */
+   public static class NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         lastExtNotifJob = notifJob;
+         // Complete is called with false, so bubbling will skip past the AppNotificationWillShowInForegroundHandler
+         notifJob.complete(false);
+      }
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler implementation
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+   }
+
+   /**
+    * @see #testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler
+    */
+   public static class NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         lastExtNotifJob = notifJob;
+         // Complete is not called, so we rely on 30 second timeout until bubbling by default to the AppNotificationWillShowInForegroundHandler
+         try {
+            threadAndTaskWait();
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+      }
+   }
+
+   // TODO: After onNotificationProcessing(OSNotificationReceivedResult) is converted to
+   //    NotificationProcessingHandler(OSNotificationReceivedResult), we wont need to create a service any longer
+   //    This method should be deleted and the startNotificationExtensionService(String) method should be used instead
    private NotificationExtenderServiceTestBase startNotificationExtender(BundleCompat bundlePayload, Class serviceClass) {
       ServiceController<NotificationExtenderServiceTestBase> controller = Robolectric.buildService(serviceClass);
       NotificationExtenderServiceTestBase service = controller.create().get();
@@ -1276,6 +1411,14 @@ public class GenerateNotificationRunner {
       controller.withIntent(testIntent).startCommand(0, 0);
 
       return service;
+   }
+
+   /**
+    * Add the correct manifest meta-data key and value regarding the NotificationExtensionServiceClass to the
+    *    mocked OneSignalShadowPackageManager metaData Bundle
+    */
+   private void startNotificationExtensionService(String servicePath) {
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationExtensionServiceClass", servicePath);
    }
 
    @Test
@@ -1467,8 +1610,7 @@ public class GenerateNotificationRunner {
          return true;
       }
    }
-   
-   
+
    public static class NotificationExtenderServiceTestReturnFalse extends NotificationExtenderServiceTest {
       @Override
       protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
@@ -1489,4 +1631,5 @@ public class GenerateNotificationRunner {
          e.printStackTrace();
       }
    }
+
 }
