@@ -2,7 +2,12 @@ package com.onesignal;
 
 import android.location.Location;
 
+import com.huawei.hms.location.LocationResult;
+
 import org.robolectric.annotation.Implements;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Copyright 2017 OneSignal
@@ -16,4 +21,10 @@ public class ShadowLocationUpdateListener {
         LocationController.locationUpdateListener.onLocationChanged(location);
     }
 
+    public static void provideFakeLocation_Huawei(Location location) {
+        List<Location> locations = new ArrayList<>();
+        locations.add(location);
+        LocationResult locationResult = LocationResult.create(locations);
+        LocationController.locationUpdateListener.onLocationResult(locationResult);
+    }
 }
