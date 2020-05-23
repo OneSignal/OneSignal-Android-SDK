@@ -21,6 +21,7 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowFusedLocationProviderClient;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHmsInstanceId;
@@ -88,6 +89,7 @@ public class TestHelpers {
       ShadowGcmBroadcastReceiver.resetStatics();
 
       ShadowFusedLocationApiWrapper.resetStatics();
+      ShadowFusedLocationProviderClient.resetStatics();
 
       ShadowFirebaseAnalytics.resetStatics();
 
