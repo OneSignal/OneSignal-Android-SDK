@@ -68,8 +68,10 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowFusedLocationProviderClient;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
+import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowLocationController;
 import com.onesignal.ShadowLocationUpdateListener;
@@ -3321,6 +3323,214 @@ public class MainOneSignalClassRunner {
       assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_session", request.url);
    }
 
+   // ####### Unit Test Huawei Location ########
+
+   @Test
+   @Config(shadows = {ShadowFusedLocationProviderClient.class})
+   public void shouldUpdateAllLocationFieldsWhenTimeStampChanges_Huawei() throws Exception {
+      ShadowLocationController.googleServicesAvailable = false;
+      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+      OneSignalInit();
+      threadAndTaskWait();
+      assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
+      assertEquals(3.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
+      assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
+
+      ShadowOneSignalRestClient.lastPost = null;
+      ShadowFusedLocationProviderClient.resetStatics();
+      ShadowFusedLocationProviderClient.lat = 30d;
+      ShadowFusedLocationProviderClient.log = 2.0d;
+      ShadowFusedLocationProviderClient.accuracy = 5.0f;
+      ShadowFusedLocationProviderClient.time = 2L;
+      restartAppAndElapseTimeToNextSession();
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(30.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
+      assertEquals(5.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
+      assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
+   }
+
+   @Test
+   @Config(shadows = {
+           ShadowFusedLocationProviderClient.class
+   }, sdk = 19)
+   public void testLocationSchedule_Huawei() throws Exception {
+      ShadowLocationController.googleServicesAvailable = false;
+      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      ShadowFusedLocationProviderClient.lat = 1.0d;
+      ShadowFusedLocationProviderClient.log = 2.0d;
+      ShadowFusedLocationProviderClient.accuracy = 3.0f;
+      ShadowFusedLocationProviderClient.time = 12345L;
+
+      // location if we have permission
+      OneSignalInit();
+      threadAndTaskWait();
+      assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+
+      // Checking make sure an update is scheduled.
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
+      assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
+
+      // Setting up a new point and testing it is sent
+      Location fakeLocation = new Location("UnitTest");
+      fakeLocation.setLatitude(1.1d);
+      fakeLocation.setLongitude(2.2d);
+      fakeLocation.setAccuracy(3.3f);
+      fakeLocation.setTime(12346L);
+      ShadowLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
+
+      Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
+      assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
+
+      assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+      assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
+
+      // Testing loc_bg
+      blankActivityController.pause();
+      threadAndTaskWait();
+      fakeLocation.setTime(12347L);
+      ShadowLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
+      Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
+      assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
+      assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+      assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
+   }
+
+   @Test
+   @Config(shadows = {
+           ShadowFusedLocationProviderClient.class,
+           ShadowHuaweiTask.class
+   }, sdk = 19)
+   public void testLocationFromSyncAlarm_Huawei() throws Exception {
+      ShadowLocationController.googleServicesAvailable = false;
+      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      ShadowFusedLocationProviderClient.lat = 1.1d;
+      ShadowFusedLocationProviderClient.log = 2.1d;
+      ShadowFusedLocationProviderClient.accuracy = 3.1f;
+      ShadowFusedLocationProviderClient.time = 12346L;
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      fastColdRestartApp();
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      shadowOf(alarmManager).getScheduledAlarms().clear();
+
+      ShadowOneSignalRestClient.lastPost = null;
+      ShadowFusedLocationProviderClient.resetStatics();
+      ShadowFusedLocationProviderClient.lat = 1.0;
+      ShadowFusedLocationProviderClient.log = 2.0d;
+      ShadowFusedLocationProviderClient.accuracy = 3.0f;
+      ShadowFusedLocationProviderClient.time = 12345L;
+      ShadowFusedLocationProviderClient.shadowTask = true;
+      ShadowHuaweiTask.result = ShadowFusedLocationProviderClient.getLocation();
+
+      blankActivityController.pause();
+      Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
+      threadAndTaskWait();
+
+      assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
+      assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
+      assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
+      assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
+      assertEquals(12345L, ShadowOneSignalRestClient.lastPost.optInt("loc_time_stamp"));
+      assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
+
+      // Checking make sure an update is scheduled.
+      alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
+      assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
+      shadowOf(alarmManager).getScheduledAlarms().clear();
+   }
+
+   @Test
+   @Config(shadows = {ShadowFusedLocationProviderClient.class})
+   public void shouldSendLocationToEmailRecord_Huawei() throws Exception {
+      ShadowLocationController.googleServicesAvailable = false;
+      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      OneSignalInit();
+      OneSignal.setEmail("josh@onesignal.com");
+      threadAndTaskWait();
+
+      JSONObject postEmailPayload = ShadowOneSignalRestClient.requests.get(2).payload;
+      assertEquals(11, postEmailPayload.getInt("device_type"));
+      assertEquals(1.0, postEmailPayload.getDouble("lat"));
+      assertEquals(2.0, postEmailPayload.getDouble("long"));
+      assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
+      assertEquals(0.0, postEmailPayload.getDouble("loc_type"));
+   }
+
+   @Test
+   @Config(shadows = {ShadowFusedLocationProviderClient.class, ShadowHuaweiTask.class})
+   public void shouldRegisterWhenPromptingAfterInit_Huawei() throws Exception {
+      ShadowLocationController.googleServicesAvailable = false;
+      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowFusedLocationProviderClient.skipOnGetLocation = true;
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      // Test promptLocation right after init race condition
+      OneSignalInit();
+      OneSignal.promptLocation();
+
+      ShadowHuaweiTask.callSuccessListener(ShadowFusedLocationProviderClient.getLocation());
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
+      assertEquals(REST_METHOD.POST, request.method);
+      assertEquals(1, request.payload.get("device_type"));
+      assertEquals(ShadowPushRegistratorGCM.regId, request.payload.get("identifier"));
+   }
+
+   @Test
+   @Config(shadows = {ShadowFusedLocationProviderClient.class, ShadowHuaweiTask.class})
+   public void shouldCallOnSessionEvenIfSyncJobStarted_Huawei() throws Exception {
+      ShadowLocationController.googleServicesAvailable = false;
+      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowFusedLocationProviderClient.shadowTask = true;
+      ShadowHuaweiTask.result = ShadowFusedLocationProviderClient.getLocation();
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession();
+      ShadowFusedLocationProviderClient.skipOnGetLocation = true;
+      OneSignalInit();
+
+      SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
+      syncJobService.onStartJob(null);
+      TestHelpers.getThreadByName("OS_SYNCSRV_BG_SYNC").join();
+      OneSignalPackagePrivateHelper.runAllNetworkRunnables();
+      ShadowHuaweiTask.callSuccessListener(ShadowFusedLocationProviderClient.getLocation());
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(3);
+      assertEquals(REST_METHOD.POST, request.method);
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_session", request.url);
+   }
+
    // ####### Unit test postNotification #####
 
    private static JSONObject postNotificationSuccess = null, postNotificationFailure = null;
@@ -3395,7 +3605,6 @@ public class MainOneSignalClassRunner {
       assertEquals(2, cursor.getCount());
       cursor.close();
    }
-
 
    // ####### Unit test toJSONObject methods
    @Test
