@@ -31,10 +31,11 @@ package com.onesignal;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
-import android.text.TextUtils;
 
 import com.onesignal.OneSignal.OSNotificationDisplay;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.security.SecureRandom;
@@ -107,10 +108,18 @@ public class OSNotificationGenerationJob {
 
    /**
     * Get the notification additional data json from the payload
+    * @return
     */
    JSONObject getAdditionalData() {
-      return jsonPayload.optJSONObject(CUSTOM_PAYLOAD_PARAM)
-                        .optJSONObject(ADDITIONAL_DATA_PAYLOAD_PARAM);
+      try {
+         return new JSONObject(jsonPayload
+                 .optString(CUSTOM_PAYLOAD_PARAM))
+                 .getJSONObject(ADDITIONAL_DATA_PAYLOAD_PARAM);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+
+      return new JSONObject();
    }
 
    /**
@@ -134,6 +143,10 @@ public class OSNotificationGenerationJob {
       if (overrideSettings == null)
          overrideSettings = new NotificationExtenderService.OverrideSettings();
       overrideSettings.androidNotificationId = id;
+   }
+
+   private OSNotificationDisplay getNotificationDisplayOption() {
+      return this.displayOption;
    }
 
    private void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
@@ -224,6 +237,10 @@ public class OSNotificationGenerationJob {
 
       public JSONObject getAdditionalData() {
          return notifJob.getAdditionalData();
+      }
+
+      public OSNotificationDisplay getNotificationDisplayOption() {
+         return notifJob.getNotificationDisplayOption();
       }
 
       public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
