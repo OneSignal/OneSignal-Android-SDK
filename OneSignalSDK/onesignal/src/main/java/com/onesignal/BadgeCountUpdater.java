@@ -37,10 +37,9 @@ import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
 import androidx.annotation.RequiresApi;
 
+import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.shortcutbadger.ShortcutBadger;
-
-import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import static com.onesignal.NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR;
 

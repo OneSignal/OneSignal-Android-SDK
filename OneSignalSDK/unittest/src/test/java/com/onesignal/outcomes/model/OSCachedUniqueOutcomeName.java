@@ -1,8 +1,8 @@
 package com.onesignal.outcomes.model;
 
-import com.onesignal.influence.model.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceChannel;
 
-import static com.onesignal.influence.model.OSInfluenceChannel.NOTIFICATION;
+import static com.onesignal.influence.domain.OSInfluenceChannel.NOTIFICATION;
 
 public class OSCachedUniqueOutcomeName extends OSCachedUniqueOutcome {
 

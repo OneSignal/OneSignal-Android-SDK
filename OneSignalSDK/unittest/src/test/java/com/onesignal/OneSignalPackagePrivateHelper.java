@@ -9,7 +9,7 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -109,6 +109,10 @@ public class OneSignalPackagePrivateHelper {
 
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
       return OneSignal.getSessionListener();
+   }
+
+   public static void OneSignal_setTime(OSTime time) {
+      OneSignal.setTime(time);
    }
 
    public static void OneSignal_setSharedPreferences(OSSharedPreferences preferences) {
@@ -378,8 +382,8 @@ public class OneSignalPackagePrivateHelper {
          this.displayStats.setLastDisplayTime(lastDisplayTime);
       }
 
-      public void setLastDisplayTimeToCurrent() {
-         this.displayStats.setLastDisplayTime(System.currentTimeMillis() / 1000);
+      public void setLastDisplayTimeToCurrent(OSTime time) {
+         this.displayStats.setLastDisplayTime(time.getCurrentTimeMillis() / 1000);
       }
 
       @Override

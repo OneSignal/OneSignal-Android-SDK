@@ -15,8 +15,8 @@ import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.model.OSInfluenceChannel;
-import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.influence.domain.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
@@ -49,7 +49,6 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOneSignalDbHelper.class
         },

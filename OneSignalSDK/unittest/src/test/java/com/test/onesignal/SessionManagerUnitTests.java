@@ -37,11 +37,11 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.OSChannelTracker;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
-import com.onesignal.influence.model.OSInfluenceChannel;
-import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.influence.data.OSChannelTracker;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.influence.domain.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceType;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -63,7 +63,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOSUtils.class,
         },

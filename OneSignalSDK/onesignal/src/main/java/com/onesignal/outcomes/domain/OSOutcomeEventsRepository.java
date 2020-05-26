@@ -1,7 +1,7 @@
 package com.onesignal.outcomes.domain;
 
 import com.onesignal.OneSignalApiResponseHandler;
-import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import java.util.List;

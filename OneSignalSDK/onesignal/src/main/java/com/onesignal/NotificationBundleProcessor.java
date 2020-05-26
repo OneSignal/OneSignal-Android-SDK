@@ -27,12 +27,6 @@
 
 package com.onesignal;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import com.onesignal.OneSignalDbContract.NotificationTable;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -43,6 +37,12 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -217,7 +217,7 @@ class NotificationBundleProcessor {
                values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
 
             // Set expire_time
-            long sentTime = jsonPayload.optLong("google.sent_time", SystemClock.currentThreadTimeMillis()) / 1_000L;
+            long sentTime = jsonPayload.optLong("google.sent_time", OneSignal.getTime().getCurrentThreadTimeMillis()) / 1_000L;
             int ttl = jsonPayload.optInt("google.ttl", NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
             long expireTime = sentTime + ttl;
             values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
@@ -530,7 +530,7 @@ class NotificationBundleProcessor {
          return false;
 
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
-      intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
+      intent.putExtra("timestamp", OneSignal.getTime().getCurrentTimeMillis() / 1000L);
 
       boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
 

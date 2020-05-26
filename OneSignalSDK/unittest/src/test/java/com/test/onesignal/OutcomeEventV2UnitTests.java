@@ -43,9 +43,9 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalRemoteParams;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
-import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.influence.domain.OSInfluenceType;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
@@ -61,7 +61,6 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.List;
 
-import static com.test.onesignal.TestHelpers.lockTimeTo;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -69,7 +68,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOSUtils.class,
         },
@@ -516,7 +514,6 @@ public class OutcomeEventV2UnitTests {
 
     @Test
     public void testOutcomeMultipleFailsSavedOnDB() throws Exception {
-        lockTimeTo(0);
         service.setSuccess(false);
 
         // Init session should set UNATTRIBUTED influence
@@ -556,13 +553,13 @@ public class OutcomeEventV2UnitTests {
         for (OSOutcomeEventParams outcomeEvent : outcomeEvents) {
             // UNATTRIBUTED Case
             if (outcomeEvent.getOutcomeId().equals(OUTCOME_NAME)) {
-                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=null, weight=0.0, timestamp=0}", outcomeEvent.toString());
+                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=null, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } else if (outcomeEvent.getOutcomeId().equals(OUTCOME_NAME + "1")) { // DIRECT By Notification INDIRECT by iam
                 assertEquals("OSOutcomeEventParams{outcomeId='testing1', outcomeSource=OSOutcomeSource{directBody=OSOutcomeSourceBody{notificationIds=[\"notification_id\"], inAppMessagesIds=[]}, " +
-                        "indirectBody=OSOutcomeSourceBody{notificationIds=[], inAppMessagesIds=[\"iam_id\"]}}, weight=0.0, timestamp=0}", outcomeEvent.toString());
+                        "indirectBody=OSOutcomeSourceBody{notificationIds=[], inAppMessagesIds=[\"iam_id\"]}}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } else if (outcomeEvent.getOutcomeId().equals(OUTCOME_NAME + "2")) { // INDIRECT By Notification DIRECT by iam
                 assertEquals("OSOutcomeEventParams{outcomeId='testing2', outcomeSource=OSOutcomeSource{directBody=OSOutcomeSourceBody{notificationIds=[], inAppMessagesIds=[\"iam_id\"]}, " +
-                        "indirectBody=OSOutcomeSourceBody{notificationIds=[\"notification_id\"], inAppMessagesIds=[]}}, weight=0.0, timestamp=0}", outcomeEvent.toString());
+                        "indirectBody=OSOutcomeSourceBody{notificationIds=[\"notification_id\"], inAppMessagesIds=[]}}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } // DISABLED Case should not be save
         }
     }
@@ -599,7 +596,6 @@ public class OutcomeEventV2UnitTests {
 
     @Test
     public void testSendFailedOutcomeWithValueOnDB() throws Exception {
-        lockTimeTo(0);
         service.setSuccess(false);
         // Restart session by app open should set UNATTRIBUTED influence
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
@@ -613,6 +609,7 @@ public class OutcomeEventV2UnitTests {
         assertEquals(1.1f, outcomeEvents.get(0).getWeight(), 0);
         assertEquals("{\"id\":\"testing\",\"sources\":{},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
 
+        long timestamp = outcomeEvents.get(0).getTimestamp();
         service.setSuccess(true);
         service.resetLastJsonObjectSent();
         controller.sendSavedOutcomes();
@@ -623,7 +620,7 @@ public class OutcomeEventV2UnitTests {
         threadAndTaskWait();
 
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"timestamp\":" + timestamp + ",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
 }

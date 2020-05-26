@@ -8,7 +8,7 @@ import android.os.Process;
 import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
-import com.onesignal.influence.model.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceChannel;
 import com.onesignal.outcomes.OSOutcomeTableProvider;
 
 class OneSignalCacheCleaner {
@@ -90,7 +90,7 @@ class OneSignalCacheCleaner {
     private static void cleanCachedNotifications(SQLiteDatabase writableDb) {
         String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
 
-        String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - NOTIFICATION_CACHE_DATA_LIFETIME);
+        String sevenDaysAgoInSeconds = String.valueOf((OneSignal.getTime().getCurrentTimeMillis() / 1_000L) - NOTIFICATION_CACHE_DATA_LIFETIME);
         String[] whereArgs = new String[]{ sevenDaysAgoInSeconds };
 
         writableDb.delete(
@@ -118,5 +118,5 @@ class OneSignalCacheCleaner {
                 whereStr,
                 null);
     }
-  
+
 }

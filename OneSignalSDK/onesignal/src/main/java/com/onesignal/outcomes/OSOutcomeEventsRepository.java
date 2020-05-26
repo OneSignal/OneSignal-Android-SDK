@@ -2,7 +2,7 @@ package com.onesignal.outcomes;
 
 import com.onesignal.OSLogger;
 import com.onesignal.OneSignalApiResponseHandler;
-import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.outcomes.domain.OutcomeEventsService;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
 

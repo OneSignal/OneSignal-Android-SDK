@@ -63,8 +63,6 @@
 
     <application>
 
-        <service android:name="com.onesignal.FCMIntentService" />
-
         <service
             android:name="com.onesignal.HmsMessageServiceOneSignal"
             android:exported="false">

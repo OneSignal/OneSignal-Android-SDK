@@ -179,7 +179,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
 
    private static BundleCompat setCompatBundleForServer(Bundle bundle, BundleCompat taskExtras) {
       taskExtras.putString("json_payload", NotificationBundleProcessor.bundleAsJSONObject(bundle).toString());
-      taskExtras.putLong("timestamp", System.currentTimeMillis() / 1000L);
+      taskExtras.putLong("timestamp", OneSignal.getTime().getCurrentTimeMillis() / 1000L);
       return taskExtras;
    }
 }

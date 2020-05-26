@@ -18,6 +18,7 @@ import androidx.work.Configuration;
 import androidx.work.testing.SynchronousExecutor;
 import androidx.work.testing.WorkManagerTestInitHelper;
 
+import com.onesignal.MockOSTime;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
@@ -43,7 +44,7 @@ import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.influence.domain.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
@@ -56,7 +57,6 @@ import org.json.JSONException;
 import org.robolectric.Robolectric;
 import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
-import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
@@ -241,11 +241,11 @@ public class TestHelpers {
       StaticResetHelper.restSetStaticFields();
    }
 
-   static void restartAppAndElapseTimeToNextSession() throws Exception {
+   static void restartAppAndElapseTimeToNextSession(MockOSTime time) throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      advanceSystemTimeBy(31);
+      advanceSystemAndElapsedTimeBy(time,31);
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords(OneSignalDb db) {
@@ -481,15 +481,6 @@ public class TestHelpers {
       return iams;
    }
 
-   /**
-    * Calling setNanoTime ends up locking time to zero.
-    * NOTE: This setNanoTime is going away in future robolectric versions
-    */
-   static void lockTimeTo(long sec) {
-      long nano = sec * 1_000L * 1_000L;
-      ShadowSystemClock.setNanoTime(nano);
-   }
-
    static void setupTestWorkManager(Context context) {
       final Configuration config = new Configuration.Builder()
               .setMinimumLoggingLevel(Log.DEBUG)
@@ -509,9 +500,15 @@ public class TestHelpers {
       SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
    }
 
-   static void advanceSystemTimeBy(long sec) {
+   static void advanceSystemTimeBy(MockOSTime time, long sec) {
       long ms = sec * 1_000L;
-      SystemClock.setCurrentTimeMillis(ShadowSystemClock.currentTimeMillis() + ms);
+      time.setMockedTime(time.getCurrentTimeMillis() + ms);
+   }
+
+   static void advanceSystemAndElapsedTimeBy(MockOSTime time, long sec) {
+      long ms = sec * 1_000L;
+      time.setMockedElapsedTime(time.getCurrentTimeMillis() + ms);
+      advanceSystemTimeBy(time, sec);
    }
 
    public static void assertMainThread() {

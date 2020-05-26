@@ -66,7 +66,7 @@ class TrackFirebaseAnalytics {
          return;
    
       // Attribute if app was opened in 2 minutes or less after displaying the notification
-      long now = System.currentTimeMillis();
+      long now = OneSignal.getTime().getCurrentTimeMillis();
       if (now - lastReceivedTime.get() > 1000 * 60 * 2)
          return;
    
@@ -98,7 +98,7 @@ class TrackFirebaseAnalytics {
    void trackOpenedEvent(OSNotificationOpenResult openResult) {
       if(lastOpenedTime == null)
          lastOpenedTime = new AtomicLong();
-      lastOpenedTime.set(System.currentTimeMillis());
+      lastOpenedTime.set(OneSignal.getTime().getCurrentTimeMillis());
       
       try {
          //get the source, medium, campaign params from the openResult
@@ -139,7 +139,7 @@ class TrackFirebaseAnalytics {
 
          if(lastReceivedTime == null)
             lastReceivedTime = new AtomicLong();
-         lastReceivedTime.set(System.currentTimeMillis());
+         lastReceivedTime.set(OneSignal.getTime().getCurrentTimeMillis());
 
          lastReceivedPayload = receivedResult.notification.payload;
 

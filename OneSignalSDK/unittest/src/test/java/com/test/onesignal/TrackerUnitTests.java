@@ -31,10 +31,9 @@ import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -55,10 +54,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
-        shadows = {
-                ShadowOSUtils.class,
-        },
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class TrackerUnitTests {

@@ -30,8 +30,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHe
 import static junit.framework.Assert.assertEquals;
 
 @Config(
-    // NOTE: We can remove "instrumentedPackages" if we make ShadowRoboNotificationManager's constructor public
-    instrumentedPackages = { "com.onesignal" },
     packageName = "com.onesignal.example",
     shadows = {
         ShadowRoboNotificationManager.class,

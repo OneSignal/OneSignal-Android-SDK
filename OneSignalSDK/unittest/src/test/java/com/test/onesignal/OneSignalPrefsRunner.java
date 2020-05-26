@@ -23,7 +23,6 @@ import org.robolectric.shadows.ShadowLog;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)

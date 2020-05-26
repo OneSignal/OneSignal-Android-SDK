@@ -1,16 +1,14 @@
 package com.onesignal;
 
-import android.renderscript.Sampler;
 import android.webkit.ValueCallback;
 
+import com.onesignal.WebViewManager.OSJavaScriptInterface;
 import com.test.onesignal.TestHelpers;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowWebView;
-
-import com.onesignal.WebViewManager.OSJavaScriptInterface;
 
 import java.util.ArrayList;
 import java.util.List;

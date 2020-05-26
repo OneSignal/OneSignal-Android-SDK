@@ -10,11 +10,11 @@ import android.content.pm.ProviderInfo;
 import android.net.Uri;
 import android.os.Looper;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
+
+import java.util.Arrays;
+import java.util.List;
 
 
 /**
