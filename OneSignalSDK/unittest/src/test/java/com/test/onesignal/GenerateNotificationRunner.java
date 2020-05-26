@@ -1738,7 +1738,7 @@ public class GenerateNotificationRunner {
       assertNotEquals(-1, lastAppNotifJob.getAndroidNotificationId());
       assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
 
-      // 6. Make sure 1 notification exists in DB
+      // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
    }
 
@@ -1775,15 +1775,15 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
-      // 3. Receive a notification
+      // 2. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
 
-      // 4. Make sure the ExtNotifJob is null and AppNotifJob is null
+      // 3. Make sure the ExtNotifJob is null and AppNotifJob is null
       assertNull(lastExtNotifJob);
       assertNull(lastAppNotifJob);
 
-      // 5. Make sure 1 notification exists in DB
+      // 4. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
    }
 
