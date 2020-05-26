@@ -4,9 +4,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import androidx.annotation.Nullable;
 
-import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
+import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
 import org.json.JSONException;
 import org.json.JSONObject;

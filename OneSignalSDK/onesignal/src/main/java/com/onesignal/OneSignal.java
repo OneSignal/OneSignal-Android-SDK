@@ -46,8 +46,8 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -299,7 +299,8 @@ public class OneSignal {
          }
       };
 
-   private static final OSLogger logger = new OSLogWrapper();
+   private static OSTime time = new OSTimeImpl();
+   private static OSLogger logger = new OSLogWrapper();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
    private static OSTaskController taskController = new OSTaskController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
@@ -716,7 +717,7 @@ public class OneSignal {
       if (!inForeground && hasUserId())
          return;
 
-      setLastSessionTime(System.currentTimeMillis());
+      setLastSessionTime(time.getCurrentTimeMillis());
       startRegistrationOrOnSession();
    }
 
@@ -1003,7 +1004,7 @@ public class OneSignal {
       inForeground = false;
       appEntryState = AppEntryAction.APP_CLOSE;
 
-      setLastSessionTime(System.currentTimeMillis());
+      setLastSessionTime(OneSignal.getTime().getCurrentTimeMillis());
       LocationController.onFocusChange();
 
       if (!initDone)
@@ -2911,7 +2912,7 @@ public class OneSignal {
    }
 
    private static boolean isPastOnSessionTime() {
-      return (System.currentTimeMillis() - getLastSessionTime()) >= MIN_ON_SESSION_TIME_MILLIS;
+      return (OneSignal.getTime().getCurrentTimeMillis() - getLastSessionTime()) >= MIN_ON_SESSION_TIME_MILLIS;
    }
 
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
@@ -2949,9 +2950,17 @@ public class OneSignal {
       }
    }
 
+   @NonNull
+   public static OSTime getTime() {
+      return time;
+   }
    /*
     * Start Mock Injection module
     */
+   static void setTime(OSTime time) {
+      OneSignal.time = time;
+   }
+
    static void setTrackerFactory(OSTrackerFactory trackerFactory) {
       OneSignal.trackerFactory = trackerFactory;
    }

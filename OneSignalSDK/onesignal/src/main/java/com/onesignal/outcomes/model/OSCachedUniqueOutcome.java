@@ -1,6 +1,6 @@
 package com.onesignal.outcomes.model;
 
-import com.onesignal.influence.model.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceChannel;
 
 public class OSCachedUniqueOutcome {
 

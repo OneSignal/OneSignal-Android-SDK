@@ -3,7 +3,7 @@ package com.onesignal.outcomes;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 
-import com.onesignal.influence.model.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceChannel;
 import com.onesignal.outcomes.OSOutcomesDbContract.CachedUniqueOutcomeTable;
 import com.onesignal.outcomes.OSOutcomesDbContract.OutcomeEventsTable;
 

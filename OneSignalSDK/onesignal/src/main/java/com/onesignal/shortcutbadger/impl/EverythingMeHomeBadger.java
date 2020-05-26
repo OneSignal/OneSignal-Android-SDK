@@ -6,11 +6,11 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
+
+import java.util.Arrays;
+import java.util.List;
 
 
 /**

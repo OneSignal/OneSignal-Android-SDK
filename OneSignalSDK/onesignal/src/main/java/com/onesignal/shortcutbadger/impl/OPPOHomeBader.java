@@ -9,6 +9,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
+import com.onesignal.shortcutbadger.Badger;
+import com.onesignal.shortcutbadger.ShortcutBadgeException;
+import com.onesignal.shortcutbadger.util.BroadcastHelper;
+import com.onesignal.shortcutbadger.util.CloseHelper;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,11 +21,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
-
-import com.onesignal.shortcutbadger.Badger;
-import com.onesignal.shortcutbadger.ShortcutBadgeException;
-import com.onesignal.shortcutbadger.util.BroadcastHelper;
-import com.onesignal.shortcutbadger.util.CloseHelper;
 
 /**
  * Created by NingSo on 2016/10/14.上午10:09

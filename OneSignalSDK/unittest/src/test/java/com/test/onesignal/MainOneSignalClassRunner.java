@@ -46,6 +46,7 @@ import androidx.test.core.app.ApplicationProvider;
 import com.huawei.hms.location.HWLocation;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOSTime;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSEmailSubscriptionObserver;
@@ -93,7 +94,7 @@ import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.example.MainActivity;
-import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -131,6 +132,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getRemoteParamController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
@@ -146,6 +148,7 @@ import static com.test.onesignal.RestClientAsserts.assertOnSessionAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
+import static com.test.onesignal.TestHelpers.advanceSystemAndElapsedTimeBy;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
@@ -165,7 +168,6 @@ import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowOneSignalRestClient.class,
             ShadowPushRegistratorADM.class,
@@ -195,6 +197,7 @@ public class MainOneSignalClassRunner {
    private static String callBackUseId, getCallBackRegId;
    private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
+   private MockOSTime time;
    private OSTrackerFactory trackerFactory;
    private MockSessionManager sessionManager;
    private MockOneSignalDBHelper dbHelper;
@@ -268,11 +271,14 @@ public class MainOneSignalClassRunner {
    public void beforeEachTest() throws Exception {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
+      time = new MockOSTime();
       trackerFactory = new OSTrackerFactory(new MockOSSharedPreferences(), new MockOSLog());
       sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
       dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
 
       cleanUp();
+
+      OneSignal_setTime(time);
    }
 
    @After
@@ -298,6 +304,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.lastPost = null;
       restartAppAndElapseTimeToNextSession();
 
+      OneSignal_setTime(time);
       // Restart app, should not send onSession automatically
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
@@ -401,6 +408,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 4. Set OneSignal.appId and context simulating a background sync doing so
+      OneSignal_setTime(time);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity.getApplicationContext());
 
@@ -431,6 +439,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 5. Set OneSignal.appId and context simulating a background sync doing so
+      OneSignal_setTime(time);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity.getApplicationContext());
 
@@ -519,6 +528,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       advanceSystemTimeBy(60);
 
+      advanceSystemAndElapsedTimeBy(time, 0);
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -564,6 +574,7 @@ public class MainOneSignalClassRunner {
       advanceSystemTimeBy(31);
 
       sessionManager.onNotificationReceived("notification_id");
+      advanceSystemAndElapsedTimeBy(time, 0);
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -607,6 +618,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Foreground app
+      advanceSystemAndElapsedTimeBy(time, 0);
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -650,6 +662,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Foreground app
+      advanceSystemAndElapsedTimeBy(time, 0);
       blankActivityController.resume();
       threadAndTaskWait();
       // Make sure on_session is called
@@ -707,6 +720,7 @@ public class MainOneSignalClassRunner {
       final String notificationId = "notification_id";
       sessionManager.onNotificationReceived(notificationId);
       sessionManager.onDirectInfluenceFromNotificationOpen(notificationId);
+      advanceSystemAndElapsedTimeBy(time, 0);
       blankActivityController.resume();
       threadAndTaskWait();
 
@@ -1282,7 +1296,8 @@ public class MainOneSignalClassRunner {
       assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Restart app - Should omit notification_types
-      restartAppAndElapseTimeToNextSession();
+      restartAppAndElapseTimeToNextSession(time);
+      OneSignal_setTime(time);
 //      OneSignalInitWithBadProjectNum();
       OneSignalInit();
       blankActivityController.resume();
@@ -2546,6 +2561,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void useAppFor2minThenBackground() throws Exception {
+      advanceSystemAndElapsedTimeBy(time,0);
       // 1. Start app
       OneSignalInit();
       threadAndTaskWait();
@@ -2589,6 +2605,7 @@ public class MainOneSignalClassRunner {
    @Config(sdk = 26)
    public void ensureFailureOnPauseIsSentFromSyncService_forPendingActiveTime() throws Exception {
       // 1. Start app
+      advanceSystemAndElapsedTimeBy(time, 0);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -2645,7 +2662,7 @@ public class MainOneSignalClassRunner {
    @Config(sdk = 26)
    public void ensureNoConcurrentUpdateCallsWithSameData_forPendingActiveTime() throws Exception {
 //      useAppFor2minThenBackground();
-
+      advanceSystemAndElapsedTimeBy(time, 0);
       // 1. Start app
       OneSignalInit();
       threadAndTaskWait();
@@ -3035,10 +3052,11 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void sendsOnFocus() throws Exception {
+      advanceSystemAndElapsedTimeBy(time, 0);
       OneSignalInit();
       threadAndTaskWait();
 
-      advanceSystemTimeBy(60);
+      advanceSystemAndElapsedTimeBy(time, 60);
       blankActivityController.pause();
       threadAndTaskWait();
 
@@ -3048,12 +3066,13 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void sendsOnFocusToEmail() throws Exception {
+      advanceSystemAndElapsedTimeBy(time, 0);
       OneSignalInit();
       OneSignal.setEmail("josh@onesignal.com");
       threadAndTaskWait();
 
       blankActivityController.resume();
-      advanceSystemTimeBy(60);
+      advanceSystemAndElapsedTimeBy(time, 60);
       blankActivityController.pause();
       threadAndTaskWait();
 
@@ -3076,6 +3095,7 @@ public class MainOneSignalClassRunner {
    @Config(sdk = 26)
    public void testSessionTimeTrackingOnPrivacyConsent() throws Exception {
       ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
+      advanceSystemAndElapsedTimeBy(time, 0);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -4763,6 +4783,7 @@ public class MainOneSignalClassRunner {
    private void OneSignalInit() {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
+      OneSignal_setTime(time);
       OneSignal_setTrackerFactory(trackerFactory);
       OneSignal_setSessionManager(sessionManager);
       OneSignal.setAppId(ONESIGNAL_APP_ID);

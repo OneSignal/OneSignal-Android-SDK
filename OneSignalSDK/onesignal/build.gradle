@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 28
@@ -55,6 +57,8 @@ dependencies {
     api 'androidx.browser:browser:[1.0.0, 1.99.99]'
     api 'androidx.appcompat:appcompat:[1.0.0, 1.99.99]'
     api 'androidx.work:work-runtime:[2.0.0, 2.99.99]'
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 
 apply from: 'maven-push.gradle'

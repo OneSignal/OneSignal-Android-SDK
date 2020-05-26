@@ -27,9 +27,9 @@
 
 package com.onesignal;
 
-import com.amazon.device.messaging.ADM;
-
 import android.content.Context;
+
+import com.amazon.device.messaging.ADM;
 
 public class PushRegistratorADM implements PushRegistrator {
 

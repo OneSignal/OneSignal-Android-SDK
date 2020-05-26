@@ -1,11 +1,10 @@
 package com.onesignal;
 
-import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 
-import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.domain.OSInfluence;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -46,7 +45,7 @@ class FocusTimeController {
    }
 
    void appForegrounded() {
-      timeFocusedAtMs = SystemClock.elapsedRealtime();
+      timeFocusedAtMs = OneSignal.getTime().getElapsedRealtime();
    }
 
    void appBackgrounded() {
@@ -90,7 +89,7 @@ class FocusTimeController {
       if (timeFocusedAtMs == null)
          return null;
 
-      long timeElapsed = (long)(((SystemClock.elapsedRealtime() - timeFocusedAtMs) / 1_000d) + 0.5d);
+      long timeElapsed = (long)(((OneSignal.getTime().getElapsedRealtime() - timeFocusedAtMs) / 1_000d) + 0.5d);
 
       // Time is invalid if below 1 or over a day
       if (timeElapsed < 1 || timeElapsed > 86_400)
@@ -110,7 +109,6 @@ class FocusTimeController {
             if (influence.getInfluenceType().isAttributed())
                return false;
          }
-         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":timeTypeApplies for influences: " + influences.toString() + " true");
          return true;
       }
 

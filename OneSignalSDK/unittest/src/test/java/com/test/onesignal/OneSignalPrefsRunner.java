@@ -29,7 +29,6 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowOSUtils.class

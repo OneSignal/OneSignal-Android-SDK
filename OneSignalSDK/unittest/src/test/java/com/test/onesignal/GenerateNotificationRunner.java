@@ -54,6 +54,7 @@ import androidx.test.core.app.ApplicationProvider;
 import com.onesignal.BundleCompat;
 import com.onesignal.FCMBroadcastReceiver;
 import com.onesignal.FCMIntentService;
+import com.onesignal.MockOSTime;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.OSNotification;
@@ -116,6 +117,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGroup;
@@ -134,7 +136,6 @@ import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowRoboNotificationManager.class,
             ShadowOneSignalRestClient.class,
@@ -157,6 +158,7 @@ public class GenerateNotificationRunner {
    private static ActivityController<BlankActivity> blankActivityController;
 
    private MockOneSignalDBHelper dbHelper;
+   private MockOSTime time;
 
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
@@ -171,6 +173,7 @@ public class GenerateNotificationRunner {
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
       dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
+      time = new MockOSTime();
 
       overrideNotificationId = -1;
       
@@ -181,6 +184,8 @@ public class GenerateNotificationRunner {
       NotificationManager notificationManager = OneSignalNotificationManagerPackageHelper.getNotificationManager(blankActivity);
       notificationManager.cancelAll();
       NotificationRestorer.restored = false;
+
+      OneSignal_setTime(time);
 
       // Set remote_params GET response
       setRemoteParamsGetHtmlResponse();
@@ -821,6 +826,7 @@ public class GenerateNotificationRunner {
 
       // Restart the app so OneSignalCacheCleaner can clean out old notifications
       fastColdRestartApp();
+      OneSignal_setTime(time);
       threadAndTaskWait();
 
       // Display a 3rd notification

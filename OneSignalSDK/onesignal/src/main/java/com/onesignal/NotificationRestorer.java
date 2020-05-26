@@ -255,7 +255,7 @@ class NotificationRestorer {
          PendingIntent pendingIntent = PendingIntent.getService(context,
                  RESTORE_KICKOFF_REQUEST_CODE, intentForService, PendingIntent.FLAG_UPDATE_CURRENT);
 
-         long scheduleTime = System.currentTimeMillis() + RESTORE_NOTIFICATIONS_DELAY_MS;
+         long scheduleTime = OneSignal.getTime().getCurrentTimeMillis() + RESTORE_NOTIFICATIONS_DELAY_MS;
          AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
          alarm.set(AlarmManager.RTC, scheduleTime, pendingIntent);
       }

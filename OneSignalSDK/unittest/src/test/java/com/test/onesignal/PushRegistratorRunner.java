@@ -47,7 +47,6 @@ import org.robolectric.shadows.ShadowLog;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowGooglePlayServicesUtil.class,
             ShadowFirebaseCloudMessaging.class },
