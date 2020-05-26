@@ -119,13 +119,16 @@ import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
+import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -283,8 +286,8 @@ public class GenerateNotificationRunner {
       
       // Display a 3 normal notification.
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
-   
-   
+
+
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       
       // Open the summary notification
@@ -309,7 +312,7 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       bundle.putString("custom", "{\"i\": \"some_UUID\", \"a\": {\"actionButtons\": [{\"text\": \"test\"} ]}}");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-   
+
    
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
@@ -1274,6 +1277,168 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_setNotificationDisplayOptionToNotification");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification_andThenToSilent() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_setNotificationDisplayOptionToNotification");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.SILENT, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification
+    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification_andThenToSilent
+    */
+   public static class NotificationExtensionService_setNotificationDisplayOptionToNotification implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+         lastExtNotifJob = notifJob;
+
+         // Complete is called with true, so bubbling to AppNotificationWillShowInForegroundHandler
+         notifJob.complete(true);
+      }
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_setNotificationDisplayOptionToSilent");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.SILENT, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_setNotificationDisplayOptionToSilent");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent
+    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification
+    */
+   public static class NotificationExtensionService_setNotificationDisplayOptionToSilent implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
+         lastExtNotifJob = notifJob;
+
+         // Complete is called with true, so bubbling to AppNotificationWillShowInForegroundHandler
+         notifJob.complete(true);
+      }
+   }
+
+   @Test
    public void testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1299,10 +1464,39 @@ public class GenerateNotificationRunner {
       // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
       assertNotNull(lastExtNotifJob);
       assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler implementation
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastExtNotifJob.getNotificationDisplayOption());
+      assertNull(lastAppNotifJob);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
    }
 
    /**
     * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler
+    * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler
     */
    public static class NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
@@ -1338,11 +1532,40 @@ public class GenerateNotificationRunner {
 
       // 4. Make sure the ExtNotifJob is not null and AppNotifJob is null
       assertNotNull(lastExtNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastExtNotifJob.getNotificationDisplayOption());
       assertNull(lastAppNotifJob);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is null
+      assertNotNull(lastExtNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastExtNotifJob.getNotificationDisplayOption());
+      assertNull(lastAppNotifJob);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
    }
 
    /**
     * @see #testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler
+    * @see #testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler
     */
    public static class NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
@@ -1354,7 +1577,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_bubbles30SecondTimeout_forExtAndAppHandlers() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
@@ -1379,9 +1602,74 @@ public class GenerateNotificationRunner {
       // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
       assertNotNull(lastExtNotifJob);
       assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler implementation
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is null
+      assertNotNull(lastExtNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastExtNotifJob.getNotificationDisplayOption());
+      assertNull(lastAppNotifJob);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+            // Complete is not called, so we rely on 30 second timeout until bubbling by default out of the AppNotificationWillShowInForegroundHandler
+            try {
+               threadAndTaskWait();
+            } catch (Exception e) {
+               e.printStackTrace();
+            }
+         }
+      });
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler and  implementation
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
    }
 
    /**
+    * @see #testNotificationWillShowInForegroundHandler_bubbles30SecondTimeout_forExtAndAppHandlers
+    * @see #testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler
     * @see #testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler
     */
    public static class NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
@@ -1395,6 +1683,108 @@ public class GenerateNotificationRunner {
             e.printStackTrace();
          }
       }
+   }
+
+   @Test
+   public void testNotificationWillShowInForegroundHandler_notifJobPayload() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notifJobPayload");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+
+            try {
+               // Until getting passed the foreground handler or being overwritten the Android notif id will be -1 until it is shown
+               assertEquals(-1, notifJob.getAndroidNotificationId());
+
+               // Make sure all of the accessible getters have the expected values
+               assertEquals("UUID1", notifJob.getApiNotificationId());
+               assertEquals("title1", notifJob.getTitle());
+               assertEquals("Notif message 1", notifJob.getBody());
+               JsonAsserts.equals(new JSONObject("{\"myKey1\": \"myValue1\", \"myKey2\": \"myValue2\"}"), notifJob.getAdditionalData());
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+
+      // 3. Receive a notification
+      // Setup - Display a single notification with a grouped.
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("title", "title1");
+      bundle.putString("alert", "Notif message 1");
+      bundle.putString("custom", "{\"i\": \"UUID1\", " +
+              "                    \"a\": {" +
+              "                              \"myKey1\": \"myValue1\", " +
+              "                              \"myKey2\": \"myValue2\"" +
+              "                           }" +
+              "                   }");
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      // Not restoring or duplicate notification, so the Android notif id should not be -1
+      assertNotEquals(-1, lastAppNotifJob.getAndroidNotificationId());
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationWillShowInForegroundHandler_notifJobPayload
+    */
+   public static class NotificationExtensionService_notifJobPayload implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         lastExtNotifJob = notifJob;
+
+         try {
+            // Until getting passed the foreground handler or being overwritten the Android notif id will be -1 until it is shown
+            assertEquals(-1, notifJob.getAndroidNotificationId());
+
+            // Make sure all of the accessible getters have the expected values
+            assertEquals("UUID1", notifJob.getApiNotificationId());
+            assertEquals("title1", notifJob.getTitle());
+            assertEquals("Notif message 1", notifJob.getBody());
+            JsonAsserts.equals(new JSONObject("{\"myKey1\": \"myValue1\", \"myKey2\": \"myValue2\"}"), notifJob.getAdditionalData());
+         } catch (JSONException e) {
+            e.printStackTrace();
+         }
+
+         // Complete is called with true, so bubbling to AppNotificationWillShowInForegroundHandler
+         notifJob.complete(true);
+      }
+   }
+
+   @Test
+   public void testNullExtAndAppNotificationWillShowInForegroundHandlers() throws Exception {
+      // 1. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is null and AppNotifJob is null
+      assertNull(lastExtNotifJob);
+      assertNull(lastAppNotifJob);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
    }
 
    // TODO: After onNotificationProcessing(OSNotificationReceivedResult) is converted to
