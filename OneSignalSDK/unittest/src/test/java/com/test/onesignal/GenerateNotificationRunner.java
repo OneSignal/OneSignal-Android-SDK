@@ -173,19 +173,14 @@ public class GenerateNotificationRunner {
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
 
-      final Configuration config = new Configuration.Builder()
-              .setMinimumLoggingLevel(Log.DEBUG)
-              .setExecutor(new SynchronousExecutor())
-              .build();
-      WorkManagerTestInitHelper.initializeTestWorkManager(blankActivity, config);
-
       lastExtNotifJob = null;
       lastAppNotifJob = null;
 
       OneSignalShadowPackageManager.resetStatics();
 
       overrideNotificationId = -1;
-      
+
+      TestHelpers.setupTestWorkManager(blankActivity);
       TestHelpers.beforeTestInitAndCleanup();
 
       setClearGroupSummaryClick(true);

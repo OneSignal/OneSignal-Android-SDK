@@ -1,5 +1,6 @@
 package com.test.onesignal;
 
+import android.app.AlarmManager;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.app.job.JobService;
@@ -9,8 +10,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.work.Configuration;
+import androidx.work.testing.SynchronousExecutor;
+import androidx.work.testing.WorkManagerTestInitHelper;
 
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.CachedUniqueOutcomeNotification;
@@ -41,6 +46,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
+import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.Scheduler;
@@ -63,6 +69,8 @@ public class TestHelpers {
       TestOneSignalPrefs.initializePool();
       if (!ranBeforeTestSuite)
          return;
+
+      resetAlarmManager();
 
       resetSystemClock();
 
@@ -394,6 +402,20 @@ public class TestHelpers {
    static void lockTimeTo(long sec) {
       long nano = sec * 1_000L * 1_000L;
       ShadowSystemClock.setNanoTime(nano);
+   }
+
+   static void setupTestWorkManager(Context context) {
+      final Configuration config = new Configuration.Builder()
+              .setMinimumLoggingLevel(Log.DEBUG)
+              .setExecutor(new SynchronousExecutor())
+              .build();
+      WorkManagerTestInitHelper.initializeTestWorkManager(context, config);
+   }
+
+   private static void resetAlarmManager() {
+      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
+      shadowAlarmManager.getScheduledAlarms().clear();
    }
 
    static void resetSystemClock() {
