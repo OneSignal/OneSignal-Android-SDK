@@ -178,12 +178,6 @@ public class GenerateNotificationRunner {
       blankActivity.getApplicationInfo().name = "UnitTestApp";
       dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
 
-      final Configuration config = new Configuration.Builder()
-              .setMinimumLoggingLevel(Log.DEBUG)
-              .setExecutor(new SynchronousExecutor())
-              .build();
-      WorkManagerTestInitHelper.initializeTestWorkManager(blankActivity, config);
-
       callbackCounter = 0;
       lastExtNotifJob = null;
       lastAppNotifJob = null;
@@ -191,7 +185,8 @@ public class GenerateNotificationRunner {
       OneSignalShadowPackageManager.resetStatics();
 
       overrideNotificationId = -1;
-      
+
+      TestHelpers.setupTestWorkManager(blankActivity);
       TestHelpers.beforeTestInitAndCleanup();
 
       setClearGroupSummaryClick(true);

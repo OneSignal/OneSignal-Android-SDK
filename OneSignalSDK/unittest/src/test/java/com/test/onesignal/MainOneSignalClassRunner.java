@@ -255,6 +255,7 @@ public class MainOneSignalClassRunner {
       lastGetTags = null;
       lastExternalUserIdResponse = null;
 
+       TestHelpers.setupTestWorkManager(blankActivity);
       ShadowGMSLocationController.reset();
       TestHelpers.beforeTestInitAndCleanup();
    }
