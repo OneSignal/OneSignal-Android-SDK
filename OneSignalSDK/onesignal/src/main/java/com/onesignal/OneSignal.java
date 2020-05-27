@@ -40,15 +40,17 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.WorkerThread;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.onesignal.OneSignalDbContract.NotificationTable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
 import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
+import com.onesignal.OSNotificationWillShowInForegroundManager.NotificationWillShowInForegroundManager;
+import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -72,10 +74,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.onesignal.NotificationBundleProcessor.newJsonArray;
-
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
+import static com.onesignal.NotificationBundleProcessor.newJsonArray;
 
 /**
  * The main OneSignal class - this is where you will interface with the OneSignal SDK
@@ -2097,10 +2098,9 @@ public class OneSignal {
     *  and AppNotificationWillShowInForegroundHandler are set
     * <br/><br/>
     * @see OneSignal.ExtNotificationWillShowInForegroundHandler
+    * @see OSNotificationWillShowInForegroundManager.ExtNotificationWillShowInForegroundWorker
     * @see OneSignal.AppNotificationWillShowInForegroundHandler
-    * <br/><br/>
-    * TODO: Enqueue this method for the extNotificationWillShowInForegroundHandler/appNotificationWillShowInForegroundHandler
-    *    with a WorkManager Worker eventually
+    * @see OSNotificationWillShowInForegroundManager.AppNotificationWillShowInForegroundWorker
     */
    static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
       // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
@@ -2111,11 +2111,11 @@ public class OneSignal {
 
       // No ExtNotificationWillShowInForegroundHandler was setup, use the AppNotificationWillShowInForegroundHandler to start
       if (extNotificationWillShowInForegroundHandler == null) {
-         appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toAppNotificationGenerationJob());
+         NotificationWillShowInForegroundManager.beginEnqueueingWork(notifJob.toAppNotificationGenerationJob());
          return;
       }
 
-      extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toExtNotificationGenerationJob());
+      NotificationWillShowInForegroundManager.beginEnqueueingWork(notifJob.toExtNotificationGenerationJob());
    }
 
    // Called when opening a notification

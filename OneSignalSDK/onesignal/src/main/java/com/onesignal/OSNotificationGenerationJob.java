@@ -33,8 +33,8 @@ import android.net.Uri;
 import android.os.Handler;
 
 import com.onesignal.OneSignal.OSNotificationDisplay;
+import com.onesignal.OSNotificationWillShowInForegroundManager.NotificationWillShowInForegroundManager;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -175,7 +175,7 @@ public class OSNotificationGenerationJob {
     *    1. {@link ExtNotificationGenerationJob}
     *    2. {@link AppNotificationGenerationJob}
     */
-   private static class NotificationGenerationJob {
+   static class NotificationGenerationJob {
 
       // Timeout in seconds before applying defaults
       private static final long SHOW_NOTIFICATION_TIMEOUT = 30 * 1_000L;
@@ -279,8 +279,7 @@ public class OSNotificationGenerationJob {
 
          // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
          //    the notificationWillShowInForeground implementation
-         OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(
-                 getNotifJob().toAppNotificationGenerationJob());
+         NotificationWillShowInForegroundManager.beginEnqueueingWork(getNotifJob().toAppNotificationGenerationJob());
       }
    }
 

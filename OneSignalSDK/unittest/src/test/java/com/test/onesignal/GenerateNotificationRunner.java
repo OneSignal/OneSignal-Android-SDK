@@ -42,10 +42,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.work.Configuration;
+import androidx.work.testing.SynchronousExecutor;
+import androidx.work.testing.WorkManagerTestInitHelper;
 
 import com.onesignal.BundleCompat;
 import com.onesignal.FCMBroadcastReceiver;
@@ -119,13 +123,11 @@ import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
-import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertNotEquals;
@@ -170,6 +172,12 @@ public class GenerateNotificationRunner {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
+
+      final Configuration config = new Configuration.Builder()
+              .setMinimumLoggingLevel(Log.DEBUG)
+              .setExecutor(new SynchronousExecutor())
+              .build();
+      WorkManagerTestInitHelper.initializeTestWorkManager(blankActivity, config);
 
       lastExtNotifJob = null;
       lastAppNotifJob = null;

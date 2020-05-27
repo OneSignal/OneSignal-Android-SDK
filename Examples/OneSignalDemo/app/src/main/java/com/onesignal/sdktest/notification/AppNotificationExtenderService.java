@@ -39,7 +39,6 @@ public class AppNotificationExtenderService extends NotificationExtenderService 
    public void notificationWillShowInForeground(ExtNotificationGenerationJob notifJob) {
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ext notificationWillShowInForeground fired!!!!");
 
-
       notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       notifJob.complete(true);
    }
