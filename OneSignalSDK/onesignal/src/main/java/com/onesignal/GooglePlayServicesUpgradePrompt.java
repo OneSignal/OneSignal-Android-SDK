@@ -14,17 +14,6 @@ import static com.onesignal.OSUtils.getResourceString;
 class GooglePlayServicesUpgradePrompt {
    private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9_000;
 
-   static boolean isGMSInstalledAndEnabled() {
-      try {
-         PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
-
-         return info.applicationInfo.enabled;
-      } catch (PackageManager.NameNotFoundException e) {}
-
-      return false;
-   }
-
    private static boolean isGooglePlayStoreInstalled() {
       try {
          PackageManager pm = OneSignal.appContext.getPackageManager();
@@ -39,7 +28,7 @@ class GooglePlayServicesUpgradePrompt {
    }
 
    static void ShowUpdateGPSDialog() {
-      if (isGMSInstalledAndEnabled() || !isGooglePlayStoreInstalled())
+      if (new OSUtils().getDeviceType() != UserState.DEVICE_TYPE_ANDROID || !isGooglePlayStoreInstalled())
          return;
 
       boolean userSelectedSkip =

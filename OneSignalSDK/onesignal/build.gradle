@@ -57,9 +57,13 @@ dependencies {
     // firebase-messaging:17.6.0 is the max version since we still have code looking for FirebaseInstanceIdService
     api 'com.google.firebase:firebase-messaging:[10.2.1, 17.3.99]'
 
-    implementation 'com.huawei.agconnect:agconnect-core:1.3.1.300'
-    implementation 'com.huawei.hms:location:3.0.2.300'
-    implementation 'com.huawei.hms:base:3.0.2.300'
+    compileOnly 'com.huawei.agconnect:agconnect-core:1.3.1.300'
+    compileOnly 'com.huawei.hms:location:3.0.2.300'
+    compileOnly 'com.huawei.hms:base:3.0.2.300'
+
+    // Huawei PushKit
+    // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
+    compileOnly 'com.huawei.hms:push:4.0.2.300'
 
     // Keep under 28 until we switch to AndroidX
     //   otherwise app can get dup classes between 26 & 28 when mixing these versions.

@@ -50,6 +50,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-core:16.0.4'
 
     implementation 'com.huawei.hms:location:3.0.2.300'
+    testImplementation 'com.huawei.hms:push:4.0.2.300'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.robolectric:robolectric:4.3.1'
