@@ -248,13 +248,14 @@ class OSUtils {
    //   on the device to make sure it would still be counted as "SUCCESS".
    // Or if we get back "SERVICE_VERSION_UPDATE_REQUIRED" then we may want to count that as successful too.
    static boolean isGMSInstalledAndEnabled() {
-      try {
-         PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
-         return info.applicationInfo.enabled;
-      } catch (PackageManager.NameNotFoundException e) {
-         return false;
-      }
+      return false;
+//      try {
+//         PackageManager pm = OneSignal.appContext.getPackageManager();
+//         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
+//         return info.applicationInfo.enabled;
+//      } catch (PackageManager.NameNotFoundException e) {
+//         return false;
+//      }
    }
 
    private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
