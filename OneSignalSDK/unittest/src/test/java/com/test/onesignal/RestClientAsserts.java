@@ -28,12 +28,14 @@ class RestClientAsserts {
    private static final AnyOf<Integer> ANY_OF_VALID_DEVICE_TYPES = anyOf(
       is(UserState.DEVICE_TYPE_ANDROID),
       is(UserState.DEVICE_TYPE_FIREOS),
-      is(UserState.DEVICE_TYPE_EMAIL)
+      is(UserState.DEVICE_TYPE_EMAIL),
+      is(UserState.DEVICE_TYPE_HUAWEI)
    );
 
    private static final AnyOf<Integer> ANY_OF_PUSH_DEVICE_TYPES = anyOf(
       is(UserState.DEVICE_TYPE_ANDROID),
-      is(UserState.DEVICE_TYPE_FIREOS)
+      is(UserState.DEVICE_TYPE_FIREOS),
+      is(UserState.DEVICE_TYPE_HUAWEI)
    );
 
    static void assertPlayerCreateAnyAtIndex(int index) throws JSONException {
