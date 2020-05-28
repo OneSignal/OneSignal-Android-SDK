@@ -496,6 +496,10 @@ public class OneSignalPackagePrivateHelper {
       return OSUtils.hasConfigChangeFlag(activity, configChangeFlag);
    }
 
+   public static int getDeviceType() {
+      return new OSUtils().getDeviceType();
+   }
+
    public abstract class UserState extends com.onesignal.UserState {
       UserState(String inPersistKey, boolean load) {
          super(inPersistKey, load);
