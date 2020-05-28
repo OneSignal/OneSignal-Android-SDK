@@ -15,7 +15,7 @@ abstract class UserState {
     public static final int DEVICE_TYPE_EMAIL = 11;
     public static final int DEVICE_TYPE_HUAWEI = 13;
 
-    static final int PUSH_STATUS_SUBSCRIBED = 1;
+    public static final int PUSH_STATUS_SUBSCRIBED = 1;
     static final int PUSH_STATUS_NO_PERMISSION = 0;
     static final int PUSH_STATUS_UNSUBSCRIBE = -2;
     static final int PUSH_STATUS_MISSING_ANDROID_SUPPORT_LIBRARY = -3;
@@ -29,11 +29,11 @@ abstract class UserState {
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION = -11;
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION = -12;
     // -13 to -24 reserved for other platforms
-    static final int PUSH_STATUS_HMS_TOKEN_TIMEOUT = -25;
+    public static final int PUSH_STATUS_HMS_TOKEN_TIMEOUT = -25;
     // Most likely missing "client/app_id".
     // Check that there is "apply plugin: 'com.huawei.agconnect'" in your app/build.gradle
-    static final int PUSH_STATUS_HMS_ARGUMENTS_INVALID = -26;
-    static final int PUSH_STATUS_HMS_API_EXCEPTION_OTHER = -27;
+    public static final int PUSH_STATUS_HMS_ARGUMENTS_INVALID = -26;
+    public static final int PUSH_STATUS_HMS_API_EXCEPTION_OTHER = -27;
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
