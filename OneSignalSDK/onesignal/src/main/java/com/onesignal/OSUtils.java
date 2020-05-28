@@ -152,7 +152,7 @@ class OSUtils {
       }
    }
 
-   private static boolean hasHMSAvailability() {
+   private boolean hasHMSAvailability() {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.api.HuaweiApiAvailability.class != null;
@@ -161,7 +161,7 @@ class OSUtils {
       }
    }
 
-   private static boolean hasHMSPushKitLibrary() {
+   private boolean hasHMSPushKitLibrary() {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.aaid.HmsInstanceId.class != null;
@@ -257,6 +257,12 @@ class OSUtils {
       }
    }
 
+   private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
+   private static boolean isHMSCoreInstalledAndEnabled() {
+      HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
+      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+   }
+
    private boolean supportsADM() {
       try {
          // Class only available on the FireOS and only when the following is in the AndroidManifest.xml.
@@ -268,15 +274,13 @@ class OSUtils {
       }
    }
 
-   private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
    private boolean supportsHMS() {
       // 1. App must have the HMSAvailability and PushKit libraries to support HMS push
       if (!hasHMSAvailability() || !hasHMSPushKitLibrary())
          return false;
 
       // 2. Device must have HMS Core installed and enabled
-      HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
-      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+     return isHMSCoreInstalledAndEnabled();
    }
 
    private boolean supportsGooglePush() {
