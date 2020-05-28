@@ -304,7 +304,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testDeviceTypeIsAmazon_forPlayerCreate() throws Exception {
       // 1. Mock Amazon device type for this test
-      ShadowOSUtils.mockAmazonDevice();
+      ShadowOSUtils.supportsADM = true;
 
       // 2. Init OneSignal so the app id is cached
       OneSignalInit();
@@ -344,7 +344,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void testDeviceTypeIsAmazon_withoutOneSignalInit() throws Exception {
       // 1. Mock Amazon device type for this test
-      ShadowOSUtils.mockAmazonDevice();
+      ShadowOSUtils.supportsADM = true;
 
       // 2. Init OneSignal so the app id is cached
       OneSignalInit();
