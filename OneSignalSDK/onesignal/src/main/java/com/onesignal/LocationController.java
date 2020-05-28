@@ -322,7 +322,7 @@ class LocationController {
             try {
                huaweiFusedLocationClient = com.huawei.hms.location.LocationServices.getFusedLocationProviderClient(classContext);
             } catch (Exception e) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Huawei LocationServices getFusedLocationProviderClient failed! " + e);
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Huawei LocationServices getFusedLocationProviderClient failed! ", e);
                fireFailedComplete();
                return;
             }
@@ -355,14 +355,11 @@ class LocationController {
    }
 
    protected static boolean isGooglePlayServicesAvailable(Context context) {
-      GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
-      int status = googleApiAvailability.isGooglePlayServicesAvailable(context);
-      return status == ConnectionResult.SUCCESS;
+      return new OSUtils().getDeviceType() == 1;
    }
 
    protected static boolean isHMSAvailable(Context context) {
-      int status = HuaweiApiAvailability.getInstance().isHuaweiMobileServicesAvailable(context);
-      return status == ConnectionResult.SUCCESS;
+      return new OSUtils().getDeviceType() == 13;
    }
 
    private static int getApiFallbackWait() {
