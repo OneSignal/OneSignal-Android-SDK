@@ -15,6 +15,8 @@ import static com.onesignal.OneSignal.LOG_LEVEL;
 
 class PushRegistratorHMS implements PushRegistrator {
 
+    static final String HMS_CLIENT_APP_ID = "client/app_id";
+
     private static final int NEW_TOKEN_TIMEOUT_MS = 30_000;
 
     private static boolean callbackSuccessful;
@@ -54,7 +56,7 @@ class PushRegistratorHMS implements PushRegistrator {
         // TODO: See if we can handle an exact message like this
         // 2020-04-14 23:06:36.164 1565-1743/com.onesignal.example E/HMSSDK_Util: In getMetaDataAppId, Failed to read meta data for the AppID.
 
-        String appId = AGConnectServicesConfig.fromContext(context).getString("client/app_id");
+        String appId = AGConnectServicesConfig.fromContext(context).getString(HMS_CLIENT_APP_ID);
         HmsInstanceId hmsInstanceId = HmsInstanceId.getInstance(context);
 
         String pushToken = hmsInstanceId.getToken(appId, HmsMessaging.DEFAULT_TOKEN_SCOPE);
@@ -64,20 +66,23 @@ class PushRegistratorHMS implements PushRegistrator {
             callback.complete(pushToken, UserState.PUSH_STATUS_SUBSCRIBED);
         }
         else
-            waitForOnNewPushTokenEvent();
+            waitForOnNewPushTokenEvent(callback);
     }
 
-    // If EMUI 9.x or older getToken will always return null.
-    // We must wait for HmsMessageService.onNewToken to fire instead.
-    private static void waitForOnNewPushTokenEvent() {
+    private static void doTimeOutWait() {
         try {
             Thread.sleep(NEW_TOKEN_TIMEOUT_MS);
         } catch (InterruptedException e) {
         }
+    }
 
+    // If EMUI 9.x or older getToken will always return null.
+    // We must wait for HmsMessageService.onNewToken to fire instead.
+    void waitForOnNewPushTokenEvent(@NonNull RegisteredHandler callback) {
+        doTimeOutWait();
         if (!callbackSuccessful) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "HmsMessageServiceOneSignal.onNewToken timed out.");
-            registeredHandler.complete(null, UserState.PUSH_STATUS_HMS_TOKEN_TIMEOUT);
+            callback.complete(null, UserState.PUSH_STATUS_HMS_TOKEN_TIMEOUT);
         }
     }
 }
