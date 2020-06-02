@@ -119,17 +119,20 @@ class NotificationBundleProcessor {
     static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
         processCollapseKey(notifJob);
 
+        int androidNotifId = notifJob.getAndroidIdWithoutCreate();
         boolean doDisplay = shouldDisplayNotif(notifJob);
-        if (doDisplay)
+        if (doDisplay) {
+            androidNotifId = notifJob.getAndroidId();
             OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
+        }
 
         if (!notifJob.isRestoring && !notifJob.isIamPreview) {
             processNotification(notifJob, opened);
             OneSignal.handleNotificationReceived(notifJob, displayed);
         }
 
-        return notifJob.getAndroidIdWithoutCreate();
-    }
+      return androidNotifId;
+   }
 
    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notifJob) {
       // Validate that the current Android device is Android 4.4 or higher and the current job is a
