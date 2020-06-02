@@ -24,6 +24,11 @@ class OSNotificationWillShowInForegroundManager {
 
     /**
      * Singleton manager class containing workable {@link NotificationGenerationJob}'s
+     * Controls the enqueueing of {@link androidx.work.WorkRequest}'s by checking which instance of
+     *  the {@link NotificationGenerationJob} is being passed in, {@link ExtNotificationGenerationJob}
+     *  or {@link AppNotificationGenerationJob}
+     * <br/><br/>
+     * @see NotificationGenerationJob
      */
     static class NotificationWillShowInForegroundManager {
 
@@ -66,6 +71,9 @@ class OSNotificationWillShowInForegroundManager {
         /**
          * Enqueue work for a NotificationGenerationJob, which will figure out and decide the correct
          *  Worker to "doWork" with the notifJob and fire the correct handler
+         * <br/><br/>
+         * @see ExtNotificationWillShowInForegroundWorker
+         * @see AppNotificationWillShowInForegroundWorker
          */
         static void beginEnqueueingWork(NotificationGenerationJob notifJob) {
             boolean isExtNotifJob = notifJob instanceof ExtNotificationGenerationJob;
@@ -78,17 +86,17 @@ class OSNotificationWillShowInForegroundManager {
             String notifJobKey = UUID.randomUUID().toString();
             NotificationWillShowInForegroundManager.getInstance().addJob(notifJobKey, notifJob);
 
-            Data appHandlerData = new Data.Builder()
+            Data workData = new Data.Builder()
                     .putString(jobKey, notifJobKey)
                     .build();
 
-            OneTimeWorkRequest appHandlerWorkRequest = new OneTimeWorkRequest.Builder(jobClazz)
-                    .setInputData(appHandlerData)
+            OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(jobClazz)
+                    .setInputData(workData)
                     .addTag(notifJobKey)
                     .build();
 
             WorkManager.getInstance(OneSignal.appContext)
-                    .enqueue(appHandlerWorkRequest);
+                    .enqueue(workRequest);
         }
     }
 
@@ -113,12 +121,12 @@ class OSNotificationWillShowInForegroundManager {
             if (extNotifJobKey == null || !mManager.hasJob(extNotifJobKey))
                 return Result.failure();
 
-            // The current job obtained is not null
+            // Make sure current job obtained is not null
             ExtNotificationGenerationJob currentNotifJob = (ExtNotificationGenerationJob) mManager.getJob(extNotifJobKey);
             if (currentNotifJob == null)
                 return Result.failure();
 
-            // The extNotificationWillShowInForegroundHandler is not null
+            // Make sure extNotificationWillShowInForegroundHandler is not null
             if (OneSignal.extNotificationWillShowInForegroundHandler == null)
                 return Result.failure();
 
@@ -150,12 +158,12 @@ class OSNotificationWillShowInForegroundManager {
             if (appNotifJobKey == null || !mManager.hasJob(appNotifJobKey))
                 return Result.failure();
 
+            // Make sure current job obtained is not null
             AppNotificationGenerationJob currentNotifJob = (AppNotificationGenerationJob) mManager.getJob(appNotifJobKey);
-            // The current job obtained is not null
             if (currentNotifJob == null)
                 return Result.failure();
 
-            // The appNotificationWillShowInForegroundHandler is not null
+            // Make sure appNotificationWillShowInForegroundHandler is not null
             if (OneSignal.appNotificationWillShowInForegroundHandler == null)
                 return Result.failure();
 
