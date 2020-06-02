@@ -78,9 +78,11 @@ class OSNotificationWillShowInForegroundManager {
         static void beginEnqueueingWork(NotificationGenerationJob notifJob) {
             boolean isExtNotifJob = notifJob instanceof ExtNotificationGenerationJob;
             String jobKey = isExtNotifJob ? EXT_NOTIF_JOB_WORKER_KEY : APP_NOTIF_JOB_WORKER_KEY;
-            Class<? extends ListenableWorker> jobClazz = isExtNotifJob ?
+            Class<? extends Worker> workerClass = isExtNotifJob ?
                     ExtNotificationWillShowInForegroundWorker.class :
                     AppNotificationWillShowInForegroundWorker.class;
+
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Beginning to enqueue work for OS notification id: " + notifJob.getApiNotificationId());
 
             // Generate a random UUID to attach to the notifJob in the Worker job manager
             String notifJobKey = UUID.randomUUID().toString();
@@ -90,7 +92,7 @@ class OSNotificationWillShowInForegroundManager {
                     .putString(jobKey, notifJobKey)
                     .build();
 
-            OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(jobClazz)
+            OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(workerClass)
                     .setInputData(workData)
                     .addTag(notifJobKey)
                     .build();
@@ -109,29 +111,44 @@ class OSNotificationWillShowInForegroundManager {
         @NonNull
         @Override
         public Result doWork() {
-            // appContext my have been used to begin "doWork"
-            // Make sure the key we need to to obtain our notifJob exists in the data input of the Worker
-            if (OneSignal.appContext == null || !getInputData().hasKeyWithValueOfType(EXT_NOTIF_JOB_WORKER_KEY, String.class))
-                return Result.failure();
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "doWork() called for ExtNotificationWillShowInForegroundWorker");
 
-            // The job key must not be null
-            // A job should exist for the key
-            String extNotifJobKey = getInputData().getString(EXT_NOTIF_JOB_WORKER_KEY);
-            NotificationWillShowInForegroundManager mManager = NotificationWillShowInForegroundManager.getInstance();
-            if (extNotifJobKey == null || !mManager.hasJob(extNotifJobKey))
+            // appContext my have been used to begin "doWork"
+            if (OneSignal.appContext == null) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "OneSignal.appContext is null, returning Result.failure for Worker");
                 return Result.failure();
+            }
+
+            // Make sure the key we need to to obtain our notifJob exists in the data input of the Worker
+            if (!getInputData().hasKeyWithValueOfType(EXT_NOTIF_JOB_WORKER_KEY, String.class)) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "getInputData() does not have the key: " + EXT_NOTIF_JOB_WORKER_KEY + " with class type: String, returning Result.failure for Worker");
+                return Result.failure();
+            }
+
+            // The job key must not be null and a job should exist for the key
+            String extNotifJobKey = getInputData().getString(EXT_NOTIF_JOB_WORKER_KEY);
+            NotificationWillShowInForegroundManager manager = NotificationWillShowInForegroundManager.getInstance();
+            if (extNotifJobKey == null || !manager.hasJob(extNotifJobKey)) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "extNotifJobKey is null or manager does not have a job with key: " + extNotifJobKey + ", returning Result.failure for Worker");
+                return Result.failure();
+            }
 
             // Make sure current job obtained is not null
-            ExtNotificationGenerationJob currentNotifJob = (ExtNotificationGenerationJob) mManager.getJob(extNotifJobKey);
-            if (currentNotifJob == null)
+            ExtNotificationGenerationJob currentExtNotifJob = (ExtNotificationGenerationJob) manager.getJob(extNotifJobKey);
+            if (currentExtNotifJob == null) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "currentExtNotifJob is null for key: " + extNotifJobKey + ", returning Result.failure for Worker");
                 return Result.failure();
+            }
 
             // Make sure extNotificationWillShowInForegroundHandler is not null
-            if (OneSignal.extNotificationWillShowInForegroundHandler == null)
+            if (OneSignal.extNotificationWillShowInForegroundHandler == null) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "OneSignal.extNotificationWillShowInForegroundHandler is null, returning Result.failure for Worker");
                 return Result.failure();
+            }
 
             // Fire the ext handler and report success
-            OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(currentNotifJob);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Calling OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(currentExtNotifJob) with OS notification id: " + currentExtNotifJob.getApiNotificationId());
+            OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(currentExtNotifJob);
 
             return Result.success();
         }
@@ -146,29 +163,44 @@ class OSNotificationWillShowInForegroundManager {
         @NonNull
         @Override
         public Result doWork() {
-            // appContext my have been used to begin "doWork"
-            // Make sure the key we need to to obtain our notifJob exists in the data input of the Worker
-            if (OneSignal.appContext == null || !getInputData().hasKeyWithValueOfType(APP_NOTIF_JOB_WORKER_KEY, String.class))
-                return Result.failure();
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "doWork() called for AppNotificationWillShowInForegroundWorker");
 
-            String appNotifJobKey = getInputData().getString(APP_NOTIF_JOB_WORKER_KEY);
-            NotificationWillShowInForegroundManager mManager = NotificationWillShowInForegroundManager.getInstance();
-            // The job key must not be null
-            // A job should exist for the key
-            if (appNotifJobKey == null || !mManager.hasJob(appNotifJobKey))
+            // appContext my have been used to begin "doWork"
+            if (OneSignal.appContext == null) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "OneSignal.appContext is null, returning Result.failure for Worker");
                 return Result.failure();
+            }
+
+            // Make sure the key we need to to obtain our notifJob exists in the data input of the Worker
+            if (!getInputData().hasKeyWithValueOfType(APP_NOTIF_JOB_WORKER_KEY, String.class)) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "getInputData() does not have the key: " + EXT_NOTIF_JOB_WORKER_KEY + " with class type: String, returning Result.failure for Worker");
+                return Result.failure();
+            }
+
+            // The job key must not be null and a job should exist for the key
+            String appNotifJobKey = getInputData().getString(APP_NOTIF_JOB_WORKER_KEY);
+            NotificationWillShowInForegroundManager manager = NotificationWillShowInForegroundManager.getInstance();
+            if (appNotifJobKey == null || !manager.hasJob(appNotifJobKey)) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "appNotifJobKey is null or manager does not have a job with key: " + appNotifJobKey + ", returning Result.failure for Worker");
+                return Result.failure();
+            }
 
             // Make sure current job obtained is not null
-            AppNotificationGenerationJob currentNotifJob = (AppNotificationGenerationJob) mManager.getJob(appNotifJobKey);
-            if (currentNotifJob == null)
+            AppNotificationGenerationJob currentAppNotifJob = (AppNotificationGenerationJob) manager.getJob(appNotifJobKey);
+            if (currentAppNotifJob == null) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "currentAppNotifJob is null for key: " + appNotifJobKey + ", returning Result.failure for Worker");
                 return Result.failure();
+            }
 
             // Make sure appNotificationWillShowInForegroundHandler is not null
-            if (OneSignal.appNotificationWillShowInForegroundHandler == null)
+            if (OneSignal.appNotificationWillShowInForegroundHandler == null) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "OneSignal.appNotificationWillShowInForegroundHandler is null, returning Result.failure for Worker");
                 return Result.failure();
+            }
 
             // Fire the app handler and report success
-            OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(currentNotifJob);
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Calling OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(currentAppNotifJob) with OS notification id: " + currentAppNotifJob.getApiNotificationId());
+            OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(currentAppNotifJob);
 
             return Result.success();
         }
