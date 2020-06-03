@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.work.WorkerParameters;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -183,6 +184,11 @@ public class OneSignalPackagePrivateHelper {
    public static class CachedUniqueOutcomeNotificationTable extends OneSignalDbContract.CachedUniqueOutcomeNotificationTable { }
    public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
+   public static class NotificationRestoreWorker extends com.onesignal.OSNotificationRestoreManager.NotificationRestoreWorker {
+      public NotificationRestoreWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+         super(context, workerParams);
+      }
+   }
 
    public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
       @Override

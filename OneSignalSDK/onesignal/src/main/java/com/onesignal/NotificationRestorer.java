@@ -40,11 +40,16 @@ import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
 import androidx.annotation.WorkerThread;
+import androidx.work.Data;
+import androidx.work.OneTimeWorkRequest;
+
 import android.text.TextUtils;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import java.util.ArrayList;
+
+import com.onesignal.OSNotificationRestoreManager.NotificationRestoreManager;
 
 // Purpose:
 // Restore any notifications not interacted by the user back into the notification shade.
@@ -79,6 +84,11 @@ import java.util.ArrayList;
 //         be to short as a visibility lifetime.
 
 class NotificationRestorer {
+
+   static final String JSON_PAYLOAD_RESTORE_INTENT_KEY = "json_payload";
+   static final String ANDROID_NOTIF_ID_RESTORE_INTENT_KEY = "android_notif_id";
+   static final String IS_RESTORING_RESTORE_INTENT_KEY = "restoring";
+   static final String TIMESTAMP_RESTORE_INTENT_KEY = "timestamp";
 
    private static final int RESTORE_KICKOFF_REQUEST_CODE = 2071862120;
 
@@ -148,7 +158,7 @@ class NotificationRestorer {
             NotificationTable._ID + " DESC", // sort order, new to old
             NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
          );
-         showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
+         showNotificationsFromCursor(cursor);
          BadgeCountUpdater.update(readableDb, context);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
@@ -183,48 +193,33 @@ class NotificationRestorer {
 
    /**
     * Restores a set of notifications back to the notification shade based on an SQL cursor.
-    * @param context - Context required to start JobIntentService
     * @param cursor - Source cursor to generate notifications from
-    * @param delay - Delay to slow down process to ensure we don't spike CPU and I/O on the device.
     */
-   static void showNotificationsFromCursor(Context context, Cursor cursor, int delay) {
+   static void showNotificationsFromCursor(Cursor cursor) {
       if (!cursor.moveToFirst())
          return;
 
-      boolean useExtender = (NotificationExtenderService.getIntent(context) != null);
-
+      ArrayList<OneTimeWorkRequest> workRequests = new ArrayList<>();
       do {
-         if (useExtender) {
-            Intent intent = NotificationExtenderService.getIntent(context);
-            addRestoreExtras(intent, cursor);
-            NotificationExtenderService.enqueueWork(context,
-                  intent.getComponent(),
-                  NotificationExtenderService.EXTENDER_SERVICE_JOB_ID,
-                  intent,
-                  false);
-         }
-         else {
-            Intent intent = addRestoreExtras(new Intent(), cursor);
-            ComponentName componentName = new ComponentName(context, RestoreJobService.class);
-            RestoreJobService.enqueueWork(context, componentName, RestoreJobService.RESTORE_SERVICE_JOB_ID, intent, false);
-         }
+         int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+         String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
+         long dateTime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
 
-         if (delay > 0)
-            OSUtils.sleep(delay);
+         Data workData = new Data.Builder()
+                 .putInt(ANDROID_NOTIF_ID_RESTORE_INTENT_KEY, existingId)
+                 .putString(JSON_PAYLOAD_RESTORE_INTENT_KEY, fullData)
+                 .putBoolean(IS_RESTORING_RESTORE_INTENT_KEY, true)
+                 .putLong(TIMESTAMP_RESTORE_INTENT_KEY, dateTime)
+                 .build();
+
+         OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(OSNotificationRestoreManager.NotificationRestoreWorker.class)
+                 .setInputData(workData)
+                 .build();
+
+         workRequests.add(workRequest);
       } while (cursor.moveToNext());
-   }
 
-   private static Intent addRestoreExtras(Intent intent, Cursor cursor) {
-      int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-      String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
-      Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
-
-      intent.putExtra("json_payload", fullData)
-            .putExtra("android_notif_id", existingId)
-            .putExtra("restoring", true)
-            .putExtra("timestamp", datetime);
-
-      return intent;
+      NotificationRestoreManager.beginEnqueueingWorkRequests(workRequests);
    }
 
    private static final int RESTORE_NOTIFICATIONS_DELAY_MS = 15_000;
