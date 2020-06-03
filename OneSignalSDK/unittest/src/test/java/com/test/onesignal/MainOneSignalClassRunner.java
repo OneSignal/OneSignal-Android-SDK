@@ -68,7 +68,7 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowFusedLocationProviderClient;
+import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHuaweiTask;
@@ -3326,7 +3326,7 @@ public class MainOneSignalClassRunner {
    // ####### Unit Test Huawei Location ########
 
    @Test
-   @Config(shadows = {ShadowFusedLocationProviderClient.class})
+   @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
    public void shouldUpdateAllLocationFieldsWhenTimeStampChanges_Huawei() throws Exception {
       ShadowLocationController.googleServicesAvailable = false;
       ShadowLocationController.huaweiServicesAvailable = true;
@@ -3339,11 +3339,11 @@ public class MainOneSignalClassRunner {
       assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
 
       ShadowOneSignalRestClient.lastPost = null;
-      ShadowFusedLocationProviderClient.resetStatics();
-      ShadowFusedLocationProviderClient.lat = 30d;
-      ShadowFusedLocationProviderClient.log = 2.0d;
-      ShadowFusedLocationProviderClient.accuracy = 5.0f;
-      ShadowFusedLocationProviderClient.time = 2L;
+      ShadowHMSFusedLocationProviderClient.resetStatics();
+      ShadowHMSFusedLocationProviderClient.lat = 30d;
+      ShadowHMSFusedLocationProviderClient.log = 2.0d;
+      ShadowHMSFusedLocationProviderClient.accuracy = 5.0f;
+      ShadowHMSFusedLocationProviderClient.time = 2L;
       restartAppAndElapseTimeToNextSession();
       OneSignalInit();
       threadAndTaskWait();
@@ -3356,16 +3356,16 @@ public class MainOneSignalClassRunner {
 
    @Test
    @Config(shadows = {
-           ShadowFusedLocationProviderClient.class
+           ShadowHMSFusedLocationProviderClient.class
    }, sdk = 19)
    public void testLocationSchedule_Huawei() throws Exception {
       ShadowLocationController.googleServicesAvailable = false;
       ShadowLocationController.huaweiServicesAvailable = true;
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
-      ShadowFusedLocationProviderClient.lat = 1.0d;
-      ShadowFusedLocationProviderClient.log = 2.0d;
-      ShadowFusedLocationProviderClient.accuracy = 3.0f;
-      ShadowFusedLocationProviderClient.time = 12345L;
+      ShadowHMSFusedLocationProviderClient.lat = 1.0d;
+      ShadowHMSFusedLocationProviderClient.log = 2.0d;
+      ShadowHMSFusedLocationProviderClient.accuracy = 3.0f;
+      ShadowHMSFusedLocationProviderClient.time = 12345L;
 
       // location if we have permission
       OneSignalInit();
@@ -3415,7 +3415,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    @Config(shadows = {
-           ShadowFusedLocationProviderClient.class,
+           ShadowHMSFusedLocationProviderClient.class,
            ShadowHuaweiTask.class
    }, sdk = 19)
    public void testLocationFromSyncAlarm_Huawei() throws Exception {
@@ -3423,10 +3423,10 @@ public class MainOneSignalClassRunner {
       ShadowLocationController.huaweiServicesAvailable = true;
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
-      ShadowFusedLocationProviderClient.lat = 1.1d;
-      ShadowFusedLocationProviderClient.log = 2.1d;
-      ShadowFusedLocationProviderClient.accuracy = 3.1f;
-      ShadowFusedLocationProviderClient.time = 12346L;
+      ShadowHMSFusedLocationProviderClient.lat = 1.1d;
+      ShadowHMSFusedLocationProviderClient.log = 2.1d;
+      ShadowHMSFusedLocationProviderClient.accuracy = 3.1f;
+      ShadowHMSFusedLocationProviderClient.time = 12346L;
 
       OneSignalInit();
       threadAndTaskWait();
@@ -3436,13 +3436,13 @@ public class MainOneSignalClassRunner {
       shadowOf(alarmManager).getScheduledAlarms().clear();
 
       ShadowOneSignalRestClient.lastPost = null;
-      ShadowFusedLocationProviderClient.resetStatics();
-      ShadowFusedLocationProviderClient.lat = 1.0;
-      ShadowFusedLocationProviderClient.log = 2.0d;
-      ShadowFusedLocationProviderClient.accuracy = 3.0f;
-      ShadowFusedLocationProviderClient.time = 12345L;
-      ShadowFusedLocationProviderClient.shadowTask = true;
-      ShadowHuaweiTask.result = ShadowFusedLocationProviderClient.getLocation();
+      ShadowHMSFusedLocationProviderClient.resetStatics();
+      ShadowHMSFusedLocationProviderClient.lat = 1.0;
+      ShadowHMSFusedLocationProviderClient.log = 2.0d;
+      ShadowHMSFusedLocationProviderClient.accuracy = 3.0f;
+      ShadowHMSFusedLocationProviderClient.time = 12345L;
+      ShadowHMSFusedLocationProviderClient.shadowTask = true;
+      ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
 
       blankActivityController.pause();
       Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
@@ -3464,7 +3464,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFusedLocationProviderClient.class})
+   @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
    public void shouldSendLocationToEmailRecord_Huawei() throws Exception {
       ShadowLocationController.googleServicesAvailable = false;
       ShadowLocationController.huaweiServicesAvailable = true;
@@ -3483,18 +3483,18 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFusedLocationProviderClient.class, ShadowHuaweiTask.class})
+   @Config(shadows = {ShadowHMSFusedLocationProviderClient.class, ShadowHuaweiTask.class})
    public void shouldRegisterWhenPromptingAfterInit_Huawei() throws Exception {
       ShadowLocationController.googleServicesAvailable = false;
       ShadowLocationController.huaweiServicesAvailable = true;
-      ShadowFusedLocationProviderClient.skipOnGetLocation = true;
+      ShadowHMSFusedLocationProviderClient.skipOnGetLocation = true;
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
       // Test promptLocation right after init race condition
       OneSignalInit();
       OneSignal.promptLocation();
 
-      ShadowHuaweiTask.callSuccessListener(ShadowFusedLocationProviderClient.getLocation());
+      ShadowHuaweiTask.callSuccessListener(ShadowHMSFusedLocationProviderClient.getLocation());
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
@@ -3504,26 +3504,26 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFusedLocationProviderClient.class, ShadowHuaweiTask.class})
+   @Config(shadows = {ShadowHMSFusedLocationProviderClient.class, ShadowHuaweiTask.class})
    public void shouldCallOnSessionEvenIfSyncJobStarted_Huawei() throws Exception {
       ShadowLocationController.googleServicesAvailable = false;
       ShadowLocationController.huaweiServicesAvailable = true;
-      ShadowFusedLocationProviderClient.shadowTask = true;
-      ShadowHuaweiTask.result = ShadowFusedLocationProviderClient.getLocation();
+      ShadowHMSFusedLocationProviderClient.shadowTask = true;
+      ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
       OneSignalInit();
       threadAndTaskWait();
 
       restartAppAndElapseTimeToNextSession();
-      ShadowFusedLocationProviderClient.skipOnGetLocation = true;
+      ShadowHMSFusedLocationProviderClient.skipOnGetLocation = true;
       OneSignalInit();
 
       SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
       syncJobService.onStartJob(null);
       TestHelpers.getThreadByName("OS_SYNCSRV_BG_SYNC").join();
       OneSignalPackagePrivateHelper.runAllNetworkRunnables();
-      ShadowHuaweiTask.callSuccessListener(ShadowFusedLocationProviderClient.getLocation());
+      ShadowHuaweiTask.callSuccessListener(ShadowHMSFusedLocationProviderClient.getLocation());
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(3);
