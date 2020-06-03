@@ -1,21 +1,21 @@
 /**
  * Modified MIT License
- *
+ * <p>
  * Copyright 2020 OneSignal
- *
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p>
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p>
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -49,126 +49,127 @@ public class OSNotificationGenerationJob {
    private final String CUSTOM_PAYLOAD_PARAM = "custom";
    private final String ADDITIONAL_DATA_PAYLOAD_PARAM = "a";
 
-   Context context;
-   JSONObject jsonPayload;
-   boolean isRestoring;
-   boolean isIamPreview;
-   OSNotificationDisplay displayOption = OSNotificationDisplay.NOTIFICATION;
+    Context context;
+    JSONObject jsonPayload;
+    boolean isRestoring;
+    boolean isIamPreview;
+    OSNotificationDisplay displayOption = OSNotificationDisplay.NOTIFICATION;
 
-   Long shownTimeStamp;
+    Long shownTimeStamp;
 
-   CharSequence overriddenBodyFromExtender;
-   CharSequence overriddenTitleFromExtender;
-   Uri overriddenSound;
-   Integer overriddenFlags;
-   Integer orgFlags;
-   Uri orgSound;
+    CharSequence overriddenBodyFromExtender;
+    CharSequence overriddenTitleFromExtender;
+    Uri overriddenSound;
+    Integer overriddenFlags;
+    Integer orgFlags;
+    Uri orgSound;
 
-   NotificationExtenderService.OverrideSettings overrideSettings;
+    NotificationExtenderService.OverrideSettings overrideSettings;
 
-   OSNotificationGenerationJob(Context context) {
-      this.context = context;
-   }
+    OSNotificationGenerationJob(Context context) {
+        this.context = context;
+    }
 
-   String getApiNotificationId() {
-      return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
-   }
+    String getApiNotificationId() {
+        return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
+    }
 
-   int getAndroidIdWithoutCreate() {
-      if (overrideSettings == null || overrideSettings.androidNotificationId == null)
-         return -1;
+    int getAndroidIdWithoutCreate() {
+        if (overrideSettings == null || overrideSettings.androidNotificationId == null)
+            return -1;
 
-      return overrideSettings.androidNotificationId;
-   }
+        return overrideSettings.androidNotificationId;
+    }
 
-   Integer getAndroidId() {
-      if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
-      if (overrideSettings.androidNotificationId == null)
-         overrideSettings.androidNotificationId = new SecureRandom().nextInt();
+    Integer getAndroidId() {
+        if (overrideSettings == null)
+            overrideSettings = new NotificationExtenderService.OverrideSettings();
+        if (overrideSettings.androidNotificationId == null)
+            overrideSettings.androidNotificationId = new SecureRandom().nextInt();
 
-      return overrideSettings.androidNotificationId;
-   }
+        return overrideSettings.androidNotificationId;
+    }
 
-   /**
-    * Get the notification title from the payload
-    */
-   CharSequence getTitle() {
-      if (overriddenTitleFromExtender != null)
-         return overriddenTitleFromExtender;
-      return jsonPayload.optString(TITLE_PAYLOAD_PARAM, null);
-   }
+    /**
+     * Get the notification title from the payload
+     */
+    CharSequence getTitle() {
+        if (overriddenTitleFromExtender != null)
+            return overriddenTitleFromExtender;
+        return jsonPayload.optString(TITLE_PAYLOAD_PARAM, null);
+    }
 
-   /**
-    * Get the notification body from the payload
-    */
-   CharSequence getBody() {
-      if (overriddenBodyFromExtender != null)
-         return overriddenBodyFromExtender;
-      return jsonPayload.optString(ALERT_PAYLOAD_PARAM, null);
-   }
+    /**
+     * Get the notification body from the payload
+     */
+    CharSequence getBody() {
+        if (overriddenBodyFromExtender != null)
+            return overriddenBodyFromExtender;
+        return jsonPayload.optString(ALERT_PAYLOAD_PARAM, null);
+    }
 
-   /**
-    * Get the notification additional data json from the payload
-    */
-   JSONObject getAdditionalData() {
-      try {
-         return new JSONObject(jsonPayload
-                 .optString(CUSTOM_PAYLOAD_PARAM))
-                 .getJSONObject(ADDITIONAL_DATA_PAYLOAD_PARAM);
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
+    /**
+     * Get the notification additional data json from the payload
+     * @return
+     */
+    JSONObject getAdditionalData() {
+        try {
+            return new JSONObject(jsonPayload
+                    .optString(CUSTOM_PAYLOAD_PARAM))
+                    .getJSONObject(ADDITIONAL_DATA_PAYLOAD_PARAM);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
-      return new JSONObject();
-   }
+        return new JSONObject();
+    }
 
-   /**
-    * If androidNotificationId is -1 then the notification is a silent one
-    */
-   boolean isNotificationToDisplay() {
-      return getAndroidIdWithoutCreate() != -1;
-   }
+    /**
+     * If androidNotificationId is -1 then the notification is a silent one
+     */
+    boolean isNotificationToDisplay() {
+        return getAndroidIdWithoutCreate() != -1;
+    }
 
-   boolean hasExtender() {
-      return overrideSettings != null && overrideSettings.extender != null;
-   }
+    boolean hasExtender() {
+        return overrideSettings != null && overrideSettings.extender != null;
+    }
 
-   void setAndroidIdWithoutOverriding(Integer id) {
-      if (id == null)
-         return;
+    void setAndroidIdWithoutOverriding(Integer id) {
+        if (id == null)
+            return;
 
-      if (overrideSettings != null && overrideSettings.androidNotificationId != null)
-         return;
+        if (overrideSettings != null && overrideSettings.androidNotificationId != null)
+            return;
 
-      if (overrideSettings == null)
-         overrideSettings = new NotificationExtenderService.OverrideSettings();
-      overrideSettings.androidNotificationId = id;
-   }
+        if (overrideSettings == null)
+            overrideSettings = new NotificationExtenderService.OverrideSettings();
+        overrideSettings.androidNotificationId = id;
+    }
 
-   private OSNotificationDisplay getNotificationDisplayOption() {
-      return this.displayOption;
-   }
+    private OSNotificationDisplay getNotificationDisplayOption() {
+        return this.displayOption;
+    }
 
-   private void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
-      this.displayOption = displayOption;
-   }
+    private void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
+        this.displayOption = displayOption;
+    }
 
-   /**
-    * Create a {@link ExtNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
-    *  while the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} is being fired
-    */
-   ExtNotificationGenerationJob toExtNotificationGenerationJob() {
-      return new ExtNotificationGenerationJob(this);
-   }
+    /**
+     * Create a {@link ExtNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
+     *  while the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} is being fired
+     */
+    ExtNotificationGenerationJob toExtNotificationGenerationJob() {
+        return new ExtNotificationGenerationJob(this);
+    }
 
-   /**
-    * Create a {@link AppNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
-    *  while the {@link OneSignal.AppNotificationWillShowInForegroundHandler} is being fired
-    */
-   AppNotificationGenerationJob toAppNotificationGenerationJob() {
-      return new AppNotificationGenerationJob(this);
-   }
+    /**
+     * Create a {@link AppNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
+     *  while the {@link OneSignal.AppNotificationWillShowInForegroundHandler} is being fired
+     */
+    AppNotificationGenerationJob toAppNotificationGenerationJob() {
+        return new AppNotificationGenerationJob(this);
+    }
 
    /**
     * A wrapper for the {@link OSNotificationGenerationJob}
@@ -181,60 +182,63 @@ public class OSNotificationGenerationJob {
       // Used to toggle when complete is called so it can not be called more than once
       boolean isComplete = false;
 
-      // The actual notifJob with notification payload data
-      private OSNotificationGenerationJob notifJob;
+        // The actual notifJob with notification payload data
+        private OSNotificationGenerationJob notifJob;
 
       NotificationGenerationJob(OSNotificationGenerationJob notifJob) {
          this.notifJob = notifJob;
          setTimeout(SHOW_NOTIFICATION_TIMEOUT);
       }
 
-      OSNotificationGenerationJob getNotifJob() {
-         return notifJob;
-      }
+        OSNotificationGenerationJob getNotifJob() {
+            return notifJob;
+        }
 
-      public String getApiNotificationId() {
-         return notifJob.getApiNotificationId();
-      }
+        public String getApiNotificationId() {
+            return notifJob.getApiNotificationId();
+        }
 
-      public int getAndroidNotificationId() {
-         return notifJob.getAndroidIdWithoutCreate();
-      }
+        public int getAndroidNotificationId() {
+            return notifJob.getAndroidIdWithoutCreate();
+        }
 
-      public String getTitle() {
-         return notifJob.getTitle().toString();
-      }
+        public String getTitle() {
+            return notifJob.getTitle().toString();
+        }
 
-      public String getBody() {
-         return notifJob.getBody().toString();
-      }
+        public String getBody() {
+            return notifJob.getBody().toString();
+        }
 
-      public JSONObject getAdditionalData() {
-         return notifJob.getAdditionalData();
-      }
+        public JSONObject getAdditionalData() {
+            return notifJob.getAdditionalData();
+        }
 
-      public OSNotificationDisplay getNotificationDisplayOption() {
-         return notifJob.getNotificationDisplayOption();
-      }
+        public OSNotificationDisplay getNotificationDisplayOption() {
+            return notifJob.getNotificationDisplayOption();
+        }
 
-      public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
-         notifJob.setNotificationDisplayOption(displayOption);
-      }
-   }
+        public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
+            notifJob.setNotificationDisplayOption(displayOption);
+        }
+    }
 
-   /**
-    * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler}
-    *    without exposing internals publicly
-    */
-   public static class ExtNotificationGenerationJob extends NotificationGenerationJob {
+    /**
+     * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler}
+     *    without exposing internals publicly
+     */
+    public static class ExtNotificationGenerationJob extends NotificationGenerationJob {
 
-      ExtNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
-         super(notifJob);
+        boolean isCompleted = false;
+
+        ExtNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
+            super(notifJob);
 
          startTimeout(new Runnable() {
             @Override
             public void run() {
-               ExtNotificationGenerationJob.this.complete(true);
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler complete never called, using " + SHOW_NOTIFICATION_TIMEOUT / 1_000L + " second default timeout and bubbling by default");
+                ExtNotificationGenerationJob.this.complete(true);
             }
          });
       }
@@ -245,53 +249,61 @@ public class OSNotificationGenerationJob {
       public synchronized void complete(boolean bubble) {
          destroyTimeout();
 
-         if (isComplete)
-            return;
+            if (isCompleted) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler already completed, returning early");
+                return;
+            }
+            isCompleted = true;
 
-         isComplete = true;
+            // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists or bubbling is set false
+            if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "appNotificationWillShowInForegroundHandler is null or bubble: " + bubble + ", moving on to showing OS notification id: " + getApiNotificationId());
+                GenerateNotification.fromJsonPayload(getNotifJob());
+                return;
+            }
 
-         // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists or bubbling is set false
-         if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
-            GenerateNotification.fromJsonPayload(getNotifJob());
-            return;
-         }
+            // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
+            //    the notificationWillShowInForeground implementation
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "appNotificationWillShowInForegroundHandler exists and bubble: " + bubble + ", enqueueing OS notification id: " + getApiNotificationId());
+            NotificationWillShowInForegroundManager.beginEnqueueingWork(getNotifJob().toAppNotificationGenerationJob());
+        }
+    }
 
-         // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
-         //    the notificationWillShowInForeground implementation
-         NotificationWillShowInForegroundManager.beginEnqueueingWork(getNotifJob().toAppNotificationGenerationJob());
-      }
-   }
+    /**
+     * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
+     *    without exposing internals publicly
+     */
+    public static class AppNotificationGenerationJob extends NotificationGenerationJob {
 
-   /**
-    * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
-    *    without exposing internals publically
-    */
-   public static class AppNotificationGenerationJob extends NotificationGenerationJob {
+        boolean isCompleted = false;
 
-      AppNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
-         super(notifJob);
+        AppNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
+            super(notifJob);
 
          startTimeout(new Runnable() {
             @Override
             public void run() {
-               AppNotificationGenerationJob.this.complete();
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "appNotificationWillShowInForegroundHandler complete never called, using " + SHOW_NOTIFICATION_TIMEOUT / 1_000L + " second default timeout");
+                AppNotificationGenerationJob.this.complete();
             }
          });
       }
 
-      // Method controlling completion from the AppNotificationWillShowInForegroundHandler
-      //    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
-      //    a 30 second timer and complete by default
-      public synchronized void complete() {
-         destroyTimeout();
+        // Method controlling completion from the AppNotificationWillShowInForegroundHandler
+        //    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
+        //    a 30 second timer and complete by default
+        public synchronized void complete() {
+            destroyTimeout();
 
-         if (isComplete)
-            return;
+            if (isCompleted) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "appNotificationWillShowInForegroundHandler already completed, returning early");
+                return;
+            }
+            isCompleted = true;
 
-         isComplete = true;
-
-         GenerateNotification.fromJsonPayload(getNotifJob());
-      }
-   }
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "NotificationWillShowInForegroundHandler are both complete, moving on to showing OS notification id: " + getApiNotificationId());
+            GenerateNotification.fromJsonPayload(getNotifJob());
+        }
+    }
 
 }
