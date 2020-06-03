@@ -2105,16 +2105,19 @@ public class OneSignal {
    static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
       // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
       if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler and appNotificationWillShowInForegroundHandler are both null, moving on to showing OS notification id: " + notifJob.getApiNotificationId());
          GenerateNotification.fromJsonPayload(notifJob);
          return;
       }
 
       // No ExtNotificationWillShowInForegroundHandler was setup, use the AppNotificationWillShowInForegroundHandler to start
       if (extNotificationWillShowInForegroundHandler == null) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler is null, but appNotificationWillShowInForegroundHandler exists, enqueueing OS notification id: " + notifJob.getApiNotificationId());
          NotificationWillShowInForegroundManager.beginEnqueueingWork(notifJob.toAppNotificationGenerationJob());
          return;
       }
 
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler exists, enqueueing OS notification id: " + notifJob.getApiNotificationId());
       NotificationWillShowInForegroundManager.beginEnqueueingWork(notifJob.toExtNotificationGenerationJob());
    }
 

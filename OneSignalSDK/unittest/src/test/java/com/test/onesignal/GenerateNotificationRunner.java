@@ -41,15 +41,12 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.work.Configuration;
-import androidx.work.testing.SynchronousExecutor;
-import androidx.work.testing.WorkManagerTestInitHelper;
 
 import com.onesignal.BundleCompat;
 import com.onesignal.FCMBroadcastReceiver;
@@ -157,8 +154,11 @@ public class GenerateNotificationRunner {
    private Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
 
-   static OSNotificationGenerationJob.ExtNotificationGenerationJob lastExtNotifJob;
+   private static OSNotificationGenerationJob.ExtNotificationGenerationJob lastExtNotifJob;
    private OSNotificationGenerationJob.AppNotificationGenerationJob lastAppNotifJob;
+
+   private static int extHandlerCount;
+   private static int appHandlerCount;
 
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
@@ -175,6 +175,9 @@ public class GenerateNotificationRunner {
 
       lastExtNotifJob = null;
       lastAppNotifJob = null;
+
+      extHandlerCount = 0;
+      appHandlerCount = 0;
 
       OneSignalShadowPackageManager.resetStatics();
 
@@ -1280,7 +1283,85 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_workTakesLongerThan30Seconds_shouldFireTimeoutOnce() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_workTakesLongerThan30Seconds_shouldFireTimeoutOnce");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(final OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
+            lastAppNotifJob = notifJob;
+            appHandlerCount++;
+
+            try {
+               // Make sure it takes more than 30 seconds to call complete to simulate work that might take much longer than the timeout
+               new Handler().postDelayed(new Runnable() {
+                  @Override
+                  public void run() {
+                     // Call complete to end without waiting default 30 second timeout
+                     notifJob.complete();
+                  }
+               }, 35_000L);
+               threadAndTaskWait();
+            } catch (Exception e) {
+               e.printStackTrace();
+            }
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.SILENT, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure even if the handler work takes more than 30 seconds the timeout fires still and it is only fires 1 time
+      assertEquals(1, extHandlerCount);
+      assertEquals(1, appHandlerCount);
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationWillShowInForegroundHandler_workTakesLongerThan30Seconds_shouldFireTimeoutOnce
+    */
+   public static class NotificationExtensionService_workTakesLongerThan30Seconds_shouldFireTimeoutOnce implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(final OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+         lastExtNotifJob = notifJob;
+         extHandlerCount++;
+
+         try {
+            // Make sure it takes more than 30 seconds to call complete to simulate work that might take much longer than the timeout
+            new Handler().postDelayed(new Runnable() {
+               @Override
+               public void run() {
+                  // Call complete to end without waiting default 30 second timeout
+                  notifJob.complete(true);
+               }
+            }, 35_000L);
+            threadAndTaskWait();
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+      }
+   }
+
+   @Test
+   public void testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_setNotificationDisplayOptionToNotification");
@@ -1313,7 +1394,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification_andThenToSilent() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification_andThenToSilent() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_setNotificationDisplayOptionToNotification");
@@ -1346,8 +1427,8 @@ public class GenerateNotificationRunner {
    }
 
    /**
-    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification
-    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification_andThenToSilent
+    * @see #testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification
+    * @see #testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification_andThenToSilent
     */
    public static class NotificationExtensionService_setNotificationDisplayOptionToNotification implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
@@ -1361,7 +1442,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_setNotificationDisplayOptionToSilent");
@@ -1394,7 +1475,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_setNotificationDisplayOptionToSilent");
@@ -1427,8 +1508,8 @@ public class GenerateNotificationRunner {
    }
 
    /**
-    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent
-    * @see #testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification
+    * @see #testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent
+    * @see #testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification
     */
    public static class NotificationExtensionService_setNotificationDisplayOptionToSilent implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
@@ -1442,7 +1523,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler");
@@ -1474,7 +1555,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler");
@@ -1498,8 +1579,8 @@ public class GenerateNotificationRunner {
    }
 
    /**
-    * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler
-    * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler
     */
    public static class NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
@@ -1511,7 +1592,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler");
@@ -1543,7 +1624,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler");
@@ -1567,8 +1648,8 @@ public class GenerateNotificationRunner {
    }
 
    /**
-    * @see #testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler
-    * @see #testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler
     */
    public static class NotificationExtensionService_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
@@ -1612,7 +1693,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
@@ -1636,7 +1717,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
@@ -1672,8 +1753,8 @@ public class GenerateNotificationRunner {
 
    /**
     * @see #testNotificationWillShowInForegroundHandler_bubbles30SecondTimeout_forExtAndAppHandlers
-    * @see #testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler
-    * @see #testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler
     */
    public static class NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override
