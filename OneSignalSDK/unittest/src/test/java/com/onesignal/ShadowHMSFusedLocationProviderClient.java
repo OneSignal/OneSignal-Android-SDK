@@ -41,11 +41,8 @@ import com.huawei.hms.location.LocationRequest;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
 @Implements(FusedLocationProviderClient.class)
-public class ShadowFusedLocationProviderClient {
+public class ShadowHMSFusedLocationProviderClient {
 
     Context context;
     public static Double lat, log;
