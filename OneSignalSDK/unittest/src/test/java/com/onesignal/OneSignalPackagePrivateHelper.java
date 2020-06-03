@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.work.WorkerParameters;
 
 import com.onesignal.influence.OSTrackerFactory;
 
@@ -168,6 +169,11 @@ public class OneSignalPackagePrivateHelper {
     public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
         OSNotificationGenerationJob(Context context) {
             super(context);
+        }
+    }
+    public static class NotificationRestoreWorker extends com.onesignal.OSNotificationRestoreManager.NotificationRestoreWorker {
+        public NotificationRestoreWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+            super(context, workerParams);
         }
     }
 
