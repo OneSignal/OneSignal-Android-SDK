@@ -50,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
-import static com.onesignal.NotificationExtenderService.EXTENDER_SERVICE_JOB_ID;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
@@ -490,7 +489,7 @@ class NotificationBundleProcessor {
          return result;
       }
 
-      if (startExtenderService(context, bundle, result))
+      if (startNotificationProcessing(context, bundle, result))
          return result;
 
       // We already ran a getNotificationIdFromFCMBundle == null check above so this will only be true for dups
@@ -534,26 +533,16 @@ class NotificationBundleProcessor {
    }
 
    // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
-   private static boolean startExtenderService(Context context, Bundle bundle, ProcessedBundleResult result) {
-      Intent intent = NotificationExtenderService.getIntent(context);
-      if (intent == null)
+   private static boolean startNotificationProcessing(Context context, Bundle bundle, ProcessedBundleResult result) {
+      if (OneSignal.notificationProcessingHandler == null)
          return false;
 
+      Intent intent = new Intent();
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
-      boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
-
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-         NotificationExtenderService.enqueueWork(
-            context,
-            intent.getComponent(),
-            EXTENDER_SERVICE_JOB_ID,
-            intent,
-            isHighPriority
-         );
-      else
-         context.startService(intent);
+      NotificationExtenderService.getInstance().processIntent(context, intent);
+      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
       result.hasExtenderService = true;
       return true;

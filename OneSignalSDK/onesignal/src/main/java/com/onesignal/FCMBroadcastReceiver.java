@@ -43,6 +43,7 @@ import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
 // This is the entry point when a FCM / GCM payload is received from the Google Play services app
 // TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+// TODO: Turn this into a Worker to replace the deprecated WakefulBroadcastReceiver class
 public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
 
    private static final String FCM_RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE";

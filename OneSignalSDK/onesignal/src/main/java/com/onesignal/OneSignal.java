@@ -181,6 +181,15 @@ public class OneSignal {
       }
    }
 
+   public interface NotificationProcessingHandler {
+
+       /**
+        * App developer must implement
+        *   - Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
+        */
+       void onNotificationProcessing(Context context, OSNotificationReceived notification);
+   }
+
    /**
     * Meant to be implemented within a custom made NotificationExtensionService
     * Naming can be whatever makes the most sense to the developer, but to actually activate any
@@ -344,6 +353,8 @@ public class OneSignal {
    private static String userId = null;
    private static String emailId = null;
    private static int subscribableStatus;
+
+   static NotificationProcessingHandler notificationProcessingHandler;
 
    static ExtNotificationWillShowInForegroundHandler extNotificationWillShowInForegroundHandler;
    static AppNotificationWillShowInForegroundHandler appNotificationWillShowInForegroundHandler;
@@ -663,6 +674,10 @@ public class OneSignal {
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) successful and appId is set, continuing OneSignal init...");
       init(context);
    }
+
+    static void setNotificationProcessingHandler(NotificationProcessingHandler callback) {
+       notificationProcessingHandler = callback;
+    }
 
    static void setExtNotificationWillShowInForegroundHandler(ExtNotificationWillShowInForegroundHandler callback) {
       extNotificationWillShowInForegroundHandler = callback;

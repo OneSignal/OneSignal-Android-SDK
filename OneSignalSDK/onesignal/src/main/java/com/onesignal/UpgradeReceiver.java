@@ -41,6 +41,6 @@ public class UpgradeReceiver extends BroadcastReceiver {
       if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N)
          return;
       
-      NotificationRestorer.startDelayedRestoreTaskFromReceiver(context);
+      NotificationRestorer.startDelayedRestoreTaskFromWorkManager(context);
    }
 }

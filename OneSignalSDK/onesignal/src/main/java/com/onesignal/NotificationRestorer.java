@@ -27,29 +27,24 @@
 
 package com.onesignal;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
 import androidx.annotation.WorkerThread;
+import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
 import android.text.TextUtils;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import java.util.ArrayList;
-
-import com.onesignal.OSNotificationRestoreManager.NotificationRestoreManager;
+import java.util.concurrent.TimeUnit;
 
 // Purpose:
 // Restore any notifications not interacted by the user back into the notification shade.
@@ -158,7 +153,7 @@ class NotificationRestorer {
             NotificationTable._ID + " DESC", // sort order, new to old
             NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
          );
-         showNotificationsFromCursor(cursor);
+         showNotificationsFromCursorWithWorkManager(context, cursor);
          BadgeCountUpdater.update(readableDb, context);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
@@ -195,7 +190,7 @@ class NotificationRestorer {
     * Restores a set of notifications back to the notification shade based on an SQL cursor.
     * @param cursor - Source cursor to generate notifications from
     */
-   static void showNotificationsFromCursor(Cursor cursor) {
+   static void showNotificationsFromCursorWithWorkManager(Context context, Cursor cursor) {
       if (!cursor.moveToFirst())
          return;
 
@@ -219,40 +214,23 @@ class NotificationRestorer {
          workRequests.add(workRequest);
       } while (cursor.moveToNext());
 
-      NotificationRestoreManager.beginEnqueueingWorkRequests(workRequests);
+      WorkManager.getInstance(context)
+              .enqueue(workRequests);
    }
 
-   private static final int RESTORE_NOTIFICATIONS_DELAY_MS = 15_000;
-   static void startDelayedRestoreTaskFromReceiver(Context context) {
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreKickoffJob");
+   private static final int RESTORE_NOTIFICATIONS_DELAY = 15; // seconds
+   static void startDelayedRestoreTaskFromWorkManager(Context context) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "");
 
-         // set the job id to android notif id - that way we don't restore any notif twice
-         JobInfo.Builder jobBuilder = new JobInfo.Builder(RESTORE_KICKOFF_REQUEST_CODE,
-                 new ComponentName(context, RestoreKickoffJobService.class));
-         JobInfo job = jobBuilder
-               .setOverrideDeadline(RESTORE_NOTIFICATIONS_DELAY_MS)
-               .setMinimumLatency(RESTORE_NOTIFICATIONS_DELAY_MS)
-               .build();
-         JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-         jobScheduler.schedule(job);
-      }
-      else {
-         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleRestoreKickoffAlarmTask");
+      Constraints workConstraints = new Constraints.Builder()
+              .setTriggerContentMaxDelay(RESTORE_NOTIFICATIONS_DELAY, TimeUnit.SECONDS)
+              .build();
 
-         Intent intentForService = new Intent();
-         intentForService.setComponent(new ComponentName(context.getPackageName(),
-                 NotificationRestoreService.class.getName()));
+      OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(OSNotificationRestoreManager.NotificationRestoreKickoffWorker.class)
+              .setConstraints(workConstraints)
+              .build();
 
-         // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
-         //        Some Samsung devices will throw the below exception otherwise.
-         //        "java.lang.SecurityException: !@Too many alarms (500) registered"
-         PendingIntent pendingIntent = PendingIntent.getService(context,
-                 RESTORE_KICKOFF_REQUEST_CODE, intentForService, PendingIntent.FLAG_UPDATE_CURRENT);
-
-         long scheduleTime = System.currentTimeMillis() + RESTORE_NOTIFICATIONS_DELAY_MS;
-         AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
-         alarm.set(AlarmManager.RTC, scheduleTime, pendingIntent);
-      }
+      WorkManager.getInstance(context)
+              .enqueue(workRequest);
    }
 }
