@@ -95,7 +95,7 @@ public class NotificationExtenderService {
       }
    }
 
-   private OSNotificationDisplayedResult notificationReceivedResult;
+   private OSNotificationReceivedResult notificationReceivedResult;
    private JSONObject currentJsonPayload;
    private boolean currentlyRestoring;
    private Long restoreTimestamp;
@@ -109,7 +109,7 @@ public class NotificationExtenderService {
          return;
 
       overrideSettings.override(currentBaseOverrideSettings);
-      notificationReceivedResult = new OSNotificationDisplayedResult();
+      notificationReceivedResult = new OSNotificationReceivedResult();
 
       OSNotificationGenerationJob notifJob = createNotifJobFromCurrent(context);
       notifJob.overrideSettings = overrideSettings;
