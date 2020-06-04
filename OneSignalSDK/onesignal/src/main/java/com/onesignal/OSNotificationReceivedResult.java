@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
-public class OSNotificationDisplayedResult {
+public class OSNotificationReceivedResult {
+
    public int androidNotificationId;
+
 }
