@@ -2,6 +2,7 @@ package com.onesignal;
 
 import android.location.Location;
 
+import com.huawei.hms.location.HWLocation;
 import com.huawei.hms.location.LocationResult;
 
 import org.robolectric.annotation.Implements;
@@ -21,8 +22,8 @@ public class ShadowLocationUpdateListener {
         LocationController.locationUpdateListener.onLocationChanged(location);
     }
 
-    public static void provideFakeLocation_Huawei(Location location) {
-        List<Location> locations = new ArrayList<>();
+    public static void provideFakeLocation_Huawei(HWLocation location) {
+        List<HWLocation> locations = new ArrayList<>();
         locations.add(location);
         LocationResult locationResult = LocationResult.create(locations);
         LocationController.locationUpdateListener.onLocationResult(locationResult);
