@@ -68,9 +68,6 @@
         <service android:name="com.onesignal.FCMIntentJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
-        <service android:name="com.onesignal.RestoreKickoffJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-
         <service android:name="com.onesignal.SyncService" android:stopWithTask="true" />
         <service android:name="com.onesignal.SyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />

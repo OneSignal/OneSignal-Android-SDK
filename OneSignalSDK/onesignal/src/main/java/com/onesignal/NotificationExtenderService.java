@@ -27,18 +27,13 @@
 
 package com.onesignal;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import androidx.core.app.NotificationCompat;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.List;
 
 // Designed to be extended by app developer.
 // Must add the following to the AndroidManifest.xml for this to be triggered.
@@ -66,12 +61,21 @@ import java.util.List;
  * - Override specific notification settings depending on client-side app logic (e.g. custom accent color,
  * vibration pattern, any other {@link NotificationCompat} options)
  */
-public abstract class NotificationExtenderService extends JobIntentService {
+public class NotificationExtenderService {
 
    static final int EXTENDER_SERVICE_JOB_ID = 2071862121;
 
    // The extension service app AndroidManifest.xml meta data tag key name
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationExtensionServiceClass";
+
+   private static NotificationExtenderService mService;
+
+   public static NotificationExtenderService getInstance() {
+      if (mService == null)
+         mService = new NotificationExtenderService();
+
+      return mService;
+   }
 
    public static class OverrideSettings {
       public NotificationCompat.Extender extender;
@@ -91,7 +95,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
       }
    }
 
-   private OSNotificationDisplayedResult osNotificationDisplayedResult;
+   private OSNotificationDisplayedResult notificationReceivedResult;
    private JSONObject currentJsonPayload;
    private boolean currentlyRestoring;
    private Long restoreTimestamp;
@@ -99,35 +103,21 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
    // Developer may call to override some notification settings.
    // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
-   protected final OSNotificationDisplayedResult displayNotification(OverrideSettings overrideSettings) {
+   protected final void displayNotification(Context context, OverrideSettings overrideSettings) {
       // Check if this method has been called already or if no override was set.
-      if (osNotificationDisplayedResult != null || overrideSettings == null)
-         return null;
+      if (notificationReceivedResult != null || overrideSettings == null)
+         return;
 
       overrideSettings.override(currentBaseOverrideSettings);
-      osNotificationDisplayedResult = new OSNotificationDisplayedResult();
+      notificationReceivedResult = new OSNotificationDisplayedResult();
 
-      OSNotificationGenerationJob notifJob = createNotifJobFromCurrent();
+      OSNotificationGenerationJob notifJob = createNotifJobFromCurrent(context);
       notifJob.overrideSettings = overrideSettings;
 
-      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
-      return osNotificationDisplayedResult;
+      notificationReceivedResult.androidNotificationId = NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
    }
 
-   // App developer must implement
-   //   - Return true to count it as processed which will prevent the default OneSignal SDK notification from displaying.
-   protected abstract boolean onNotificationProcessing(OSNotificationReceivedResult notification);
-
-   @Override
-   protected final void onHandleWork(Intent intent) {
-      if (intent == null)
-         return;
-      
-      processIntent(intent);
-      FCMBroadcastReceiver.completeWakefulIntent(intent);
-   }
-
-   private void processIntent(Intent intent) {
+   void processIntent(Context context, Intent intent) {
       Bundle bundle = intent.getExtras();
 
       // Service maybe triggered without extras on some Android devices on boot.
@@ -151,36 +141,37 @@ public abstract class NotificationExtenderService extends JobIntentService {
             currentBaseOverrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
 
-         if (!currentlyRestoring && OneSignal.notValidOrDuplicated(this, currentJsonPayload))
+         if (!currentlyRestoring && OneSignal.notValidOrDuplicated(context, currentJsonPayload))
             return;
 
          restoreTimestamp = bundle.getLong("timestamp");
-         processJsonObject(currentJsonPayload, currentlyRestoring);
+         processJsonObject(context, currentJsonPayload, currentlyRestoring);
       } catch (JSONException e) {
          e.printStackTrace();
       }
    }
 
-   void processJsonObject(JSONObject currentJsonPayload, boolean restoring) {
-      OSNotificationReceivedResult receivedResult = new OSNotificationReceivedResult();
-      receivedResult.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(currentJsonPayload);
-      receivedResult.restoring = restoring;
-      receivedResult.isAppInFocus = OneSignal.isAppActive();
+   void processJsonObject(Context context, JSONObject currentJsonPayload, boolean restoring) {
+      OSNotificationReceived receivedResult = new OSNotificationReceived(
+              NotificationBundleProcessor.OSNotificationPayloadFrom(currentJsonPayload),
+              restoring,
+              OneSignal.isAppActive());
 
-      osNotificationDisplayedResult = null;
-      boolean developerProcessed = false;
+      notificationReceivedResult = null;
+      boolean developerProcessed = OneSignal.notificationProcessingHandler != null;
       try {
-         developerProcessed = onNotificationProcessing(receivedResult);
+         if (developerProcessed)
+            OneSignal.notificationProcessingHandler.onNotificationProcessing(context, receivedResult);
       } catch (Throwable t) {
          //noinspection ConstantConditions - displayNotification might have been called by the developer
-         if (osNotificationDisplayedResult == null)
+         if (notificationReceivedResult == null)
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
          else
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
       }
 
       // If the developer did not call displayNotification from onNotificationProcessing
-      if (osNotificationDisplayedResult == null) {
+      if (notificationReceivedResult == null) {
          // Save as processed to prevent possible duplicate calls from canonical ids.
 
          boolean display = !developerProcessed &&
@@ -188,7 +179,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
 
          if (!display) {
             if (!restoring) {
-               OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(this);
+               OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
                notifJob.jsonPayload = currentJsonPayload;
                notifJob.overrideSettings = new OverrideSettings();
                notifJob.overrideSettings.androidNotificationId = -1;
@@ -199,10 +190,10 @@ public abstract class NotificationExtenderService extends JobIntentService {
             // If are are not displaying a restored notification make sure we mark it as dismissed
             //   This will prevent it from being restored again.
             else if (currentBaseOverrideSettings != null)
-               NotificationBundleProcessor.markRestoredNotificationAsDismissed(createNotifJobFromCurrent());
+               NotificationBundleProcessor.markRestoredNotificationAsDismissed(createNotifJobFromCurrent(context));
          }
          else
-            NotificationBundleProcessor.ProcessJobForDisplay(createNotifJobFromCurrent());
+            NotificationBundleProcessor.ProcessJobForDisplay(createNotifJobFromCurrent(context));
 
          // Delay to prevent CPU spikes.
          //    Normally more than one notification is restored at a time.
@@ -211,20 +202,20 @@ public abstract class NotificationExtenderService extends JobIntentService {
       }
    }
 
-   static Intent getIntent(Context context) {
-      PackageManager packageManager = context.getPackageManager();
-      Intent intent = new Intent().setAction("com.onesignal.NotificationExtender").setPackage(context.getPackageName());
-      List<ResolveInfo> resolveInfo = packageManager.queryIntentServices(intent, PackageManager.GET_META_DATA);
-      if (resolveInfo.size() < 1)
-         return null;
+//   static Intent getIntent(Context context) {
+//      PackageManager packageManager = context.getPackageManager();
+//      Intent intent = new Intent().setAction("com.onesignal.NotificationExtender").setPackage(context.getPackageName());
+//      List<ResolveInfo> resolveInfo = packageManager.queryIntentServices(intent, PackageManager.GET_META_DATA);
+//      if (resolveInfo.size() < 1)
+//         return null;
+//
+//      intent.setComponent(new ComponentName(context, resolveInfo.get(0).serviceInfo.name));
+//
+//      return intent;
+//   }
 
-      intent.setComponent(new ComponentName(context,resolveInfo.get(0).serviceInfo.name));
-
-      return intent;
-   }
-
-   private OSNotificationGenerationJob createNotifJobFromCurrent() {
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(this);
+   private OSNotificationGenerationJob createNotifJobFromCurrent(Context context) {
+      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.isRestoring = currentlyRestoring;
       notifJob.jsonPayload = currentJsonPayload;
       notifJob.shownTimeStamp = restoreTimestamp;
@@ -239,6 +230,8 @@ public abstract class NotificationExtenderService extends JobIntentService {
     * The meta data tag looks like this:
     *  <meta-data android:name="com.onesignal.NotificationExtensionServiceClass" android:value="com.company.ExtensionService" />
     * <br/><br/>
+    * TODO: Comment about {@link OneSignal.NotificationProcessingHandler}
+    * <br/><br/>
     * In the case of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} and the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
     *  there are also setters for these handlers. So why create this new class and implement
     *  the same handlers, won't they just overwrite each other?
@@ -247,7 +240,10 @@ public abstract class NotificationExtenderService extends JobIntentService {
     *  handlers set through the setter methods.
     * The extension handlers will always be called first and then bubble to the app handlers
     * <br/><br/>
+    * @see OneSignal.NotificationProcessingHandler
+    * @see OneSignal#setNotificationProcessingHandler
     * @see OneSignal.ExtNotificationWillShowInForegroundHandler
+    * @see OneSignal#setExtNotificationWillShowInForegroundHandler
     */
    static void setupNotificationExtensionServiceClass() {
       String className = OSUtils.getManifestMeta(OneSignal.appContext, EXTENSION_SERVICE_META_DATA_TAG_NAME);
@@ -263,6 +259,13 @@ public abstract class NotificationExtenderService extends JobIntentService {
       try {
          Class<?> clazz = Class.forName(className);
          Object clazzInstance = clazz.newInstance();
+
+         // Attempt to find an implementation for the NotificationProcessingHandler and then set it using package-private setter
+         if (clazzInstance instanceof OneSignal.NotificationProcessingHandler) {
+            OneSignal.setNotificationProcessingHandler((OneSignal.NotificationProcessingHandler) clazzInstance);
+         }
+
+         // Attempt to find an implementation for the ExtNotificationWillShowInForegroundHandler and then set it using package-private setter
          if (clazzInstance instanceof OneSignal.ExtNotificationWillShowInForegroundHandler) {
             OneSignal.setExtNotificationWillShowInForegroundHandler((OneSignal.ExtNotificationWillShowInForegroundHandler) clazzInstance);
          }

@@ -21,15 +21,6 @@
         <meta-data android:name="com.onesignal.NotificationExtensionServiceClass"
             android:value="com.onesignal.sdktest.notification.AppNotificationExtenderService" />
 
-        <service
-            android:name=".notification.AppNotificationExtenderService"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.onesignal.NotificationExtender" />
-            </intent-filter>
-        </service>
-
         <activity android:name=".activity.SplashActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -25,34 +25,19 @@ import static com.onesignal.NotificationRestorer.TIMESTAMP_RESTORE_INTENT_KEY;
 
 class OSNotificationRestoreManager {
 
-    /**
-     *
-     * <br/><br/>
-     * @see Intent
-     */
-    static class NotificationRestoreManager {
+    public static class NotificationRestoreKickoffWorker extends Worker {
 
-        private static NotificationRestoreManager mManager;
-
-        public static NotificationRestoreManager getInstance() {
-            if (mManager == null)
-                mManager = new NotificationRestoreManager();
-
-            return mManager;
+        public NotificationRestoreKickoffWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+            super(context, workerParams);
         }
 
-        NotificationRestoreManager() {
+        @NonNull
+        @Override
+        public Result doWork() {
+            Context context = getApplicationContext();
+            NotificationRestorer.restore(context);
 
-        }
-
-        /**
-         *
-         * <br/><br/>
-         * @see
-         */
-        static void beginEnqueueingWorkRequests(ArrayList<OneTimeWorkRequest> workRequests) {
-            WorkManager.getInstance(OneSignal.appContext)
-                    .enqueue(workRequests);
+            return Result.success();
         }
     }
 
@@ -66,20 +51,14 @@ class OSNotificationRestoreManager {
         @Override
         public Result doWork() {
             Context context = getApplicationContext();
-            boolean useExtender = (NotificationExtenderService.getIntent(context) != null);
+            boolean useNotificationProcessor = OneSignal.notificationProcessingHandler != null;
 
             Intent intent = new Intent();
-            if (useExtender)
-                intent = NotificationExtenderService.getIntent(context);
-
             addRestoreExtras(intent, getInputData());
-            if (useExtender) {
-                NotificationExtenderService.enqueueWork(
-                        context,
-                        intent.getComponent(),
-                        NotificationExtenderService.EXTENDER_SERVICE_JOB_ID,
-                        intent,
-                        false);
+
+            if (useNotificationProcessor) {
+                NotificationExtenderService.getInstance().processIntent(context, intent);
+                FCMBroadcastReceiver.completeWakefulIntent(intent);
             }
             else {
                 // Null check for https://github.com/OneSignal/OneSignal-Android-SDK/issues/591
@@ -87,11 +66,9 @@ class OSNotificationRestoreManager {
                 if (extras == null)
                     return Result.failure();
 
-                NotificationBundleProcessor.ProcessFromFCMIntentService(
-                        getApplicationContext(),
+                NotificationBundleProcessor.ProcessFromFCMIntentService(context,
                         new BundleCompatBundle(extras),
-                        null
-                );
+                        null);
             }
 
             return Result.success();
