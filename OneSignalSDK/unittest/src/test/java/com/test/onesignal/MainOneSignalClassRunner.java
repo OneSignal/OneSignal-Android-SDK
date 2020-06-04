@@ -41,6 +41,7 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
+import com.huawei.hms.location.HWLocation;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalDBHelper;
@@ -3382,7 +3383,7 @@ public class MainOneSignalClassRunner {
       assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
 
       // Setting up a new point and testing it is sent
-      Location fakeLocation = new Location("UnitTest");
+      HWLocation fakeLocation = new HWLocation();
       fakeLocation.setLatitude(1.1d);
       fakeLocation.setLongitude(2.2d);
       fakeLocation.setAccuracy(3.3f);
