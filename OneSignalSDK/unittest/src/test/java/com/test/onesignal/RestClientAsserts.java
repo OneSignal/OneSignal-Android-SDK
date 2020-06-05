@@ -303,6 +303,20 @@ class RestClientAsserts {
       assertIsUUID(request.payload.optString("app_id"));
    }
 
+   public static void assertNotificationOpenAtIndex(int index, int deviceType) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertEquals(REST_METHOD.PUT, request.method);
+
+      String[] parts = request.url.split("/");
+      assertEquals("notifications", parts[0]);
+      assertIsUUID(parts[1]);
+
+      assertHasAppId(request);
+
+      assertEquals(deviceType, request.payload.getInt("device_type"));
+   }
+
    private static void assertAppIdInUrl(@NonNull String url) {
       String[] appsPath = url.split("apps/");
       if (appsPath.length == 2) {

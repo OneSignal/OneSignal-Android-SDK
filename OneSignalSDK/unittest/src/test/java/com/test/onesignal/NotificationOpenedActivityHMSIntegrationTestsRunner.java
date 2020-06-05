@@ -6,15 +6,18 @@ import android.support.annotation.NonNull;
 
 import com.onesignal.NotificationOpenedActivityHMS;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -29,16 +32,18 @@ import org.robolectric.shadows.ShadowLog;
 import java.util.UUID;
 
 import static com.onesignal.InAppMessagingHelpers.ONESIGNAL_APP_ID;
+import static com.test.onesignal.RestClientAsserts.assertNotificationOpenAtIndex;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
 
-@Config(packageName = "com.onesignal.example",
-    instrumentedPackages = { "com.onesignal" },
+@Config(
+    packageName = "com.onesignal.example",
     shadows = {
         ShadowOSUtils.class,
+        ShadowPushRegistratorHMS.class,
         ShadowOneSignalRestClient.class,
         ShadowCustomTabsClient.class,
         ShadowOSWebView.class,
@@ -48,8 +53,6 @@ import static org.robolectric.Shadows.shadowOf;
     },
     sdk = 26
 )
-
-
 @RunWith(RobolectricTestRunner.class)
 public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
@@ -63,6 +66,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
     @Before
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
+        ShadowOSUtils.supportsHMS(true);
     }
 
     private static Intent helper_baseHMSOpenIntent() {
@@ -75,6 +79,21 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         Robolectric.buildActivity(NotificationOpenedActivityHMS.class, intent).create();
     }
 
+    private static void helper_initSDKAndFireHMSNotificationOpenIntent() throws Exception {
+        OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
+        fastColdRestartApp();
+
+        Intent intent = helper_baseHMSOpenIntent()
+                .putExtra(
+                        "custom",
+                        new JSONObject() {{
+                            put("i", UUID.randomUUID().toString());
+                        }}.toString()
+                );
+
+        helper_startHMSOpenActivity(intent);
+    }
+
     // Since the Activity has to be public it could be started outside of a OneSignal flow.
     // Ensure it doesn't crash the app.
     @Test
@@ -84,21 +103,16 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     @Test
     public void barebonesOSPayload_startsMainActivity() throws Exception {
-        OneSignal.init(RuntimeEnvironment.application, "123456789", ONESIGNAL_APP_ID);
-        fastColdRestartApp();
-
-        Intent intent = helper_baseHMSOpenIntent()
-            .putExtra(
-                "custom",
-                new JSONObject() {{
-                    put("i", UUID.randomUUID().toString());
-                }}.toString()
-            );
-
-        helper_startHMSOpenActivity(intent);
+        helper_initSDKAndFireHMSNotificationOpenIntent();
 
         Intent startedActivity = shadowOf(RuntimeEnvironment.application).getNextStartedActivity();
         assertEquals(startedActivity.getComponent().getClassName(), BlankActivity.class.getName());
+    }
+
+    @Test
+    public void barebonesOSPayload_makesNotificationOpenRequest() throws Exception {
+        helper_initSDKAndFireHMSNotificationOpenIntent();
+        assertNotificationOpenAtIndex(1, UserState.DEVICE_TYPE_HUAWEI);
     }
 
     @Test
