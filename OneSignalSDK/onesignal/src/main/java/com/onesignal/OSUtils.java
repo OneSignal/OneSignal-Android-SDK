@@ -325,6 +325,10 @@ class OSUtils {
       return new OSUtils().getDeviceType() == UserState.DEVICE_TYPE_ANDROID;
    }
 
+   static boolean isHuaweiDeviceType() {
+      return new OSUtils().getDeviceType() == UserState.DEVICE_TYPE_HUAWEI;
+   }
+
    Integer getNetType () {
       ConnectivityManager cm = (ConnectivityManager) OneSignal.appContext.getSystemService(Context.CONNECTIVITY_SERVICE);
       NetworkInfo netInfo = cm.getActiveNetworkInfo();
