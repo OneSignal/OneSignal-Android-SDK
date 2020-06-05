@@ -35,16 +35,13 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.huawei.hms.api.HuaweiApiAvailability;
 import com.huawei.hms.location.FusedLocationProviderClient;
 import com.huawei.hms.location.LocationResult;
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
@@ -279,9 +276,9 @@ class LocationController {
          locationHandlerThread = new LocationHandlerThread();
 
       try {
-         if (isGooglePlayServicesAvailable(classContext)) {
+         if (isGooglePlayServicesAvailable()) {
             initGoogleLocation();
-         } else if (isHMSAvailable(classContext)) {
+         } else if (isHMSAvailable()) {
             initHuaweiLocation();
          } else {
             fireFailedComplete();
@@ -354,15 +351,14 @@ class LocationController {
       }
    }
 
-   protected static boolean isGooglePlayServicesAvailable(Context context) {
-      GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
-      int status = googleApiAvailability.isGooglePlayServicesAvailable(context);
-      return status == ConnectionResult.SUCCESS;
+   // If we are using device type Android for push we can safely assume we are using Google Play services
+   private static boolean isGooglePlayServicesAvailable() {
+      return OSUtils.isAndroidDeviceType();
    }
 
-   protected static boolean isHMSAvailable(Context context) {
-      int status = HuaweiApiAvailability.getInstance().isHuaweiMobileServicesAvailable(context);
-      return status == ConnectionResult.SUCCESS;
+   // If we are using device type Huawei for push we can safely assume we are using HMS Core
+   private static boolean isHMSAvailable() {
+      return OSUtils.isHuaweiDeviceType();
    }
 
    private static int getApiFallbackWait() {
@@ -450,11 +446,11 @@ class LocationController {
       synchronized (syncLock) {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LocationController onFocusChange!");
          // Google location not initialized or connected yet
-         if (isGooglePlayServicesAvailable(classContext) && (googleApiClient == null || !googleApiClient.realInstance().isConnected()))
+         if (isGooglePlayServicesAvailable() && (googleApiClient == null || !googleApiClient.realInstance().isConnected()))
             return;
 
          // Huawei location not initialized yet and not google play available
-         if (!isGooglePlayServicesAvailable(classContext) && isHMSAvailable(classContext) && huaweiFusedLocationClient == null)
+         if (!isGooglePlayServicesAvailable() && isHMSAvailable() && huaweiFusedLocationClient == null)
             return;
 
          if (googleApiClient != null) {
