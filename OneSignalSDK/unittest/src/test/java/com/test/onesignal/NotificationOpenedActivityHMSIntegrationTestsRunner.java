@@ -17,7 +17,6 @@ import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -71,7 +70,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     private static Intent helper_baseHMSOpenIntent() {
         return new Intent()
-                .setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NEW_TASK)
+                .setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
                 .setAction("android.intent.action.VIEW");
     }
 
