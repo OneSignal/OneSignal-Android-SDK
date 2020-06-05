@@ -39,9 +39,27 @@ import org.json.JSONObject;
 //   Intent is defined via OneSignal's backend and is sent to HMS.
 // This has to be it's own Activity separate from NotificationOpenedActivity since
 //   we do not have full control over the Bundle.
-// Designed to be started with these flags
-// Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NEW_TASK
-// This way if app developer does not want the app to launch then it won't do so
+
+// Designed to be started with these flags:
+// Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+//   - This gives us the hex value of 0x58000000
+
+// This is to meet the following requirements
+//   1. Allows the app developer to omit foregrounding the app if they choose
+//      - FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_MULTIPLE_TASK is required to do this
+//      - FLAG_ACTIVITY_SINGLE_TOP nor FLAG_ACTIVITY_NEW_TASK on it's own does this.
+//      - FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET would also work but this is deprecated.
+//   2. This Activity does not become part of the back stack.
+//      - FLAG_ACTIVITY_NO_HISTORY does this
+//   3. This Activity does not show in the recent Activities list.
+//      - FLAG_ACTIVITY_NO_HISTORY does this
+
+// Note on using  Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+//   We always want to create a new task so it doesn't resume some existing task.
+//   If it resumes an existing task then it won't be possible to prevent the app from showing.
+//   Some developer want to process the click in the background without bring the app to the foreground.
+//   The launcher Activity is started in OneSignal.java:startOrResumeApp if the developer does want the app
+//     to be opened.
 
 public class NotificationOpenedActivityHMS extends Activity {
 
