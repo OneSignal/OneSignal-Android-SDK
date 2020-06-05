@@ -17,7 +17,6 @@ import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.BeforeClass;
