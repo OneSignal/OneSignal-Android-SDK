@@ -321,6 +321,10 @@ class OSUtils {
       return UserState.DEVICE_TYPE_ANDROID;
    }
 
+   static boolean isAndroidDeviceType() {
+      return new OSUtils().getDeviceType() == UserState.DEVICE_TYPE_ANDROID;
+   }
+
    Integer getNetType () {
       ConnectivityManager cm = (ConnectivityManager) OneSignal.appContext.getSystemService(Context.CONNECTIVITY_SERVICE);
       NetworkInfo netInfo = cm.getActiveNetworkInfo();
