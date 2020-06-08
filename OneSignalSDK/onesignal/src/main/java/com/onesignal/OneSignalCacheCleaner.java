@@ -113,7 +113,7 @@ class OneSignalCacheCleaner {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 } finally {
-                    if (cursor != null & !cursor.isClosed())
+                    if (cursor != null && !cursor.isClosed())
                         cursor.close();
                 }
 
