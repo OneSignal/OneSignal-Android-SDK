@@ -286,7 +286,7 @@ class OneSignalPrefs {
         }
 
         SharedPreferences prefs = getSharedPrefsByName(prefsName);
-        if (prefs != null ) {
+        if (prefs != null) {
             if (type.equals(String.class))
                return prefs.getString(key, (String)defValue);
             else if (type.equals(Boolean.class))
