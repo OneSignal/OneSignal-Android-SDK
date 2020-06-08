@@ -49,8 +49,8 @@ public class OSNotificationReceived {
         return isAppInFocus;
     }
 
-    public void setModifiedContent(Context context, NotificationExtenderService.OverrideSettings overrideSettings) {
-        NotificationExtenderService.getInstance().displayNotification(context, overrideSettings);
+    public OSNotificationReceivedResult setModifiedContent(Context context, NotificationExtenderService.OverrideSettings overrideSettings) {
+        return NotificationExtenderService.getInstance().displayNotification(context, overrideSettings);
     }
 }
 

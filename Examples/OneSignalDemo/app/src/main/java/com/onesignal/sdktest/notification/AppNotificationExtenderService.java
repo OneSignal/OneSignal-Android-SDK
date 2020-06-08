@@ -9,6 +9,7 @@ import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceived;
+import com.onesignal.OSNotificationReceivedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
@@ -19,6 +20,7 @@ public class AppNotificationExtenderService implements
 
    @Override
    public void onNotificationProcessing(Context context, OSNotificationReceived notification) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "onNotificationProcessing fired!!!");
       if (notification.payload.actionButtons != null) {
          for (OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
             System.out.println("button:" + button.toString());
@@ -33,7 +35,8 @@ public class AppNotificationExtenderService implements
          }
       };
 
-      notification.setModifiedContent(context, overrideSettings);
+      OSNotificationReceivedResult notificationReceivedResult = notification.setModifiedContent(context, overrideSettings);
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "onNotificationProcessing finished wth Android notification id: " + notificationReceivedResult.androidNotificationId);
    }
 
    @Override
