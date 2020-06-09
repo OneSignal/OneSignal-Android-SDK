@@ -95,6 +95,10 @@ class OSInAppMessageTracker extends OSChannelTracker {
 
     @Override
     public void cacheState() {
-        dataRepository.cacheIAMInfluenceType(influenceType == null ? OSInfluenceType.UNATTRIBUTED : influenceType);
+        // We only need to cache INDIRECT and UNATTRIBUTED influence types
+        // DIRECT is downgrade to INDIRECT to avoid inconsistency state
+        // where the app might be close before dismissing current displayed IAM
+        OSInfluenceType influenceTypeToCache = influenceType == null ? OSInfluenceType.UNATTRIBUTED : influenceType;
+        dataRepository.cacheIAMInfluenceType(influenceTypeToCache == OSInfluenceType.DIRECT ? OSInfluenceType.INDIRECT : influenceTypeToCache);
     }
 }

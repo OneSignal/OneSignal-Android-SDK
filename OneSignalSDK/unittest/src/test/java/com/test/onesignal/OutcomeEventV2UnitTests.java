@@ -43,6 +43,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.model.OSInfluenceType;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
 import com.onesignal.outcomes.model.OSOutcomeEventParams;
@@ -340,6 +341,31 @@ public class OutcomeEventV2UnitTests {
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
         assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+    }
+
+    @Test
+    public void testDirectOutcomeSaveIndirectSuccess() throws Exception {
+        service.setSuccess(true);
+        sessionManager.initSessionFromCache();
+        sessionManager.onNotificationReceived(NOTIFICATION_ID);
+        sessionManager.onInAppMessageReceived(IAM_ID);
+        // Set DIRECT notification id influence
+        sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
+        sessionManager.onDirectInfluenceFromIAMClick(IAM_ID);
+
+        controller.sendOutcomeEventWithValue(OUTCOME_NAME, 1.1f);
+        threadAndTaskWait();
+
+        handler.setOutcomes(repository.getSavedOutcomeEvents());
+
+        threadAndTaskWait();
+        assertEquals(0, outcomeEvents.size());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+
+        sessionManager.initSessionFromCache();
+        assertEquals(OSInfluenceType.INDIRECT, trackerFactory.getIAMChannelTracker().getInfluenceType());
+        assertEquals(1, trackerFactory.getIAMChannelTracker().getIndirectIds().length());
+        assertEquals(IAM_ID, trackerFactory.getIAMChannelTracker().getIndirectIds().get(0));
     }
 
     @Test
