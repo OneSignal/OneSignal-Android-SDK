@@ -42,8 +42,8 @@ class OSInAppMessageRepository {
         } finally {
             try {
                 writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (Throwable t) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+            } catch (SQLException e) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", e);
             }
         }
     }
