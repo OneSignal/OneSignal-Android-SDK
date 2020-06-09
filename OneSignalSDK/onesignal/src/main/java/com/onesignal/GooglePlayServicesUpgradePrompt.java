@@ -27,8 +27,8 @@ class GooglePlayServicesUpgradePrompt {
       return false;
    }
 
-   static void ShowUpdateGPSDialog() {
-      if (new OSUtils().getDeviceType() != UserState.DEVICE_TYPE_ANDROID || !isGooglePlayStoreInstalled())
+   static void showUpdateGPSDialog() {
+      if (!OSUtils.isAndroidDeviceType() || !isGooglePlayStoreInstalled())
          return;
 
       boolean userSelectedSkip =

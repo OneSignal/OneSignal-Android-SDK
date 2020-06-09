@@ -969,10 +969,9 @@ public class OneSignal {
       if (mPushRegistrator != null)
          return mPushRegistrator;
 
-      int deviceType = osUtils.getDeviceType();
-      if (deviceType == UserState.DEVICE_TYPE_FIREOS)
+      if (OSUtils.isFireOSDeviceType())
          mPushRegistrator = new PushRegistratorADM();
-      else if (new OSUtils().getDeviceType() == UserState.DEVICE_TYPE_ANDROID) {
+      else if (OSUtils.isAndroidDeviceType()) {
          if (OSUtils.hasFCMLibrary())
             mPushRegistrator = new PushRegistratorFCM();
          else
