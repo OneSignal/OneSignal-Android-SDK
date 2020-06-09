@@ -1,24 +1,19 @@
 package com.onesignal;
 
-import com.onesignal.OneSignalDbContract.NotificationTable;
-import com.onesignal.influence.model.OSInfluenceChannel;
-import com.onesignal.outcomes.OSOutcomeTableProvider;
-
 import android.content.Context;
-import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Process;
 import android.support.annotation.WorkerThread;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
-import java.util.Set;
+import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.influence.model.OSInfluenceChannel;
+import com.onesignal.outcomes.OSOutcomeTableProvider;
 
 class OneSignalCacheCleaner {
 
     private final static long NOTIFICATION_CACHE_DATA_LIFETIME = 604_800L; // 7 days in seconds
-    private final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
+    final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
 
     private final static String OS_DELETE_CACHED_NOTIFICATIONS_THREAD = "OS_DELETE_CACHED_NOTIFICATIONS_THREAD";
     private final static String OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD = "OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD";
@@ -33,7 +28,7 @@ class OneSignalCacheCleaner {
         SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
 
         cleanNotificationCache(writableDb);
-        cleanCachedInAppMessages(writableDb);
+        cleanCachedInAppMessages(dbHelper);
     }
 
     /**
@@ -47,8 +42,18 @@ class OneSignalCacheCleaner {
             public void run() {
                 Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
-                cleanCachedNotifications(writableDb);
-                cleanCachedUniqueOutcomeEventNotifications(writableDb);
+                writableDb.beginTransaction();
+                try {
+                    cleanCachedNotifications(writableDb);
+                    cleanCachedUniqueOutcomeEventNotifications(writableDb);
+                    writableDb.setTransactionSuccessful();
+                } finally {
+                    try {
+                        writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+                    } catch (SQLException t) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+                    }
+                }
             }
 
         }, OS_DELETE_CACHED_NOTIFICATIONS_THREAD).start();
@@ -61,73 +66,13 @@ class OneSignalCacheCleaner {
      * 3. Use queried data to clean SharedPreferences
      */
     @WorkerThread
-    synchronized static void cleanCachedInAppMessages(final SQLiteDatabase writableDb) {
+    synchronized static void cleanCachedInAppMessages(final OneSignalDbHelper dbHelper) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-
-                // 1. Query for all old message ids and old clicked click ids
-                String[] retColumns = new String[]{
-                        OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID,
-                        OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS
-                };
-
-                String whereStr = OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + " < ?";
-
-                String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - IAM_CACHE_DATA_LIFETIME);
-                String[] whereArgs = new String[]{sixMonthsAgoInSeconds};
-
-                Set<String> oldMessageIds = OSUtils.newConcurrentSet();
-                Set<String> oldClickedClickIds = OSUtils.newConcurrentSet();
-
-                Cursor cursor = null;
-                try {
-                    cursor = writableDb.query(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
-                            retColumns,
-                            whereStr,
-                            whereArgs,
-                            null,
-                            null,
-                            null);
-
-                    if (cursor == null || cursor.getCount() == 0) {
-                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Attempted to clean 6 month old IAM data, but none exists!");
-                        return;
-                    }
-
-                    // From cursor get all of the old message ids and old clicked click ids
-                    if (cursor.moveToFirst()) {
-                        do {
-                            String oldMessageId = cursor.getString(
-                                    cursor.getColumnIndex(
-                                            OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
-                            String oldClickIds = cursor.getString(
-                                    cursor.getColumnIndex(
-                                            OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS));
-
-                            oldMessageIds.add(oldMessageId);
-                            oldClickedClickIds.addAll(OSUtils.newStringSetFromJSONArray(new JSONArray(oldClickIds)));
-                        } while (cursor.moveToNext());
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (cursor != null && !cursor.isClosed())
-                        cursor.close();
-                }
-
-                // 2. Delete old IAMs from SQL
-                writableDb.delete(
-                        OneSignalDbContract.InAppMessageTable.TABLE_NAME,
-                        whereStr,
-                        whereArgs);
-
-                // 3. Use queried data to clean SharedPreferences
-                cleanInAppMessageIds(oldMessageIds);
-                cleanInAppMessageClickedClickIds(oldClickedClickIds);
+                new OSInAppMessageRepository(dbHelper).cleanCachedInAppMessages();
             }
-
         }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
     }
 
@@ -168,70 +113,6 @@ class OneSignalCacheCleaner {
                 OSOutcomeTableProvider.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,
                 null);
-    }
-
-    /**
-     * Clean up 6 month old IAM ids in {@link android.content.SharedPreferences}:
-     *  1. Dismissed message ids
-     *  2. Impressioned message ids
-     * <br/><br/>
-     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)}
-     * <br/><br/>
-     * @see OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)
-     */
-    private static void cleanInAppMessageIds(Set<String> oldMessageIds) {
-        if (oldMessageIds != null && oldMessageIds.size() > 0) {
-            Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
-                    OneSignalPrefs.PREFS_ONESIGNAL,
-                    OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                    OSUtils.<String>newConcurrentSet());
-
-            Set<String> impressionedMessages = OneSignalPrefs.getStringSet(
-                    OneSignalPrefs.PREFS_ONESIGNAL,
-                    OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                    OSUtils.<String>newConcurrentSet());
-
-            if (dismissedMessages != null && dismissedMessages.size() > 0) {
-                dismissedMessages.removeAll(oldMessageIds);
-                OneSignalPrefs.saveStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                        dismissedMessages);
-            }
-
-            if (impressionedMessages != null && impressionedMessages.size() > 0) {
-                impressionedMessages.removeAll(oldMessageIds);
-                OneSignalPrefs.saveStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                        impressionedMessages);
-            }
-        }
-    }
-
-    /**
-     * Clean up 6 month old IAM clicked click ids in {@link android.content.SharedPreferences}:
-     *  1. Clicked click ids from elements within IAM
-     * <br/><br/>
-     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)}
-     * <br/><br/>
-     * @see OneSignalCacheCleaner#cleanCachedInAppMessages(SQLiteDatabase)
-     */
-    private static void cleanInAppMessageClickedClickIds(Set<String> oldClickedClickIds) {
-        if (oldClickedClickIds != null && oldClickedClickIds.size() > 0) {
-            Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
-                    OneSignalPrefs.PREFS_ONESIGNAL,
-                    OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                    OSUtils.<String>newConcurrentSet());
-
-            if (clickedClickIds != null && clickedClickIds.size() > 0) {
-                clickedClickIds.removeAll(oldClickedClickIds);
-                OneSignalPrefs.saveStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                        clickedClickIds);
-            }
-        }
     }
 
 }

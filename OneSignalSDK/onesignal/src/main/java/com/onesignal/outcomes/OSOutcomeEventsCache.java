@@ -2,6 +2,7 @@ package com.onesignal.outcomes;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.support.annotation.NonNull;
@@ -95,7 +96,6 @@ class OSOutcomeEventsCache {
      */
     @WorkerThread
     synchronized void saveOutcomeEvent(OSOutcomeEventParams eventParams) {
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
         JSONArray notificationIds = new JSONArray();
         JSONArray iamIds = new JSONArray();
         OSInfluenceType notificationInfluenceType = OSInfluenceType.UNATTRIBUTED;
@@ -133,19 +133,30 @@ class OSOutcomeEventsCache {
             }
         }
 
-        ContentValues values = new ContentValues();
-        // Save influence ids
-        values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds.toString());
-        values.put(OutcomeEventsTable.COLUMN_NAME_IAM_IDS, iamIds.toString());
-        // Save influence types
-        values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, notificationInfluenceType.toString().toLowerCase());
-        values.put(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, iamInfluenceType.toString().toLowerCase());
-        // Save outcome data
-        values.put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.getOutcomeId());
-        values.put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.getWeight());
-        values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.getTimestamp());
+        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
+        writableDb.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            // Save influence ids
+            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds.toString());
+            values.put(OutcomeEventsTable.COLUMN_NAME_IAM_IDS, iamIds.toString());
+            // Save influence types
+            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, notificationInfluenceType.toString().toLowerCase());
+            values.put(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, iamInfluenceType.toString().toLowerCase());
+            // Save outcome data
+            values.put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.getOutcomeId());
+            values.put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.getWeight());
+            values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.getTimestamp());
 
-        writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
+            writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
+            writableDb.setTransactionSuccessful();
+        } finally {
+            try {
+                writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (SQLException e) {
+                logger.error("Error closing transaction! ", e);
+            }
+        }
     }
 
     /**
@@ -285,15 +296,24 @@ class OSOutcomeEventsCache {
         addIdsToListFromSource(cachedUniqueOutcomes, indirectBody);
 
         SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
+        writableDb.beginTransaction();
+        try {
+            for (OSCachedUniqueOutcome uniqueOutcome : cachedUniqueOutcomes) {
+                ContentValues values = new ContentValues();
 
-        for (OSCachedUniqueOutcome uniqueOutcome : cachedUniqueOutcomes) {
-            ContentValues values = new ContentValues();
+                values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcome.getInfluenceId());
+                values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, String.valueOf(uniqueOutcome.getChannel()));
+                values.put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName);
 
-            values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcome.getInfluenceId());
-            values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, String.valueOf(uniqueOutcome.getChannel()));
-            values.put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName);
-
-            writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values);
+                writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values);
+            }
+            writableDb.setTransactionSuccessful();
+        } finally {
+            try {
+                writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (SQLException e) {
+                logger.error("Error closing transaction! ", e);
+            }
         }
     }
 
