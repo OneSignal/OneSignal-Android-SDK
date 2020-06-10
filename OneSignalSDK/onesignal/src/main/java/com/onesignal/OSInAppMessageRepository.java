@@ -179,12 +179,12 @@ class OSInAppMessageRepository {
             Set<String> dismissedMessages = OneSignalPrefs.getStringSet(
                     OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                    OSUtils.<String>newConcurrentSet());
+                    null);
 
             Set<String> impressionedMessages = OneSignalPrefs.getStringSet(
                     OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                    OSUtils.<String>newConcurrentSet());
+                    null);
 
             if (dismissedMessages != null && dismissedMessages.size() > 0) {
                 dismissedMessages.removeAll(oldMessageIds);
@@ -218,7 +218,7 @@ class OSInAppMessageRepository {
             Set<String> clickedClickIds = OneSignalPrefs.getStringSet(
                     OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                    OSUtils.<String>newConcurrentSet());
+                    null);
 
             if (clickedClickIds != null && clickedClickIds.size() > 0) {
                 clickedClickIds.removeAll(oldClickedClickIds);
