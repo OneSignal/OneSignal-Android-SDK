@@ -61,6 +61,7 @@ import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.PermissionsActivity;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
@@ -72,6 +73,7 @@ import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
+import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowLocationController;
@@ -169,6 +171,7 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
             ShadowLocationController.class,
+            ShadowHmsInstanceId.class,
             OneSignalShadowPackageManager.class
         },
         sdk = 21
@@ -3329,8 +3332,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
    public void shouldUpdateAllLocationFieldsWhenTimeStampChanges_Huawei() throws Exception {
-      ShadowLocationController.googleServicesAvailable = false;
-      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowOSUtils.supportsHMS(true);
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
       OneSignalInit();
       threadAndTaskWait();
@@ -3360,8 +3362,7 @@ public class MainOneSignalClassRunner {
            ShadowHMSFusedLocationProviderClient.class
    }, sdk = 19)
    public void testLocationSchedule_Huawei() throws Exception {
-      ShadowLocationController.googleServicesAvailable = false;
-      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowOSUtils.supportsHMS(true);
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowHMSFusedLocationProviderClient.lat = 1.0d;
       ShadowHMSFusedLocationProviderClient.log = 2.0d;
@@ -3420,8 +3421,7 @@ public class MainOneSignalClassRunner {
            ShadowHuaweiTask.class
    }, sdk = 19)
    public void testLocationFromSyncAlarm_Huawei() throws Exception {
-      ShadowLocationController.googleServicesAvailable = false;
-      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowOSUtils.supportsHMS(true);
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
       ShadowHMSFusedLocationProviderClient.lat = 1.1d;
@@ -3467,8 +3467,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
    public void shouldSendLocationToEmailRecord_Huawei() throws Exception {
-      ShadowLocationController.googleServicesAvailable = false;
-      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowOSUtils.supportsHMS(true);
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
       OneSignalInit();
@@ -3486,8 +3485,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class, ShadowHuaweiTask.class})
    public void shouldRegisterWhenPromptingAfterInit_Huawei() throws Exception {
-      ShadowLocationController.googleServicesAvailable = false;
-      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowOSUtils.supportsHMS(true);
       ShadowHMSFusedLocationProviderClient.skipOnGetLocation = true;
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
@@ -3500,15 +3498,14 @@ public class MainOneSignalClassRunner {
 
       ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
       assertEquals(REST_METHOD.POST, request.method);
-      assertEquals(1, request.payload.get("device_type"));
-      assertEquals(ShadowPushRegistratorGCM.regId, request.payload.get("identifier"));
+      assertEquals(UserState.DEVICE_TYPE_HUAWEI, request.payload.get("device_type"));
+      assertEquals(ShadowHmsInstanceId.token, request.payload.get("identifier"));
    }
 
    @Test
    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class, ShadowHuaweiTask.class})
    public void shouldCallOnSessionEvenIfSyncJobStarted_Huawei() throws Exception {
-      ShadowLocationController.googleServicesAvailable = false;
-      ShadowLocationController.huaweiServicesAvailable = true;
+      ShadowOSUtils.supportsHMS(true);
       ShadowHMSFusedLocationProviderClient.shadowTask = true;
       ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
