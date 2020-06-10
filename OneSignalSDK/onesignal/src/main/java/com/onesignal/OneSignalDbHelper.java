@@ -43,6 +43,11 @@ import com.onesignal.outcomes.OSOutcomeTableProvider;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V3;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
+
 class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    static final int DATABASE_VERSION = 8;
    private static final String DATABASE_NAME = "OneSignal.db";
@@ -164,8 +169,8 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    @Override
    public void onCreate(SQLiteDatabase db) {
       db.execSQL(SQL_CREATE_ENTRIES);
-      db.execSQL(outcomeTableProvider.getSqlCreateOutcomeEntries());
-      db.execSQL(outcomeTableProvider.getSqlCreateUniqueOutcomeEntries());
+      db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3);
+      db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2);
       db.execSQL(SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
       for (String ind : SQL_INDEX_ENTRIES) {
          db.execSQL(ind);
@@ -235,21 +240,21 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    }
 
    private static void upgradeToV4(SQLiteDatabase db) {
-      safeExecSQL(db, outcomeTableProvider.getSqlCreateOutcomeEntries());
+      safeExecSQL(db, SQL_CREATE_OUTCOME_ENTRIES_V1);
    }
 
    private static void upgradeToV5(SQLiteDatabase db) {
       // Added for 3.12.1
-      safeExecSQL(db, outcomeTableProvider.getSqlCreateUniqueOutcomeEntries());
+      safeExecSQL(db, SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1);
       // Added for 3.12.2
-      upgradeOutcomeTableRevision1To2(db);
+      upgradeFromV5ToV6(db);
    }
 
    // We only want to run this if going from DB v5 to v6 specifically since
-   //   it was originally missed in upgradeToV5 in 3.12.1
+   // it was originally missed in upgradeToV5 in 3.12.1
    // Added for 3.12.2
    private static void upgradeFromV5ToV6(SQLiteDatabase db) {
-      upgradeOutcomeTableRevision1To2(db);
+      outcomeTableProvider.upgradeOutcomeTableRevision1To2(db);
    }
 
    private static void upgradeToV7(SQLiteDatabase db) {
@@ -259,33 +264,6 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    private synchronized void upgradeToV8(SQLiteDatabase db) {
       outcomeTableProvider.upgradeOutcomeTableRevision2To3(db);
       outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db);
-   }
-
-   // On the outcome table this adds the new weight column and drops params column.
-   private static void upgradeOutcomeTableRevision1To2(SQLiteDatabase db) {
-      String commonColumns = "_id,name,session,timestamp,notification_ids";
-      try {
-         // Since SQLite does not support dropping a column we need to:
-         //   1. Create a temptable
-         //   2. Copy outcome table into it
-         //   3. Drop the outcome table
-         //   4. Recreate it with the correct fields
-         //   5. Copy the temptable rows back into the new outcome table
-         //   6. Drop the temptable.
-         db.execSQL("BEGIN TRANSACTION;");
-         db.execSQL("CREATE TEMPORARY TABLE outcome_backup(" + commonColumns + ");");
-         db.execSQL("INSERT INTO outcome_backup SELECT " + commonColumns + " FROM outcome;");
-         db.execSQL("DROP TABLE outcome;");
-         db.execSQL(outcomeTableProvider.getSqlCreateOutcomeEntries());
-         // Not converting weight from param here, just set to zero.
-         //   3.12.1 quickly replaced 3.12.0 so converting cache isn't critical.
-         db.execSQL("INSERT INTO outcome (" + commonColumns + ", weight) SELECT " + commonColumns + ", 0 FROM outcome_backup;");
-         db.execSQL("DROP TABLE outcome_backup;");
-      } catch (SQLiteException e) {
-         e.printStackTrace();
-      } finally {
-         db.execSQL("COMMIT;");
-      }
    }
 
    private static void safeExecSQL(SQLiteDatabase db, String sql) {

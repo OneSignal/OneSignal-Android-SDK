@@ -13,10 +13,6 @@ public class MockOneSignalDBHelper implements OneSignalDb {
         this.context = context;
     }
 
-    public void setOutcomeTableProvider(OSOutcomeTableProvider outcomeTableProvider) {
-        OneSignalDbHelper.getInstance(context).setOutcomeTableProvider(outcomeTableProvider);
-    }
-
     @Override
     public SQLiteDatabase getSQLiteDatabaseWithRetries() {
         return OneSignalDbHelper.getInstance(context).getSQLiteDatabaseWithRetries();

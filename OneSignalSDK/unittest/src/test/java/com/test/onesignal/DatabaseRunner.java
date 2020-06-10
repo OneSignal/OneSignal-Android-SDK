@@ -17,8 +17,8 @@ import com.onesignal.influence.model.OSInfluenceChannel;
 import com.onesignal.influence.model.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.MockOSOutcomeEventsTable;
-import com.onesignal.outcomes.MockOSOutcomeTableProvider;
 import com.onesignal.outcomes.OSOutcomeEventDB;
+import com.onesignal.outcomes.OSOutcomeTableProvider;
 import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
 
 import org.json.JSONArray;
@@ -54,7 +54,6 @@ import static junit.framework.Assert.assertTrue;
         },
         sdk = 26
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseRunner {
 
@@ -66,7 +65,7 @@ public class DatabaseRunner {
     private static final String COMMA_SEP = ",";
 
     private MockOneSignalDBHelper dbHelper;
-    private MockOSOutcomeTableProvider outcomeTableProvider;
+    private OSOutcomeTableProvider outcomeTableProvider;
 
     @BeforeClass // Runs only once, before any tests
     public static void setUpClass() throws Exception {
@@ -79,9 +78,8 @@ public class DatabaseRunner {
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
 
-        outcomeTableProvider = new MockOSOutcomeTableProvider();
+        outcomeTableProvider = new OSOutcomeTableProvider();
         dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
-        dbHelper.setOutcomeTableProvider(outcomeTableProvider);
     }
 
     @After
@@ -124,9 +122,6 @@ public class DatabaseRunner {
     public void shouldUpgradeDbFromV3ToV4() throws Exception {
         // 1. Init DB as version 3
         ShadowOneSignalDbHelper.DATABASE_VERSION = 3;
-        outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
-        // disable tables upgrades on future versions
-        outcomeTableProvider.disableUpgrade();
         SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
         Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSOutcomeEventsTable.TABLE_NAME + "'", null);
@@ -143,7 +138,7 @@ public class DatabaseRunner {
 
         OutcomeEvent event = new OutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
         ContentValues values = new ContentValues();
-        values.put(MockOSOutcomeEventsTable.COLUMN_NAME_SESSION, event.getSession().toString().toLowerCase());
+        values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, event.getSession().toString().toLowerCase());
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NAME, event.getName());
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_TIMESTAMP, event.getTimestamp());
@@ -151,7 +146,6 @@ public class DatabaseRunner {
 
         // 3. Clear the cache of the DB so it reloads the file.
         ShadowOneSignalDbHelper.restSetStaticFields();
-        outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
         // 4. Opening the DB will auto trigger the update.
@@ -164,7 +158,7 @@ public class DatabaseRunner {
         writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, values);
         writableDatabase.close();
 
-        List<OutcomeEvent> outcomeEvents = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OSOutcomeEventDB> outcomeEvents = getAllOutcomesRecords(dbHelper);
 
         assertEquals(outcomeEvents.size(), 1);
     }
@@ -180,7 +174,7 @@ public class DatabaseRunner {
                     ")";
 
     private static final String SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES =
-            "CREATE TABLE " + MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME + " (" +
+            "CREATE TABLE " + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V1 + " (" +
                     MockOSCachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
                     MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
                     MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
@@ -190,16 +184,12 @@ public class DatabaseRunner {
     public void shouldUpgradeDbFromV4ToV5() {
         // 1. Init DB as version 4
         ShadowOneSignalDbHelper.DATABASE_VERSION = 4;
-        outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
-        outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
-        // disable tables upgrades on future versions
-        outcomeTableProvider.disableUpgrade();
         SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
         // Create table with the schema we had in DB v4
         writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
 
-        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME + "'", null);
+        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2 + "'", null);
 
         boolean exist = false;
         if (cursor != null) {
@@ -213,23 +203,24 @@ public class DatabaseRunner {
 
         OSCachedUniqueOutcomeName notification = new OSCachedUniqueOutcomeName("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
         ContentValues values = new ContentValues();
-        values.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID, notification.getInfluenceId());
+        values.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, notification.getChannel().toString());
+        values.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, notification.getInfluenceId());
         values.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, notification.getName());
 
         // 3. Clear the cache of the DB so it reloads the file.
         ShadowOneSignalDbHelper.restSetStaticFields();
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
-        outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
+
         // 4. Opening the DB will auto trigger the update.
-        List<OSCachedUniqueOutcomeName> notifications = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
+        List<OSCachedUniqueOutcomeName> notifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
         assertEquals(notifications.size(), 0);
 
         // 5. Table now must exist
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
-        writableDatabase.insert(MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME, null, values);
+        writableDatabase.insert(MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2, null, values);
         writableDatabase.close();
 
-        List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
+        List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
 
         assertEquals(1, uniqueOutcomeNotifications.size());
     }
@@ -249,14 +240,11 @@ public class DatabaseRunner {
     public void shouldUpgradeDbFromV5ToV6() {
         // 1. Init outcome table as version 5
         ShadowOneSignalDbHelper.DATABASE_VERSION = 5;
-        // Create table with the schema we had in DB v4
-        outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
-        // disable tables upgrades on future versions
-        outcomeTableProvider.disableUpgrade();
         SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
-        // Create table with the schema we had in DB v4
+        // Create table with the schema we had in DB v5
         writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
+        writableDatabase.execSQL(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
 
         // Insert one outcome record so we can test migration keeps it later on
         ContentValues values = new ContentValues();
@@ -268,8 +256,6 @@ public class DatabaseRunner {
         // 2. restSetStaticFields so the db reloads and upgrade is done to version 6
         ShadowOneSignalDbHelper.restSetStaticFields();
 
-        // Create table with the schema we had in DB v6
-        outcomeTableProvider.setMockedSqlCreateOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
         // 3. Ensure the upgrade kept our existing record
@@ -304,8 +290,10 @@ public class DatabaseRunner {
         // 1. Init DB as version 6
         ShadowOneSignalDbHelper.DATABASE_VERSION = 6;
         SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
-        // disable tables upgrades on future versions
-        outcomeTableProvider.disableUpgrade();
+
+        // Create table with the schema we had in DB v6
+        writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
+        writableDatabase.execSQL(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
 
         Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + InAppMessageTable.TABLE_NAME + "'", null);
 
@@ -335,9 +323,8 @@ public class DatabaseRunner {
         values.put(InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
         values.put(InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
-        // 3. Clear the cache of the DB so it reloads the file.
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
         ShadowOneSignalDbHelper.restSetStaticFields();
-        ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
         // 4. Opening the DB will auto trigger the update.
         List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages(dbHelper);
@@ -362,17 +349,13 @@ public class DatabaseRunner {
     public void shouldUpgradeDbFromV7ToV8CacheUniqueOutcomeTable() throws JSONException {
         // 1. Init DB as version 7
         ShadowOneSignalDbHelper.DATABASE_VERSION = 7;
-        // Mock table with the schema we had in DB v7
-        outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
-        outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
         SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
-        // disable tables upgrades on future versions
-        outcomeTableProvider.disableUpgrade();
+
         // Create table with the schema we had in DB v7
         writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
         writableDatabase.execSQL(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
 
-        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME + "'", null);
+        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2 + "'", null);
 
         boolean exist = false;
         if (cursor != null) {
@@ -388,13 +371,11 @@ public class DatabaseRunner {
         uniqueOutcomeValuesBeforeUpdate.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID, cachedOutcomeBeforeUpdate.getInfluenceId());
         uniqueOutcomeValuesBeforeUpdate.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, cachedOutcomeBeforeUpdate.getName());
 
-        writableDatabase.insert(MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME, null, uniqueOutcomeValuesBeforeUpdate);
+        writableDatabase.insert(MockOSCachedUniqueOutcomeTable.TABLE_NAME_V1, null, uniqueOutcomeValuesBeforeUpdate);
 
         List<OSCachedUniqueOutcomeName> cachedOutcomesBeforeUpdate = getAllUniqueOutcomeNotificationRecordsDBv5(dbHelper);
         assertEquals(1, cachedOutcomesBeforeUpdate.size());
 
-        outcomeTableProvider = new MockOSOutcomeTableProvider();
-        dbHelper.setOutcomeTableProvider(outcomeTableProvider);
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
         writableDatabase.setVersion(7);
         writableDatabase.close();
@@ -404,11 +385,11 @@ public class DatabaseRunner {
         uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, cachedOutcomeBeforeUpdate.getChannel().toString());
         uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, cachedOutcomeBeforeUpdate.getName());
 
-        // 3. Clear the cache of the DB so it reloads the file.
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
         ShadowOneSignalDbHelper.restSetStaticFields();
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
-        // 4. Opening the DB will auto trigger the update.
+        // 4. Opening the DB will auto trigger the update to DB version 8.
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
         List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
@@ -419,20 +400,16 @@ public class DatabaseRunner {
     }
 
     @Test
-    public void shouldUpgradeDbFromV7ToV8OutcomesTable() throws JSONException {
+    public void shouldUpgradeDbFromV7ToV8OutcomesTable() {
         // 1. Init DB as version 7
         ShadowOneSignalDbHelper.DATABASE_VERSION = 7;
-        // Mock table with the schema we had in DB v7
-        outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
-        outcomeTableProvider.setMockedSqlCreateUniqueOutcomeEntries(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
         SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
-        // disable tables upgrades on future versions
-        outcomeTableProvider.disableUpgrade();
+
         // Create table with the schema we had in DB v7
         writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
         writableDatabase.execSQL(SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES);
 
-        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME + "'", null);
+        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2 + "'", null);
 
         boolean exist = false;
         if (cursor != null) {
@@ -458,17 +435,15 @@ public class DatabaseRunner {
         List<OutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
         assertEquals(1, outcomesSavedBeforeUpdate.size());
 
-        outcomeTableProvider = new MockOSOutcomeTableProvider();
-        dbHelper.setOutcomeTableProvider(outcomeTableProvider);
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
         writableDatabase.setVersion(7);
         writableDatabase.close();
 
-        // 3. Clear the cache of the DB so it reloads the file.
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
         ShadowOneSignalDbHelper.restSetStaticFields();
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
-        // 4. Opening the DB will auto trigger the update.
+        // 4. Opening the DB will auto trigger the update to DB version 8.
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
 
         List<OSOutcomeEventDB> outcomesSaved = getAllOutcomesRecords(dbHelper);
@@ -483,4 +458,191 @@ public class DatabaseRunner {
         assertEquals(new JSONArray(), outcomeSaved.getIamIds());
         assertEquals(OSInfluenceType.UNATTRIBUTED, outcomeSaved.getIamInfluenceType());
     }
+
+    @Test
+    public void shouldUpgradeDbFromV3ToV8UniqueOutcomeTable() {
+        // 1. Init DB as version 3
+        ShadowOneSignalDbHelper.DATABASE_VERSION = 3;
+        SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2 + "'", null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            exist = cursor.getCount() > 0;
+            cursor.close();
+        }
+        // 2. Table must not exist
+        assertFalse(exist);
+        writableDatabase.setVersion(3);
+        writableDatabase.close();
+
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
+        ShadowOneSignalDbHelper.restSetStaticFields();
+
+        // 4. Opening the DB will auto trigger the update to DB version 8.
+        writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        OSCachedUniqueOutcomeName uniqueOutcomeName = new OSCachedUniqueOutcomeName("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
+        ContentValues uniqueOutcomeValues = new ContentValues();
+        uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcomeName.getInfluenceId());
+        uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, uniqueOutcomeName.getChannel().toString());
+        uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, uniqueOutcomeName.getName());
+
+        writableDatabase.insert(MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2, null, uniqueOutcomeValues);
+
+        List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
+        assertEquals(1, uniqueOutcomeNotifications.size());
+        assertEquals(uniqueOutcomeName.getInfluenceId(), uniqueOutcomeNotifications.get(0).getInfluenceId());
+        assertEquals(uniqueOutcomeName.getChannel(), uniqueOutcomeNotifications.get(0).getChannel());
+        assertEquals(uniqueOutcomeName.getName(), uniqueOutcomeNotifications.get(0).getName());
+    }
+
+    @Test
+    public void shouldUpgradeDbFromV3ToV8OutcomeTable() {
+        // 1. Init DB as version 3
+        ShadowOneSignalDbHelper.DATABASE_VERSION = 3;
+        SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSOutcomeEventsTable.TABLE_NAME + "'", null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            exist = cursor.getCount() > 0;
+            cursor.close();
+        }
+        // 2. Table must not exist
+        assertFalse(exist);
+        writableDatabase.setVersion(3);
+        writableDatabase.close();
+
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
+        ShadowOneSignalDbHelper.restSetStaticFields();
+
+        // 4. Opening the DB will auto trigger the update to DB version 8.
+        writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        OSOutcomeEventDB outcomeEventDB = new OSOutcomeEventDB(OSInfluenceType.DIRECT, OSInfluenceType.INDIRECT,
+                "iam_id", "notificationId", "outcome_outcome", 1234, (float) 1234);
+
+        ContentValues outcomeValues = new ContentValues();
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, outcomeEventDB.getNotificationIds().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_IAM_IDS, outcomeEventDB.getIamIds().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, outcomeEventDB.getNotificationInfluenceType().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, outcomeEventDB.getIamInfluenceType().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_NAME, outcomeEventDB.getName());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT, outcomeEventDB.getWeight());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_TIMESTAMP, outcomeEventDB.getTimestamp());
+
+        writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
+
+        List<OSOutcomeEventDB> outcomesSaved = getAllOutcomesRecords(dbHelper);
+        assertEquals(1, outcomesSaved.size());
+        OSOutcomeEventDB outcomeSaved = outcomesSaved.get(0);
+
+        assertEquals(outcomeEventDB.getName(), outcomeSaved.getName());
+        assertEquals(outcomeEventDB.getWeight(), outcomeSaved.getWeight());
+        assertEquals(outcomeEventDB.getTimestamp(), outcomeSaved.getTimestamp());
+        assertEquals(outcomeEventDB.getNotificationIds(), outcomeSaved.getNotificationIds());
+        assertEquals(outcomeEventDB.getNotificationInfluenceType(), outcomeSaved.getNotificationInfluenceType());
+        assertEquals(outcomeEventDB.getIamIds(), outcomeSaved.getIamIds());
+        assertEquals(outcomeEventDB.getIamInfluenceType(), outcomeSaved.getIamInfluenceType());
+    }
+
+    @Test
+    public void shouldUpgradeDbFromV4ToV8UniqueOutcomeTable() {
+        // 1. Init DB as version 4
+        ShadowOneSignalDbHelper.DATABASE_VERSION = 4;
+        SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        // Create table with the schema we had in DB v4
+        writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION2_ENTRIES);
+
+        Cursor cursor = writableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2 + "'", null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            exist = cursor.getCount() > 0;
+            cursor.close();
+        }
+        // 2. Table must not exist
+        assertFalse(exist);
+        writableDatabase.setVersion(4);
+        writableDatabase.close();
+
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
+        ShadowOneSignalDbHelper.restSetStaticFields();
+
+        // 4. Opening the DB will auto trigger the update to DB version 8.
+        writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        OSCachedUniqueOutcomeName uniqueOutcomeName = new OSCachedUniqueOutcomeName("outcome", "notificationId", OSInfluenceChannel.NOTIFICATION);
+        ContentValues uniqueOutcomeValues = new ContentValues();
+        uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcomeName.getInfluenceId());
+        uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, uniqueOutcomeName.getChannel().toString());
+        uniqueOutcomeValues.put(MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME, uniqueOutcomeName.getName());
+
+        writableDatabase.insert(MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2, null, uniqueOutcomeValues);
+
+        List<OSCachedUniqueOutcomeName> uniqueOutcomeNotifications = getAllUniqueOutcomeNotificationRecordsDB(dbHelper);
+        assertEquals(1, uniqueOutcomeNotifications.size());
+        assertEquals(uniqueOutcomeName.getInfluenceId(), uniqueOutcomeNotifications.get(0).getInfluenceId());
+        assertEquals(uniqueOutcomeName.getChannel(), uniqueOutcomeNotifications.get(0).getChannel());
+        assertEquals(uniqueOutcomeName.getName(), uniqueOutcomeNotifications.get(0).getName());
+    }
+
+    @Test
+    public void shouldUpgradeDbFromV4ToV8OutcomeTable() {
+        // 1. Init DB as version 4
+        ShadowOneSignalDbHelper.DATABASE_VERSION = 4;
+        SQLiteDatabase writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        // Create table with the schema we had in DB v4
+        writableDatabase.execSQL(SQL_CREATE_OUTCOME_REVISION1_ENTRIES);
+        Cursor cursor = writableDatabase.query(MockOSOutcomeEventsTable.TABLE_NAME, null, null, null, null, null, null);
+
+        boolean exist = false;
+        if (cursor != null) {
+            String[] columns = cursor.getColumnNames();
+            exist = columns.length == 6;
+            cursor.close();
+        }
+        // 2. Table must not exist
+        assertTrue(exist);
+        writableDatabase.setVersion(4);
+        writableDatabase.close();
+
+        // 3. Clear the cache of the DB so it reloads the file and next getSQLiteDatabaseWithRetries will auto trigger the update
+        ShadowOneSignalDbHelper.restSetStaticFields();
+
+        // 4. Opening the DB will auto trigger the update to DB version 8.
+        writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
+
+        OSOutcomeEventDB outcomeEventDB = new OSOutcomeEventDB(OSInfluenceType.DIRECT, OSInfluenceType.INDIRECT,
+                "iam_id", "notificationId", "outcome_outcome", 1234, (float) 1234);
+
+        ContentValues outcomeValues = new ContentValues();
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, outcomeEventDB.getNotificationIds().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_IAM_IDS, outcomeEventDB.getIamIds().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, outcomeEventDB.getNotificationInfluenceType().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, outcomeEventDB.getIamInfluenceType().toString());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_NAME, outcomeEventDB.getName());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT, outcomeEventDB.getWeight());
+        outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_TIMESTAMP, outcomeEventDB.getTimestamp());
+
+        writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
+
+        List<OSOutcomeEventDB> outcomesSaved = getAllOutcomesRecords(dbHelper);
+        assertEquals(1, outcomesSaved.size());
+        OSOutcomeEventDB outcomeSaved = outcomesSaved.get(0);
+
+        assertEquals(outcomeEventDB.getName(), outcomeSaved.getName());
+        assertEquals(outcomeEventDB.getWeight(), outcomeSaved.getWeight());
+        assertEquals(outcomeEventDB.getTimestamp(), outcomeSaved.getTimestamp());
+        assertEquals(outcomeEventDB.getNotificationIds(), outcomeSaved.getNotificationIds());
+        assertEquals(outcomeEventDB.getNotificationInfluenceType(), outcomeSaved.getNotificationInfluenceType());
+        assertEquals(outcomeEventDB.getIamIds(), outcomeSaved.getIamIds());
+        assertEquals(outcomeEventDB.getIamInfluenceType(), outcomeSaved.getIamInfluenceType());
+    }
+
 }
