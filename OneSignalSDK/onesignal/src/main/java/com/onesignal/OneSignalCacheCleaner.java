@@ -118,5 +118,5 @@ class OneSignalCacheCleaner {
                 whereStr,
                 null);
     }
-
+  
 }
