@@ -190,6 +190,16 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    }
 
    private synchronized void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
+      // Specifically running only when going from 8 to 9+
+      if (oldVersion == 8) {
+         upgradeFromV8ToV9(db);
+         return;
+      }
+
+      internalOnUpgradeHappyPath(db, oldVersion);
+   }
+
+   private synchronized void internalOnUpgradeHappyPath(SQLiteDatabase db, int oldVersion) {
       if (oldVersion < 2)
          upgradeToV2(db);
 
@@ -197,7 +207,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
          upgradeToV3(db);
 
       if (oldVersion < 4)
-          upgradeToV4(db);
+         upgradeToV4(db);
 
       if (oldVersion < 5)
          upgradeToV5(db);
@@ -266,6 +276,29 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db);
    }
 
+   // We only want to run this if going from DB v8 to v9 specifically since
+   // it was originally missed early DB query's in 3.14.1
+   // Added for 3.14.1
+   private static void upgradeFromV8ToV9(SQLiteDatabase db) {
+      // Check for IAM table
+      Cursor iamCursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + InAppMessageTable.TABLE_NAME + "'", null);
+
+      boolean exist = false;
+      if (iamCursor != null) {
+         exist = iamCursor.getCount() > 0;
+         iamCursor.close();
+      }
+
+      // If IAM table upgrade is missing because of previous upgrade failure, create table
+      if (!exist)
+         upgradeToV7(db);
+
+      // Migrate Outcome table if necessary
+      outcomeTableProvider.upgradeOutcomeTableFromDBv8ToDBv9IfNecessary(db);
+      // Migrate Unique Outcome table if necessary
+      outcomeTableProvider.upgradeUniqueOutcomeTableFromDBv8ToDBv9IfNecessary(db);
+   }
+
    private static void safeExecSQL(SQLiteDatabase db, String sql) {
       try {
          db.execSQL(sql);
@@ -296,15 +329,6 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
 
       onCreate(db);
    }
-
-   // Could enable WAL in the future but requires Android API 11
-   /*
-   @Override
-   public void onConfigure(SQLiteDatabase db) {
-      super.onConfigure(db);
-      db.enableWriteAheadLogging();
-   }
-   */
 
    static StringBuilder recentUninteractedWithNotificationsWhere() {
       long currentTimeSec = System.currentTimeMillis() / 1_000L;

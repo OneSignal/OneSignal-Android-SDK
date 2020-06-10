@@ -1,5 +1,6 @@
 package com.onesignal.outcomes;
 
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 
@@ -76,7 +77,7 @@ public class OSOutcomeTableProvider {
      */
     public void upgradeOutcomeTableRevision1To2(SQLiteDatabase db) {
         String commonColumns = OutcomeEventsTable._ID + "," +
-                OutcomeEventsTable.COLUMN_NAME_SESSION+ "," +
+                OutcomeEventsTable.COLUMN_NAME_SESSION + "," +
                 OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
                 OutcomeEventsTable.COLUMN_NAME_NAME + "," +
                 OutcomeEventsTable.COLUMN_NAME_TIMESTAMP;
@@ -169,6 +170,58 @@ public class OSOutcomeTableProvider {
         } catch (SQLiteException e) {
             e.printStackTrace();
         }
+    }
+
+    public void upgradeOutcomeTableFromDBv8ToDBv9IfNecessary(SQLiteDatabase db) {
+        Cursor outcomeCursorColumns = db.query(OutcomeEventsTable.TABLE_NAME, null, null, null, null, null, null);
+
+        boolean updatedToV3 = false;
+        boolean updatedToV2 = false;
+        if (outcomeCursorColumns != null) {
+            String[] columns = outcomeCursorColumns.getColumnNames();
+            for (String columnName : columns) {
+                // This column was added on DB v5 SDK v3.12.1, migration added on DB v6 SDK v3.12.2
+                if (columnName.equals(OutcomeEventsTable.COLUMN_NAME_WEIGHT)) {
+                    updatedToV2 = true;
+                    break;
+                }
+            }
+            for (String columnName : columns) {
+                // This column was added on DB v8 SDK v3.14.0
+                if (columnName.equals(OutcomeEventsTable.COLUMN_NAME_IAM_IDS)) {
+                    updatedToV3 = true;
+                    break;
+                }
+            }
+        }
+
+        if (!updatedToV2)
+            upgradeOutcomeTableRevision1To2(db);
+        // If outcome table doesn't have all new columns of V3
+        if (!updatedToV3)
+            upgradeOutcomeTableRevision2To3(db);
+    }
+
+    public void upgradeUniqueOutcomeTableFromDBv8ToDBv9IfNecessary(SQLiteDatabase db) {
+        Cursor uniqueOutcomeV1Cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + CachedUniqueOutcomeTable.TABLE_NAME_V1 + "'", null);
+        Cursor uniqueOutcomeV2Cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type ='table' AND name='" + CachedUniqueOutcomeTable.TABLE_NAME_V2 + "'", null);
+
+        boolean v1Exist = false;
+        if (uniqueOutcomeV1Cursor != null) {
+            v1Exist = uniqueOutcomeV1Cursor.getCount() > 0;
+            uniqueOutcomeV1Cursor.close();
+        }
+
+        boolean v2Exist = false;
+        if (uniqueOutcomeV2Cursor != null) {
+            v2Exist = uniqueOutcomeV2Cursor.getCount() > 0;
+            uniqueOutcomeV2Cursor.close();
+        }
+
+        // If unique outcome v1 exist and no unique outcome v2 exist, migrate from v1 to v2
+        if (v1Exist && !v2Exist)
+            upgradeCacheOutcomeTableRevision1To2(db);
+
     }
 
 }
