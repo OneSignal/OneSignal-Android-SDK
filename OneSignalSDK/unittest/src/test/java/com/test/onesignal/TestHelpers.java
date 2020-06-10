@@ -353,7 +353,7 @@ public class TestHelpers {
    static ArrayList<OSCachedUniqueOutcomeName> getAllUniqueOutcomeNotificationRecordsDBv5(OneSignalDb db) {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
-              MockOSCachedUniqueOutcomeTable.OLD_TABLE_NAME,
+              MockOSCachedUniqueOutcomeTable.TABLE_NAME_V1,
               null,
               null,
               null,
@@ -384,7 +384,7 @@ public class TestHelpers {
    static ArrayList<OSCachedUniqueOutcomeName> getAllUniqueOutcomeNotificationRecordsDB(OneSignalDb db) {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
-              MockOSCachedUniqueOutcomeTable.TABLE_NAME,
+              MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2,
               null,
               null,
               null,

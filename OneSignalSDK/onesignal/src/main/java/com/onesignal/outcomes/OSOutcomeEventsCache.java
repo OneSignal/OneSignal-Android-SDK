@@ -293,7 +293,7 @@ class OSOutcomeEventsCache {
             values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, String.valueOf(uniqueOutcome.getChannel()));
             values.put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName);
 
-            writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values);
+            writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME_V2, null, values);
         }
     }
 
@@ -327,7 +327,7 @@ class OSOutcomeEventsCache {
                     String[] args = new String[]{channelInfluenceId, String.valueOf(channel), name};
 
                     cursor = readableDb.query(
-                            CachedUniqueOutcomeTable.TABLE_NAME,
+                            CachedUniqueOutcomeTable.TABLE_NAME_V2,
                             columns,
                             where,
                             args,
