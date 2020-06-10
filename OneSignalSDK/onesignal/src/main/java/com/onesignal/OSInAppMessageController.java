@@ -129,7 +129,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     protected void initRedisplayData(OneSignalDbHelper dbHelper) {
-        inAppMessageRepository = new OSInAppMessageRepository(dbHelper);
+        inAppMessageRepository = getInAppMessageRepository(dbHelper);
         redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
