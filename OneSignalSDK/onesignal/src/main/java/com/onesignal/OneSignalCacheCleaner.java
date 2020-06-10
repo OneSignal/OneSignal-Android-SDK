@@ -71,7 +71,11 @@ class OneSignalCacheCleaner {
             @Override
             public void run() {
                 Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                new OSInAppMessageRepository(dbHelper).cleanCachedInAppMessages();
+
+                OSInAppMessageRepository inAppMessageRepository = OSInAppMessageController
+                        .getController()
+                        .getInAppMessageRepository(dbHelper);
+                inAppMessageRepository.cleanCachedInAppMessages();
             }
         }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
     }
