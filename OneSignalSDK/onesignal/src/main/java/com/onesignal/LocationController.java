@@ -458,7 +458,7 @@ class LocationController {
             if (locationUpdateListener != null)
                LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationUpdateListener);
             locationUpdateListener = new LocationUpdateListener(googleApiClient);
-         } else {
+         } else if (huaweiFusedLocationClient != null) {
             if (locationUpdateListener != null)
                huaweiFusedLocationClient.removeLocationUpdates(locationUpdateListener);
             locationUpdateListener = new LocationUpdateListener(huaweiFusedLocationClient);
