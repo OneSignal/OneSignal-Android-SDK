@@ -204,8 +204,19 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       if (oldVersion < 7)
          upgradeToV7(db);
 
-      if (oldVersion < 8)
-         upgradeToV8(db);
+      // Specifically upgrade from DB versions that already have outcome table with session column created
+      // DB v4 is the first version creating outcome table
+      // If we come from earlier DB versions then the outcome table will already have influence columns instead of session
+      // because upgradeToV4 step will use the new outcome table creation query
+      if (oldVersion > 3 && oldVersion < 8)
+         upgradeFromV3ToV8(db);
+
+      // Specifically upgrade from DB versions that already have cached_unique_outcome_notification table created
+      // DB v5 is the first version creating unique outcome table
+      // If we come from earlier DB versions then the cached_unique_outcome_notification table won't exist
+      // because cached_unique_outcome table will be created instead on upgradeToV5 step
+      if (oldVersion > 4 && oldVersion < 8)
+         upgradeFromV4ToV8(db);
    }
 
    // Add collapse_id field and index
@@ -242,49 +253,26 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       // Added for 3.12.1
       safeExecSQL(db, outcomeTableProvider.getSqlCreateUniqueOutcomeEntries());
       // Added for 3.12.2
-      upgradeOutcomeTableRevision1To2(db);
+      upgradeFromV5ToV6(db);
    }
 
    // We only want to run this if going from DB v5 to v6 specifically since
-   //   it was originally missed in upgradeToV5 in 3.12.1
+   // it was originally missed in upgradeToV5 in 3.12.1
    // Added for 3.12.2
    private static void upgradeFromV5ToV6(SQLiteDatabase db) {
-      upgradeOutcomeTableRevision1To2(db);
+      outcomeTableProvider.upgradeOutcomeTableRevision1To2(db);
    }
 
    private static void upgradeToV7(SQLiteDatabase db) {
       safeExecSQL(db, SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
    }
 
-   private synchronized void upgradeToV8(SQLiteDatabase db) {
+   private synchronized void upgradeFromV3ToV8(SQLiteDatabase db) {
       outcomeTableProvider.upgradeOutcomeTableRevision2To3(db);
-      outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db);
    }
 
-   // On the outcome table this adds the new weight column and drops params column.
-   private static void upgradeOutcomeTableRevision1To2(SQLiteDatabase db) {
-      String commonColumns = "_id,name,session,timestamp,notification_ids";
-      try {
-         // Since SQLite does not support dropping a column we need to:
-         //   1. Create a temptable
-         //   2. Copy outcome table into it
-         //   3. Drop the outcome table
-         //   4. Recreate it with the correct fields
-         //   5. Copy the temptable rows back into the new outcome table
-         //   6. Drop the temptable.
-         db.execSQL("BEGIN TRANSACTION;");
-         db.execSQL("CREATE TEMPORARY TABLE outcome_backup(" + commonColumns + ");");
-         db.execSQL("INSERT INTO outcome_backup SELECT " + commonColumns + " FROM outcome;");
-         db.execSQL("DROP TABLE outcome;");
-         db.execSQL(outcomeTableProvider.getSqlCreateOutcomeEntries());
-         // Not converting weight from param here, just set to zero.
-         //   3.12.1 quickly replaced 3.12.0 so converting cache isn't critical.
-         db.execSQL("INSERT INTO outcome (" + commonColumns + ", weight) SELECT " + commonColumns + ", 0 FROM outcome_backup;");
-         db.execSQL("DROP TABLE outcome_backup;");
-         db.execSQL("COMMIT;");
-      } catch (SQLiteException e) {
-         e.printStackTrace();
-      }
+   private synchronized void upgradeFromV4ToV8(SQLiteDatabase db) {
+      outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db);
    }
 
    private static void safeExecSQL(SQLiteDatabase db, String sql) {

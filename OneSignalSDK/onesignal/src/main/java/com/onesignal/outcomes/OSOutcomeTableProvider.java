@@ -20,6 +20,18 @@ public class OSOutcomeTableProvider {
     public static final String CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID;
     public static final String CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE = CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE;
 
+    private static final String OLD_SQL_CREATE_OUTCOME_ENTRIES =
+            "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
+                    OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," +
+                    // "params TEXT" Added in v4, removed in v5.
+                    OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
+                    ");";
+
+
     private static final String SQL_CREATE_OUTCOME_ENTRIES =
             "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
                     OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
@@ -40,6 +52,34 @@ public class OSOutcomeTableProvider {
                     CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + TEXT_TYPE + "," +
                     CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
                     ");";
+
+    /**
+     * On the outcome table this adds the new weight column and drops params column.
+     */
+    public void upgradeOutcomeTableRevision1To2(SQLiteDatabase db) {
+        String commonColumns = "_id,session,notification_ids,name,timestamp";
+        try {
+            // Since SQLite does not support dropping a column we need to:
+            //   1. Create a temptable
+            //   2. Copy outcome table into it
+            //   3. Drop the outcome table
+            //   4. Recreate it with the correct fields
+            //   5. Copy the temptable rows back into the new outcome table
+            //   6. Drop the temptable.
+            db.execSQL("BEGIN TRANSACTION;");
+            db.execSQL("CREATE TEMPORARY TABLE outcome_backup(" + commonColumns + ");");
+            db.execSQL("INSERT INTO outcome_backup SELECT " + commonColumns + " FROM outcome;");
+            db.execSQL("DROP TABLE outcome;");
+            db.execSQL(OLD_SQL_CREATE_OUTCOME_ENTRIES);
+            // Not converting weight from param here, just set to zero.
+            //   3.12.1 quickly replaced 3.12.0 so converting cache isn't critical.
+            db.execSQL("INSERT INTO outcome (" + commonColumns + ", weight) SELECT " + commonColumns + ", 0 FROM outcome_backup;");
+            db.execSQL("DROP TABLE outcome_backup;");
+            db.execSQL("COMMIT;");
+        } catch (SQLiteException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * On the outcome table rename session column to notification influence type
