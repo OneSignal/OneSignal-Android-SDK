@@ -27,32 +27,15 @@
 
 package com.onesignal;
 
-import android.content.Context;
-
-import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
 @Implements(LocationController.class)
 public class ShadowLocationController {
 
    public static Integer apiFallbackTime = LocationController.API_FALLBACK_TIME;
-   public static boolean googleServicesAvailable = true;
-   public static boolean huaweiServicesAvailable = false;
 
    public static void reset() {
       apiFallbackTime = LocationController.API_FALLBACK_TIME;
-      googleServicesAvailable = true;
-      huaweiServicesAvailable = false;
-   }
-
-   @Implementation
-   protected static boolean isGooglePlayServicesAvailable(Context context) {
-      return googleServicesAvailable;
-   }
-
-   @Implementation
-   protected static boolean isHMSAvailable(Context context) {
-      return huaweiServicesAvailable;
    }
 
    public static int getApiFallbackWait() {
