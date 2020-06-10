@@ -281,9 +281,10 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
          //   3.12.1 quickly replaced 3.12.0 so converting cache isn't critical.
          db.execSQL("INSERT INTO outcome (" + commonColumns + ", weight) SELECT " + commonColumns + ", 0 FROM outcome_backup;");
          db.execSQL("DROP TABLE outcome_backup;");
-         db.execSQL("COMMIT;");
       } catch (SQLiteException e) {
          e.printStackTrace();
+      } finally {
+         db.execSQL("COMMIT;");
       }
    }
 
