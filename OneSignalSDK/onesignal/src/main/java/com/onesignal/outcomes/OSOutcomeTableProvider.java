@@ -20,7 +20,29 @@ public class OSOutcomeTableProvider {
     public static final String CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID;
     public static final String CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE = CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE;
 
-    private static final String SQL_CREATE_OUTCOME_ENTRIES =
+    public static final String SQL_CREATE_OUTCOME_ENTRIES_V1 =
+            "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
+                    OutcomeEventsTable._ID + " INTEGER PRIMARY KEY," +
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " TIMESTAMP" +
+                    ");";
+
+    public static final String SQL_CREATE_OUTCOME_ENTRIES_V2 =
+            "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
+                    OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," +
+                    // "params TEXT" Added in v4, removed in v5.
+                    OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
+                    ");";
+
+
+    public static final String SQL_CREATE_OUTCOME_ENTRIES_V3 =
             "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
                     OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE + TEXT_TYPE + "," +
@@ -33,13 +55,54 @@ public class OSOutcomeTableProvider {
                     OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
                     ");";
 
-    private static final String SQL_CREATE_UNIQUE_OUTCOME_ENTRIES =
-            "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME + " (" +
+    public static final String SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1 =
+            "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME_V1 + " (" +
+                    CachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+                    CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + "," +
+                    CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
+                    ");";
+
+
+    public static final String SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2 =
+            "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + " (" +
                     CachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + "," +
                     CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + TEXT_TYPE + "," +
                     CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + TEXT_TYPE + "," +
                     CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
                     ");";
+
+    /**
+     * On the outcome table this adds the new weight column and drops params column.
+     */
+    public void upgradeOutcomeTableRevision1To2(SQLiteDatabase db) {
+        String commonColumns = OutcomeEventsTable._ID + "," +
+                OutcomeEventsTable.COLUMN_NAME_SESSION+ "," +
+                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
+                OutcomeEventsTable.COLUMN_NAME_NAME + "," +
+                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP;
+        try {
+            // Since SQLite does not support dropping a column we need to:
+            //   1. Create a temptable
+            //   2. Copy outcome table into it
+            //   3. Drop the outcome table
+            //   4. Recreate it with the correct fields
+            //   5. Copy the temptable rows back into the new outcome table
+            //   6. Drop the temptable.
+            db.execSQL("BEGIN TRANSACTION;");
+            db.execSQL("CREATE TEMPORARY TABLE outcome_backup(" + commonColumns + ");");
+            db.execSQL("INSERT INTO outcome_backup SELECT " + commonColumns + " FROM outcome;");
+            db.execSQL("DROP TABLE outcome;");
+            db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V2);
+            // Not converting weight from param here, just set to zero.
+            //   3.12.1 quickly replaced 3.12.0 so converting cache isn't critical.
+            db.execSQL("INSERT INTO outcome (" + commonColumns + ", weight) SELECT " + commonColumns + ", 0 FROM outcome_backup;");
+            db.execSQL("DROP TABLE outcome_backup;");
+        } catch (SQLiteException e) {
+            e.printStackTrace();
+        } finally {
+            db.execSQL("COMMIT;");
+        }
+    }
 
     /**
      * On the outcome table rename session column to notification influence type
@@ -66,7 +129,7 @@ public class OSOutcomeTableProvider {
             //   4. Drop altered table
             db.execSQL("BEGIN TRANSACTION;");
             db.execSQL("ALTER TABLE " + OutcomeEventsTable.TABLE_NAME + " RENAME TO " + auxOutcomeTableName + ";");
-            db.execSQL(getSqlCreateOutcomeEntries());
+            db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3);
             db.execSQL("INSERT INTO " + OutcomeEventsTable.TABLE_NAME + "(" + commonColumnsWithNewSessionColumn + ")" +
                     " SELECT " + commonColumnsWithSessionColumn + " FROM " + auxOutcomeTableName + ";");
             db.execSQL("DROP TABLE " + auxOutcomeTableName + ";");
@@ -89,7 +152,7 @@ public class OSOutcomeTableProvider {
         String commonColumnsWithNotificationIdColumn = commonColumns + "," + CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID;
         String commonColumnsWithNewInfluenceIdColumn = commonColumns + "," + CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID;
 
-        String oldCacheUniqueOutcomeTable = CachedUniqueOutcomeTable.OLD_TABLE_NAME;
+        String oldCacheUniqueOutcomeTable = CachedUniqueOutcomeTable.TABLE_NAME_V1;
         try {
             // Since SQLite does not support dropping a column we need to:
             // See https://www.techonthenet.com/sqlite/tables/alter_table.php
@@ -98,10 +161,10 @@ public class OSOutcomeTableProvider {
             //   3. Copy data to new table
             //   4. Drop altered table
             db.execSQL("BEGIN TRANSACTION;");
-            db.execSQL(getSqlCreateUniqueOutcomeEntries());
-            db.execSQL("INSERT INTO " + CachedUniqueOutcomeTable.TABLE_NAME + "(" + commonColumnsWithNewInfluenceIdColumn + ")" +
+            db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2);
+            db.execSQL("INSERT INTO " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + "(" + commonColumnsWithNewInfluenceIdColumn + ")" +
                     " SELECT " + commonColumnsWithNotificationIdColumn + " FROM " + oldCacheUniqueOutcomeTable + ";");
-            db.execSQL("UPDATE " + CachedUniqueOutcomeTable.TABLE_NAME +
+            db.execSQL("UPDATE " + CachedUniqueOutcomeTable.TABLE_NAME_V2 +
                     " SET " + CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = \'" + OSInfluenceChannel.NOTIFICATION.toString() + "\';");
             db.execSQL("DROP TABLE " + oldCacheUniqueOutcomeTable + ";");
         } catch (SQLiteException e) {
@@ -111,17 +174,4 @@ public class OSOutcomeTableProvider {
         }
     }
 
-    /**
-     * Testing mock purposes
-     */
-    public String getSqlCreateOutcomeEntries() {
-        return SQL_CREATE_OUTCOME_ENTRIES;
-    }
-
-    /**
-     * Testing mock purposes
-     */
-    public String getSqlCreateUniqueOutcomeEntries() {
-        return SQL_CREATE_UNIQUE_OUTCOME_ENTRIES;
-    }
 }
