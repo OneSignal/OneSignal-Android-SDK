@@ -694,7 +694,7 @@ public class OneSignal {
          return;
       }
 
-      NotificationExtenderService.setupNotificationExtensionServiceClass();
+      NotificationExtender.setupNotificationExtensionServiceClass();
 
       handleActivityLifecycleHandler(appContext);
 
@@ -2118,9 +2118,11 @@ public class OneSignal {
     * @see OSNotificationWillShowInForegroundManager.AppNotificationWillShowInForegroundWorker
     */
    static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
-      // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
-      if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
-         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler and appNotificationWillShowInForegroundHandler are both null, moving on to showing OS notification id: " + notifJob.getApiNotificationId());
+      // Move on to showing the notification:
+      //    1. If that app is in the background no foreground handlers should fire
+      //    2. No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler were setup
+      if (!isAppActive() || (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null)) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "App is in background or extNotificationWillShowInForegroundHandler and appNotificationWillShowInForegroundHandler are both null, moving on to showing OS notification id: " + notifJob.getApiNotificationId());
          GenerateNotification.fromJsonPayload(notifJob);
          return;
       }

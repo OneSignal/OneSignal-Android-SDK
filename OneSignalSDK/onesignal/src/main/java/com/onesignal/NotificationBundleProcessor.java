@@ -68,7 +68,7 @@ class NotificationBundleProcessor {
    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
    static final String DEFAULT_ACTION = "__DEFAULT__";
 
-   static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
+   static void ProcessFromFCMIntentService(Context context, BundleCompat bundle, NotificationExtender.OverrideSettings overrideSettings) {
       OneSignal.setAppContext(context);
       try {
          String jsonStrPayload = bundle.getString("json_payload");
@@ -90,12 +90,13 @@ class NotificationBundleProcessor {
 
          if (bundle.containsKey("android_notif_id")) {
             if (overrideSettings == null)
-               overrideSettings = new NotificationExtenderService.OverrideSettings();
+               overrideSettings = new NotificationExtender.OverrideSettings();
             overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
          }
          
          notifJob.overrideSettings = overrideSettings;
          ProcessJobForDisplay(notifJob);
+         OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
 
          // Delay to prevent CPU spikes.
          //    Normally more than one notification is restored at a time.
@@ -120,10 +121,8 @@ class NotificationBundleProcessor {
 
       int androidNotifId = notifJob.getAndroidIdWithoutCreate();
       boolean doDisplay = shouldDisplayNotif(notifJob);
-      if (doDisplay) {
+      if (doDisplay)
          androidNotifId = notifJob.getAndroidId();
-         OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
-      }
 
       if (!notifJob.isRestoring && !notifJob.isIamPreview) {
          processNotification(notifJob, opened);
@@ -152,7 +151,7 @@ class NotificationBundleProcessor {
    private static OSNotificationGenerationJob saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
       OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
-      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+      notifJob.overrideSettings = new NotificationExtender.OverrideSettings();
       notifJob.overrideSettings.androidNotificationId = notificationId;
 
       processNotification(notifJob, opened);
@@ -436,7 +435,6 @@ class NotificationBundleProcessor {
          return;
       String collapse_id = notifJob.jsonPayload.optString("collapse_key");
 
-
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
       Cursor cursor = null;
 
@@ -500,7 +498,7 @@ class NotificationBundleProcessor {
       // Create new notifJob to be processed for display
       final OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = bundleAsJSONObject(bundle);
-      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+      notifJob.overrideSettings = new NotificationExtender.OverrideSettings();
 
       // Process and save as a opened notification to prevent duplicates.
       String alert = bundle.getString("alert");
@@ -510,6 +508,7 @@ class NotificationBundleProcessor {
       }
       else {
          NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+         OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
       }
 
       return result;
@@ -541,11 +540,54 @@ class NotificationBundleProcessor {
       intent.putExtra("json_payload", bundleAsJSONObject(bundle).toString());
       intent.putExtra("timestamp", System.currentTimeMillis() / 1000L);
 
-      NotificationExtenderService.getInstance().processIntent(context, intent);
+      processIntent(context, intent);
       FCMBroadcastReceiver.completeWakefulIntent(intent);
 
       result.hasExtenderService = true;
       return true;
+   }
+
+   static void processIntent(Context context, Intent intent) {
+      Bundle bundle = intent.getExtras();
+
+      // Service maybe triggered without extras on some Android devices on boot.
+      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/99
+      if (bundle == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No extras sent to NotificationExtenderService in its Intent!\n" + intent);
+         return;
+      }
+
+      String jsonStrPayload = bundle.getString("json_payload");
+      if (jsonStrPayload == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to NotificationExtenderService: " + bundle);
+         return;
+      }
+
+      try {
+         JSONObject currentJsonPayload = new JSONObject(jsonStrPayload);
+         boolean currentlyRestoring = bundle.getBoolean("restoring", false);
+         NotificationExtender.OverrideSettings currentBaseOverrideSettings = null;
+         if (bundle.containsKey("android_notif_id")) {
+            currentBaseOverrideSettings = new NotificationExtender.OverrideSettings();
+            currentBaseOverrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
+         }
+
+         if (!currentlyRestoring && OneSignal.notValidOrDuplicated(context, currentJsonPayload))
+            return;
+
+         Long restoreTimestamp = bundle.getLong("timestamp");
+
+         OSNotificationReceived notificationReceived = new OSNotificationReceived(context,
+                 currentJsonPayload,
+                 currentlyRestoring,
+                 OneSignal.isAppActive(),
+                 restoreTimestamp,
+                 currentBaseOverrideSettings);
+
+         OSNotificationProcessingManager.NotificationProcessingManager.beginEnqueueingWork(context, notificationReceived);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
    }
 
    static boolean shouldDisplay(String body) {

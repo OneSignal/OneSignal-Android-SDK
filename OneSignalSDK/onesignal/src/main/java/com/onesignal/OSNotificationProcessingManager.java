@@ -112,44 +112,52 @@ class OSNotificationProcessingManager {
                 return Result.failure();
             }
 
-            OSNotificationReceived notificationReceived = manager.getJob(notificationReceivedKey);
+            final OSNotificationReceived notificationReceived = manager.getJob(notificationReceivedKey);
             if (notificationReceived == null) {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "notificationReceived is null for key: " + notificationReceivedKey + ", returning Result.failure for Worker");
                 return Result.failure();
             }
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Beginning to enqueue work for OS notification id: " + notificationReceived.payload.notificationID);
 
-            NotificationExtenderService service = NotificationExtenderService.getInstance();
-            service.notificationReceivedResult = null;
-            service.isNotificationModified = false;
+            NotificationExtender notifExtender = notificationReceived.getNotificationExtender();
             // Has a notificationProcessingHandler been setup
             boolean useNotificationProcessor = OneSignal.notificationProcessingHandler != null;
             try {
-                if (useNotificationProcessor)
+                if (useNotificationProcessor) {
+                    notificationReceived.startTimeout(new Runnable() {
+                        @Override
+                        public void run() {
+                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "notificationProcessingHandler complete never called, using default post delayed timeout handler's timeout runnable");
+                            notificationReceived.complete();
+                        }
+                    });
                     OneSignal.notificationProcessingHandler.onNotificationProcessing(context, notificationReceived);
+                }
             } catch (Throwable t) {
                 //noinspection ConstantConditions - displayNotification might have been called by the developer
-                if (service.notificationReceivedResult == null)
+                if (notifExtender.notificationReceivedResult == null)
                     OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
                 else
                     OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
             }
 
             // If the developer did not call displayNotification from onNotificationProcessing
-            if (service.notificationReceivedResult == null) {
+            if (notifExtender.notificationReceivedResult == null) {
                 // Save as processed to prevent possible duplicate calls from canonical ids.
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "notificationReceivedResult is null, so setModifiedContent from the OSNotificationReceived class has not been called for notification id: " + notificationReceived.payload.notificationID);
 
-                boolean display = (!useNotificationProcessor || !service.isNotificationModified) &&
-                        NotificationBundleProcessor.shouldDisplay(service.currentJsonPayload.optString("alert"));
+                boolean display = !useNotificationProcessor &&
+                        NotificationBundleProcessor.shouldDisplay(notifExtender.currentJsonPayload.optString("alert"));
 
+                OSNotificationGenerationJob notifJob = notifExtender.createNotifJobFromCurrent(context);
                 if (!display) {
                     if (!notificationReceived.isRestoring()) {
-                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Not for display and not restoring notification with notification id: " + notificationReceived.payload.notificationID);
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Notification not for display and not restoring notification with notification id: " + notificationReceived.payload.notificationID);
 
-                        OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-                        notifJob.jsonPayload = service.currentJsonPayload;
-                        notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
+                        if (notifExtender.currentBaseOverrideSettings == null)
+                            notifExtender.currentBaseOverrideSettings = new NotificationExtender.OverrideSettings();
+
+                        notifJob.overrideSettings = notifExtender.currentBaseOverrideSettings;
                         notifJob.overrideSettings.androidNotificationId = -1;
 
                         NotificationBundleProcessor.processNotification(notifJob, true);
@@ -157,13 +165,13 @@ class OSNotificationProcessingManager {
                     }
                     // If are are not displaying a restored notification make sure we mark it as dismissed
                     //   This will prevent it from being restored again.
-                    else if (service.currentBaseOverrideSettings != null)
-                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Not for display, but is restoring notification storing as dismissed with notification id: " + notificationReceived.payload.notificationID);
-                        NotificationBundleProcessor.markRestoredNotificationAsDismissed(service.createNotifJobFromCurrent(context));
+                    else if (notifExtender.currentBaseOverrideSettings != null)
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Notification not for display, but is restoring notification; storing as dismissed with notification id: " + notificationReceived.payload.notificationID);
+                        NotificationBundleProcessor.markRestoredNotificationAsDismissed(notifJob);
                 }
                 else {
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Displayable notification with notification id: " + notificationReceived.payload.notificationID);
-                    NotificationBundleProcessor.ProcessJobForDisplay(service.createNotifJobFromCurrent(context));
+                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Notification displayable with notification id: " + notificationReceived.payload.notificationID);
+                    NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
                 }
             }
 

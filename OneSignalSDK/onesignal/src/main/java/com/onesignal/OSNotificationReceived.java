@@ -29,16 +29,42 @@ package com.onesignal;
 
 import android.content.Context;
 
-public class OSNotificationReceived {
+import org.json.JSONObject;
+
+public class OSNotificationReceived extends OSTimeoutHandler {
+
+    // Timeout in millis before applying defaults
+    static final long PROCESSING_NOTIFICATION_TIMEOUT = 30 * 1_000L;
+
+    // The notification extender keeping track of notification received data and override settings
+    private NotificationExtender notificationExtender;
+
+    // boolean keeping track of whether complete was called or not
+    boolean isCompleted = false;
 
     public OSNotificationPayload payload;
     private boolean isRestoring;
     private boolean isAppInFocus;
+    private boolean shouldDisplay;
 
-    OSNotificationReceived(OSNotificationPayload notificationPayload, boolean restoring, boolean appActive) {
-        payload = notificationPayload;
+    OSNotificationReceived(Context context,
+                           JSONObject jsonPayload,
+                           boolean restoring,
+                           boolean appActive,
+                           Long restoreTimestamp,
+                           NotificationExtender.OverrideSettings currentBaseOverrideSettings) {
+
+        setTimeout(PROCESSING_NOTIFICATION_TIMEOUT);
+
+        payload = NotificationBundleProcessor.OSNotificationPayloadFrom(jsonPayload);
         isRestoring = restoring;
         isAppInFocus = appActive;
+
+        notificationExtender = new NotificationExtender(context, jsonPayload, restoreTimestamp, restoring, currentBaseOverrideSettings);
+    }
+
+    public NotificationExtender getNotificationExtender() {
+        return notificationExtender;
     }
 
     public boolean isRestoring() {
@@ -49,8 +75,35 @@ public class OSNotificationReceived {
         return isAppInFocus;
     }
 
-    public OSNotificationReceivedResult setModifiedContent(Context context, NotificationExtenderService.OverrideSettings overrideSettings) {
-        return NotificationExtenderService.getInstance().displayNotification(context, overrideSettings);
+    /**
+     *
+     */
+    public void setModifiedContent(NotificationExtender.OverrideSettings overrideSettings) {
+        notificationExtender.setModifiedContentForNotification(overrideSettings);
+    }
+
+    /**
+     *
+     */
+    public OSNotificationReceivedResult display() {
+        shouldDisplay = true;
+        return notificationExtender.displayNotification();
+    }
+
+    // Method controlling completion from the NotificationProcessingHandler
+    //    If a dev does not call this at the end of the onNotificationProcessing implementation, a runnable will fire after
+    //    a timer and complete by default
+    public void complete() {
+        destroyTimeout();
+
+        if (isCompleted) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "notificationProcessingHandler already completed, returning early");
+            return;
+        }
+        isCompleted = true;
+
+        if (shouldDisplay)
+            OneSignal.fireNotificationWillShowInForegroundHandlers(notificationExtender.notifJob);
     }
 }
 

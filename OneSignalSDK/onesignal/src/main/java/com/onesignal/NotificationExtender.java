@@ -28,14 +28,10 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
+
 import androidx.core.app.NotificationCompat;
 
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import com.onesignal.OSNotificationProcessingManager.NotificationProcessingManager;
 
 /**
  * OneSignal supports sending additional data along with a notification as key/value pairs.
@@ -50,19 +46,10 @@ import com.onesignal.OSNotificationProcessingManager.NotificationProcessingManag
  * - Override specific notification settings depending on client-side app logic (e.g. custom accent color,
  * vibration pattern, any other {@link NotificationCompat} options)
  */
-public class NotificationExtenderService {
+public class NotificationExtender {
 
    // The extension service app AndroidManifest.xml meta data tag key name
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationExtensionServiceClass";
-
-   private static NotificationExtenderService mService;
-
-   public static NotificationExtenderService getInstance() {
-      if (mService == null)
-         mService = new NotificationExtenderService();
-
-      return mService;
-   }
 
    public static class OverrideSettings {
       public NotificationCompat.Extender extender;
@@ -83,73 +70,44 @@ public class NotificationExtenderService {
    }
 
    OSNotificationReceivedResult notificationReceivedResult;
-   boolean isNotificationModified;
+   OSNotificationGenerationJob notifJob;
+
+   Context context;
    JSONObject currentJsonPayload;
    boolean currentlyRestoring;
    Long restoreTimestamp;
-   OverrideSettings currentBaseOverrideSettings = null;
+   OverrideSettings currentBaseOverrideSettings;
 
-   // Developer may call to override some notification settings.
-   // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
-   protected final OSNotificationReceivedResult displayNotification(Context context, OverrideSettings overrideSettings) {
+   public NotificationExtender(Context context, JSONObject jsonPayload, Long restoreTimestamp, boolean restoring, OverrideSettings overrideSettings) {
+      this.context = context;
+      this.currentJsonPayload = jsonPayload;
+      this.restoreTimestamp = restoreTimestamp;
+      this.currentlyRestoring = restoring;
+      this.currentBaseOverrideSettings = overrideSettings;
+   }
+
+   public void setModifiedContentForNotification(OverrideSettings overrideSettings) {
       // Check if this method has been called already or if no override was set.
       if (notificationReceivedResult != null || overrideSettings == null)
-         return null;
-
-      isNotificationModified = true;
+         return;
 
       overrideSettings.override(currentBaseOverrideSettings);
       notificationReceivedResult = new OSNotificationReceivedResult();
 
-      OSNotificationGenerationJob notifJob = createNotifJobFromCurrent(context);
+      notifJob = createNotifJobFromCurrent(context);
       notifJob.overrideSettings = overrideSettings;
+   }
 
+   // Developer may call to override some notification settings.
+   // If this method is called the SDK will omit it's notification regardless of what is returned from onNotificationProcessing.
+   protected final OSNotificationReceivedResult displayNotification() {
+      if (notifJob == null) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notification.setModifiedContent not called with OverrideSettings, creating default OSNotificationReceivedResult and processing job for display.");
+         notifJob = createNotifJobFromCurrent(context);
+         notificationReceivedResult = new OSNotificationReceivedResult();
+      }
       notificationReceivedResult.androidNotificationId = NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
-
       return notificationReceivedResult;
-   }
-
-   void processIntent(Context context, Intent intent) {
-      Bundle bundle = intent.getExtras();
-
-      // Service maybe triggered without extras on some Android devices on boot.
-      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/99
-      if (bundle == null) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "No extras sent to NotificationExtenderService in its Intent!\n" + intent);
-         return;
-      }
-
-      String jsonStrPayload = bundle.getString("json_payload");
-      if (jsonStrPayload == null) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from bundle passed to NotificationExtenderService: " + bundle);
-         return;
-      }
-
-      try {
-         currentJsonPayload = new JSONObject(jsonStrPayload);
-         currentlyRestoring = bundle.getBoolean("restoring", false);
-         if (bundle.containsKey("android_notif_id")) {
-            currentBaseOverrideSettings = new OverrideSettings();
-            currentBaseOverrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
-         }
-
-         if (!currentlyRestoring && OneSignal.notValidOrDuplicated(context, currentJsonPayload))
-            return;
-
-         restoreTimestamp = bundle.getLong("timestamp");
-         processJsonObjectWithWorkManager(context, currentJsonPayload, currentlyRestoring);
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
-   }
-
-   void processJsonObjectWithWorkManager(Context context, JSONObject currentJsonPayload, boolean restoring) {
-      OSNotificationReceived notificationReceived = new OSNotificationReceived(
-              NotificationBundleProcessor.OSNotificationPayloadFrom(currentJsonPayload),
-              restoring,
-              OneSignal.isAppActive());
-
-      NotificationProcessingManager.beginEnqueueingWork(context, notificationReceived);
    }
 
    OSNotificationGenerationJob createNotifJobFromCurrent(Context context) {
@@ -158,7 +116,6 @@ public class NotificationExtenderService {
       notifJob.jsonPayload = currentJsonPayload;
       notifJob.shownTimeStamp = restoreTimestamp;
       notifJob.overrideSettings = currentBaseOverrideSettings;
-
       return notifJob;
    }
 

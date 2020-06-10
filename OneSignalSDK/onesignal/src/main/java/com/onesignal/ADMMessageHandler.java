@@ -62,6 +62,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
       NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
    }
 
    @Override

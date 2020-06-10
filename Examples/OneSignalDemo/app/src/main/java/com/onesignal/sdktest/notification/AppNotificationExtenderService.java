@@ -4,7 +4,7 @@ import android.content.Context;
 
 import androidx.core.app.NotificationCompat;
 
-import com.onesignal.NotificationExtenderService;
+import com.onesignal.NotificationExtender;
 import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
@@ -27,7 +27,7 @@ public class AppNotificationExtenderService implements
          }
       }
 
-      NotificationExtenderService.OverrideSettings overrideSettings = new NotificationExtenderService.OverrideSettings();
+      NotificationExtender.OverrideSettings overrideSettings = new NotificationExtender.OverrideSettings();
       overrideSettings.extender = new NotificationCompat.Extender() {
          @Override
          public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
@@ -35,8 +35,12 @@ public class AppNotificationExtenderService implements
          }
       };
 
-      OSNotificationReceivedResult notificationReceivedResult = notification.setModifiedContent(context, overrideSettings);
+      notification.setModifiedContent(overrideSettings);
+      OSNotificationReceivedResult notificationReceivedResult = notification.display();
+
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "onNotificationProcessing finished wth Android notification id: " + notificationReceivedResult.androidNotificationId);
+
+      notification.complete();
    }
 
    @Override

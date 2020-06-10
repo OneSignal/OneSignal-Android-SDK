@@ -105,13 +105,19 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   static void fromJsonPayload(OSNotificationGenerationJob notifJob) {
+   static void fromJsonPayload(final OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
       if (notifJob.displayOption.isSilent())
          return;
 
-      showNotification(notifJob);
+      // New thread so that any Network usage is off the main thread before showing the notification
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            showNotification(notifJob);
+         }
+      }).start();
    }
    
    private static CharSequence getTitle(JSONObject fcmJson) {

@@ -57,7 +57,7 @@ class OSNotificationRestoreManager {
             addRestoreExtras(intent, getInputData());
 
             if (useNotificationProcessor) {
-                NotificationExtenderService.getInstance().processIntent(context, intent);
+                NotificationBundleProcessor.processIntent(context, intent);
                 FCMBroadcastReceiver.completeWakefulIntent(intent);
             }
             else {
