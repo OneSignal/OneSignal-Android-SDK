@@ -50,6 +50,8 @@
 
 -dontwarn com.amazon.**
 
+-dontwarn com.huawei.**
+
 # Proguard ends up removing this class even if it is used in AndroidManifest.xml so force keeping it.
 -keep public class com.onesignal.ADMMessageHandler {*;}
 
