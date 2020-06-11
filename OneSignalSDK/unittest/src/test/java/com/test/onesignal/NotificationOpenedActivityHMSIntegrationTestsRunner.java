@@ -32,6 +32,9 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_ROOT_CUSTOM;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.InAppMessagingHelpers.ONESIGNAL_APP_ID;
 import static com.test.onesignal.RestClientAsserts.assertNotificationOpenAtIndex;
@@ -57,6 +60,8 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
+    private static final String TEST_ACTION_ID = "myTestActionId";
+
     @BeforeClass // Runs only once, before any tests
     public static void setUpClass() throws Exception {
         ShadowLog.stream = System.out;
@@ -79,19 +84,19 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
     private static @NonNull Intent helper_basicOSHMSOpenIntent() throws JSONException {
         return helper_baseHMSOpenIntent()
                 .putExtra(
-                    "custom",
-                    new JSONObject() {{
-                        put("i", UUID.randomUUID().toString());
-                }}.toString()
+                        PAYLOAD_OS_ROOT_CUSTOM,
+                        new JSONObject() {{
+                            put(PAYLOAD_OS_NOTIFICATION_ID, UUID.randomUUID().toString());
+                        }}.toString()
         );
     }
 
     private static @NonNull Intent helper_basicOSHMSOpenIntentWithActionId(final @NonNull String actionId) throws JSONException {
         return helper_baseHMSOpenIntent()
                 .putExtra(
-                        "custom",
+                        PAYLOAD_OS_ROOT_CUSTOM,
                         new JSONObject() {{
-                            put("i", UUID.randomUUID().toString());
+                            put(PAYLOAD_OS_NOTIFICATION_ID, UUID.randomUUID().toString());
                             put(BUNDLE_KEY_ACTION_ID, actionId);
                         }}.toString()
                 );
@@ -139,7 +144,6 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         assertNotificationOpenAtIndex(1, UserState.DEVICE_TYPE_HUAWEI);
     }
 
-    private static final String TEST_ACTION_ID = "myTestActionId";
     private static String lastActionId;
     @Test
     public void firesOSNotificationOpenCallbackWithActionId() throws Exception {
@@ -163,10 +167,10 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
         Intent intent = helper_baseHMSOpenIntent()
                 .putExtra(
-                        "custom",
+                        PAYLOAD_OS_ROOT_CUSTOM,
                         new JSONObject() {{
-                            put("i", UUID.randomUUID().toString());
-                            put("a", new JSONObject() {{
+                            put(PAYLOAD_OS_NOTIFICATION_ID, UUID.randomUUID().toString());
+                            put(PUSH_ADDITIONAL_DATA_KEY, new JSONObject() {{
                                 put("os_in_app_message_preview_id", "UUID");
                             }});
                         }}.toString()
