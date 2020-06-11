@@ -116,6 +116,18 @@ public class DeviceTypeTestsRunner {
     }
 
     @Test
+    public void noPushSDKsAndOnlyHMSCoreInstalled_isHuawei() {
+        ShadowOSUtils.isHMSCoreInstalledAndEnabled = true;
+        assertEquals(DEVICE_TYPE_HUAWEI, getDeviceType());
+    }
+
+    @Test
+    public void noPushSDKsAndOnlyGoogleServicesInstalled_isAndroid() {
+        ShadowOSUtils.isGMSInstalledAndEnabled = true;
+        assertEquals(DEVICE_TYPE_ANDROID, getDeviceType());
+    }
+
+    @Test
     public void supportsFCMAndADM_PreferADM() {
         ShadowOSUtils.isGMSInstalledAndEnabled = true;
         ShadowOSUtils.hasFCMLibrary = true;
