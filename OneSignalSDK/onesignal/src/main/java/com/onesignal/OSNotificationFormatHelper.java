@@ -11,8 +11,8 @@ import org.json.JSONObject;
 // Future: This class could also support parsing our SDK generated bundles
 class OSNotificationFormatHelper {
 
-    static final String PAYLOAD_OS_ROOT_CUSTOM = "custom";
-    private static final String PAYLOAD_OS_NOTIFICATION_ID = "i";
+    public static final String PAYLOAD_OS_ROOT_CUSTOM = "custom";
+    public static final String PAYLOAD_OS_NOTIFICATION_ID = "i";
 
     static boolean isOneSignalIntent(@Nullable Intent intent) {
         if (intent == null)
