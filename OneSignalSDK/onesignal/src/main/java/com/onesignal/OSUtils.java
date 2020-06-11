@@ -152,7 +152,7 @@ class OSUtils {
       }
    }
 
-   private boolean hasHMSAvailability() {
+   private static boolean hasHMSAvailabilityLibrary() {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.api.HuaweiApiAvailability.class != null;
@@ -161,13 +161,28 @@ class OSUtils {
       }
    }
 
-   private boolean hasHMSPushKitLibrary() {
+   private static boolean hasHMSPushKitLibrary() {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.aaid.HmsInstanceId.class != null;
       } catch (Throwable e) {
          return false;
       }
+   }
+
+   private static boolean hasHMSAGConnectLibrary() {
+      try {
+         // noinspection ConstantConditions
+         return com.huawei.agconnect.config.AGConnectServicesConfig.class != null;
+      } catch (Throwable e) {
+         return false;
+      }
+   }
+
+   static boolean hasAllHMSLibrariesForPushKit() {
+      // NOTE: hasHMSAvailabilityLibrary technically is not required,
+      //   just used as recommend way to detect if "HMS Core" app exists and is enabled
+      return hasHMSAGConnectLibrary() && hasHMSPushKitLibrary();
    }
 
    Integer checkForGooglePushLibrary() {
@@ -286,8 +301,8 @@ class OSUtils {
    }
 
    private boolean supportsHMS() {
-      // 1. App must have the HMSAvailability and PushKit libraries to support HMS push
-      if (!hasHMSAvailability() || !hasHMSPushKitLibrary())
+      // 1. App should have the HMSAvailability for best detection and must have PushKit libraries
+      if (!hasHMSAvailabilityLibrary() || !hasAllHMSLibrariesForPushKit())
          return false;
 
       // 2. Device must have HMS Core installed and enabled
