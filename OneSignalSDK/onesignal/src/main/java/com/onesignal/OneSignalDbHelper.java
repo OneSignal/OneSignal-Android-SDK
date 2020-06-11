@@ -319,15 +319,6 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       onCreate(db);
    }
 
-   // Could enable WAL in the future but requires Android API 11
-   /*
-   @Override
-   public void onConfigure(SQLiteDatabase db) {
-      super.onConfigure(db);
-      db.enableWriteAheadLogging();
-   }
-   */
-
    static StringBuilder recentUninteractedWithNotificationsWhere() {
       long currentTimeSec = System.currentTimeMillis() / 1_000L;
       long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back

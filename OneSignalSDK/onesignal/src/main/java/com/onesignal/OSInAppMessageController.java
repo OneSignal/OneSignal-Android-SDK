@@ -32,7 +32,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
-    private static final String OS_DELETE_IN_APP_MESSAGE = "OS_DELETE_IN_APP_MESSAGE";
 
     OSTriggerController triggerController;
     private OSSystemConditionController systemConditionController;
@@ -122,8 +121,15 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         initRedisplayData(dbHelper);
     }
 
+    OSInAppMessageRepository getInAppMessageRepository(OneSignalDbHelper dbHelper) {
+        if (inAppMessageRepository == null)
+            inAppMessageRepository = new OSInAppMessageRepository(dbHelper);
+
+        return inAppMessageRepository;
+    }
+
     protected void initRedisplayData(OneSignalDbHelper dbHelper) {
-        inAppMessageRepository = new OSInAppMessageRepository(dbHelper);
+        inAppMessageRepository = getInAppMessageRepository(dbHelper);
         redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
