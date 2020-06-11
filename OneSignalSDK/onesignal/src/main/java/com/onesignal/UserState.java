@@ -34,6 +34,7 @@ abstract class UserState {
     // Check that there is "apply plugin: 'com.huawei.agconnect'" in your app/build.gradle
     public static final int PUSH_STATUS_HMS_ARGUMENTS_INVALID = -26;
     public static final int PUSH_STATUS_HMS_API_EXCEPTION_OTHER = -27;
+    public static final int PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY = -28;
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp", "ad_id"};
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
