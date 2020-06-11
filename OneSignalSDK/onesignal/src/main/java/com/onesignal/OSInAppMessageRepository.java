@@ -15,6 +15,8 @@ import java.util.Set;
 
 class OSInAppMessageRepository {
 
+    final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
+
     private final OneSignalDbHelper dbHelper;
 
     OSInAppMessageRepository(OneSignalDbHelper dbHelper) {
@@ -101,7 +103,7 @@ class OSInAppMessageRepository {
 
         String whereStr = OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + " < ?";
 
-        String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - OneSignalCacheCleaner.IAM_CACHE_DATA_LIFETIME);
+        String sixMonthsAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - IAM_CACHE_DATA_LIFETIME);
         String[] whereArgs = new String[]{sixMonthsAgoInSeconds};
 
         Set<String> oldMessageIds = OSUtils.newConcurrentSet();

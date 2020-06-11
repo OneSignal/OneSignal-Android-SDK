@@ -12,8 +12,7 @@ import com.onesignal.outcomes.OSOutcomeTableProvider;
 
 class OneSignalCacheCleaner {
 
-    private final static long NOTIFICATION_CACHE_DATA_LIFETIME = 604_800L; // 7 days in seconds
-    final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
+    private final static long NOTIFICATION_CACHE_DATA_LIFETIME = 604_800L; // 7 days in second
 
     private final static String OS_DELETE_CACHED_NOTIFICATIONS_THREAD = "OS_DELETE_CACHED_NOTIFICATIONS_THREAD";
     private final static String OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD = "OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD";
