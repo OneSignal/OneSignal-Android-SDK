@@ -14,12 +14,12 @@ import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 
 class NotificationPayloadProcessorHMS {
 
-    static void handleHmsNotificationOpenIntent(@NonNull Activity activity, @Nullable Intent intent) {
+    static void handleHMSNotificationOpenIntent(@NonNull Activity activity, @Nullable Intent intent) {
         OneSignal.setAppContext(activity);
         if (intent == null)
             return;
 
-        JSONObject jsonData = covertHmsOpenIntentToJson(intent);
+        JSONObject jsonData = covertHMSOpenIntentToJson(intent);
         if (jsonData == null)
             return;
 
@@ -28,7 +28,7 @@ class NotificationPayloadProcessorHMS {
 
     // Takes in a Notification Open Intent fired from HMS Core and coverts it to an OS formatted JSONObject
     // Returns null if it is NOT a notification sent from OneSignal's backend
-    private static @Nullable JSONObject covertHmsOpenIntentToJson(@Nullable Intent intent) {
+    private static @Nullable JSONObject covertHMSOpenIntentToJson(@Nullable Intent intent) {
         // Validate Intent to prevent any side effects or crashes
         //    if triggered outside of OneSignal for any reason.
         if (!OSNotificationFormatHelper.isOneSignalIntent(intent))

@@ -78,7 +78,7 @@ public class NotificationOpenedActivityHMS extends Activity {
     }
 
     private void processOpen(@Nullable Intent intent) {
-        NotificationPayloadProcessorHMS.handleHmsNotificationOpenIntent(this, intent);
+        NotificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent);
     }
 
 }
