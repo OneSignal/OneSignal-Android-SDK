@@ -243,24 +243,35 @@ class OSUtils {
       return null;
    }
 
-   // TODO: Maybe able to switch to GoogleApiAvailability.isGooglePlayServicesAvailable to simplify
-   // However before doing so we need to test with an old version of the "Google Play services"
-   //   on the device to make sure it would still be counted as "SUCCESS".
-   // Or if we get back "SERVICE_VERSION_UPDATE_REQUIRED" then we may want to count that as successful too.
-   static boolean isGMSInstalledAndEnabled() {
+   private static boolean packageInstalledAndEnabled(@NonNull String packageName) {
       try {
          PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
+         PackageInfo info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA);
          return info.applicationInfo.enabled;
       } catch (PackageManager.NameNotFoundException e) {
          return false;
       }
    }
 
+   // TODO: Maybe able to switch to GoogleApiAvailability.isGooglePlayServicesAvailable to simplify
+   // However before doing so we need to test with an old version of the "Google Play services"
+   //   on the device to make sure it would still be counted as "SUCCESS".
+   // Or if we get back "SERVICE_VERSION_UPDATE_REQUIRED" then we may want to count that as successful too.
+   static boolean isGMSInstalledAndEnabled() {
+      return packageInstalledAndEnabled(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE);
+   }
+
    private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
    private static boolean isHMSCoreInstalledAndEnabled() {
       HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
       return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+   }
+
+   private static final String HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid"; // = HuaweiApiAvailability.SERVICES_PACKAGE
+   // HuaweiApiAvailability is the recommend way to detect if "HMS Core" is available but this fallback
+   //   works even if the app developer doesn't include any HMS libraries in their app.
+   private static boolean isHMSCoreInstalledAndEnabledFallback() {
+      return packageInstalledAndEnabled(HMS_CORE_SERVICES_PACKAGE);
    }
 
    private boolean supportsADM() {
@@ -310,13 +321,22 @@ class OSUtils {
 
       if (supportsGooglePush())
          return UserState.DEVICE_TYPE_ANDROID;
-      else {
-         // If the Huawei device has both FCM & HMS support we prefer FCM (Google push)
-         // HMS will only be used if it is the only option.
-         if (supportsHMS())
-            return UserState.DEVICE_TYPE_HUAWEI;
-      }
 
+      // Some Huawei devices have both FCM & HMS support, but prefer FCM (Google push) over HMS
+      if (supportsHMS())
+         return UserState.DEVICE_TYPE_HUAWEI;
+
+      // Start - Fallback logic
+      //    Libraries in the app (Google:FCM, HMS:PushKit) + Device may not have a valid combo
+      // Example: App with only the FCM library in it and a Huawei device with only HMS Core
+
+      if (isGMSInstalledAndEnabled())
+         return UserState.DEVICE_TYPE_ANDROID;
+
+      if (isHMSCoreInstalledAndEnabledFallback())
+         return UserState.DEVICE_TYPE_HUAWEI;
+
+      // Last fallback
       // Fallback to device_type 1 (Android) if there are no supported push channels on the device
       return UserState.DEVICE_TYPE_ANDROID;
    }

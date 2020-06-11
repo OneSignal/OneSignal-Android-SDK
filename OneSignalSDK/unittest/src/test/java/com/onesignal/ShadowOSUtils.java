@@ -43,6 +43,9 @@ public class ShadowOSUtils {
    public static boolean isHMSCoreInstalledAndEnabled() {
       return isHMSCoreInstalledAndEnabled;
    }
+   public static boolean isHMSCoreInstalledAndEnabledFallback() {
+      return isHMSCoreInstalledAndEnabled;
+   }
 
    public static void supportsHMS(boolean value) {
       hasHMSPushKitLibrary = true;
