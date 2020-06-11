@@ -452,7 +452,15 @@ public class OneSignal {
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
 
-   private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
+   @Nullable private static AdvertisingIdentifierProvider adIdProvider;
+   private static synchronized @Nullable AdvertisingIdentifierProvider getAdIdProvider() {
+      if (adIdProvider == null) {
+         if (OSUtils.isAndroidDeviceType())
+            adIdProvider = new AdvertisingIdProviderGPS();
+      }
+
+      return adIdProvider;
+   }
 
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
@@ -1342,9 +1350,11 @@ public class OneSignal {
 
       deviceInfo.put("app_id", getSavedAppId());
 
-      String adId = mainAdIdProvider.getIdentifier(appContext);
-      if (adId != null)
-         deviceInfo.put("ad_id", adId);
+      if (getAdIdProvider() != null) {
+         String adId = getAdIdProvider().getIdentifier(appContext);
+         if (adId != null)
+            deviceInfo.put("ad_id", adId);
+      }
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
       deviceInfo.put("language", OSUtils.getCorrectedLanguage());
