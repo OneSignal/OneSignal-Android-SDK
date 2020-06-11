@@ -32,13 +32,18 @@ public class ShadowOSUtils {
 
    // Huawei: HMS
    public static boolean hasHMSAvailability;
-   public boolean hasHMSAvailability() {
+   public static boolean hasHMSAvailability() {
       return hasHMSAvailability;
    }
    public static boolean hasHMSPushKitLibrary;
-   public boolean hasHMSPushKitLibrary() {
+   public static boolean hasHMSPushKitLibrary() {
       return hasHMSPushKitLibrary;
    }
+   public static boolean hasHMSAGConnectLibrary;
+   public static boolean hasHMSAGConnectLibrary() {
+      return hasHMSAGConnectLibrary;
+   }
+
    public static boolean isHMSCoreInstalledAndEnabled;
    public static boolean isHMSCoreInstalledAndEnabled() {
       return isHMSCoreInstalledAndEnabled;
@@ -47,9 +52,16 @@ public class ShadowOSUtils {
       return isHMSCoreInstalledAndEnabled;
    }
 
+   public static void hasAllRecommendHMSLibraries(boolean value) {
+      // required
+      hasHMSPushKitLibrary = value;
+      hasHMSAGConnectLibrary = value;
+      // recommend
+      hasHMSAvailability = value;
+   }
+
    public static void supportsHMS(boolean value) {
-      hasHMSPushKitLibrary = true;
-      hasHMSAvailability = true;
+      hasAllRecommendHMSLibraries(value);
       isHMSCoreInstalledAndEnabled = true;
    }
 
@@ -66,6 +78,7 @@ public class ShadowOSUtils {
       isGMSInstalledAndEnabled = false;
       hasHMSAvailability = false;
       hasHMSPushKitLibrary = false;
+      hasHMSAGConnectLibrary = false;
       isHMSCoreInstalledAndEnabled = false;
 
    }

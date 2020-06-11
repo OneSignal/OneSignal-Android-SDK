@@ -53,8 +53,12 @@ class PushRegistratorHMS implements PushRegistrator {
     }
 
     private synchronized void getHMSTokenTask(@NonNull Context context, @NonNull RegisteredHandler callback) throws ApiException {
-        // TODO: See if we can handle an exact message like this
-        // 2020-04-14 23:06:36.164 1565-1743/com.onesignal.example E/HMSSDK_Util: In getMetaDataAppId, Failed to read meta data for the AppID.
+        // If here is required to prevent AGConnectServicesConfig or HmsInstanceId used below
+        //   from throwing a ClassNotFoundException
+        if (!OSUtils.hasAllHMSLibrariesForPushKit()) {
+            callback.complete(null, UserState.PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY);
+            return;
+        }
 
         String appId = AGConnectServicesConfig.fromContext(context).getString(HMS_CLIENT_APP_ID);
         HmsInstanceId hmsInstanceId = HmsInstanceId.getInstance(context);
