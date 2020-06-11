@@ -32,9 +32,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 // HMS Core creates a notification with an Intent when opened to start this Activity.
 //   Intent is defined via OneSignal's backend and is sent to HMS.
 // This has to be it's own Activity separate from NotificationOpenedActivity since
@@ -81,24 +78,7 @@ public class NotificationOpenedActivityHMS extends Activity {
     }
 
     private void processOpen(@Nullable Intent intent) {
-        // Validate Intent to prevent any side effects or crashes
-        //    if triggered outside of OneSignal for any reason.
-        if (!OSNotificationFormatHelper.isOneSignalIntent(intent))
-            return;
-        OneSignal.setAppContext(this);
-
-        Bundle bundle = intent.getExtras();
-        JSONObject jsonData = NotificationBundleProcessor.bundleAsJSONObject(bundle);
-
-        if (NotificationOpenedProcessor.handleIAMPreviewOpen(this, jsonData))
-            return;
-
-        OneSignal.handleNotificationOpen(
-            this,
-            new JSONArray().put(jsonData),
-            false,
-            OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData)
-        );
+        NotificationPayloadProcessorHMS.handleHmsNotificationOpenIntent(this, intent);
     }
 
 }
