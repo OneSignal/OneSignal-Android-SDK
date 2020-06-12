@@ -73,11 +73,12 @@ import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
+import com.onesignal.ShadowHMSLocationUpdateListener;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowJobService;
-import com.onesignal.ShadowLocationController;
-import com.onesignal.ShadowLocationUpdateListener;
+import com.onesignal.ShadowGMSLocationController;
+import com.onesignal.ShadowGMSLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
@@ -171,7 +172,6 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowCustomTabsSession.class,
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
-            ShadowLocationController.class,
             ShadowHmsInstanceId.class,
             OneSignalShadowPackageManager.class
         },
@@ -240,7 +240,7 @@ public class MainOneSignalClassRunner {
       lastGetTags = null;
       lastExternalUserIdResponse = null;
 
-      ShadowLocationController.reset();
+      ShadowGMSLocationController.reset();
       TestHelpers.beforeTestInitAndCleanup();
    }
 
@@ -2476,9 +2476,9 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(sdk = 26, shadows = { ShadowGoogleApiClientCompatProxy.class })
+   @Config(sdk = 26, shadows = { ShadowGoogleApiClientCompatProxy.class, ShadowGMSLocationController.class })
    public void ensureSyncJobServiceRescheduleOnApiTimeout() throws Exception {
-      ShadowLocationController.apiFallbackTime = 0;
+      ShadowGMSLocationController.apiFallbackTime = 0;
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
 
@@ -3204,7 +3204,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      Class klass = Class.forName("com.onesignal.LocationController");
+      Class klass = Class.forName("com.onesignal.GMSLocationController");
       Method method = klass.getDeclaredMethod("startFallBackThread");
       method.setAccessible(true);
       method.invoke(null);
@@ -3249,7 +3249,7 @@ public class MainOneSignalClassRunner {
       fakeLocation.setLongitude(2.2d);
       fakeLocation.setAccuracy(3.3f);
       fakeLocation.setTime(12346L);
-      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
+      ShadowGMSLocationUpdateListener.provideFakeLocation(fakeLocation);
 
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
@@ -3264,7 +3264,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       threadAndTaskWait();
       fakeLocation.setTime(12347L);
-      ShadowLocationUpdateListener.provideFakeLocation(fakeLocation);
+      ShadowGMSLocationUpdateListener.provideFakeLocation(fakeLocation);
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
       assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
@@ -3443,7 +3443,7 @@ public class MainOneSignalClassRunner {
       fakeLocation.setLongitude(2.2d);
       fakeLocation.setAccuracy(3.3f);
       fakeLocation.setTime(12346L);
-      ShadowLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
+      ShadowHMSLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
 
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
@@ -3459,7 +3459,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.pause();
       threadAndTaskWait();
       fakeLocation.setTime(12347L);
-      ShadowLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
+      ShadowHMSLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
       threadAndTaskWait();
       assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));

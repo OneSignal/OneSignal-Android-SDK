@@ -152,6 +152,15 @@ class OSUtils {
       }
    }
 
+   static boolean hasGMSLocationLibrary() {
+      try {
+         // noinspection ConstantConditions
+         return com.google.android.gms.location.LocationListener.class != null;
+      } catch (NoClassDefFoundError e) {
+         return false;
+      }
+   }
+
    private static boolean hasHMSAvailabilityLibrary() {
       try {
          // noinspection ConstantConditions
@@ -174,6 +183,15 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.agconnect.config.AGConnectServicesConfig.class != null;
+      } catch (NoClassDefFoundError e) {
+         return false;
+      }
+   }
+
+   static boolean hasHMSLocationLibrary() {
+      try {
+         // noinspection ConstantConditions
+         return com.huawei.hms.location.LocationCallback.class != null;
       } catch (NoClassDefFoundError e) {
          return false;
       }
