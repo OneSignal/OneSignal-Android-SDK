@@ -431,7 +431,8 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031401";
+   // Marking as 10 in patch to confirm Huawei rc1 is used
+   public static final String VERSION = "031410";
 
    private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
