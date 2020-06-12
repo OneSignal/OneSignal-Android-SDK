@@ -29,13 +29,13 @@ package com.onesignal;
 
 import org.robolectric.annotation.Implements;
 
-@Implements(LocationController.class)
-public class ShadowLocationController {
+@Implements(GMSLocationController.class)
+public class ShadowGMSLocationController {
 
-   public static Integer apiFallbackTime = LocationController.API_FALLBACK_TIME;
+   public static Integer apiFallbackTime = GMSLocationController.API_FALLBACK_TIME;
 
    public static void reset() {
-      apiFallbackTime = LocationController.API_FALLBACK_TIME;
+      apiFallbackTime = GMSLocationController.API_FALLBACK_TIME;
    }
 
    public static int getApiFallbackWait() {
