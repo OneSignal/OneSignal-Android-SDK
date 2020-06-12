@@ -589,6 +589,13 @@ public class OneSignal {
    }
    // End EmailSubscriptionState
 
+   private static OSDevice userDevice;
+   public static OSDevice getUserDevice() {
+      if (userDevice == null)
+         userDevice = new OSDevice();
+
+      return userDevice;
+   }
 
    private static class IAPUpdateJob {
       JSONArray toReport;

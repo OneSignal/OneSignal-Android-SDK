@@ -4400,6 +4400,77 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testOSDeviceHasEmailAddress() throws Exception {
+      String testEmail = "test@onesignal.com";
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertNull(OneSignal.getUserDevice().getEmailAddress());
+
+      OneSignal.setEmail(testEmail);
+      threadAndTaskWait();
+
+      assertEquals(testEmail, OneSignal.getUserDevice().getEmailAddress());
+   }
+
+   @Test
+   public void testOSDeviceHasEmailId() throws Exception {
+      String testEmail = "test@onesignal.com";
+
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertNull(OneSignal.getUserDevice().getEmailUserId());
+
+      OneSignal.setEmail(testEmail);
+      threadAndTaskWait();
+
+      assertNotNull(OneSignal.getUserDevice().getEmailUserId());
+   }
+
+   @Test
+   public void testOSDeviceHasUserId() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertNotNull(OneSignal.getUserDevice().getUserId());
+   }
+
+   @Test
+   public void testOSDeviceHasPushToken() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertNotNull(OneSignal.getUserDevice().getPushToken());
+   }
+
+   @Test
+   public void testOSDeviceNotificationPermission() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertTrue(OneSignal.getUserDevice().isNotificationEnabled());
+   }
+
+   @Test
+   public void testOSDeviceUserSubscriptionSetting() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertTrue(OneSignal.getUserDevice().isUserSubscribed());
+   }
+
+   @Test
+   public void testOSDeviceSubscribed() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertTrue(OneSignal.getUserDevice().isSubscribed());
+   }
+
+   @Test
    public void testGetTagsQueuesCallbacks() throws Exception {
       final BlockingQueue<Boolean> queue = new ArrayBlockingQueue<>(2);
 
