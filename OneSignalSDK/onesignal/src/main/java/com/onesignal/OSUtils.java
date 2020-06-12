@@ -156,7 +156,7 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.api.HuaweiApiAvailability.class != null;
-      } catch (Throwable e) {
+      } catch (Exception e) {
          return false;
       }
    }
@@ -165,7 +165,7 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.aaid.HmsInstanceId.class != null;
-      } catch (Throwable e) {
+      } catch (Exception e) {
          return false;
       }
    }
@@ -174,7 +174,7 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.agconnect.config.AGConnectServicesConfig.class != null;
-      } catch (Throwable e) {
+      } catch (Exception e) {
          return false;
       }
    }
@@ -344,7 +344,6 @@ class OSUtils {
       // Start - Fallback logic
       //    Libraries in the app (Google:FCM, HMS:PushKit) + Device may not have a valid combo
       // Example: App with only the FCM library in it and a Huawei device with only HMS Core
-
       if (isGMSInstalledAndEnabled())
          return UserState.DEVICE_TYPE_ANDROID;
 

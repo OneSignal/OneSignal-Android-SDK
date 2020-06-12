@@ -53,7 +53,7 @@ class PushRegistratorHMS implements PushRegistrator {
     }
 
     private synchronized void getHMSTokenTask(@NonNull Context context, @NonNull RegisteredHandler callback) throws ApiException {
-        // If here is required to prevent AGConnectServicesConfig or HmsInstanceId used below
+        // Check required to prevent AGConnectServicesConfig or HmsInstanceId used below
         //   from throwing a ClassNotFoundException
         if (!OSUtils.hasAllHMSLibrariesForPushKit()) {
             callback.complete(null, UserState.PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY);
