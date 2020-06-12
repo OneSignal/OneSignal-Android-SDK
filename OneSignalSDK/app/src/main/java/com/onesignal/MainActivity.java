@@ -154,9 +154,9 @@ public class MainActivity extends Activity implements OSEmailSubscriptionObserve
 
          this.addObservers();
 
-         OSPermissionSubscriptionState state = OneSignal.getPermissionSubscriptionState();
+         OSDevice device = OneSignal.getUserDevice();
 
-         this.didGetEmailStatus(state.getEmailSubscriptionStatus().getSubscribed());
+         this.didGetEmailStatus(device.isSubscribed());
       }
 
       this.debugTextView = this.findViewById(com.onesignal.example.R.id.debugTextView);
