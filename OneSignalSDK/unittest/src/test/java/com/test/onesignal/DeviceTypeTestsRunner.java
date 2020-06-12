@@ -83,7 +83,7 @@ public class DeviceTypeTestsRunner {
     @Test
     public void supportedHMS_isHuawei() {
         ShadowOSUtils.isHMSCoreInstalledAndEnabled = true;
-        ShadowOSUtils.hasAllRecommendHMSLibraries(true);
+        ShadowOSUtils.hasAllRecommendedHMSLibraries(true);
 
         assertEquals(DEVICE_TYPE_HUAWEI, getDeviceType());
     }
@@ -94,7 +94,7 @@ public class DeviceTypeTestsRunner {
         ShadowOSUtils.hasFCMLibrary = true;
 
         ShadowOSUtils.isHMSCoreInstalledAndEnabled = true;
-        ShadowOSUtils.hasAllRecommendHMSLibraries(true);
+        ShadowOSUtils.hasAllRecommendedHMSLibraries(true);
 
         // Prefer Google Services over Huawei if both available
         assertEquals(DEVICE_TYPE_ANDROID, getDeviceType());
@@ -106,7 +106,7 @@ public class DeviceTypeTestsRunner {
         ShadowOSUtils.hasFCMLibrary = true;
 
         ShadowOSUtils.isHMSCoreInstalledAndEnabled = true;
-        ShadowOSUtils.hasAllRecommendHMSLibraries(true);
+        ShadowOSUtils.hasAllRecommendedHMSLibraries(true);
 
         // Use HMS since device does not have the "Google Play services" app or it is disabled
         assertEquals(DEVICE_TYPE_HUAWEI, getDeviceType());
