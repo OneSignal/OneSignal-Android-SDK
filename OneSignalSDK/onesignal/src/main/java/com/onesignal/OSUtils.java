@@ -156,7 +156,7 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.api.HuaweiApiAvailability.class != null;
-      } catch (Exception e) {
+      } catch (NoClassDefFoundError e) {
          return false;
       }
    }
@@ -165,7 +165,7 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.hms.aaid.HmsInstanceId.class != null;
-      } catch (Exception e) {
+      } catch (NoClassDefFoundError e) {
          return false;
       }
    }
@@ -174,7 +174,7 @@ class OSUtils {
       try {
          // noinspection ConstantConditions
          return com.huawei.agconnect.config.AGConnectServicesConfig.class != null;
-      } catch (Exception e) {
+      } catch (NoClassDefFoundError e) {
          return false;
       }
    }
