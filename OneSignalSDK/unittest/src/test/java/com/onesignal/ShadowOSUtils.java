@@ -21,10 +21,12 @@ public class ShadowOSUtils {
    boolean hasFCMLibrary() {
       return hasFCMLibrary;
    }
+
    public static boolean hasGCMLibrary;
    public static boolean hasGCMLibrary() {
       return hasGCMLibrary;
    }
+
    public static boolean isGMSInstalledAndEnabled;
    public static boolean isGMSInstalledAndEnabled() {
       return isGMSInstalledAndEnabled;
@@ -35,10 +37,12 @@ public class ShadowOSUtils {
    public static boolean hasHMSAvailability() {
       return hasHMSAvailability;
    }
+
    public static boolean hasHMSPushKitLibrary;
    public static boolean hasHMSPushKitLibrary() {
       return hasHMSPushKitLibrary;
    }
+
    public static boolean hasHMSAGConnectLibrary;
    public static boolean hasHMSAGConnectLibrary() {
       return hasHMSAGConnectLibrary;
@@ -48,20 +52,21 @@ public class ShadowOSUtils {
    public static boolean isHMSCoreInstalledAndEnabled() {
       return isHMSCoreInstalledAndEnabled;
    }
+
    public static boolean isHMSCoreInstalledAndEnabledFallback() {
       return isHMSCoreInstalledAndEnabled;
    }
 
-   public static void hasAllRecommendHMSLibraries(boolean value) {
+   public static void hasAllRecommendedHMSLibraries(boolean value) {
       // required
       hasHMSPushKitLibrary = value;
       hasHMSAGConnectLibrary = value;
-      // recommend
+      // recommended
       hasHMSAvailability = value;
    }
 
    public static void supportsHMS(boolean value) {
-      hasAllRecommendHMSLibraries(value);
+      hasAllRecommendedHMSLibraries(value);
       isHMSCoreInstalledAndEnabled = true;
    }
 
