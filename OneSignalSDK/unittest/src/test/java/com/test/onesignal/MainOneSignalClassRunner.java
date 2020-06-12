@@ -134,6 +134,7 @@ import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.RestClientAsserts.assertAmazonPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertAndroidPlayerCreateAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertHuaweiPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
 import static com.test.onesignal.RestClientAsserts.assertOnSessionAtIndex;
@@ -320,6 +321,59 @@ public class MainOneSignalClassRunner {
 
       // 3. Make sure device_type is Amazon (2) in player create
       assertAmazonPlayerCreateAtIndex(1);
+   }
+
+   @Test
+   public void testAmazonDoesNotGetAdId() throws Exception {
+      // 1. Mock Amazon device type for this test
+      ShadowOSUtils.supportsADM = true;
+
+      // 2. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 3. Make sure device_type is Amazon (2) in player create
+      assertAmazonPlayerCreateAtIndex(1);
+
+      // 4. Assert Player Create does NOT have an ad_id
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
+      JsonAsserts.doesNotContainKeys(request.payload, new ArrayList<String>() {{ add("ad_id"); }});
+
+      // 5. Assert we did NOT try to get a Google Ad id
+      assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
+   }
+
+   @Test
+   public void testDeviceTypeIsHuawei_forPlayerCreate() throws Exception {
+      // 1. Mock Amazon device type for this test
+      ShadowOSUtils.supportsHMS(true);
+
+      // 2. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 3. Make sure device_type is Huawei (13) in player create
+      assertHuaweiPlayerCreateAtIndex(1);
+   }
+
+   @Test
+   public void testHuaweiDoesNotGetAdId() throws Exception {
+      // 1. Mock Huawei device type for this test
+      ShadowOSUtils.supportsHMS(true);
+
+      // 2. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 3. Make sure device_type is Huawei (13) in player create
+      assertHuaweiPlayerCreateAtIndex(1);
+
+      // 4. Assert Player Create does NOT have an ad_id
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
+      JsonAsserts.doesNotContainKeys(request.payload, new ArrayList<String>() {{ add("ad_id"); }});
+
+      // 5. Assert we did NOT try to get a Google Ad id
+      assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
    }
 
    @Test
