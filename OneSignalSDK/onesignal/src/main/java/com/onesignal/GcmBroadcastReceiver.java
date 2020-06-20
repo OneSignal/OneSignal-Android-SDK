@@ -131,7 +131,7 @@ public class GcmBroadcastReceiver extends WakefulBroadcastReceiver {
       return processedResult;
    }
 
-   private static void startGCMService(Context context, Bundle bundle) {
+   static void startGCMService(Context context, Bundle bundle) {
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
          BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());

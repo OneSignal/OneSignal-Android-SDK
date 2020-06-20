@@ -1,6 +1,7 @@
 package com.onesignal;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -70,5 +71,21 @@ class NotificationPayloadProcessorHMS {
             false,
             OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData)
         );
+    }
+
+    static void processDataMessageReceived(@NonNull Context context, @NonNull String data) {
+        OneSignal.setAppContext(context);
+        Bundle bundle = OSUtils.jsonStringToBundle(data);
+        if (bundle == null)
+            return;
+
+        NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+
+        // Return if the notification will NOT be handled by normal GcmIntentService display flow.
+        if (processedResult.processed())
+            return;
+
+        // TODO: 4.0.0 or after - What is in GcmBroadcastReceiver should be split into a shared class to support FCM, HMS, and ADM
+        GcmBroadcastReceiver.startGCMService(context, bundle);
     }
 }
