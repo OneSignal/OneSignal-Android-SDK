@@ -59,6 +59,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -631,6 +632,23 @@ class OSUtils {
             result.add((String) value);
       }
       return result;
+   }
+
+   static @Nullable Bundle jsonStringToBundle(@NonNull String data) {
+      try {
+         JSONObject jsonObject = new JSONObject(data);
+         Bundle bundle = new Bundle();
+         Iterator iterator = jsonObject.keys();
+         while (iterator.hasNext()) {
+            String key = (String)iterator.next();
+            String value = jsonObject.getString(key);
+            bundle.putString(key, value);
+         }
+         return bundle;
+      } catch (JSONException e) {
+         e.printStackTrace();
+         return null;
+      }
    }
 
    static boolean shouldLogMissingAppIdError(@Nullable String appId) {
