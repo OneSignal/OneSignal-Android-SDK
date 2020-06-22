@@ -532,4 +532,6 @@ public class OneSignalPackagePrivateHelper {
    public static class NotificationBundleProcessor extends com.onesignal.NotificationBundleProcessor {}
 
    public static class OSNotificationFormatHelper extends com.onesignal.OSNotificationFormatHelper {}
+
+   public static class NotificationPayloadProcessorHMS extends com.onesignal.NotificationPayloadProcessorHMS {}
 }
