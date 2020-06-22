@@ -73,8 +73,11 @@ class NotificationPayloadProcessorHMS {
         );
     }
 
-    static void processDataMessageReceived(@NonNull Context context, @NonNull String data) {
+    public static void processDataMessageReceived(@NonNull Context context, @Nullable String data) {
         OneSignal.setAppContext(context);
+        if (data == null)
+            return;
+
         Bundle bundle = OSUtils.jsonStringToBundle(data);
         if (bundle == null)
             return;
