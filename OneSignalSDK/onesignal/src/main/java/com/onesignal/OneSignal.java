@@ -535,7 +535,7 @@ public class OneSignal {
       }
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppId(id) successful and appContext is set, continuing OneSignal init...");
-      init();
+      init(appContext);
    }
 
    /**
@@ -574,7 +574,7 @@ public class OneSignal {
       }
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) successful and appId is set, continuing OneSignal init...");
-      init();
+      init(context);
    }
 
    public static void setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler callback) {
@@ -595,7 +595,7 @@ public class OneSignal {
    /**
     * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
     */
-   synchronized private static void init() {
+   synchronized private static void init(Context context) {
       if (requiresUserPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.WARN, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
          delayedInitParams = new DelayedConsentInitializationParameters(appContext, appId);
@@ -615,7 +615,7 @@ public class OneSignal {
          return;
       }
 
-      handleActivityLifecycleHandler(appContext);
+      handleActivityLifecycleHandler(context);
 
       OneSignalStateSynchronizer.initUserState();
 
