@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId 'com.onesignal.example'
-        minSdkVersion 16
+        minSdkVersion 17
         targetSdkVersion 28
         versionCode 1
         versionName '1.0'
@@ -20,6 +20,9 @@ android {
         unitTests.all {
             maxParallelForks 1
             maxHeapSize '2048m'
+        }
+        unitTests {
+            includeAndroidResources = true
         }
     }
 }
@@ -42,6 +45,9 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:17.0.0'
 
     implementation 'com.google.firebase:firebase-core:17.2.2'
+
+    implementation 'com.huawei.hms:push:4.0.2.300'
+    implementation 'com.huawei.hms:location:4.0.0.300'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.robolectric:robolectric:4.3.1'

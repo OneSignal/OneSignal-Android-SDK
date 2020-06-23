@@ -47,6 +47,9 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.outcomes.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -61,6 +64,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -93,21 +97,21 @@ public class OneSignal {
       None, InAppAlert, Notification
    }
 
-   enum AppEntryAction {
+   public enum AppEntryAction {
       NOTIFICATION_CLICK,
       APP_OPEN,
       APP_CLOSE,
       ;
 
-      boolean isNotificationClick() {
+      public boolean isNotificationClick() {
           return this.equals(NOTIFICATION_CLICK);
       }
 
-      boolean isAppOpen() {
+      public boolean isAppOpen() {
           return this.equals(APP_OPEN);
       }
 
-      boolean isAppClose() {
+      public boolean isAppClose() {
           return this.equals(APP_CLOSE);
       }
    }
@@ -296,21 +300,36 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031302";
+   public static final String VERSION = "031500";
 
-   private static OSSessionManager.SessionListener getNewSessionListener() {
-      return new OSSessionManager.SessionListener() {
+   private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
-         public void onSessionEnding(@NonNull OSSessionManager.SessionResult lastSessionResult) {
-            outcomeEventsController.cleanOutcomes();
-            FocusTimeController.getInstance().onSessionEnded(lastSessionResult);
+         public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
+            if (outcomeEventsController == null)
+               OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before initZ");
+            if (outcomeEventsController != null)
+               outcomeEventsController.cleanOutcomes();
+            FocusTimeController.getInstance().onSessionEnded(lastInfluences);
          }
       };
-   }
-   @Nullable private static OSSessionManager sessionManager;
-   @Nullable private static OutcomeEventsController outcomeEventsController;
 
-   private static AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPS();
+   private static OSLogger logger = new OSLogWrapper();
+   private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
+   private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
+   private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger);
+   private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
+   @Nullable private static OSOutcomeEventsController outcomeEventsController;
+   @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
+
+   @Nullable private static AdvertisingIdentifierProvider adIdProvider;
+   private static synchronized @Nullable AdvertisingIdentifierProvider getAdIdProvider() {
+      if (adIdProvider == null) {
+         if (OSUtils.isAndroidDeviceType())
+            adIdProvider = new AdvertisingIdProviderGPS();
+      }
+
+      return adIdProvider;
+   }
 
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
@@ -320,7 +339,7 @@ public class OneSignal {
    private static String lastRegistrationId;
    private static boolean registerForPushFired, locationFired, promptedLocation;
 
-   private static LocationGMS.LocationPoint lastLocationPoint;
+   private static LocationController.LocationPoint lastLocationPoint;
 
    static boolean shareLocation = true;
 
@@ -438,6 +457,13 @@ public class OneSignal {
    }
    // End EmailSubscriptionState
 
+   private static OSDevice userDevice;
+   public static OSDevice getUserDevice() {
+      if (userDevice == null)
+         userDevice = new OSDevice();
+
+      return userDevice;
+   }
 
    private static class IAPUpdateJob {
       JSONArray toReport;
@@ -628,8 +654,11 @@ public class OneSignal {
 
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
-         sessionManager = new OSSessionManager(getNewSessionListener());
-         outcomeEventsController = new OutcomeEventsController(sessionManager, OneSignalDbHelper.getInstance(appContext));
+         if (outcomeEventsFactory == null)
+            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
+
+         sessionManager.initSessionFromCache();
+         outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
@@ -705,11 +734,11 @@ public class OneSignal {
           OneSignalStateSynchronizer.setNewSession();
          if (inForeground) {
             outcomeEventsController.cleanOutcomes();
-            sessionManager.restartSessionIfNeeded();
+            sessionManager.restartSessionIfNeeded(getAppEntryState());
          }
       } else if (inForeground) {
          OSInAppMessageController.getController().initWithCachedInAppMessages();
-         sessionManager.attemptSessionUpgrade();
+         sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
 
       // We still want register the user to OneSignal if the SDK was initialized
@@ -820,13 +849,13 @@ public class OneSignal {
    }
 
    private static void startLocationUpdate() {
-      LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationHandler() {
+      LocationController.LocationHandler locationHandler = new LocationController.LocationHandler() {
          @Override
-         public LocationGMS.PermissionType getType() {
-            return LocationGMS.PermissionType.STARTUP;
+         public LocationController.PermissionType getType() {
+            return LocationController.PermissionType.STARTUP;
          }
          @Override
-         public void onComplete(LocationGMS.LocationPoint point) {
+         public void onComplete(LocationController.LocationPoint point) {
             lastLocationPoint = point;
             locationFired = true;
             registerUser();
@@ -836,7 +865,7 @@ public class OneSignal {
       // Prompted so we don't ask for permissions more than once
       promptedLocation = promptedLocation || mPromptLocation;
 
-      LocationGMS.getLocation(appContext, doPrompt, false, locationHandler);
+      LocationController.getLocation(appContext, doPrompt, false, locationHandler);
    }
    private static PushRegistrator mPushRegistrator;
 
@@ -844,11 +873,13 @@ public class OneSignal {
       if (mPushRegistrator != null)
          return mPushRegistrator;
 
-      int deviceType = osUtils.getDeviceType();
-      if (deviceType == UserState.DEVICE_TYPE_FIREOS)
+      if (OSUtils.isFireOSDeviceType())
          mPushRegistrator = new PushRegistratorADM();
-      else if (OSUtils.hasFCMLibrary())
-         mPushRegistrator = new PushRegistratorFCM();
+      else if (OSUtils.isAndroidDeviceType()) {
+         if (OSUtils.hasFCMLibrary())
+            mPushRegistrator = new PushRegistratorFCM();
+      } else
+         mPushRegistrator = new PushRegistratorHMS();
 
       return mPushRegistrator;
    }
@@ -888,7 +919,7 @@ public class OneSignal {
          return;
       }
 
-      OneSignalRemoteParams.makeAndroidParamsRequest(new OneSignalRemoteParams.ParamsRequestCallback() {
+      OneSignalRemoteParams.makeAndroidParamsRequest(new OneSignalRemoteParams.CallBack() {
          @Override
          public void complete(OneSignalRemoteParams.Params params) {
             remoteParams = params;
@@ -915,8 +946,13 @@ public class OneSignal {
                OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
                remoteParams.receiveReceiptEnabled
             );
-           
-            OutcomesUtils.saveOutcomesParams(params.outcomesParams);
+            OneSignalPrefs.saveBool(
+               OneSignalPrefs.PREFS_ONESIGNAL,
+               preferences.getOutcomesV2KeyName(),
+               params.influenceParams.outcomesV2ServiceEnabled
+            );
+            logger.debug("OneSignal saveInfluenceParams: " + params.influenceParams.toString());
+            trackerFactory.saveInfluenceParams(params.influenceParams);
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
@@ -1109,7 +1145,7 @@ public class OneSignal {
       appEntryState = AppEntryAction.APP_CLOSE;
 
       setLastSessionTime(System.currentTimeMillis());
-      LocationGMS.onFocusChange();
+      LocationController.onFocusChange();
 
       if (!initDone)
          return;
@@ -1128,7 +1164,7 @@ public class OneSignal {
       if (unsyncedChanges)
          OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
 
-      boolean locationScheduled = LocationGMS.scheduleUpdate(appContext);
+      boolean locationScheduled = LocationController.scheduleUpdate(appContext);
       return locationScheduled || unsyncedChanges;
    }
 
@@ -1139,7 +1175,7 @@ public class OneSignal {
       if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
          appEntryState = AppEntryAction.APP_OPEN;
 
-      LocationGMS.onFocusChange();
+      LocationController.onFocusChange();
 
       // Make sure without privacy consent, onAppFocus returns early
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
@@ -1213,9 +1249,11 @@ public class OneSignal {
 
       deviceInfo.put("app_id", getSavedAppId());
 
-      String adId = mainAdIdProvider.getIdentifier(appContext);
-      if (adId != null)
-         deviceInfo.put("ad_id", adId);
+      if (getAdIdProvider() != null) {
+         String adId = getAdIdProvider().getIdentifier(appContext);
+         if (adId != null)
+            deviceInfo.put("ad_id", adId);
+      }
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
       deviceInfo.put("language", OSUtils.getCorrectedLanguage());
@@ -2000,7 +2038,7 @@ public class OneSignal {
    }
 
    // Called when opening a notification
-   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert, String notificationId) {
+   public static void handleNotificationOpen(Context inContext, JSONArray data, boolean fromAlert, @Nullable String notificationId) {
 
       //if applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
@@ -2021,10 +2059,14 @@ public class OneSignal {
       if (shouldInitDirectSessionFromNotificationOpen(inContext, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
          appEntryState = AppEntryAction.NOTIFICATION_CLICK;
-         sessionManager.onDirectSessionFromNotificationOpen(notificationId);
+         sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
       }
 
       runNotificationOpenedCallback(data, true, fromAlert);
+   }
+
+   static OneSignalDbHelper getDBHelperInstance() {
+      return OneSignalDbHelper.getInstance(appContext);
    }
 
    static boolean startOrResumeApp(Context inContext) {
@@ -2403,13 +2445,13 @@ public class OneSignal {
       Runnable runPromptLocation = new Runnable() {
          @Override
          public void run() {
-            LocationGMS.LocationHandler locationHandler = new LocationGMS.LocationPromptCompletionHandler() {
+            LocationController.LocationHandler locationHandler = new LocationController.LocationPromptCompletionHandler() {
                @Override
-               public LocationGMS.PermissionType getType() {
-                  return LocationGMS.PermissionType.PROMPT_LOCATION;
+               public LocationController.PermissionType getType() {
+                  return LocationController.PermissionType.PROMPT_LOCATION;
                }
                @Override
-               public void onComplete(LocationGMS.LocationPoint point) {
+               public void onComplete(LocationController.LocationPoint point) {
                   //if applicable, check if the user provided privacy consent
                   if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
                      return;
@@ -2426,7 +2468,7 @@ public class OneSignal {
                }
             };
 
-            LocationGMS.getLocation(appContext, true, fallbackToSettings, locationHandler);
+            LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
             promptedLocation = true;
          }
       };
@@ -3031,23 +3073,41 @@ public class OneSignal {
    }
 
    /*
+    * Start Mock Injection module
+    */
+   static void setTrackerFactory(OSTrackerFactory trackerFactory) {
+      OneSignal.trackerFactory = trackerFactory;
+   }
+
+   static void setSessionManager(OSSessionManager sessionManager) {
+      OneSignal.sessionManager = sessionManager;
+   }
+
+   static void setSharedPreferences(OSSharedPreferences preferences) {
+      OneSignal.preferences = preferences;
+   }
+
+   static OSSessionManager.SessionListener getSessionListener() {
+      return sessionListener;
+   }
+   /*
+    * End Mock Injection module
+    */
+
+   /*
     * Start OneSignalOutcome module
     */
    static OSSessionManager getSessionManager() {
       return sessionManager;
    }
 
-   static void sendClickActionOutcome(@NonNull String name) {
-      sendClickActionOutcomeWithValue(name, 0);
-   }
-
-   static void sendClickActionOutcomeWithValue(@NonNull String name, float value) {
+   static void sendClickActionOutcomes(@NonNull List<OSInAppMessageOutcome> outcomes) {
       if (outcomeEventsController == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
          return;
       }
 
-      outcomeEventsController.sendClickOutcomeEventWithValue(name, value);
+      outcomeEventsController.sendClickActionOutcomes(outcomes);
    }
 
    public static void sendOutcome(@NonNull String name) {
@@ -3064,15 +3124,6 @@ public class OneSignal {
       }
 
       outcomeEventsController.sendOutcomeEvent(name, callback);
-   }
-
-   static void sendClickActionUniqueOutcome(@NonNull String name) {
-      if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
-         return;
-      }
-
-      outcomeEventsController.sendUniqueClickOutcomeEvent(name);
    }
 
    public static void sendUniqueOutcome(@NonNull String name) {
@@ -3127,14 +3178,16 @@ public class OneSignal {
 
    /**
     * OutcomeEvent will be null in cases where the request was not sent:
-    *    1. OutcomeEvent cached already for re-attempt in future
-    *    2. Unique OutcomeEvent already sent for ATTRIBUTED session and notification(s)
-    *    3. Unique OutcomeEvent already sent for UNATTRIBUTED session during session
+    *    1. OutcomeEventParams cached already for re-attempt in future
+    *    2. Unique OutcomeEventParams already sent for ATTRIBUTED session and notification(s)
+    *    3. Unique OutcomeEventParams already sent for UNATTRIBUTED session during session
     */
    public interface OutcomeCallback {
       void onSuccess(@Nullable OutcomeEvent outcomeEvent);
    }
-   // End OneSignalOutcome module
+   /*
+    * End OneSignalOutcome module
+    */
 
    interface OSPromptActionCompletionCallback {
       void onCompleted(PromptActionResult result);

@@ -87,8 +87,8 @@ public class PermissionsActivity extends Activity {
 
       if (!waiting) {
          waiting = true;
-         neverAskAgainClicked = !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, LocationGMS.requestPermission);
-         ActivityCompat.requestPermissions(this, new String[]{LocationGMS.requestPermission}, REQUEST_LOCATION);
+         neverAskAgainClicked = !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, LocationController.requestPermission);
+         ActivityCompat.requestPermissions(this, new String[]{LocationController.requestPermission}, REQUEST_LOCATION);
       }
    }
 
@@ -109,12 +109,12 @@ public class PermissionsActivity extends Activity {
             public void run() {
                boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
                OneSignal.PromptActionResult result = granted ? OneSignal.PromptActionResult.PERMISSION_GRANTED : OneSignal.PromptActionResult.PERMISSION_DENIED;
-               LocationGMS.sendAndClearPromptHandlers(true, result);
+                LocationController.sendAndClearPromptHandlers(true, result);
                if (granted) {
-                  LocationGMS.startGetLocation();
+                   LocationController.startGetLocation();
                } else {
                   attemptToShowLocationPermissionSettings();
-                  LocationGMS.fireFailedComplete();
+                   LocationController.fireFailedComplete();
                }
             }
          }, DELAY_TIME_CALLBACK_CALL);
@@ -127,7 +127,7 @@ public class PermissionsActivity extends Activity {
    private void attemptToShowLocationPermissionSettings() {
       if (fallbackToSettings
               && neverAskAgainClicked
-              && !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, LocationGMS.requestPermission))
+              && !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, LocationController.requestPermission))
          showLocationPermissionSettings();
    }
 
@@ -140,13 +140,13 @@ public class PermissionsActivity extends Activity {
                     Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                     intent.setData(Uri.parse("package:" + getPackageName()));
                     startActivity(intent);
-                    LocationGMS.sendAndClearPromptHandlers(true, OneSignal.PromptActionResult.PERMISSION_DENIED);
+                     LocationController.sendAndClearPromptHandlers(true, OneSignal.PromptActionResult.PERMISSION_DENIED);
                  }
               })
               .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
                  @Override
                  public void onClick(DialogInterface dialog, int which) {
-                    LocationGMS.sendAndClearPromptHandlers(true, OneSignal.PromptActionResult.PERMISSION_DENIED);
+                     LocationController.sendAndClearPromptHandlers(true, OneSignal.PromptActionResult.PERMISSION_DENIED);
                  }
               })
               .show();

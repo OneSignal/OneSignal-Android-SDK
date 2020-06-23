@@ -45,6 +45,11 @@ dependencies {
     // firebase-messaging:19.0.0 is the first version using AndroidX
     api 'com.google.firebase:firebase-messaging:[19.0.0, 20.99.99]'
 
+    // Huawei PushKit
+    // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
+    compileOnly 'com.huawei.hms:push:4.0.3.301'
+    compileOnly 'com.huawei.hms:location:4.0.0.300'
+
     api 'androidx.cardview:cardview:[1.0.0, 1.99.99]'
     api 'androidx.legacy:legacy-support-v4:[1.0.0, 1.99.99]'
     api 'androidx.browser:browser:[1.0.0, 1.99.99]'

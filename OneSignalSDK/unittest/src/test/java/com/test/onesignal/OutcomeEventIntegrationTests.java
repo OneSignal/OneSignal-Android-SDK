@@ -3,23 +3,34 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 
-import com.onesignal.MockOutcomesUtils;
+import com.onesignal.MockOSLog;
+import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOneSignalDBHelper;
+import com.onesignal.MockSessionManager;
 import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowJobService;
+import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
+import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.model.OSInfluenceChannel;
+import com.onesignal.influence.model.OSInfluenceType;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -29,18 +40,22 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionDirectNotification;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionIndirectNotificationIds;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionType;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.RestClientAsserts.assertMeasureAtIndex;
+import static com.test.onesignal.RestClientAsserts.assertMeasureOnV2AtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHaveKeys;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexForPlayerId;
@@ -49,7 +64,7 @@ import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
-import static com.test.onesignal.TestHelpers.getAllUniqueOutcomeNotificationRecords;
+import static com.test.onesignal.TestHelpers.getAllUniqueOutcomeNotificationRecordsDB;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -58,14 +73,15 @@ import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
-            ShadowOneSignalRestClient.class,
-            ShadowPushRegistratorFCM.class,
-            ShadowOSUtils.class,
-            ShadowAdvertisingIdProviderGPS.class,
-            ShadowCustomTabsClient.class,
-            ShadowCustomTabsSession.class,
-            ShadowNotificationManagerCompat.class,
-            ShadowJobService.class
+                ShadowOneSignalRestClient.class,
+                ShadowPushRegistratorFCM.class,
+                ShadowGMSLocationController.class,
+                ShadowOSUtils.class,
+                ShadowAdvertisingIdProviderGPS.class,
+                ShadowCustomTabsClient.class,
+                ShadowCustomTabsSession.class,
+                ShadowNotificationManagerCompat.class,
+                ShadowJobService.class
         },
         instrumentedPackages = {"com.onesignal"},
         sdk = 26)
@@ -80,6 +96,20 @@ public class OutcomeEventIntegrationTests {
     private static Activity blankActivity;
     private static ActivityController<BlankActivity> blankActivityController;
     private static String notificationOpenedMessage;
+    private MockOneSignalDBHelper dbHelper;
+    private MockOSLog logger = new MockOSLog();
+    private MockSessionManager sessionManager;
+    private OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper preferences;
+    private OSTrackerFactory trackerFactory;
+    private static List<OSInfluence> lastInfluencesEnding;
+
+    OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
+        @Override
+        public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
+            OneSignal_getSessionListener().onSessionEnding(lastInfluences);
+            OutcomeEventIntegrationTests.lastInfluencesEnding = lastInfluences;
+        }
+    };
 
     private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
         return new OneSignal.NotificationOpenedHandler() {
@@ -110,12 +140,16 @@ public class OutcomeEventIntegrationTests {
     public void beforeEachTest() throws Exception {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
-
+        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        preferences = new OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         cleanUp();
     }
 
     @After
     public void afterEachTest() throws Exception {
+        lastInfluencesEnding = null;
         afterTestCleanup();
     }
 
@@ -129,7 +163,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // Check session INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(1);
 
         // Background app
         blankActivityController.pause();
@@ -144,7 +178,14 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Check session DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        assertNotificationChannelDirectInfluence(ONESIGNAL_NOTIFICATION_ID + "2");
+        // Upgrade on influence will end indirect session
+        assertEquals(1, lastInfluencesEnding.size());
+        // Upgrade on influence will end indirect session
+        assertEquals(OSInfluenceChannel.NOTIFICATION, lastInfluencesEnding.get(0).getInfluenceChannel());
+        assertEquals(OSInfluenceType.INDIRECT, lastInfluencesEnding.get(0).getInfluenceType());
+        assertEquals(1, lastInfluencesEnding.get(0).getIds().length());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", lastInfluencesEnding.get(0).getIds().get(0));
     }
 
     @Test
@@ -152,7 +193,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // Check session INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(1);
 
         // Background app for 30 seconds
         blankActivityController.pause();
@@ -168,7 +209,14 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Check session DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        assertNotificationChannelDirectInfluence(ONESIGNAL_NOTIFICATION_ID + "2");
+        // Upgrade on influence will end indirect session
+        assertEquals(1, lastInfluencesEnding.size());
+        // Upgrade on influence will end indirect session
+        assertEquals(OSInfluenceChannel.NOTIFICATION, lastInfluencesEnding.get(0).getInfluenceChannel());
+        assertEquals(OSInfluenceType.INDIRECT, lastInfluencesEnding.get(0).getInfluenceType());
+        assertEquals(1, lastInfluencesEnding.get(0).getIds().length());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", lastInfluencesEnding.get(0).getIds().get(0));
     }
 
     @Test
@@ -176,9 +224,9 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // Check received notifications matches indirectNotificationIds
-        assertEquals(new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"), OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"), trackerFactory.getNotificationChannelTracker().getIndirectIds());
         // Check session INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(1);
 
         // Background app for attribution window time
         blankActivityController.pause();
@@ -190,17 +238,12 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Check session UNATTRIBUTED
-        assertTrue(OneSignal_getSessionType().isUnattributed());
+        assertNotificationChannelUnattributedInfluence();
     }
 
     @Test
     public void testUniqueOutcomeMeasureOnlySentOncePerClickedNotification_whenSendingMultipleUniqueOutcomes_inDirectSession() throws Exception {
         foregroundAppAfterClickingNotification();
-
-        // Check clicked notification matches directNotificationId
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", OneSignal_getSessionDirectNotification());
-        // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
 
         // Send unique outcome event
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
@@ -220,14 +263,44 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    public void testOnV2UniqueOutcomeMeasureOnlySentOncePerClickedNotification_whenSendingMultipleUniqueOutcomes_inDirectSession() throws Exception {
+        // Enable IAM v2
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+        foregroundAppAfterClickingNotification();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        JSONArray notificationIds = new JSONArray();
+        notificationIds.put(ONESIGNAL_NOTIFICATION_ID + "1");
+
+        // Check measure end point was most recent request and contains clicked notification
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, new JSONArray(), notificationIds, null, null);
+        // Only 4 requests have been made
+        assertRestCalls(4);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make still only 4 requests have been made
+        assertRestCalls(4);
+    }
+
+    @Test
     public void testUniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         foregroundAppAfterReceivingNotification();
 
         // Check notificationIds equal indirectNotificationIds from OSSessionManager
         JSONArray notificationIds = new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1");
-        assertEquals(notificationIds, OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(notificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
         // Make sure session is INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(1);
 
         // Send unique outcome event
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
@@ -256,7 +329,7 @@ public class OutcomeEventIntegrationTests {
         // Wait 31 seconds to start new session
         advanceSystemTimeBy(31);
 
-        // Foreground app
+        // Foreground app will start a new session upgrade
         blankActivityController.resume();
         threadAndTaskWait();
 
@@ -266,12 +339,73 @@ public class OutcomeEventIntegrationTests {
 
         // Check notificationIds are not equal indirectNotificationIds from OSSessionManager
         notificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
-        assertEquals(notificationIds, OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(notificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
         // Make sure session is INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(2);
 
         // Check measure end point was most recent request and contains received notification
         assertMeasureAtIndex(4, false, ONESIGNAL_OUTCOME_NAME, new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
+    }
+
+    @Test
+    public void testOnV2UniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
+        // Enable IAM v2
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+        foregroundAppAfterReceivingNotification();
+
+        // Check notificationIds equal indirectNotificationIds from OSSessionManager
+        JSONArray notificationIds = new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1");
+        assertEquals(notificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
+        // Make sure session is INDIRECT
+        assertNotificationChannelIndirectInfluence(1);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, null, null, new JSONArray(), notificationIds);
+        // Only 3 requests have been made
+        assertRestCalls(3);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make still only 3 requests have been made
+        assertRestCalls(3);
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive notification
+        Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
+        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+
+        // Wait 31 seconds to start new session
+        advanceSystemTimeBy(31);
+
+        // Foreground app will start a new session upgrade
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check notificationIds are not equal indirectNotificationIds from OSSessionManager
+        notificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
+        assertEquals(notificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
+        // Make sure session is INDIRECT
+        assertNotificationChannelIndirectInfluence(2);
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, null, null, new JSONArray(),  new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"));
     }
 
     @Test
@@ -280,7 +414,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure session is UNATTRIBUTED
-        assertTrue(OneSignal_getSessionType().isUnattributed());
+        assertNotificationChannelUnattributedInfluence();
 
         // Send unique outcome event
         OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
@@ -314,10 +448,63 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure session is UNATTRIBUTED
-        assertTrue(OneSignal_getSessionType().isUnattributed());
+        assertNotificationChannelUnattributedInfluence();
 
         // Check measure end point was most recent request and contains received notification
         assertMeasureAtIndex(4, ONESIGNAL_OUTCOME_NAME);
+    }
+
+    @Test
+    public void testOnV2OutcomeNameSentWithMeasureOncePerSession_whenSendingMultipleUniqueOutcomes_inUnattributedSession() throws Exception {
+        // Enable IAM v2
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Make sure session is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureOnV2AtIndex(2, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
+        // Only 3 requests have been made
+        assertRestCalls(3);
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make still only 3 requests have been made
+        assertRestCalls(3);
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Wait 31 seconds to start new session
+        advanceSystemTimeBy(31);
+
+        // Foreground app
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make sure session is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureOnV2AtIndex(4, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
     }
 
     @Test
@@ -348,6 +535,43 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    public void testOnV2CorrectOutcomeSent_fromNotificationOpenedHandler() throws Exception {
+        // Enable IAM v2
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+
+        // Init OneSignal with a custom opened handler
+        OneSignalInit(new OneSignal.NotificationOpenedHandler() {
+            @Override
+            public void notificationOpened(OSNotificationOpenResult result) {
+                OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+            }
+        });
+        threadAndTaskWait();
+
+        // Background app
+        blankActivityController.pause();
+        threadAndTaskWait();
+
+        // Receive and open a notification
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        threadAndTaskWait();
+
+        // Foreground the application
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        JSONArray notificationIds = new JSONArray();
+        notificationIds.put(ONESIGNAL_NOTIFICATION_ID);
+
+        // Make sure a measure request is made with the correct session and notifications
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, new JSONArray(), notificationIds, null, null);
+    }
+
+    @Test
     public void testNoDirectSession_fromNotificationOpen_whenAppIsInForeground() throws Exception {
         OneSignalInit();
         threadAndTaskWait();
@@ -361,9 +585,12 @@ public class OutcomeEventIntegrationTests {
 
         // Check message String matches data sent in open handler
         assertEquals("Test Msg", notificationOpenedMessage);
-
         // Make sure session is not DIRECT
-        assertFalse(OneSignal_getSessionType().isDirect());
+        assertFalse(trackerFactory.getNotificationChannelTracker().getInfluenceType().isDirect());
+        // Make sure session is not INDIRECT
+        assertFalse(trackerFactory.getNotificationChannelTracker().getInfluenceType().isIndirect());
+        // Make sure no session is ending
+        assertNull(lastInfluencesEnding);
     }
 
     @Test
@@ -372,9 +599,8 @@ public class OutcomeEventIntegrationTests {
 
         // Check message String matches data sent in open handler
         assertEquals("Test Msg", notificationOpenedMessage);
-
-        // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        // Make sure notification influence is DIRECT
+        assertNotificationChannelDirectInfluence(ONESIGNAL_NOTIFICATION_ID + "1");
     }
 
     @Test
@@ -383,16 +609,19 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure session is unattributed
-        assertTrue(OneSignal_getSessionType().isUnattributed());
+        assertNotificationChannelUnattributedInfluence();
+        assertIAMChannelUnattributedInfluence();
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
         FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
+        // Make sure notification influence is not INDIRECT
+        assertFalse(trackerFactory.getNotificationChannelTracker().getInfluenceType().isIndirect());
         // Make sure not indirect notifications exist
-        assertNull(OneSignal_getSessionIndirectNotificationIds());
-        // Make sure session is not DIRECT
-        assertFalse(OneSignal_getSessionType().isIndirect());
+        assertNull(trackerFactory.getNotificationChannelTracker().getIndirectIds());
+        // Make sure not session is ending
+        assertNull(lastInfluencesEnding);
     }
 
     @Test
@@ -403,7 +632,7 @@ public class OutcomeEventIntegrationTests {
         advanceSystemTimeBy(10);
 
         // Make sure session is INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(1);
 
         // Background app
         blankActivityController.pause();
@@ -424,19 +653,18 @@ public class OutcomeEventIntegrationTests {
             put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
         }});
         // Check directNotificationId is set to clicked notification
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "2", OneSignal_getSessionDirectNotification());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "2", trackerFactory.getNotificationChannelTracker().getDirectId());
         // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        assertNotificationChannelDirectInfluence(ONESIGNAL_NOTIFICATION_ID + "2");
     }
 
     @Test
     public void testDirectSession_willOverrideDirectSession_whenAppIsInBackground() throws Exception {
-        foregroundAppAfterClickingNotification();
-
-        // Check directNotificationId is set to clicked notification
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", OneSignal_getSessionDirectNotification());
-        // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        sessionManager.initSessionFromCache();
+        OneSignal_setTrackerFactory(trackerFactory);
+        OneSignal_setSessionManager(sessionManager);
+        OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
+        trackerFactory.saveInfluenceParams(params);
 
         // Background app
         blankActivityController.pause();
@@ -447,19 +675,19 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Check directNotificationId is set to clicked notification
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "2", OneSignal_getSessionDirectNotification());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "2", trackerFactory.getNotificationChannelTracker().getDirectId());
         // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        assertNotificationChannelDirectInfluence(ONESIGNAL_NOTIFICATION_ID + "2");
+        // Make sure session is ending
+        assertEquals(1, lastInfluencesEnding.size());
+        assertEquals(OSInfluenceChannel.NOTIFICATION, lastInfluencesEnding.get(0).getInfluenceChannel());
+        assertEquals(OSInfluenceType.UNATTRIBUTED, lastInfluencesEnding.get(0).getInfluenceType());
+        assertNull(lastInfluencesEnding.get(0).getIds());
     }
 
     @Test
     public void testIndirectSession_fromDirectSession_afterNewSession() throws Exception {
         foregroundAppAfterClickingNotification();
-
-        // Check directNotificationId is set to clicked notification
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", OneSignal_getSessionDirectNotification());
-        // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
 
         // Background app
         blankActivityController.pause();
@@ -479,22 +707,24 @@ public class OutcomeEventIntegrationTests {
 
         // Check on_session is triggered
         assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
-        // Make sure no indirectNotificationIds exist
-        assertNull(OneSignal_getSessionDirectNotification());
+        // Make sure no directNotificationId exist
+        assertNull(trackerFactory.getNotificationChannelTracker().getDirectId());
         // Make sure indirectNotificationIds are correct
-        assertEquals(new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "2"), OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1").put(ONESIGNAL_NOTIFICATION_ID + "2"), trackerFactory.getNotificationChannelTracker().getIndirectIds());
         // Make sure session is INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(2);
+
+        // Make sure session is ending
+        assertEquals(1, lastInfluencesEnding.size());
+        assertEquals(OSInfluenceChannel.NOTIFICATION, lastInfluencesEnding.get(0).getInfluenceChannel());
+        assertEquals(OSInfluenceType.DIRECT, lastInfluencesEnding.get(0).getInfluenceType());
+        assertEquals(1, lastInfluencesEnding.get(0).getIds().length());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", lastInfluencesEnding.get(0).getIds().get(0));
     }
 
     @Test
     public void testIndirectSession_wontOverrideDirectSession_beforeNewSession() throws Exception {
         foregroundAppAfterClickingNotification();
-
-        // Check directNotificationId is set to clicked notification
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", OneSignal_getSessionDirectNotification());
-        // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
 
         // Background app
         blankActivityController.pause();
@@ -509,11 +739,13 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure no indirectNotificationIds exist
-        assertNull(OneSignal_getSessionIndirectNotificationIds());
+        assertNull(trackerFactory.getNotificationChannelTracker().getIndirectIds());
         // Check directNotificationId is set to clicked notification
-        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", OneSignal_getSessionDirectNotification());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", trackerFactory.getNotificationChannelTracker().getDirectId());
         // Make sure session is DIRECT
-        assertTrue(OneSignal_getSessionType().isDirect());
+        assertNotificationChannelDirectInfluence(ONESIGNAL_NOTIFICATION_ID + "1");
+        // Make sure no session is ending
+        assertNull(lastInfluencesEnding);
     }
 
     @Test
@@ -534,10 +766,12 @@ public class OutcomeEventIntegrationTests {
 
         // Make sure indirectNotificationIds are correct
         JSONArray indirectNotificationIds = new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1");
-        assertEquals(indirectNotificationIds, OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(indirectNotificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
 
         // Make sure session is INDIRECT
-        assertTrue(OneSignal_getSessionType().isIndirect());
+        assertNotificationChannelIndirectInfluence(1);
+        // Make sure no session is ending
+        assertNull(lastInfluencesEnding);
     }
 
     @Test
@@ -622,7 +856,7 @@ public class OutcomeEventIntegrationTests {
 
         // Make sure indirectNotificationIds are correct
         JSONArray indirectNotificationIds = new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1");
-        assertEquals(indirectNotificationIds, OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(indirectNotificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
 
         // Background app
         blankActivityController.pause();
@@ -641,15 +875,22 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure indirectNotificationIds are updated and correct
-        assertEquals(indirectNotificationIds, OneSignal_getSessionIndirectNotificationIds());
+        assertEquals(indirectNotificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
+
+        // Make sure session is ending
+        assertEquals(1, lastInfluencesEnding.size());
+        assertEquals(OSInfluenceChannel.NOTIFICATION, lastInfluencesEnding.get(0).getInfluenceChannel());
+        assertEquals(OSInfluenceType.INDIRECT, lastInfluencesEnding.get(0).getInfluenceType());
+        assertEquals(1, lastInfluencesEnding.get(0).getIds().length());
+        assertEquals(ONESIGNAL_NOTIFICATION_ID + "1", lastInfluencesEnding.get(0).getIds().get(0));
     }
 
     @Test
     public void testCleaningCachedNotifications_after7Days_willAlsoCleanUniqueOutcomeNotifications() throws Exception {
         foregroundAppAfterReceivingNotification();
 
-        assertEquals(1, getAllNotificationRecords().size());
-        assertEquals(0, getAllUniqueOutcomeNotificationRecords().size());
+        assertEquals(1, getAllNotificationRecords(dbHelper).size());
+        assertEquals(0, getAllUniqueOutcomeNotificationRecordsDB(dbHelper).size());
 
         // Should add a new unique outcome notifications (total in cache = 0 + 1)
         OneSignal.sendUniqueOutcome("unique_1");
@@ -659,8 +900,8 @@ public class OutcomeEventIntegrationTests {
         OneSignal.sendUniqueOutcome("unique_1");
         threadAndTaskWait();
 
-        assertEquals(1, getAllNotificationRecords().size());
-        assertEquals(1, getAllUniqueOutcomeNotificationRecords().size());
+        assertEquals(1, getAllNotificationRecords(dbHelper).size());
+        assertEquals(1, getAllUniqueOutcomeNotificationRecordsDB(dbHelper).size());
 
         // Background app
         blankActivityController.pause();
@@ -686,8 +927,8 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure only 2 notifications exist still, but 5 unique outcome notifications exist
-        assertEquals(2, getAllNotificationRecords().size());
-        assertEquals(5, getAllUniqueOutcomeNotificationRecords().size());
+        assertEquals(2, getAllNotificationRecords(dbHelper).size());
+        assertEquals(5, getAllUniqueOutcomeNotificationRecordsDB(dbHelper).size());
 
         // Wait a week to clear cached notifications
         advanceSystemTimeBy(604_800);
@@ -698,8 +939,8 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Make sure when notification cache is cleaned so is the unique outcome events cache
-        assertEquals(0, getAllNotificationRecords().size());
-        assertEquals(0, getAllUniqueOutcomeNotificationRecords().size());
+        assertEquals(0, getAllNotificationRecords(dbHelper).size());
+        assertEquals(0, getAllUniqueOutcomeNotificationRecordsDB(dbHelper).size());
     }
 
     private void foregroundAppAfterClickingNotification() throws Exception {
@@ -709,66 +950,145 @@ public class OutcomeEventIntegrationTests {
         // Make sure no notification data exists
         assertNull(notificationOpenedMessage);
         // Make no direct notification id is set
-        assertNull(OneSignal_getSessionDirectNotification());
-        // Make sure session started unattributed
-        assertTrue(OneSignal_getSessionType().isUnattributed());
+        assertNull(trackerFactory.getNotificationChannelTracker().getDirectId());
+        // Make sure all influences are UNATTRIBUTED
+        List<OSInfluence> influences = sessionManager.getInfluences();
+        for (OSInfluence influence : influences) {
+            assertTrue(influence.getInfluenceType().isUnattributed());
+        }
 
         // Background app
         blankActivityController.pause();
         threadAndTaskWait();
 
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
+        sessionManager.onNotificationReceived(notificationID);
         // Click notification before new session
-        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
+        OneSignal.handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, notificationID);
         threadAndTaskWait();
 
         // App opened after clicking notification, but Robolectric needs this to simulate onAppFocus() code after a click
         blankActivityController.resume();
         threadAndTaskWait();
+
+        // Check directNotificationId is set to clicked notification
+        assertEquals(notificationID, trackerFactory.getNotificationChannelTracker().getDirectId());
+        // Make sure notification influence is DIRECT
+        assertNotificationChannelDirectInfluence(notificationID);
+        // Make sure iam influence is UNATTRIBUTED
+        assertIAMChannelUnattributedInfluence();
+
+        // Upgrade on influence will end unattributed session
+        assertEquals(1, lastInfluencesEnding.size());
+        for (OSInfluence influence : lastInfluencesEnding) {
+            assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+        }
+
+        // Reset for upcoming asserts
+        lastInfluencesEnding = null;
     }
 
     private void foregroundAppAfterReceivingNotification() throws Exception {
         OneSignalInit();
         threadAndTaskWait();
 
-        // Make no direct notification id is set
-        assertNull(OneSignal_getSessionIndirectNotificationIds());
-        // Make sure session started unattributed
-        assertTrue(OneSignal_getSessionType().isUnattributed());
+        // Make sure all influences are UNATTRIBUTED
+        List<OSInfluence> influences = sessionManager.getInfluences();
+        for (OSInfluence influence : influences) {
+            assertTrue(influence.getInfluenceType().isUnattributed());
+        }
 
         // Background app
         blankActivityController.pause();
         threadAndTaskWait();
 
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "1");
         FCMBroadcastReceiver_onReceived(blankActivity, bundle);
 
+        // Check notification was saved
+        assertEquals(1, trackerFactory.getNotificationChannelTracker().getLastReceivedIds().length());
+        assertEquals(notificationID, trackerFactory.getNotificationChannelTracker().getLastReceivedIds().get(0));
+
         // Foreground app through icon
         blankActivityController.resume();
         threadAndTaskWait();
+
+        // Upgrade on influence will end unattributed session
+        assertEquals(1, lastInfluencesEnding.size());
+        for (OSInfluence influence : lastInfluencesEnding) {
+            assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+        }
+
+        // Reset for upcoming asserts
+        lastInfluencesEnding = null;
+    }
+
+    private void assertNotificationChannelDirectInfluence(String id) throws JSONException {
+        OSInfluence influence = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
+        assertTrue(influence.getInfluenceType().isDirect());
+        assertEquals(1, influence.getIds().length());
+        assertEquals(id, influence.getIds().get(0));
+    }
+
+    private void assertNotificationChannelIndirectInfluence(int indirectIdsLength) {
+        OSInfluence influence = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
+        assertTrue(influence.getInfluenceType().isIndirect());
+        assertEquals(indirectIdsLength, influence.getIds().length());
+    }
+
+    private void assertIAMChannelUnattributedInfluence() {
+        OSInfluence influence = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertTrue(influence.getInfluenceType().isUnattributed());
+        assertNull(influence.getIds());
+    }
+
+    private void assertIAMChannelDirectInfluence() {
+        OSInfluence influence = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertTrue(influence.getInfluenceType().isDirect());
+        assertEquals(1, influence.getIds().length());
+    }
+
+    private void assertIAMChannelIndirectInfluence(int indirectIdsLength) {
+        OSInfluence influence = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
+        assertTrue(influence.getInfluenceType().isIndirect());
+        assertEquals(indirectIdsLength, influence.getIds().length());
+    }
+
+    private void assertNotificationChannelUnattributedInfluence() {
+        OSInfluence influence = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
+        assertTrue(influence.getInfluenceType().isUnattributed());
+        assertNull(influence.getIds());
     }
 
     private void OneSignalInit() throws Exception {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
+        // Set mocks for mocking behaviour
+        OneSignal_setTrackerFactory(trackerFactory);
+        OneSignal_setSessionManager(sessionManager);
         OneSignal.setAppId(ONESIGNAL_APP_ID);
         OneSignal.setAppContext(blankActivity);
         OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
         threadAndTaskWait();
-        OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-        new MockOutcomesUtils().saveOutcomesParams(params);
+        // Enable influence
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         blankActivityController.resume();
     }
 
     private void OneSignalInit(OneSignal.NotificationOpenedHandler notificationOpenedHandler) throws Exception {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
+        // Set mocks for mocking behaviour
+        OneSignal_setTrackerFactory(trackerFactory);
+        OneSignal_setSessionManager(sessionManager);
         OneSignal.setAppId(ONESIGNAL_APP_ID);
         OneSignal.setAppContext(blankActivity);
         OneSignal.setNotificationOpenedHandler(notificationOpenedHandler);
         threadAndTaskWait();
-        OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-        new MockOutcomesUtils().saveOutcomesParams(params);
+        // Enable influence
+        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         blankActivityController.resume();
     }
 }

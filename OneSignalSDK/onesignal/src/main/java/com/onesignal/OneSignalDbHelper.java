@@ -36,16 +36,20 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.SystemClock;
 
-import com.onesignal.OneSignalDbContract.NotificationTable;
-import com.onesignal.OneSignalDbContract.OutcomeEventsTable;
-import com.onesignal.OneSignalDbContract.CachedUniqueOutcomeNotificationTable;
 import com.onesignal.OneSignalDbContract.InAppMessageTable;
+import com.onesignal.OneSignalDbContract.NotificationTable;
+import com.onesignal.outcomes.OSOutcomeTableProvider;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class OneSignalDbHelper extends SQLiteOpenHelper {
-   static final int DATABASE_VERSION = 7;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V3;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
+
+class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
+   static final int DATABASE_VERSION = 8;
    private static final String DATABASE_NAME = "OneSignal.db";
 
    private static final String INTEGER_PRIMARY_KEY_TYPE = " INTEGER PRIMARY KEY";
@@ -75,24 +79,6 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
                    NotificationTable.COLUMN_NAME_EXPIRE_TIME + TIMESTAMP_TYPE +
                    ");";
 
-   private static final String SQL_CREATE_OUTCOME_ENTRIES =
-           "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
-                   OutcomeEventsTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + COMMA_SEP +
-                   OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + COMMA_SEP +
-                   // "params TEXT" Added in v4, removed in v5.
-                   OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
-                   ");";
-
-   private static final String SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES =
-           "CREATE TABLE " + CachedUniqueOutcomeNotificationTable.TABLE_NAME + " (" +
-                   CachedUniqueOutcomeNotificationTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
-                   CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
-                   CachedUniqueOutcomeNotificationTable.COLUMN_NAME_NAME + TEXT_TYPE +
-                   ");";
-
    private static final String SQL_CREATE_IN_APP_MESSAGE_ENTRIES =
            "CREATE TABLE " + InAppMessageTable.TABLE_NAME + " (" +
                    InAppMessageTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
@@ -113,6 +99,14 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    };
 
    private static OneSignalDbHelper sInstance;
+   private static OSOutcomeTableProvider outcomeTableProvider = new OSOutcomeTableProvider();
+
+   /**
+    * Testing mock purposes
+    * */
+   void setOutcomeTableProvider(OSOutcomeTableProvider outcomeTableProvider) {
+      OneSignalDbHelper.outcomeTableProvider = outcomeTableProvider;
+   }
 
    private static int getDbVersion() {
       return DATABASE_VERSION;
@@ -158,7 +152,8 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
     * <br/><br/>
     * @see OneSignalDbHelper#getSQLiteDatabase()
     */
-   synchronized SQLiteDatabase getSQLiteDatabaseWithRetries() {
+   @Override
+   public synchronized SQLiteDatabase getSQLiteDatabaseWithRetries() {
       int count = 0;
       while(true) {
          try {
@@ -174,8 +169,8 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    @Override
    public void onCreate(SQLiteDatabase db) {
       db.execSQL(SQL_CREATE_ENTRIES);
-      db.execSQL(SQL_CREATE_OUTCOME_ENTRIES);
-      db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES);
+      db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3);
+      db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2);
       db.execSQL(SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
       for (String ind : SQL_INDEX_ENTRIES) {
          db.execSQL(ind);
@@ -184,6 +179,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
    @Override
    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal Database onUpgrade from: " + oldVersion + " to: " + newVersion);
       try {
          internalOnUpgrade(db, oldVersion);
       } catch (SQLiteException e) {
@@ -193,7 +189,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       }
    }
 
-   private static void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
+   private synchronized void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
       if (oldVersion < 2)
          upgradeToV2(db);
 
@@ -212,6 +208,9 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
       if (oldVersion < 7)
          upgradeToV7(db);
+
+      if (oldVersion < 8)
+         upgradeToV8(db);
    }
 
    // Add collapse_id field and index
@@ -241,51 +240,30 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
    }
 
    private static void upgradeToV4(SQLiteDatabase db) {
-      safeExecSQL(db, SQL_CREATE_OUTCOME_ENTRIES);
+      safeExecSQL(db, SQL_CREATE_OUTCOME_ENTRIES_V1);
    }
 
    private static void upgradeToV5(SQLiteDatabase db) {
       // Added for 3.12.1
-      safeExecSQL(db, SQL_CREATE_UNIQUE_OUTCOME_NOTIFICATION_ENTRIES);
+      safeExecSQL(db, SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1);
       // Added for 3.12.2
-      upgradeOutcomeTableRevision1To2(db);
+      upgradeFromV5ToV6(db);
    }
 
    // We only want to run this if going from DB v5 to v6 specifically since
-   //   it was originally missed in upgradeToV5 in 3.12.1
+   // it was originally missed in upgradeToV5 in 3.12.1
    // Added for 3.12.2
    private static void upgradeFromV5ToV6(SQLiteDatabase db) {
-      upgradeOutcomeTableRevision1To2(db);
+      outcomeTableProvider.upgradeOutcomeTableRevision1To2(db);
    }
 
    private static void upgradeToV7(SQLiteDatabase db) {
       safeExecSQL(db, SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
    }
 
-   // On the outcome table this adds the new weight column and drops params column.
-   private static void upgradeOutcomeTableRevision1To2(SQLiteDatabase db) {
-      String commonColumns = "_id,name,session,timestamp,notification_ids";
-      try {
-         // Since SQLite does not support dropping a column we need to:
-         //   1. Create a temptable
-         //   2. Copy outcome table into it
-         //   3. Drop the outcome table
-         //   4. Recreate it with the correct fields
-         //   5. Copy the temptable rows back into the new outcome table
-         //   6. Drop the temptable.
-         db.execSQL("BEGIN TRANSACTION;");
-         db.execSQL("CREATE TEMPORARY TABLE outcome_backup(" + commonColumns + ");");
-         db.execSQL("INSERT INTO outcome_backup SELECT " + commonColumns + " FROM outcome;");
-         db.execSQL("DROP TABLE outcome;");
-         db.execSQL(SQL_CREATE_OUTCOME_ENTRIES);
-         // Not converting weight from param here, just set to zero.
-         //   3.12.1 quickly replaced 3.12.0 so converting cache isn't critical.
-         db.execSQL("INSERT INTO outcome (" + commonColumns + ", weight) SELECT " + commonColumns + ", 0 FROM outcome_backup;");
-         db.execSQL("DROP TABLE outcome_backup;");
-         db.execSQL("COMMIT;");
-      } catch (SQLiteException e) {
-         e.printStackTrace();
-      }
+   private synchronized void upgradeToV8(SQLiteDatabase db) {
+      outcomeTableProvider.upgradeOutcomeTableRevision2To3(db);
+      outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db);
    }
 
    private static void safeExecSQL(SQLiteDatabase db, String sql) {
@@ -319,15 +297,6 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
       onCreate(db);
    }
 
-   // Could enable WAL in the future but requires Android API 11
-   /*
-   @Override
-   public void onConfigure(SQLiteDatabase db) {
-      super.onConfigure(db);
-      db.enableWriteAheadLogging();
-   }
-   */
-
    static StringBuilder recentUninteractedWithNotificationsWhere() {
       long currentTimeSec = System.currentTimeMillis() / 1_000L;
       long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back
@@ -350,7 +319,7 @@ public class OneSignalDbHelper extends SQLiteOpenHelper {
 
    static void cleanOutcomeDatabaseTable(SQLiteDatabase writeableDb) {
       writeableDb.delete(
-              OneSignalDbContract.OutcomeEventsTable.TABLE_NAME,
+              OSOutcomeTableProvider.OUTCOME_EVENT_TABLE,
               null,
               null);
    }

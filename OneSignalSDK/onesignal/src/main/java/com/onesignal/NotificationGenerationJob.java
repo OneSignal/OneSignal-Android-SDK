@@ -31,6 +31,8 @@ package com.onesignal;
 import android.content.Context;
 import android.net.Uri;
 
+import androidx.annotation.Nullable;
+
 import org.json.JSONObject;
 
 import java.security.SecureRandom;
@@ -93,6 +95,7 @@ class NotificationGenerationJob {
       return getAndroidIdWithoutCreate() != -1;
    }
 
+   @Nullable
    String getApiNotificationId() {
       return OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
    }

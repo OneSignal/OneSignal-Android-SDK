@@ -14,12 +14,17 @@ import org.json.JSONObject;
 
 import java.util.List;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.UserState.PUSH_STATUS_SUBSCRIBED;
 import static com.test.onesignal.RestClientValidator.GET_REMOTE_PARAMS_ENDPOINT;
 import static com.test.onesignal.TypeAsserts.assertIsUUID;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 class RestClientAsserts {
@@ -27,12 +32,14 @@ class RestClientAsserts {
    private static final AnyOf<Integer> ANY_OF_VALID_DEVICE_TYPES = anyOf(
       is(UserState.DEVICE_TYPE_ANDROID),
       is(UserState.DEVICE_TYPE_FIREOS),
-      is(UserState.DEVICE_TYPE_EMAIL)
+      is(UserState.DEVICE_TYPE_EMAIL),
+      is(UserState.DEVICE_TYPE_HUAWEI)
    );
 
    private static final AnyOf<Integer> ANY_OF_PUSH_DEVICE_TYPES = anyOf(
       is(UserState.DEVICE_TYPE_ANDROID),
-      is(UserState.DEVICE_TYPE_FIREOS)
+      is(UserState.DEVICE_TYPE_FIREOS),
+      is(UserState.DEVICE_TYPE_HUAWEI)
    );
 
    static void assertPlayerCreateAnyAtIndex(int index) throws JSONException {
@@ -65,6 +72,39 @@ class RestClientAsserts {
 
       assertPlayerCreateMethodAndUrl(request);
       assertDeviceTypeIsAmazon(request.payload);
+   }
+
+   static void assertHuaweiPlayerCreateAtIndex(int index) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertPlayerCreateMethodAndUrl(request);
+      assertDeviceTypeIsHuawei(request.payload);
+   }
+
+   static void assertPlayerCreateSubscribedAtIndex(int index) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertPlayerCreateMethodAndUrl(request);
+
+      boolean subscribed = !request.payload.has("notification_types");
+      assertTrue(subscribed);
+      assertNotNull(request.payload.optString("identifier", null));
+   }
+
+   static void assertPlayerCreateNotSubscribedAtIndex(int index) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertPlayerCreateMethodAndUrl(request);
+
+      boolean unsubscribed = request.payload.getInt("notification_types") < PUSH_STATUS_SUBSCRIBED;
+      assertTrue(unsubscribed);
+      assertNull(request.payload.optString("identifier", null));
+   }
+
+   static void assertPlayerCreateWithNotificationTypesAtIndex(int notification_types, int index) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+      assertPlayerCreateMethodAndUrl(request);
+      assertEquals(notification_types, request.payload.getInt("notification_types"));
    }
 
    static void assertOnSessionAtIndex(int index) {
@@ -121,6 +161,10 @@ class RestClientAsserts {
       assertEquals(UserState.DEVICE_TYPE_FIREOS, payload.getInt("device_type"));
    }
 
+   private static void assertDeviceTypeIsHuawei(@NonNull JSONObject payload) throws JSONException {
+      assertEquals(UserState.DEVICE_TYPE_HUAWEI, payload.getInt("device_type"));
+   }
+
    static void assertReportReceivedAtIndex(int index, @NonNull String notificationId, @NonNull JSONObject payload) {
       Request request = ShadowOneSignalRestClient.requests.get(index);
       assertEquals(REST_METHOD.PUT, request.method);
@@ -143,24 +187,64 @@ class RestClientAsserts {
    }
 
    static void assertMeasureAtIndex(int index, @NonNull String outcomeName) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure", index, new JSONObject()
               .put("id", outcomeName)
       );
    }
 
    static void assertMeasureAtIndex(int index, @NonNull boolean isDirect, @NonNull String outcomeName, @NonNull JSONArray notificationIds) throws JSONException {
-      assertMeasureAtIndex(index, new JSONObject()
+      assertMeasureAtIndex("measure", index, new JSONObject()
               .put("direct", isDirect)
               .put("id", outcomeName)
               .put("notification_ids", notificationIds)
       );
    }
 
-   private static void assertMeasureAtIndex(int index, JSONObject containsPayload) throws JSONException {
+   static void assertMeasureOnV2AtIndex(int index, @NonNull String outcomeName,
+                                        JSONArray directIAMs, JSONArray directNotifications,
+                                        JSONArray indirectIAMs, JSONArray indirectNotifications) throws JSONException {
+      JSONObject sources = new JSONObject();
+      boolean direct = false;
+      boolean indirect = false;
+      if (directIAMs != null || directNotifications != null) {
+         direct = true;
+         JSONObject directBody = new JSONObject();
+         if (directNotifications != null)
+            directBody.put("notification_ids", directNotifications);
+         if (directIAMs != null)
+            directBody.put("in_app_message_ids", directIAMs);
+         sources.put("direct", directBody);
+      }
+
+      if (indirectIAMs != null || indirectNotifications != null) {
+         indirect = true;
+         JSONObject indirectBody = new JSONObject();
+         if (indirectNotifications != null)
+            indirectBody.put("notification_ids", indirectNotifications);
+         if (indirectIAMs != null)
+            indirectBody.put("in_app_message_ids", indirectIAMs);
+         sources.put("indirect", indirectBody);
+      }
+
+      assertMeasureAtIndex("measure_sources", index, new JSONObject()
+              .put("id", outcomeName)
+              .put("sources", sources)
+      );
+
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+      if (!direct)
+         assertFalse(request.payload.getJSONObject("sources").has("direct"));
+      if (!indirect)
+         assertFalse(request.payload.getJSONObject("sources").has("indirect"));
+
+      assertFalse(request.payload.has("weight"));
+   }
+
+   private static void assertMeasureAtIndex(String measureKey, int index, JSONObject containsPayload) throws JSONException {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 
       assertEquals(REST_METHOD.POST, request.method);
-      assertMeasureUrl(request.url);
+      assertMeasureUrl(measureKey, request.url);
       JsonAsserts.containsSubset(request.payload, containsPayload);
    }
 
@@ -200,10 +284,10 @@ class RestClientAsserts {
       assertEquals(3, parts.length);
    }
 
-   private static void assertMeasureUrl(String url) {
+   private static void assertMeasureUrl(String measureKey, String url) {
       String[] parts = url.split("/");
       assertEquals("outcomes", parts[0]);
-      assertEquals("measure", parts[1]);
+      assertEquals(measureKey, parts[1]);
    }
 
    static void assertRestCalls(int expected) {
@@ -217,6 +301,20 @@ class RestClientAsserts {
       }
 
       assertIsUUID(request.payload.optString("app_id"));
+   }
+
+   public static void assertNotificationOpenAtIndex(int index, int deviceType) throws JSONException {
+      Request request = ShadowOneSignalRestClient.requests.get(index);
+
+      assertEquals(REST_METHOD.PUT, request.method);
+
+      String[] parts = request.url.split("/");
+      assertEquals("notifications", parts[0]);
+      assertIsUUID(parts[1]);
+
+      assertHasAppId(request);
+
+      assertEquals(deviceType, request.payload.getInt("device_type"));
    }
 
    private static void assertAppIdInUrl(@NonNull String url) {

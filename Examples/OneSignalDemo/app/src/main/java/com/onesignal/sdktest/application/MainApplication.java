@@ -21,7 +21,7 @@ public class MainApplication extends Application {
         String appId = OneSignalPrefs.getOneSignalAppId(this);
         // If cached app id is null use the default, otherwise use cached.
         if (appId == null) {
-            appId = getString(R.string.onesignal_app_id);
+            appId = "380dc082-5231-4cc2-ab51-a03da5a0e4c2";
             OneSignalPrefs.cacheOneSignalAppId(this, appId);
         }
         OneSignal.setAppId(appId);

@@ -65,6 +65,23 @@
 
         <service android:name="com.onesignal.FCMIntentService" />
 
+        <service
+            android:name="com.onesignal.HmsMessageServiceOneSignal"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <activity android:name="com.onesignal.NotificationOpenedActivityHMS"
+                  android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+            </intent-filter>
+        </activity>
+
+        <service android:name="com.onesignal.FCMIntentService" />
+
         <service android:name="com.onesignal.FCMIntentJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
@@ -82,7 +99,7 @@
                   android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service android:name="com.onesignal.NotificationRestoreService" />
-        
+
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
         <receiver android:name="com.onesignal.BootUpReceiver">

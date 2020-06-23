@@ -35,7 +35,7 @@ import com.google.android.gms.location.LocationRequest;
 
 import org.robolectric.annotation.Implements;
 
-@Implements(LocationGMS.FusedLocationApiWrapper.class)
+@Implements(GMSLocationController.FusedLocationApiWrapper.class)
 public class ShadowFusedLocationApiWrapper {
    
    public static Double lat, log;

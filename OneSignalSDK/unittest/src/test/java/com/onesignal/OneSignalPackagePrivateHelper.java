@@ -9,6 +9,8 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.onesignal.influence.OSTrackerFactory;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -101,42 +103,24 @@ public class OneSignalPackagePrivateHelper {
       return true;
    }
 
-   public static OSSessionManager.Session OneSignal_getSessionType() {
-      return OneSignal.getSessionManager().getSession();
-   }
-
-   public static String OneSignal_getSessionDirectNotification() {
-      return OneSignal.getSessionManager().getDirectNotificationId();
-   }
-
-   public static JSONArray OneSignal_getSessionIndirectNotificationIds() {
-      return OneSignal.getSessionManager().getIndirectNotificationIds();
-   }
-
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
-   public static class OSSessionManager extends com.onesignal.OSSessionManager {
-      public OSSessionManager(@NonNull SessionListener sessionListener) {
-         super(sessionListener);
-      }
+   public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
+      return OneSignal.getSessionListener();
    }
 
-   public static class CachedUniqueOutcomeNotification extends com.onesignal.CachedUniqueOutcomeNotification {
-      public CachedUniqueOutcomeNotification(String notificationId, String name) {
-         super(notificationId, name);
-      }
+   public static void OneSignal_setSharedPreferences(OSSharedPreferences preferences) {
+      OneSignal.setSharedPreferences(preferences);
+   }
 
-      @Override
-      public String getNotificationId() {
-         return super.getNotificationId();
-      }
+   public static void OneSignal_setSessionManager(OSSessionManager sessionManager) {
+      OneSignal.setSessionManager(sessionManager);
+   }
 
-      @Override
-      public String getName() {
-         return super.getName();
-      }
+   public static void OneSignal_setTrackerFactory(OSTrackerFactory trackerFactory) {
+      OneSignal.setTrackerFactory(trackerFactory);
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -179,8 +163,6 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
-   public static class OutcomeEventsTable extends OneSignalDbContract.OutcomeEventsTable { }
-   public static class CachedUniqueOutcomeNotificationTable extends OneSignalDbContract.CachedUniqueOutcomeNotificationTable { }
    public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
    public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
    public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
@@ -244,7 +226,13 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.appId;
    }
 
-   public static class RemoteOutcomeParams extends com.onesignal.OneSignalRemoteParams.OutcomesParams {
+   public static void OneSignal_setAppId(String appId) {
+      OneSignal.appId = appId;
+   }
+
+   static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}
+
+   static public class RemoteOutcomeParams extends OneSignalRemoteParams.InfluenceParams {
 
       public RemoteOutcomeParams() {
          this(true, true, true);
@@ -509,6 +497,10 @@ public class OneSignalPackagePrivateHelper {
       return OSUtils.hasConfigChangeFlag(activity, configChangeFlag);
    }
 
+   public static int getDeviceType() {
+      return new OSUtils().getDeviceType();
+   }
+
    public abstract class UserState extends com.onesignal.UserState {
       UserState(String inPersistKey, boolean load) {
          super(inPersistKey, load);
@@ -539,4 +531,8 @@ public class OneSignalPackagePrivateHelper {
    public static class GenerateNotification extends com.onesignal.GenerateNotification {}
 
    public static class NotificationBundleProcessor extends com.onesignal.NotificationBundleProcessor {}
+
+   public static class OSNotificationFormatHelper extends com.onesignal.OSNotificationFormatHelper {}
+
+   public static class NotificationPayloadProcessorHMS extends com.onesignal.NotificationPayloadProcessorHMS {}
 }

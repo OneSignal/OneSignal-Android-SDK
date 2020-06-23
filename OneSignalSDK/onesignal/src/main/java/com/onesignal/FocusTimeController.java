@@ -5,11 +5,16 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 
+import com.onesignal.influence.model.OSInfluence;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -18,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 2. App is foregrounded (appForegrounded) - Set start focused time
  * 3. App is backgrounded (appBackgrounded) - Kick off job to sync when session ends
  */
+
 class FocusTimeController {
    // Only present if app is currently in focus.
    @Nullable private Long timeFocusedAtMs;
@@ -44,13 +50,13 @@ class FocusTimeController {
    }
 
    void appBackgrounded() {
-      giveProcessorsValidFocusTime(OneSignal.getSessionManager().getSessionResult(), FocusEventType.BACKGROUND);
+      giveProcessorsValidFocusTime(OneSignal.getSessionManager().getInfluences(), FocusEventType.BACKGROUND);
       timeFocusedAtMs = null;
    }
 
-   void onSessionEnded(@NonNull OSSessionManager.SessionResult lastSessionResult) {
+   void onSessionEnded(@NonNull List<OSInfluence> lastInfluences) {
       final FocusEventType focusEventType = FocusEventType.END_SESSION;
-      boolean hadValidTime = giveProcessorsValidFocusTime(lastSessionResult, focusEventType);
+      boolean hadValidTime = giveProcessorsValidFocusTime(lastInfluences, focusEventType);
 
       // If there is no in focus time to be added we just need to send the time from the last session that just ended.
       if (!hadValidTime) {
@@ -67,13 +73,13 @@ class FocusTimeController {
          focusTimeProcessor.syncUnsentTimeFromSyncJob();
    }
 
-   private boolean giveProcessorsValidFocusTime(@NonNull OSSessionManager.SessionResult lastSessionResult, @NonNull FocusEventType focusType) {
+   private boolean giveProcessorsValidFocusTime(@NonNull List<OSInfluence> influences, @NonNull FocusEventType focusType) {
       Long timeElapsed = getTimeFocusedElapsed();
       if (timeElapsed == null)
         return false;
 
       for (FocusTimeProcessorBase focusTimeProcessor : focusTimeProcessors)
-         focusTimeProcessor.addTime(timeElapsed, lastSessionResult.session, focusType);
+         focusTimeProcessor.addTime(timeElapsed, influences, focusType);
       return true;
    }
 
@@ -98,8 +104,14 @@ class FocusTimeController {
          PREF_KEY_FOR_UNSENT_TIME = OneSignalPrefs.PREFS_GT_UNSENT_ACTIVE_TIME;
       }
 
-      protected boolean timeTypeApplies(@NonNull OSSessionManager.Session session) {
-         return session.isUnattributed() || session.isDisabled();
+      protected boolean timeTypeApplies(@NonNull List<OSInfluence> influences) {
+         for (OSInfluence influence : influences) {
+            // If at least one channel attributed the session then it is an attributed session.
+            if (influence.getInfluenceType().isAttributed())
+               return false;
+         }
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":timeTypeApplies for influences: " + influences.toString() + " true");
+         return true;
       }
 
       protected void sendTime(@NonNull FocusEventType focusType) {
@@ -109,6 +121,11 @@ class FocusTimeController {
 
          syncUnsentTimeOnBackgroundEvent();
       }
+
+      @Override
+      protected void saveInfluences(List<OSInfluence> influences) {
+         // We don't save influences for unattributed, there is no session duration influenced
+      }
    }
 
    private static class FocusTimeProcessorAttributed extends FocusTimeProcessorBase {
@@ -117,12 +134,53 @@ class FocusTimeController {
          PREF_KEY_FOR_UNSENT_TIME = OneSignalPrefs.PREFS_OS_UNSENT_ATTRIBUTED_ACTIVE_TIME;
       }
 
-      protected boolean timeTypeApplies(@NonNull OSSessionManager.Session session) {
-         return session.isAttributed();
+      private List<OSInfluence> getInfluences() {
+         List<OSInfluence> influences = new ArrayList<>();
+         Set<String> influenceJSONs = OneSignalPrefs.getStringSet(
+                 OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_OS_ATTRIBUTED_INFLUENCES,
+                 new HashSet<String>()
+         );
+
+         for (String influenceJSON : influenceJSONs) {
+            try {
+               influences.add(new OSInfluence(influenceJSON));
+            } catch (JSONException exception) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, this.getClass().getSimpleName() + ": error generation OSInfluence from json object: " + exception);
+            }
+         }
+         return influences;
+      }
+
+      @Override
+      protected void saveInfluences(List<OSInfluence> influences) {
+         Set<String> setInfluences = new HashSet<>();
+         for (OSInfluence influence : influences) {
+            try {
+               setInfluences.add(influence.toJSONString());
+            } catch (JSONException exception) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, this.getClass().getSimpleName() + ": error generation json object OSInfluence: " + exception);
+            }
+         }
+
+         OneSignalPrefs.saveStringSet(
+                 OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_OS_ATTRIBUTED_INFLUENCES,
+                 setInfluences
+         );
+      }
+
+      protected boolean timeTypeApplies(@NonNull List<OSInfluence> influences) {
+         for (OSInfluence influence : influences) {
+            // Is true is at least one channel attributed the session
+            if (influence.getInfluenceType().isAttributed())
+               return true;
+         }
+         return false;
       }
 
       protected void additionalFieldsToAddToOnFocusPayload(@NonNull JSONObject jsonBody) {
-         OneSignal.getSessionManager().addSessionNotificationsIds(jsonBody);
+         OneSignal.getSessionManager().addSessionIds(jsonBody, getInfluences());
       }
 
       protected void sendTime(@NonNull FocusEventType focusType) {
@@ -134,12 +192,14 @@ class FocusTimeController {
    }
 
    private static abstract class FocusTimeProcessorBase {
+
       // These values are set by child classes that inherit this base class
       protected long MIN_ON_FOCUS_TIME_SEC;
       protected @NonNull String PREF_KEY_FOR_UNSENT_TIME;
 
-      protected abstract boolean timeTypeApplies(@NonNull OSSessionManager.Session session);
+      protected abstract boolean timeTypeApplies(@NonNull List<OSInfluence> influences);
       protected abstract void sendTime(@NonNull FocusEventType focusType);
+      protected abstract void saveInfluences(List<OSInfluence> influences);
 
       @Nullable private Long unsentActiveTime = null;
 
@@ -165,10 +225,12 @@ class FocusTimeController {
          );
       }
 
-      private void addTime(long time, @NonNull OSSessionManager.Session session, @NonNull FocusEventType focusType) {
-         if (!timeTypeApplies(session))
+      private void addTime(long time, @NonNull List<OSInfluence> influences, @NonNull FocusEventType focusType) {
+         if (!timeTypeApplies(influences))
             return;
 
+         saveInfluences(influences);
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":addTime with lastFocusTimeInfluences: " + influences.toString());
          long totalTime = getUnsentActiveTime() + time;
          saveUnsentActiveTime(totalTime);
          sendUnsentTimeNow(focusType);
@@ -247,6 +309,7 @@ class FocusTimeController {
 
       private void sendOnFocus(long totalTimeActive) {
          try {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":sendOnFocus with totalTimeActive: " + totalTimeActive);
             JSONObject jsonBody = generateOnFocusPayload(totalTimeActive);
             additionalFieldsToAddToOnFocusPayload(jsonBody);
             sendOnFocusToPlayer(OneSignal.getUserId(), jsonBody);

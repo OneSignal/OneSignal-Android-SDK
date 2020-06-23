@@ -1,21 +1,23 @@
+package com.onesignal;
+
 /**
  * Modified MIT License
- *
- * Copyright 2018 OneSignal
- *
+ * <p>
+ * Copyright 2019 OneSignal
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p>
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p>
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,14 +27,21 @@
  * THE SOFTWARE.
  */
 
-package com.onesignal;
+import androidx.annotation.NonNull;
 
-import org.robolectric.annotation.Implements;
+import org.json.JSONObject;
 
-@Implements(LocationGMS.class)
-public class ShadowLocationGMS {
+public interface OneSignalAPIClient {
 
-   public static int getApiFallbackWait() {
-      return 0;
-   }
+    void put(final String url, final JSONObject jsonBody, final OneSignalApiResponseHandler responseHandler);
+
+    void post(final String url, final JSONObject jsonBody, final OneSignalApiResponseHandler responseHandler);
+
+    void get(final String url, final OneSignalApiResponseHandler responseHandler, @NonNull final String cacheKey);
+
+    void getSync(final String url, final OneSignalApiResponseHandler responseHandler, @NonNull String cacheKey);
+
+    void putSync(String url, JSONObject jsonBody, OneSignalApiResponseHandler responseHandler);
+
+    void postSync(String url, JSONObject jsonBody, OneSignalApiResponseHandler responseHandler);
 }

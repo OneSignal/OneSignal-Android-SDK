@@ -53,10 +53,10 @@ abstract class PushRegistratorAbstractGoogle implements PushRegistrator {
 
    private void internalRegisterForPush(String senderId) {
       try {
-         if (GooglePlayServicesUpgradePrompt.isGMSInstalledAndEnabled())
+         if (OSUtils.isGMSInstalledAndEnabled())
             registerInBackground(senderId);
          else {
-            GooglePlayServicesUpgradePrompt.ShowUpdateGPSDialog();
+            GooglePlayServicesUpgradePrompt.showUpdateGPSDialog();
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "'Google Play services' app not installed or disabled on the device.");
             registeredHandler.complete(null, UserState.PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP);
          }

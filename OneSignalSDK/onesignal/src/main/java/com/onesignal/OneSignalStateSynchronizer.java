@@ -34,7 +34,6 @@ import org.json.JSONObject;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
 import java.util.HashMap;
-import java.util.Iterator;
 
 class OneSignalStateSynchronizer {
 
@@ -140,7 +139,7 @@ class OneSignalStateSynchronizer {
       getPushStateSynchronizer().setPermission(enable);
    }
 
-   static void updateLocation(LocationGMS.LocationPoint point) {
+   static void updateLocation(LocationController.LocationPoint point) {
       getPushStateSynchronizer().updateLocation(point);
       getEmailStateSynchronizer().updateLocation(point);
    }

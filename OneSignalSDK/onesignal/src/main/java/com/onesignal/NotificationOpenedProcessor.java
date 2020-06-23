@@ -61,6 +61,8 @@ class NotificationOpenedProcessor {
       processIntent(context, intent);
    }
 
+   // Was Bundle created from our SDK? Prevents external Intents
+   // TODO: Could most likely be simplified checking if BUNDLE_KEY_ONESIGNAL_DATA is present
    private static boolean isOneSignalIntent(Intent intent) {
       return intent.hasExtra(BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
    }

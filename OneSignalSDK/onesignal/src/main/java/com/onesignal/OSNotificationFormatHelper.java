@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -7,10 +8,20 @@ import androidx.annotation.Nullable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+// Current: All helpers are for parsing a push payload
+// Future: This class could also support parsing our SDK generated bundles
 class OSNotificationFormatHelper {
 
-    private static final String PAYLOAD_OS_ROOT_CUSTOM = "custom";
-    private static final String PAYLOAD_OS_NOTIFICATION_ID = "i";
+    public static final String PAYLOAD_OS_ROOT_CUSTOM = "custom";
+    public static final String PAYLOAD_OS_NOTIFICATION_ID = "i";
+
+    static boolean isOneSignalIntent(@Nullable Intent intent) {
+        if (intent == null)
+            return false;
+
+        Bundle bundle = intent.getExtras();
+        return OSNotificationFormatHelper.isOneSignalBundle(bundle);
+    }
 
     static boolean isOneSignalBundle(@Nullable Bundle bundle) {
         return getOSNotificationIdFromBundle(bundle) != null;

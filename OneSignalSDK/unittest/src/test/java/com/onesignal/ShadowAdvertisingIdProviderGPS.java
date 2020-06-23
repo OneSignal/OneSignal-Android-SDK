@@ -35,12 +35,19 @@ import org.robolectric.annotation.Implements;
 public class ShadowAdvertisingIdProviderGPS {
    
    private static final String MOCK_ID = "11111111-2222-3333-4444-555555555555";
+
+   public static boolean calledGetIdentifier;
+
+   public static void resetStatics() {
+      calledGetIdentifier = false;
+   }
    
    public static String getLastValue() {
       return MOCK_ID;
    }
    
    public String getIdentifier(Context appContext) {
+      calledGetIdentifier = true;
       return MOCK_ID;
    }
 }

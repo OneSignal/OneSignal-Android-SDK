@@ -24,10 +24,13 @@ class JsonAsserts {
       Iterator<String> iterator = contains.keys();
       while (iterator.hasNext()) {
          String key = iterator.next();
-         assertEquals(
-            normalizeType(contains.get(key)),
-            normalizeType(subject.get(key))
-         );
+         if (contains.get(key) instanceof JSONObject && subject.get(key) instanceof JSONObject)
+            equals(contains.getJSONObject(key), subject.getJSONObject(key));
+         else
+            assertEquals(
+                    normalizeType(contains.get(key)),
+                    normalizeType(subject.get(key))
+            );
       }
    }
 

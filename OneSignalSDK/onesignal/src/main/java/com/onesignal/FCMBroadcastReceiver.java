@@ -125,7 +125,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       return processedResult;
    }
 
-   private static void startFCMService(Context context, Bundle bundle) {
+   static void startFCMService(Context context, Bundle bundle) {
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
          BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
