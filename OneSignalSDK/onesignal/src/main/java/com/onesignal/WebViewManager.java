@@ -9,16 +9,21 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
 
 import static com.onesignal.OSViewUtils.dpToPx;
 
@@ -123,26 +128,284 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessage message, @NonNull String htmlStr) {
-        try {
-            final String base64Str = Base64.encodeToString(
-                    htmlStr.getBytes("UTF-8"),
-                    Base64.NO_WRAP
-            );
+        htmlStr =
+                "<html>\n" +
+                "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\"/>\n" +
+                "<style>\n" +
+                "    * {\n" +
+                "        -webkit-touch-callout: none;\n" +
+                "        -webkit-user-select: none; /* Disable selection/copy in UIWebView */\n" +
+                "    }\n" +
+                "    h1 {\n" +
+                "        font-weight: 400;\n" +
+                "    }\n" +
+                "    body {\n" +
+                "        font-family: -apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Oxygen-Sans,Ubuntu,Cantarell,\"Helvetica Neue\",sans-serif;\n" +
+                "        padding: 16px;\n" +
+                "        overflow: hidden;\n" +
+                "        cursor: pointer;background-image: url(https://img.onesignal.com/i/228dacaf-62c3-42f1-a625-ff699006b01c);\n" +
+                "            background-position: center;\n" +
+                "            background-repeat: no-repeat;\n" +
+                "            background-size: cover;background-color: #FFFFFF;\n" +
+                "        \n" +
+                "    }\n" +
+                "\n" +
+                "    .flex-container {\n" +
+                "        display: flex;\n" +
+                "        flex-direction: column;\n" +
+                "        height: 100%;\n" +
+                "    }\n" +
+                "\n" +
+                "    /* top level elements */\n" +
+                "    .flex-container > * {\n" +
+                "        margin-top: 8px;\n" +
+                "        margin-bottom: 8px;\n" +
+                "    }\n" +
+                "\n" +
+                "    /* Image only for Fullscreen and Modal */\n" +
+                "    .image-container {\n" +
+                "        display: flex;\n" +
+                "        justify-content: center;\n" +
+                "        flex-direction: column;\n" +
+                "    }\n" +
+                "</style>\n" +
+                "<script>\n" +
+                "    // Called from onClick of images, buttons, and dismiss button\n" +
+                "    function actionTaken(data, clickType) {\n" +
+                "        console.log(\"actionTaken(): \" + JSON.stringify(data));\n" +
+                "        if (clickType)\n" +
+                "            data[\"click_type\"] = clickType;\n" +
+                "        postMessageToNative({ type: \"action_taken\", body: data });\n" +
+                "    }\n" +
+                "\n" +
+                "    function postMessageToNative(msgJson) {\n" +
+                "        console.log(\"postMessageToNative(): \" + JSON.stringify(msgJson));\n" +
+                "        var encodedMsg = JSON.stringify(msgJson);\n" +
+                "        postMessageToIos(encodedMsg);\n" +
+                "        postMessageToAndroid(encodedMsg);\n" +
+                "        postMessageToDashboard(encodedMsg);\n" +
+                "    }\n" +
+                "\n" +
+                "    function postMessageToIos(encodedMsg) {\n" +
+                "        // See iOS SDK Source\n" +
+                "        //    userContentController:didReceiveScriptMessage:\n" +
+                "        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosListener)\n" +
+                "            window.webkit.messageHandlers.iosListener.postMessage(encodedMsg);\n" +
+                "    }\n" +
+                "\n" +
+                "    function postMessageToAndroid(encodedMsg) {\n" +
+                "        if (window.OSAndroid)\n" +
+                "            window.OSAndroid.postMessage(encodedMsg);\n" +
+                "    }\n" +
+                "\n" +
+                "    function postMessageToDashboard(encodedMsg) {\n" +
+                "        if (window.parent) {\n" +
+                "            window.parent.postMessage(encodedMsg, \"*\");\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    // last-element needed to give the correct height for modals and banners\n" +
+                "    function getPageMetaData() {\n" +
+                "        var lastElement = document.getElementById(\"last-element\");\n" +
+                "        if (!lastElement)\n" +
+                "            return {};\n" +
+                "\n" +
+                "        var flexContainer = document.querySelector(\".flex-container\");\n" +
+                "        if (!flexContainer) {\n" +
+                "            console.error(\"Could not find flex-container class required to resize modal correctly!\");\n" +
+                "            return {};\n" +
+                "        }\n" +
+                "\n" +
+                "        // rect.x and rect.y will be undefined on ClientRect and not DOMRect, " +
+                "        // but rect.top and rect.left work for both\n" +
+                "        var flexContainerRect = flexContainer.getBoundingClientRect();\n" +
+                "        var lastElementRect = lastElement.getBoundingClientRect();\n" +
+                "        return {\n" +
+                "            rect: {\n" +
+                "                height: lastElementRect.top + flexContainerRect.top\n" +
+                "            },\n" +
+                "            flexContainerRect: toJsonObject(flexContainerRect)\n" +
+                "        };\n" +
+                "    }\n" +
+                "\n" +
+//                    "    function toJsonObject(value) {\n" +
+//                    "        return JSON.parse(JSON.stringify(value));\n" +
+//                    "    }\n" +
+//                    "    function toJsonObject(obj) {\n" +
+//                    "       var clone = {};\n" +
+//                    "       for(var i in obj) {\n" +
+//                    "           if(obj[i] != null && typeof(obj[i])==\"object\")\n" +
+//                    "               clone[i] = cloneObject(obj[i]);\n" +
+//                    "           else\n" +
+//                    "               clone[i] = obj[i];\n" +
+//                    "       }\n" +
+//                    "       return clone;\n" +
+//                    "    }\n" +
+                "    function toJsonObject(rect) {\n" +
+                "        return {\n" +
+                "            top: rect.top,\n" +
+                "            right: rect.right,\n" +
+                "            bottom: rect.bottom,\n" +
+                "            left: rect.left,\n" +
+                "            width: rect.width,\n" +
+                "            height: rect.height\n" +
+//                        "       x: rect.x,\n" + // DOMRect objects have 'x' attribute, but not ClientRect
+//                        "       y: rect.y\n" +  // DOMRect objects have 'y' attribute, but not ClientRect
+                "        };\n" +
+                "    }\n" +
+                "\n" +
+                "    function getDisplayLocation() {\n" +
+                "        var flexContainer = document.querySelector(\".flex-container\");\n" +
+                "        if (!flexContainer) {\n" +
+                "            console.error(\"Could not find flex-container class required to resize modal correctly!\");\n" +
+                "            return null;\n" +
+                "        }\n" +
+                "\n" +
+                "        return flexContainer.dataset.displaylocation;\n" +
+                "    }\n" +
+                "\n" +
+                "    function getAttributes(element) {\n" +
+                "        var attributes = {};\n" +
+                "        if (element.hasAttributes()) {\n" +
+                "            for (var i = 0, n = element.attributes.length; i < n; i++) {\n" +
+                "                var attr = element.attributes[i];\n" +
+                "                attributes[attr.name] = attr.value;\n" +
+                "            }\n" +
+                "        }\n" +
+                "        return attributes;\n" +
+                "    }\n" +
+                "\n" +
+                "    // TODO: Remove after we have verified we are not seeing any mis touches.\n" +
+                "    // Just a quick and dirty way to see where you have tapped by moving the close button to where you tapped.\n" +
+                "    function debugTaps() {\n" +
+                "        document.body.addEventListener('click', function(e) {\n" +
+                "            console.log(\"body onlick:\" + JSON.stringify({x: e.pageX, y: e.pageY}));\n" +
+                "            document.querySelector(\".close-button\").style.display = \"block\";\n" +
+                "            document.querySelector(\".close-button\").style.right = 0;\n" +
+                "            document.querySelector(\".close-button\").style.left = e.pageX;\n" +
+                "            document.querySelector(\".close-button\").style.top = e.pageY;\n" +
+                "        }, true);\n" +
+                "    }\n" +
+                "\n" +
+                "    // Lets the SDK know the page is done loading as well as it's display type and location.\n" +
+                "    window.onload = function() {\n" +
+                "        postMessageToNative({\n" +
+                "            type: \"rendering_complete\",\n" +
+                "            pageMetaData: getPageMetaData(),\n" +
+                "            displayLocation: getDisplayLocation()\n" +
+                "        });\n" +
+                "\n" +
+                "        // Body clicks\n" +
+                "        \n" +
+                "            document.addEventListener(\"click\", function(e) {\n" +
+                "                actionTaken({\"id\":\"ffefda63-fdb8-4912-b69b-b760b2032532\",\"url\":\"\",\"name\":\"\",\"close\":true,\"prompts\":[],\"url_target\":\"browser\"}, \"body\");\n" +
+                "                e.stopPropagation();\n" +
+                "            }, false);\n" +
+                "        \n" +
+                "\n" +
+                "        // close button clicks\n" +
+                "        var closeButton = document.querySelector(\".close-button\");\n" +
+                "        closeButton && closeButton.addEventListener(\"click\", function(e) {\n" +
+                "            actionTaken({close: true});\n" +
+                "            e.stopPropagation();\n" +
+                "        }, true);\n" +
+                "\n" +
+                "        // image and button clicks\n" +
+                "        var clickable = document.getElementsByClassName(\"iam-clickable\");\n" +
+                "        for (var i = 0, n = clickable.length; i < n; i++) {\n" +
+                "            var el = clickable[i];\n" +
+                "            var attributes = getAttributes(el);\n" +
+                "            if (attributes[\"data-action-payload\"]) {\n" +
+                "                // use iife to close over the right element and value\n" +
+                "                (function(element, value, label) {\n" +
+                "                    element.addEventListener(\"click\", function(e) {\n" +
+                "                        actionTaken(value, label);\n" +
+                "                        e.stopPropagation();\n" +
+                "                    }, true);\n" +
+                "                })(el, JSON.parse(attributes[\"data-action-payload\"]), attributes[\"data-action-label\"]);\n" +
+                "            }\n" +
+                "        }\n" +
+                "    };\n" +
+                "\n" +
+                "    window.onresize = function () {\n" +
+                "        postMessageToNative({\n" +
+                "            type: \"resize\",\n" +
+                "            pageMetaData: getPageMetaData(),\n" +
+                "            displayLocation: getDisplayLocation()\n" +
+                "        });\n" +
+                "    }\n" +
+                "</script>\n" +
+                "<style>\n" +
+                ".close-button {\n" +
+                "    right: -8px;\n" +
+                "    top: -8px;\n" +
+                "    width: 48px;\n" +
+                "    height: 48px;\n" +
+                "    position: absolute;\n" +
+                "    display: flex;\n" +
+                "    justify-content: center;\n" +
+                "    flex-direction: column;\n" +
+                "    align-items: center;\n" +
+                "}#text-a0c6f1e0-0779-4062-9741-71ac689f1f5a {\n" +
+                "  color: #ffffff;\n" +
+                "  font-size: 24px;\n" +
+                "  margin: 0;\n" +
+                "  text-align: center;\n" +
+                "}\n" +
+                "#button-6119642d-efda-4692-ba4a-0a22a55302fa {\n" +
+                "  font-size: 24px;\n" +
+                "  color: #FFF;\n" +
+                "  background-color: #eb1f2c;\n" +
+                "  text-align: center;\n" +
+                "  width: 100%;\n" +
+                "  padding: 12px;\n" +
+                "  border-width: 0;\n" +
+                "  border-radius: 4px;\n" +
+                "}\n" +
+                "#991a7eb3-f817-409a-963a-9cebe340eb96 {\n" +
+                "  font-size: 18px;\n" +
+                "  color: #999;\n" +
+                "  margin-top: 0px;\n" +
+                "  text-align: center;\n" +
+                "}\n" +
+                "\n" +
+                "    </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "<div class=\"close-button\">\n" +
+                "    <svg width=\"10\" height=\"10\" viewBox=\"0 0 8 8\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n" +
+                "        <path d=\"M7.80309 1.14768C8.06564 0.885137 8.06564 0.459453 7.80309 0.196909C7.54055 -0.0656362 7.11486 -0.0656362 6.85232 0.196909L4 3.04923L1.14768 0.196909C0.885137 -0.0656362 0.459453 -0.0656362 0.196909 0.196909C-0.0656362 0.459453 -0.0656362 0.885137 0.196909 1.14768L3.04923 4L0.196909 6.85232C-0.0656362 7.11486 -0.0656362 7.54055 0.196909 7.80309C0.459453 8.06564 0.885137 8.06564 1.14768 7.80309L4 4.95077L6.85232 7.80309C7.11486 8.06564 7.54055 8.06564 7.80309 7.80309C8.06564 7.54055 8.06564 7.11486 7.80309 6.85232L4.95077 4L7.80309 1.14768Z\" fill=\"#111111\"/>\n" +
+                "    </svg>\n" +
+                "</div>\n" +
+                "<div class=\"flex-container\" data-displaylocation=\"center_modal\">\n" +
+                "        <div class=\"title-container\">\n" +
+                "    <h1 id=\"text-a0c6f1e0-0779-4062-9741-71ac689f1f5a\">Outcome Test 2</h1>\n" +
+                "</div><div class=\"button-container\">\n" +
+                "  <button type=\"button\" id=\"button-6119642d-efda-4692-ba4a-0a22a55302fa\" class=\"iam-button iam-clickable\" data-action-payload='{\"id\":\"332a46e8-d6a0-4007-abd8-8fb3778282a2\",\"close\":false,\"url_target\":\"browser\"}' data-action-label=\"button\">Click Me</button>\n" +
+                "</div>\n" +
+                "\n" +
+                "\n" +
+                "        <!-- Used to find the height of the content so the SDK can set the correct view port height. -->\n" +
+                "        <div id=\"last-element\" />\n" +
+                "    </div>\n" +
+                "</body>\n" +
+                "</html>\n";
 
-            final WebViewManager webViewManager = new WebViewManager(message, currentActivity);
-            lastInstance = webViewManager;
+        final String base64Str = Base64.encodeToString(
+                htmlStr.getBytes(StandardCharsets.UTF_8),
+                Base64.NO_WRAP
+        );
 
-            // Web view must be created on the main thread.
-            OSUtils.runOnMainUIThread(new Runnable() {
-                @Override
-                public void run() {
-                    webViewManager.setupWebView(currentActivity, base64Str);
-                }
-            });
-        } catch (UnsupportedEncodingException e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Catch on initInAppMessage: ", e);
-            e.printStackTrace();
-        }
+        final WebViewManager webViewManager = new WebViewManager(message, currentActivity);
+        lastInstance = webViewManager;
+
+        // Web view must be created on the main thread.
+        OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+                webViewManager.setupWebView(currentActivity, base64Str);
+            }
+        });
     }
 
     // Lets JS from the page send JSON payloads to this class
@@ -304,7 +567,33 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
        webView.setVerticalScrollBarEnabled(false);
        webView.setHorizontalScrollBarEnabled(false);
+       webView.clearCache(true);
+       webView.clearHistory();
        webView.getSettings().setJavaScriptEnabled(true);
+       webView.getSettings().setDomStorageEnabled(true);
+       webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+
+       webView.setWebChromeClient(new WebChromeClient() {
+           public boolean onConsoleMessage(ConsoleMessage cm) {
+               Log.d(TAG, cm.message() + " -- From line "
+                       + cm.lineNumber() + " of "
+                       + cm.sourceId() );
+               return true;
+           }
+       });
+
+       webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+
+            }
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                // Keep local assets in this WebView.
+                return !url.startsWith("file");
+            }
+        });
 
        // Setup receiver for page events / data from JS
        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
