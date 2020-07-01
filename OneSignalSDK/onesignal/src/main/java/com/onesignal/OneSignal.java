@@ -142,7 +142,7 @@ public class OneSignal {
     * @see OneSignal#onAppLostFocus
     * @see OneSignal#handleNotificationOpen
     */
-   enum AppEntryAction {
+   public enum AppEntryAction {
 
       /**
        * Entered the app through opening a notification
@@ -742,7 +742,7 @@ public class OneSignal {
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
          if (outcomeEventsFactory == null)
-            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
+            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, OneSignalDbHelper.getInstance(appContext), preferences);
 
          sessionManager.initSessionFromCache();
          outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);

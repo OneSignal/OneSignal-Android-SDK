@@ -73,7 +73,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private static OSInAppMessageController sharedInstance;
 
     public static synchronized OSInAppMessageController getController() {
-        OneSignalDbHelper dbHelper = OneSignal.getDBHelperInstance();
+        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(OneSignal.appContext);
 
         // Make sure only Android 4.4 devices and higher can use IAMs
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {

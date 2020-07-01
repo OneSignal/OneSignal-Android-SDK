@@ -196,8 +196,6 @@ public class MainOneSignalClassRunner {
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
-   private static String callBackUseId, getCallBackRegId;
-   private static String notificationOpenedMessage;
    private static JSONObject lastGetTags;
    private MockOSTimeImpl time;
    private OSTrackerFactory trackerFactory;
@@ -2732,7 +2730,6 @@ public class MainOneSignalClassRunner {
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, OneSignal.getCurrentNotificationDisplayOption());
       // Permission subscription wont return until OneSignal init is done
       assertNull(OneSignal.getPermissionSubscriptionState());
 
