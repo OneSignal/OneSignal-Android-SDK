@@ -30,17 +30,18 @@ package com.onesignal;
 
 import android.content.Context;
 import android.net.Uri;
-import android.os.Handler;
 
 import com.onesignal.OneSignal.OSNotificationDisplay;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.security.SecureRandom;
 
 public class OSNotificationGenerationJob {
+
+   // Timeout in seconds before applying defaults
+   private static final long SHOW_NOTIFICATION_TIMEOUT = 30 * 1_000L;
 
    private final String TITLE_PAYLOAD_PARAM = "title";
    private final String ALERT_PAYLOAD_PARAM = "alert";
@@ -108,7 +109,6 @@ public class OSNotificationGenerationJob {
 
    /**
     * Get the notification additional data json from the payload
-    * @return
     */
    JSONObject getAdditionalData() {
       try {
@@ -175,44 +175,17 @@ public class OSNotificationGenerationJob {
     *    1. {@link ExtNotificationGenerationJob}
     *    2. {@link AppNotificationGenerationJob}
     */
-   private static class NotificationGenerationJob {
+   private static class NotificationGenerationJob extends OSTimeoutHandler {
 
-      // Timeout in seconds before applying defaults
-      private static final long SHOW_NOTIFICATION_TIMEOUT = 30 * 1_000L;
+      // Used to toggle when complete is called so it can not be called more than once
+      boolean isComplete = false;
 
       // The actual notifJob with notification payload data
       private OSNotificationGenerationJob notifJob;
 
-      // Single Handler used to timeout the handler if bubble or complete is not called
-      private Handler timeoutHandler;
-      // Single Runnable used to execute code after the handler timeout completes
-      private Runnable timeoutRunnable;
-
       NotificationGenerationJob(OSNotificationGenerationJob notifJob) {
          this.notifJob = notifJob;
-      }
-
-      void startShowNotificationTimeout(final Runnable runnable) {
-         // If the handler or runnable isn't null we do not want to start another
-         if (this.timeoutHandler != null || this.timeoutRunnable != null)
-            return;
-
-         this.timeoutRunnable = runnable;
-         OSUtils.runOnMainUIThread(new Runnable() {
-            @Override
-            public void run() {
-               timeoutHandler = new Handler();
-               timeoutHandler.postDelayed(timeoutRunnable, SHOW_NOTIFICATION_TIMEOUT);
-            }
-         });
-      }
-
-      void destroyShowNotificationTimeout() {
-         if (timeoutHandler != null)
-            timeoutHandler.removeCallbacks(timeoutRunnable);
-
-         timeoutHandler = null;
-         timeoutRunnable = null;
+         setTimeout(SHOW_NOTIFICATION_TIMEOUT);
       }
 
       OSNotificationGenerationJob getNotifJob() {
@@ -257,7 +230,7 @@ public class OSNotificationGenerationJob {
       ExtNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
          super(notifJob);
 
-         startShowNotificationTimeout(new Runnable() {
+         startTimeout(new Runnable() {
             @Override
             public void run() {
                ExtNotificationGenerationJob.this.complete(true);
@@ -268,8 +241,13 @@ public class OSNotificationGenerationJob {
       // Method controlling bubbling from the ExtNotificationWillShowInForegroundHandler to the AppNotificationWillShowInForegroundHandler
       //    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
       //    a 30 second timer and attempt to bubble to the AppNotificationWillShowInForegroundHandler automatically
-      public void complete(boolean bubble) {
-         destroyShowNotificationTimeout();
+      public synchronized void complete(boolean bubble) {
+         destroyTimeout();
+
+         if (isComplete)
+            return;
+
+         isComplete = true;
 
          // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists or bubbling is set false
          if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
@@ -293,7 +271,7 @@ public class OSNotificationGenerationJob {
       AppNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
          super(notifJob);
 
-         startShowNotificationTimeout(new Runnable() {
+         startTimeout(new Runnable() {
             @Override
             public void run() {
                AppNotificationGenerationJob.this.complete();
@@ -304,8 +282,14 @@ public class OSNotificationGenerationJob {
       // Method controlling completion from the AppNotificationWillShowInForegroundHandler
       //    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
       //    a 30 second timer and complete by default
-      public void complete() {
-         destroyShowNotificationTimeout();
+      public synchronized void complete() {
+         destroyTimeout();
+
+         if (isComplete)
+            return;
+
+         isComplete = true;
+
          GenerateNotification.fromJsonPayload(getNotifJob());
       }
    }
