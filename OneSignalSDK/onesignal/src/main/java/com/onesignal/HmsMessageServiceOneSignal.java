@@ -3,6 +3,21 @@ package com.onesignal;
 import com.huawei.hms.push.HmsMessageService;
 import com.huawei.hms.push.RemoteMessage;
 
+/**
+ * The hms:push library creates an instance of this service based on the
+ * intent-filter action "com.huawei.push.action.MESSAGING_EVENT".
+ *
+ * WARNING: HMS only creates one {@link HmsMessageService} instance.
+ * This means this class will not be used by the app in the following cases:
+ *    1. Another push provider library / SDK is in the app.
+ *       - Due to ordering in the AndroidManifest.xml OneSignal may or may not be the winner.
+ *       - App needs to it's own {@link HmsMessageService} and call bridging / forwarding APIs
+ *         on each SDK / library for both to work.
+ *    2. The app has it's own  {@link HmsMessageService} class.
+ * If either of these are true the app must have it's own {@link HmsMessageService} with AndroidManifest.xml
+ * entries and call {@link OneSignalHmsEventBridge} for these methods. This is noted in the OneSignal SDK
+ * Huawei setup guide.
+ */
 public class HmsMessageServiceOneSignal extends HmsMessageService {
 
     /**
@@ -13,8 +28,7 @@ public class HmsMessageServiceOneSignal extends HmsMessageService {
      */
     @Override
     public void onNewToken(String token) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "HmsMessageServiceOneSignal.onNewToken - HMS token: " + token);
-        PushRegistratorHMS.fireCallback(token);
+        OneSignalHmsEventBridge.onNewToken(this, token);
     }
 
     /**
@@ -28,6 +42,6 @@ public class HmsMessageServiceOneSignal extends HmsMessageService {
      */
     @Override
     public void onMessageReceived(RemoteMessage message) {
-        NotificationPayloadProcessorHMS.processDataMessageReceived(this, message.getData());
+        OneSignalHmsEventBridge.onMessageReceived(this, message);
     }
 }
