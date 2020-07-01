@@ -41,6 +41,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Button;
@@ -154,6 +155,8 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
 
+   private static int callbackCounter = 0;
+
    private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static final String notifMessage = "Robo test message";
 
@@ -180,6 +183,7 @@ public class GenerateNotificationRunner {
       dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
       time = new MockOSTimeImpl();
 
+      callbackCounter = 0;
       lastExtNotifJob = null;
       lastAppNotifJob = null;
 
@@ -1809,6 +1813,68 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   public void testNotificationWillShowInForegroundHandler_workTimeLongerThanTimeout() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_workTimeLongerThanTimeout");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(final OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            callbackCounter++;
+            lastAppNotifJob = notifJob;
+
+            // Simulate doing work for more than 30 seconds
+            new Handler().postDelayed(new Runnable() {
+               @Override
+               public void run() {
+                  // After 35 seconds call complete to try after the timeout ended already
+                  notifJob.complete();
+               }
+            }, 35_000L);
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
+      assertNotNull(lastExtNotifJob);
+      assertNotNull(lastAppNotifJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotifJob.getNotificationDisplayOption());
+
+      // 5. Make sure the callback counter is only fired twice, once for both Ext and App NotificationWillShowInForegroundHandler
+      assertEquals(2, callbackCounter);
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationWillShowInForegroundHandler_workTimeLongerThanTimeout
+    */
+   public static class NotificationExtensionService_workTimeLongerThanTimeout implements OneSignal.ExtNotificationWillShowInForegroundHandler {
+      @Override
+      public void notificationWillShowInForeground(final OSNotificationGenerationJob.ExtNotificationGenerationJob notifJob) {
+         callbackCounter++;
+         lastExtNotifJob = notifJob;
+
+         new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+               // After 35 seconds call complete to try after the timeout ended already
+               notifJob.complete(true);
+            }
+         }, 35_000L);
+      }
+   }
+
+   @Test
    public void testNullExtAndAppNotificationWillShowInForegroundHandlers() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -2008,6 +2074,7 @@ public class GenerateNotificationRunner {
       
       @Override
       protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+         
          OverrideSettings overrideSettings = new OverrideSettings();
          overrideSettings.extender = new NotificationCompat.Extender() {
             @Override
