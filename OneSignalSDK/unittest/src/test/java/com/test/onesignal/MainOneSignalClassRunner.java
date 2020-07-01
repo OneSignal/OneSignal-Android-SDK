@@ -192,9 +192,6 @@ public class MainOneSignalClassRunner {
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
-   private static String callBackUseId, getCallBackRegId;
-   private static String notificationOpenedMessage;
-   private static JSONObject lastGetTags;
    private OSTrackerFactory trackerFactory;
    private MockSessionManager sessionManager;
    private MockOneSignalDBHelper dbHelper;
