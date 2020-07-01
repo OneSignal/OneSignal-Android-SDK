@@ -2122,7 +2122,7 @@ public class OneSignal {
          jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
 
          OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
-         if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
+         if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
             trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
       } catch (JSONException e) {

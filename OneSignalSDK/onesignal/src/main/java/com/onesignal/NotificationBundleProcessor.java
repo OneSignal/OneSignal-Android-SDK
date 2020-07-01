@@ -77,7 +77,7 @@ class NotificationBundleProcessor {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "json_payload key is nonexistent from mBundle passed to ProcessFromFCMIntentService: " + bundle);
             return;
          }
-   
+
          OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
          notifJob.isRestoring = bundle.getBoolean("restoring", false);
          notifJob.shownTimeStamp = bundle.getLong("timestamp");
@@ -107,29 +107,29 @@ class NotificationBundleProcessor {
       }
    }
 
-   /**
-    * Recommended method to process notification before displaying
-    * Only use the {@link NotificationBundleProcessor#ProcessJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
-    *     in the event where you want to mark a notification as opened or displayed different than the defaults
-    */
-   static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob) {
-      return ProcessJobForDisplay(notifJob, false, true);
-   }
+    /**
+     * Recommended method to process notification before displaying
+     * Only use the {@link NotificationBundleProcessor#ProcessJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
+     *     in the event where you want to mark a notification as opened or displayed different than the defaults
+     */
+    static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob) {
+        return ProcessJobForDisplay(notifJob, false, true);
+    }
 
-   static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
-      processCollapseKey(notifJob);
+    static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
+        processCollapseKey(notifJob);
 
-      boolean doDisplay = shouldDisplayNotif(notifJob);
-      if (doDisplay)
-         OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
+        boolean doDisplay = shouldDisplayNotif(notifJob);
+        if (doDisplay)
+            OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
 
-      if (!notifJob.isRestoring && !notifJob.isIamPreview) {
-         processNotification(notifJob, opened);
-         OneSignal.handleNotificationReceived(notifJob, displayed);
-      }
+        if (!notifJob.isRestoring && !notifJob.isIamPreview) {
+            processNotification(notifJob, opened);
+            OneSignal.handleNotificationReceived(notifJob, displayed);
+        }
 
-      return notifJob.getAndroidIdWithoutCreate();
-   }
+        return notifJob.getAndroidIdWithoutCreate();
+    }
 
    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notifJob) {
       // Validate that the current Android device is Android 4.4 or higher and the current job is a
@@ -427,7 +427,7 @@ class NotificationBundleProcessor {
       }
    }
 
-   private static void processCollapseKey(OSNotificationGenerationJob notifJob) {
+    private static void processCollapseKey(OSNotificationGenerationJob notifJob) {
       if (notifJob.isRestoring)
          return;
       if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
@@ -501,14 +501,14 @@ class NotificationBundleProcessor {
       notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
 
       // Process and save as a opened notification to prevent duplicates.
-      String alert = bundle.getString("alert");
-      if (!shouldDisplay(alert)) {
-         notifJob.overrideSettings.androidNotificationId = -1;
-         NotificationBundleProcessor.ProcessJobForDisplay(notifJob, true, false);
-      }
-      else {
-         NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
-      }
+       String alert = bundle.getString("alert");
+       if (!shouldDisplay(alert)) {
+           notifJob.overrideSettings.androidNotificationId = -1;
+           NotificationBundleProcessor.ProcessJobForDisplay(notifJob, true, false);
+       }
+       else {
+           NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+       }
 
       return result;
    }
@@ -557,7 +557,7 @@ class NotificationBundleProcessor {
    }
 
    static boolean shouldDisplay(String body) {
-      return !TextUtils.isEmpty(body);
+       return !TextUtils.isEmpty(body);
    }
 
    static @NonNull JSONArray newJsonArray(JSONObject jsonObject) {
