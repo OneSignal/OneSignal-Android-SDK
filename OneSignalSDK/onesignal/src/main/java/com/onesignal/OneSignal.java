@@ -2037,7 +2037,7 @@ public class OneSignal {
     */
    static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
       // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
-      if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
+      if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null || !isInForeground()) {
          GenerateNotification.fromJsonPayload(notifJob);
          return;
       }
