@@ -96,7 +96,7 @@ class NotificationBundleProcessor {
          }
          
          notifJob.overrideSettings = overrideSettings;
-         ProcessJobForDisplay(notifJob);
+         processJobForDisplay(notifJob);
 
          // Delay to prevent CPU spikes.
          //    Normally more than one notification is restored at a time.
@@ -109,19 +109,23 @@ class NotificationBundleProcessor {
 
     /**
      * Recommended method to process notification before displaying
-     * Only use the {@link NotificationBundleProcessor#ProcessJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
+     * Only use the {@link NotificationBundleProcessor#processJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
      *     in the event where you want to mark a notification as opened or displayed different than the defaults
      */
-    static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob) {
-        return ProcessJobForDisplay(notifJob, false, true);
+    static int processJobForDisplay(OSNotificationGenerationJob notifJob) {
+        return processJobForDisplay(notifJob, false, true);
     }
 
-    static int ProcessJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
+    static int processJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
         processCollapseKey(notifJob);
 
         boolean doDisplay = shouldDisplayNotif(notifJob);
-        if (doDisplay)
-            OneSignal.fireNotificationWillShowInForegroundHandlers(notifJob);
+        if (doDisplay) {
+            if (OneSignal.shouldFireForegroundHandlers())
+                OneSignal.fireForegroundHandlers(notifJob);
+            else
+                GenerateNotification.fromJsonPayload(notifJob);
+        }
 
         if (!notifJob.isRestoring && !notifJob.isIamPreview) {
             processNotification(notifJob, opened);
@@ -139,23 +143,6 @@ class NotificationBundleProcessor {
 
       // Otherwise, this is a normal notification and should be shown
       return notifJob.hasExtender() || shouldDisplay(notifJob.jsonPayload.optString("alert"));
-   }
-
-   private static JSONArray bundleAsJsonArray(Bundle bundle) {
-      JSONArray jsonArray = new JSONArray();
-      jsonArray.put(bundleAsJSONObject(bundle));
-      return jsonArray;
-   }
-
-   private static OSNotificationGenerationJob saveAndProcessNotification(Context context, Bundle bundle, boolean opened, int notificationId) {
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-      notifJob.jsonPayload = bundleAsJSONObject(bundle);
-      notifJob.overrideSettings = new NotificationExtenderService.OverrideSettings();
-      notifJob.overrideSettings.androidNotificationId = notificationId;
-
-      processNotification(notifJob, opened);
-
-      return notifJob;
    }
 
    /**
@@ -504,10 +491,10 @@ class NotificationBundleProcessor {
        String alert = bundle.getString("alert");
        if (!shouldDisplay(alert)) {
            notifJob.overrideSettings.androidNotificationId = -1;
-           NotificationBundleProcessor.ProcessJobForDisplay(notifJob, true, false);
+           NotificationBundleProcessor.processJobForDisplay(notifJob, true, false);
        }
        else {
-           NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+           NotificationBundleProcessor.processJobForDisplay(notifJob);
        }
 
       return result;

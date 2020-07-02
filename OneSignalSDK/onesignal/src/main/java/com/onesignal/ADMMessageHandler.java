@@ -61,7 +61,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
-      NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      NotificationBundleProcessor.processJobForDisplay(notifJob);
    }
 
    @Override

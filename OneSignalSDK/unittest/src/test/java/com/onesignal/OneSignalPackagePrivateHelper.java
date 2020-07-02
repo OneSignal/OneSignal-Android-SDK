@@ -172,7 +172,7 @@ public class OneSignalPackagePrivateHelper {
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;
       notifJob.isRestoring = restoring;
-      return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      return NotificationBundleProcessor.processJobForDisplay(notifJob);
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
