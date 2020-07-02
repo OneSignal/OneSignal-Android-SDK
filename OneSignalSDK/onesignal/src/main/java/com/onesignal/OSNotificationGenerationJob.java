@@ -40,9 +40,6 @@ import java.security.SecureRandom;
 
 public class OSNotificationGenerationJob {
 
-   // Timeout in seconds before applying defaults
-   private static final long SHOW_NOTIFICATION_TIMEOUT = 30 * 1_000L;
-
    private final String TITLE_PAYLOAD_PARAM = "title";
    private final String ALERT_PAYLOAD_PARAM = "alert";
    private final String CUSTOM_PAYLOAD_PARAM = "custom";
@@ -177,6 +174,9 @@ public class OSNotificationGenerationJob {
     */
    private static class NotificationGenerationJob extends OSTimeoutHandler {
 
+      // Timeout in seconds before applying defaults
+      private static final long SHOW_NOTIFICATION_TIMEOUT = 30 * 1_000L;
+
       // Used to toggle when complete is called so it can not be called more than once
       boolean isComplete = false;
 
@@ -264,7 +264,7 @@ public class OSNotificationGenerationJob {
 
    /**
     * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
-    *    without exposing internals publically
+    *    without exposing internals publicly
     */
    public static class AppNotificationGenerationJob extends NotificationGenerationJob {
 

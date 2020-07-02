@@ -110,7 +110,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
       OSNotificationGenerationJob notifJob = createNotifJobFromCurrent();
       notifJob.overrideSettings = overrideSettings;
 
-      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      osNotificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.processJobForDisplay(notifJob);
       return osNotificationDisplayedResult;
    }
 
@@ -202,7 +202,7 @@ public abstract class NotificationExtenderService extends JobIntentService {
                NotificationBundleProcessor.markRestoredNotificationAsDismissed(createNotifJobFromCurrent());
          }
          else
-            NotificationBundleProcessor.ProcessJobForDisplay(createNotifJobFromCurrent());
+            NotificationBundleProcessor.processJobForDisplay(createNotifJobFromCurrent());
 
          // Delay to prevent CPU spikes.
          //    Normally more than one notification is restored at a time.
