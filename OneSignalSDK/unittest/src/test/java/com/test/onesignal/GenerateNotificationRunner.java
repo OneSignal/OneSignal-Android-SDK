@@ -1509,6 +1509,14 @@ public class GenerateNotificationRunner {
       // 2. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
       threadAndTaskWait();
 
       // 3. Background the app
