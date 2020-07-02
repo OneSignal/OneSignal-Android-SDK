@@ -1500,9 +1500,45 @@ public class GenerateNotificationRunner {
       assertNotificationDbRecords(1);
    }
 
+   @Test
+   public void testNotificationWillShowInForegroundHandler_doesNotFireWhenAppBackgrounded() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+            lastAppNotifJob = notifJob;
+            // Call complete to end without waiting default 30 second timeout
+            notifJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      // 3. Background the app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // 4. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 5. Make sure the ExtNotifJob is null and AppNotifJob is null since the app is in background when receiving a notification
+      assertNull(lastExtNotifJob);
+      assertNull(lastAppNotifJob);
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
    /**
     * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler
     * @see #testExtNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler
+    * @see #testNotificationWillShowInForegroundHandler_doesNotFireWhenAppBackgrounded
     */
    public static class NotificationExtensionService_completeBubbles_toAppNotificationWillShowInForegroundHandler implements OneSignal.ExtNotificationWillShowInForegroundHandler {
       @Override

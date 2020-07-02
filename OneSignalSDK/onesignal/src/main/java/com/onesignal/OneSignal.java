@@ -2131,8 +2131,30 @@ public class OneSignal {
    }
 
    /**
-    * A few checks before before firing the normal expected scenario where a ExtNotificationWillShowInForegroundHandler
-    *  and AppNotificationWillShowInForegroundHandler are set
+    * Checks if the app is in the background
+    * Checks if extNotificationWillShowInForegroundHandler and appNotificationWillShowInForegroundHandler are setup
+    * <br/><br/>
+    * @see OneSignal.ExtNotificationWillShowInForegroundHandler
+    * @see OneSignal.AppNotificationWillShowInForegroundHandler
+    */
+   static boolean shouldFireForegroundHandlers() {
+      if (!isInForeground()) {
+         OneSignal.onesignalLog(LOG_LEVEL.INFO, "App is in background, show notification");
+         return false;
+      }
+
+      if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
+         OneSignal.onesignalLog(LOG_LEVEL.INFO, "No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler setup, show notification");
+         return false;
+      }
+
+      return true;
+   }
+
+   /**
+    * Responsible for firing the extNotificationWillShowInForegroundHandler or appNotificationWillShowInForegroundHandler
+    * If both handlers are set or only the extNotificationWillShowInForegroundHandler is set, fire the extNotificationWillShowInForegroundHandler
+    * If the extNotificationWillShowInForegroundHandler is NOT set, the appNotificationWillShowInForegroundHandler will start
     * <br/><br/>
     * @see OneSignal.ExtNotificationWillShowInForegroundHandler
     * @see OneSignal.AppNotificationWillShowInForegroundHandler
@@ -2140,20 +2162,15 @@ public class OneSignal {
     * TODO: Enqueue this method for the extNotificationWillShowInForegroundHandler/appNotificationWillShowInForegroundHandler
     *    with a WorkManager Worker eventually
     */
-   static void fireNotificationWillShowInForegroundHandlers(OSNotificationGenerationJob notifJob) {
-      // No ExtNotificationWillShowInForegroundHandler or AppNotificationWillShowInForegroundHandler was setup, show the notification
-      if (extNotificationWillShowInForegroundHandler == null && appNotificationWillShowInForegroundHandler == null) {
-         GenerateNotification.fromJsonPayload(notifJob);
+   static void fireForegroundHandlers(OSNotificationGenerationJob notifJob) {
+      if (OneSignal.extNotificationWillShowInForegroundHandler == null) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "No extNotificationWillShowInForegroundHandler setup, fire appNotificationWillShowInForegroundHandler");
+         OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toAppNotificationGenerationJob());
          return;
       }
 
-      // No ExtNotificationWillShowInForegroundHandler was setup, use the AppNotificationWillShowInForegroundHandler to start
-      if (extNotificationWillShowInForegroundHandler == null) {
-         appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toAppNotificationGenerationJob());
-         return;
-      }
-
-      extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toExtNotificationGenerationJob());
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler and appNotificationWillShowInForegroundHandler setup, fire extNotificationWillShowInForegroundHandler");
+      OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toExtNotificationGenerationJob());
    }
 
    // Called when opening a notification
