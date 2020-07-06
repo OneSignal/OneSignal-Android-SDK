@@ -133,12 +133,12 @@ public class OneSignalPackagePrivateHelper {
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, NotificationExtender.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromFCMIntentService(context, bundle, overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtender.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.processFromFCMIntentService(context, bundle, overrideSettings);
    }
 
    public static boolean FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
@@ -154,7 +154,7 @@ public class OneSignalPackagePrivateHelper {
       receiver.onReceive(context,intent);
    }
 
-   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
+   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtender.OverrideSettings overrideSettings) {
       OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;

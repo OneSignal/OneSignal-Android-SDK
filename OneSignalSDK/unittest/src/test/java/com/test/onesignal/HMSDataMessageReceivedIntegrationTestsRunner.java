@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_ROOT_CUSTOM;
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 
 @Config(
@@ -84,9 +85,11 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
     }
 
     @Test
-    public void basicPayload_shouldDisplayNotification() throws JSONException {
+    public void basicPayload_shouldDisplayNotification() throws Exception {
         blankActivityController.pause();
         NotificationPayloadProcessorHMS.processDataMessageReceived(blankActivity, helperBasicOSPayload());
+        threadAndTaskWait();
+
         assertEquals(ALERT_TEST_MESSAGE_BODY, ShadowRoboNotificationManager.getLastShadowNotif().getBigText());
     }
 

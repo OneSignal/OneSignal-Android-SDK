@@ -59,7 +59,7 @@ public class FCMIntentService extends IntentService {
       if (extras == null)
          return;
 
-      NotificationBundleProcessor.ProcessFromFCMIntentService(this,
+      NotificationBundleProcessor.processFromFCMIntentService(this,
           new BundleCompatBundle(extras),
           null);
 

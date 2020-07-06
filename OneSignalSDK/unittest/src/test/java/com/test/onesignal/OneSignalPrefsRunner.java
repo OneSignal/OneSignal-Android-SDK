@@ -85,7 +85,7 @@ public class OneSignalPrefsRunner {
    }
 
    @Test
-   public void tesWriteWithNullContextAndAppId_andSavesAfterSetting() {
+   public void testWriteWithNullContextAndAppId_andSavesAfterSetting() {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL,"key", "value");
       TestHelpers.flushBufferedSharedPrefs();

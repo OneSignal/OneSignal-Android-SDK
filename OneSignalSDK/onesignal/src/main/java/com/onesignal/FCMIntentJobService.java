@@ -20,7 +20,7 @@ public class FCMIntentJobService extends JobIntentService {
         BundleCompat bundle = BundleCompatFactory.getInstance();
         bundle.setBundle(intent.getExtras().getParcelable(BUNDLE_EXTRA));
 
-        NotificationBundleProcessor.ProcessFromFCMIntentService(this, bundle, null);
+        NotificationBundleProcessor.processFromFCMIntentService(this, bundle, null);
     }
 
     public static void enqueueWork(Context context, Intent intent) {

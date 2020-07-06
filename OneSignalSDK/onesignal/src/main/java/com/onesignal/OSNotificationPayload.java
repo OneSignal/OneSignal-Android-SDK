@@ -136,7 +136,6 @@ public class OSNotificationPayload {
       public String bodyTextColor;
    }
 
-
    public JSONObject toJSONObject() {
       JSONObject json = new JSONObject();
 
@@ -144,8 +143,6 @@ public class OSNotificationPayload {
          json.put("notificationID", notificationID);
          json.put("title", title);
          json.put("body", body);
-         if (additionalData != null)
-            json.put("additionalData", additionalData);
          json.put("smallIcon", smallIcon);
          json.put("largeIcon", largeIcon);
          json.put("bigPicture", bigPicture);
@@ -156,6 +153,12 @@ public class OSNotificationPayload {
          json.put("lockScreenVisibility", lockScreenVisibility);
          json.put("groupKey", groupKey);
          json.put("groupMessage", groupMessage);
+         json.put("fromProjectNumber", fromProjectNumber);
+         json.put("collapseId", collapseId);
+         json.put("priority", priority);
+
+         if (additionalData != null)
+            json.put("additionalData", additionalData);
 
          if (actionButtons != null) {
             JSONArray actionButtonJsonArray = new JSONArray();
@@ -164,9 +167,6 @@ public class OSNotificationPayload {
             }
             json.put("actionButtons", actionButtonJsonArray);
          }
-         json.put("fromProjectNumber", fromProjectNumber);
-         json.put("collapseId", collapseId);
-         json.put("priority", priority);
 
          json.put("rawPayload", rawPayload);
       }
@@ -175,5 +175,43 @@ public class OSNotificationPayload {
       }
 
       return json;
+   }
+
+   public void fromJSONString(String jsonString) {
+      try {
+         JSONObject json = new JSONObject(jsonString);
+         notificationID = json.getString("notificationID");
+         title = json.getString("title");
+         body = json.getString("body");
+         smallIcon = json.getString("smallIcon");
+         largeIcon = json.getString("largeIcon");
+         bigPicture = json.getString("bigPicture");
+         smallIconAccentColor = json.getString("smallIconAccentColor");
+         launchURL = json.getString("launchURL");
+         sound = json.getString("sound");
+         ledColor = json.getString("ledColor");
+         lockScreenVisibility = json.getInt("lockScreenVisibility");
+         groupKey = json.getString("groupKey");
+         groupMessage = json.getString("groupMessage");
+         fromProjectNumber = json.getString("fromProjectNumber");
+         collapseId = json.getString("collapseId");
+         priority = json.getInt("priority");
+
+         if (json.has("additionalData"))
+            additionalData = new JSONObject(json.getString("additionalData"));
+
+         if (json.has("actionButtons")) {
+            JSONArray actionButtonJsonArray = new JSONArray(json.getString("actionButtons"));
+            for (int i = 0; i < actionButtonJsonArray.length(); i++) {
+               JSONObject actionButton = actionButtonJsonArray.getJSONObject(i);
+               actionButtons.add(new ActionButton(actionButton));
+            }
+         }
+
+         rawPayload = json.getString("rawPayload");
+      }
+      catch (Throwable t) {
+         t.printStackTrace();
+      }
    }
 }

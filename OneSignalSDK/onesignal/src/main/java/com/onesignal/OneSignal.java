@@ -704,9 +704,9 @@ public class OneSignal {
          return;
       }
 
-      NotificationExtenderService.setupNotificationExtensionServiceClass();
+      NotificationExtender.setupNotificationExtensionServiceClass();
 
-       handleActivityLifecycleHandler(context);
+      handleActivityLifecycleHandler(context);
 
       OneSignalStateSynchronizer.initUserState();
 
@@ -2158,9 +2158,6 @@ public class OneSignal {
     * <br/><br/>
     * @see OneSignal.ExtNotificationWillShowInForegroundHandler
     * @see OneSignal.AppNotificationWillShowInForegroundHandler
-    * <br/><br/>
-    * TODO: Enqueue this method for the extNotificationWillShowInForegroundHandler/appNotificationWillShowInForegroundHandler
-    *    with a WorkManager Worker eventually
     */
    static void fireForegroundHandlers(OSNotificationGenerationJob notifJob) {
       if (OneSignal.extNotificationWillShowInForegroundHandler == null) {

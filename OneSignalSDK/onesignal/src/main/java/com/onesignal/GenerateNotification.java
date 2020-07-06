@@ -72,6 +72,8 @@ import static com.onesignal.OSUtils.getResourceString;
 
 class GenerateNotification {
 
+   public static final String OS_SHOW_NOTIFICATION_THREAD = "OS_SHOW_NOTIFICATION_THREAD";
+
    public static final String BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId";
    public static final String BUNDLE_KEY_ACTION_ID = "actionId";
    // Bundle key the whole OneSignal payload will be placed into as JSON and attached to the
@@ -105,13 +107,19 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   static void fromJsonPayload(OSNotificationGenerationJob notifJob) {
+   static void fromJsonPayload(final OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
       if (notifJob.displayOption.isSilent())
          return;
 
-      showNotification(notifJob);
+      // New thread so that any Network usage is off the main thread before showing the notification
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            showNotification(notifJob);
+         }
+      }, OS_SHOW_NOTIFICATION_THREAD).start();
    }
    
    private static CharSequence getTitle(JSONObject fcmJson) {
@@ -265,7 +273,7 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   static void showNotification(OSNotificationGenerationJob notifJob) {
+   private static void showNotification(OSNotificationGenerationJob notifJob) {
       int notificationId = notifJob.getAndroidId();
       JSONObject fcmJson = notifJob.jsonPayload;
       String group = fcmJson.optString("grp", null);
