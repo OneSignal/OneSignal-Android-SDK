@@ -1,43 +1,48 @@
 package com.onesignal.sdktest.notification;
 
+import android.content.Context;
+
 import androidx.core.app.NotificationCompat;
 
-import com.onesignal.NotificationExtenderService;
+import com.onesignal.NotificationExtender.OverrideSettings;
+import com.onesignal.OSNotificationDisplayedResult;
 import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
-import com.onesignal.OSNotificationReceivedResult;
+import com.onesignal.OSNotificationReceived;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
-public class AppNotificationExtenderService extends NotificationExtenderService implements
+public class AppNotificationExtensionService implements
+        OneSignal.NotificationProcessingHandler,
         OneSignal.ExtNotificationWillShowInForegroundHandler,
         OneSignal.NotificationOpenedHandler {
 
    @Override
-   protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
+   protected boolean onNotificationProcessing(Context context, OSNotificationReceived notification) {
       if (notification.payload.actionButtons != null) {
          for (OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
             System.out.println("button:" + button.toString());
          }
       }
 
-      OverrideSettings overrideSettings = new NotificationExtenderService.OverrideSettings();
+      OverrideSettings overrideSettings = new OverrideSettings();
       overrideSettings.extender = new NotificationCompat.Extender() {
          @Override
          public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
-            return builder.setColor(getResources().getColor(R.color.colorPrimary));
+            return builder.setColor(context.getResources().getColor(R.color.colorPrimary));
          }
       };
 
-      displayNotification(overrideSettings);
+      notification.setModifiedContent(overrideSettings);
+      OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
 
-      return true;
+      notification.complete();
    }
 
    @Override
    public void notificationWillShowInForeground(ExtNotificationGenerationJob notifJob) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ext notificationWillShowInForeground fired!!!!");
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "ExtNotificationWillShowInForeground fired!");
 
       notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
       notifJob.complete(true);

@@ -263,6 +263,8 @@ public class MainOneSignalClassRunner {
       lastExternalUserIdResponse = null;
 
       ShadowGMSLocationController.reset();
+
+      TestHelpers.setupTestWorkManager(blankActivity);
       TestHelpers.beforeTestInitAndCleanup();
 
       // Set remote_params GET response
@@ -3818,6 +3820,7 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       bundle = getBaseNotifBundle("UUID2");
       OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
 
       // Test canceling
       Map<Integer, ShadowRoboNotificationManager.PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;

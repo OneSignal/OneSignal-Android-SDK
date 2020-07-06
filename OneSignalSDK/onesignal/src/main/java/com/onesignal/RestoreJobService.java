@@ -43,7 +43,7 @@ public class RestoreJobService extends JobIntentService {
       if (extras == null)
          return;
 
-      NotificationBundleProcessor.ProcessFromFCMIntentService(
+      NotificationBundleProcessor.processFromFCMIntentService(
             getApplicationContext(),
             new BundleCompatBundle(extras),
             null

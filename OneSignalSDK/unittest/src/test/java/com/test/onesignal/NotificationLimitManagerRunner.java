@@ -127,7 +127,9 @@ public class NotificationLimitManagerRunner {
    @Test
    public void clearFallbackMakingRoomForOneWhenAtLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
+      threadAndTaskWait();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID2"), null);
+      threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
       threadAndTaskWait();
@@ -138,6 +140,7 @@ public class NotificationLimitManagerRunner {
    @Test
    public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
+      threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
       threadAndTaskWait();

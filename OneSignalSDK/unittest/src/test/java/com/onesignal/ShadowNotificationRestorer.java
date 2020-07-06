@@ -9,7 +9,7 @@ import org.robolectric.annotation.Implements;
 @Implements(NotificationRestorer.class)
 public class ShadowNotificationRestorer {
    public static void startService(Context context, Intent intent) {
-      NotificationBundleProcessor.ProcessFromFCMIntentService(context,
+      NotificationBundleProcessor.processFromFCMIntentService(context,
           new BundleCompatBundle(intent),
           null);
    }
