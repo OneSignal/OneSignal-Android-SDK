@@ -29,6 +29,8 @@ package com.test.onesignal;
 
 import android.support.annotation.NonNull;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalAPIClient;
@@ -53,7 +55,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -120,7 +121,7 @@ public class OutcomeEventUnitTests {
     public void beforeEachTest() throws Exception {
         outcomeEvents = null;
 
-        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
         // Mock on a custom HashMap in order to not use custom context
         preferences = new MockOSSharedPreferences();
 

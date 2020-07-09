@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOneSignalDBHelper;
@@ -16,8 +18,8 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
-import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowGMSLocationController;
+import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -40,7 +42,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
@@ -140,7 +141,7 @@ public class OutcomeEventIntegrationTests {
     public void beforeEachTest() throws Exception {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
-        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
         preferences = new OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper();
         trackerFactory = new OSTrackerFactory(preferences, logger);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
