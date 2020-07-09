@@ -31,7 +31,7 @@ public class OSInfluence {
         String ids = jsonObject.getString(INFLUENCE_IDS);
         this.influenceChannel = OSInfluenceChannel.fromString(channel);
         this.influenceType = OSInfluenceType.fromString(type);
-        this.ids = ids != null ? new JSONArray(ids) : null;
+        this.ids = ids.isEmpty() ? null : new JSONArray(ids);
     }
 
     OSInfluence(@NonNull OSInfluence.Builder builder) {
@@ -108,7 +108,7 @@ public class OSInfluence {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(INFLUENCE_CHANNEL, influenceChannel.toString());
         jsonObject.put(INFLUENCE_TYPE, influenceType.toString());
-        jsonObject.put(INFLUENCE_IDS, ids != null ? ids.toString() : null);
+        jsonObject.put(INFLUENCE_IDS, ids != null ? ids.toString() : "");
         return jsonObject.toString();
     }
 

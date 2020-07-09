@@ -120,11 +120,14 @@ class OneSignalSyncServiceUtils {
       if (delayMs < 5_000)
          delayMs = 5_000;
 
+      boolean scheduled;
       if (useJob())
-         scheduleSyncServiceAsJob(context, delayMs);
+         scheduled = scheduleSyncServiceAsJob(context, delayMs);
       else
-         scheduleSyncServiceAsAlarm(context, delayMs);
-      nextScheduledSyncTimeMs = System.currentTimeMillis() + delayMs;
+         scheduled = scheduleSyncServiceAsAlarm(context, delayMs);
+
+      if (scheduled)
+         nextScheduledSyncTimeMs = System.currentTimeMillis() + delayMs;
    }
 
    private static boolean hasBootPermission(Context context) {
@@ -134,9 +137,26 @@ class OneSignalSyncServiceUtils {
              ) == PackageManager.PERMISSION_GRANTED;
    }
 
+
+   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+   private static boolean isJobIdRunning(Context context) {
+      final JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      for (JobInfo jobInfo : jobScheduler.getAllPendingJobs()) {
+         if (jobInfo.getId() == OneSignalSyncServiceUtils.SYNC_TASK_ID) {
+            return true;
+         }
+      }
+      return false;
+   }
+
    @RequiresApi(21)
-   private static void scheduleSyncServiceAsJob(Context context, long delayMs) {
+   private static boolean scheduleSyncServiceAsJob(Context context, long delayMs) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob:atTime: " + delayMs);
+
+      if (isJobIdRunning(context)) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob Scheduler already running!");
+         return false;
+      }
 
       JobInfo.Builder jobBuilder = new JobInfo.Builder(
          SYNC_TASK_ID,
@@ -150,26 +170,31 @@ class OneSignalSyncServiceUtils {
       if (hasBootPermission(context))
          jobBuilder.setPersisted(true);
 
-      JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
       try {
          int result = jobScheduler.schedule(jobBuilder.build());
          OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleSyncServiceAsJob:result: " + result);
+         return true;
       } catch (NullPointerException e) {
          // Catch for buggy Oppo devices
          // https://github.com/OneSignal/OneSignal-Android-SDK/issues/487
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR,
             "scheduleSyncServiceAsJob called JobScheduler.jobScheduler which " +
                "triggered an internal null Android error. Skipping job.", e);
+
+         return false;
       }
    }
 
-   private static void scheduleSyncServiceAsAlarm(Context context, long delayMs) {
+   private static boolean scheduleSyncServiceAsAlarm(Context context, long delayMs) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleServiceSyncTask:atTime: " + delayMs);
 
       PendingIntent pendingIntent = syncServicePendingIntent(context);
       AlarmManager alarm = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
       long triggerAtMs = System.currentTimeMillis() + delayMs;
       alarm.set(AlarmManager.RTC_WAKEUP,  triggerAtMs + delayMs, pendingIntent);
+
+      return true;
    }
 
    private static Thread syncBgThread;

@@ -50,7 +50,7 @@ class FocusTimeController {
    }
 
    void appBackgrounded() {
-      giveProcessorsValidFocusTime(OneSignal.getSessionManager().getInfluences(), FocusEventType.BACKGROUND);
+      giveProcessorsValidFocusTime(OneSignal.getSessionManager().getSessionInfluences(), FocusEventType.BACKGROUND);
       timeFocusedAtMs = null;
    }
 
