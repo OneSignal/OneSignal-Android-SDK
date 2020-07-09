@@ -115,6 +115,11 @@ public class OSSessionManager {
         return trackerFactory.getInfluences();
     }
 
+    @NonNull
+    List<OSInfluence> getSessionInfluences() {
+        return trackerFactory.getSessionInfluences();
+    }
+
     /**
      * Attempt to override the current session before the 30 second session minimum
      * This should only be done in a upward direction:

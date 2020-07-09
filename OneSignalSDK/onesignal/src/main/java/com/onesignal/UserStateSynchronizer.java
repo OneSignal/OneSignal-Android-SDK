@@ -197,6 +197,7 @@ abstract class UserStateSynchronizer {
         return false;
     }
 
+    protected abstract OneSignal.LOG_LEVEL getLogLevel();
     protected abstract String getId();
 
     private boolean isSessionCall() {
@@ -306,7 +307,7 @@ abstract class UserStateSynchronizer {
 
     private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
         if (userId == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error updating the user record because of the null user id");
+            OneSignal.onesignalLog(getLogLevel(), "Error updating the user record because of the null user id");
             sendTagsHandlersPerformOnFailure(new SendTagsError(-1, "Unable to update tags: the current user is not registered with OneSignal"));
             externalUserIdUpdateHandlersPerformOnFailure();
             return;

@@ -115,6 +115,7 @@ class OneSignalRestClient {
       
       // getResponseCode() can hang past it's timeout setting so join it's thread to ensure it is timing out.
       try {
+         // Sequentially wait for connectionThread to execute
          connectionThread.join(getThreadTimeout(timeout));
          if (connectionThread.getState() != Thread.State.TERMINATED)
             connectionThread.interrupt();

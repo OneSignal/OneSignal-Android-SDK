@@ -684,7 +684,8 @@ public class OneSignal {
          if (sender_id != null && sender_id.length() > 4)
             sender_id = sender_id.substring(4);
 
-         OneSignal.init(context, sender_id, bundle.getString("onesignal_app_id"), mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
+         String appId = bundle.getString("onesignal_app_id");
+         OneSignal.init(context, sender_id, appId, mInitBuilder.mNotificationOpenedHandler, mInitBuilder.mNotificationReceivedHandler);
       } catch (Throwable t) {
          t.printStackTrace();
       }
@@ -2287,7 +2288,6 @@ public class OneSignal {
    static String getUserId() {
       if (userId == null && appContext != null)
          userId = getSavedUserId(appContext);
-
       return userId;
    }
 
