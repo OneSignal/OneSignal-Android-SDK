@@ -4,6 +4,8 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -30,7 +32,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -79,7 +80,7 @@ public class DatabaseRunner {
         TestHelpers.beforeTestInitAndCleanup();
 
         outcomeTableProvider = new OSOutcomeTableProvider();
-        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
     }
 
     @After

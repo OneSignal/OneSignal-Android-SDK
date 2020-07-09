@@ -1,5 +1,7 @@
 package com.test.onesignal;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
@@ -9,15 +11,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_ANDROID;
-import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_HUAWEI;
 import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_FIREOS;
+import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_HUAWEI;
 import static com.onesignal.OneSignalPackagePrivateHelper.getDeviceType;
-
 import static org.junit.Assert.assertEquals;
 
 @Config(
@@ -40,7 +40,7 @@ public class DeviceTypeTestsRunner {
     @Before
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
-        OneSignal.setAppContext(RuntimeEnvironment.application);
+        OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
     }
 
     @Test

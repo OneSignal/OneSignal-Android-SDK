@@ -50,6 +50,8 @@ dependencies {
     implementation 'com.huawei.hms:location:4.0.0.300'
 
     testImplementation 'junit:junit:4.12'
+    testImplementation 'androidx.test:core:1.2.0'
+    testImplementation 'androidx.work:work-testing:2.3.4'
     testImplementation 'org.robolectric:robolectric:4.3.1'
     testImplementation 'org.awaitility:awaitility:3.1.5'
 }
