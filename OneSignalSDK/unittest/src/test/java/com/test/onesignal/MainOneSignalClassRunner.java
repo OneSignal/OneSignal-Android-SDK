@@ -41,6 +41,8 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.huawei.hms.location.HWLocation;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
@@ -70,15 +72,15 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowHMSFusedLocationProviderClient;
+import com.onesignal.ShadowGMSLocationController;
+import com.onesignal.ShadowGMSLocationUpdateListener;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
+import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHMSLocationUpdateListener;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowJobService;
-import com.onesignal.ShadowGMSLocationController;
-import com.onesignal.ShadowGMSLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
@@ -103,7 +105,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowAlarmManager;
@@ -127,7 +128,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppId;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
@@ -263,7 +263,7 @@ public class MainOneSignalClassRunner {
       blankActivity = blankActivityController.get();
       trackerFactory = new OSTrackerFactory(new MockOSSharedPreferences(), new MockOSLog());
       sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
-      dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+      dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
 
       cleanUp();
    }
@@ -283,7 +283,7 @@ public class MainOneSignalClassRunner {
       // Application.onCreate
 //      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(RuntimeEnvironment.application);
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       threadAndTaskWait();
       // Testing we still register the user in the background if this is the first time. (Note Context is application)
       assertNotNull(ShadowOneSignalRestClient.lastPost);
@@ -293,7 +293,7 @@ public class MainOneSignalClassRunner {
 
       // Restart app, should not send onSession automatically
       OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(RuntimeEnvironment.application);
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       threadAndTaskWait();
       assertNull(ShadowOneSignalRestClient.lastPost);
 
@@ -451,7 +451,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Create a dummy PermissionsActivity to compare in the test cases
-      Intent expectedActivity = new Intent(RuntimeEnvironment.application, PermissionsActivity.class);
+      Intent expectedActivity = new Intent(ApplicationProvider.getApplicationContext(), PermissionsActivity.class);
 
       /* Without showing the LocationGMS prompt we check to see that the current
        * activity is not equal to PermissionsActivity since it is not showing yet */
@@ -1153,7 +1153,7 @@ public class MainOneSignalClassRunner {
 
       // First run should set badge to 0
       OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(RuntimeEnvironment.application);
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       threadAndTaskWait();
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
 
@@ -1166,7 +1166,7 @@ public class MainOneSignalClassRunner {
       // Nor an app restart
       StaticResetHelper.restSetStaticFields();
       OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(RuntimeEnvironment.application);
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       threadAndTaskWait();
       assertEquals(-1, ShadowBadgeCountUpdater.lastCount);
    }
@@ -1462,7 +1462,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOfflineCrashes() throws Exception {
-      ConnectivityManager connectivityManager = (ConnectivityManager)RuntimeEnvironment.application.getSystemService(Context.CONNECTIVITY_SERVICE);
+      ConnectivityManager connectivityManager = (ConnectivityManager)ApplicationProvider.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
       ShadowConnectivityManager shadowConnectivityManager = shadowOf(connectivityManager);
       shadowConnectivityManager.setActiveNetworkInfo(null);
 
@@ -2387,7 +2387,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Tags did not get synced so SyncService should be scheduled
-      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
       assertEquals(1, shadowAlarmManager.getScheduledAlarms().size());
       assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
@@ -3366,7 +3366,7 @@ public class MainOneSignalClassRunner {
       assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
 
       // Checking make sure an update is scheduled.
-      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
       assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
@@ -3421,7 +3421,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       fastColdRestartApp();
-      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       shadowOf(alarmManager).getScheduledAlarms().clear();
       ShadowOneSignalRestClient.lastPost = null;
 
@@ -3442,7 +3442,7 @@ public class MainOneSignalClassRunner {
       assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
 
       // Checking make sure an update is scheduled.
-      alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
       assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
@@ -3560,7 +3560,7 @@ public class MainOneSignalClassRunner {
       assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
 
       // Checking make sure an update is scheduled.
-      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
       assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
@@ -3617,7 +3617,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       fastColdRestartApp();
-      AlarmManager alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       shadowOf(alarmManager).getScheduledAlarms().clear();
 
       ShadowOneSignalRestClient.lastPost = null;
@@ -3641,7 +3641,7 @@ public class MainOneSignalClassRunner {
       assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
 
       // Checking make sure an update is scheduled.
-      alarmManager = (AlarmManager)RuntimeEnvironment.application.getSystemService(Context.ALARM_SERVICE);
+      alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
       assertEquals(SyncService.class, shadowOf(intent).getIntentClass());

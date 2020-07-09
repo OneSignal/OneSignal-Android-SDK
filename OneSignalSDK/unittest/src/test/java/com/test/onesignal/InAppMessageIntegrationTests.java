@@ -3,6 +3,8 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
@@ -18,8 +20,8 @@ import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowDynamicTimer;
-import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowGMSLocationController;
+import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
@@ -43,7 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
@@ -131,7 +132,7 @@ public class InAppMessageIntegrationTests {
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
-        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
         TestHelpers.beforeTestInitAndCleanup();
     }
 

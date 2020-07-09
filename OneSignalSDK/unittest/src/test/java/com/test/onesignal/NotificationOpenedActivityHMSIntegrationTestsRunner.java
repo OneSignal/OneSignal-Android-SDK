@@ -1,8 +1,11 @@
 package com.test.onesignal;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.Intent;
 import android.support.annotation.NonNull;
+
+import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.NotificationOpenedActivityHMS;
 import com.onesignal.OSNotificationOpenResult;
@@ -118,7 +121,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     private static void helper_initSDKAndFireHMSNotificationOpenWithIntent(@NonNull Intent intent) throws Exception {
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(RuntimeEnvironment.application);
+        OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
         fastColdRestartApp();
 
         helper_startHMSOpenActivity(intent);
@@ -135,7 +138,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
     public void barebonesOSPayload_startsMainActivity() throws Exception {
         helper_initSDKAndFireHMSNotificationBarebonesOSOpenIntent();
 
-        Intent startedActivity = shadowOf(RuntimeEnvironment.application).getNextStartedActivity();
+        Intent startedActivity = shadowOf((Application) ApplicationProvider.getApplicationContext()).getNextStartedActivity();
         assertEquals(startedActivity.getComponent().getClassName(), BlankActivity.class.getName());
     }
 
@@ -151,7 +154,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         helper_initSDKAndFireHMSNotificationActionButtonTapIntent(TEST_ACTION_ID);
 
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(RuntimeEnvironment.application);
+        OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
         OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
             @Override
             public void notificationOpened(OSNotificationOpenResult result) {

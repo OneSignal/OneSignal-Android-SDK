@@ -43,10 +43,12 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.widget.Button;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import android.widget.Button;
+import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.BundleCompat;
 import com.onesignal.FCMBroadcastReceiver;
@@ -90,7 +92,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.android.controller.ServiceController;
@@ -110,8 +111,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.B
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTONS_LIST;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_MINIFIED_BUTTON_TEXT;
-import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
-import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
@@ -168,7 +167,7 @@ public class GenerateNotificationRunner {
       blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
       blankActivity = blankActivityController.get();
       blankActivity.getApplicationInfo().name = "UnitTestApp";
-      dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+      dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
 
       overrideNotificationId = -1;
       
@@ -1368,7 +1367,7 @@ public class GenerateNotificationRunner {
    private NotificationExtenderServiceTestBase startNotificationExtender(BundleCompat bundlePayload, Class serviceClass) {
       ServiceController<NotificationExtenderServiceTestBase> controller = Robolectric.buildService(serviceClass);
       NotificationExtenderServiceTestBase service = controller.create().get();
-      Intent testIntent = new Intent(RuntimeEnvironment.application, NotificationExtenderServiceTestReturnFalse.class);
+      Intent testIntent = new Intent(ApplicationProvider.getApplicationContext(), NotificationExtenderServiceTestReturnFalse.class);
       testIntent.putExtras((Bundle)bundlePayload.getBundle());
       controller.withIntent(testIntent).startCommand(0, 0);
 
