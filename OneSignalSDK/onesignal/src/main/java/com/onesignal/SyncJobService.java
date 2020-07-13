@@ -48,8 +48,8 @@ public class SyncJobService extends JobService {
 
    @Override
    public boolean onStopJob(JobParameters jobParameters) {
-      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "SyncJobService onStopJob called, system conditions not available");
       boolean reschedule = OneSignalSyncServiceUtils.stopSyncBgThread();
+      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "SyncJobService onStopJob called, system conditions not available reschedule: " + reschedule);
       return reschedule;
    }
 }
