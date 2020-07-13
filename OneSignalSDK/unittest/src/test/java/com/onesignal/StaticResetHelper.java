@@ -12,6 +12,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_clearRemoteParams;
+
 public class StaticResetHelper {
 
    private static Collection<ClassState> classes = new ArrayList<>();
@@ -108,13 +110,15 @@ public class StaticResetHelper {
    }
 
    public static void saveStaticValues() throws Exception {
-      for(ClassState aClass : classes)
+      for (ClassState aClass : classes)
          aClass.saveStaticValues();
    }
 
    public static void restSetStaticFields() throws Exception {
-      for(ClassState aClass : classes)
-            aClass.restSetStaticFields();
+      OneSignal_clearRemoteParams();
+
+      for (ClassState aClass : classes)
+         aClass.restSetStaticFields();
 
       clearWebViewManger();
    }

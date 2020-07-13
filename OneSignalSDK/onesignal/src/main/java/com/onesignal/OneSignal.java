@@ -247,8 +247,8 @@ public class OneSignal {
       void onFailure(JSONObject response);
    }
 
-   static String appId;
    static Context appContext;
+   static String appId;
    static String googleProjectNumber;
 
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
@@ -256,7 +256,7 @@ public class OneSignal {
 
    private static String userId = null;
    private static String emailId = null;
-   private static int subscribableStatus;
+   private static int subscribableStatus = Integer.MAX_VALUE;
 
    // TODO: Start of old mInitBuilder params
    //    These should be cleaned up and managed else where maybe?
@@ -265,7 +265,6 @@ public class OneSignal {
    static NotificationOpenedHandler notificationOpenedHandler;
    static InAppMessageClickHandler inAppMessageClickHandler;
    static boolean mPromptLocation;
-   static boolean mDisableGmsMissingPrompt;
    static boolean mUnsubscribeWhenNotificationsAreDisabled = true;
    // TODO: Will be apart of NotificationWillShowInForegroundHandler
    static OSInFocusDisplayOption mDisplayOption = OSInFocusDisplayOption.Notification;
@@ -314,6 +313,7 @@ public class OneSignal {
       };
 
    private static OSLogger logger = new OSLogWrapper();
+   private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
    private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger);
@@ -333,28 +333,19 @@ public class OneSignal {
 
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
+   private static String lastRegistrationId;
 
    @NonNull private static OSUtils osUtils = new OSUtils();
 
-   private static String lastRegistrationId;
-   private static boolean registerForPushFired, locationFired, promptedLocation;
+   private static boolean remoteParamsCall, registerForPushFired, locationFired, promptedLocation, getTagsCall, waitingToPostStateSync;
 
    private static LocationController.LocationPoint lastLocationPoint;
 
-   static boolean shareLocation = true;
-
    private static Collection<JSONArray> unprocessedOpenedNotifs = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
-
    private static ArrayList<GetTagsHandler> pendingGetTagsHandlers = new ArrayList<>();
-   private static boolean getTagsCall;
 
-   private static boolean waitingToPostStateSync;
-
-   static boolean requiresUserPrivacyConsent = false;
    static DelayedConsentInitializationParameters delayedInitParams;
-
-   static OneSignalRemoteParams.Params remoteParams;
 
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -556,11 +547,9 @@ public class OneSignal {
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
       setupActivityLifecycleListener(wasAppContextNull);
-      setupPrivacyConsent(appContext);
 
       OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
-
          // Get the cached app id, if it exists
          String oldAppId = getSavedAppId();
          if (oldAppId == null) {
@@ -569,7 +558,6 @@ public class OneSignal {
             OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "appContext set and an old appId was found, attempting to call setAppId(oldAppId)");
             setAppId(oldAppId);
          }
-
          return;
       }
 
@@ -596,22 +584,28 @@ public class OneSignal {
     * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
     */
    synchronized private static void init(Context context) {
-      if (requiresUserPrivacyConsent()) {
-         OneSignal.Log(LOG_LEVEL.WARN, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
-         delayedInitParams = new DelayedConsentInitializationParameters(appContext, appId);
+      if (requiresUserPrivacyConsent() || !remoteParamsCall) {
+         OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
+         delayedInitParams = new DelayedConsentInitializationParameters(context, appId);
+         String lastAppId = appId;
          // Set app id null since OneSignal was not init fully
          appId = null;
+         // Wrapper SDK's call init twice and pass null as the appId on the first call
+         //  the app ID is required to download parameters, so do not download params until the appID is provided
+         if (lastAppId != null && context != null)
+            makeAndroidParamsRequest(lastAppId, getUserId());
          return;
       }
 
-      subscribableStatus = osUtils.initializationChecker(appContext, appId);
+      // Keep last subscribed Status if already set
+      subscribableStatus = subscribableStatus != Integer.MAX_VALUE ? subscribableStatus : osUtils.initializationChecker(appContext, appId);
       if (isSubscriptionStatusUninitializable())
           return;
 
       if (initDone) {
          if (notificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
-
+         OneSignal.Log(LOG_LEVEL.DEBUG, "OneSignal SDK initialization already completed.");
          return;
       }
 
@@ -641,11 +635,19 @@ public class OneSignal {
          trackFirebaseAnalytics = new TrackFirebaseAnalytics(appContext);
 
       initDone = true;
+      OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization done.");
 
       outcomeEventsController.sendSavedOutcomes();
 
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
+   }
+
+   static void onRemoteParamSet() {
+      if (delayedInitParams != null) // Remote Params called from init
+         reassignDelayedInitParams();
+      else if (inForeground) // Remote Params called from onAppFocus
+         onAppFocusLogic();
    }
 
    private static void setupActivityLifecycleListener(boolean wasAppContextNull) {
@@ -667,19 +669,6 @@ public class OneSignal {
       }
    }
 
-   private static void setupPrivacyConsent(Context context) {
-      try {
-         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         Bundle bundle = ai.metaData;
-
-         // Read the current privacy consent setting from AndroidManifest.xml
-         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
-         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
-   }
-
    private static void handleAppIdChange() {
       // Re-register user if the app id changed (might happen when a dev is testing)
       String oldAppId = getSavedAppId();
@@ -688,7 +677,7 @@ public class OneSignal {
             Log(LOG_LEVEL.DEBUG, "App id has changed:\nFrom: " + oldAppId + "\n To: " + appId + "\nClearing the user id, app state, and remoteParams as they are no longer valid");
             saveAppId(appId);
             OneSignalStateSynchronizer.resetCurrentState();
-            remoteParams = null;
+            remoteParamController.clearRemoteParams();
             initDone = false;
          }
       }
@@ -701,7 +690,12 @@ public class OneSignal {
    }
 
    public static boolean userProvidedPrivacyConsent() {
-      return getSavedUserConsentStatus();
+      return remoteParamController.getSavedUserConsentStatus();
+   }
+
+   private static boolean isGoogleProjectNumberRemote() {
+      return getRemoteParams() != null &&
+              getRemoteParams().googleProjectNumber != null;
    }
 
    private static boolean isSubscriptionStatusUninitializable() {
@@ -845,7 +839,11 @@ public class OneSignal {
       startLocationUpdate();
 
       registerForPushFired = false;
-      makeAndroidParamsRequest();
+
+      if (getRemoteParams() != null)
+         registerForPushToken();
+      else
+         makeAndroidParamsRequest(appId, getUserId());
    }
 
    private static void startLocationUpdate() {
@@ -913,58 +911,31 @@ public class OneSignal {
       return subscriptionStatus < -6;
    }
 
-   private static void makeAndroidParamsRequest() {
-      if (remoteParams != null) {
-         registerForPushToken();
+   private static void makeAndroidParamsRequest(String appId, String userId) {
+      if (getRemoteParams() != null) {
+         remoteParamsCall = true;
          return;
       }
 
-      OneSignalRemoteParams.makeAndroidParamsRequest(new OneSignalRemoteParams.CallBack() {
+      OneSignalRemoteParams.makeAndroidParamsRequest(appId, userId, new OneSignalRemoteParams.CallBack() {
          @Override
          public void complete(OneSignalRemoteParams.Params params) {
-            remoteParams = params;
-            if (remoteParams.googleProjectNumber != null)
-               googleProjectNumber = remoteParams.googleProjectNumber;
+            remoteParamsCall = true;
+            if (params.googleProjectNumber != null)
+               googleProjectNumber = params.googleProjectNumber;
 
-            OneSignalPrefs.saveBool(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED,
-               remoteParams.firebaseAnalytics
-            );
-            OneSignalPrefs.saveBool(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,
-               remoteParams.restoreTTLFilter
-            );
-            OneSignalPrefs.saveBool(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
-               remoteParams.clearGroupOnSummaryClick
-            );
-            OneSignalPrefs.saveBool(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
-               remoteParams.receiveReceiptEnabled
-            );
-            OneSignalPrefs.saveBool(
-               OneSignalPrefs.PREFS_ONESIGNAL,
-               preferences.getOutcomesV2KeyName(),
-               params.influenceParams.outcomesV2ServiceEnabled
-            );
-            logger.debug("OneSignal saveInfluenceParams: " + params.influenceParams.toString());
-            trackerFactory.saveInfluenceParams(params.influenceParams);
+            remoteParamController.saveRemoteParams(params, trackerFactory, preferences, logger);
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
                params.notificationChannels
             );
-            registerForPushToken();
          }
       });
-
    }
+
    private static void fireCallbackForOpenedNotifications() {
-      for(JSONArray dataArray : unprocessedOpenedNotifs)
+      for (JSONArray dataArray : unprocessedOpenedNotifs)
          runNotificationOpenedCallback(dataArray, true, false);
 
       unprocessedOpenedNotifs.clear();
@@ -982,7 +953,7 @@ public class OneSignal {
    public static void provideUserConsent(boolean consent) {
       boolean previousConsentStatus = userProvidedPrivacyConsent();
 
-      saveUserConsentStatus(consent);
+      remoteParamController.saveUserConsentStatus(consent);
 
       if (!previousConsentStatus && consent && delayedInitParams != null) {
          OneSignal.Log(LOG_LEVEL.VERBOSE, "Privacy consent provided, reassigning all delayed init params and attempting init again...");
@@ -1000,21 +971,15 @@ public class OneSignal {
       setAppContext(delayedContext);
    }
 
-   public static void setRequiresUserPrivacyConsent(boolean required) {
-      if (requiresUserPrivacyConsent && !required) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Cannot change requiresUserPrivacyConsent() from TRUE to FALSE");
-         return;
-      }
-
-      requiresUserPrivacyConsent = required;
+   static OneSignalRemoteParams.Params getRemoteParams() {
+      return remoteParamController.getRemoteParams();
    }
-
 
    /**
     * Indicates if the SDK is still waiting for the user to provide consent
     */
    public static boolean requiresUserPrivacyConsent() {
-      return requiresUserPrivacyConsent && !userProvidedPrivacyConsent();
+      return appContext == null || isUserPrivacyConsentRequired() && !userProvidedPrivacyConsent();
    }
 
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
@@ -1177,11 +1142,21 @@ public class OneSignal {
 
       LocationController.onFocusChange();
 
+      if (OSUtils.shouldLogMissingAppIdError(appId))
+         return;
+      // Make sure remote param call has finish in order to know if privacyConsent is required
+      if (!remoteParamsCall) {
+         Log(LOG_LEVEL.DEBUG, "Delay onAppFocus logic due to missing remote params");
+         makeAndroidParamsRequest(appId, getUserId());
+         return;
+      }
+
+      onAppFocusLogic();
+   }
+
+   private static void onAppFocusLogic() {
       // Make sure without privacy consent, onAppFocus returns early
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
-         return;
-      
-      if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
 
       FocusTimeController.getInstance().appForegrounded();
@@ -1222,18 +1197,18 @@ public class OneSignal {
          "registerUser:" +
          "registerForPushFired:" + registerForPushFired +
          ", locationFired: " + locationFired +
-         ", remoteParams: " + remoteParams +
+         ", remoteParams: " + getRemoteParams() +
          ", appId: " + appId
       );
 
-      if (!registerForPushFired || !locationFired || remoteParams == null || appId == null)
+      if (!registerForPushFired || !locationFired || getRemoteParams() == null || appId == null)
          return;
 
       new Thread(new Runnable() {
          public void run() {
             try {
                registerUserTask();
-               OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue());
+               OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
             } catch(JSONException t) {
                Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
             }
@@ -1279,7 +1254,7 @@ public class OneSignal {
       pushState.put("device_type", osUtils.getDeviceType());
       OneSignalStateSynchronizer.updatePushState(pushState);
 
-      if (shareLocation && lastLocationPoint != null)
+      if (isLocationShared() && lastLocationPoint != null)
          OneSignalStateSynchronizer.updateLocation(lastLocationPoint);
 
       OneSignalStateSynchronizer.readyToUpdate(true);
@@ -1355,7 +1330,7 @@ public class OneSignal {
          return;
       }
 
-      if (remoteParams != null && remoteParams.useEmailAuth && emailAuthHash == null) {
+      if (getRemoteParams() != null && getRemoteParams().useEmailAuth && emailAuthHash == null) {
          String errorMessage = "Email authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (callback != null)
             callback.onFailure(new EmailUpdateError(EmailErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
@@ -2151,20 +2126,6 @@ public class OneSignal {
               null);
    }
 
-   static boolean getSavedUserConsentStatus() {
-      return OneSignalPrefs.getBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT,
-              false);
-   }
-
-   static void saveUserConsentStatus(boolean consent) {
-      OneSignalPrefs.saveBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_ONESIGNAL_USER_PROVIDED_CONSENT,
-              consent);
-   }
-
    private static String getSavedUserId(Context inContext) {
       if (inContext == null)
          return null;
@@ -2238,7 +2199,7 @@ public class OneSignal {
 
       OneSignalStateSynchronizer.refreshEmailState();
 
-      OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue());
+      OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
    }
 
    static void updateEmailIdDependents(String emailId) {
@@ -2252,20 +2213,27 @@ public class OneSignal {
       }
    }
 
+   // Start Remote params getters
    static boolean getFirebaseAnalyticsEnabled() {
-      return OneSignalPrefs.getBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED,
-              false);
+      return remoteParamController.getFirebaseAnalyticsEnabled();
    }
 
    static boolean getClearGroupSummaryClick() {
-      return OneSignalPrefs.getBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
-              true);
+      return remoteParamController.getClearGroupSummaryClick();
    }
 
+   static boolean getDisableGMSMissingPrompt() {
+      return remoteParamController.isGMSMissingPromptDisable();
+   }
+
+   static boolean isLocationShared() {
+      return remoteParamController.isLocationShared();
+   }
+
+   static boolean isUserPrivacyConsentRequired() {
+      return remoteParamController.isPrivacyConsentRequired();
+   }
+   // End Remote params getters
 
    // If true(default) - Device will always vibrate unless the device is in silent mode.
    // If false - Device will only vibrate when the device is set on it's vibrate only mode.
@@ -2404,16 +2372,10 @@ public class OneSignal {
       runSetSubscription.run();
    }
 
-   public static void setLocationShared(boolean enable) {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLocationShared()"))
-         return;
-
-      shareLocation = enable;
+   static void setSharedLocation(boolean enable) {
       if (!enable)
          OneSignalStateSynchronizer.clearLocation();
-      Log(LOG_LEVEL.DEBUG, "shareLocation:" + shareLocation);
+      logger.debug("OneSignal is shareLocation enabled:" + enable);
    }
 
    /**
@@ -3039,7 +3001,7 @@ public class OneSignal {
 
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
    static boolean areNotificationsEnabledForSubscribedState() {
-      if (mUnsubscribeWhenNotificationsAreDisabled)
+      if (mUnsubscribeWhenNotificationsAreDisabled || remoteParamController.unsubscribeWhenNotificationsAreDisabled())
          return OSUtils.areNotificationsEnabled(appContext);
       return true;
    }
@@ -3089,6 +3051,10 @@ public class OneSignal {
 
    static OSSessionManager.SessionListener getSessionListener() {
       return sessionListener;
+   }
+
+   static OSRemoteParamController getRemoteParamController() {
+      return remoteParamController;
    }
    /*
     * End Mock Injection module

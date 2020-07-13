@@ -96,6 +96,7 @@ import com.onesignal.example.MainActivity;
 import com.onesignal.influence.OSTrackerFactory;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -128,10 +129,12 @@ import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setRequiresUserPrivacyConsent;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.RestClientAsserts.assertAmazonPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertAndroidPlayerCreateAtIndex;
@@ -182,7 +185,7 @@ import static org.robolectric.Shadows.shadowOf;
 // @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MainOneSignalClassRunner {
 
-   private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
+   private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
 
    @SuppressLint("StaticFieldLeak")
@@ -242,6 +245,9 @@ public class MainOneSignalClassRunner {
 
       ShadowGMSLocationController.reset();
       TestHelpers.beforeTestInitAndCleanup();
+
+      // Set remote_params GET response
+      setRemoteParamsGetHtmlResponse();
    }
 
    @BeforeClass // Runs only once, before any tests
@@ -445,7 +451,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(sdk = 26)
    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignal.autoPromptLocation(true);
       OneSignalInit();
       threadAndTaskWait();
@@ -471,7 +477,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAppFocusWithPrivacyConsent() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -483,9 +489,10 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      // No requests should be made at this point since privacy consent has not been given
+      // Only remote param request should be made at this point since privacy consent has not been given
       int requestsCount = ShadowOneSignalRestClient.requests.size();
-      assertEquals(requestsCount, 0);
+      assertEquals(1, requestsCount);
+      assertRemoteParamsAtIndex(0);
 
       // Give privacy consent
       OneSignal.provideUserConsent(true);
@@ -958,8 +965,9 @@ public class MainOneSignalClassRunner {
    @Test
    public void testNullProjectNumberSetsErrorType() throws Exception {
       // Get call will not return a Google project number if it hasn't been entered on the OneSignal dashboard.
-      ShadowOneSignalRestClient.setNextSuccessfulJSONResponse(new JSONObject() {{
+      ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(new JSONObject() {{
          put("awl_list", new JSONObject());
+         put("android_sender_id", "");
       }});
 
       // Don't fire the mock callback, it will be done from the real class.
@@ -1800,7 +1808,6 @@ public class MainOneSignalClassRunner {
       OneSignal.setEmail("different@email.com");
       threadAndTaskWait();
 
-
       // Update Push record's email field.
       ShadowOneSignalRestClient.Request putPushEmail = ShadowOneSignalRestClient.requests.get(5);
       assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, putPushEmail.method);
@@ -1946,6 +1953,10 @@ public class MainOneSignalClassRunner {
    // Tests to make sure that the onFailure callback works
    @Test
    public void shouldFailToSendTagsWithResponse() throws Exception {
+      // Context is needed for privacy consent
+      OneSignal.setAppContext(blankActivity);
+      OneSignal_setRequiresUserPrivacyConsent(false);
+
       TestChangeTagsUpdateHandler handler = new TestChangeTagsUpdateHandler();
 
       // should fail because there is no OneSignal player ID
@@ -2714,6 +2725,8 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testMethodCalls_withSetAppContextAndSetAppId() throws Exception {
+      OneSignal_setRequiresUserPrivacyConsent(false);
+
       GetTags();
       OneSignal.sendTag("key", "value");
       OneSignal.sendTags("{\"key\": \"value\"}");
@@ -2947,14 +2960,16 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void getTagsDelayedAfterRegistering() throws Exception {
-      ShadowOneSignalRestClient.setSuccessfulGETJSONResponses(new JSONObject(), new JSONObject() {{
+      // Set players GET response
+      ShadowOneSignalRestClient.setNextSuccessfulGETJSONResponse(new JSONObject() {{
          put("tags", new JSONObject() {{
             put("test1", "value1");
          }});
       }});
       ShadowOneSignalRestClient.nextSuccessfulGETResponsePattern = Pattern.compile("players/.*");
-
       OneSignalInit();
+      // need to wait for remote_params call -> privacy consent set to false
+      threadAndTaskWait();
       GetTags();
       threadAndTaskWait();
 
@@ -3041,7 +3056,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(sdk = 26)
    public void testSessionTimeTrackingOnPrivacyConsent() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3061,10 +3076,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void gdprUserConsent() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
-
-      //check to ensure that the privacy consent status can never go from TRUE -> FALSE
-      OneSignal.setRequiresUserPrivacyConsent(false);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       assertTrue(OneSignalPackagePrivateHelper.OneSignal_requiresUserPrivacyConsent());
 
       //privacy consent state should still be set to true (user consent required)
@@ -3109,7 +3121,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void gdprRevokeUserConsent() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
 
       //privacy consent state should still be set to true (user consent required)
       OneSignalInit();
@@ -3143,8 +3155,8 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void shouldReturnCorrectConsentRequiredStatus() {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+   public void shouldReturnCorrectConsentRequiredStatus() throws JSONException {
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
 
       OneSignalInit();
 
@@ -3157,7 +3169,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldReturnCorrectConsentRequiredStatusWhenSetBeforeInit() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignal.provideUserConsent(true);
       OneSignalInit();
       threadAndTaskWait();
@@ -3176,7 +3188,7 @@ public class MainOneSignalClassRunner {
    // to work even if privacy consent has not been granted.
    @Test
    public void shouldAddSubscriptionObserverIfConsentNotGranted() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3202,7 +3214,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldAddPermissionObserverIfConsentNotGranted() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3225,7 +3237,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldAddEmailSubscriptionObserverIfConsentNotGranted() throws Exception {
-      OneSignal.setRequiresUserPrivacyConsent(true);
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
       OneSignalInit();
       OSEmailSubscriptionObserver subscriptionObserver = new OSEmailSubscriptionObserver() {
          @Override
@@ -4168,7 +4180,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = { ShadowFirebaseAnalytics.class })
    public void shouldSendFirebaseAnalyticsNotificationOpen() throws Exception {
-      ShadowOneSignalRestClient.paramExtras = new JSONObject().put("fba", true);
+      ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(new JSONObject().put("fba", true));
       OneSignalInit();
       threadAndTaskWait();
 
@@ -4197,7 +4209,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = { ShadowFirebaseAnalytics.class })
    public void shouldSendFirebaseAnalyticsNotificationReceived() throws Exception {
-      ShadowOneSignalRestClient.paramExtras = new JSONObject().put("fba", true);
+      ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(new JSONObject().put("fba", true));
       OneSignalInit();
       threadAndTaskWait();
 
@@ -4727,20 +4739,12 @@ public class MainOneSignalClassRunner {
    }
 
    private void OneSignalInit() {
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+//      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal_setTrackerFactory(trackerFactory);
       OneSignal_setSessionManager(sessionManager);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
-      trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
-      blankActivityController.resume();
-   }
-
-   private void OneSignalInitFromApplication() {
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
-      OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.setAppContext(blankActivity.getApplicationContext());
       blankActivityController.resume();
    }
 

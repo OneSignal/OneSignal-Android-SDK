@@ -30,7 +30,6 @@ public class MainApplication extends Application {
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
         OneSignal.pauseInAppMessages(true);
-        OneSignal.setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
     }

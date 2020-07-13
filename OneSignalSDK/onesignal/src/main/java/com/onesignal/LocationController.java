@@ -100,7 +100,7 @@ class LocationController {
    }
 
    static boolean scheduleUpdate(Context context) {
-      if (!hasLocationPermission(context) || !OneSignal.shareLocation)
+      if (!hasLocationPermission(context) || !OneSignal.isLocationShared())
          return false;
 
       long lastTime = System.currentTimeMillis() - getLastLocationTime();
@@ -175,7 +175,7 @@ class LocationController {
       classContext = context;
       locationHandlers.put(handler.getType(), handler);
 
-      if (!OneSignal.shareLocation) {
+      if (!OneSignal.isLocationShared()) {
          sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
          fireFailedComplete();
          return;
