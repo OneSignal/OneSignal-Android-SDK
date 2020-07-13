@@ -54,6 +54,8 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       Bundle bundle = intent.getExtras();
       
       NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+      // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+//      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
       if (processedResult.processed())
          return;

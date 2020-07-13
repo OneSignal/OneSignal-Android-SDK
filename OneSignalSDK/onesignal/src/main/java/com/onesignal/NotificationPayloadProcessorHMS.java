@@ -83,6 +83,8 @@ class NotificationPayloadProcessorHMS {
             return;
 
         NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+        // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+//      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
         // Return if the notification will NOT be handled by normal GcmIntentService display flow.
         if (processedResult.processed())

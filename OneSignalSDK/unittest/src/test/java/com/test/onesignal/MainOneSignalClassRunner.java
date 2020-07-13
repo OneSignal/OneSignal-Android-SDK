@@ -264,7 +264,6 @@ public class MainOneSignalClassRunner {
 
       ShadowGMSLocationController.reset();
 
-      TestHelpers.setupTestWorkManager(blankActivity);
       TestHelpers.beforeTestInitAndCleanup();
 
       // Set remote_params GET response
@@ -292,6 +291,8 @@ public class MainOneSignalClassRunner {
       trackerFactory = new OSTrackerFactory(new MockOSSharedPreferences(), new MockOSLog(), time);
       sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
       dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
+
+      TestHelpers.setupTestWorkManager(blankActivity);
 
       cleanUp();
 
