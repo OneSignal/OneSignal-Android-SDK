@@ -36,7 +36,7 @@ class OneSignalCacheCleaner {
      * 1. NotificationTable.TABLE_NAME
      * 2. CachedUniqueOutcomeNotificationTable.TABLE_NAME
      */
-    synchronized static void cleanNotificationCache(final SQLiteDatabase writableDb) {
+    static synchronized void cleanNotificationCache(final SQLiteDatabase writableDb) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -66,7 +66,7 @@ class OneSignalCacheCleaner {
      * 3. Use queried data to clean SharedPreferences
      */
     @WorkerThread
-    synchronized static void cleanCachedInAppMessages(final OneSignalDbHelper dbHelper) {
+    static synchronized void cleanCachedInAppMessages(final OneSignalDbHelper dbHelper) {
         new Thread(new Runnable() {
             @Override
             public void run() {

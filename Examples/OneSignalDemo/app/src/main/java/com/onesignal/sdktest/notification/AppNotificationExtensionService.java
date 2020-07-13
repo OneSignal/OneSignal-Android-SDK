@@ -4,8 +4,8 @@ import android.content.Context;
 
 import androidx.core.app.NotificationCompat;
 
-import com.onesignal.NotificationExtender.OverrideSettings;
 import com.onesignal.OSNotificationDisplayedResult;
+import com.onesignal.OSNotificationExtender;
 import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
@@ -19,14 +19,14 @@ public class AppNotificationExtensionService implements
         OneSignal.NotificationOpenedHandler {
 
    @Override
-   protected boolean onNotificationProcessing(Context context, OSNotificationReceived notification) {
+   public void notificationProcessing(Context context, OSNotificationReceived notification) {
       if (notification.payload.actionButtons != null) {
          for (OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
             System.out.println("button:" + button.toString());
          }
       }
 
-      OverrideSettings overrideSettings = new OverrideSettings();
+      OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
       overrideSettings.extender = new NotificationCompat.Extender() {
          @Override
          public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
@@ -35,7 +35,9 @@ public class AppNotificationExtensionService implements
       };
 
       notification.setModifiedContent(overrideSettings);
+
       OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
+      System.out.println("Android notification id: " + notificationDisplayedResult.androidNotificationId);
 
       notification.complete();
    }

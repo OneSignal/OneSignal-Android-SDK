@@ -30,6 +30,8 @@ package com.onesignal;
 import android.content.Intent;
 import android.os.Bundle;
 
+// TODO: This will be removed in future and the internals should be placed inside of this method:
+//    showNotificationsFromCursor
 public class RestoreJobService extends JobIntentService {
 
    static final int RESTORE_SERVICE_JOB_ID = 2071862122;

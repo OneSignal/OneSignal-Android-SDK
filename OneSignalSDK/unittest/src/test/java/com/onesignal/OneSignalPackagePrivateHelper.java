@@ -133,11 +133,11 @@ public class OneSignalPackagePrivateHelper {
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, NotificationExtender.OverrideSettings overrideSettings) {
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
       NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtender.OverrideSettings overrideSettings) {
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
       NotificationBundleProcessor.processFromFCMIntentService(context, bundle, overrideSettings);
    }
 
@@ -154,7 +154,7 @@ public class OneSignalPackagePrivateHelper {
       receiver.onReceive(context,intent);
    }
 
-   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtender.OverrideSettings overrideSettings) {
+   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, OSNotificationExtender.OverrideSettings overrideSettings) {
       OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;

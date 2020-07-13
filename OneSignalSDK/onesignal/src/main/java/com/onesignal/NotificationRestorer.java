@@ -191,40 +191,42 @@ class NotificationRestorer {
       if (!cursor.moveToFirst())
          return;
 
-      boolean useExtender = (NotificationExtender.getIntent(context) != null);
-
+      boolean useNotificationProcessor = OneSignal.notificationProcessingHandler != null;
       do {
-         if (useExtender) {
-            Intent intent = NotificationExtender.getIntent(context);
-            addRestoreExtras(intent, cursor);
-            NotificationExtender.enqueueWork(context,
-                  intent.getComponent(),
-                  NotificationExtender.EXTENDER_SERVICE_JOB_ID,
-                  intent,
-                  false);
+         int existingAndroidNotifId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+         String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
+         long timestamp = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
+
+         if (useNotificationProcessor) {
+            OSNotificationWorkManager.beginEnqueueingWork(
+                    context,
+                    existingAndroidNotifId,
+                    fullData,
+                    true,
+                    timestamp,
+                    false
+            );
          }
          else {
-            Intent intent = addRestoreExtras(new Intent(), cursor);
+            // TODO: We should remove the RestoreJobService and simply call the internals here
+            //    A RestoreJobKickoffWorker will be implemented for the start of this whole process
+            Intent intent = new Intent()
+                    .putExtra("android_notif_id", existingAndroidNotifId)
+                    .putExtra("json_payload", fullData)
+                    .putExtra("is_restoring", true)
+                    .putExtra("timestamp", timestamp);
             ComponentName componentName = new ComponentName(context, RestoreJobService.class);
-            RestoreJobService.enqueueWork(context, componentName, RestoreJobService.RESTORE_SERVICE_JOB_ID, intent, false);
+            RestoreJobService.enqueueWork(
+                    context,
+                    componentName,
+                    RestoreJobService.RESTORE_SERVICE_JOB_ID,
+                    intent,
+                    false);
          }
 
          if (delay > 0)
             OSUtils.sleep(delay);
       } while (cursor.moveToNext());
-   }
-
-   private static Intent addRestoreExtras(Intent intent, Cursor cursor) {
-      int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-      String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
-      Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
-
-      intent.putExtra("json_payload", fullData)
-            .putExtra("android_notif_id", existingId)
-            .putExtra("restoring", true)
-            .putExtra("timestamp", datetime);
-
-      return intent;
    }
 
    private static final int RESTORE_NOTIFICATIONS_DELAY_MS = 15_000;

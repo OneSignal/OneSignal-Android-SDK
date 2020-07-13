@@ -180,6 +180,14 @@ public class OneSignal {
    }
 
    /**
+    *
+    */
+   public interface NotificationProcessingHandler {
+
+      void notificationProcessing(Context context, OSNotificationReceived notification);
+   }
+
+   /**
     * Meant to be implemented within a custom made NotificationExtensionService
     * Naming can be whatever makes the most sense to the developer, but to actually activate any
     *    implemented interfaces, a metadata tag with a specific OneSignal key and then file path value
@@ -342,6 +350,8 @@ public class OneSignal {
    private static String userId = null;
    private static String emailId = null;
    private static int subscribableStatus;
+
+   static NotificationProcessingHandler notificationProcessingHandler;
 
    static ExtNotificationWillShowInForegroundHandler extNotificationWillShowInForegroundHandler;
    static AppNotificationWillShowInForegroundHandler appNotificationWillShowInForegroundHandler;
@@ -662,6 +672,10 @@ public class OneSignal {
       init(context);
    }
 
+   static void setNotificationProcessingHandler(NotificationProcessingHandler callback) {
+      notificationProcessingHandler = callback;
+   }
+
    static void setExtNotificationWillShowInForegroundHandler(ExtNotificationWillShowInForegroundHandler callback) {
       extNotificationWillShowInForegroundHandler = callback;
    }
@@ -684,7 +698,7 @@ public class OneSignal {
    /**
     * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
     */
-   synchronized private static void init(Context context) {
+   private static synchronized void init(Context context) {
       if (requiresUserPrivacyConsent()) {
          OneSignal.Log(LOG_LEVEL.WARN, "OneSignal SDK initialization delayed, user privacy consent is set to required for this application.");
          delayedInitParams = new DelayedConsentInitializationParameters(appContext, appId);
@@ -704,7 +718,7 @@ public class OneSignal {
          return;
       }
 
-      NotificationExtender.setupNotificationExtensionServiceClass();
+      OSNotificationExtender.setupNotificationExtensionServiceClass();
 
       handleActivityLifecycleHandler(context);
 
@@ -3023,7 +3037,7 @@ public class OneSignal {
       OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
    }
 
-   private static boolean isDuplicateNotification(String id, Context context) {
+   private static boolean isDuplicateNotification(Context context, String id) {
       if (id == null || "".equals(id))
          return false;
 
@@ -3039,11 +3053,13 @@ public class OneSignal {
          String[] whereArgs = {id};
 
          cursor = readableDb.query(
-             NotificationTable.TABLE_NAME,
-             retColumn,
-             NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",   // Where String
-             whereArgs,
-             null, null, null);
+                 NotificationTable.TABLE_NAME,
+                 retColumn,
+                 NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",
+                 whereArgs,
+                 null,
+                 null,
+                 null);
 
          exists = cursor.moveToFirst();
       }
@@ -3065,7 +3081,7 @@ public class OneSignal {
 
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
       String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
-      return id == null || OneSignal.isDuplicateNotification(id, context);
+      return id == null || OneSignal.isDuplicateNotification(context, id);
    }
 
    static String getNotificationIdFromFCMJson(@Nullable JSONObject fcmJson) {

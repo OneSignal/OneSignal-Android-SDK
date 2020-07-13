@@ -1,6 +1,7 @@
 package com.test.onesignal;
 
 import android.app.AlarmManager;
+import android.app.Application;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.app.job.JobService;
@@ -430,7 +431,7 @@ public class TestHelpers {
       return cachedUniqueOutcomes;
    }
 
-   synchronized static void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
+   static synchronized void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
       SQLiteDatabase writableDatabase = db.getSQLiteDatabaseWithRetries();
 
       ContentValues values = new ContentValues();
@@ -444,7 +445,7 @@ public class TestHelpers {
       writableDatabase.close();
    }
 
-   synchronized static List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
+   static synchronized List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
               OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,

@@ -27,59 +27,88 @@
 
 package com.onesignal;
 
-import com.onesignal.NotificationExtender.OverrideSettings;
+import android.content.Context;
 
-import org.json.JSONException;
+import com.onesignal.OSNotificationExtender.OverrideSettings;
+
 import org.json.JSONObject;
 
 public class OSNotificationReceived extends OSTimeoutHandler {
+
+   // Timeout in seconds before auto calling
+   private static final long PROCESS_NOTIFICATION_TIMEOUT = 5 * 1_000L;
+
+   // Used to toggle when complete is called so it can not be called more than once
+   private boolean isComplete = false;
 
    public OSNotificationPayload payload;
    public boolean isRestoring;
    public boolean isAppInFocus;
 
-   private NotificationExtender notificationExtenderService;
+   OSNotificationExtender notificationExtender;
 
-   OSNotificationReceived() {
-      notificationExtenderService = new NotificationExtender();
+   OSNotificationReceived(Context context, int androidNotificationId, JSONObject jsonPayload, boolean isRestoring, boolean isAppInFocus, long timestamp) {
+      this.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(jsonPayload);
+      this.isRestoring = isRestoring;
+      this.isAppInFocus = isAppInFocus;
+
+      notificationExtender = new OSNotificationExtender(
+              context,
+              androidNotificationId,
+              jsonPayload,
+              isRestoring,
+              timestamp
+      );
+
+      setTimeout(PROCESS_NOTIFICATION_TIMEOUT);
+      startTimeout(new Runnable() {
+         @Override
+         public void run() {
+            complete();
+         }
+      });
    }
 
-   public JSONObject toJSONObject() {
-      JSONObject json = new JSONObject();
-
-      try {
-         json.put("payload", payload.toJSONObject().toString());
-         json.put("isRestoring", isRestoring);
-         json.put("isAppInFocus", isAppInFocus);
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
-
-      return json;
+   /**
+    * If a developer wants to override the data within a received notification, they can do so by
+    *    creating a {@link androidx.core.app.NotificationCompat.Extender} within the {@link com.onesignal.OneSignal.NotificationProcessingHandler}
+    *    and override any notification data desired
+    * This notification data will be given to a {@link OSNotificationExtender} class and then passed
+    *    into the {@link OSNotificationReceived#setModifiedContent(OverrideSettings)}
+    * <br/><br/>
+    * @see com.onesignal.OneSignal.NotificationProcessingHandler
+    */
+   public synchronized void setModifiedContent(OverrideSettings overrideSettings) {
+      notificationExtender.setModifiedContent(overrideSettings);
    }
 
-   public void fromJSONObject(String jsonString) {
-      try {
-         JSONObject json = new JSONObject(jsonString);
-         payload = new OSNotificationPayload(
-                 new JSONObject(json.getString("payload")));
-         isRestoring = json.getBoolean("isRestoring");
-         isAppInFocus = json.getBoolean("isAppInFocus");
-
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
+   /**
+    * If a developer wants to display the notification, whether or not {@link OSNotificationReceived#setModifiedContent(OverrideSettings)}
+    *    was called by the developer
+    * Without calling this method, the notification will not display at all
+    * <br/><br/>
+    * Returns a {@link OSNotificationDisplayedResult}, which currently is only responsible for the
+    *    android notification id
+    * <br/><br/>
+    * @see OSNotificationDisplayedResult
+    * @see com.onesignal.OneSignal.NotificationProcessingHandler
+    */
+   public synchronized OSNotificationDisplayedResult display() {
+      return notificationExtender.displayNotification();
    }
 
-   public void setModifiedContent(OverrideSettings overrideSettings) {
-      if (notificationExtenderService == null)
-         notificationExtenderService = new NotificationExtender();
+   /**
+    *
+    */
+   public synchronized void complete() {
+      destroyTimeout();
 
-      notificationExtenderService.setModifiedContent(overrideSettings);
-   }
+      if (isComplete)
+         return;
 
-   public OSNotificationDisplayedResult display() {
+      isComplete = true;
 
+      notificationExtender.processNotification();
    }
 
 }
