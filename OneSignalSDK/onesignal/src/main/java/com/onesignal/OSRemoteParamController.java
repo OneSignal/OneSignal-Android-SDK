@@ -69,6 +69,10 @@ class OSRemoteParamController {
         OneSignal.onRemoteParamSet();
     }
 
+    boolean isRemoteParamsCallDone() {
+        return remoteParams != null;
+    }
+
     OneSignalRemoteParams.Params getRemoteParams() {
         return remoteParams;
     }
@@ -95,7 +99,7 @@ class OSRemoteParamController {
         return OneSignalPrefs.getBool(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_UNSUBSCRIBE_WHEN_NOTIFICATIONS_DISABLED,
-                false);
+                true);
     }
 
     boolean isGMSMissingPromptDisable() {

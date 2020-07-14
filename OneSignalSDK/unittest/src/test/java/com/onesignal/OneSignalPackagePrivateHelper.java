@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.robolectric.Shadows.shadowOf;
 
@@ -109,6 +110,10 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_clearRemoteParams() {
       OneSignal.getRemoteParamController().clearRemoteParams();
+   }
+
+   public static void OneSignal_savePrivacyConsentRequired(boolean required) {
+      OneSignal.getRemoteParamController().savePrivacyConsentRequired(required);
    }
 
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
@@ -220,6 +225,10 @@ public class OneSignalPackagePrivateHelper {
 
    public static DelayedConsentInitializationParameters OneSignal_delayedInitParams() {
       return OneSignal.delayedInitParams;
+   }
+
+   public static ConcurrentLinkedQueue<Runnable> OneSignal_taskQueueWaitingForInit() {
+      return OSTaskController.taskQueueWaitingForInit;
    }
 
    public static boolean OneSignal_requiresUserPrivacyConsent() {

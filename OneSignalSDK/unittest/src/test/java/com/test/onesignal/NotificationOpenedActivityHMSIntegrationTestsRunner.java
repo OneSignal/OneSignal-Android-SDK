@@ -30,6 +30,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -40,6 +41,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHe
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.InAppMessagingHelpers.ONESIGNAL_APP_ID;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertNotificationOpenAtIndex;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -76,6 +78,8 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
         ShadowOSUtils.supportsHMS(true);
+        // Set remote_params GET response
+        setRemoteParamsGetHtmlResponse();
     }
 
     private static @NonNull Intent helper_baseHMSOpenIntent() {
@@ -167,9 +171,13 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     @Test
     public void osIAMPreview_showsPreview() throws Exception {
-        Activity activity = Robolectric.buildActivity(BlankActivity.class).create().get();
+        ActivityController<BlankActivity> blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
+        Activity blankActivity = blankActivityController.get();
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(activity);
+        OneSignal.setAppContext(blankActivity);
+        threadAndTaskWait();
+
+        blankActivityController.resume();
         threadAndTaskWait();
 
         Intent intent = helper_baseHMSOpenIntent()

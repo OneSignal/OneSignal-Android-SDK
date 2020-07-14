@@ -64,7 +64,7 @@ class GMSLocationController extends LocationController {
                         .addApi(LocationServices.API)
                         .addConnectionCallbacks(googleApiClientListener)
                         .addOnConnectionFailedListener(googleApiClientListener)
-                        .setHandler(locationHandlerThread.mHandler)
+                        .setHandler(getLocationHandlerThread().mHandler)
                         .build();
 
                 GMSLocationController.googleApiClient = new GoogleApiClientCompatProxy(googleApiClient);

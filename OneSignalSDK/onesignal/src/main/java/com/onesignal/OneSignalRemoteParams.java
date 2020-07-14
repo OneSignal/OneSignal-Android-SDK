@@ -179,7 +179,7 @@ public class OneSignalRemoteParams {
          clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
          receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
 
-         unsubscribeWhenNotificationsDisabled = responseJson.optBoolean(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE, false);
+         unsubscribeWhenNotificationsDisabled = responseJson.optBoolean(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE, true);
          disableGMSMissingPrompt = responseJson.optBoolean(DISABLE_GMS_MISSING_PROMPT, false);
 
          if (responseJson.has(LOCATION_SHARED))

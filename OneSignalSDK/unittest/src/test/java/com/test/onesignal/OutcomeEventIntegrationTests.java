@@ -54,6 +54,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionLi
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.RestClientAsserts.assertMeasureAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertMeasureOnV2AtIndex;
@@ -135,6 +136,8 @@ public class OutcomeEventIntegrationTests {
         notificationOpenedMessage = null;
 
         TestHelpers.beforeTestInitAndCleanup();
+        // Set remote_params GET response
+        setRemoteParamsGetHtmlResponse();
     }
 
     @Before
@@ -661,11 +664,8 @@ public class OutcomeEventIntegrationTests {
 
     @Test
     public void testDirectSession_willOverrideDirectSession_whenAppIsInBackground() throws Exception {
-        sessionManager.initSessionFromCache();
-        OneSignal_setTrackerFactory(trackerFactory);
-        OneSignal_setSessionManager(sessionManager);
-        OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
-        trackerFactory.saveInfluenceParams(params);
+        OneSignalInit();
+        threadAndTaskWait();
 
         // Background app
         blankActivityController.pause();
@@ -814,7 +814,7 @@ public class OutcomeEventIntegrationTests {
         TestHelpers.runNextJob();
         threadAndTaskWait();
 
-        assertOnFocusAtIndex(2, new JSONObject() {{
+        assertOnFocusAtIndex(3, new JSONObject() {{
             put("active_time", 10);
             put("direct", false);
             put("notification_ids", new JSONArray().put(ONESIGNAL_NOTIFICATION_ID + "1"));
@@ -1073,8 +1073,6 @@ public class OutcomeEventIntegrationTests {
         OneSignal.setAppContext(blankActivity);
         OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
         threadAndTaskWait();
-        // Enable influence
-        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         blankActivityController.resume();
     }
 
@@ -1088,8 +1086,6 @@ public class OutcomeEventIntegrationTests {
         OneSignal.setAppContext(blankActivity);
         OneSignal.setNotificationOpenedHandler(notificationOpenedHandler);
         threadAndTaskWait();
-        // Enable influence
-        trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         blankActivityController.resume();
     }
 }

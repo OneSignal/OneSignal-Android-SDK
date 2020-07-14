@@ -29,6 +29,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertHuaweiPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreateNotSubscribedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreateSubscribedAtIndex;
@@ -70,6 +71,9 @@ public class PushRegistratorHMSIntegrationTestsRunner {
 
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
+
+        // Set remote_params GET response
+        setRemoteParamsGetHtmlResponse();
     }
 
     private static void assertHuaweiSubscribe() throws JSONException {
