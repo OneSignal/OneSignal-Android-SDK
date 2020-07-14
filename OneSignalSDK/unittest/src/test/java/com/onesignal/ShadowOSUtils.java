@@ -52,6 +52,11 @@ public class ShadowOSUtils {
       return isHMSCoreInstalledAndEnabled;
    }
 
+   public static void hasAllRecommendedFCMLibraries(boolean value) {
+      isGMSInstalledAndEnabled = value;
+      hasFCMLibrary = value;
+   }
+
    public static void hasAllRecommendedHMSLibraries(boolean value) {
       // required
       hasHMSPushKitLibrary = value;

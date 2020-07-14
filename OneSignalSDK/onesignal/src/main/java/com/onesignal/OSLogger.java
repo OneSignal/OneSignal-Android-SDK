@@ -9,7 +9,11 @@ public interface OSLogger {
 
     void debug(@NonNull String message);
 
+    void info(@NonNull String message);
+
     void warning(@NonNull String message);
+
+    void error(@NonNull String message);
 
     void error(@NonNull String message, @Nullable Throwable throwable);
 

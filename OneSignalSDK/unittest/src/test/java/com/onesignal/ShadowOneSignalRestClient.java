@@ -77,7 +77,7 @@ public class ShadowOneSignalRestClient {
 
    public static List<String> successfulGETResponses = new ArrayList<>();
    public static ArrayList<Request> requests;
-   public static String lastUrl, failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse, pushUserId, emailUserId;
+   public static String lastUrl, failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse, pushUserId, emailUserId, failMethod;
    public static Pattern nextSuccessfulGETResponsePattern;
    public static JSONObject lastPost;
    public static boolean failNext, failNextPut, failAll, failPosts, failGetParams;
@@ -93,7 +93,7 @@ public class ShadowOneSignalRestClient {
    private static String remoteParamsGetHtmlResponse = null;
    private static final String REMOTE_PARAMS = " {" +
            "\"awl_list\":{}," +
-           "\"android_sender_id\":\"1087181915257\"," +
+           "\"android_sender_id\":\"87654321\"," +
            "\"chnl_lst\":[]," +
            "\"enterp\":false," +
            "\"outcomes\":{" +
@@ -107,7 +107,7 @@ public class ShadowOneSignalRestClient {
            "\"enabled\":true" +
            "}" +
            "}," +
-           "\"receive_receipts_enable\":true," +
+           "\"receive_receipts_enable\":false," +
            "\"unsubscribe_on_notifications_disabled\":true," +
            "\"disable_gms_missing_prompt\":true," +
            "\"location_shared\":true," +
@@ -136,6 +136,7 @@ public class ShadowOneSignalRestClient {
       nextSuccessfulGETResponse = null;
       nextSuccessfulGETResponsePattern = null;
 
+      failMethod = null;
       failResponse = "{}";
       nextSuccessfulRegistrationResponse = null;
       nextSuccessResponse = null;
@@ -204,7 +205,11 @@ public class ShadowOneSignalRestClient {
       remoteParamsGetHtmlResponse = remoteParams.toString();
    }
 
-   public static void setRemoteParamsGetHtmlResponse() throws JSONException {
+   public static void setRemoteParamsGetHtmlResponse(String response) {
+      remoteParamsGetHtmlResponse = response;
+   }
+
+   public static void setRemoteParamsGetHtmlResponse() {
       remoteParamsGetHtmlResponse = REMOTE_PARAMS;
    }
 
@@ -256,7 +261,7 @@ public class ShadowOneSignalRestClient {
    }
 
    private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler, boolean doFail) {
-      if (failNext || failAll || doFail) {
+      if (failNext || failAll || doFail || handleFailMethod(lastUrl, responseHandler)) {
          if (!suspendResponse(false, failResponse, responseHandler))
             responseHandler.onFailure(failHttpCode, failResponse, new Exception());
          failNext = failNextPut = false;
@@ -391,5 +396,9 @@ public class ShadowOneSignalRestClient {
 
       responseHandler.onSuccess(remoteParamsGetHtmlResponse);
       return true;
+   }
+
+   private static boolean handleFailMethod(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      return failMethod != null && url.contains(failMethod);
    }
 }

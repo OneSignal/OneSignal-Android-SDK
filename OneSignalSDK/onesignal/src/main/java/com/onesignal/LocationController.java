@@ -58,7 +58,18 @@ class LocationController {
    private static boolean locationCoarse;
 
    static final Object syncLock = new Object() {};
-   static LocationHandlerThread locationHandlerThread;
+
+   private static LocationHandlerThread locationHandlerThread;
+   static LocationHandlerThread getLocationHandlerThread() {
+      if (locationHandlerThread == null) {
+         synchronized (syncLock) {
+            if (locationHandlerThread == null)
+               locationHandlerThread = new LocationHandlerThread();
+         }
+      }
+      return locationHandlerThread;
+   }
+
    static Thread fallbackFailThread;
    static Context classContext;
    static Location lastLocation;
@@ -252,9 +263,6 @@ class LocationController {
    // Started from this class or PermissionActivity
    static void startGetLocation() {
       OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LocationController startGetLocation with lastLocation: " + lastLocation);
-
-      if (locationHandlerThread == null)
-         locationHandlerThread = new LocationHandlerThread();
 
       try {
          if (isGooglePlayServicesAvailable()) {

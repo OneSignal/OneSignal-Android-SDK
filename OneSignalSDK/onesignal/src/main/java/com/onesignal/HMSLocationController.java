@@ -125,7 +125,7 @@ class HMSLocationController extends LocationController {
                     .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "HMSLocationController Huawei LocationServices requestLocationUpdates!");
-            huaweiFusedLocationProviderClient.requestLocationUpdates(locationRequest, this, locationHandlerThread.getLooper());
+            huaweiFusedLocationProviderClient.requestLocationUpdates(locationRequest, this, getLocationHandlerThread().getLooper());
         }
 
         @Override
