@@ -134,29 +134,33 @@ class OSUtils {
       return subscribableStatus;
    }
 
+   // The the following is done to ensure Proguard compatibility with class existent detection
+   // 1. Using Class instead of Strings as class renames would result incorrectly not finding the class
+   // 2. class.getName() is called as if no method is called then the try-catch would be removed.
+   //    - Only an issue when using Proguard (NOT R8) and using getDefaultProguardFile('proguard-android-optimize.txt')
+
    static boolean hasFCMLibrary() {
       try {
-         // Using class instead of Strings for proguard compatibility
-         // noinspection ConstantConditions
-         return com.google.firebase.messaging.FirebaseMessaging.class != null;
-      } catch (Throwable e) {
+         com.google.firebase.messaging.FirebaseMessaging.class.getName();
+         return true;
+      } catch (NoClassDefFoundError e) {
          return false;
       }
    }
 
    private static boolean hasGCMLibrary() {
       try {
-         // noinspection ConstantConditions
-         return com.google.android.gms.gcm.GoogleCloudMessaging.class != null;
-      } catch (Throwable e) {
+         com.google.android.gms.gcm.GoogleCloudMessaging.class.getName();
+         return true;
+      } catch (NoClassDefFoundError e) {
          return false;
       }
    }
 
    static boolean hasGMSLocationLibrary() {
       try {
-         // noinspection ConstantConditions
-         return com.google.android.gms.location.LocationListener.class != null;
+         com.google.android.gms.location.LocationListener.class.getName();
+         return true;
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -164,8 +168,8 @@ class OSUtils {
 
    private static boolean hasHMSAvailabilityLibrary() {
       try {
-         // noinspection ConstantConditions
-         return com.huawei.hms.api.HuaweiApiAvailability.class != null;
+         com.huawei.hms.api.HuaweiApiAvailability.class.getName();
+         return true;
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -173,8 +177,8 @@ class OSUtils {
 
    private static boolean hasHMSPushKitLibrary() {
       try {
-         // noinspection ConstantConditions
-         return com.huawei.hms.aaid.HmsInstanceId.class != null;
+         com.huawei.hms.aaid.HmsInstanceId.class.getName();
+         return true;
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -182,8 +186,8 @@ class OSUtils {
 
    private static boolean hasHMSAGConnectLibrary() {
       try {
-         // noinspection ConstantConditions
-         return com.huawei.agconnect.config.AGConnectServicesConfig.class != null;
+         com.huawei.agconnect.config.AGConnectServicesConfig.class.getName();
+         return true;
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -191,8 +195,8 @@ class OSUtils {
 
    static boolean hasHMSLocationLibrary() {
       try {
-         // noinspection ConstantConditions
-         return com.huawei.hms.location.LocationCallback.class != null;
+         com.huawei.hms.location.LocationCallback.class.getName();
+         return true;
       } catch (NoClassDefFoundError e) {
          return false;
       }
