@@ -475,6 +475,10 @@ class OSUtils {
       return true;
    }
 
+   static boolean isRunningOnMainThread() {
+      return Thread.currentThread().equals(Looper.getMainLooper().getThread());
+   }
+
    static void runOnMainUIThread(Runnable runnable) {
       if (Looper.getMainLooper().getThread() == Thread.currentThread())
          runnable.run();
