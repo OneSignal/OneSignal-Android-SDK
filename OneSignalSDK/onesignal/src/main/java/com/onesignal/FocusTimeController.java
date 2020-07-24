@@ -173,8 +173,10 @@ class FocusTimeController {
       protected boolean timeTypeApplies(@NonNull List<OSInfluence> influences) {
          for (OSInfluence influence : influences) {
             // Is true is at least one channel attributed the session
-            if (influence.getInfluenceType().isAttributed())
+            if (influence.getInfluenceType().isAttributed()) {
+               OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + ":timeTypeApplies for influences: " + influences.toString() + " true");
                return true;
+            }
          }
          return false;
       }

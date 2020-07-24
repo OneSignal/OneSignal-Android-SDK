@@ -57,7 +57,7 @@ import static junit.framework.Assert.assertTrue;
 
 @RunWith(RobolectricTestRunner.class)
 public class RESTClientRunner {
-   
+
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
@@ -82,7 +82,7 @@ public class RESTClientRunner {
          mockThreadHang = true;
       }};
 
-      OneSignalRestClient.getSync("URL", null,"");
+      OneSignalRestClient.get("URL", null, "");
       threadAndTaskWait();
 
       assertTrue(ShadowOneSignalRestClientWithMockConnection.lastConnection.getDidInterruptMockHang());
@@ -92,7 +92,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInGetCalls() throws Exception {
-      OneSignalRestClient.getSync("URL", null, null);
+      OneSignalRestClient.get("URL", null, null);
       threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
@@ -100,7 +100,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInPostCalls() throws Exception {
-      OneSignalRestClient.postSync("URL", null,null);
+      OneSignalRestClient.post("URL", null, null);
       threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
@@ -108,7 +108,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInPutCalls() throws Exception {
-      OneSignalRestClient.putSync("URL", null,null);
+      OneSignalRestClient.put("URL", null, null);
       threadAndTaskWait();
 
       assertEquals(SDK_VERSION_HTTP_HEADER, getLastHTTPHeaderProp("SDK-Version"));
@@ -131,7 +131,7 @@ public class RESTClientRunner {
          responseBody = "{\"key1\": \"value1\"}";
          mockProps.put("etag", MOCK_ETAG_VALUE);
       }};
-      OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
+      OneSignalRestClient.get("URL", new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
             firstResponse = response;
@@ -145,7 +145,7 @@ public class RESTClientRunner {
          status = 304;
       }};
 
-      OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
+      OneSignalRestClient.get("URL", new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
             secondResponse = response;
@@ -171,7 +171,7 @@ public class RESTClientRunner {
          responseBody = newMockResponse;
          mockProps.put("etag", "MOCK_ETAG_VALUE2");
       }};
-      OneSignalRestClient.getSync("URL", null, MOCK_CACHE_KEY);
+      OneSignalRestClient.get("URL", null, MOCK_CACHE_KEY);
       threadAndTaskWait();
       Thread.sleep(200);
 
@@ -179,7 +179,7 @@ public class RESTClientRunner {
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
          status = 304;
       }};
-      OneSignalRestClient.getSync("URL", new OneSignalRestClient.ResponseHandler() {
+      OneSignalRestClient.get("URL", new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
             secondResponse = response.replace("\u0000", "");
@@ -203,7 +203,7 @@ public class RESTClientRunner {
 
       final String[] failResponse = {null};
       final int[] statusCodeResponse = {0};
-      OneSignalRestClient.postSync("URL", null, new OneSignalRestClient.ResponseHandler() {
+      OneSignalRestClient.post("URL", null, new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
             super.onSuccess(response);
@@ -234,7 +234,7 @@ public class RESTClientRunner {
 
       final String[] failResponse = {null};
       final int[] statusCodeResponse = {0};
-      OneSignalRestClient.postSync("URL", null, new OneSignalRestClient.ResponseHandler() {
+      OneSignalRestClient.post("URL", null, new OneSignalRestClient.ResponseHandler() {
          @Override
          public void onSuccess(String response) {
             super.onSuccess(response);

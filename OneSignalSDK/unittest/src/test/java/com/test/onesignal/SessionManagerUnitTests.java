@@ -339,7 +339,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromAppClosed() {
+    public void testSessionUpgradeFromAppClosed() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -369,6 +369,7 @@ public class SessionManagerUnitTests {
         }
 
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_CLOSE);
+        threadAndTaskWait();
 
         influences = sessionManager.getInfluences();
 
@@ -390,7 +391,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromUnattributedToIndirect() throws JSONException {
+    public void testSessionUpgradeFromUnattributedToIndirect() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -420,6 +421,7 @@ public class SessionManagerUnitTests {
         }
 
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.APP_OPEN);
+        threadAndTaskWait();
 
         influences = sessionManager.getInfluences();
 
@@ -439,7 +441,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromUnattributedToDirectNotification() throws JSONException {
+    public void testSessionUpgradeFromUnattributedToDirectNotification() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -452,6 +454,7 @@ public class SessionManagerUnitTests {
         sessionManager.onNotificationReceived(GENERIC_ID);
         sessionManager.onInAppMessageReceived(GENERIC_ID);
         sessionManager.onDirectInfluenceFromNotificationOpen(GENERIC_ID);
+        threadAndTaskWait();
 
         iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
@@ -474,7 +477,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromIndirectToDirect() throws JSONException {
+    public void testSessionUpgradeFromIndirectToDirect() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -490,6 +493,7 @@ public class SessionManagerUnitTests {
         assertEquals(GENERIC_ID, notificationInfluences.getIds().get(0));
 
         sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
+        threadAndTaskWait();
 
         iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
@@ -513,7 +517,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromDirectToDirectDifferentID() throws JSONException {
+    public void testSessionUpgradeFromDirectToDirectDifferentID() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -527,6 +531,7 @@ public class SessionManagerUnitTests {
 
         sessionManager.onNotificationReceived(NOTIFICATION_ID);
         sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
+        threadAndTaskWait();
 
         notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
@@ -543,7 +548,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromDirectToDirectSameID() throws JSONException {
+    public void testSessionUpgradeFromDirectToDirectSameID() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -556,6 +561,7 @@ public class SessionManagerUnitTests {
         assertEquals(GENERIC_ID, notificationInfluences.getIds().get(0));
 
         sessionManager.attemptSessionUpgrade(OneSignal.AppEntryAction.NOTIFICATION_CLICK);
+        threadAndTaskWait();
 
         notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
 
@@ -571,7 +577,7 @@ public class SessionManagerUnitTests {
     }
 
     @Test
-    public void testSessionUpgradeFromDirectToDirectEndChannelsDirect() throws JSONException {
+    public void testSessionUpgradeFromDirectToDirectEndChannelsDirect() throws Exception {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
         sessionManager.initSessionFromCache();
 
@@ -579,6 +585,7 @@ public class SessionManagerUnitTests {
         sessionManager.onDirectInfluenceFromNotificationOpen(GENERIC_ID);
         sessionManager.onInAppMessageReceived(IAM_ID);
         sessionManager.onDirectInfluenceFromIAMClick(IAM_ID);
+        threadAndTaskWait();
 
         OSInfluence iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         OSInfluence notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
@@ -589,6 +596,7 @@ public class SessionManagerUnitTests {
         assertEquals(GENERIC_ID, notificationInfluences.getIds().get(0));
 
         sessionManager.onDirectInfluenceFromNotificationOpen(NOTIFICATION_ID);
+        threadAndTaskWait();
 
         iamInfluences = trackerFactory.getIAMChannelTracker().getCurrentSessionInfluence();
         notificationInfluences = trackerFactory.getNotificationChannelTracker().getCurrentSessionInfluence();
