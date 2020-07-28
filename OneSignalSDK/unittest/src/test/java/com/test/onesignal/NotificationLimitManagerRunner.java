@@ -87,6 +87,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 2);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
       assertEquals(2, notificationManager.getActiveNotifications()[0].getId());
@@ -97,6 +98,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 1);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }
@@ -112,6 +114,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 2);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1 , notificationManager.getActiveNotifications()[0].getId());
    }
@@ -124,20 +127,22 @@ public class NotificationLimitManagerRunner {
    }
 
    @Test
-   public void clearFallbackMakingRoomForOneWhenAtLimit() {
+   public void clearFallbackMakingRoomForOneWhenAtLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID2"), null);
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }
 
    @Test
-   public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() {
+   public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }

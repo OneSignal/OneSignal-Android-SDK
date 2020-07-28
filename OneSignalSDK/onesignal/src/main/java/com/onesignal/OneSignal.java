@@ -299,7 +299,7 @@ public class OneSignal {
          }
       };
 
-   private static OSLogger logger = new OSLogWrapper();
+   private static final OSLogger logger = new OSLogWrapper();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
    private static OSTaskController taskController = new OSTaskController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
@@ -557,12 +557,13 @@ public class OneSignal {
     */
    synchronized private static void init(Context context) {
       if (requiresUserPrivacyConsent() || !remoteParamController.isRemoteParamsCallDone()) {
-         if (requiresUserPrivacyConsent())
+         if (!remoteParamController.isRemoteParamsCallDone())
             OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, " +
-                      "waiting for privacy consent to be set.");
+                    "waiting for remote params.");
          else
             OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, " +
-                      "waiting for remote params.");
+                    "waiting for privacy consent to be set.");
+
          delayedInitParams = new DelayedConsentInitializationParameters(context, appId);
          String lastAppId = appId;
          // Set app id null since OneSignal was not init fully
@@ -810,13 +811,14 @@ public class OneSignal {
       if (getRemoteParams() != null)
          return;
 
-      OneSignalRemoteParams.makeAndroidParamsRequest(appId, userId, new OneSignalRemoteParams.CallBack() {
+      OneSignalRemoteParams.makeAndroidParamsRequest(appId, userId, new OneSignalRemoteParams.Callback() {
          @Override
          public void complete(OneSignalRemoteParams.Params params) {
             if (params.googleProjectNumber != null)
                googleProjectNumber = params.googleProjectNumber;
 
             remoteParamController.saveRemoteParams(params, trackerFactory, preferences, logger);
+            onRemoteParamSet();
 
             NotificationChannelManager.processChannelList(
                OneSignal.appContext,
@@ -1159,13 +1161,13 @@ public class OneSignal {
     */
    @Deprecated
    public static void syncHashedEmail(final String email) {
-      if (taskController.shouldQueueTaskForInit("SyncHashedEmail()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SYNC_HASHED_EMAIL)) {
          logger.error( "Waiting for remote params. " +
-                 "Moving SyncHashedEmail() operation to a pending task queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.SYNC_HASHED_EMAIL + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug( "Running SyncHashedEmail() operation from pending task queue.");
+               logger.debug( "Running " + OSTaskController.SYNC_HASHED_EMAIL + " operation from pending task queue.");
                syncHashedEmail(email);
             }
          });
@@ -1173,28 +1175,14 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("SyncHashedEmail()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SYNC_HASHED_EMAIL))
          return;
 
       if (!OSUtils.isValidEmail(email))
          return;
 
-      Runnable runSyncHashedEmail = new Runnable() {
-         @Override
-         public void run() {
-            String trimmedEmail = email.trim();
-            OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
-         }
-      };
-
-      //If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (taskController.shouldRunTaskThroughQueue()) {
-         logger.error("You should initialize OneSignal before calling syncHashedEmail! " +
-                 "Moving this operation to a pending task queue.");
-         taskController.addTaskToQueue(runSyncHashedEmail);
-         return;
-      }
-      runSyncHashedEmail.run();
+      String trimmedEmail = email.trim();
+      OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
    }
 
    public static void setEmail(@NonNull final String email, EmailUpdateHandler callback) {
@@ -1220,19 +1208,19 @@ public class OneSignal {
     * @param callback Fire onSuccess or onFailure depending if the update successes or fails
     */
    public static void setEmail(@NonNull final String email, @Nullable final String emailAuthHash, @Nullable final EmailUpdateHandler callback) {
-      if (taskController.shouldQueueTaskForInit("setEmail()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_EMAIL)) {
          logger.error("Waiting for remote params. " +
-                 "Moving setEmail() operation to a pending task queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.SET_EMAIL + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running setEmail() operation from a pending task queue.");
+               logger.debug("Running " + OSTaskController.SET_EMAIL + " operation from a pending task queue.");
                setEmail(email, emailAuthHash, callback);
             }
          });
       }
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setEmail()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EMAIL))
          return;
 
       if (!OSUtils.isValidEmail(email)) {
@@ -1243,7 +1231,7 @@ public class OneSignal {
          return;
       }
 
-      if (getRemoteParams() != null && getRemoteParams().useEmailAuth && emailAuthHash == null) {
+      if (getRemoteParams().useEmailAuth && emailAuthHash == null) {
          String errorMessage = "Email authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (callback != null)
             callback.onFailure(new EmailUpdateError(EmailErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
@@ -1253,28 +1241,14 @@ public class OneSignal {
 
       emailUpdateHandler = callback;
 
-      Runnable runSetEmail = new Runnable() {
-         @Override
-         public void run() {
-            String trimmedEmail = email.trim();
+      String trimmedEmail = email.trim();
 
-            String internalEmailAuthHash = emailAuthHash;
-            if (internalEmailAuthHash != null)
-               internalEmailAuthHash.toLowerCase();
+      String internalEmailAuthHash = emailAuthHash;
+      if (internalEmailAuthHash != null)
+         internalEmailAuthHash = internalEmailAuthHash.toLowerCase();
 
-            getCurrentEmailSubscriptionState(appContext).setEmailAddress(trimmedEmail);
-            OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), internalEmailAuthHash);
-         }
-      };
-
-      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (taskController.shouldRunTaskThroughQueue()) {
-         logger.error("You should initialize OneSignal before calling setEmail! " +
-                 "Moving this operation to a pending task queue.");
-         taskController.addTaskToQueue(runSetEmail);
-         return;
-      }
-      runSetEmail.run();
+      getCurrentEmailSubscriptionState(appContext).setEmailAddress(trimmedEmail);
+      OneSignalStateSynchronizer.setEmail(trimmedEmail.toLowerCase(), internalEmailAuthHash);
    }
 
    /**
@@ -1286,10 +1260,22 @@ public class OneSignal {
       logoutEmail(null);
    }
 
-   public static void logoutEmail(@Nullable EmailUpdateHandler callback) {
+   public static void logoutEmail(@Nullable final EmailUpdateHandler callback) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.LOGOUT_EMAIL)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.LOGOUT_EMAIL + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running  " + OSTaskController.LOGOUT_EMAIL + " operation from pending task queue.");
+               logoutEmail(callback);
+            }
+         });
+         return;
+      }
 
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("logoutEmail()"))
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.LOGOUT_EMAIL))
          return;
 
       if (getEmailId() == null) {
@@ -1301,22 +1287,7 @@ public class OneSignal {
       }
 
       emailLogoutHandler = callback;
-
-      Runnable emailLogout = new Runnable() {
-         @Override
-         public void run() {
-            OneSignalStateSynchronizer.logoutEmail();
-         }
-      };
-
-      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (taskController.shouldRunTaskThroughQueue()) {
-         Log(LOG_LEVEL.ERROR, "You should initialize OneSignal before calling logoutEmail! " +
-                 "Moving this operation to a pending task queue.");
-         taskController.addTaskToQueue(emailLogout);
-         return;
-      }
-      emailLogout.run();
+      OneSignalStateSynchronizer.logoutEmail();
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
@@ -1324,47 +1295,34 @@ public class OneSignal {
    }
 
    public static void setExternalUserId(@NonNull final String externalId, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
-      if (taskController.shouldQueueTaskForInit("setExternalUserId()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_EXTERNAL_USER_ID)) {
          logger.error("Waiting for remote params. " +
-                 "Moving setExternalUserId() operation to a pending task queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.SET_EXTERNAL_USER_ID + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running setExternalUserId() operation from pending task queue.");
+               logger.debug("Running " + OSTaskController.SET_EXTERNAL_USER_ID + " operation from pending task queue.");
                setExternalUserId(externalId, completionCallback);
             }
          });
          return;
       }
 
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalUserId()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EXTERNAL_USER_ID))
          return;
 
-      Runnable runSetExternalUserId = new Runnable() {
-         @Override
-         public void run() {
-            if (externalId == null) {
-               logger.warning("External id can't be null, set an empty string to remove an external id");
-               return;
-            }
-
-            try {
-               OneSignalStateSynchronizer.setExternalUserId(externalId, completionCallback);
-            } catch (JSONException exception) {
-               String operation = externalId.equals("") ? "remove" : "set";
-               logger.error("Attempted to " + operation + " external ID but encountered a JSON exception");
-               exception.printStackTrace();
-            }
-         }
-      };
-
-      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
-      if (taskController.shouldRunTaskThroughQueue()) {
-         taskController.addTaskToQueue(runSetExternalUserId);
+      if (externalId == null) {
+         logger.warning("External id can't be null, set an empty string to remove an external id");
          return;
       }
 
-      runSetExternalUserId.run();
+      try {
+         OneSignalStateSynchronizer.setExternalUserId(externalId, completionCallback);
+      } catch (JSONException exception) {
+         String operation = externalId.equals("") ? "remove" : "set";
+         logger.error("Attempted to " + operation + " external ID but encountered a JSON exception");
+         exception.printStackTrace();
+      }
    }
 
    public static void removeExternalUserId() {
@@ -1396,21 +1354,21 @@ public class OneSignal {
     * @see OneSignal#deleteTags
     */
    public static void sendTag(final String key, final String value) {
-      if (taskController.shouldQueueTaskForInit("sendTag()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_TAG)) {
          logger.error("Waiting for remote params. " +
-                 "Moving sendTag() operation to a pending task queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.SEND_TAG + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running sendTag() operation from pending task queue.");
+               logger.debug("Running " + OSTaskController.SEND_TAG + " operation from pending task queue.");
                sendTag(key, value);
             }
          });
          return;
       }
 
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendTag()"))
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SEND_TAG))
          return;
 
       try {
@@ -1456,13 +1414,13 @@ public class OneSignal {
     *
     */
    public static void sendTags(final JSONObject keyValues, final ChangeTagsUpdateHandler changeTagsUpdateHandler) {
-      if (taskController.shouldQueueTaskForInit("sendTags()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_TAGS)) {
          logger.error("Waiting for remote params. " +
-                 "Moving sendTags() operation to a pending task queue.");
+                 "Moving " + OSTaskController.SEND_TAGS + " operation to a pending task queue.");
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running sendTags() operation from pending task queue.");
+               logger.debug("Running " + OSTaskController.SEND_TAGS + " operation from pending task queue.");
                sendTags(keyValues, changeTagsUpdateHandler);
             }
          });
@@ -1470,7 +1428,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendTags()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SEND_TAGS))
          return;
 
       Runnable sendTagsRunnable = new Runnable() {
@@ -1513,9 +1471,9 @@ public class OneSignal {
          }
       };
 
-      // If pendingTaskExecutor is running, use it to run sendTagsRunnable
+      // If pendingTaskExecutor is running, there might be sendTags tasks running, use it to run sendTagsRunnable to keep order call
       if (taskController.shouldRunTaskThroughQueue()) {
-         logger.debug("Sending sendTags() operation to pending task queue.");
+         logger.debug("Sending " + OSTaskController.SEND_TAGS + " operation to pending task queue.");
          taskController.addTaskToQueue(sendTagsRunnable);
          return;
       }
@@ -1615,13 +1573,13 @@ public class OneSignal {
     *                       Calls {@link GetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
     */
    public static void getTags(final GetTagsHandler getTagsHandler) {
-      if (taskController.shouldQueueTaskForInit("getTags()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.GET_TAGS)) {
          logger.error("Waiting for remote params. " +
-                 "Moving getTags() operation to a pending queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.GET_TAGS + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running getTags() operation from pending queue.");
+               logger.debug("Running " + OSTaskController.GET_TAGS + " operation from pending queue.");
                getTags(getTagsHandler);
             }
          });
@@ -1629,7 +1587,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (remoteParamController.isRemoteParamsCallDone() && shouldLogUserPrivacyConsentErrorMessageForMethodName("getTags()"))
+      if (remoteParamController.isRemoteParamsCallDone() && shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.GET_TAGS))
          return;
 
       if (getTagsHandler == null) {
@@ -1759,13 +1717,13 @@ public class OneSignal {
    }
 
    public static void idsAvailable(final IdsAvailableHandler inIdsAvailableHandler) {
-      if (taskController.shouldQueueTaskForInit("idsAvailable()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.IDS_AVAILABLE)) {
          logger.error("Waiting for remote params. " +
-                 "Moving idsAvailable() operation to a pending queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.IDS_AVAILABLE + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running idsAvailable() operation from pending queue.");
+               logger.debug("Running " + OSTaskController.IDS_AVAILABLE + " operation from pending queue.");
                idsAvailable(inIdsAvailableHandler);
             }
          });
@@ -1773,32 +1731,19 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("idsAvailable()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.IDS_AVAILABLE))
          return;
 
       idsAvailableHandler = inIdsAvailableHandler;
 
-      Runnable runIdsAvailable = new Runnable() {
-         @Override
-         public void run() {
-            if (getUserId() != null)
-               OSUtils.runOnMainUIThread(new Runnable() {
-                  @Override
-                  public void run() {
-                     internalFireIdsAvailableCallback();
-                  }
-               });
-         }
-      };
-
-      if (taskController.shouldRunTaskThroughQueue()) {
-         logger.error("You must initialize OneSignal before getting tags! " +
-                 "Moving this tag operation to a pending queue.");
-         taskController.addTaskToQueue(runIdsAvailable);
-         return;
+      if (getUserId() != null) {
+         OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+               internalFireIdsAvailableCallback();
+            }
+         });
       }
-
-      runIdsAvailable.run();
    }
 
    static void fireIdsAvailableCallback() {
@@ -1976,14 +1921,14 @@ public class OneSignal {
     * */
    public static void handleNotificationOpen(Context inContext, final JSONArray data, final boolean fromAlert, @Nullable final String notificationId) {
       // Delay call until remote params are set
-      if (taskController.shouldQueueTaskForInit("handleNotificationOpen()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.HANDLE_NOTIFICATION_OPEN)) {
          logger.error("Waiting for remote params. " +
-                 "Moving handleNotificationOpen() operation to a pending queue.");
+                 "Moving " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation to a pending queue.");
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
                if (appContext != null) {
-                  logger.debug("Running handleNotificationOpen() operation from pending queue.");
+                  logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
                   handleNotificationOpen(appContext, data, fromAlert, notificationId);
                }
             }
@@ -2325,13 +2270,13 @@ public class OneSignal {
     * @param enable whether to subscribe the user to notifications or not
     */
    public static void setSubscription(final boolean enable) {
-      if (taskController.shouldQueueTaskForInit("setSubscription()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_SUBSCRIPTION)) {
          logger.error("Waiting for remote params. " +
-                 "Moving setSubscription() operation to a pending queue.");
+                 "Moving " + OSTaskController.SET_SUBSCRIPTION + " operation to a pending queue.");
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running setSubscription() operation from pending queue.");
+               logger.debug("Running " + OSTaskController.SET_SUBSCRIPTION + " operation from pending queue.");
                setSubscription(enable);
             }
          });
@@ -2339,25 +2284,11 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setSubscription()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_SUBSCRIPTION))
          return;
 
-      Runnable runSetSubscription = new Runnable() {
-         @Override
-         public void run() {
-            getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
-            OneSignalStateSynchronizer.setSubscription(enable);
-         }
-      };
-
-      if (taskController.shouldRunTaskThroughQueue()) {
-         logger.error("OneSignal.init has not been called. " +
-                 "Moving subscription action to a waiting task queue.");
-         taskController.addTaskToQueue(runSetSubscription);
-         return;
-      }
-
-      runSetSubscription.run();
+      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
+      OneSignalStateSynchronizer.setSubscription(enable);
    }
 
    static void setSharedLocation(boolean enable) {
@@ -2388,13 +2319,13 @@ public class OneSignal {
    }
 
    static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback, final boolean fallbackToSettings) {
-      if (taskController.shouldQueueTaskForInit("promptLocation()")) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.PROMPT_LOCATION)) {
          logger.error("Waiting for remote params. " +
-                 "Moving promptLocation() operation to a pending queue.");
-         taskController.addTaskWaitingForInit(new Runnable() {
+                 "Moving " + OSTaskController.PROMPT_LOCATION + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running promptLocation() operation from pending queue.");
+               logger.debug("Running " + OSTaskController.PROMPT_LOCATION + " operation from pending queue.");
                promptLocation(callback, fallbackToSettings);
             }
          });
@@ -2402,49 +2333,35 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.PROMPT_LOCATION))
          return;
 
-      Runnable runPromptLocation = new Runnable() {
+      LocationController.LocationHandler locationHandler = new LocationController.LocationPromptCompletionHandler() {
          @Override
-         public void run() {
-            LocationController.LocationHandler locationHandler = new LocationController.LocationPromptCompletionHandler() {
-               @Override
-               public LocationController.PermissionType getType() {
-                  return LocationController.PermissionType.PROMPT_LOCATION;
-               }
-               @Override
-               public void onComplete(LocationController.LocationPoint point) {
-                  //if applicable, check if the user provided privacy consent
-                  if (shouldLogUserPrivacyConsentErrorMessageForMethodName("promptLocation()"))
-                     return;
+         public LocationController.PermissionType getType() {
+            return LocationController.PermissionType.PROMPT_LOCATION;
+         }
 
-                  if (point != null)
-                     OneSignalStateSynchronizer.updateLocation(point);
-               }
+         @Override
+         public void onComplete(LocationController.LocationPoint point) {
+            //if applicable, check if the user provided privacy consent
+            if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.PROMPT_LOCATION))
+               return;
 
-               @Override
-               void onAnswered(OneSignal.PromptActionResult result) {
-                  super.onAnswered(result);
-                  if (callback != null)
-                     callback.onCompleted(result);
-               }
-            };
+            if (point != null)
+               OneSignalStateSynchronizer.updateLocation(point);
+         }
 
-            LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
-            promptedLocation = true;
+         @Override
+         void onAnswered(OneSignal.PromptActionResult result) {
+            super.onAnswered(result);
+            if (callback != null)
+               callback.onCompleted(result);
          }
       };
 
-      if (taskController.shouldRunTaskThroughQueue()) {
-         logger.error("OneSignal.init has not been called. " +
-                 "Could not prompt for location at this time - moving this operation to a" +
-                 "waiting queue.");
-         taskController.addTaskToQueue(runPromptLocation);
-         return;
-      }
-
-      runPromptLocation.run();
+      LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
+      promptedLocation = true;
    }
 
    /**
@@ -2517,15 +2434,11 @@ public class OneSignal {
          }
       };
 
-      if (taskController.shouldRunTaskThroughQueue()) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
-                 "Could not clear notifications at this time - moving this operation to" +
-                 "a waiting task queue.");
-         taskController.addTaskToQueue(runClearOneSignalNotifications);
-         return;
-      }
-
-      runClearOneSignalNotifications.run();
+      // DB access is a heavy task, dispatch to a thread if running on main thread
+      if (OSUtils.isRunningOnMainThread())
+         new Thread(runClearOneSignalNotifications, "OS_NOTIFICATIONS").start();
+      else
+         runClearOneSignalNotifications.run();
    }
 
    /**
@@ -2575,23 +2488,30 @@ public class OneSignal {
          }
       };
 
-      if (taskController.shouldRunTaskThroughQueue()) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
-                 "Could not clear notification id: " + id + " at this time - moving" +
-                 "this operation to a waiting task queue. The notification will still be canceled" +
-                 "from NotificationManager at this time.");
-         taskController.addTaskWaitingForInit(runCancelNotification);
-         return;
-      }
-
-      runCancelNotification.run();
+      // DB access is a heavy task, dispatch to a thread if running on main thread
+      if (OSUtils.isRunningOnMainThread())
+         new Thread(runCancelNotification, "OS_NOTIFICATIONS").start();
+      else
+         runCancelNotification.run();
    }
 
 
    public static void cancelGroupedNotifications(final String group) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.CANCEL_GROUPED_NOTIFICATIONS)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.CANCEL_GROUPED_NOTIFICATIONS + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.CANCEL_GROUPED_NOTIFICATIONS + " operation from pending queue.");
+               cancelGroupedNotifications(group);
+            }
+         });
+         return;
+      }
 
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("cancelGroupedNotifications()"))
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.CANCEL_GROUPED_NOTIFICATIONS))
          return;
 
       Runnable runCancelGroupedNotifications = new Runnable() {
@@ -2664,15 +2584,11 @@ public class OneSignal {
          }
       };
 
-      if (taskController.shouldRunTaskThroughQueue()) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
-                 "Could not clear notifications part of group " + group + " - moving" +
-                 "this operation to a waiting task queue.");
-         taskController.addTaskToQueue(runCancelGroupedNotifications);
-         return;
-      }
-
-      runCancelGroupedNotifications.run();
+      // DB access is a heavy task, dispatch to a thread if running on main thread
+      if (OSUtils.isRunningOnMainThread())
+         new Thread(runCancelGroupedNotifications, "OS_NOTIFICATIONS").start();
+      else
+         runCancelGroupedNotifications.run();
    }
 
    public static void removeNotificationWillShowInForegroundHandler() {

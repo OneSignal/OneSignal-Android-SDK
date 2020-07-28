@@ -89,7 +89,7 @@ public class OneSignalRemoteParams {
       FCMParams fcmParams;
    }
 
-   interface CallBack {
+   interface Callback {
       void complete(Params params);
    }
 
@@ -121,7 +121,7 @@ public class OneSignalRemoteParams {
    public static final int DEFAULT_INDIRECT_ATTRIBUTION_WINDOW = 24 * 60;
    public static final int DEFAULT_NOTIFICATION_LIMIT = 10;
 
-   static void makeAndroidParamsRequest(final String appId, final String userId, final @NonNull CallBack callback) {
+   static void makeAndroidParamsRequest(final String appId, final String userId, final @NonNull Callback callback) {
       OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
          @Override
          void onFailure(int statusCode, String response, Throwable throwable) {
@@ -158,7 +158,7 @@ public class OneSignalRemoteParams {
       OneSignalRestClient.get(params_url, responseHandler, OneSignalRestClient.CACHE_KEY_REMOTE_PARAMS);
    }
 
-   static private void processJson(String json, final @NonNull CallBack callBack) {
+   static private void processJson(String json, final @NonNull Callback callBack) {
       final JSONObject responseJson;
       try {
          responseJson = new JSONObject(json);

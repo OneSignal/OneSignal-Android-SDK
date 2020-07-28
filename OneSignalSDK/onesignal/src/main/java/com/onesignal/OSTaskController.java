@@ -2,9 +2,8 @@ package com.onesignal;
 
 import androidx.annotation.NonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,31 +13,60 @@ import java.util.concurrent.atomic.AtomicLong;
 
 class OSTaskController {
 
-    // the concurrent queue in which we pin pending tasks upon finishing initialization
-    static final ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
-    private static final AtomicLong lastTaskId = new AtomicLong();
-    private static ExecutorService pendingTaskExecutor;
+    static final String OS_PENDING_EXECUTOR = "OS_PENDING_EXECUTOR_";
+
+    // Available task for delay
+    static final String GET_TAGS = "getTags()";
+    static final String SET_EMAIL = "setEmail()";
+    static final String LOGOUT_EMAIL = "logoutEmail()";
+    static final String SYNC_HASHED_EMAIL = "syncHashedEmail()";
+    static final String SET_EXTERNAL_USER_ID = "setExternalUserId()";
+    static final String SET_SUBSCRIPTION = "setSubscription()";
+    static final String PROMPT_LOCATION = "promptLocation()";
+    static final String IDS_AVAILABLE = "idsAvailable()";
+    static final String SEND_TAG = "sendTag()";
+    static final String SEND_TAGS = "sendTags()";
+    static final String HANDLE_NOTIFICATION_OPEN = "handleNotificationOpen()";
+    static final String CANCEL_GROUPED_NOTIFICATIONS = "cancelGroupedNotifications()";
+    static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
+            GET_TAGS,
+            SYNC_HASHED_EMAIL,
+            SET_EXTERNAL_USER_ID,
+            SET_SUBSCRIPTION,
+            PROMPT_LOCATION,
+            IDS_AVAILABLE,
+            SEND_TAG,
+            SEND_TAGS,
+            HANDLE_NOTIFICATION_OPEN,
+            SET_EMAIL));
+
+    // The concurrent queue in which we pin pending tasks upon finishing initialization
+    private final ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
+    private final AtomicLong lastTaskId = new AtomicLong();
+    private ExecutorService pendingTaskExecutor;
 
     private final OSLogger logger;
     private final OSRemoteParamController paramController;
 
-    private List<String> methodsAvailableForDelay;
-
     OSTaskController(OSRemoteParamController paramController, OSLogger logger) {
         this.paramController = paramController;
         this.logger = logger;
-
-        methodsAvailableForDelay = new ArrayList<>(
-                Arrays.asList("getTags()", "SyncHashedEmail()", "setExternalUserId()", "setSubscription()",
-                        "promptLocation()", "idsAvailable()", "sendTag()", "sendTags()", "handleNotificationOpen()",
-                        "setEmail()"));
     }
 
+    /**
+     * Check if task should be queue
+     *
+     * @return true if remote params aren't available and current method needs them otherwise false
+     * */
     boolean shouldQueueTaskForInit(String task) {
-        return !paramController.isRemoteParamsCallDone() && methodsAvailableForDelay.contains(task);
+        return !paramController.isRemoteParamsCallDone() && METHODS_AVAILABLE_FOR_DELAY.contains(task);
     }
 
     boolean shouldRunTaskThroughQueue() {
+        // Don't schedule again a running pending task
+        if (Thread.currentThread().getName().contains(OS_PENDING_EXECUTOR))
+            return false;
+
         if (OneSignal.isInitDone() && pendingTaskExecutor == null) {
             // There never were any waiting tasks
             return false;
@@ -52,10 +80,6 @@ class OSTaskController {
         return !pendingTaskExecutor.isShutdown();
     }
 
-    void addTaskWaitingForInit(Runnable runnable) {
-        taskQueueWaitingForInit.add(runnable);
-    }
-
     void addTaskToQueue(Runnable runnable) {
         addTaskToQueue(new PendingTaskRunnable(this, runnable));
     }
@@ -66,7 +90,7 @@ class OSTaskController {
         if (pendingTaskExecutor == null) {
             logger.debug("Adding a task to the pending queue with ID: " + task.taskId);
             // The tasks haven't been executed yet...add them to the waiting queue
-            addTaskWaitingForInit(task);
+            taskQueueWaitingForInit.add(task);
         } else if (!pendingTaskExecutor.isShutdown()) {
             logger.debug("Executor is still running, add to the executor with ID: " + task.taskId);
             try {
@@ -84,13 +108,18 @@ class OSTaskController {
         }
     }
 
+    /**
+     * Called by OneSignal.init as last step on the init
+     * Run available pending tasks on an Executor
+     */
     void startPendingTasks() {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startPendingTasks with task queue quantity: " + taskQueueWaitingForInit.size());
         if (!taskQueueWaitingForInit.isEmpty()) {
             pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
                 @Override
                 public Thread newThread(@NonNull Runnable runnable) {
                     Thread newThread = new Thread(runnable);
-                    newThread.setName("OS_PENDING_EXECUTOR_" + newThread.getId());
+                    newThread.setName(OS_PENDING_EXECUTOR + newThread.getId());
                     return newThread;
                 }
             });
@@ -108,6 +137,10 @@ class OSTaskController {
         }
     }
 
+    ConcurrentLinkedQueue<Runnable> getTaskQueueWaitingForInit() {
+        return taskQueueWaitingForInit;
+    }
+
     private static class PendingTaskRunnable implements Runnable {
         private OSTaskController controller;
         private Runnable innerTask;
@@ -123,6 +156,14 @@ class OSTaskController {
         public void run() {
             innerTask.run();
             controller.onTaskRan(taskId);
+        }
+
+        @Override
+        public String toString() {
+            return "PendingTaskRunnable{" +
+                    "innerTask=" + innerTask +
+                    ", taskId=" + taskId +
+                    '}';
         }
     }
 }

@@ -12,8 +12,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_clearRemoteParams;
-
 public class StaticResetHelper {
 
    private static Collection<ClassState> classes = new ArrayList<>();
@@ -24,6 +22,12 @@ public class StaticResetHelper {
          public boolean onOtherField(Field field) throws Exception {
             if (field.getName().equals("unprocessedOpenedNotifis")) {
                field.set(null, new ArrayList<JSONArray>());
+               return true;
+            } else if (field.getName().equals("remoteParamController")) {
+               field.set(null, new OSRemoteParamController());
+               return true;
+            } else if (field.getName().equals("taskController")) {
+               field.set(null, new OSTaskController(OneSignal.getRemoteParamController(), new OSLogWrapper()));
                return true;
             }
             return false;
@@ -115,8 +119,6 @@ public class StaticResetHelper {
    }
 
    public static void restSetStaticFields() throws Exception {
-      OneSignal_clearRemoteParams();
-
       for (ClassState aClass : classes)
          aClass.restSetStaticFields();
 
