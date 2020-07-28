@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.os.Process;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -23,6 +24,8 @@ import java.util.List;
  * - Unattributed: the session was not influenced nor was on the time frame os a push
  */
 public class OSSessionManager {
+
+    private static final String OS_END_CURRENT_SESSION = "OS_END_CURRENT_SESSION";
 
     public interface SessionListener {
         // Fire with the last OSInfluence that just ended.
@@ -113,6 +116,11 @@ public class OSSessionManager {
     @NonNull
     List<OSInfluence> getInfluences() {
         return trackerFactory.getInfluences();
+    }
+
+    @NonNull
+    List<OSInfluence> getSessionInfluences() {
+        return trackerFactory.getSessionInfluences();
     }
 
     /**
@@ -229,10 +237,17 @@ public class OSSessionManager {
                 !JSONUtils.compareJSONArrays(channelTracker.getIndirectIds(), indirectNotificationIds);
     }
 
-    private void sendSessionEndingWithInfluences(List<OSInfluence> endingInfluences) {
+    private void sendSessionEndingWithInfluences(final List<OSInfluence> endingInfluences) {
         logger.debug("OneSignal SessionManager sendSessionEndingWithInfluences with influences: " + endingInfluences);
         // Only end session if there are influences available to end
-        if (endingInfluences.size() > 0)
-            sessionListener.onSessionEnding(endingInfluences);
+        if (endingInfluences.size() > 0) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                    sessionListener.onSessionEnding(endingInfluences);
+                }
+            }, OS_END_CURRENT_SESSION).start();
+        }
     }
 }

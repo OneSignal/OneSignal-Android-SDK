@@ -306,7 +306,7 @@ public class OneSignal {
          @Override
          public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
             if (outcomeEventsController == null)
-               OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before initZ");
+               OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before init!");
             if (outcomeEventsController != null)
                outcomeEventsController.cleanOutcomes();
             FocusTimeController.getInstance().onSessionEnded(lastInfluences);

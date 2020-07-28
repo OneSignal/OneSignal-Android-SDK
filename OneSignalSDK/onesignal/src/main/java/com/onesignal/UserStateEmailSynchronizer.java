@@ -18,6 +18,11 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         return new UserStateEmail(inPersistKey, load);
     }
 
+    @Override
+    protected OneSignal.LOG_LEVEL getLogLevel() {
+        return OneSignal.LOG_LEVEL.INFO;
+    }
+
     // Email subscription not readable from SDK
     @Override
     boolean getSubscribed() {
