@@ -275,7 +275,7 @@ public class GenerateNotificationRunner {
    private static OSNotificationOpenResult lastOpenResult;
    
    @Test
-   public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() {
+   public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
@@ -299,7 +299,7 @@ public class GenerateNotificationRunner {
       
       // Display a 3 normal notification.
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle("UUID3"), null);
-
+      threadAndTaskWait();
 
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
       
@@ -308,6 +308,7 @@ public class GenerateNotificationRunner {
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = Shadows.shadowOf(postedNotification.notif.contentIntent).getSavedIntent();
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
+      threadAndTaskWait();
       
       // Make sure we get a payload when it is opened.
       assertNotNull(lastOpenResult.notification.payload);
@@ -1090,7 +1091,7 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = {ShadowFCMBroadcastReceiver.class}, sdk = 26)
    public void shouldStartFCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
-      
+
       Intent intentFCM = new Intent();
       intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
       intentFCM.putExtra("message_type", "gcm");
@@ -1825,9 +1826,6 @@ public class GenerateNotificationRunner {
          lastExtNotifJob = notifJob;
 
          try {
-            // Until getting passed the foreground handler or being overwritten the Android notif id will be -1 until it is shown
-            assertEquals(-1, notifJob.getAndroidNotificationId());
-
             // Make sure all of the accessible getters have the expected values
             assertEquals("UUID1", notifJob.getApiNotificationId());
             assertEquals("title1", notifJob.getTitle());

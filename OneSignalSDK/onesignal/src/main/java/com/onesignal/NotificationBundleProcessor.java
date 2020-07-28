@@ -549,7 +549,6 @@ class NotificationBundleProcessor {
                 isHighPriority
         );
 
-        result.hasExtenderService = true;
         return true;
     }
 
@@ -579,12 +578,11 @@ class NotificationBundleProcessor {
 
     static class ProcessedBundleResult {
         boolean isOneSignalPayload;
-        boolean hasExtenderService;
         boolean isDup;
         boolean inAppPreviewShown;
 
         boolean processed() {
-            return !isOneSignalPayload || hasExtenderService || isDup || inAppPreviewShown;
+            return !isOneSignalPayload || isDup || inAppPreviewShown;
         }
     }
 }
