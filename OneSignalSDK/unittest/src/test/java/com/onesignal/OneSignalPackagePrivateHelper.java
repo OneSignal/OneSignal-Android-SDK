@@ -108,12 +108,12 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
-   public static void OneSignal_clearRemoteParams() {
-      OneSignal.getRemoteParamController().clearRemoteParams();
+   public static OSRemoteParamController OneSignal_getRemoteParamController() {
+      return OneSignal.getRemoteParamController();
    }
 
    public static void OneSignal_savePrivacyConsentRequired(boolean required) {
-      OneSignal.getRemoteParamController().savePrivacyConsentRequired(required);
+      OneSignal_getRemoteParamController().savePrivacyConsentRequired(required);
    }
 
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
@@ -228,15 +228,11 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static ConcurrentLinkedQueue<Runnable> OneSignal_taskQueueWaitingForInit() {
-      return OSTaskController.taskQueueWaitingForInit;
+      return OneSignal.getTaskController().getTaskQueueWaitingForInit();
    }
 
    public static boolean OneSignal_requiresUserPrivacyConsent() {
       return OneSignal.isUserPrivacyConsentRequired();
-   }
-
-   public static void OneSignal_setRequiresUserPrivacyConsent(boolean required) {
-      OneSignal.getRemoteParamController().savePrivacyConsentRequired(required);
    }
 
    public static boolean OneSignal_locationShared() {

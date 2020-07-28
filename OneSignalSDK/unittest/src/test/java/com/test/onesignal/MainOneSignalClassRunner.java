@@ -128,6 +128,7 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getRemoteParamController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
@@ -2100,6 +2101,7 @@ public class MainOneSignalClassRunner {
          assertFalse(failedCurModTest);
       }
 
+      assertEquals(30000, OneSignal_taskQueueWaitingForInit().size());
       OneSignalInit();
 
       for (int a = 0; a < 10; a++) {
@@ -3355,10 +3357,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowOneSignal.class})
    @SuppressWarnings("unchecked") // getDeclaredMethod
-   public void testLocationTimeout() throws Exception {
-//      ShadowApplication.getInstance().grantPermissions(new String[]{"android.permission.YOUR_PERMISSION"});
-
-      OneSignalInit();
+   public void testLocationTimeout() throws Exception { OneSignalInit();
       threadAndTaskWait();
 
       Class klass = Class.forName("com.onesignal.GMSLocationController");
@@ -3803,10 +3802,12 @@ public class MainOneSignalClassRunner {
       ShadowRoboNotificationManager.PostedNotification postedNotification = postedNotifsIterator.next().getValue();
 
       OneSignal.cancelNotification(postedNotification.id);
+      threadAndTaskWait();
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());
 
       OneSignal.clearOneSignalNotifications();
+      threadAndTaskWait();
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
 

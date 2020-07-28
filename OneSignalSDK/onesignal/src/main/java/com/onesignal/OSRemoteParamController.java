@@ -4,10 +4,9 @@ import com.onesignal.influence.OSTrackerFactory;
 
 class OSRemoteParamController {
 
-    private OneSignalRemoteParams.Params remoteParams;
+    private OneSignalRemoteParams.Params remoteParams = null;
 
     OSRemoteParamController() {
-        this.remoteParams = null;
     }
 
     /**
@@ -65,8 +64,6 @@ class OSRemoteParamController {
 
         if (remoteParams.requiresUserPrivacyConsent != null)
             savePrivacyConsentRequired(remoteParams.requiresUserPrivacyConsent);
-
-        OneSignal.onRemoteParamSet();
     }
 
     boolean isRemoteParamsCallDone() {

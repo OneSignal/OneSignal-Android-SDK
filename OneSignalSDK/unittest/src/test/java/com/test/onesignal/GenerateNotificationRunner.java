@@ -345,6 +345,8 @@ public class GenerateNotificationRunner {
       assertEquals(4, ShadowRoboNotificationManager.notifications.size());
       
       OneSignal.cancelGroupedNotifications("test1");
+      threadAndTaskWait();
+
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());
    }
 
@@ -609,7 +611,8 @@ public class GenerateNotificationRunner {
       // Setup - Let's cancel a child notification.
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
       OneSignal.cancelNotification(postedNotification.id);
-   
+      threadAndTaskWait();
+
       // Test - It should update summary text to say 2 notifications
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(3, postedNotifs.size());       // 2 notifis + 1 summary
@@ -621,6 +624,8 @@ public class GenerateNotificationRunner {
       // Setup - Let's cancel a 2nd child notification.
       postedNotification = postedNotifsIterator.next().getValue();
       OneSignal.cancelNotification(postedNotification.id);
+      threadAndTaskWait();
+
       runImplicitServices();
       Thread.sleep(1_000); // TODO: Service runs AsyncTask. Need to wait for this
    
@@ -638,7 +643,8 @@ public class GenerateNotificationRunner {
       
       // Setup - Let's cancel our 3rd and last child notification.
       OneSignal.cancelNotification(postedNotification.id);
-   
+      threadAndTaskWait();
+
       // Test - No more notifications! :)
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(0, postedNotifs.size());
