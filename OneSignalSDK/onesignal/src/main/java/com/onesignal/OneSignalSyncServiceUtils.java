@@ -63,6 +63,7 @@ class OneSignalSyncServiceUtils {
    private static final long SYNC_AFTER_BG_DELAY_MS = OneSignal.MIN_ON_SESSION_TIME_MILLIS;
 
    private static Long nextScheduledSyncTimeMs = 0L;
+   private static boolean needsJobReschedule = false;
 
    static void scheduleLocationUpdateTask(Context context, long delayMs) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleLocationUpdateTask:delayMs: " + delayMs);
@@ -124,6 +125,7 @@ class OneSignalSyncServiceUtils {
          scheduleSyncServiceAsJob(context, delayMs);
       else
          scheduleSyncServiceAsAlarm(context, delayMs);
+
       nextScheduledSyncTimeMs = System.currentTimeMillis() + delayMs;
    }
 
@@ -134,9 +136,29 @@ class OneSignalSyncServiceUtils {
              ) == PackageManager.PERMISSION_GRANTED;
    }
 
+
+   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+   private static boolean isJobIdRunning(Context context) {
+      final JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      for (JobInfo jobInfo : jobScheduler.getAllPendingJobs()) {
+         if (jobInfo.getId() == OneSignalSyncServiceUtils.SYNC_TASK_ID && syncBgThread != null && syncBgThread.isAlive()) {
+            return true;
+         }
+      }
+      return false;
+   }
+
    @RequiresApi(21)
    private static void scheduleSyncServiceAsJob(Context context, long delayMs) {
       OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob:atTime: " + delayMs);
+
+      if (isJobIdRunning(context)) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob Scheduler already running!");
+         // If a JobScheduler is schedule again while running it will stop current job. We will schedule again when finished.
+         // This will avoid InterruptionException due to thread.join() or queue.take() running.
+         needsJobReschedule = true;
+         return;
+      }
 
       JobInfo.Builder jobBuilder = new JobInfo.Builder(
          SYNC_TASK_ID,
@@ -150,7 +172,7 @@ class OneSignalSyncServiceUtils {
       if (hasBootPermission(context))
          jobBuilder.setPersisted(true);
 
-      JobScheduler jobScheduler = (JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
       try {
          int result = jobScheduler.schedule(jobBuilder.build());
          OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleSyncServiceAsJob:result: " + result);
@@ -268,8 +290,11 @@ class OneSignalSyncServiceUtils {
 
       @Override
       protected void stopSync() {
-         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LollipopSyncRunnable:JobFinished");
-         jobService.jobFinished(jobParameters, false);
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LollipopSyncRunnable:JobFinished needsJobReschedule: " + needsJobReschedule);
+         // Reschedule if needed
+         boolean reschedule = needsJobReschedule;
+         needsJobReschedule = false;
+         jobService.jobFinished(jobParameters, reschedule);
       }
    }
 

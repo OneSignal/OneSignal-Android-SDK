@@ -19,6 +19,11 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
+    protected OneSignal.LOG_LEVEL getLogLevel() {
+        return OneSignal.LOG_LEVEL.ERROR;
+    }
+
+    @Override
     boolean getSubscribed() {
         return getToSyncUserState().isSubscribed();
     }

@@ -57,6 +57,17 @@ public class OSTrackerFactory {
         return influences;
     }
 
+    public List<OSInfluence> getSessionInfluences() {
+        List<OSInfluence> influences = new ArrayList<>();
+        for (OSChannelTracker tracker : trackers.values()) {
+            // IAM doesn't influence session calls
+            if (tracker instanceof OSInAppMessageTracker)
+                continue;
+            influences.add(tracker.getCurrentSessionInfluence());
+        }
+        return influences;
+    }
+
     public OSChannelTracker getIAMChannelTracker() {
         return trackers.get(OSInAppMessageTracker.TAG);
     }
