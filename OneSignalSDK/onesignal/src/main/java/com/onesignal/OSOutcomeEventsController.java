@@ -6,10 +6,10 @@ import androidx.annotation.Nullable;
 
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.influence.domain.OSInfluenceType;
-import com.onesignal.outcomes.OSOutcomeEventsFactory;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
-import com.onesignal.outcomes.model.OSOutcomeSource;
-import com.onesignal.outcomes.model.OSOutcomeSourceBody;
+import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.domain.OSOutcomeEventParams;
+import com.onesignal.outcomes.domain.OSOutcomeSource;
+import com.onesignal.outcomes.domain.OSOutcomeSourceBody;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -216,7 +216,7 @@ class OSOutcomeEventsController {
 
         OSOutcomeSource source = new OSOutcomeSource(directSourceBody, indirectSourceBody);
 
-        final OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight);
+        final OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight, 0);
 
         OneSignalApiResponseHandler responseHandler = new OneSignalApiResponseHandler() {
             @Override

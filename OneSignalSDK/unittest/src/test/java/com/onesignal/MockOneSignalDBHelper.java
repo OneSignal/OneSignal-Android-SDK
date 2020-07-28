@@ -3,7 +3,7 @@ package com.onesignal;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.onesignal.outcomes.OSOutcomeTableProvider;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
 
 public class MockOneSignalDBHelper implements OneSignalDb {
 

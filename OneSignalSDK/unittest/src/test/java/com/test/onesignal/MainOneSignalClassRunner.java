@@ -300,7 +300,7 @@ public class MainOneSignalClassRunner {
       assertNotNull(ShadowOneSignalRestClient.lastPost);
 
       ShadowOneSignalRestClient.lastPost = null;
-      restartAppAndElapseTimeToNextSession();
+      restartAppAndElapseTimeToNextSession(time);
 
       OneSignal_setTime(time);
       // Restart app, should not send onSession automatically
@@ -402,7 +402,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 3. Restart OneSignal and clear the ShadowPushRegistratorADM statics
-      restartAppAndElapseTimeToNextSession();
+      restartAppAndElapseTimeToNextSession(time);
       threadAndTaskWait();
 
       // 4. Set OneSignal.appId and context simulating a background sync doing so
@@ -433,7 +433,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 4. Restart the entire OneSignal and clear the ShadowPushRegistratorADM statics
-      restartAppAndElapseTimeToNextSession();
+      restartAppAndElapseTimeToNextSession(time);
       threadAndTaskWait();
 
       // 5. Set OneSignal.appId and context simulating a background sync doing so
@@ -3362,7 +3362,7 @@ public class MainOneSignalClassRunner {
       ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 5.0f;
       ShadowFusedLocationApiWrapper.time = 2L;
-      restartAppAndElapseTimeToNextSession();
+      restartAppAndElapseTimeToNextSession(time);
       OneSignalInit();
       threadAndTaskWait();
 

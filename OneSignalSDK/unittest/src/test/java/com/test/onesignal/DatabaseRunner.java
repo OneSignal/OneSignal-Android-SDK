@@ -17,11 +17,11 @@ import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.domain.OSInfluenceChannel;
 import com.onesignal.influence.domain.OSInfluenceType;
-import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
-import com.onesignal.outcomes.MockOSOutcomeEventsTable;
+import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
+import com.onesignal.outcomes.data.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.OSOutcomeTableProvider;
-import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
+import com.onesignal.outcomes.domain.OSCachedUniqueOutcomeName;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -175,7 +175,7 @@ public class DatabaseRunner {
 
     private static final String SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES =
             "CREATE TABLE " + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V1 + " (" +
-                    MockOSCachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                    MockOSCachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
                     MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
                     MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
                     ");";

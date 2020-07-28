@@ -9,7 +9,8 @@ import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.domain.OSInfluenceChannel;
-import com.onesignal.outcomes.OSOutcomeTableProvider;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
+import com.onesignal.outcomes.data.OutcomesDbContract;
 
 class OneSignalCacheCleaner {
 
@@ -109,12 +110,12 @@ class OneSignalCacheCleaner {
     private static void cleanCachedUniqueOutcomeEventNotifications(SQLiteDatabase writableDb) {
         String whereStr = "NOT EXISTS(" +
                 "SELECT NULL FROM " + NotificationTable.TABLE_NAME + " n " +
-                "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + OSOutcomeTableProvider.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
-                " AND " + OSOutcomeTableProvider.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + OSInfluenceChannel.NOTIFICATION.toString().toLowerCase() +
+                "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
+                " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + OSInfluenceChannel.NOTIFICATION.toString().toLowerCase() +
                 "\")";
 
         writableDb.delete(
-                OSOutcomeTableProvider.CACHE_UNIQUE_OUTCOME_TABLE,
+                OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,
                 null);
     }

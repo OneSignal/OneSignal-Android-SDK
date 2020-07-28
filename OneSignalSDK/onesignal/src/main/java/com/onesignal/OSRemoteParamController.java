@@ -1,6 +1,6 @@
 package com.onesignal;
 
-import com.onesignal.influence.OSTrackerFactory;
+import com.onesignal.influence.data.OSTrackerFactory;
 
 class OSRemoteParamController {
 

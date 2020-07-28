@@ -3,7 +3,7 @@ package com.onesignal;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 public class MockOutcomeEventsController extends OSOutcomeEventsController {
 
