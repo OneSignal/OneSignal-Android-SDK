@@ -57,8 +57,6 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
 
-        TestHelpers.setupTestWorkManager(blankActivity);
-
         ShadowOSUtils.supportsHMS(true);
 
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
