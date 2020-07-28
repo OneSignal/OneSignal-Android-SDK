@@ -45,9 +45,9 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
-import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.domain.OSOutcomeEventParams;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.junit.After;
 import org.junit.Before;
@@ -60,6 +60,7 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.List;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppId;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -74,6 +75,7 @@ public class OutcomeEventUnitTests {
 
     private static final String OUTCOME_NAME = "testing";
     private static final String NOTIFICATION_ID = "testing";
+    private static final String APP_ID = "123456789";
 
     private MockOutcomeEventsController controller;
     private MockOneSignalAPIClient service;
@@ -132,6 +134,8 @@ public class OutcomeEventUnitTests {
         TestHelpers.beforeTestInitAndCleanup();
         repository = factory.getRepository();
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
+
+        OneSignal_setAppId(APP_ID);
     }
 
     @After
@@ -160,7 +164,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"device_type\":1,\"direct\":true}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"app_id\":\"" + APP_ID + "\",\"device_type\":1,\"direct\":true}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -185,7 +189,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"device_type\":1,\"direct\":false}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"app_id\":\"" + APP_ID + "\",\"device_type\":1,\"direct\":false}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -206,7 +210,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -250,7 +254,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -294,7 +298,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"weight\":1.1,\"device_type\":1,\"direct\":true}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1,\"direct\":true}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -319,7 +323,7 @@ public class OutcomeEventUnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"weight\":1.1,\"device_type\":1,\"direct\":false}", service.getLastJsonObjectSent());
+        assertEquals("{\"notification_ids\":[\"testing\"],\"id\":\"testing\",\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1,\"direct\":false}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -343,7 +347,7 @@ public class OutcomeEventUnitTests {
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getOutcomeId());
-        assertEquals("{\"id\":\"testing\",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
 
         controller.cleanOutcomes();
 
@@ -455,7 +459,7 @@ public class OutcomeEventUnitTests {
         for (OSOutcomeEventParams outcomeEvent : outcomeEvents) {
             // UNATTRIBUTED Case
             if (outcomeEvent.isUnattributed()) {
-                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=null, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
+                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=OSOutcomeSource{directBody=null, indirectBody=null}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } else if (outcomeEvent.getOutcomeSource().getIndirectBody() != null) { // INDIRECT Case
                 assertEquals("OSOutcomeEventParams{outcomeId='testing2', outcomeSource=OSOutcomeSource{directBody=null, indirectBody=OSOutcomeSourceBody{notificationIds=[\"testing\"], inAppMessagesIds=[]}}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } else { // DIRECT Case
@@ -521,7 +525,7 @@ public class OutcomeEventUnitTests {
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
         assertEquals(1.1f, outcomeEvents.get(0).getWeight(), 0);
-        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
 
         long timestamp = outcomeEvents.get(0).getTimestamp();
         service.setSuccess(true);
@@ -538,7 +542,7 @@ public class OutcomeEventUnitTests {
         threadAndTaskWait();
 
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"timestamp\":" + timestamp + ",\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"timestamp\":" + timestamp + ",\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
 }

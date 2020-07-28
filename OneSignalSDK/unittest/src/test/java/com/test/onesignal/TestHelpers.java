@@ -45,10 +45,10 @@ import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.domain.OSInfluenceType;
-import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
-import com.onesignal.outcomes.MockOSOutcomeEventsTable;
+import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
+import com.onesignal.outcomes.data.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
+import com.onesignal.outcomes.domain.OSCachedUniqueOutcomeName;
 
 import junit.framework.Assert;
 

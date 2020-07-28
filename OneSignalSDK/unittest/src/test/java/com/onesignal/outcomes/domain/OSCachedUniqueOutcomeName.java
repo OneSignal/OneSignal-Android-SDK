@@ -1,4 +1,4 @@
-package com.onesignal.outcomes.model;
+package com.onesignal.outcomes.domain;
 
 import com.onesignal.influence.domain.OSInfluenceChannel;
 

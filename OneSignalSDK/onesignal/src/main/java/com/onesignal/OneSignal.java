@@ -49,7 +49,7 @@ import android.util.Log;
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
-import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
