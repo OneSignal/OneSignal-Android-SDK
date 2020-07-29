@@ -4,7 +4,7 @@ import com.onesignal.OSLogger
 import com.onesignal.OSSharedPreferences
 import com.onesignal.OneSignal.AppEntryAction
 import com.onesignal.OneSignalRemoteParams.InfluenceParams
-import com.onesignal.influence.Constants
+import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.influence.domain.OSInfluenceChannel
 import org.json.JSONObject
@@ -19,13 +19,13 @@ class OSTrackerFactory(preferences: OSSharedPreferences, logger: OSLogger) {
         get() = trackers.values.map { it.currentSessionInfluence }
 
     val sessionInfluences: List<OSInfluence>
-        get() = trackers.values.filter { it.idTag != Constants.IAM_TAG }.map { it.currentSessionInfluence }
+        get() = trackers.values.filter { it.idTag != OSInfluenceConstants.IAM_TAG }.map { it.currentSessionInfluence }
 
     val iAMChannelTracker: OSChannelTracker
-        get() = trackers[Constants.IAM_TAG]!!
+        get() = trackers[OSInfluenceConstants.IAM_TAG]!!
 
     val notificationChannelTracker: OSChannelTracker
-        get() = trackers[Constants.NOTIFICATION_TAG]!!
+        get() = trackers[OSInfluenceConstants.NOTIFICATION_TAG]!!
 
     val channels: List<OSChannelTracker>
         get() {
@@ -36,8 +36,8 @@ class OSTrackerFactory(preferences: OSSharedPreferences, logger: OSLogger) {
         }
 
     init {
-        trackers[Constants.IAM_TAG] = OSInAppMessageTracker(dataRepository, logger)
-        trackers[Constants.NOTIFICATION_TAG] = OSNotificationTracker(dataRepository, logger)
+        trackers[OSInfluenceConstants.IAM_TAG] = OSInAppMessageTracker(dataRepository, logger)
+        trackers[OSInfluenceConstants.NOTIFICATION_TAG] = OSNotificationTracker(dataRepository, logger)
     }
 
     fun initFromCache() {

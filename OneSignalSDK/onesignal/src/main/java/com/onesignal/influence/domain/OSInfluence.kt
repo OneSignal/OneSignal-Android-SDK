@@ -1,6 +1,6 @@
 package com.onesignal.influence.domain
 
-import com.onesignal.influence.Constants
+import com.onesignal.influence.OSInfluenceConstants
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -17,9 +17,9 @@ class OSInfluence {
     @Throws(JSONException::class)
     constructor(jsonString: String) {
         val jsonObject = JSONObject(jsonString)
-        val channel = jsonObject.getString(Constants.INFLUENCE_CHANNEL)
-        val type = jsonObject.getString(Constants.INFLUENCE_TYPE)
-        val ids = jsonObject.getString(Constants.INFLUENCE_IDS)
+        val channel = jsonObject.getString(OSInfluenceConstants.INFLUENCE_CHANNEL)
+        val type = jsonObject.getString(OSInfluenceConstants.INFLUENCE_TYPE)
+        val ids = jsonObject.getString(OSInfluenceConstants.INFLUENCE_IDS)
         influenceChannel = OSInfluenceChannel.fromString(channel)
         influenceType = OSInfluenceType.fromString(type)
         this.ids = ids?.let { JSONArray(it) }
@@ -45,9 +45,9 @@ class OSInfluence {
 
     @Throws(JSONException::class)
     fun toJSONString() = JSONObject()
-            .put(Constants.INFLUENCE_CHANNEL, influenceChannel.toString())
-            .put(Constants.INFLUENCE_TYPE, influenceType.toString())
-            .put(Constants.INFLUENCE_IDS, if (ids != null) ids.toString() else null)
+            .put(OSInfluenceConstants.INFLUENCE_CHANNEL, influenceChannel.toString())
+            .put(OSInfluenceConstants.INFLUENCE_TYPE, influenceType.toString())
+            .put(OSInfluenceConstants.INFLUENCE_IDS, if (ids != null) ids.toString() else null)
             .toString()
 
     override fun toString(): String {

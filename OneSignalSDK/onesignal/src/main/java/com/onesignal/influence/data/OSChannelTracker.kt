@@ -2,7 +2,7 @@ package com.onesignal.influence.data
 
 import com.onesignal.OSLogger
 import com.onesignal.OneSignal
-import com.onesignal.influence.Constants
+import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.influence.domain.OSInfluenceChannel
 import com.onesignal.influence.domain.OSInfluenceType
@@ -86,7 +86,7 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
                 val currentTime = OneSignal.getTime().currentTimeMillis
                 for (i in 0 until lastChannelObjectReceived.length()) {
                     val jsonObject = lastChannelObjectReceived.getJSONObject(i)
-                    val time = jsonObject.getLong(Constants.TIME)
+                    val time = jsonObject.getLong(OSInfluenceConstants.TIME)
                     val difference = currentTime - time
                     if (difference <= attributionWindow) {
                         val id = jsonObject.getString(idTag)
@@ -121,7 +121,7 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
             OneSignal.getTime().run {
                 JSONObject()
                         .put(idTag, id)
-                        .put(Constants.TIME, currentTimeMillis)
+                        .put(OSInfluenceConstants.TIME, currentTimeMillis)
             }.also { newInfluenceId ->
                 lastChannelObjectsReceived.put(newInfluenceId)
             }

@@ -3,20 +3,20 @@ package com.onesignal.influence
 import com.onesignal.influence.data.OSInAppMessageTracker
 import com.onesignal.influence.data.OSNotificationTracker
 
-internal object Constants {
+internal object OSInfluenceConstants {
 
     const val TIME = "time"
 
-    // OSInfluence CONSTANTS
+    // OSInfluence Constants
     const val INFLUENCE_CHANNEL = "influence_channel"
     const val INFLUENCE_TYPE = "influence_type"
     const val INFLUENCE_IDS = "influence_ids"
 
-    // IAM TRACKER CONSTANTS
+    // OSInAppMessageTracker Constants
     val IAM_TAG: String = OSInAppMessageTracker::class.java.canonicalName
     const val IAM_ID_TAG = "iam_id"
 
-    // NOTIFICATION TRACKER CONSTANTS
+    // OSNotificationTracker Constants
     val NOTIFICATION_TAG: String = OSNotificationTracker::class.java.canonicalName
     const val DIRECT_TAG = "direct"
     const val NOTIFICATIONS_IDS = "notification_ids"

@@ -1,7 +1,7 @@
 package com.onesignal.influence.data
 
 import com.onesignal.OSLogger
-import com.onesignal.influence.Constants
+import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.influence.domain.OSInfluenceChannel
 import com.onesignal.influence.domain.OSInfluenceType
@@ -9,10 +9,9 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-
 internal class OSInAppMessageTracker(dataRepository: OSInfluenceDataRepository, logger: OSLogger) : OSChannelTracker(dataRepository, logger) {
     override val idTag: String
-        get() = Constants.IAM_ID_TAG
+        get() = OSInfluenceConstants.IAM_ID_TAG
 
     override val channelType: OSInfluenceChannel
         get() = OSInfluenceChannel.IAM
@@ -63,7 +62,8 @@ internal class OSInAppMessageTracker(dataRepository: OSInfluenceDataRepository, 
         logger.debug("OneSignal InAppMessageTracker initInfluencedTypeFromCache: $this")
     }
 
-    override fun addSessionData(jsonObject: JSONObject, influence: OSInfluence) { // In app message don't influence the session
+    override fun addSessionData(jsonObject: JSONObject, influence: OSInfluence) {
+        // In app message don't influence the session
     }
 
     override fun cacheState() {
