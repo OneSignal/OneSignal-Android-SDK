@@ -362,7 +362,7 @@ class InAppMessageView {
         // Set the initial elevation of the CardView to 0dp if using Android 6 API 23
         //  Fixes bug when animating a elevated CardView class
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M)
-            cardView.setCardElevation(dpToPx(0));
+            cardView.setCardElevation(0);
         else
             cardView.setCardElevation(dpToPx(5));
 
@@ -486,7 +486,10 @@ class InAppMessageView {
 
     private void animateInAppMessage(WebViewManager.Position displayLocation, View messageView, View backgroundView) {
         final CardView messageViewCardView = messageView.findViewWithTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
-        Animation.AnimationListener cardViewAnimCallback = createAnimationListenerForAndroidApi23Elevation(messageViewCardView);
+
+        Animation.AnimationListener cardViewAnimCallback = null;
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M)
+            cardViewAnimCallback = createAnimationListenerForAndroidApi23Elevation(messageViewCardView);
 
         // Based on the location of the in app message apply and animation to match
         switch (displayLocation) {
