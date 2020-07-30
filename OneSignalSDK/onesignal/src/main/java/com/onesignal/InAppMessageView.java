@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -42,6 +43,8 @@ import static com.onesignal.OSViewUtils.dpToPx;
  *      - height = MATCH_PARENT
  */
 class InAppMessageView {
+
+    private static final String IN_APP_MESSAGE_CARD_VIEW_TAG = "IN_APP_MESSAGE_CARD_VIEW_TAG";
 
     private static final int ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.parseColor("#00000000");
     private static final int ACTIVITY_BACKGROUND_COLOR_FULL = Color.parseColor("#BB000000");
@@ -121,8 +124,8 @@ class InAppMessageView {
             public void run() {
                 if (webView == null) {
                     OneSignal.onesignalLog(
-                       OneSignal.LOG_LEVEL.WARN,
-                       "WebView height update skipped, new height will be used once it is displayed.");
+                            OneSignal.LOG_LEVEL.WARN,
+                            "WebView height update skipped, new height will be used once it is displayed.");
                     return;
                 }
 
@@ -156,10 +159,10 @@ class InAppMessageView {
         LinearLayout.LayoutParams linearLayoutParams = hasBackground ? createParentLinearLayoutParams() : null;
 
         showDraggableView(
-            displayLocation,
-            webViewLayoutParams,
-            linearLayoutParams,
-            createDraggableLayoutParams(pageHeight, displayLocation)
+                displayLocation,
+                webViewLayoutParams,
+                linearLayoutParams,
+                createDraggableLayoutParams(pageHeight, displayLocation)
         );
     }
 
@@ -227,7 +230,7 @@ class InAppMessageView {
             @Override
             public void run() {
                 if (webView == null)
-                   return;
+                    return;
 
                 webView.setLayoutParams(relativeLayoutParams);
 
@@ -241,51 +244,51 @@ class InAppMessageView {
                     messageController.onMessageWasShown();
                 }
 
-               startDismissTimerIfNeeded();
-             }
+                startDismissTimerIfNeeded();
+            }
         });
     }
 
-   /**
-    * Create a new Android PopupWindow that draws over the current Activity
-    *
-    * @param parentRelativeLayout root layout to attach to the pop up window
-    */
+    /**
+     * Create a new Android PopupWindow that draws over the current Activity
+     *
+     * @param parentRelativeLayout root layout to attach to the pop up window
+     */
     private void createPopupWindow(@NonNull RelativeLayout parentRelativeLayout) {
-       popupWindow = new PopupWindow(
-          parentRelativeLayout,
-          hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
-          hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT
-       );
-       popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-       popupWindow.setTouchable(true);
+        popupWindow = new PopupWindow(
+                parentRelativeLayout,
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT
+        );
+        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popupWindow.setTouchable(true);
 
-       int gravity = 0;
-       if (!hasBackground) {
-          switch (displayLocation) {
-             case TOP_BANNER:
-                gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
-                break;
-             case BOTTOM_BANNER:
-                gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-                break;
-          }
-       }
+        int gravity = 0;
+        if (!hasBackground) {
+            switch (displayLocation) {
+                case TOP_BANNER:
+                    gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                    break;
+                case BOTTOM_BANNER:
+                    gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                    break;
+            }
+        }
 
-       // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
-       //  cut off in immersive mode.
-       PopupWindowCompat.setWindowLayoutType(
-          popupWindow,
-          WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
-       );
+        // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
+        //  cut off in immersive mode.
+        PopupWindowCompat.setWindowLayoutType(
+                popupWindow,
+                WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+        );
 
-       popupWindow.showAtLocation(
-          currentActivity.getWindow().getDecorView().getRootView(),
-          gravity,
-          0,
-          0
-       );
-   }
+        popupWindow.showAtLocation(
+                currentActivity.getWindow().getDecorView().getRootView(),
+                gravity,
+                0,
+                0
+        );
+    }
 
     private void setUpParentLinearLayout(Context context) {
         parentRelativeLayout = new RelativeLayout(context);
@@ -320,9 +323,10 @@ class InAppMessageView {
         });
 
         if (webView.getParent() != null)
-           ((ViewGroup) webView.getParent()).removeAllViews();
+            ((ViewGroup) webView.getParent()).removeAllViews();
 
         CardView cardView = createCardView(context);
+        cardView.setTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
         cardView.addView(webView);
 
         draggableRelativeLayout.setPadding(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
@@ -346,21 +350,27 @@ class InAppMessageView {
         CardView cardView = new CardView(context);
 
         int height = displayLocation == WebViewManager.Position.FULL_SCREEN ?
-           ViewGroup.LayoutParams.MATCH_PARENT :
-           ViewGroup.LayoutParams.WRAP_CONTENT;
+                ViewGroup.LayoutParams.MATCH_PARENT :
+                ViewGroup.LayoutParams.WRAP_CONTENT;
         RelativeLayout.LayoutParams cardViewLayoutParams = new RelativeLayout.LayoutParams(
-           ViewGroup.LayoutParams.MATCH_PARENT,
-           height
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                height
         );
         cardViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         cardView.setLayoutParams(cardViewLayoutParams);
 
-        cardView.setRadius(dpToPx(8));
-        cardView.setCardElevation(dpToPx(5));
+        // Set the initial elevation of the CardView to 0dp if using Android 6 API 23
+        //  Fixes bug when animating a elevated CardView class
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M)
+            cardView.setCardElevation(dpToPx(0));
+        else
+            cardView.setCardElevation(dpToPx(5));
 
+        cardView.setRadius(dpToPx(8));
         cardView.setClipChildren(false);
         cardView.setClipToPadding(false);
         cardView.setPreventCornerOverlap(false);
+
         return cardView;
     }
 
@@ -369,10 +379,10 @@ class InAppMessageView {
      */
     private void startDismissTimerIfNeeded() {
         if (dismissDuration <= 0)
-           return;
+            return;
 
         if (scheduleDismissRunnable != null)
-           return;
+            return;
 
         scheduleDismissRunnable = new Runnable() {
             public void run() {
@@ -431,7 +441,7 @@ class InAppMessageView {
                 else {
                     cleanupViewsAfterDismiss();
                     if (callback != null)
-                       callback.onComplete();
+                        callback.onComplete();
                 }
             }
         }, ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS);
@@ -447,21 +457,21 @@ class InAppMessageView {
             messageController.onMessageWasDismissed();
     }
 
-   /**
-    * Remove all views and dismiss PopupWindow
-    */
+    /**
+     * Remove all views and dismiss PopupWindow
+     */
     void removeAllViews() {
-       if (scheduleDismissRunnable != null) {
-          // Dismissed before the dismiss delay
-          handler.removeCallbacks(scheduleDismissRunnable);
-          scheduleDismissRunnable = null;
-       }
-       if (draggableRelativeLayout != null)
-          draggableRelativeLayout.removeAllViews();
+        if (scheduleDismissRunnable != null) {
+            // Dismissed before the dismiss delay
+            handler.removeCallbacks(scheduleDismissRunnable);
+            scheduleDismissRunnable = null;
+        }
+        if (draggableRelativeLayout != null)
+            draggableRelativeLayout.removeAllViews();
 
-       if (popupWindow != null)
-          popupWindow.dismiss();
-       dereferenceViews();
+        if (popupWindow != null)
+            popupWindow.dismiss();
+        dereferenceViews();
     }
 
     /**
@@ -475,24 +485,45 @@ class InAppMessageView {
     }
 
     private void animateInAppMessage(WebViewManager.Position displayLocation, View messageView, View backgroundView) {
+        final CardView messageViewCardView = messageView.findViewWithTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
+        Animation.AnimationListener cardViewAnimCallback = createAnimationListenerForAndroidApi23Elevation(messageViewCardView);
+
         // Based on the location of the in app message apply and animation to match
         switch (displayLocation) {
             case TOP_BANNER:
-                View topBannerMessageViewChild = ((ViewGroup) messageView).getChildAt(0);
-                animateTop(topBannerMessageViewChild, webView.getHeight());
+                animateTop(messageViewCardView, webView.getHeight(), cardViewAnimCallback);
                 break;
             case BOTTOM_BANNER:
-                View bottomBannerMessageViewChild = ((ViewGroup) messageView).getChildAt(0);
-                animateBottom(bottomBannerMessageViewChild, webView.getHeight());
+                animateBottom(messageViewCardView, webView.getHeight(), cardViewAnimCallback);
                 break;
             case CENTER_MODAL:
             case FULL_SCREEN:
-                animateCenter(messageView, backgroundView);
+                animateCenter(messageView, backgroundView, cardViewAnimCallback, null);
                 break;
         }
     }
 
-    private void animateTop(View messageView, int height) {
+    private Animation.AnimationListener createAnimationListenerForAndroidApi23Elevation(final CardView messageViewCardView) {
+        return new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                // For Android 6 API 23 devices, waits until end of animation to set elevation of CardView class
+                messageViewCardView.setCardElevation(dpToPx(5));
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        };
+    }
+
+    private void animateTop(View messageView, int height, Animation.AnimationListener cardViewAnimCallback) {
         // Animate the message view from above the screen downward to the top
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
@@ -500,11 +531,11 @@ class InAppMessageView {
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
-                null)
+                cardViewAnimCallback)
                 .start();
     }
 
-    private void animateBottom(View messageView, int height) {
+    private void animateBottom(View messageView, int height, Animation.AnimationListener cardViewAnimCallback) {
         // Animate the message view from under the screen upward to the bottom
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
@@ -512,17 +543,17 @@ class InAppMessageView {
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
-                null)
+                cardViewAnimCallback)
                 .start();
     }
 
-    private void animateCenter(View messageView, final View backgroundView) {
+    private void animateCenter(View messageView, final View backgroundView, Animation.AnimationListener cardViewAnimCallback, Animator.AnimatorListener backgroundAnimCallback) {
         // Animate the message view by scale since it settles at the center of the screen
         Animation messageAnimation = OneSignalAnimate.animateViewSmallToLarge(
                 messageView,
                 IN_APP_CENTER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
-                null);
+                cardViewAnimCallback);
 
         // Animate background behind the message so it doesn't just show the dark transparency
         ValueAnimator backgroundAnimation = animateBackgroundColor(
@@ -530,7 +561,7 @@ class InAppMessageView {
                 IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
                 ACTIVITY_BACKGROUND_COLOR_EMPTY,
                 ACTIVITY_BACKGROUND_COLOR_FULL,
-                null);
+                backgroundAnimCallback);
 
         messageAnimation.start();
         backgroundAnimation.start();
@@ -541,8 +572,8 @@ class InAppMessageView {
             @Override
             public void onAnimationEnd(Animator animation) {
                 cleanupViewsAfterDismiss();
-               if (callback != null)
-                  callback.onComplete();
+                if (callback != null)
+                    callback.onComplete();
             }
         };
 
