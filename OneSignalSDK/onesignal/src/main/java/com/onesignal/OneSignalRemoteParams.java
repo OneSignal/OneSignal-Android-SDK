@@ -83,8 +83,8 @@ public class OneSignalRemoteParams {
       boolean receiveReceiptEnabled;
       boolean unsubscribeWhenNotificationsDisabled;
       boolean disableGMSMissingPrompt;
-      Boolean locationShared;
-      Boolean requiresUserPrivacyConsent;
+      boolean locationShared;
+      boolean requiresUserPrivacyConsent;
       InfluenceParams influenceParams;
       FCMParams fcmParams;
    }
@@ -181,16 +181,8 @@ public class OneSignalRemoteParams {
 
          unsubscribeWhenNotificationsDisabled = responseJson.optBoolean(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE, true);
          disableGMSMissingPrompt = responseJson.optBoolean(DISABLE_GMS_MISSING_PROMPT, false);
-
-         if (responseJson.has(LOCATION_SHARED))
-            locationShared = responseJson.optBoolean(LOCATION_SHARED, true);
-         else
-            locationShared = null;
-
-         if (responseJson.has(REQUIRES_USER_PRIVACY_CONSENT))
-            requiresUserPrivacyConsent = responseJson.optBoolean(REQUIRES_USER_PRIVACY_CONSENT, false);
-         else
-            requiresUserPrivacyConsent = null;
+         locationShared = responseJson.optBoolean(LOCATION_SHARED, true);
+         requiresUserPrivacyConsent = responseJson.optBoolean(REQUIRES_USER_PRIVACY_CONSENT, false);
 
          influenceParams = new InfluenceParams();
          // Process outcomes params

@@ -189,8 +189,8 @@ public class ShadowOneSignalRestClient {
       }
    }
 
-   public static void setRemoteParamsRequirePrivacyConsent() throws JSONException {
-      JSONObject remoteParams = new JSONObject().put("requires_user_privacy_consent", true);
+   public static void setRemoteParamsRequirePrivacyConsent(boolean requirePrivacyConsent) throws JSONException {
+      JSONObject remoteParams = new JSONObject().put("requires_user_privacy_consent", requirePrivacyConsent);
       ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
    }
 

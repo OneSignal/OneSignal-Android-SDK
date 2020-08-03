@@ -6,6 +6,10 @@ import android.content.SharedPreferences;
 
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
+import com.onesignal.ShadowCustomTabsClient;
+import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -25,7 +29,11 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.junit.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
+        instrumentedPackages = {"com.onesignal"},
+        shadows = {
+                ShadowOneSignalRestClient.class,
+                ShadowOSUtils.class
+        },
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
@@ -51,6 +59,9 @@ public class OneSignalPrefsRunner {
       blankActivity = blankActivityController.get();
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+
+      // We only care about shared preferences, avoid other logic's
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
    }
 
    @AfterClass

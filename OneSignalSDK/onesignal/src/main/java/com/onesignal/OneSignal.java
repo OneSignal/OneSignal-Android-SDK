@@ -510,7 +510,7 @@ public class OneSignal {
     * @param context - Context used by the Application of the app
     */
    public static void setAppContext(@NonNull Context context) {
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) called!");
+      logger.verbose("setAppContext(context) called!");
 
       if (context == null) {
          Log(LOG_LEVEL.WARN, "context is null, ignoring!");
@@ -521,19 +521,19 @@ public class OneSignal {
       appContext = context.getApplicationContext();
       setupActivityLifecycleListener(wasAppContextNull);
 
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) finished, checking if appId has been set before proceeding...");
+      logger.verbose("setAppContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
          // Get the cached app id, if it exists
          String oldAppId = getSavedAppId();
          if (oldAppId == null) {
-            OneSignal.onesignalLog(LOG_LEVEL.WARN, "appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
+            logger.warning("appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
          } else {
-            OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "appContext set and an old appId was found, attempting to call setAppId(oldAppId)");
+            logger.verbose("appContext set and an old appId was found, attempting to call setAppId(oldAppId)");
             setAppId(oldAppId);
          }
          return;
       }
-      OneSignal.onesignalLog(LOG_LEVEL.VERBOSE, "setAppContext(context) successful and appId is set, continuing OneSignal init...");
+      logger.verbose("setAppContext(context) successful and appId is set, continuing OneSignal init...");
       init(context);
    }
 
@@ -558,10 +558,10 @@ public class OneSignal {
    synchronized private static void init(Context context) {
       if (requiresUserPrivacyConsent() || !remoteParamController.isRemoteParamsCallDone()) {
          if (!remoteParamController.isRemoteParamsCallDone())
-            OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, " +
+            logger.verbose("OneSignal SDK initialization delayed, " +
                     "waiting for remote params.");
          else
-            OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization delayed, " +
+            logger.verbose("OneSignal SDK initialization delayed, " +
                     "waiting for privacy consent to be set.");
 
          delayedInitParams = new DelayedConsentInitializationParameters(context, appId);
@@ -583,7 +583,7 @@ public class OneSignal {
       if (initDone) {
          if (notificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
-         OneSignal.Log(LOG_LEVEL.DEBUG, "OneSignal SDK initialization already completed.");
+         logger.debug("OneSignal SDK initialization already completed.");
          return;
       }
 
@@ -2294,7 +2294,7 @@ public class OneSignal {
    static void setSharedLocation(boolean enable) {
       if (!enable)
          OneSignalStateSynchronizer.clearLocation();
-      logger.debug("OneSignal is shareLocation enabled:" + enable);
+      logger.debug("OneSignal is shareLocation enabled: " + enable);
    }
 
    /**

@@ -27,24 +27,20 @@
 
 package com.test.onesignal;
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
+import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.MockHttpURLConnection;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
 
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -64,10 +60,6 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(RobolectricTestRunner.class)
 public class RESTClientRunner {
 
-   @SuppressLint("StaticFieldLeak")
-   private static Activity blankActivity;
-   private static ActivityController<BlankActivity> blankActivityController;
-
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
@@ -78,10 +70,7 @@ public class RESTClientRunner {
    @Before // Before each test
    public void beforeEachTest() throws Exception {
       firstResponse = secondResponse = null;
-      blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
-      blankActivity = blankActivityController.get();
       TestHelpers.beforeTestInitAndCleanup();
-      OneSignal.setAppContext(blankActivity);
    }
 
    @AfterClass
@@ -91,6 +80,7 @@ public class RESTClientRunner {
 
    @Test
    public void testRESTClientFallbackTimeout() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
          mockThreadHang = true;
       }};
@@ -105,6 +95,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInGetCalls() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       OneSignalRestClient.get("URL", null, null);
       threadAndTaskWait();
 
@@ -113,6 +104,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInPostCalls() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       OneSignal_savePrivacyConsentRequired(false);
 
       OneSignalRestClient.post("URL", null, null);
@@ -123,6 +115,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInPutCalls() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       OneSignal_savePrivacyConsentRequired(false);
 
       OneSignalRestClient.put("URL", null, null);
@@ -142,6 +135,7 @@ public class RESTClientRunner {
    // https://github.com/robolectric/robolectric/issues/3819
    @Test
    public void testReusesCache() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       // 1. Do first request to save response
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
          status = 200;
@@ -178,6 +172,7 @@ public class RESTClientRunner {
 
    @Test
    public void testReplacesCacheOn200() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       testReusesCache();
       firstResponse = secondResponse = null;
       final String newMockResponse = "{\"key2\": \"value2\"}";
@@ -210,6 +205,7 @@ public class RESTClientRunner {
 
    @Test
    public void testApiCall400Response() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       OneSignal_savePrivacyConsentRequired(false);
 
       final String newMockResponse = "{\"errors\":[\"test response\"]}";
@@ -243,6 +239,7 @@ public class RESTClientRunner {
 
    @Test
    public void testApiCall400EmptyResponse() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       OneSignal_savePrivacyConsentRequired(false);
 
       final String newMockResponse = "";

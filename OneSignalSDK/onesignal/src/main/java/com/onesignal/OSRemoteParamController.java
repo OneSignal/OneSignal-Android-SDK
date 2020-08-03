@@ -57,13 +57,9 @@ class OSRemoteParamController {
         logger.debug("OneSignal saveInfluenceParams: " + remoteParams.influenceParams.toString());
         trackerFactory.saveInfluenceParams(remoteParams.influenceParams);
 
-        if (remoteParams.locationShared != null) {
-            saveLocationShared(remoteParams.locationShared);
-            OneSignal.setSharedLocation(remoteParams.locationShared);
-        }
-
-        if (remoteParams.requiresUserPrivacyConsent != null)
-            savePrivacyConsentRequired(remoteParams.requiresUserPrivacyConsent);
+        saveLocationShared(remoteParams.locationShared);
+        OneSignal.setSharedLocation(remoteParams.locationShared);
+        savePrivacyConsentRequired(remoteParams.requiresUserPrivacyConsent);
     }
 
     boolean isRemoteParamsCallDone() {

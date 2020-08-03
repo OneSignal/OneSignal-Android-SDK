@@ -452,7 +452,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(sdk = 26)
    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignal.autoPromptLocation(true);
       OneSignalInit();
       threadAndTaskWait();
@@ -478,7 +478,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAppFocusWithPrivacyConsent() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3075,7 +3075,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(sdk = 26)
    public void testSessionTimeTrackingOnPrivacyConsent() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3095,7 +3095,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void gdprUserConsent() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       assertTrue(OneSignalPackagePrivateHelper.OneSignal_requiresUserPrivacyConsent());
 
       //privacy consent state should still be set to true (user consent required)
@@ -3140,7 +3140,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void gdprRevokeUserConsent() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
 
       //privacy consent state should still be set to true (user consent required)
       OneSignalInit();
@@ -3175,7 +3175,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldReturnCorrectConsentRequiredStatus() throws JSONException {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
 
       OneSignalInit();
 
@@ -3188,7 +3188,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldReturnCorrectConsentRequiredStatusWhenSetBeforeInit() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignal.provideUserConsent(true);
       OneSignalInit();
       threadAndTaskWait();
@@ -3207,7 +3207,7 @@ public class MainOneSignalClassRunner {
    // to work even if privacy consent has not been granted.
    @Test
    public void shouldAddSubscriptionObserverIfConsentNotGranted() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3233,7 +3233,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldAddPermissionObserverIfConsentNotGranted() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignalInit();
       threadAndTaskWait();
 
@@ -3256,7 +3256,7 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldAddEmailSubscriptionObserverIfConsentNotGranted() throws Exception {
-      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent();
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
       OneSignalInit();
       OSEmailSubscriptionObserver subscriptionObserver = new OSEmailSubscriptionObserver() {
          @Override
@@ -3357,7 +3357,8 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowOneSignal.class})
    @SuppressWarnings("unchecked") // getDeclaredMethod
-   public void testLocationTimeout() throws Exception { OneSignalInit();
+   public void testLocationTimeout() throws Exception {
+      OneSignalInit();
       threadAndTaskWait();
 
       Class klass = Class.forName("com.onesignal.GMSLocationController");

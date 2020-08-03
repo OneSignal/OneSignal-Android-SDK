@@ -85,14 +85,8 @@ public class SplashActivityViewModel implements ActivityViewModel {
     }
 
     private void setupOneSignalSDK() {
-        boolean privacyConsent = true;
-
-        boolean isLocationShared = OneSignalPrefs.getCachedLocationSharedStatus(context);
-
         boolean isInAppMessagingPaused = OneSignalPrefs.getCachedInAppMessagingPausedStatus(context);
         OneSignal.pauseInAppMessages(isInAppMessagingPaused);
-
-        Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
 
         boolean isEmailCached = attemptSignIn(new EmailUpdateCallback() {
             @Override
@@ -156,17 +150,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
                 return;
         }
 
-        ((Activity) context).runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        intentTo.mainActivity();
-                    }
-                }, 1000);
-            }
-        });
+        ((Activity) context).runOnUiThread(() -> new Handler().postDelayed(() -> intentTo.mainActivity(), 1000));
     }
 
 }
