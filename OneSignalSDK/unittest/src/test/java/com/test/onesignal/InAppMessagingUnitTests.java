@@ -43,6 +43,7 @@ import java.util.UUID;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -540,12 +541,12 @@ public class InAppMessagingUnitTests {
     }
 
     private void OneSignalInit() {
+        setRemoteParamsGetHtmlResponse();
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         OneSignal.setAppId(InAppMessagingHelpers.ONESIGNAL_APP_ID);
         OneSignal.setAppContext(blankActivity);
         blankActivityController.resume();
     }
-
 
     private static @Nullable OSInAppMessageAction lastAction;
     @Test

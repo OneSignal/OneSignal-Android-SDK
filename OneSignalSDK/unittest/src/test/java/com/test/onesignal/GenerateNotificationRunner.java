@@ -43,6 +43,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.widget.Button;
 
 import androidx.annotation.NonNull;
@@ -116,6 +117,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGroup;
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
@@ -147,7 +149,8 @@ import static org.robolectric.Shadows.shadowOf;
 )
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
-   
+
+   private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static final String notifMessage = "Robo test message";
 
    private Activity blankActivity;
@@ -178,6 +181,9 @@ public class GenerateNotificationRunner {
       NotificationManager notificationManager = OneSignalNotificationManagerPackageHelper.getNotificationManager(blankActivity);
       notificationManager.cancelAll();
       NotificationRestorer.restored = false;
+
+      // Set remote_params GET response
+      setRemoteParamsGetHtmlResponse();
    }
 
    @AfterClass
@@ -339,6 +345,8 @@ public class GenerateNotificationRunner {
       assertEquals(4, ShadowRoboNotificationManager.notifications.size());
       
       OneSignal.cancelGroupedNotifications("test1");
+      threadAndTaskWait();
+
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());
    }
 
@@ -603,7 +611,8 @@ public class GenerateNotificationRunner {
       // Setup - Let's cancel a child notification.
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
       OneSignal.cancelNotification(postedNotification.id);
-   
+      threadAndTaskWait();
+
       // Test - It should update summary text to say 2 notifications
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(3, postedNotifs.size());       // 2 notifis + 1 summary
@@ -615,6 +624,8 @@ public class GenerateNotificationRunner {
       // Setup - Let's cancel a 2nd child notification.
       postedNotification = postedNotifsIterator.next().getValue();
       OneSignal.cancelNotification(postedNotification.id);
+      threadAndTaskWait();
+
       runImplicitServices();
       Thread.sleep(1_000); // TODO: Service runs AsyncTask. Need to wait for this
    
@@ -632,7 +643,8 @@ public class GenerateNotificationRunner {
       
       // Setup - Let's cancel our 3rd and last child notification.
       OneSignal.cancelNotification(postedNotification.id);
-   
+      threadAndTaskWait();
+
       // Test - No more notifications! :)
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(0, postedNotifs.size());
@@ -900,7 +912,22 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldGenerate2BasicGroupNotifications() {
+   public void shouldGenerate2BasicGroupNotifications() throws Exception {
+      ShadowOSUtils.hasAllRecommendedFCMLibraries(true);
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+      fastColdRestartApp();
+      // We only care about request post first init
+      ShadowOneSignalRestClient.resetStatics();
+
+      Log.i(GenerateNotificationRunner.class.getCanonicalName(), "****** AFTER RESET STATICS ******");
+      setRemoteParamsGetHtmlResponse();
+      ShadowOSUtils.hasAllRecommendedFCMLibraries(true);
+
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("grp", "test1");
@@ -961,10 +988,14 @@ public class GenerateNotificationRunner {
       postedNotification = postedNotifsIterator.next().getValue();
       Intent intent = createOpenIntent(postedNotification.id, bundle).putExtra("summary", "test1");
       NotificationOpenedProcessor_processFromContext(blankActivity, intent);
+      // Wait for remote params call
+      threadAndTaskWait();
 
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
-      // 2 open calls should fire.
-      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      // 2 open calls should fire + remote params + players call
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(1).url);
+      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(2).url);
       ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification
@@ -1534,7 +1565,6 @@ public class GenerateNotificationRunner {
       
       @Override
       protected boolean onNotificationProcessing(OSNotificationReceivedResult notification) {
-         
          OverrideSettings overrideSettings = new OverrideSettings();
          overrideSettings.extender = new NotificationCompat.Extender() {
             @Override

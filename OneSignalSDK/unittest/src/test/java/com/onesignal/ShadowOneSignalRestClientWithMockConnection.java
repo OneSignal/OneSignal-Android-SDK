@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
 import java.io.IOException;
@@ -51,6 +52,7 @@ public class ShadowOneSignalRestClientWithMockConnection {
       return 1;
    }
 
+   @Implementation
    public static HttpURLConnection newHttpURLConnection(String url) throws IOException {
       lastConnection = new MockHttpURLConnection(
          new URL("https://onesignal.com/api/v1/" + url),
