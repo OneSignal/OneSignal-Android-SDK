@@ -1,16 +1,15 @@
 package com.onesignal;
 
-import android.renderscript.Sampler;
 import android.webkit.ValueCallback;
 
+import com.onesignal.WebViewManager.OSJavaScriptInterface;
 import com.test.onesignal.TestHelpers;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowWebView;
-
-import com.onesignal.WebViewManager.OSJavaScriptInterface;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +50,7 @@ public class ShadowOSWebView extends ShadowWebView {
       MOCK_IAM_RENDERING_COMPLETE_TOP_BANNER = jsonObject.toString();
    }
 
+   @Implementation
    public void loadData(String data, String mimeType, String encoding) {
       TestHelpers.assertMainThread();
       lastData = data;

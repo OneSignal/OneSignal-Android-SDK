@@ -81,11 +81,15 @@ public class OneSignalRemoteParams {
       boolean restoreTTLFilter;
       boolean clearGroupOnSummaryClick;
       boolean receiveReceiptEnabled;
+      boolean unsubscribeWhenNotificationsDisabled;
+      boolean disableGMSMissingPrompt;
+      boolean locationShared;
+      boolean requiresUserPrivacyConsent;
       InfluenceParams influenceParams;
       FCMParams fcmParams;
    }
 
-   interface CallBack {
+   interface Callback {
       void complete(Params params);
    }
 
@@ -100,6 +104,11 @@ public class OneSignalRemoteParams {
    private static final String IAM_ATTRIBUTION_PARAM = "in_app_message_attribution";
    private static final String UNATTRIBUTED_PARAM = "unattributed";
 
+   private static final String UNSUBSCRIBE_ON_NOTIFICATION_DISABLE = "unsubscribe_on_notifications_disabled";
+   private static final String DISABLE_GMS_MISSING_PROMPT = "disable_gms_missing_prompt";
+   private static final String LOCATION_SHARED = "location_shared";
+   private static final String REQUIRES_USER_PRIVACY_CONSENT = "requires_user_privacy_consent";
+
    private static final String FCM_PARENT_PARAM = "fcm";
    private static final String FCM_PROJECT_ID = "project_id";
    private static final String FCM_APP_ID = "app_id";
@@ -112,7 +121,7 @@ public class OneSignalRemoteParams {
    public static final int DEFAULT_INDIRECT_ATTRIBUTION_WINDOW = 24 * 60;
    public static final int DEFAULT_NOTIFICATION_LIMIT = 10;
 
-   static void makeAndroidParamsRequest(final @NonNull CallBack callback) {
+   static void makeAndroidParamsRequest(final String appId, final String userId, final @NonNull Callback callback) {
       OneSignalRestClient.ResponseHandler responseHandler = new OneSignalRestClient.ResponseHandler() {
          @Override
          void onFailure(int statusCode, String response, Throwable throwable) {
@@ -130,7 +139,7 @@ public class OneSignalRemoteParams {
                   OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Failed to get Android parameters, trying again in " + (sleepTime / 1_000) +  " seconds.");
                   OSUtils.sleep(sleepTime);
                   androidParamsRetries++;
-                  makeAndroidParamsRequest(callback);
+                  makeAndroidParamsRequest(appId, userId, callback);
                }
             }, "OS_PARAMS_REQUEST").start();
          }
@@ -141,8 +150,7 @@ public class OneSignalRemoteParams {
          }
       };
 
-      String params_url = "apps/" + OneSignal.appId + "/android_params.js";
-      String userId = OneSignal.getUserId();
+      String params_url = "apps/" + appId + "/android_params.js";
       if (userId != null)
          params_url += "?player_id=" + userId;
 
@@ -150,7 +158,7 @@ public class OneSignalRemoteParams {
       OneSignalRestClient.get(params_url, responseHandler, OneSignalRestClient.CACHE_KEY_REMOTE_PARAMS);
    }
 
-   static private void processJson(String json, final @NonNull CallBack callBack) {
+   static private void processJson(String json, final @NonNull Callback callBack) {
       final JSONObject responseJson;
       try {
          responseJson = new JSONObject(json);
@@ -170,6 +178,11 @@ public class OneSignalRemoteParams {
          googleProjectNumber = responseJson.optString("android_sender_id", null);
          clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
          receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
+
+         unsubscribeWhenNotificationsDisabled = responseJson.optBoolean(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE, true);
+         disableGMSMissingPrompt = responseJson.optBoolean(DISABLE_GMS_MISSING_PROMPT, false);
+         locationShared = responseJson.optBoolean(LOCATION_SHARED, true);
+         requiresUserPrivacyConsent = responseJson.optBoolean(REQUIRES_USER_PRIVACY_CONSENT, false);
 
          influenceParams = new InfluenceParams();
          // Process outcomes params

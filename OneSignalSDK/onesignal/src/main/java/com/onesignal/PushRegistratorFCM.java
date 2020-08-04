@@ -65,31 +65,32 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       if (firebaseApp != null)
          return;
 
+      OneSignalRemoteParams.Params remoteParams = OneSignal.getRemoteParams();
       FirebaseOptions firebaseOptions =
          new FirebaseOptions.Builder()
             .setGcmSenderId(senderId)
-            .setApplicationId(getAppId())
-            .setApiKey(getApiKey())
-            .setProjectId(getProjectId())
+            .setApplicationId(getAppId(remoteParams))
+            .setApiKey(getApiKey(remoteParams))
+            .setProjectId(getProjectId(remoteParams))
             .build();
       firebaseApp = FirebaseApp.initializeApp(OneSignal.appContext, firebaseOptions, FCM_APP_NAME);
    }
 
-   private static @NonNull String getAppId() {
-      if (OneSignal.remoteParams.fcmParams.appId != null)
-         return OneSignal.remoteParams.fcmParams.appId;
+   private static @NonNull String getAppId(OneSignalRemoteParams.Params remoteParams) {
+      if (remoteParams.fcmParams.appId != null)
+         return remoteParams.fcmParams.appId;
       return FCM_DEFAULT_APP_ID;
    }
 
-   private static @NonNull String getApiKey() {
-      if (OneSignal.remoteParams.fcmParams.apiKey != null)
-         return OneSignal.remoteParams.fcmParams.apiKey;
+   private static @NonNull String getApiKey(OneSignalRemoteParams.Params remoteParams) {
+      if (remoteParams.fcmParams.apiKey != null)
+         return remoteParams.fcmParams.apiKey;
       return new String(Base64.decode(FCM_DEFAULT_API_KEY_BASE64, Base64.DEFAULT));
    }
 
-   private static @NonNull String getProjectId() {
-      if (OneSignal.remoteParams.fcmParams.projectId != null)
-         return OneSignal.remoteParams.fcmParams.projectId;
+   private static @NonNull String getProjectId(OneSignalRemoteParams.Params remoteParams) {
+      if (remoteParams.fcmParams.projectId != null)
+         return remoteParams.fcmParams.projectId;
       return FCM_DEFAULT_PROJECT_ID;
    }
 }

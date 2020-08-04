@@ -18,6 +18,7 @@ import androidx.work.Configuration;
 import androidx.work.testing.SynchronousExecutor;
 import androidx.work.testing.WorkManagerTestInitHelper;
 
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
@@ -69,6 +70,7 @@ import static org.robolectric.Shadows.shadowOf;
 
 public class TestHelpers {
 
+   private static final String TAG = TestHelpers.class.getCanonicalName();
    private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
 
    static Exception lastException;
@@ -239,6 +241,7 @@ public class TestHelpers {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
+      Log.d(TAG, "fastColdRestartApp finished");
    }
 
    static void restartAppAndElapseTimeToNextSession() throws Exception {
@@ -246,6 +249,7 @@ public class TestHelpers {
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
       advanceSystemTimeBy(31);
+      Log.d(TAG, "restartAppAndElapseTimeToNextSession finished");
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords(OneSignalDb db) {

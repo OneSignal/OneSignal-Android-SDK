@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.robolectric.Shadows.shadowOf;
 
@@ -113,6 +114,14 @@ public class OneSignalPackagePrivateHelper {
     */
    public static void OneSignal_setupNotificationExtensionServiceClass() {
       OSNotificationExtender.setupNotificationExtensionServiceClass();
+   }
+
+   public static OSRemoteParamController OneSignal_getRemoteParamController() {
+      return OneSignal.getRemoteParamController();
+   }
+
+   public static void OneSignal_savePrivacyConsentRequired(boolean required) {
+      OneSignal_getRemoteParamController().savePrivacyConsentRequired(required);
    }
 
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
@@ -226,8 +235,24 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.delayedInitParams;
    }
 
+   public static ConcurrentLinkedQueue<Runnable> OneSignal_taskQueueWaitingForInit() {
+      return OneSignal.getTaskController().getTaskQueueWaitingForInit();
+   }
+
    public static boolean OneSignal_requiresUserPrivacyConsent() {
-      return OneSignal.requiresUserPrivacyConsent;
+      return OneSignal.isUserPrivacyConsentRequired();
+   }
+
+   public static boolean OneSignal_locationShared() {
+      return OneSignal.isLocationShared();
+   }
+
+   public static boolean OneSignal_areNotificationsEnabledForSubscribedState() {
+      return OneSignal.areNotificationsEnabledForSubscribedState();
+   }
+
+   public static boolean OneSignal_getDisableGMSMissingPrompt() {
+      return OneSignal.getDisableGMSMissingPrompt();
    }
 
    public static String OneSignal_appId() {

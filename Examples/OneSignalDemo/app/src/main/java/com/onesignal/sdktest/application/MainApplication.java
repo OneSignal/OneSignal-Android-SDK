@@ -37,10 +37,7 @@ public class MainApplication extends Application {
                 notifJob.complete();
             }
         });
-
-        OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.pauseInAppMessages(true);
-        OneSignal.setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
     }

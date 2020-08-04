@@ -63,7 +63,6 @@ class OneSignalRestClient {
    }
 
    public static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
-
       new Thread(new Runnable() {
          public void run() {
             makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT, null);

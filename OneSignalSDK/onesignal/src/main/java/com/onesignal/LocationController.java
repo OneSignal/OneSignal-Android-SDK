@@ -58,7 +58,18 @@ class LocationController {
    private static boolean locationCoarse;
 
    static final Object syncLock = new Object() {};
-   static LocationHandlerThread locationHandlerThread;
+
+   private static LocationHandlerThread locationHandlerThread;
+   static LocationHandlerThread getLocationHandlerThread() {
+      if (locationHandlerThread == null) {
+         synchronized (syncLock) {
+            if (locationHandlerThread == null)
+               locationHandlerThread = new LocationHandlerThread();
+         }
+      }
+      return locationHandlerThread;
+   }
+
    static Thread fallbackFailThread;
    static Context classContext;
    static Location lastLocation;
@@ -100,7 +111,7 @@ class LocationController {
    }
 
    static boolean scheduleUpdate(Context context) {
-      if (!hasLocationPermission(context) || !OneSignal.shareLocation)
+      if (!hasLocationPermission(context) || !OneSignal.isLocationShared())
          return false;
 
       long lastTime = System.currentTimeMillis() - getLastLocationTime();
@@ -175,7 +186,7 @@ class LocationController {
       classContext = context;
       locationHandlers.put(handler.getType(), handler);
 
-      if (!OneSignal.shareLocation) {
+      if (!OneSignal.isLocationShared()) {
          sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
          fireFailedComplete();
          return;
@@ -252,9 +263,6 @@ class LocationController {
    // Started from this class or PermissionActivity
    static void startGetLocation() {
       OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LocationController startGetLocation with lastLocation: " + lastLocation);
-
-      if (locationHandlerThread == null)
-         locationHandlerThread = new LocationHandlerThread();
 
       try {
          if (isGooglePlayServicesAvailable()) {

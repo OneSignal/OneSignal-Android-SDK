@@ -64,6 +64,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionLi
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertMeasureOnV2AtIndex;
 import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.assertMainThread;
@@ -134,6 +135,9 @@ public class InAppMessageIntegrationTests {
         blankActivity = blankActivityController.get();
         dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
         TestHelpers.beforeTestInitAndCleanup();
+
+        // Set remote_params GET response
+        setRemoteParamsGetHtmlResponse();
     }
 
     @After

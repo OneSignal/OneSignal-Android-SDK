@@ -29,6 +29,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -67,6 +68,8 @@ public class NotificationLimitManagerRunner {
       notificationManager = (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       TestHelpers.beforeTestInitAndCleanup();
 
+      // Set remote_params GET response
+      setRemoteParamsGetHtmlResponse();
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
@@ -83,6 +86,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 2);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
       assertEquals(2, notificationManager.getActiveNotifications()[0].getId());
@@ -93,6 +97,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 1);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }
@@ -108,6 +113,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 2);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1 , notificationManager.getActiveNotifications()[0].getId());
    }
@@ -127,6 +133,7 @@ public class NotificationLimitManagerRunner {
       threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }
@@ -137,6 +144,7 @@ public class NotificationLimitManagerRunner {
       threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }

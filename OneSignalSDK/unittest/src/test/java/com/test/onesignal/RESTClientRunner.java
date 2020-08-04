@@ -27,6 +27,8 @@
 
 package com.test.onesignal;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.MockHttpURLConnection;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.OneSignalRestClient;
@@ -42,6 +44,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_savePrivacyConsentRequired;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
@@ -77,6 +80,7 @@ public class RESTClientRunner {
 
    @Test
    public void testRESTClientFallbackTimeout() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
          mockThreadHang = true;
       }};
@@ -91,6 +95,7 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInGetCalls() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       OneSignalRestClient.get("URL", null, null);
       threadAndTaskWait();
 
@@ -99,6 +104,9 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInPostCalls() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_savePrivacyConsentRequired(false);
+
       OneSignalRestClient.post("URL", null, null);
       threadAndTaskWait();
 
@@ -107,6 +115,9 @@ public class RESTClientRunner {
 
    @Test
    public void SDKHeaderIsIncludedInPutCalls() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_savePrivacyConsentRequired(false);
+
       OneSignalRestClient.put("URL", null, null);
       threadAndTaskWait();
 
@@ -124,6 +135,7 @@ public class RESTClientRunner {
    // https://github.com/robolectric/robolectric/issues/3819
    @Test
    public void testReusesCache() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       // 1. Do first request to save response
       ShadowOneSignalRestClientWithMockConnection.mockResponse = new MockHttpURLConnection.MockResponse() {{
          status = 200;
@@ -160,6 +172,7 @@ public class RESTClientRunner {
 
    @Test
    public void testReplacesCacheOn200() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
       testReusesCache();
       firstResponse = secondResponse = null;
       final String newMockResponse = "{\"key2\": \"value2\"}";
@@ -192,6 +205,9 @@ public class RESTClientRunner {
 
    @Test
    public void testApiCall400Response() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_savePrivacyConsentRequired(false);
+
       final String newMockResponse = "{\"errors\":[\"test response\"]}";
       final int statusCode = 400;
 
@@ -223,6 +239,9 @@ public class RESTClientRunner {
 
    @Test
    public void testApiCall400EmptyResponse() throws Exception {
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_savePrivacyConsentRequired(false);
+
       final String newMockResponse = "";
       final int statusCode = 400;
 

@@ -69,7 +69,7 @@ class NotificationLimitManager {
       }
 
       // Clear the oldest based on the count in notifsToClear
-      for(Map.Entry<Long, Integer> mapData : activeNotifIds.entrySet()) {
+      for (Map.Entry<Long, Integer> mapData : activeNotifIds.entrySet()) {
          OneSignal.cancelNotification(mapData.getValue());
          if (--notifsToClear <= 0)
             break;
