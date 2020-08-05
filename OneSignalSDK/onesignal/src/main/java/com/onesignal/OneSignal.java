@@ -827,7 +827,7 @@ public class OneSignal {
       inForeground = isContextActivity(context);
       if (inForeground) {
          ActivityLifecycleHandler.curActivity = (Activity) context;
-         NotificationRestorer.asyncRestore(appContext);
+         OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
          FocusTimeController.getInstance().appForegrounded();
       }
       else
@@ -1306,7 +1306,7 @@ public class OneSignal {
       if (trackGooglePurchase != null)
          trackGooglePurchase.trackIAP();
 
-      NotificationRestorer.asyncRestore(appContext);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(appContext, false);
 
       getCurrentPermissionState(appContext).refreshAsTo();
 
