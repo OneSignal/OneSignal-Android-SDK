@@ -234,7 +234,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       safeExecSQL(db,
          "UPDATE " + NotificationTable.TABLE_NAME + " " +
             "SET " + NotificationTable.COLUMN_NAME_EXPIRE_TIME +  " = "
-                     + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD + ";"
+                 + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD + ";"
       );
 
       safeExecSQL(db, NotificationTable.INDEX_CREATE_EXPIRE_TIME);

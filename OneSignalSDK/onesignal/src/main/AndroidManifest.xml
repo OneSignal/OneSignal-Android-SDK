@@ -83,20 +83,12 @@
         <service android:name="com.onesignal.FCMIntentJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
-        <service android:name="com.onesignal.RestoreJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-
-        <service android:name="com.onesignal.RestoreKickoffJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-
         <service android:name="com.onesignal.SyncService" android:stopWithTask="true" />
         <service android:name="com.onesignal.SyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <activity android:name="com.onesignal.PermissionsActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
-        <service android:name="com.onesignal.NotificationRestoreService" />
 
         <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
 
