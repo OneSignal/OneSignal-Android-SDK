@@ -1,6 +1,7 @@
 package com.onesignal.sdktest.notification;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -37,7 +38,7 @@ public class AppNotificationExtensionService implements
       notification.setModifiedContent(overrideSettings);
 
       OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
-      System.out.println("Android notification id: " + notificationDisplayedResult.androidNotificationId);
+      Log.i("OneSignal", "Android notification id: " + notificationDisplayedResult.androidNotificationId);
 
       notification.complete();
    }

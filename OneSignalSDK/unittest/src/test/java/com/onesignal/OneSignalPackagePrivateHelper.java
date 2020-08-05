@@ -107,6 +107,14 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
+   /**
+    * Only necessary when not fully init OneSignal SDK
+    * setAppContext required to setup a notification extension service
+    */
+   public static void OneSignal_setupNotificationExtensionServiceClass() {
+      OSNotificationExtender.setupNotificationExtensionServiceClass();
+   }
+
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
       return OneSignal.getSessionListener();
    }

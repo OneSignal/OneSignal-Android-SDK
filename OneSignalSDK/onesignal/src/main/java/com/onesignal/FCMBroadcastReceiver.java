@@ -66,7 +66,6 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          return;
 
       OneSignal.setAppContext(context);
-
       ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
 
       // Null means this isn't a FCM message
@@ -77,8 +76,8 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
 
       // Prevent other FCM receivers from firing if:
       //   1. This is a duplicated FCM message
-      //   2. OR app developer setup a extender service to handle the notification.
-      if (processedResult.isDup) {
+      //   2. OR work manager is processing the notification
+      if (processedResult.isDup || processedResult.isWorkManagerProcessing) {
          // Abort to prevent other FCM receivers from process this Intent.
          setAbort();
          return;
