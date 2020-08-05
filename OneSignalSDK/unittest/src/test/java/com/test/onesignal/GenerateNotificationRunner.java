@@ -34,8 +34,6 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ResolveInfo;
-import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -43,7 +41,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -52,10 +49,9 @@ import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.BundleCompat;
 import com.onesignal.FCMBroadcastReceiver;
-import com.onesignal.FCMIntentService;
 import com.onesignal.MockOneSignalDBHelper;
-import com.onesignal.OSNotificationExtender;
 import com.onesignal.OSNotificationDisplayedResult;
+import com.onesignal.OSNotificationExtender;
 import com.onesignal.OSNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
@@ -116,6 +112,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setupNotificationExtensionServiceClass;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGroup;
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
@@ -127,7 +124,6 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertNotEquals;
@@ -181,8 +177,6 @@ public class GenerateNotificationRunner {
       lastAppNotifJob = null;
 
       OneSignalShadowPackageManager.resetStatics();
-
-      overrideNotificationId = -1;
 
       TestHelpers.setupTestWorkManager(blankActivity);
       TestHelpers.beforeTestInitAndCleanup();
@@ -1087,26 +1081,26 @@ public class GenerateNotificationRunner {
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
       assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);
    }
-   
-   @Test
-   @Config(shadows = {ShadowFCMBroadcastReceiver.class}, sdk = 26)
-   public void shouldStartFCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
 
-      Intent intentFCM = new Intent();
-      intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intentFCM.putExtra("message_type", "gcm");
-      Bundle bundle = getBaseNotifBundle();
-      bundle.putString("pri", "10");
-      bundle.putString("licon", "http://domain.com/image.jpg");
-      addButtonsToReceivedPayload(bundle);
-      intentFCM.putExtras(bundle);
-      
-      FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
-      broadcastReceiver.onReceive(blankActivity, intentFCM);
-      
-      Intent blankActivityIntent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      assertEquals(FCMIntentService.class.getName(), blankActivityIntent.getComponent().getClassName());
-   }
+   // TODO: Once we figure out the correct way to process notifications with high priority using the WorkManager
+//   @Test
+//   @Config(shadows = {ShadowFCMBroadcastReceiver.class}, sdk = 26)
+//   public void shouldStartFCMServiceOnAndroidOWhenPriorityIsHighAndContainsRemoteResource() {
+//      Intent intentFCM = new Intent();
+//      intentFCM.setAction("com.google.android.c2dm.intent.RECEIVE");
+//      intentFCM.putExtra("message_type", "gcm");
+//      Bundle bundle = getBaseNotifBundle();
+//      bundle.putString("pri", "10");
+//      bundle.putString("licon", "http://domain.com/image.jpg");
+//      addButtonsToReceivedPayload(bundle);
+//      intentFCM.putExtras(bundle);
+//
+//      FCMBroadcastReceiver broadcastReceiver = new FCMBroadcastReceiver();
+//      broadcastReceiver.onReceive(ApplicationProvider.getApplicationContext(), intentFCM);
+//
+//      Intent blankActivityIntent = Shadows.shadowOf(blankActivity).getNextStartedService();
+//      assertEquals(FCMIntentService.class.getName(), blankActivityIntent.getComponent().getClassName());
+//   }
 
    private static @NonNull Bundle inAppPreviewMockPayloadBundle() throws JSONException {
       Bundle bundle = new Bundle();
@@ -1183,140 +1177,311 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId(appId);
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
+
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
       threadAndTaskWait();
 
       assertRestCalls(2);
    }
 
-   
-//   private OSNotificationGenerationJob.AppNotificationGenerationJob lastAppNotificationGenerationJob;
-//   @Test
-//   public void shouldStillFireReceivedHandlerWhenNotificationExtenderServiceIsUsed() throws Exception {
-//      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-//      OneSignal.setAppContext(blankActivity);
-//      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
-//         @Override
-//         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
-//            lastAppNotificationGenerationJob = notifJob;
-//         }
-//      });
-//      threadAndTaskWait();
-//
-//      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()),
-//                                NotificationExtenderServiceTestReturnFalse.class);
-//
-//      assertNotNull(lastAppNotificationGenerationJob);
-//   }
+   @Test
+   @Config(sdk = 17)
+   public void testNotificationExtensionServiceOverridePropertiesWithSummaryApi17() throws Exception {
+      // 1. Setup notification extension service as well as notifications to receive
+      setupNotificationExtensionServiceOverridePropertiesWithSummary();
 
-//   @Test
-//   public void shouldNotFailedNotificationExtenderServiceWhenAlertIsNull() throws Exception {
-//      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-//      OneSignal.setAppContext(blankActivity);
-//      threadAndTaskWait();
-//
-//      Bundle bundle = getBaseNotifBundle();
-//      bundle.remove("alert");
-//
-//      startNotificationExtender(
-//         createInternalPayloadBundle(bundle),
-//         NotificationExtenderServiceTest.class
-//      );
-//      threadAndTaskWait();
-//
-//      assertNotificationDbRecords(1);
-//   }
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
 
-//   @Test
-//   public void notificationExtenderServiceOverrideShouldOverrideAndroidNotificationId() {
-//      overrideNotificationId = 1;
-//
-//      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")),
-//          NotificationExtenderServiceTest.class);
-//      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID2")),
-//          NotificationExtenderServiceTest.class);
-//      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
-//   }
+      // 2. First notification should be the summary with the custom sound set
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      assertThat(postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
 
+      // 3. Make sure only 1 summary notification has been posted
+      assertEquals(1, postedNotifs.size());
+   }
 
-//   @Test
-//   @Config(sdk = 17)
-//   public void notificationExtenderServiceOverridePropertiesWithSummaryApi17() throws Exception {
-//      testNotificationExtenderServiceOverridePropertiesWithSummary();
-//      threadAndTaskWait();
-//
-//      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-//      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
-//
-//      // Test - First notification should be the summary with the custom sound set.
-//      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-//      assertThat(postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
-//      assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
-//
-//      assertEquals(1, postedNotifs.size());
-//   }
+   @Test
+   @Config(sdk = 21)
+   public void testNotificationExtensionServiceOverridePropertiesWithSummary() throws Exception {
+      // 1. Setup notification extension service as well as received notifications/summary
+      setupNotificationExtensionServiceOverridePropertiesWithSummary();
 
-//   @Test
-//   @Config(sdk = 21)
-//   public void notificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
-//      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-//      OneSignal.setAppContext(blankActivity);
-//      threadAndTaskWait();
-//
-//      testNotificationExtenderServiceOverridePropertiesWithSummary();
-//      threadAndTaskWait();
-//
-//      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-//      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
-//
-//      // Test - First notification should be the summary with the custom sound set.
-//      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-//      assertThat(postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
-//      assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
-//
-//      // Test - individual notification 1 should not play a sound
-//      PostedNotification notification = postedNotifsIterator.next().getValue();
-//      assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
-//      assertNull(notification.notif.sound);
-//
-//      // Test - individual notification 2 should not play a sound
-//      notification = postedNotifsIterator.next().getValue();
-//      assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
-//      assertNull(notification.notif.sound);
-//   }
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
 
-//   // Test to make sure changed bodies and titles are used for the summary notification.
-//   private void testNotificationExtenderServiceOverridePropertiesWithSummary() throws Exception {
-//      Bundle bundle = getBaseNotifBundle("UUID1");
-//      bundle.putString("grp", "test1");
-//
-//      startNotificationExtender(createInternalPayloadBundle(bundle),
-//          NotificationExtenderServiceOverrideProperties.class);
-//      threadAndTaskWait();
-//
-//      bundle = getBaseNotifBundle("UUID2");
-//      bundle.putString("grp", "test1");
-//
-//      startNotificationExtender(createInternalPayloadBundle(bundle),
-//          NotificationExtenderServiceOverrideProperties.class);
-//      threadAndTaskWait();
-//
-//      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-//      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
-//
-//      // Test - First notification should be the summary
-//      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
-//      assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
-//      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT)
-//         assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
-//
-//      // Test - Make sure summary build saved and used the developer's extender settings for the body and title
-//      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2) {
-//         CharSequence[] lines = postedSummaryNotification.notif.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
-//         for (CharSequence line : lines)
-//            assertEquals("[Modified Tile] [Modified Body(ContentText)]", line.toString());
-//      }
-//   }
+      // 2. First notification should be the summary with the custom sound set
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      assertThat(postedSummaryNotification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertEquals("content://media/internal/audio/media/32", postedSummaryNotification.notif.sound.toString());
+
+      // 3. Individual notification 1 should not play a sound
+      PostedNotification notification = postedNotifsIterator.next().getValue();
+      assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertNull(notification.notif.sound);
+
+      // 4. Individual notification 2 should not play a sound
+      notification = postedNotifsIterator.next().getValue();
+      assertThat(notification.notif.flags & Notification.DEFAULT_SOUND, not(Notification.DEFAULT_SOUND));
+      assertNull(notification.notif.sound);
+   }
+
+   /**
+    * Test to make sure changed bodies and titles are used for the summary notification
+    * @see #testNotificationExtensionServiceOverridePropertiesWithSummaryApi17
+    * @see #testNotificationExtensionServiceOverridePropertiesWithSummary
+    */
+   private void setupNotificationExtensionServiceOverridePropertiesWithSummary() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingOverrideProperties");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Post 2 notifications with the same grp key so a summary is generated
+      Bundle bundle = getBaseNotifBundle("UUID1");
+      bundle.putString("grp", "test1");
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      bundle = getBaseNotifBundle("UUID2");
+      bundle.putString("grp", "test1");
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
+
+      // 4. First notification should be the summary
+      PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
+      assertEquals("2 new messages", postedSummaryNotification.getShadow().getContentText());
+      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT)
+         assertEquals(Notification.FLAG_GROUP_SUMMARY, postedSummaryNotification.notif.flags & Notification.FLAG_GROUP_SUMMARY);
+
+      // 5. Make sure summary build saved and used the developer's extender settings for the body and title
+      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2) {
+         CharSequence[] lines = postedSummaryNotification.notif.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+         for (CharSequence line : lines)
+            assertEquals("[Modified Title] [Modified Body(ContentText)]", line.toString());
+      }
+   }
+
+   /**
+    * @see #testNotificationExtensionServiceOverridePropertiesWithSummaryApi17
+    * @see #testNotificationExtensionServiceOverridePropertiesWithSummary
+    */
+   public static class NotificationExtensionService_notificationProcessingOverrideProperties implements OneSignal.NotificationProcessingHandler {
+
+      @Override
+      public void notificationProcessing(Context context, OSNotificationReceived notification) {
+         OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
+         overrideSettings.extender = new NotificationCompat.Extender() {
+            @Override
+            public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
+               // Must disable the default sound when setting a custom one
+               try {
+                  Field mNotificationField = NotificationCompat.Builder.class.getDeclaredField("mNotification");
+                  mNotificationField.setAccessible(true);
+                  Notification mNotification = (Notification) mNotificationField.get(builder);
+
+                  mNotification.flags &= ~Notification.DEFAULT_SOUND;
+                  builder.setDefaults(mNotification.flags);
+               } catch (Throwable t) {
+                  t.printStackTrace();
+               }
+
+               return builder.setSound(Uri.parse("content://media/internal/audio/media/32"))
+                       .setColor(new BigInteger("FF00FF00", 16).intValue())
+                       .setContentTitle("[Modified Title]")
+                       .setStyle(new NotificationCompat.BigTextStyle().bigText("[Modified Body(bigText)]"))
+                       .setContentText("[Modified Body(ContentText)]");
+            }
+         };
+         notification.setModifiedContent(overrideSettings);
+
+         // Display called to show notification
+         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
+
+         // Complete is called to end NotificationProcessingHandler
+         notification.complete();
+      }
+   }
+
+   @Test
+   @Config(shadows = {ShadowOneSignal.class})
+   public void testNotificationExtensionService_notificationProcessingProperties() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingProperties");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Test that WorkManager begins processing the notification
+      boolean ret = FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+      assertTrue(ret);
+
+      // 4. Receive a notification with all data fields used
+      FCMBroadcastReceiver_processBundle(blankActivity, getBundleWithAllOptionsSet());
+      threadAndTaskWait();
+
+      // 5. Evaluate the notification received within the NotificationProcessingHandler
+      OSNotificationReceived notificationReceived = NotificationExtensionService_notificationProcessingProperties.notification;
+      OSNotificationPayload notificationPayload = notificationReceived.payload;
+      assertEquals("Test H", notificationPayload.title);
+      assertEquals("Test B", notificationPayload.body);
+      assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationID);
+
+      assertEquals(0, notificationPayload.lockScreenVisibility);
+      assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
+      assertEquals("703322744261", notificationPayload.fromProjectNumber);
+      assertEquals("FFFFFF00", notificationPayload.ledColor);
+      assertEquals("big_picture", notificationPayload.bigPicture);
+      assertEquals("large_icon", notificationPayload.largeIcon);
+      assertEquals("small_icon", notificationPayload.smallIcon);
+      assertEquals("test_sound", notificationPayload.sound);
+      assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
+      assertEquals("http://google.com", notificationPayload.launchURL);
+      assertEquals(10, notificationPayload.priority);
+      assertEquals("a_key", notificationPayload.collapseId);
+
+      assertEquals("id1", notificationPayload.actionButtons.get(0).id);
+      assertEquals("button1", notificationPayload.actionButtons.get(0).text);
+      assertEquals("ic_menu_share", notificationPayload.actionButtons.get(0).icon);
+      assertEquals("id2", notificationPayload.actionButtons.get(1).id);
+      assertEquals("button2", notificationPayload.actionButtons.get(1).text);
+      assertEquals("ic_menu_send", notificationPayload.actionButtons.get(1).icon);
+
+      assertEquals("test_image_url", notificationPayload.backgroundImageLayout.image);
+      assertEquals("FF000000", notificationPayload.backgroundImageLayout.titleTextColor);
+      assertEquals("FFFFFFFF", notificationPayload.backgroundImageLayout.bodyTextColor);
+
+      JSONObject additionalData = notificationPayload.additionalData;
+      assertEquals("myValue", additionalData.getString("myKey"));
+      assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
+
+      // 6. Make sure the notification id is not -1 (not restoring)
+      assertThat(NotificationExtensionService_notificationProcessingProperties.notificationId, not(-1));
+
+      // 7. Test a basic notification without anything special
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+      assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
+
+      // 8. Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception
+      NotificationExtensionService_notificationProcessingProperties.throwInAppCode = true;
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle("NewUUID1"));
+      threadAndTaskWait();
+
+      // 9. Make sure 3 notifications have been posted
+      assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      assertEquals(3, postedNotifs.size());
+   }
+
+   /**
+    * @see #testNotificationExtensionService_notificationProcessingProperties
+    */
+   public static class NotificationExtensionService_notificationProcessingProperties implements OneSignal.NotificationProcessingHandler {
+      public static OSNotificationReceived notification;
+      public static int notificationId = -1;
+      public static boolean throwInAppCode;
+
+      @Override
+      public void notificationProcessing(Context context, OSNotificationReceived notification) {
+         if (throwInAppCode)
+            throw new NullPointerException();
+
+         NotificationExtensionService_notificationProcessingProperties.notification = notification;
+
+         OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
+         notification.setModifiedContent(overrideSettings);
+
+         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
+         notificationId = notificationDisplayedResult.androidNotificationId;
+
+         notification.complete();
+      }
+   }
+
+   @Test
+   public void testNotificationProcessing_twoNotificationsWithSameOverrideAndroidNotificationId() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingOverrideAndroidNotification");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Generate two notifications with different API notification ids
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle("NewUUID1"));
+      threadAndTaskWait();
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle("NewUUID2"));
+      threadAndTaskWait();
+
+      // 4. Only 1 notification count should exist since the same Android Notification Id was used
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+   }
+
+   /**
+    * @see #testNotificationProcessing_twoNotificationsWithSameOverrideAndroidNotificationId
+    */
+   public static class NotificationExtensionService_notificationProcessingOverrideAndroidNotification implements OneSignal.NotificationProcessingHandler {
+
+      @Override
+      public void notificationProcessing(final Context context, OSNotificationReceived notification) {
+         OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
+         overrideSettings.androidNotificationId = 1;
+         notification.setModifiedContent(overrideSettings);
+
+         // Display called to show notification
+         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
+
+         // Complete is called to end NotificationProcessingHandler
+         notification.complete();
+      }
+   }
+
+   @Test
+   public void testNotificationProcessing_whenAlertIsNull() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingDisplayAndComplete");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Receive a notification
+      Bundle bundle = getBaseNotifBundle();
+      bundle.remove("alert");
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      // 4. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationProcessing_whenAlertIsNull
+    */
+   public static class NotificationExtensionService_notificationProcessingDisplayAndComplete implements OneSignal.NotificationProcessingHandler {
+
+      @Override
+      public void notificationProcessing(Context context, OSNotificationReceived notification) {
+         // Display called to show notification
+         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
+
+         // Complete is called to end NotificationProcessingHandler
+         notification.complete();
+      }
+   }
 
    @Test
    public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
@@ -1711,7 +1876,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
@@ -1934,80 +2099,6 @@ public class GenerateNotificationRunner {
    private void startNotificationExtensionService(String servicePath) {
       OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationExtensionServiceClass", servicePath);
    }
-
-//   @Test
-//   @Config(shadows = {ShadowOneSignal.class})
-//   public void shouldFireNotificationExtenderService() throws Exception {
-//      // Test that FCM receiver starts the NotificationExtenderServiceTest when it is in the AndroidManifest.xml
-//      Bundle bundle = getBaseNotifBundle();
-//
-//      Intent serviceIntent = new Intent();
-//      serviceIntent.setPackage("com.onesignal.example");
-//      serviceIntent.setAction("com.onesignal.NotificationExtender");
-//      ResolveInfo resolveInfo = new ResolveInfo();
-//      resolveInfo.serviceInfo = new ServiceInfo();
-//      resolveInfo.serviceInfo.name = "com.onesignal.example.NotificationExtenderServiceTest";
-//      shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(serviceIntent, resolveInfo);
-//
-//      boolean ret = OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-//      threadAndTaskWait();
-//      assertTrue(ret);
-//
-//      // Test that all options are set.
-//      NotificationExtenderServiceTest service = (NotificationExtenderServiceTest)startNotificationExtender(createInternalPayloadBundle(getBundleWithAllOptionsSet()),
-//                                                                          NotificationExtenderServiceTest.class);
-//
-//      OSNotificationReceived notificationReceived = service.notification;
-//      OSNotificationPayload notificationPayload = notificationReceived.payload;
-//      assertEquals("Test H", notificationPayload.title);
-//      assertEquals("Test B", notificationPayload.body);
-//      assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationID);
-//
-//      assertEquals(0, notificationPayload.lockScreenVisibility);
-//      assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
-//      assertEquals("703322744261", notificationPayload.fromProjectNumber);
-//      assertEquals("FFFFFF00", notificationPayload.ledColor);
-//      assertEquals("big_picture", notificationPayload.bigPicture);
-//      assertEquals("large_icon", notificationPayload.largeIcon);
-//      assertEquals("small_icon", notificationPayload.smallIcon);
-//      assertEquals("test_sound", notificationPayload.sound);
-//      assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
-//      assertEquals("http://google.com", notificationPayload.launchURL);
-//      assertEquals(10, notificationPayload.priority);
-//      assertEquals("a_key", notificationPayload.collapseId);
-//
-//      assertEquals("id1", notificationPayload.actionButtons.get(0).id);
-//      assertEquals("button1", notificationPayload.actionButtons.get(0).text);
-//      assertEquals("ic_menu_share", notificationPayload.actionButtons.get(0).icon);
-//      assertEquals("id2", notificationPayload.actionButtons.get(1).id);
-//      assertEquals("button2", notificationPayload.actionButtons.get(1).text);
-//      assertEquals("ic_menu_send", notificationPayload.actionButtons.get(1).icon);
-//
-//      assertEquals("test_image_url", notificationPayload.backgroundImageLayout.image);
-//      assertEquals("FF000000", notificationPayload.backgroundImageLayout.titleTextColor);
-//      assertEquals("FFFFFFFF", notificationPayload.backgroundImageLayout.bodyTextColor);
-//
-//      JSONObject additionalData = notificationPayload.additionalData;
-//      assertEquals("myValue", additionalData.getString("myKey"));
-//      assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
-//
-//      assertThat(service.notificationId, not(-1));
-//
-//      // Test a basic notification without anything special.
-//      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle()), NotificationExtenderServiceTest.class);
-//      threadAndTaskWait();
-//      assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
-//
-//      // Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception.
-//      NotificationExtenderServiceTest.throwInAppCode = true;
-//      startNotificationExtender(createInternalPayloadBundle(getBaseNotifBundle("NewUUID1")), NotificationExtenderServiceTest.class);
-//      threadAndTaskWait();
-//
-//      assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
-//      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-//      assertEquals(3, postedNotifs.size());
-//   }
-   
    
    /* Helpers */
    
@@ -2056,68 +2147,6 @@ public class GenerateNotificationRunner {
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { "created_time" }, null, null, null, null, null);
       assertEquals(expected, cursor.getCount());
       cursor.close();
-   }
-
-   
-   static int overrideNotificationId;
-   public static class NotificationExtenderServiceTest implements OneSignal.NotificationProcessingHandler {
-      public OSNotificationReceived notification;
-      public int notificationId = -1;
-      public static boolean throwInAppCode;
-
-      @Override
-      public void notificationProcessing(Context context, OSNotificationReceived notification) {
-         if (throwInAppCode)
-            throw new NullPointerException();
-
-         this.notification = notification;
-
-         OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
-         if (overrideNotificationId != -1)
-            overrideSettings.androidNotificationId = overrideNotificationId;
-
-
-         notification.setModifiedContent(overrideSettings);
-         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
-         notificationId = notificationDisplayedResult.androidNotificationId;
-
-         notification.complete();
-      }
-   }
-   
-   public static class NotificationExtenderServiceOverrideProperties implements OneSignal.NotificationProcessingHandler {
-      
-      @Override
-      public void notificationProcessing(Context context, OSNotificationReceived notification) {
-         
-         OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
-         overrideSettings.extender = new NotificationCompat.Extender() {
-            @Override
-            public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
-               // Must disable the default sound when setting a custom one
-               try {
-                  Field mNotificationField = NotificationCompat.Builder.class.getDeclaredField("mNotification");
-                  mNotificationField.setAccessible(true);
-                  Notification mNotification = (Notification) mNotificationField.get(builder);
-
-                  mNotification.flags &= ~Notification.DEFAULT_SOUND;
-                  builder.setDefaults(mNotification.flags);
-               } catch (Throwable t) {
-                  t.printStackTrace();
-               }
-               
-               return builder.setSound(Uri.parse("content://media/internal/audio/media/32"))
-                   .setColor(new BigInteger("FF00FF00", 16).intValue())
-                   .setContentTitle("[Modified Tile]")
-                   .setStyle(new NotificationCompat.BigTextStyle().bigText("[Modified Body(bigText)]"))
-                   .setContentText("[Modified Body(ContentText)]");
-            }
-         };
-         notification.setModifiedContent(overrideSettings);
-         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
-
-         notification.complete();
-      }
    }
 
    private void addButtonsToReceivedPayload(@NonNull Bundle bundle) {

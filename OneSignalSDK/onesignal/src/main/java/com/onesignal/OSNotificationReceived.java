@@ -45,7 +45,7 @@ public class OSNotificationReceived extends OSTimeoutHandler {
    public boolean isRestoring;
    public boolean isAppInFocus;
 
-   OSNotificationExtender notificationExtender;
+   private OSNotificationExtender notificationExtender;
 
    OSNotificationReceived(Context context, int androidNotificationId, JSONObject jsonPayload, boolean isRestoring, boolean isAppInFocus, long timestamp) {
       this.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(jsonPayload);
@@ -67,6 +67,18 @@ public class OSNotificationReceived extends OSTimeoutHandler {
             complete();
          }
       });
+   }
+
+   private boolean isDeveloperProcessed() {
+      return notificationExtender.developerProcessed;
+   }
+
+   private boolean hasNotificationDisplayedResult() {
+      return notificationExtender.notificationDisplayedResult != null;
+   }
+
+   boolean displayed() {
+      return isDeveloperProcessed() && hasNotificationDisplayedResult();
    }
 
    /**

@@ -60,12 +60,10 @@ class OSNotificationWorkManager {
                         timestamp);
 
             } catch (JSONException e) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ending the current notification worker");
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error occurred doing work for job with id: " + getId().toString());
                 e.printStackTrace();
                 return Result.failure();
             }
-
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ending the current notification worker");
             return Result.success();
         }
 
@@ -80,10 +78,18 @@ class OSNotificationWorkManager {
             );
 
             if (OneSignal.notificationProcessingHandler != null)
-                OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
-            else if (!notificationReceived.notificationExtender.developerProcessed && notificationReceived.notificationExtender.notificationDisplayedResult == null) {
-                // noinspection ConstantConditions - displayNotification might have been called by the developer
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
+                try {
+                    OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
+                } catch (Throwable t) {
+                    if (!notificationReceived.displayed()) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
+                        notificationReceived.complete();
+                    }
+                    else
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
+                }
+            else if (!notificationReceived.displayed()) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
                 notificationReceived.complete();
             }
         }

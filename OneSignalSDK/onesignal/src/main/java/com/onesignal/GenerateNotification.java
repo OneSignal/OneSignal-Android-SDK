@@ -28,13 +28,10 @@
 package com.onesignal;
 
 import android.R.drawable;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -45,12 +42,13 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import androidx.annotation.RequiresApi;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -114,12 +112,20 @@ class GenerateNotification {
          return;
 
       // New thread so that any Network usage is off the main thread before showing the notification
-      new Thread(new Runnable() {
+      Thread thread = new Thread(new Runnable() {
          @Override
          public void run() {
             showNotification(notifJob);
          }
-      }, OS_SHOW_NOTIFICATION_THREAD).start();
+      }, OS_SHOW_NOTIFICATION_THREAD);
+      thread.start();
+
+      // Stop all code until thread is done doing work to show notification
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
    }
    
    private static CharSequence getTitle(JSONObject fcmJson) {
@@ -373,7 +379,7 @@ class GenerateNotification {
       try {
          Field mNotificationField = NotificationCompat.Builder.class.getDeclaredField("mNotification");
          mNotificationField.setAccessible(true);
-         Notification mNotification = (Notification) mNotificationField.get(notifBuilder);
+         Notification mNotification = (Notification)mNotificationField.get(notifBuilder);
 
          notifJob.orgFlags = mNotification.flags;
          notifJob.orgSound = mNotification.sound;
@@ -490,9 +496,9 @@ class GenerateNotification {
              retColumn,
              whereStr,
              whereArgs,
-             null,                                                    // group by
-             null,                                                    // filter by row groups
-             NotificationTable._ID + " DESC"                          // sort order, new to old
+             null,                              // group by
+             null,                              // filter by row groups
+             NotificationTable._ID + " DESC"    // sort order, new to old
          );
          
          if (cursor.moveToFirst()) {

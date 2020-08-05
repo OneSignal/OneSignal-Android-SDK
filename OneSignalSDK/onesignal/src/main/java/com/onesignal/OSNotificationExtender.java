@@ -33,9 +33,6 @@ import androidx.core.app.NotificationCompat;
 
 import org.json.JSONObject;
 
-/**
- *
- */
 public class OSNotificationExtender {
 
    // The extension service app AndroidManifest.xml meta data tag key name
@@ -56,6 +53,9 @@ public class OSNotificationExtender {
 
          if (overrideSettings.androidNotificationId != null)
             androidNotificationId = overrideSettings.androidNotificationId;
+
+         if (overrideSettings.extender != null)
+            extender = overrideSettings.extender;
       }
    }
 
@@ -91,6 +91,9 @@ public class OSNotificationExtender {
     * @see OSNotificationReceived#setModifiedContent(OverrideSettings)
     */
    void setModifiedContent(OverrideSettings overrideSettings) {
+      if (overrideSettings == null)
+         return;
+
       if (currentBaseOverrideSettings == null)
          currentBaseOverrideSettings = new OverrideSettings();
 
@@ -202,10 +205,12 @@ public class OSNotificationExtender {
       try {
          Class<?> clazz = Class.forName(className);
          Object clazzInstance = clazz.newInstance();
-         if (clazzInstance instanceof OneSignal.NotificationProcessingHandler) {
+         // Make sure a NotificationProcessingHandler exists and notificationProcessingHandler has not been set yet
+         if (clazzInstance instanceof OneSignal.NotificationProcessingHandler && OneSignal.notificationProcessingHandler == null) {
             OneSignal.setNotificationProcessingHandler((OneSignal.NotificationProcessingHandler) clazzInstance);
          }
-         if (clazzInstance instanceof OneSignal.ExtNotificationWillShowInForegroundHandler) {
+         // Make sure a ExtNotificationWillShowInForegroundHandler exists and extNotificationWillShowInForegroundHandler has not been set yet
+         if (clazzInstance instanceof OneSignal.ExtNotificationWillShowInForegroundHandler && OneSignal.extNotificationWillShowInForegroundHandler == null) {
             OneSignal.setExtNotificationWillShowInForegroundHandler((OneSignal.ExtNotificationWillShowInForegroundHandler) clazzInstance);
          }
       } catch (IllegalAccessException e) {

@@ -29,7 +29,6 @@ package com.onesignal;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
@@ -166,14 +165,14 @@ class NotificationBundleProcessor {
     //   * Collapse key / id support - Used to lookup the android notification id later
     //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
     //   * Future - Public API to get a list of notifications
-    private static void saveNotification(OSNotificationGenerationJob notifiJob, boolean opened) {
-        Context context = notifiJob.context;
-        JSONObject jsonPayload = notifiJob.jsonPayload;
+    private static void saveNotification(OSNotificationGenerationJob notifJob, boolean opened) {
+        Context context = notifJob.context;
+        JSONObject jsonPayload = notifJob.jsonPayload;
 
         try {
-            JSONObject customJSON = getCustomJSONObject(notifiJob.jsonPayload);
+            JSONObject customJSON = getCustomJSONObject(notifJob.jsonPayload);
 
-            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
             SQLiteDatabase writableDb = null;
 
             try {
@@ -183,8 +182,8 @@ class NotificationBundleProcessor {
 
                 // Count any notifications with duplicated android notification ids as dismissed.
                 // -1 is used to note never displayed
-                if (notifiJob.isNotificationToDisplay()) {
-                    String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
+                if (notifJob.isNotificationToDisplay()) {
+                    String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifJob.getAndroidIdWithoutCreate();
 
                     ContentValues values = new ContentValues();
                     values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
@@ -203,12 +202,12 @@ class NotificationBundleProcessor {
 
                 values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
                 if (!opened)
-                    values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.getAndroidIdWithoutCreate());
+                    values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifJob.getAndroidIdWithoutCreate());
 
-                if (notifiJob.getTitle() != null)
-                    values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
-                if (notifiJob.getBody() != null)
-                    values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
+                if (notifJob.getTitle() != null)
+                    values.put(NotificationTable.COLUMN_NAME_TITLE, notifJob.getTitle().toString());
+                if (notifJob.getBody() != null)
+                    values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifJob.getBody().toString());
 
                 // Set expire_time
                 long sentTime = jsonPayload.optLong("google.sent_time", SystemClock.currentThreadTimeMillis()) / 1_000L;
@@ -524,7 +523,7 @@ class NotificationBundleProcessor {
         // Service maybe triggered without extras on some Android devices on boot.
         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/99
         if (bundle == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "");
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Notification bundle is null, not passing the notification to the work manager");
             return false;
         }
 
@@ -549,6 +548,7 @@ class NotificationBundleProcessor {
                 isHighPriority
         );
 
+        result.isWorkManagerProcessing = true;
         return true;
     }
 
@@ -580,9 +580,10 @@ class NotificationBundleProcessor {
         boolean isOneSignalPayload;
         boolean isDup;
         boolean inAppPreviewShown;
+        boolean isWorkManagerProcessing;
 
         boolean processed() {
-            return !isOneSignalPayload || isDup || inAppPreviewShown;
+            return !isOneSignalPayload || isDup || inAppPreviewShown || isWorkManagerProcessing;
         }
     }
 }

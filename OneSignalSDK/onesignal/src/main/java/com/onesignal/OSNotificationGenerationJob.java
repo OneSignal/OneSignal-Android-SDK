@@ -83,6 +83,7 @@ public class OSNotificationGenerationJob {
     Integer getAndroidId() {
         if (overrideSettings == null)
             overrideSettings = new OSNotificationExtender.OverrideSettings();
+
         if (overrideSettings.androidNotificationId == null)
             overrideSettings.androidNotificationId = new SecureRandom().nextInt();
 
