@@ -193,6 +193,7 @@ class NotificationRestorer {
 
       boolean useNotificationProcessor = OneSignal.notificationProcessingHandler != null;
       do {
+         String osNotificationId = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_NOTIFICATION_ID));
          int existingAndroidNotifId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
          String fullData = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
          long timestamp = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
@@ -200,6 +201,7 @@ class NotificationRestorer {
          if (useNotificationProcessor) {
             OSNotificationWorkManager.beginEnqueueingWork(
                     context,
+                    osNotificationId,
                     existingAndroidNotifId,
                     fullData,
                     true,

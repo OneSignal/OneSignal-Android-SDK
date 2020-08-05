@@ -173,7 +173,19 @@ public class OneSignal {
    }
 
    /**
-    *
+    * Meant to be implemented within a custom made NotificationExtensionService
+    * Naming can be whatever makes the most sense to the developer, but to actually activate any
+    *    implemented interfaces, a metadata tag with a specific OneSignal key and then file path value
+    *    must be added to the apps AndroidManifest.xml
+    *       ex. <meta-data android:name="com.onesignal.NotificationExtensionServiceClass" android:value="com.company.ExtensionService" />
+    * <br/><br/>
+    * Allows for modification of a notifications payload by creating a {@link com.onesignal.OSNotificationExtender.OverrideSettings}
+    *    instance and passing it into {@link OSNotificationReceived#setModifiedContent(OSNotificationExtender.OverrideSettings)}
+    * To display the notification, call {@link OSNotificationReceived#display()}
+    * Finally, to notify the SDK that the processing work is done, call {@link OSNotificationReceived#complete()}
+    * <br/><br/>
+    * TODO: Update docs with new NotificationProcessingHandler, this would be replacing the old NotificationExtenderService
+    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationreceivedhandler">NotificationReceivedHandler | OneSignal Docs</a>
     */
    public interface NotificationProcessingHandler {
 
@@ -2011,7 +2023,11 @@ public class OneSignal {
       return openResult;
    }
 
-   static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
+   private static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
+      // TODO: Is there a reason we need the opened handler to be fired from main thread?
+
+      // TODO: Once the NotificationOpenedHandler gets a Worker, we should make sure we add a catch
+      //    like we have implemented for the NotificationProcessingHandler and NotificationWillShowInForegroundHandlers
       OSUtils.runOnMainUIThread(new Runnable() {
          @Override
          public void run() {
@@ -2065,18 +2081,40 @@ public class OneSignal {
     * If both handlers are set or only the extNotificationWillShowInForegroundHandler is set, fire the extNotificationWillShowInForegroundHandler
     * If the extNotificationWillShowInForegroundHandler is NOT set, the appNotificationWillShowInForegroundHandler will start
     * <br/><br/>
+    * @see OneSignal#fireExtNotificationWillShowInForegroundHandler(ExtNotificationGenerationJob)
+    * @see OneSignal#fireAppNotificationWillShowInForegroundHandler(AppNotificationGenerationJob)
     * @see OneSignal.ExtNotificationWillShowInForegroundHandler
     * @see OneSignal.AppNotificationWillShowInForegroundHandler
     */
    static void fireForegroundHandlers(OSNotificationGenerationJob notifJob) {
       if (OneSignal.extNotificationWillShowInForegroundHandler == null) {
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "No extNotificationWillShowInForegroundHandler setup, fire appNotificationWillShowInForegroundHandler");
-         OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toAppNotificationGenerationJob());
+         fireAppNotificationWillShowInForegroundHandler(notifJob.toAppNotificationGenerationJob());
          return;
       }
 
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "extNotificationWillShowInForegroundHandler and appNotificationWillShowInForegroundHandler setup, fire extNotificationWillShowInForegroundHandler");
-      OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(notifJob.toExtNotificationGenerationJob());
+      fireExtNotificationWillShowInForegroundHandler(notifJob.toExtNotificationGenerationJob());
+   }
+
+   static void fireExtNotificationWillShowInForegroundHandler(ExtNotificationGenerationJob extNotifJob) {
+      try {
+         OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(extNotifJob);
+      } catch (Throwable t) {
+         OneSignal.onesignalLog(LOG_LEVEL.ERROR, "Exception thrown while notification was being processed for display by extNotificationWillShowInForegroundHandler, attempting to call appNotificationWillShowInForegroundHandler!");
+         extNotifJob.complete(true);
+         throw t;
+      }
+   }
+
+   static void fireAppNotificationWillShowInForegroundHandler(AppNotificationGenerationJob appNotifJob) {
+      try {
+         OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(appNotifJob);
+      } catch (Throwable t) {
+         OneSignal.onesignalLog(LOG_LEVEL.ERROR, "Exception thrown while notification was being processed for display by appNotificationWillShowInForegroundHandler, showing notification in foreground!");
+         appNotifJob.complete();
+         throw t;
+      }
    }
 
    /**

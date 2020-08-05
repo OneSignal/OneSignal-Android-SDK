@@ -1169,9 +1169,9 @@ public class MainOneSignalClassRunner {
       boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
 
+      assertTrue(processResult);
       assertNull(lastNotificationOpenedBody);
-      assertFalse(processResult);
-      // NotificationBundleProcessor.Process(...) will be called if processResult is true as a service
+
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
       assertEquals("Robo test message", notificationReceivedBody);
       assertNotEquals(0, androidNotificationId);

@@ -4,6 +4,7 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
@@ -19,9 +20,8 @@ class OSNotificationWorkManager {
     private static final String TIMESTAMP_WORKER_DATA_PARAM = "timestamp";
     private static final String IS_RESTORING_WORKER_DATA_PARAM = "is_restoring";
 
-    static void beginEnqueueingWork(Context context, int androidNotificationId, String jsonPayload, boolean isRestoring, long timestamp, boolean isHighPriority) {
-        // TODO: Do we need isHighPriority only more?
-
+    static void beginEnqueueingWork(Context context, String osNotificationId, int androidNotificationId, String jsonPayload, boolean isRestoring, long timestamp, boolean isHighPriority) {
+        // TODO: Need to figure out how to implement the isHighPriority param
         Data inputData = new Data.Builder()
                 .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
                 .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload)
@@ -33,7 +33,8 @@ class OSNotificationWorkManager {
                 .setInputData(inputData)
                 .build();
 
-        WorkManager.getInstance(context).enqueue(workRequest);
+        WorkManager.getInstance(context)
+                .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest);
     }
 
     public static class NotificationWorker extends Worker {
@@ -60,12 +61,10 @@ class OSNotificationWorkManager {
                         timestamp);
 
             } catch (JSONException e) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ending the current notification worker");
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error occurred doing work for job with id: " + getId().toString());
                 e.printStackTrace();
                 return Result.failure();
             }
-
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Ending the current notification worker");
             return Result.success();
         }
 
@@ -80,10 +79,20 @@ class OSNotificationWorkManager {
             );
 
             if (OneSignal.notificationProcessingHandler != null)
-                OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
-            else if (!notificationReceived.notificationExtender.developerProcessed && notificationReceived.notificationExtender.notificationDisplayedResult == null) {
-                // noinspection ConstantConditions - displayNotification might have been called by the developer
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
+                try {
+                    OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
+                } catch (Throwable t) {
+                    if (!notificationReceived.displayed()) {
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
+                        notificationReceived.complete();
+                    }
+                    else
+                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
+
+                    throw t;
+                }
+            else if (!notificationReceived.displayed()) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
                 notificationReceived.complete();
             }
         }

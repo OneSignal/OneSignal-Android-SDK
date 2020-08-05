@@ -108,12 +108,20 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
-   public static OSRemoteParamController OneSignal_getRemoteParamController() {
-      return OneSignal.getRemoteParamController();
+   /**
+    * Only necessary when not fully init OneSignal SDK
+    * setAppContext required to setup a notification extension service
+    */
+   public static void OneSignal_setupNotificationExtensionServiceClass() {
+      OSNotificationExtender.setupNotificationExtensionServiceClass();
    }
 
    public static void OneSignal_savePrivacyConsentRequired(boolean required) {
       OneSignal_getRemoteParamController().savePrivacyConsentRequired(required);
+   }
+
+   public static OSRemoteParamController OneSignal_getRemoteParamController() {
+      return OneSignal.getRemoteParamController();
    }
 
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
