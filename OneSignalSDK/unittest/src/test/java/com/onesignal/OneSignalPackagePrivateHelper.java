@@ -203,8 +203,8 @@ public class OneSignalPackagePrivateHelper {
       NotificationOpenedProcessor.processFromContext(context, intent);
    }
 
-   public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
-      NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
+   public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, OneSignalDb db, String group, boolean dismissed) {
+      NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, db, group, dismissed);
    }
 
    public class TestOneSignalPrefs extends com.onesignal.OneSignalPrefs {}
@@ -244,18 +244,9 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   public static SQLiteDatabase OneSignal_getSQLiteDatabase(Context context) {
-      return OneSignalDbHelper.getInstance(context).getSQLiteDatabase();
-   }
-
-   public static void OneSignal_cleanOutcomeDatabaseTable(Context context) {
-      OneSignalDbHelper.cleanOutcomeDatabaseTable(
-              OneSignal_getSQLiteDatabase(context));
-   }
-
    public static class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
-      public static void update(SQLiteDatabase readableDb, Context context) {
-         com.onesignal.BadgeCountUpdater.update(readableDb, context);
+      public static void update(OneSignalDb db, Context context) {
+         com.onesignal.BadgeCountUpdater.update(db, context);
       }
    }
 

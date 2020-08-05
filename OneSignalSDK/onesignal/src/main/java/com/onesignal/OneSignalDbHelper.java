@@ -27,14 +27,18 @@
 
 package com.onesignal;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteCantOpenDatabaseException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.SystemClock;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.onesignal.OneSignalDbContract.InAppMessageTable;
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -49,7 +53,9 @@ import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OU
 import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
 
 class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
+
    static final int DATABASE_VERSION = 8;
+   private static final Object LOCK = new Object();
    private static final String DATABASE_NAME = "OneSignal.db";
 
    private static final String INTEGER_PRIMARY_KEY_TYPE = " INTEGER PRIMARY KEY";
@@ -98,6 +104,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       NotificationTable.INDEX_CREATE_EXPIRE_TIME
    };
 
+   private static OSLogger logger = new OSLogWrapper();
    private static OneSignalDbHelper sInstance;
    private static OSOutcomeTableProvider outcomeTableProvider = new OSOutcomeTableProvider();
 
@@ -117,9 +124,13 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
 
    }
 
-   public static synchronized OneSignalDbHelper getInstance(Context context) {
-      if (sInstance == null)
-         sInstance = new OneSignalDbHelper(context.getApplicationContext());
+   public static OneSignalDbHelper getInstance(Context context) {
+      if (sInstance == null) {
+         synchronized (LOCK) {
+            if (sInstance == null)
+               sInstance = new OneSignalDbHelper(context.getApplicationContext());
+         }
+      }
       return sInstance;
    }
 
@@ -132,17 +143,19 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
     * <br/><br/>
     * @see <a href="https://stackoverflow.com/questions/2493331/what-are-the-best-practices-for-sqlite-on-android/3689883#3689883">StackOverflow | What are best practices for SQLite on Android</a>
     */
-   synchronized SQLiteDatabase getSQLiteDatabase() {
-      try {
-         return getWritableDatabase();
-      } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
-         // SQLiteCantOpenDatabaseException
-         // Retry in-case of rare device issues with opening database.
-         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/136
-         // SQLiteDatabaseLockedException
-         // Retry in-case of rare device issues with locked database.
-         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/988
-         throw e;
+   private SQLiteDatabase getSQLiteDatabase() {
+      synchronized (LOCK) {
+         try {
+            return getWritableDatabase();
+         } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
+            // SQLiteCantOpenDatabaseException
+            // Retry in-case of rare device issues with opening database.
+            // https://github.com/OneSignal/OneSignal-Android-SDK/issues/136
+            // SQLiteDatabaseLockedException
+            // Retry in-case of rare device issues with locked database.
+            // https://github.com/OneSignal/OneSignal-Android-SDK/issues/988
+            throw e;
+         }
       }
    }
 
@@ -152,16 +165,122 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
     * <br/><br/>
     * @see OneSignalDbHelper#getSQLiteDatabase()
     */
+   private SQLiteDatabase getSQLiteDatabaseWithRetries() {
+      synchronized (LOCK) {
+         int count = 0;
+         while (true) {
+            try {
+               return getSQLiteDatabase();
+            } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
+               if (++count >= DB_OPEN_RETRY_MAX)
+                  throw e;
+               SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
+            }
+         }
+      }
+   }
+
    @Override
-   public synchronized SQLiteDatabase getSQLiteDatabaseWithRetries() {
-      int count = 0;
-      while(true) {
+   public Cursor query(@NonNull String table, @Nullable String[] columns, @Nullable String selection,
+                       String[] selectionArgs, @Nullable String groupBy, @Nullable String having,
+                       @Nullable String orderBy) {
+      synchronized (LOCK) {
+         return getSQLiteDatabaseWithRetries().query(table, columns, selection, selectionArgs, groupBy, having, orderBy);
+      }
+   }
+
+   @Override
+   public Cursor query(@NonNull String table, @Nullable String[] columns, @Nullable String selection,
+                       @Nullable String[] selectionArgs, @Nullable String groupBy, @Nullable String having,
+                       @Nullable String orderBy, @Nullable String limit) {
+      synchronized (LOCK) {
+         return getSQLiteDatabaseWithRetries().query(table, columns, selection, selectionArgs, groupBy, having, orderBy, limit);
+      }
+   }
+
+   @Override
+   public void insert(@NonNull String table, @Nullable String nullColumnHack, @Nullable ContentValues values) {
+      synchronized (LOCK) {
+         SQLiteDatabase writableDb = getSQLiteDatabaseWithRetries();
          try {
-            return getWritableDatabase();
-         } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
-            if (++count >= DB_OPEN_RETRY_MAX)
-               throw e;
-            SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
+            writableDb.beginTransaction();
+            writableDb.insert(table, nullColumnHack, values);
+            writableDb.setTransactionSuccessful();
+         } finally {
+            try {
+               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+            } catch (SQLException e) {
+               logger.error("Error closing transaction! ", e);
+            }
+         }
+      }
+   }
+
+   @Override
+   public void insertOrThrow(@NonNull String table, @Nullable String nullColumnHack, @Nullable ContentValues values)
+           throws SQLException {
+      synchronized (LOCK) {
+         SQLiteDatabase writableDb = getSQLiteDatabaseWithRetries();
+         try {
+            writableDb.beginTransaction();
+            writableDb.insertOrThrow(table, nullColumnHack, values);
+            writableDb.setTransactionSuccessful();
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error inserting under table: " + table, t);
+         } finally {
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (Throwable t) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               }
+            }
+         }
+      }
+   }
+
+   @Override
+   public int update(@NonNull String table, @NonNull ContentValues values, @Nullable String whereClause, @Nullable String[] whereArgs) {
+      int result = 0;
+      synchronized (LOCK) {
+         SQLiteDatabase writableDb = getSQLiteDatabaseWithRetries();
+         try {
+            writableDb.beginTransaction();
+            result = writableDb.update(table, values, whereClause, whereArgs);
+            writableDb.setTransactionSuccessful();
+         } catch (Throwable t) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error updating table: " + table, t);
+         } finally {
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (Throwable t) {
+                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               }
+            }
+         }
+      }
+      return result;
+   }
+
+   @Override
+   public void delete(@NonNull String table, @Nullable String whereClause, @Nullable String[] whereArgs) {
+      synchronized (LOCK) {
+         SQLiteDatabase writableDb = getSQLiteDatabaseWithRetries();
+         try {
+            writableDb.beginTransaction();
+            writableDb.delete(table, whereClause, whereArgs);
+            writableDb.setTransactionSuccessful();
+         } catch (SQLiteException e) {
+            logger.error("Error deleting on table: " + table, e);
+         } finally {
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (SQLiteException e) {
+                  logger.error("Error closing transaction! ", e);
+               }
+            }
          }
       }
    }

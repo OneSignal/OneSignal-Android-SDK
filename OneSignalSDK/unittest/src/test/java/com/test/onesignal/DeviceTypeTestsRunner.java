@@ -14,10 +14,9 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_ANDROID;
-import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_HUAWEI;
 import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_FIREOS;
+import static com.onesignal.OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_HUAWEI;
 import static com.onesignal.OneSignalPackagePrivateHelper.getDeviceType;
-
 import static org.junit.Assert.assertEquals;
 
 @Config(

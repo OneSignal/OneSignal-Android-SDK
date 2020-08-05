@@ -144,7 +144,6 @@ import static org.robolectric.Shadows.shadowOf;
         },
         sdk = 21
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class GenerateNotificationRunner {
    
@@ -250,8 +249,8 @@ public class GenerateNotificationRunner {
       JobScheduler scheduler = (JobScheduler)blankActivity.getSystemService(Context.JOB_SCHEDULER_SERVICE);
       assertTrue(scheduler.getAllPendingJobs().isEmpty());
    }
-   
-   
+
+
    private static OSNotificationOpenResult lastOpenResult;
    
    @Test
@@ -880,8 +879,7 @@ public class GenerateNotificationRunner {
       advanceSystemTimeBy(604_801);
 
       // Should not count as a badge
-      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      OneSignalPackagePrivateHelper.BadgeCountUpdater.update(readableDb, blankActivity);
+      OneSignalPackagePrivateHelper.BadgeCountUpdater.update(dbHelper, blankActivity);
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
@@ -974,8 +972,7 @@ public class GenerateNotificationRunner {
    
    @Test
    public void shouldHandleOpeningInAppAlertWithGroupKeySet() {
-      SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "some_group", false);
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, dbHelper, "some_group", false);
    }
    
    @Test
@@ -991,8 +988,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
    
       // Test1 - Manually trigger a refresh on grouped notification.
-      SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, dbHelper, "test1", false);
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    
    
@@ -1002,8 +998,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity, bundle, null);
    
       // Test2 - Manually trigger a refresh on grouped notification.
-      writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "test1", false);
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, dbHelper, "test1", false);
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
    }
    

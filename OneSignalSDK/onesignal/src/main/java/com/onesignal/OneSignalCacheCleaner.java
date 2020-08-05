@@ -1,8 +1,6 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.database.SQLException;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Process;
 import android.support.annotation.WorkerThread;
 
@@ -24,9 +22,7 @@ class OneSignalCacheCleaner {
      */
     static void cleanOldCachedData(final Context context) {
         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-
-        cleanNotificationCache(writableDb);
+        cleanNotificationCache(dbHelper);
         cleanCachedInAppMessages(dbHelper);
     }
 
@@ -35,24 +31,14 @@ class OneSignalCacheCleaner {
      * 1. NotificationTable.TABLE_NAME
      * 2. CachedUniqueOutcomeNotificationTable.TABLE_NAME
      */
-    synchronized static void cleanNotificationCache(final SQLiteDatabase writableDb) {
+    synchronized static void cleanNotificationCache(final OneSignalDbHelper writableDb) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
-                writableDb.beginTransaction();
-                try {
-                    cleanCachedNotifications(writableDb);
-                    cleanCachedUniqueOutcomeEventNotifications(writableDb);
-                    writableDb.setTransactionSuccessful();
-                } finally {
-                    try {
-                        writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-                    } catch (SQLException t) {
-                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-                    }
-                }
+                cleanCachedNotifications(writableDb);
+                cleanCachedUniqueOutcomeEventNotifications(writableDb);
             }
 
         }, OS_DELETE_CACHED_NOTIFICATIONS_THREAD).start();
@@ -82,15 +68,16 @@ class OneSignalCacheCleaner {
     /**
      * Deletes notifications with created timestamps older than 7 days
      * <br/><br/>
-     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)}
+     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(OneSignalDbHelper)}
      * <br/><br/>
-     * @see OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)
+     *
+     * @see OneSignalCacheCleaner#cleanNotificationCache(OneSignalDbHelper)
      */
-    private static void cleanCachedNotifications(SQLiteDatabase writableDb) {
+    private static void cleanCachedNotifications(OneSignalDbHelper writableDb) {
         String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
 
         String sevenDaysAgoInSeconds = String.valueOf((System.currentTimeMillis() / 1_000L) - NOTIFICATION_CACHE_DATA_LIFETIME);
-        String[] whereArgs = new String[]{ sevenDaysAgoInSeconds };
+        String[] whereArgs = new String[]{sevenDaysAgoInSeconds};
 
         writableDb.delete(
                 NotificationTable.TABLE_NAME,
@@ -101,11 +88,12 @@ class OneSignalCacheCleaner {
     /**
      * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
      * <br/><br/>
-     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)}
+     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(OneSignalDbHelper)}
      * <br/><br/>
-     * @see OneSignalCacheCleaner#cleanNotificationCache(SQLiteDatabase)
+     *
+     * @see OneSignalCacheCleaner#cleanNotificationCache(OneSignalDbHelper)
      */
-    private static void cleanCachedUniqueOutcomeEventNotifications(SQLiteDatabase writableDb) {
+    private static void cleanCachedUniqueOutcomeEventNotifications(OneSignalDbHelper writableDb) {
         String whereStr = "NOT EXISTS(" +
                 "SELECT NULL FROM " + NotificationTable.TABLE_NAME + " n " +
                 "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + OSOutcomeTableProvider.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
@@ -117,5 +105,5 @@ class OneSignalCacheCleaner {
                 whereStr,
                 null);
     }
-  
+
 }
