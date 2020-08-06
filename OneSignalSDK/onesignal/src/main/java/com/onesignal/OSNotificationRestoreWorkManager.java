@@ -3,6 +3,7 @@ package com.onesignal;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
@@ -31,11 +32,13 @@ class OSNotificationRestoreWorkManager {
     // E/NotificationService: Package enqueue rate is 10.56985. Shedding events. package=####
     private static final int DELAY_BETWEEN_NOTIFICATION_RESTORES_MS = 200;
 
+    static final int DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200;
+
     // Notifications will never be force removed when the app's process is running,
     //   so we only need to restore at most once per cold start of the app.
     public static boolean restored;
 
-    static void beginEnqueueingWork(Context context) {
+    public static void beginEnqueueingWork(Context context) {
         OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(NotificationRestoreWorker.class)
                 // TODO: Is this the correct usage of the restore delay in seconds
                 .setInitialDelay(RESTORE_NOTIFICATIONS_DELAY_SECONDS, TimeUnit.SECONDS)
@@ -99,7 +102,7 @@ class OSNotificationRestoreWorkManager {
                     OneSignalDbContract.NotificationTable._ID + " DESC", // sort order, new to old
                     NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
             );
-            showNotificationsFromCursor(cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
+            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
             BadgeCountUpdater.update(readableDb, context);
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
@@ -139,22 +142,23 @@ class OSNotificationRestoreWorkManager {
      * @param cursor - Source cursor to generate notifications from
      * @param delay - Delay to slow down process to ensure we don't spike CPU and I/O on the device
      */
-    static void showNotificationsFromCursor(Cursor cursor, int delay) {
+    static void showNotificationsFromCursor(Context context, Cursor cursor, int delay) {
         if (!cursor.moveToFirst())
             return;
 
         do {
             int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
             String fullData = cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA));
-            Long datetime = cursor.getLong(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME));
-            boolean isRestoring = true;
+            long dateTime = cursor.getLong(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME));
 
-            // TODO: Use the OSNotificationWorkManager here instead of RestoreJobService for each notification
-            //      so that the all 4 steps occur:
-            //  1. NotificationProcessingHandler
-            //  2. ExtNotificationProcessingHandler
-            //  3. AppNotificationProcessingHandler
-            //  4. Showing the notification
+            OSNotificationWorkManager.beginEnqueueingWork(
+                    context,
+                    existingId,
+                    fullData,
+                    true,
+                    dateTime,
+                    false
+            );
 
             if (delay > 0)
                 OSUtils.sleep(delay);

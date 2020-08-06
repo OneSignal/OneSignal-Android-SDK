@@ -61,11 +61,10 @@ import com.onesignal.OSNotificationReceived;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.NotificationRestorer;
+import com.onesignal.OneSignalPackagePrivateHelper.OSNotificationRestoreWorkManager;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
-import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
@@ -190,7 +189,7 @@ public class GenerateNotificationRunner {
 
       NotificationManager notificationManager = OneSignalNotificationManagerPackageHelper.getNotificationManager(blankActivity);
       notificationManager.cancelAll();
-      NotificationRestorer.restored = false;
+      OSNotificationRestoreWorkManager.restored = false;
 
       // Set remote_params GET response
       setRemoteParamsGetHtmlResponse();
@@ -265,7 +264,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // Restore notifs
-      NotificationRestorer.restore(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
       threadAndTaskWait();
 
       // Assert that no restoration jobs were scheduled
@@ -623,7 +622,6 @@ public class GenerateNotificationRunner {
       // Test - 3 notifis + 1 summary
       assertEquals(4, postedNotifs.size());
       
-      
       // Test - First notification should be the summary
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
       assertEquals("3 new messages", postedSummaryNotification.getShadow().getContentText());
@@ -717,20 +715,22 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldSetBadgesWhenRestoringNotifications() {
+   public void shouldSetBadgesWhenRestoringNotifications() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
       ShadowBadgeCountUpdater.lastCount = 0;
 
-      NotificationRestorer.restore(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
+      threadAndTaskWait();
 
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    }
 
-   @Test public void shouldNotRestoreNotificationsIfPermissionIsDisabled() {
+   @Test public void shouldNotRestoreNotificationsIfPermissionIsDisabled() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       ShadowNotificationManagerCompat.enabled = false;
-      NotificationRestorer.restore(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
+      threadAndTaskWait();
 
       assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
    }
@@ -858,38 +858,40 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldRestoreNotifications() {
-      NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
+   public void shouldRestoreNotifications() throws Exception {
+      restoreNotifications();
+      threadAndTaskWait();
+
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
 
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
-      NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
-      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      assertEquals(RestoreJobService.class.getName(), intent.getComponent().getClassName());
+      restoreNotifications();
+      threadAndTaskWait();
+
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+
+//      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
+//      assertEquals(RestoreJobService.class.getName(), intent.getComponent().getClassName());
 
       // Go forward 1 week
       // Note: Does not effect the SQL function strftime
       advanceSystemTimeBy(604_801);
 
       // Restorer should not fire service since the notification is over 1 week old.
-      NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
-      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
-   }
+      restoreNotifications();
+      threadAndTaskWait();
+//      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
 
-   private void assertRestoreRan() {
-      Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
-      assertEquals(RestoreJobService.class.getName(), intent.getComponent().getClassName());
-   }
-   private void assertRestoreDidNotRun() {
-      assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
+      assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    private void restoreNotifications() {
-      NotificationRestorer.restored = false;
-      NotificationRestorer.restore(blankActivity);
+      OSNotificationRestoreWorkManager.restored = false;
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
    }
 
-   private void helperShouldRestoreNotificationsPastExpireTime(boolean should) {
+   private void helperShouldRestoreNotificationsPastExpireTime(boolean should) throws Exception {
       long ttl = 60L;
       Bundle bundle = getBaseNotifBundle();
       bundle.putLong("google.sent_time", System.currentTimeMillis());
@@ -897,24 +899,26 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       restoreNotifications();
-      assertRestoreRan();
+      threadAndTaskWait();
+
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Go forward just past the TTL of the notification
       advanceSystemTimeBy(ttl + 1);
       restoreNotifications();
       if (should)
-         assertRestoreRan();
+         assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       else
-         assertRestoreDidNotRun();
+         assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
-   public void doNotRestoreNotificationsPastExpireTime() {
+   public void doNotRestoreNotificationsPastExpireTime() throws Exception {
       helperShouldRestoreNotificationsPastExpireTime(false);
    }
 
    @Test
-   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() {
+   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() throws Exception {
       TestOneSignalPrefs.saveBool(TestOneSignalPrefs.PREFS_ONESIGNAL, TestOneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
       helperShouldRestoreNotificationsPastExpireTime(true);
    }
