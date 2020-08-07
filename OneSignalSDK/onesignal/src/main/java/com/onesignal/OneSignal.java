@@ -305,7 +305,7 @@ public class OneSignal {
    private static OSTaskController taskController = new OSTaskController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
-   private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger);
+   private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger, time);
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
@@ -2951,7 +2951,7 @@ public class OneSignal {
    }
 
    @NonNull
-   public static OSTime getTime() {
+   static OSTime getTime() {
       return time;
    }
    /*

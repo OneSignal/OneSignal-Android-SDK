@@ -2,6 +2,7 @@ package com.onesignal.influence.data
 
 import com.onesignal.OSLogger
 import com.onesignal.OSSharedPreferences
+import com.onesignal.OSTime
 import com.onesignal.OneSignal.AppEntryAction
 import com.onesignal.OneSignalRemoteParams.InfluenceParams
 import com.onesignal.influence.OSInfluenceConstants
@@ -11,7 +12,7 @@ import org.json.JSONObject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class OSTrackerFactory(preferences: OSSharedPreferences, logger: OSLogger) {
+class OSTrackerFactory(preferences: OSSharedPreferences, logger: OSLogger, timeProvider: OSTime) {
     private val trackers = ConcurrentHashMap<String, OSChannelTracker>()
     private val dataRepository: OSInfluenceDataRepository = OSInfluenceDataRepository(preferences)
 
@@ -36,8 +37,8 @@ class OSTrackerFactory(preferences: OSSharedPreferences, logger: OSLogger) {
         }
 
     init {
-        trackers[OSInfluenceConstants.IAM_TAG] = OSInAppMessageTracker(dataRepository, logger)
-        trackers[OSInfluenceConstants.NOTIFICATION_TAG] = OSNotificationTracker(dataRepository, logger)
+        trackers[OSInfluenceConstants.IAM_TAG] = OSInAppMessageTracker(dataRepository, logger, timeProvider)
+        trackers[OSInfluenceConstants.NOTIFICATION_TAG] = OSNotificationTracker(dataRepository, logger, timeProvider)
     }
 
     fun initFromCache() {

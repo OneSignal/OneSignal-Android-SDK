@@ -1,6 +1,7 @@
 package com.onesignal.influence.data
 
 import com.onesignal.OSLogger
+import com.onesignal.OSTime
 import com.onesignal.OneSignal
 import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
@@ -10,7 +11,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-abstract class OSChannelTracker internal constructor(protected var dataRepository: OSInfluenceDataRepository, var logger: OSLogger) {
+abstract class OSChannelTracker internal constructor(protected var dataRepository: OSInfluenceDataRepository, var logger: OSLogger, var timeProvider: OSTime) {
     var influenceType: OSInfluenceType? = null
     var indirectIds: JSONArray? = null
     var directId: String? = null
@@ -73,7 +74,6 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
 
     /**
      * Get all received ids that may influence actions
-     *
      * @return ids that happen between attribution window
      */
     val lastReceivedIds: JSONArray
@@ -83,7 +83,7 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
                 val lastChannelObjectReceived = lastChannelObjects
                 logger.debug("OneSignal ChannelTracker getLastReceivedIds lastChannelObjectReceived: $lastChannelObjectReceived")
                 val attributionWindow = indirectAttributionWindow * 60 * 1000L
-                val currentTime = OneSignal.getTime().currentTimeMillis
+                val currentTime = timeProvider.currentTimeMillis
                 for (i in 0 until lastChannelObjectReceived.length()) {
                     val jsonObject = lastChannelObjectReceived.getJSONObject(i)
                     val time = jsonObject.getLong(OSInfluenceConstants.TIME)
@@ -118,7 +118,7 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
         logger.debug("OneSignal OSChannelTracker for: $idTag saveLastId with lastChannelObjectsReceived: $lastChannelObjectsReceived")
 
         try {
-            OneSignal.getTime().run {
+            timeProvider.run {
                 JSONObject()
                         .put(idTag, id)
                         .put(OSInfluenceConstants.TIME, currentTimeMillis)

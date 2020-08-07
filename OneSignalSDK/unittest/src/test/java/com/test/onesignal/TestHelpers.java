@@ -18,7 +18,7 @@ import androidx.work.Configuration;
 import androidx.work.testing.SynchronousExecutor;
 import androidx.work.testing.WorkManagerTestInitHelper;
 
-import com.onesignal.MockOSTime;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -244,11 +244,11 @@ public class TestHelpers {
       Log.d(TAG, "fastColdRestartApp finished");
    }
 
-   static void restartAppAndElapseTimeToNextSession(MockOSTime time) throws Exception {
+   static void restartAppAndElapseTimeToNextSession(MockOSTimeImpl time) throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      advanceSystemAndElapsedTimeBy(time,31);
+      time.advanceSystemAndElapsedTimeBy(31);
       Log.d(TAG, "restartAppAndElapseTimeToNextSession finished");
    }
 
@@ -502,17 +502,6 @@ public class TestHelpers {
 
    static void resetSystemClock() {
       SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
-   }
-
-   static void advanceSystemTimeBy(MockOSTime time, long sec) {
-      long ms = sec * 1_000L;
-      time.setMockedTime(time.getCurrentTimeMillis() + ms);
-   }
-
-   static void advanceSystemAndElapsedTimeBy(MockOSTime time, long sec) {
-      long ms = sec * 1_000L;
-      time.setMockedElapsedTime(time.getCurrentTimeMillis() + ms);
-      advanceSystemTimeBy(time, sec);
    }
 
    public static void assertMainThread() {

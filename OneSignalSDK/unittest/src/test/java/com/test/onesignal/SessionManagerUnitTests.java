@@ -31,6 +31,7 @@ import android.support.annotation.NonNull;
 
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
@@ -100,8 +101,9 @@ public class SessionManagerUnitTests {
     @Before // Before each test
     public void beforeEachTest() throws Exception {
         MockOSLog logger = new MockOSLog();
+        MockOSTimeImpl time = new MockOSTimeImpl();
         preferences = new MockOSSharedPreferences();
-        trackerFactory = new OSTrackerFactory(preferences, logger);
+        trackerFactory = new OSTrackerFactory(preferences, logger, time);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
         TestHelpers.beforeTestInitAndCleanup();
     }

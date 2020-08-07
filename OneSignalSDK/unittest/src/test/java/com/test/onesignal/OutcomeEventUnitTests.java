@@ -33,6 +33,7 @@ import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
@@ -119,11 +120,12 @@ public class OutcomeEventUnitTests {
     public void beforeEachTest() throws Exception {
         outcomeEvents = null;
 
+        MockOSTimeImpl time = new MockOSTimeImpl();
         dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
         // Mock on a custom HashMap in order to not use custom context
         preferences = new MockOSSharedPreferences();
 
-        trackerFactory = new OSTrackerFactory(preferences, logWrapper);
+        trackerFactory = new OSTrackerFactory(preferences, logWrapper, time);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
         service = new MockOneSignalAPIClient();
         OSOutcomeEventsFactory factory = new OSOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);

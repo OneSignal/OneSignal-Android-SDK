@@ -1,8 +1,6 @@
 package com.onesignal;
 
-import android.os.SystemClock;
-
-public class MockOSTime implements OSTime {
+public class MockOSTimeImpl extends OSTimeImpl {
 
     private Long mockedTime = null;
     private Long mockedElapsedTime = null;
@@ -16,17 +14,17 @@ public class MockOSTime implements OSTime {
 
     @Override
     public long getCurrentTimeMillis() {
-        return mockedTime != null ? mockedTime : System.currentTimeMillis();
+        return mockedTime != null ? mockedTime : super.getCurrentTimeMillis();
     }
 
     @Override
     public long getElapsedRealtime() {
-        return mockedElapsedTime != null ? mockedElapsedTime : SystemClock.elapsedRealtime();
+        return mockedElapsedTime != null ? mockedElapsedTime : super.getElapsedRealtime();
     }
 
     @Override
     public long getCurrentThreadTimeMillis() {
-        return mockedCurrentThreadTimeMillis != null ? mockedCurrentThreadTimeMillis : SystemClock.currentThreadTimeMillis();
+        return mockedCurrentThreadTimeMillis != null ? mockedCurrentThreadTimeMillis : super.getCurrentThreadTimeMillis();
     }
 
     public void setMockedTime(Long mockedTime) {
@@ -40,4 +38,16 @@ public class MockOSTime implements OSTime {
     public void setMockedCurrentThreadTimeMillis(Long mockedCurrentThreadTimeMillis) {
         this.mockedCurrentThreadTimeMillis = mockedCurrentThreadTimeMillis;
     }
+
+    public void advanceSystemTimeBy(long sec) {
+        long ms = sec * 1_000L;
+        setMockedTime(getCurrentTimeMillis() + ms);
+    }
+
+    public void advanceSystemAndElapsedTimeBy(long sec) {
+        long ms = sec * 1_000L;
+        setMockedElapsedTime(getCurrentTimeMillis() + ms);
+        advanceSystemTimeBy(sec);
+    }
+
 }

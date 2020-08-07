@@ -8,7 +8,7 @@ import androidx.test.core.app.ApplicationProvider;
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
-import com.onesignal.MockOSTime;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSInAppMessageAction;
@@ -68,7 +68,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertMeasureOnV2AtIndex;
-import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -104,7 +103,7 @@ public class InAppMessageIntegrationTests {
     private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
     private static final int LIMIT = 5;
     private static final int DELAY = 60;
-    private MockOSTime time;
+    private MockOSTimeImpl time;
     private MockOSSharedPreferences preferences;
     private OSTrackerFactory trackerFactory;
     private MockSessionManager sessionManager;
@@ -130,9 +129,9 @@ public class InAppMessageIntegrationTests {
     @Before
     public void beforeEachTest() throws Exception {
         ShadowDynamicTimer.shouldScheduleTimers = true;
-        time = new MockOSTime();
+        time = new MockOSTimeImpl();
         preferences = new MockOSSharedPreferences();
-        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
+        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog(), time);
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
@@ -554,7 +553,7 @@ public class InAppMessageIntegrationTests {
         // Enable IAM v2
         preferences = new MockOSSharedPreferences();
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
-        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
+        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog(), time);
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
 
         OneSignal_setSharedPreferences(preferences);
@@ -637,7 +636,7 @@ public class InAppMessageIntegrationTests {
         // Enable IAM v2
         preferences = new MockOSSharedPreferences();
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
-        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
+        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog(), time);
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
 
         OneSignal_setSharedPreferences(preferences);
@@ -698,7 +697,7 @@ public class InAppMessageIntegrationTests {
         // Enable IAM v2
         preferences = new MockOSSharedPreferences();
         preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
-        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog());
+        trackerFactory = new OSTrackerFactory(preferences, new MockOSLog(), time);
         sessionManager = new MockSessionManager(OneSignal_getSessionListener(), trackerFactory, new MockOSLog());
 
         OneSignal_setSharedPreferences(preferences);
@@ -1153,7 +1152,7 @@ public class InAppMessageIntegrationTests {
         assertTrue(lastDisplayTime > 0);
 
         // Change time for delay to be covered
-        advanceSystemTimeBy(time, DELAY);
+        time.advanceSystemTimeBy(DELAY);
         // Set same trigger, should display again
         OneSignal.addTrigger("test_1", 2);
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
@@ -1199,7 +1198,7 @@ public class InAppMessageIntegrationTests {
             add(message);
         }});
         // Change time for delay to be covered
-        advanceSystemTimeBy(time, DELAY);
+        time.advanceSystemTimeBy(DELAY);
 
         // Init OneSignal with IAM with redisplay
         OneSignalInit();
@@ -1220,7 +1219,7 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // Change time for delay to be covered
-        advanceSystemTimeBy(time, DELAY * 2);
+        time.advanceSystemTimeBy(DELAY * 2);
         // Add trigger to call evaluateInAppMessage
         OneSignal.addTrigger("test_1", 2);
         // IAM shouldn't display again because It don't have triggers
@@ -1253,7 +1252,7 @@ public class InAppMessageIntegrationTests {
 
         OneSignal.addTrigger("test_1", 2);
         // Wait for the delay between redisplay
-        advanceSystemTimeBy(time, DELAY);
+        time.advanceSystemTimeBy(DELAY);
         assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
 
         // Remove trigger, IAM should display again
@@ -1323,7 +1322,7 @@ public class InAppMessageIntegrationTests {
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
-        advanceSystemTimeBy(time, DELAY);
+        time.advanceSystemTimeBy(DELAY);
 
         // Set trigger, will evaluate IAMs again
         OneSignal.addTrigger("test_1", 2);
@@ -1368,7 +1367,7 @@ public class InAppMessageIntegrationTests {
         assertTrue(lastDisplayTime > 0);
 
         // Wait for the delay between redisplay
-        advanceSystemTimeBy(time, DELAY);
+        time.advanceSystemTimeBy(DELAY);
         // Swipe away app
         fastColdRestartApp();
         // Cold Start app

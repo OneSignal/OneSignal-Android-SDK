@@ -1,6 +1,7 @@
 package com.onesignal.influence.data
 
 import com.onesignal.OSLogger
+import com.onesignal.OSTime
 import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.influence.domain.OSInfluenceChannel
@@ -9,7 +10,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-internal class OSNotificationTracker(dataRepository: OSInfluenceDataRepository, logger: OSLogger) : OSChannelTracker(dataRepository, logger) {
+internal class OSNotificationTracker(dataRepository: OSInfluenceDataRepository, logger: OSLogger, timeProvider: OSTime) : OSChannelTracker(dataRepository, logger, timeProvider) {
     override fun getLastChannelObjectsReceivedByNewId(id: String?): JSONArray {
         return try {
             lastChannelObjects

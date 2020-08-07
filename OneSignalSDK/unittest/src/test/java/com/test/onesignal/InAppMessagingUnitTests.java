@@ -2,10 +2,11 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+
 import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
-import com.onesignal.MockOSTime;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -46,7 +47,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTrigge
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
-import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
 import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
@@ -199,7 +199,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayDelay() throws JSONException {
-        MockOSTime time = new MockOSTime();
+        MockOSTimeImpl time = new MockOSTimeImpl();
         OneSignal_setTime(time);
         OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
@@ -208,12 +208,12 @@ public class InAppMessagingUnitTests {
 
         assertTrue(message.getRedisplayStats().isDelayTimeSatisfied());
 
-        message.getRedisplayStats().setLastDisplayTimeToCurrent();
-        advanceSystemTimeBy(DELAY);
+        message.getRedisplayStats().setLastDisplayTimeToCurrent(time);
+        time.advanceSystemTimeBy(DELAY);
         assertTrue(message.getRedisplayStats().isDelayTimeSatisfied());
 
-        message.getRedisplayStats().setLastDisplayTimeToCurrent();
-        advanceSystemTimeBy(DELAY - 1);
+        message.getRedisplayStats().setLastDisplayTimeToCurrent(time);
+        time.advanceSystemTimeBy(DELAY - 1);
         assertFalse(message.getRedisplayStats().isDelayTimeSatisfied());
     }
 

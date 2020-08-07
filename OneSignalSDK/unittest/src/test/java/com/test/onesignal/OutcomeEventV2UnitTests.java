@@ -33,6 +33,7 @@ import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
@@ -131,7 +132,8 @@ public class OutcomeEventV2UnitTests {
         String v2Name = preferences.getOutcomesV2KeyName();
         preferences.saveBool(preferences.getPreferencesName(), v2Name, true);
 
-        trackerFactory = new OSTrackerFactory(preferences, logWrapper);
+        MockOSTimeImpl time = new MockOSTimeImpl();
+        trackerFactory = new OSTrackerFactory(preferences, logWrapper, time);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
         service = new MockOneSignalAPIClient();
         OSOutcomeEventsFactory factory = new OSOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
