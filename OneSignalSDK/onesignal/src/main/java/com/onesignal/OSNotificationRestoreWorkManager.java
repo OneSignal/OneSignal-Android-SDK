@@ -25,8 +25,6 @@ class OSNotificationRestoreWorkManager {
             OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME
     };
 
-    private static final int RESTORE_NOTIFICATIONS_DELAY_SECONDS = 15;
-
     // Delay to prevent logcat messages and possibly skipping some notifications
     //    This prevents the following error;
     // E/NotificationService: Package enqueue rate is 10.56985. Shedding events. package=####
@@ -38,10 +36,12 @@ class OSNotificationRestoreWorkManager {
     //   so we only need to restore at most once per cold start of the app.
     public static boolean restored;
 
-    public static void beginEnqueueingWork(Context context) {
+    public static void beginEnqueueingWork(Context context, boolean shouldDelay) {
+        // When boot or upgrade, add a 15 second delay to alleviate app doing to much work all at once
+        int restoreDelayInSeconds = shouldDelay ? 15 : 0;
+
         OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(NotificationRestoreWorker.class)
-                // TODO: Is this the correct usage of the restore delay in seconds
-                .setInitialDelay(RESTORE_NOTIFICATIONS_DELAY_SECONDS, TimeUnit.SECONDS)
+                .setInitialDelay(restoreDelayInSeconds, TimeUnit.SECONDS)
                 .build();
 
         WorkManager.getInstance(context).enqueue(workRequest);
