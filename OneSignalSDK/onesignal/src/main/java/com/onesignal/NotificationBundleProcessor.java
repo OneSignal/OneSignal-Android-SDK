@@ -108,7 +108,7 @@ class NotificationBundleProcessor {
     /**
      * Recommended method to process notification before displaying
      * Only use the {@link NotificationBundleProcessor#processJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
-     *     in the event where you want to mark a notification as opened or displayed different than the defaults
+     *  in the event where you want to mark a notification as opened or displayed different than the defaults
      */
     static int processJobForDisplay(OSNotificationGenerationJob notifJob) {
         return processJobForDisplay(notifJob, false, true);
@@ -384,7 +384,6 @@ class NotificationBundleProcessor {
 
         return notification;
     }
-
 
     private static void setActionButtons(OSNotificationPayload notification) throws Throwable {
         if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {

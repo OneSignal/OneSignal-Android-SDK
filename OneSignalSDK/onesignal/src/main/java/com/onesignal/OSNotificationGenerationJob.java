@@ -252,15 +252,15 @@ public class OSNotificationGenerationJob {
 
             isComplete = true;
 
-            // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exi
-            //    or bubbling is set false
+            // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists
+            //  or bubbling is set false
             if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
                 GenerateNotification.fromJsonPayload(getNotifJob());
                 return;
             }
 
             // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
-            //    the notificationWillShowInForeground implementation
+            //  the notificationWillShowInForeground implementation
             OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(
                     getNotifJob().toAppNotificationGenerationJob());
         }
@@ -286,8 +286,8 @@ public class OSNotificationGenerationJob {
 
         /**
          * Method controlling completion from the AppNotificationWillShowInForegroundHandler
-         *    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
-         *    a 30 second timer and complete by default
+         * If a dev does not call this at the end of the notificationWillShowInForeground implementation,
+         *  a runnable will fire after a 30 second timer and complete by default
          */
         public synchronized void complete() {
             destroyTimeout();
@@ -297,7 +297,6 @@ public class OSNotificationGenerationJob {
 
             isComplete = true;
 
-            //
             GenerateNotification.fromJsonPayload(getNotifJob());
         }
     }

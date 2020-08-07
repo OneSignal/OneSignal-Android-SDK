@@ -110,7 +110,9 @@ public class OSNotificationReceived extends OSTimeoutHandler {
    }
 
    /**
-    *
+    * Method controlling completion from the NotificationProcessingHandler
+    * If a dev does not call this at the end of the notificationProcessing implementation,
+    *  a runnable will fire after a 5 second timer and complete by default
     */
    public synchronized void complete() {
       destroyTimeout();
