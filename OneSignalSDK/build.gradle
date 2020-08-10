@@ -4,7 +4,7 @@ buildscript {
     repositories {
         google()
         jcenter()
-        maven { url 'https://maven.google.com' }
+//        maven { url 'https://maven.google.com' }
         // OneSignal-Gradle-Plugin - Local testing
 //      maven { url uri('../../repo') }
         // OneSignal-Gradle-Plugin - Public version
@@ -16,7 +16,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:3.5.0'
 
-        classpath 'com.google.gms:google-services:4.3.2'
+//        classpath 'com.google.gms:google-services:4.3.2'
         classpath 'com.huawei.agconnect:agcp:1.2.1.301'
 
         // com.huawei.agconnect Gradle Plugin
@@ -36,7 +36,7 @@ allprojects {
         flatDir {
             dirs 'libs'
         }
-        maven { url 'https://maven.google.com' }
+//        maven { url 'https://maven.google.com' }
 
         // huawei maven
         maven { url 'http://developer.huawei.com/repo/' }
