@@ -39,8 +39,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
-import androidx.annotation.WorkerThread;
 import android.text.TextUtils;
+
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -83,6 +84,7 @@ class NotificationRestorer {
    private static final int RESTORE_KICKOFF_REQUEST_CODE = 2071862120;
 
    static final String[] COLUMNS_FOR_RESTORE = {
+       NotificationTable.COLUMN_NAME_NOTIFICATION_ID,
        NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
        NotificationTable.COLUMN_NAME_FULL_DATA,
        NotificationTable.COLUMN_NAME_CREATED_TIME
