@@ -27,8 +27,8 @@
 
 package com.onesignal;
 
-import android.app.NotificationChannel;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 import androidx.annotation.NonNull;
@@ -75,7 +75,7 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    public static LinkedHashMap<Integer, PostedNotification> notifications = new LinkedHashMap<>();
 
    private static ShadowRoboNotificationManager mInstance;
-   ShadowRoboNotificationManager() {
+   public ShadowRoboNotificationManager() {
       mInstance = this;
    }
    

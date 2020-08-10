@@ -169,8 +169,8 @@ class OneSignalPrefs {
             mHandler.removeCallbacksAndMessages(null);
 
             if (lastSyncTime == 0)
-                lastSyncTime = System.currentTimeMillis();
-            long delay = lastSyncTime - System.currentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
+                lastSyncTime = OneSignal.getTime().getCurrentTimeMillis();
+            long delay = lastSyncTime - OneSignal.getTime().getCurrentTimeMillis() + WRITE_CALL_DELAY_TO_BUFFER_MS;
 
             Runnable runnable = new Runnable() {
                 @Override
@@ -205,7 +205,7 @@ class OneSignalPrefs {
                 editor.apply();
             }
 
-            lastSyncTime = System.currentTimeMillis();
+            lastSyncTime = OneSignal.getTime().getCurrentTimeMillis();
         }
     }
 

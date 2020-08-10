@@ -1,6 +1,6 @@
 package com.onesignal.outcomes;
 
-import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.influence.domain.OSInfluenceType;
 
 import org.json.JSONArray;
 

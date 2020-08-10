@@ -8,11 +8,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Created by wuxuejian on 2016/10/9.

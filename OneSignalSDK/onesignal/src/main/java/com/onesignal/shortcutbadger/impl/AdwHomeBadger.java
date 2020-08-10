@@ -5,12 +5,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.shortcutbadger.util.BroadcastHelper;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Gernot Pansy

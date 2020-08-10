@@ -3,9 +3,9 @@ package com.onesignal;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.onesignal.influence.model.OSInfluenceType;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
-import com.onesignal.outcomes.model.OSOutcomeSource;
+import com.onesignal.influence.domain.OSInfluenceType;
+import com.onesignal.outcomes.domain.OSOutcomeEventParams;
+import com.onesignal.outcomes.domain.OSOutcomeSource;
 
 import org.json.JSONArray;
 import org.json.JSONException;

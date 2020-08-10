@@ -114,7 +114,7 @@ class LocationController {
       if (!hasLocationPermission(context) || !OneSignal.isLocationShared())
          return false;
 
-      long lastTime = System.currentTimeMillis() - getLastLocationTime();
+      long lastTime = OneSignal.getTime().getCurrentTimeMillis() - getLastLocationTime();
       long minTime = 1_000 * (OneSignal.isInForeground() ? TIME_FOREGROUND_SEC : TIME_BACKGROUND_SEC);
       long scheduleTime = minTime - lastTime;
 
@@ -336,7 +336,7 @@ class LocationController {
          }
       }
       // Save last time so even if a failure we trigger the same schedule update
-      setLastLocationTime(System.currentTimeMillis());
+      setLastLocationTime(OneSignal.getTime().getCurrentTimeMillis());
    }
 
    protected static void fireCompleteForLocation(Location location) {

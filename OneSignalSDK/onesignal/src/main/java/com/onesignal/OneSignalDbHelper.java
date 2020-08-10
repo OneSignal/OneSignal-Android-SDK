@@ -38,15 +38,16 @@ import android.os.SystemClock;
 
 import com.onesignal.OneSignalDbContract.InAppMessageTable;
 import com.onesignal.OneSignalDbContract.NotificationTable;
-import com.onesignal.outcomes.OSOutcomeTableProvider;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V1;
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V3;
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
+import static com.onesignal.outcomes.data.OutcomesDbContract.OUTCOME_EVENT_TABLE;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
 
 class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    static final int DATABASE_VERSION = 8;
@@ -298,7 +299,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    }
 
    static StringBuilder recentUninteractedWithNotificationsWhere() {
-      long currentTimeSec = System.currentTimeMillis() / 1_000L;
+      long currentTimeSec = OneSignal.getTime().getCurrentTimeMillis() / 1_000L;
       long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back
 
       StringBuilder where = new StringBuilder(
@@ -319,7 +320,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
 
    static void cleanOutcomeDatabaseTable(SQLiteDatabase writeableDb) {
       writeableDb.delete(
-              OSOutcomeTableProvider.OUTCOME_EVENT_TABLE,
+              OUTCOME_EVENT_TABLE,
               null,
               null);
    }

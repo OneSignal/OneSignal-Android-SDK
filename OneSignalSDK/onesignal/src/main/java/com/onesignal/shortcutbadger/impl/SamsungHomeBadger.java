@@ -9,12 +9,12 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.onesignal.shortcutbadger.Badger;
 import com.onesignal.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.shortcutbadger.util.CloseHelper;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Leo Lin

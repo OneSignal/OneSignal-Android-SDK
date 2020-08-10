@@ -8,11 +8,11 @@ import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import androidx.annotation.RequiresApi;
 
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import com.onesignal.OneSignalDbContract.NotificationTable;
 
 // Ensures old notifications are cleared up to a limit before displaying new ones
 class NotificationLimitManager {

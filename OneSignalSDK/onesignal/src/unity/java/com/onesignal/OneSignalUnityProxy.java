@@ -30,9 +30,11 @@ package com.onesignal;
 import android.app.Activity;
 import androidx.annotation.Nullable;
 import com.onesignal.OneSignal;
-import java.lang.reflect.Method;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.lang.reflect.Method;
 
 public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler, OneSignal.NotificationReceivedHandler, OSPermissionObserver, OSSubscriptionObserver, OSEmailSubscriptionObserver, OneSignal.InAppMessageClickHandler {
    private static String unityListenerName;

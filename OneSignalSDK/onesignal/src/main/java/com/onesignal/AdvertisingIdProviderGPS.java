@@ -27,9 +27,9 @@
 
 package com.onesignal;
 
-import com.google.android.gms.ads.identifier.AdvertisingIdClient;
-
 import android.content.Context;
+
+import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 
 class AdvertisingIdProviderGPS implements AdvertisingIdentifierProvider {
    

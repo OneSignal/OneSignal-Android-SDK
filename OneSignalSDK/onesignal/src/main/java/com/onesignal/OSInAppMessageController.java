@@ -601,7 +601,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void persistInAppMessage(final OSInAppMessage message) {
-        long displayTimeSeconds = System.currentTimeMillis() / 1000;
+        long displayTimeSeconds = OneSignal.getTime().getCurrentTimeMillis() / 1000;
         message.getRedisplayStats().setLastDisplayTime(displayTimeSeconds);
         message.getRedisplayStats().incrementDisplayQuantity();
         message.setTriggerChanged(false);

@@ -29,9 +29,10 @@ package com.onesignal;
 
 import androidx.annotation.Nullable;
 
+import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
+
 import org.json.JSONException;
 import org.json.JSONObject;
-import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 
 import java.util.HashMap;
 
