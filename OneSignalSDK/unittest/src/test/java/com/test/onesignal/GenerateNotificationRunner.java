@@ -176,9 +176,6 @@ public class GenerateNotificationRunner {
       lastExtNotifJob = null;
       lastAppNotifJob = null;
 
-      OneSignalShadowPackageManager.resetStatics();
-
-      TestHelpers.setupTestWorkManager(blankActivity);
       TestHelpers.beforeTestInitAndCleanup();
 
       setClearGroupSummaryClick(true);

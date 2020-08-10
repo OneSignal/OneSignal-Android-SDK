@@ -111,6 +111,10 @@ class GenerateNotification {
       if (notifJob.displayOption.isSilent())
          return;
 
+      // Runtime check against showing the notification from the main thread
+      if (OSUtils.isRunningOnMainThread())
+         throw new OSThrowable.OSMainThreadException("Process for showing a notification should never been done on Main Thread!");
+
       showNotification(notifJob);
    }
    

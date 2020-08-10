@@ -35,6 +35,7 @@ import static junit.framework.Assert.assertEquals;
     instrumentedPackages = { "com.onesignal" },
     packageName = "com.onesignal.example",
     shadows = {
+        ShadowOSUtils.class,
         ShadowRoboNotificationManager.class,
         ShadowNotificationManagerCompat.class
     },
