@@ -4,6 +4,7 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
@@ -19,9 +20,8 @@ class OSNotificationWorkManager {
     private static final String TIMESTAMP_WORKER_DATA_PARAM = "timestamp";
     private static final String IS_RESTORING_WORKER_DATA_PARAM = "is_restoring";
 
-    static void beginEnqueueingWork(Context context, int androidNotificationId, String jsonPayload, boolean isRestoring, long timestamp, boolean isHighPriority) {
+    static void beginEnqueueingWork(Context context, String osNotificationId, int androidNotificationId, String jsonPayload, boolean isRestoring, long timestamp, boolean isHighPriority) {
         // TODO: Need to figure out how to implement the isHighPriority param
-
         Data inputData = new Data.Builder()
                 .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
                 .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload)
@@ -33,7 +33,8 @@ class OSNotificationWorkManager {
                 .setInputData(inputData)
                 .build();
 
-        WorkManager.getInstance(context).enqueue(workRequest);
+        WorkManager.getInstance(context)
+                .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest);
     }
 
     public static class NotificationWorker extends Worker {

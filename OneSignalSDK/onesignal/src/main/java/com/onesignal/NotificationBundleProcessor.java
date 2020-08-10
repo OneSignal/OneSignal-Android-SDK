@@ -538,8 +538,10 @@ class NotificationBundleProcessor {
         if (!isRestoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
             return false;
 
+        String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
         OSNotificationWorkManager.beginEnqueueingWork(
                 context,
+                osNotificationId,
                 androidNotificationId,
                 jsonPayload.toString(),
                 isRestoring,
