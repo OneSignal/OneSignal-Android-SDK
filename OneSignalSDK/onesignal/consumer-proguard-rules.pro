@@ -33,7 +33,7 @@
 
 -keep class com.onesignal.shortcutbadger.impl.AdwHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.ApexHomeBadger { <init>(...); }
--keep class com.onesignal.shortcutbadger.impl.AsusHomeLauncher { <init>(...); }
+-keep class com.onesignal.shortcutbadger.impl.AsusHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.DefaultBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.EverythingMeHomeBadger { <init>(...); }
 -keep class com.onesignal.shortcutbadger.impl.HuaweiHomeBadger { <init>(...); }
