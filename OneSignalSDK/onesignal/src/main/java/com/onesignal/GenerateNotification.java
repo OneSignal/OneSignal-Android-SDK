@@ -111,21 +111,7 @@ class GenerateNotification {
       if (notifJob.displayOption.isSilent())
          return;
 
-      // New thread so that any Network usage is off the main thread before showing the notification
-      Thread thread = new Thread(new Runnable() {
-         @Override
-         public void run() {
-            showNotification(notifJob);
-         }
-      }, OS_SHOW_NOTIFICATION_THREAD);
-      thread.start();
-
-      // Stop all code until thread is done doing work to show notification
-      try {
-         thread.join();
-      } catch (InterruptedException e) {
-         e.printStackTrace();
-      }
+      showNotification(notifJob);
    }
    
    private static CharSequence getTitle(JSONObject fcmJson) {

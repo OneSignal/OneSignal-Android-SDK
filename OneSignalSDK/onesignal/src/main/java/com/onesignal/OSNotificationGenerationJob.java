@@ -261,8 +261,7 @@ public class OSNotificationGenerationJob {
 
             // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
             //  the notificationWillShowInForeground implementation
-            OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(
-                    getNotifJob().toAppNotificationGenerationJob());
+            OneSignal.fireAppNotificationWillShowInForegroundHandler(getNotifJob().toAppNotificationGenerationJob());
         }
     }
 

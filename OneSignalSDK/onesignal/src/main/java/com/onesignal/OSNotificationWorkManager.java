@@ -20,7 +20,7 @@ class OSNotificationWorkManager {
     private static final String IS_RESTORING_WORKER_DATA_PARAM = "is_restoring";
 
     static void beginEnqueueingWork(Context context, int androidNotificationId, String jsonPayload, boolean isRestoring, long timestamp, boolean isHighPriority) {
-        // TODO: Do we need isHighPriority only more?
+        // TODO: Need to figure out how to implement the isHighPriority param
 
         Data inputData = new Data.Builder()
                 .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
@@ -87,6 +87,8 @@ class OSNotificationWorkManager {
                     }
                     else
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
+
+                    throw t;
                 }
             else if (!notificationReceived.displayed()) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
