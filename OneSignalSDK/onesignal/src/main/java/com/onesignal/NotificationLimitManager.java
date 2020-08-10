@@ -1,20 +1,17 @@
 package com.onesignal;
 
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import android.support.annotation.RequiresApi;
 
-import java.util.ArrayList;
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import com.onesignal.OneSignalDbContract.NotificationTable;
 
 // Ensures old notifications are cleared up to a limit before displaying new ones
 class NotificationLimitManager {
@@ -84,8 +81,7 @@ class NotificationLimitManager {
 
       Cursor cursor = null;
       try {
-         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-         cursor = readableDb.query(
+         cursor = dbHelper.query(
             NotificationTable.TABLE_NAME,
             new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID },
             OneSignalDbHelper.recentUninteractedWithNotificationsWhere().toString(),

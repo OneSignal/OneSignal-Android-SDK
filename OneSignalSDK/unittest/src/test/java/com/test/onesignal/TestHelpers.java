@@ -6,7 +6,6 @@ import android.app.job.JobService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
@@ -22,9 +21,9 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowGcmBroadcastReceiver;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
+import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -240,8 +239,7 @@ public class TestHelpers {
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords(OneSignalDb db) {
-      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDatabase.query(
+      Cursor cursor = db.query(
          OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME,
          null,
          null,
@@ -274,9 +272,8 @@ public class TestHelpers {
       return mapList;
    }
 
-   static List<OutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) {
-      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDatabase.query(
+   static List<OutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) { ;
+      Cursor cursor = db.query(
               MockOSOutcomeEventsTable.TABLE_NAME,
               null,
               null,
@@ -308,14 +305,12 @@ public class TestHelpers {
       }
 
       cursor.close();
-      readableDatabase.close();
 
       return events;
    }
 
    static List<OSOutcomeEventDB> getAllOutcomesRecords(OneSignalDb db) {
-      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDatabase.query(
+      Cursor cursor = db.query(
               MockOSOutcomeEventsTable.TABLE_NAME,
               null,
               null,
@@ -353,14 +348,12 @@ public class TestHelpers {
       }
 
       cursor.close();
-      readableDatabase.close();
 
       return events;
    }
 
    static ArrayList<OSCachedUniqueOutcomeName> getAllUniqueOutcomeNotificationRecordsDBv5(OneSignalDb db) {
-      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDatabase.query(
+      Cursor cursor = db.query(
               MockOSCachedUniqueOutcomeTable.TABLE_NAME_V1,
               null,
               null,
@@ -384,14 +377,12 @@ public class TestHelpers {
       }
 
       cursor.close();
-      readableDatabase.close();
 
       return cachedUniqueOutcomes;
    }
 
    static ArrayList<OSCachedUniqueOutcomeName> getAllUniqueOutcomeNotificationRecordsDB(OneSignalDb db) {
-      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDatabase.query(
+      Cursor cursor = db.query(
               MockOSCachedUniqueOutcomeTable.TABLE_NAME_V2,
               null,
               null,
@@ -416,14 +407,11 @@ public class TestHelpers {
       }
 
       cursor.close();
-      readableDatabase.close();
 
       return cachedUniqueOutcomes;
    }
 
    synchronized static void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
-      SQLiteDatabase writableDatabase = db.getSQLiteDatabaseWithRetries();
-
       ContentValues values = new ContentValues();
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
@@ -431,13 +419,11 @@ public class TestHelpers {
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
-      writableDatabase.insert(OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME, null, values);
-      writableDatabase.close();
+      db.insert(OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME, null, values);
    }
 
    synchronized static List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
-      SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDatabase.query(
+      Cursor cursor = db.query(
               OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,
               null,
               null,

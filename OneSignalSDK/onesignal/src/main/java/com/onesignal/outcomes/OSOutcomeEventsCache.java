@@ -2,9 +2,6 @@ package com.onesignal.outcomes;
 
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.database.SQLException;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteException;
 import android.support.annotation.NonNull;
 import android.support.annotation.WorkerThread;
 
@@ -69,24 +66,8 @@ class OSOutcomeEventsCache {
      */
     @WorkerThread
     synchronized void deleteOldOutcomeEvent(OSOutcomeEventParams event) {
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-
-        try {
-            writableDb.beginTransaction();
-            writableDb.delete(OutcomeEventsTable.TABLE_NAME,
-                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?", new String[]{String.valueOf(event.getTimestamp())});
-            writableDb.setTransactionSuccessful();
-        } catch (SQLiteException e) {
-            logger.error("Error deleting old outcome event records! ", e);
-        } finally {
-            if (writableDb != null) {
-                try {
-                    writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-                } catch (SQLiteException e) {
-                    logger.error("Error closing transaction! ", e);
-                }
-            }
-        }
+        dbHelper.delete(OutcomeEventsTable.TABLE_NAME,
+                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?", new String[]{String.valueOf(event.getTimestamp())});
     }
 
     /**
@@ -132,31 +113,19 @@ class OSOutcomeEventsCache {
                 }
             }
         }
+        ContentValues values = new ContentValues();
+        // Save influence ids
+        values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds.toString());
+        values.put(OutcomeEventsTable.COLUMN_NAME_IAM_IDS, iamIds.toString());
+        // Save influence types
+        values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, notificationInfluenceType.toString().toLowerCase());
+        values.put(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, iamInfluenceType.toString().toLowerCase());
+        // Save outcome data
+        values.put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.getOutcomeId());
+        values.put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.getWeight());
+        values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.getTimestamp());
 
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-        writableDb.beginTransaction();
-        try {
-            ContentValues values = new ContentValues();
-            // Save influence ids
-            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds.toString());
-            values.put(OutcomeEventsTable.COLUMN_NAME_IAM_IDS, iamIds.toString());
-            // Save influence types
-            values.put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, notificationInfluenceType.toString().toLowerCase());
-            values.put(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, iamInfluenceType.toString().toLowerCase());
-            // Save outcome data
-            values.put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.getOutcomeId());
-            values.put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.getWeight());
-            values.put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.getTimestamp());
-
-            writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values);
-            writableDb.setTransactionSuccessful();
-        } finally {
-            try {
-                writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (SQLException e) {
-                logger.error("Error closing transaction! ", e);
-            }
-        }
+        dbHelper.insert(OutcomeEventsTable.TABLE_NAME, null, values);
     }
 
     /**
@@ -167,89 +136,83 @@ class OSOutcomeEventsCache {
     @WorkerThread
     synchronized List<OSOutcomeEventParams> getAllEventsToSend() {
         List<OSOutcomeEventParams> events = new ArrayList<>();
-        Cursor cursor = null;
+        Cursor
+                cursor = dbHelper.query(OutcomeEventsTable.TABLE_NAME,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
 
-        try {
-            SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-            cursor = readableDb.query(
-                    OutcomeEventsTable.TABLE_NAME,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
+        if (cursor.moveToFirst()) {
+            do {
+                // Retrieve influence types
+                String notificationInfluenceTypeString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE));
+                OSInfluenceType notificationInfluenceType = OSInfluenceType.fromString(notificationInfluenceTypeString);
+                String iamInfluenceTypeString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE));
+                OSInfluenceType iamInfluenceType = OSInfluenceType.fromString(iamInfluenceTypeString);
 
-            if (cursor.moveToFirst()) {
-                do {
-                    // Retrieve influence types
-                    String notificationInfluenceTypeString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE));
-                    OSInfluenceType notificationInfluenceType = OSInfluenceType.fromString(notificationInfluenceTypeString);
-                    String iamInfluenceTypeString = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE));
-                    OSInfluenceType iamInfluenceType = OSInfluenceType.fromString(iamInfluenceTypeString);
+                // Retrieve influence ids
+                String notificationIds = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
+                notificationIds = notificationIds != null ? notificationIds : "[]";
+                String iamIds = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_IDS));
+                iamIds = iamIds != null ? iamIds : "[]";
 
-                    // Retrieve influence ids
-                    String notificationIds = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
-                    notificationIds = notificationIds != null ? notificationIds : "[]";
-                    String iamIds = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_IDS));
-                    iamIds = iamIds != null ? iamIds : "[]";
+                // Retrieve Outcome data
+                String name = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NAME));
+                float weight = cursor.getFloat(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_WEIGHT));
+                long timestamp = cursor.getLong(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
 
-                    // Retrieve Outcome data
-                    String name = cursor.getString(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NAME));
-                    float weight = cursor.getFloat(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_WEIGHT));
-                    long timestamp = cursor.getLong(cursor.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP));
+                try {
+                    OSOutcomeSourceBody directSourceBody = new OSOutcomeSourceBody();
+                    OSOutcomeSourceBody indirectSourceBody = new OSOutcomeSourceBody();
+                    OSOutcomeSource source = null;
 
-                    try {
-                        OSOutcomeSourceBody directSourceBody = new OSOutcomeSourceBody();
-                        OSOutcomeSourceBody indirectSourceBody = new OSOutcomeSourceBody();
-                        OSOutcomeSource source = null;
-
-                        switch (notificationInfluenceType) {
-                            case DIRECT:
-                                directSourceBody.setNotificationIds(new JSONArray(notificationIds));
-                                source = new OSOutcomeSource(directSourceBody, null);
-                                break;
-                            case INDIRECT:
-                                indirectSourceBody.setNotificationIds(new JSONArray(notificationIds));
-                                source = new OSOutcomeSource(null, indirectSourceBody);
-                                break;
-                            case UNATTRIBUTED:
-                                // Keep source as null, no source mean unattributed
-                                break;
-                            case DISABLED:
-                                // We should not save disable
-                                break;
-                        }
-
-                        switch (iamInfluenceType) {
-                            case DIRECT:
-                                directSourceBody.setInAppMessagesIds(new JSONArray(iamIds));
-                                source = source == null ? new OSOutcomeSource(directSourceBody, null) : source.setDirectBody(directSourceBody);
-                                break;
-                            case INDIRECT:
-                                indirectSourceBody.setInAppMessagesIds(new JSONArray(iamIds));
-                                source = source == null ? new OSOutcomeSource(null, indirectSourceBody) : source.setIndirectBody(indirectSourceBody);
-                                break;
-                            case UNATTRIBUTED:
-                                // Keep source as null, no source mean unattributed
-                                break;
-                            case DISABLED:
-                                // We should not save disable
-                                break;
-                        }
-
-                        OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight, timestamp);
-                        events.add(eventParams);
-                    } catch (JSONException e) {
-                        logger.error("Generating JSONArray from notifications ids outcome:JSON Failed.", e);
+                    switch (notificationInfluenceType) {
+                        case DIRECT:
+                            directSourceBody.setNotificationIds(new JSONArray(notificationIds));
+                            source = new OSOutcomeSource(directSourceBody, null);
+                            break;
+                        case INDIRECT:
+                            indirectSourceBody.setNotificationIds(new JSONArray(notificationIds));
+                            source = new OSOutcomeSource(null, indirectSourceBody);
+                            break;
+                        case UNATTRIBUTED:
+                            // Keep source as null, no source mean unattributed
+                            break;
+                        case DISABLED:
+                            // We should not save disable
+                            break;
                     }
-                } while (cursor.moveToNext());
-            }
-        } finally {
-            if (cursor != null && !cursor.isClosed())
-                cursor.close();
+
+                    switch (iamInfluenceType) {
+                        case DIRECT:
+                            directSourceBody.setInAppMessagesIds(new JSONArray(iamIds));
+                            source = source == null ? new OSOutcomeSource(directSourceBody, null) : source.setDirectBody(directSourceBody);
+                            break;
+                        case INDIRECT:
+                            indirectSourceBody.setInAppMessagesIds(new JSONArray(iamIds));
+                            source = source == null ? new OSOutcomeSource(null, indirectSourceBody) : source.setIndirectBody(indirectSourceBody);
+                            break;
+                        case UNATTRIBUTED:
+                            // Keep source as null, no source mean unattributed
+                            break;
+                        case DISABLED:
+                            // We should not save disable
+                            break;
+                    }
+
+                    OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight, timestamp);
+                    events.add(eventParams);
+                } catch (JSONException e) {
+                    logger.error("Generating JSONArray from notifications ids outcome:JSON Failed.", e);
+                }
+            } while (cursor.moveToNext());
         }
+
+        cursor.close();
 
         return events;
     }
@@ -295,25 +258,14 @@ class OSOutcomeEventsCache {
         addIdsToListFromSource(cachedUniqueOutcomes, directBody);
         addIdsToListFromSource(cachedUniqueOutcomes, indirectBody);
 
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-        writableDb.beginTransaction();
-        try {
-            for (OSCachedUniqueOutcome uniqueOutcome : cachedUniqueOutcomes) {
-                ContentValues values = new ContentValues();
+        for (OSCachedUniqueOutcome uniqueOutcome : cachedUniqueOutcomes) {
+            ContentValues values = new ContentValues();
 
-                values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcome.getInfluenceId());
-                values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, String.valueOf(uniqueOutcome.getChannel()));
-                values.put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName);
+            values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcome.getInfluenceId());
+            values.put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, String.valueOf(uniqueOutcome.getChannel()));
+            values.put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName);
 
-                writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values);
-            }
-            writableDb.setTransactionSuccessful();
-        } finally {
-            try {
-                writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (SQLException e) {
-                logger.error("Error closing transaction! ", e);
-            }
+            dbHelper.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values);
         }
     }
 
@@ -323,7 +275,6 @@ class OSOutcomeEventsCache {
     @WorkerThread
     synchronized List<OSInfluence> getNotCachedUniqueInfluencesForOutcome(String name, List<OSInfluence> influences) {
         List<OSInfluence> uniqueInfluences = new ArrayList<>();
-        SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
         Cursor cursor = null;
 
         try {
@@ -346,7 +297,7 @@ class OSOutcomeEventsCache {
 
                     String[] args = new String[]{channelInfluenceId, String.valueOf(channel), name};
 
-                    cursor = readableDb.query(
+                    cursor = dbHelper.query(
                             CachedUniqueOutcomeTable.TABLE_NAME,
                             columns,
                             where,

@@ -27,22 +27,21 @@
 
 package com.onesignal;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import com.onesignal.OneSignalDbContract.NotificationTable;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -113,7 +112,7 @@ class NotificationBundleProcessor {
 
       boolean doDisplay = shouldDisplayNotif(notifJob);
       if (doDisplay)
-            GenerateNotification.fromJsonPayload(notifJob);
+         GenerateNotification.fromJsonPayload(notifJob);
 
       if (!notifJob.restoring && !notifJob.isInAppPreviewPush) {
          processNotification(notifJob, false);
@@ -121,7 +120,9 @@ class NotificationBundleProcessor {
             JSONObject jsonObject = new JSONObject(notifJob.jsonPayload.toString());
             jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
             OneSignal.handleNotificationReceived(newJsonArray(jsonObject), true, notifJob.showAsAlert);
-         } catch(Throwable t) {}
+         } catch (JSONException t) {
+            t.printStackTrace();
+         }
       }
 
       return notifJob.getAndroidId();
@@ -180,66 +181,48 @@ class NotificationBundleProcessor {
          JSONObject customJSON = getCustomJSONObject(notifiJob.jsonPayload);
    
          OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
-         SQLiteDatabase writableDb = null;
 
-         try {
-            writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-   
-            writableDb.beginTransaction();
-            
-            // Count any notifications with duplicated android notification ids as dismissed.
-            // -1 is used to note never displayed
-            if (notifiJob.isNotificationToDisplay()) {
-               String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
-   
-               ContentValues values = new ContentValues();
-               values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-   
-               writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-               BadgeCountUpdater.update(writableDb, context);
-            }
+         // Count any notifications with duplicated android notification ids as dismissed.
+         // -1 is used to note never displayed
+         if (notifiJob.isNotificationToDisplay()) {
+            String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
 
-            // Save just received notification to DB
             ContentValues values = new ContentValues();
-            values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
-            if (jsonPayload.has("grp"))
-               values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
-            if (jsonPayload.has("collapse_key") && !"do_not_collapse".equals(jsonPayload.optString("collapse_key")))
-               values.put(NotificationTable.COLUMN_NAME_COLLAPSE_ID, jsonPayload.optString("collapse_key"));
+            values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
 
-            values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
-            if (!opened)
-               values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.getAndroidIdWithoutCreate());
-            
-            if (notifiJob.getTitle() != null)
-               values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
-            if (notifiJob.getBody() != null)
-               values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
-
-            // Set expire_time
-            long sentTime = jsonPayload.optLong("google.sent_time", SystemClock.currentThreadTimeMillis()) / 1_000L;
-            int ttl = jsonPayload.optInt("google.ttl", NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
-            long expireTime = sentTime + ttl;
-            values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
-
-            values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
-
-            writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
-
-            if (!opened)
-               BadgeCountUpdater.update(writableDb, context);
-            writableDb.setTransactionSuccessful();
-         } catch (Exception e) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
-         } finally {
-            if (writableDb != null) {
-               try {
-                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-               } catch (Throwable t) {
-                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-               }
-            }
+            dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+            BadgeCountUpdater.update(dbHelper, context);
          }
+
+         // Save just received notification to DB
+         ContentValues values = new ContentValues();
+         values.put(NotificationTable.COLUMN_NAME_NOTIFICATION_ID, customJSON.optString("i"));
+         if (jsonPayload.has("grp"))
+            values.put(NotificationTable.COLUMN_NAME_GROUP_ID, jsonPayload.optString("grp"));
+         if (jsonPayload.has("collapse_key") && !"do_not_collapse".equals(jsonPayload.optString("collapse_key")))
+            values.put(NotificationTable.COLUMN_NAME_COLLAPSE_ID, jsonPayload.optString("collapse_key"));
+
+         values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
+         if (!opened)
+            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifiJob.getAndroidIdWithoutCreate());
+
+         if (notifiJob.getTitle() != null)
+            values.put(NotificationTable.COLUMN_NAME_TITLE, notifiJob.getTitle().toString());
+         if (notifiJob.getBody() != null)
+            values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifiJob.getBody().toString());
+
+         // Set expire_time
+         long sentTime = jsonPayload.optLong("google.sent_time", SystemClock.currentThreadTimeMillis()) / 1_000L;
+         int ttl = jsonPayload.optInt("google.ttl", NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+         long expireTime = sentTime + ttl;
+         values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
+
+         values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
+
+         dbHelper.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
+
+         if (!opened)
+            BadgeCountUpdater.update(dbHelper, context);
       } catch (JSONException e) {
          e.printStackTrace();
       }
@@ -252,31 +235,12 @@ class NotificationBundleProcessor {
       String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
 
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
-      SQLiteDatabase writableDb = null;
 
-      try {
-         writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-         writableDb.beginTransaction();
+      ContentValues values = new ContentValues();
+      values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
 
-         ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-
-         writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-         BadgeCountUpdater.update(writableDb, notifiJob.context);
-
-         writableDb.setTransactionSuccessful();
-
-      } catch (Exception e) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error saving notification record! ", e);
-      } finally {
-         if (writableDb != null) {
-            try {
-               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (Throwable t) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-            }
-         }
-      }
+      dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+      BadgeCountUpdater.update(dbHelper, notifiJob.context);
    }
 
    static @NonNull JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -385,7 +349,7 @@ class NotificationBundleProcessor {
          } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.backgroundImageLayout values!", t);
          }
-      } catch (Throwable t) {
+      } catch (JSONException t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload values!", t);
       }
 
@@ -429,32 +393,22 @@ class NotificationBundleProcessor {
          return;
       String collapse_id = notifJob.jsonPayload.optString("collapse_key");
 
-
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
-      Cursor cursor = null;
+      Cursor cursor = dbHelper.query(
+              NotificationTable.TABLE_NAME,
+              new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
+              NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
+                      NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                      NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
+              new String[]{collapse_id},
+              null, null, null);
 
-      try {
-         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-         cursor = readableDb.query(
-               NotificationTable.TABLE_NAME,
-               new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
-               NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
-                     NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                     NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
-               new String[] {collapse_id},
-               null, null, null);
+      if (cursor.moveToFirst()) {
+         int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+         notifJob.setAndroidIdWithOutOverriding(androidNotificationId);
+      }
 
-         if (cursor.moveToFirst()) {
-            int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            notifJob.setAndroidIdWithOutOverriding(androidNotificationId);
-         }
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not read DB to find existing collapse_key!", t);
-      }
-      finally {
-         if (cursor != null && !cursor.isClosed())
-            cursor.close();
-      }
+      cursor.close();
    }
 
    //  Process bundle passed from gcm / adm broadcast receiver.

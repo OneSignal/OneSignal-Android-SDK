@@ -32,11 +32,11 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
-import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_ROOT_CUSTOM;
-import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
-import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.InAppMessagingHelpers.ONESIGNAL_APP_ID;
+import static com.onesignal.OneSignalPackagePrivateHelper.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_ROOT_CUSTOM;
 import static com.test.onesignal.RestClientAsserts.assertNotificationOpenAtIndex;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;

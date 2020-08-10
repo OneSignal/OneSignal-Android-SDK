@@ -35,7 +35,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
@@ -137,8 +136,7 @@ class NotificationRestorer {
 
       Cursor cursor = null;
       try {
-         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-         cursor = readableDb.query(
+         cursor = dbHelper.query(
             NotificationTable.TABLE_NAME,
             COLUMNS_FOR_RESTORE,
             dbQuerySelection.toString(),
@@ -149,7 +147,7 @@ class NotificationRestorer {
             NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
          );
          showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
-         BadgeCountUpdater.update(readableDb, context);
+         BadgeCountUpdater.update(dbHelper, context);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
       } finally {

@@ -36,7 +36,6 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -70,15 +69,15 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowHMSFusedLocationProviderClient;
+import com.onesignal.ShadowGMSLocationController;
+import com.onesignal.ShadowGMSLocationUpdateListener;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
+import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHMSLocationUpdateListener;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowJobService;
-import com.onesignal.ShadowGMSLocationController;
-import com.onesignal.ShadowGMSLocationUpdateListener;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
@@ -3653,8 +3652,7 @@ public class MainOneSignalClassRunner {
       assertEquals(0, ShadowRoboNotificationManager.notifications.size());
 
       // Make sure they are marked dismissed.
-      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      Cursor cursor = readableDb.query(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, new String[] { "created_time" },
+      Cursor cursor = dbHelper.query(OneSignalPackagePrivateHelper.NotificationTable.TABLE_NAME, new String[] { "created_time" },
           OneSignalPackagePrivateHelper.NotificationTable.COLUMN_NAME_DISMISSED + " = 1", null, null, null, null);
       assertEquals(2, cursor.getCount());
       cursor.close();
