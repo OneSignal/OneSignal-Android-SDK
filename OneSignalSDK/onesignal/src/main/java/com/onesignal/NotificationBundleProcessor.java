@@ -67,6 +67,8 @@ class NotificationBundleProcessor {
     private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     static final String DEFAULT_ACTION = "__DEFAULT__";
 
+    private static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
+
     static void processFromFCMIntentService(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
         OneSignal.setAppContext(context);
         try {
@@ -143,6 +145,15 @@ class NotificationBundleProcessor {
 
         // Otherwise, this is a normal notification and should be shown
         return notifJob.hasExtender() || shouldDisplay(notifJob.jsonPayload.optString("alert"));
+    }
+
+    private static void saveAndProcessDupNotification(Context context, Bundle bundle) {
+        OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
+        notifJob.jsonPayload = bundleAsJSONObject(bundle);
+        notifJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
+        notifJob.overrideSettings.androidNotificationId = -1;
+
+        processNotification(notifJob, true);
     }
 
     /**
@@ -487,13 +498,17 @@ class NotificationBundleProcessor {
         notifJob.jsonPayload = bundleAsJSONObject(bundle);
         notifJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
 
-        // Process and save as a opened notification to prevent duplicates.
+        // Save as a opened notification to prevent duplicates
         String alert = bundle.getString("alert");
         if (!shouldDisplay(alert)) {
-            notifJob.overrideSettings.androidNotificationId = -1;
-            NotificationBundleProcessor.processJobForDisplay(notifJob, true, false);
-        } else {
-            NotificationBundleProcessor.processJobForDisplay(notifJob);
+            saveAndProcessDupNotification(context, bundle);
+            // Current thread is meant to be short lived
+            // Make a new thread to do our OneSignal work on
+            new Thread(new Runnable() {
+                public void run() {
+                    OneSignal.handleNotificationReceived(notifJob, false);
+                }
+            }, OS_NOTIFICATION_PROCESSING_THREAD).start();
         }
 
         return result;
