@@ -274,7 +274,6 @@ public class OSNotificationGenerationJob {
         AppNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
             super(notifJob);
 
-
             startTimeout(new Runnable() {
                 @Override
                 public void run() {

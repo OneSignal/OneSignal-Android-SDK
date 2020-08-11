@@ -7,14 +7,8 @@ import org.robolectric.annotation.Implements;
 @Implements(OSUtils.class)
 public class ShadowOSUtils {
 
-   public static boolean isRunningOnMainThread;
-
    public static String carrierName;
    public static int subscribableStatus;
-
-   public static boolean isRunningOnMainThread() {
-      return isRunningOnMainThread;
-   }
 
    // FireOS: ADM
    public static boolean supportsADM;
@@ -78,7 +72,6 @@ public class ShadowOSUtils {
       carrierName = "test1";
       subscribableStatus = 1;
 
-      isRunningOnMainThread = false;
       supportsADM = false;
       hasFCMLibrary = false;
       isGMSInstalledAndEnabled = false;
