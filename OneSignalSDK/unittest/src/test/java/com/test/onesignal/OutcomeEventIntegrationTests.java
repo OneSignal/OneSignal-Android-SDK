@@ -49,7 +49,7 @@ import org.robolectric.shadows.ShadowLog;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived;
+import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived_withBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
@@ -325,7 +325,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Wait 31 seconds to start new session
         advanceSystemTimeBy(31);
@@ -386,7 +386,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Wait 31 seconds to start new session
         advanceSystemTimeBy(31);
@@ -615,7 +615,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Make sure notification influence is not INDIRECT
         assertFalse(trackerFactory.getNotificationChannelTracker().getInfluenceType().isIndirect());
@@ -696,7 +696,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
         threadAndTaskWait();
 
         // Wait 31 seconds
@@ -733,7 +733,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -759,7 +759,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive another notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -865,7 +865,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
         indirectNotificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
 
         // App in background for 31 seconds to trigger new session
@@ -913,7 +913,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Foreground app through icon
         blankActivityController.resume();
@@ -1006,7 +1006,7 @@ public class OutcomeEventIntegrationTests {
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "1");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Check notification was saved
         assertEquals(1, trackerFactory.getNotificationChannelTracker().getLastReceivedIds().length());

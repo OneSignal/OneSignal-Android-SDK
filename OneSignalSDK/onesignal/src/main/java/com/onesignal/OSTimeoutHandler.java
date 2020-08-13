@@ -45,16 +45,20 @@ class OSTimeoutHandler {
 
     synchronized void startTimeout(@NonNull final Runnable runnable) {
         // If the handler or runnable isn't null we do not want to start another
-        if (this.timeoutHandler != null && this.timeoutRunnable != null)
+        if (timeoutHandler != null && timeoutRunnable != null)
             return;
 
-        this.timeoutRunnable = runnable;
+        timeoutRunnable = runnable;
 
         if (Looper.myLooper() == null)
             Looper.prepare();
 
         timeoutHandler = new Handler();
         timeoutHandler.postDelayed(timeoutRunnable, timeout);
+
+        // TODO: This line causes some UnitTests to run forever and not sure how to fix
+        //  This is required though for apps that have a no complete inside of the NotificationProcessing or NotificationWillShowInForeground handlers
+        Looper.loop();
     }
 
     synchronized void destroyTimeout() {

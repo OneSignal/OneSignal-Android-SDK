@@ -151,6 +151,7 @@ import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.getNextJob;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
 import static com.test.onesignal.TestHelpers.runNextJob;
+import static com.test.onesignal.TestHelpers.runOSThreads;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -1134,12 +1135,12 @@ public class MainOneSignalClassRunner {
 
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait();
 
       assertTrue(processResult);
       assertNull(lastNotificationOpenedBody);
 
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
+
       assertEquals("Robo test message", notificationReceivedBody);
       assertNotEquals(0, androidNotificationId);
 
@@ -1148,7 +1149,7 @@ public class MainOneSignalClassRunner {
       notificationReceivedBody = null;
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait();
+
       assertNull(lastNotificationOpenedBody);
       assertNull(notificationReceivedBody);
 
@@ -1157,9 +1158,8 @@ public class MainOneSignalClassRunner {
 
       // Test that only NotificationReceivedHandler fires
       bundle = getBaseNotifBundle("UUID2");
-
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait();
+
       assertNull(lastNotificationOpenedBody);
       assertEquals("Robo test message", notificationReceivedBody);
    }

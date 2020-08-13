@@ -105,7 +105,7 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   static void fromJsonPayload(final OSNotificationGenerationJob notifJob) {
+   static void fromJsonPayload(OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
       if (notifJob.displayOption.isSilent())

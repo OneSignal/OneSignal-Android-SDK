@@ -141,33 +141,128 @@ public class OneSignalPackagePrivateHelper {
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(final Context context, final Bundle bundle, final OSNotificationExtender.OverrideSettings overrideSettings) {
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.processFromFCMIntentService(context, bundle, overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(final Context context, final BundleCompat bundle, final OSNotificationExtender.OverrideSettings overrideSettings) {
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            NotificationBundleProcessor.processFromFCMIntentService(context, bundle, overrideSettings);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
    }
 
-   public static boolean FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
-      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+   public static boolean FCMBroadcastReceiver_processBundle(final Context context, final Bundle bundle) {
+      NotificationBundleProcessor.ProcessedBundleResult processedResult = new com.onesignal.NotificationBundleProcessor.ProcessedBundleResult();
+
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
+
       return processedResult.processed();
    }
 
-   public static void FCMBroadcastReceiver_onReceived(Context context, Bundle bundle) {
-      FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
-      Intent intent = new Intent();
-      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
-      intent.putExtras(bundle);
-      receiver.onReceive(context,intent);
+   public static void FCMBroadcastReceiver_onReceived_withIntent(final Context context, final Intent intent) {
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
+            intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+            receiver.onReceive(context, intent);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
+   }
+
+   public static void FCMBroadcastReceiver_onReceived_withBundle(final Context context, final Bundle bundle) {
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            final FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
+            Intent intent = new Intent();
+            intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+            intent.putExtras(bundle);
+            receiver.onReceive(context, intent);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
+   }
+
+   public static void HMSProcessor_processDataMessageReceived(final Context context, final String jsonStrPayload) {
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            NotificationPayloadProcessorHMS.processDataMessageReceived(context, jsonStrPayload);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, OSNotificationExtender.OverrideSettings overrideSettings) {
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
+      final OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;
       notifJob.isRestoring = restoring;
-      return NotificationBundleProcessor.processJobForDisplay(notifJob);
+
+      int androidNotificationId = 0;
+      // processJobForDisplay leads to a MainThread check and must be run from a new Thread to pass
+      Thread thread = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            NotificationBundleProcessor.processJobForDisplay(notifJob);
+         }
+      });
+      thread.start();
+      try {
+         thread.join();
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
+
+      return androidNotificationId;
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
