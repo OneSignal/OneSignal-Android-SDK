@@ -579,7 +579,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         inAppMessageShowing = false;
         synchronized (messageDisplayQueue) {
             if (messageDisplayQueue.size() > 0) {
-                if (message != null && !messageDisplayQueue.contains(message)) {
+                if (message != null && message.messageId && !messageDisplayQueue.contains(message)) {
                     OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Message already removed from the queue!");
                     return;
                 } else {
