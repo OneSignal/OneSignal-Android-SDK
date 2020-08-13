@@ -264,7 +264,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // Restore notifs
-      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity, false);
       threadAndTaskWait();
 
       // Assert that no restoration jobs were scheduled
@@ -719,7 +719,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
       ShadowBadgeCountUpdater.lastCount = 0;
 
-      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity, false);
       threadAndTaskWait();
 
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
@@ -729,7 +729,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
 
       ShadowNotificationManagerCompat.enabled = false;
-      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity, false);
       threadAndTaskWait();
 
       assertNull(Shadows.shadowOf(blankActivity).getNextStartedService());
@@ -888,7 +888,7 @@ public class GenerateNotificationRunner {
 
    private void restoreNotifications() {
       OSNotificationRestoreWorkManager.restored = false;
-      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity, false);
    }
 
    private void helperShouldRestoreNotificationsPastExpireTime(boolean should) throws Exception {

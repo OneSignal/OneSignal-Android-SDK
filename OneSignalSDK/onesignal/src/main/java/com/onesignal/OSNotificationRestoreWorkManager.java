@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 class OSNotificationRestoreWorkManager {
 
     static final String[] COLUMNS_FOR_RESTORE = {
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID,
             OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
             OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA,
             OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME
@@ -147,12 +148,14 @@ class OSNotificationRestoreWorkManager {
             return;
 
         do {
+            String osNotificationId = cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID));
             int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
             String fullData = cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA));
             long dateTime = cursor.getLong(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME));
 
             OSNotificationWorkManager.beginEnqueueingWork(
                     context,
+                    osNotificationId,
                     existingId,
                     fullData,
                     true,
