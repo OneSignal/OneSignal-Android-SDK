@@ -1,18 +1,24 @@
 buildscript {
     repositories {
         maven { url 'https://plugins.gradle.org/m2/'}
+        maven { url "https://jitpack.io" }
     }
     dependencies {
         classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.11.0, 0.99.99]'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1' // Add this line
     }
 }
 apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
+apply plugin: 'com.github.dcendents.android-maven'
+group='com.github.restart916'
 
 repositories {
     maven { url 'https://maven.google.com' }
 }
 
 apply plugin: 'com.android.application'
+
+
 
 android {
     compileSdkVersion 27
@@ -42,10 +48,11 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:appcompat-v7:27.+'
+    implementation 'com.github.jitpack:gradle-simple:1.0'
 
     // OneSignal SDK
     implementation 'com.onesignal:OneSignal:[3.9.2, 3.99.99)'
-
+    
     // Required for geotagging
     implementation 'com.google.android.gms:play-services-location:15.0.1'
 }
