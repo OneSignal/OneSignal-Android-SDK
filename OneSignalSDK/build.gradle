@@ -4,7 +4,6 @@ buildscript {
     repositories {
         google()
         jcenter()
-        maven { url "https://jitpack.io" }
         maven { url 'https://maven.google.com' }
         // OneSignal-Gradle-Plugin - Local testing
 //      maven { url uri('../../repo') }
@@ -38,7 +37,6 @@ allprojects {
             dirs 'libs'
         }
         maven { url 'https://maven.google.com' }
-        maven { url "https://jitpack.io" }
 
         // huawei maven
         maven { url 'http://developer.huawei.com/repo/' }
