@@ -1021,8 +1021,8 @@ public class GenerateNotificationRunner {
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
       // 2 open calls should fire + remote params + players call
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
-      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(1).url);
-      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(2).url);
+      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(2).url);
+      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(3).url);
       ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification
@@ -1540,6 +1540,9 @@ public class GenerateNotificationRunner {
       });
       threadAndTaskWait();
 
+      blankActivityController.resume();
+      threadAndTaskWait();
+
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -1571,6 +1574,9 @@ public class GenerateNotificationRunner {
             notifJob.complete();
          }
       });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // 3. Receive a notification
@@ -1621,6 +1627,9 @@ public class GenerateNotificationRunner {
       });
       threadAndTaskWait();
 
+      blankActivityController.resume();
+      threadAndTaskWait();
+
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -1652,6 +1661,9 @@ public class GenerateNotificationRunner {
             notifJob.complete();
          }
       });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // 3. Receive a notification
@@ -1701,6 +1713,9 @@ public class GenerateNotificationRunner {
       });
       threadAndTaskWait();
 
+      blankActivityController.resume();
+      threadAndTaskWait();
+
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -1723,6 +1738,9 @@ public class GenerateNotificationRunner {
       // 2. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // 3. Receive a notification
@@ -1806,6 +1824,9 @@ public class GenerateNotificationRunner {
       });
       threadAndTaskWait();
 
+      blankActivityController.resume();
+      threadAndTaskWait();
+
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -1828,6 +1849,9 @@ public class GenerateNotificationRunner {
       // 2. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // 3. Receive a notification
@@ -1875,6 +1899,9 @@ public class GenerateNotificationRunner {
       });
       threadAndTaskWait();
 
+      blankActivityController.resume();
+      threadAndTaskWait();
+
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler implementation
@@ -1899,6 +1926,9 @@ public class GenerateNotificationRunner {
       OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
+      blankActivityController.resume();
+      threadAndTaskWait();
+
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler implementation
@@ -1913,7 +1943,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() {
+   public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler");
@@ -1933,6 +1963,10 @@ public class GenerateNotificationRunner {
             }
          }
       });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
 
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
@@ -1993,6 +2027,9 @@ public class GenerateNotificationRunner {
             notifJob.complete();
          }
       });
+
+      blankActivityController.resume();
+      threadAndTaskWait();
 
       // 3. Receive a notification
       // Setup - Display a single notification with a grouped.
@@ -2073,6 +2110,9 @@ public class GenerateNotificationRunner {
             }, 35_000L);
          }
       });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // 3. Receive a notification
