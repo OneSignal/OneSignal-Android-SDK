@@ -2150,7 +2150,7 @@ public class OneSignal {
          jsonObject.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notifJob.getAndroidId());
 
          OSNotificationOpenResult openResult = generateOsNotificationOpenResult(newJsonArray(jsonObject), displayed);
-         if(trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
+         if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
             trackFirebaseAnalytics.trackReceivedEvent(openResult);
 
       } catch (JSONException e) {
@@ -2189,6 +2189,7 @@ public class OneSignal {
     * @see OneSignal.ExtNotificationWillShowInForegroundHandler
     * @see OneSignal.AppNotificationWillShowInForegroundHandler
     */
+   @WorkerThread
    static void fireForegroundHandlers(OSNotificationGenerationJob notifJob) {
       if (OneSignal.extNotificationWillShowInForegroundHandler == null) {
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "No extNotificationWillShowInForegroundHandler setup, fire appNotificationWillShowInForegroundHandler");
@@ -2200,7 +2201,7 @@ public class OneSignal {
       fireExtNotificationWillShowInForegroundHandler(notifJob.toExtNotificationGenerationJob());
    }
 
-   static void fireExtNotificationWillShowInForegroundHandler(ExtNotificationGenerationJob extNotifJob) {
+   private static void fireExtNotificationWillShowInForegroundHandler(ExtNotificationGenerationJob extNotifJob) {
       try {
          OneSignal.extNotificationWillShowInForegroundHandler.notificationWillShowInForeground(extNotifJob);
       } catch (Throwable t) {

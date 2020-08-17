@@ -5,6 +5,7 @@ import android.app.Activity;
 
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationPayloadProcessorHMS;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationWorker;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
@@ -87,6 +88,7 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void basicPayload_shouldDisplayNotification() throws Exception {
         blankActivityController.pause();
         HMSProcessor_processDataMessageReceived(blankActivity, helperBasicOSPayload());

@@ -66,9 +66,12 @@ class OSNotificationWorkManager {
                 return Result.failure();
             }
 
-            // TODO: This line stops the Looper.loop call once the notification processing is all done
-            //  The reason for all of this is because we are firing handlers while running a background thread using the Worker
-            Looper.myLooper().quit();
+            // This check is only for UnitTest purpose
+            if (!OSUtils.isRunningOnMainThread() && Looper.myLooper() != null) {
+                // TODO: This line stops the Looper.loop call once the notification processing is all done
+                //  The reason for all of this is because we are firing handlers while running a background thread using the Worker
+                Looper.myLooper().quit();
+            }
             return Result.success();
         }
 
@@ -82,23 +85,36 @@ class OSNotificationWorkManager {
                     timestamp
             );
 
-            if (OneSignal.notificationProcessingHandler != null)
+            if (OneSignal.notificationProcessingHandler != null) {
                 try {
-                    OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
+                    callProcessingHandler(context, notificationReceived);
                 } catch (Throwable t) {
                     if (!notificationReceived.displayed()) {
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
-                        notificationReceived.complete();
-                    }
-                    else
+                        completeWork(notificationReceived);
+                    } else
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
 
                     throw t;
                 }
-            else if (!notificationReceived.displayed()) {
+            } else if (!notificationReceived.displayed()) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
-                notificationReceived.complete();
+                completeWork(notificationReceived);
             }
+        }
+
+        /**
+         * For shadow testing purpose
+         */
+        void callProcessingHandler(Context context, OSNotificationReceived notificationReceived) {
+            OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
+        }
+
+        /**
+         * For shadow testing purpose
+         */
+        void completeWork(OSNotificationReceived notificationReceived) {
+            notificationReceived.complete();
         }
     }
 }

@@ -41,6 +41,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -67,8 +68,11 @@ import com.onesignal.RestoreJobService;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowExtNotificationGenerationJob;
 import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationReceived;
+import com.onesignal.ShadowNotificationWorker;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
@@ -77,6 +81,7 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -214,7 +219,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   @Config (sdk = 22)
+   @Config (sdk = 22, shadows = { ShadowNotificationWorker.class })
    public void shouldSetTitleCorrectly() throws Exception {
       // Should use app's Title by default
       Bundle bundle = getBaseNotifBundle();
@@ -233,7 +238,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   @Config (sdk = 22)
+   @Config (sdk = 22, shadows = { ShadowNotificationWorker.class })
    public void shouldProcessRestore() throws Exception {
       BundleCompat bundle = createInternalPayloadBundle(getBaseNotifBundle());
       bundle.putInt("android_notif_id", 0);
@@ -246,7 +251,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.O)
+   @Config(sdk = Build.VERSION_CODES.O, shadows = { ShadowNotificationWorker.class })
    public void shouldNotRestoreActiveNotifs() throws Exception {
       // Display a notification
       Bundle bundle = getBaseNotifBundle("UUID1");
@@ -267,6 +272,7 @@ public class GenerateNotificationRunner {
    private static OSNotificationOpenResult lastOpenResult;
    
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldContainPayloadWhenOldSummaryNotificationIsOpened() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -281,11 +287,13 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-   
+      threadAndTaskWait();
+
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-   
+      threadAndTaskWait();
+
       // Go forward 4 weeks
       advanceSystemTimeBy(2_419_202);
       
@@ -307,6 +315,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldSetCorrectNumberOfButtonsOnSummaryNotification() throws Exception {
       // Setup - Init
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -329,6 +338,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldCancelAllNotificationsPartOfAGroup() throws Exception {
       // Setup - Init
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -356,9 +366,8 @@ public class GenerateNotificationRunner {
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());
    }
 
-
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testFourNotificationsUseProvidedGroup() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity.getApplicationContext());
@@ -366,13 +375,12 @@ public class GenerateNotificationRunner {
 
       // Add 4 grouped notifications
       postNotificationWithOptionalGroup(4, "test1");
-      threadAndTaskWait();
 
       assertEquals(4, getNotificationsInGroup("test1").size());
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testFourGrouplessNotificationsUseDefaultGroup() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity.getApplicationContext());
@@ -380,13 +388,12 @@ public class GenerateNotificationRunner {
 
       // Add 4 groupless notifications
       postNotificationWithOptionalGroup(4, null);
-      threadAndTaskWait();
 
       assertEquals(4, getNotificationsInGroup("os_group_undefined").size());
    }
 
     @Test
-    @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
+    @Config(sdk = Build.VERSION_CODES.LOLLIPOP, shadows = { ShadowNotificationWorker.class })
     public void testNotifDismissAllOnGroupSummaryClickForAndroidUnderM() throws Exception {
         OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
         OneSignal.setAppContext(blankActivity);
@@ -402,7 +409,7 @@ public class GenerateNotificationRunner {
     }
 
     @Test
-    @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
+    @Config(sdk = Build.VERSION_CODES.LOLLIPOP, shadows = { ShadowNotificationWorker.class })
     public void testNotifDismissRecentOnGroupSummaryClickForAndroidUnderM() throws Exception {
         OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
         OneSignal.setAppContext(blankActivity);
@@ -418,7 +425,7 @@ public class GenerateNotificationRunner {
     }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testNotifDismissAllOnGroupSummaryClick() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -434,7 +441,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testNotifDismissRecentOnGroupSummaryClick() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -452,7 +459,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testNotifDismissAllOnGrouplessSummaryClick() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -468,7 +475,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testNotifDismissRecentOnGrouplessSummaryClick() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -510,7 +517,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = Build.VERSION_CODES.N)
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowNotificationWorker.class })
    public void testGrouplessSummaryKeyReassignmentAtFourOrMoreNotification() throws Exception {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -518,7 +525,6 @@ public class GenerateNotificationRunner {
 
       // Add 3 groupless notifications
       postNotificationWithOptionalGroup(3, null);
-      threadAndTaskWait();
 
       // Assert before 4, no notif summary is created
       int count = OneSignalNotificationManagerPackageHelper.getActiveNotifications(blankActivity).length;
@@ -526,7 +532,6 @@ public class GenerateNotificationRunner {
 
       // Add 4 groupless notifications
       postNotificationWithOptionalGroup(4, null);
-      threadAndTaskWait();
 
       // Assert after 4, a notif summary is created
       count = OneSignalNotificationManagerPackageHelper.getActiveNotifications(blankActivity).length;
@@ -543,13 +548,14 @@ public class GenerateNotificationRunner {
       assertEquals(0, groupCount);
    }
 
-    private @Nullable Bundle postNotificationWithOptionalGroup(int notifCount, @Nullable String group) {
+    private @Nullable Bundle postNotificationWithOptionalGroup(int notifCount, @Nullable String group) throws Exception {
        Bundle bundle = null;
        for (int i = 0; i < notifCount; i++) {
           bundle = getBaseNotifBundle("UUID" + i);
           bundle.putString("grp", group);
 
           NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+          threadAndTaskWait();
        }
        return bundle;
     }
@@ -582,6 +588,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because RestoreJobService run under an AsyncTask, in that way we can avoid deadlock due to Roboelectric tying to shadow
+   // Handlers under AsyncTask, and Roboelectric doesn't support handler outside it's custom Main Thread
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void shouldCancelNotificationAndUpdateSummary() throws Exception {
       // Setup - Init
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -610,8 +619,7 @@ public class GenerateNotificationRunner {
       
       // Test - 3 notifis + 1 summary
       assertEquals(4, postedNotifs.size());
-      
-      
+
       // Test - First notification should be the summary
       PostedNotification postedSummaryNotification = postedNotifsIterator.next().getValue();
       assertEquals("3 new messages", postedSummaryNotification.getShadow().getContentText());
@@ -620,7 +628,7 @@ public class GenerateNotificationRunner {
       // Setup - Let's cancel a child notification.
       PostedNotification postedNotification = postedNotifsIterator.next().getValue();
       OneSignal.cancelNotification(postedNotification.id);
-   
+
       // Test - It should update summary text to say 2 notifications
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(3, postedNotifs.size());       // 2 notifis + 1 summary
@@ -631,10 +639,12 @@ public class GenerateNotificationRunner {
    
       // Setup - Let's cancel a 2nd child notification.
       postedNotification = postedNotifsIterator.next().getValue();
+      // RestoreJobService is runned on a AsyncTaskThread no need to emulate worker thread
+      ShadowNotificationWorker.completeWorkUnderThread = false;
       OneSignal.cancelNotification(postedNotification.id);
       runImplicitServices();
       Thread.sleep(1_000); // TODO: Service runs AsyncTask. Need to wait for this
-   
+
       // Test - It should update summary notification to be the text of the last remaining one.
       postedNotifs = ShadowRoboNotificationManager.notifications;
       assertEquals(2, postedNotifs.size()); // 1 notifis + 1 summary
@@ -673,9 +683,12 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldUpdateBadgesWhenDismissingNotification() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldUpdateBadgesWhenDismissingNotification() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
+
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    
@@ -689,6 +702,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldNotSetBadgesWhenNotificationPermissionIsDisabled() throws Exception {
       ShadowNotificationManagerCompat.enabled = false;
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -697,12 +711,17 @@ public class GenerateNotificationRunner {
       
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
+
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
-   public void shouldSetBadgesWhenRestoringNotifications() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldSetBadgesWhenRestoringNotifications() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
+
       ShadowBadgeCountUpdater.lastCount = 0;
 
       NotificationRestorer.restore(blankActivity);
@@ -710,8 +729,11 @@ public class GenerateNotificationRunner {
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    }
 
-   @Test public void shouldNotRestoreNotificationsIfPermissionIsDisabled() {
+   @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldNotRestoreNotificationsIfPermissionIsDisabled() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
 
       ShadowNotificationManagerCompat.enabled = false;
       NotificationRestorer.restore(blankActivity);
@@ -737,6 +759,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldUpdateNormalNotificationDisplayWhenReplacingANotification() throws Exception {
       // Setup - init
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -748,12 +771,13 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       bundle.putString("collapse_key", "1");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-   
+      threadAndTaskWait();
+
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
       bundle.putString("collapse_key", "1");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
-   
+      threadAndTaskWait();
       
       // Test - Summary created and sub notification. Summary will look the same as the normal notification.
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -783,10 +807,13 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldHandleBasicNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
+
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
@@ -810,6 +837,8 @@ public class GenerateNotificationRunner {
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
+
       readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(1, cursor.getCount());
@@ -819,6 +848,7 @@ public class GenerateNotificationRunner {
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
 
       // Go forward 4 weeks
       // Note: Does not effect the SQL function strftime
@@ -833,6 +863,8 @@ public class GenerateNotificationRunner {
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
+
       readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { }, null, null, null, null, null);
 
@@ -842,10 +874,12 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldRestoreNotifications() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldRestoreNotifications() throws Exception {
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
 
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
 
       NotificationRestorer.restore(blankActivity); NotificationRestorer.restored = false;
       Intent intent = Shadows.shadowOf(blankActivity).getNextStartedService();
@@ -873,12 +907,13 @@ public class GenerateNotificationRunner {
       NotificationRestorer.restore(blankActivity);
    }
 
-   private void helperShouldRestoreNotificationsPastExpireTime(boolean should) {
+   private void helperShouldRestoreNotificationsPastExpireTime(boolean should) throws Exception {
       long ttl = 60L;
       Bundle bundle = getBaseNotifBundle();
       bundle.putLong("google.sent_time", System.currentTimeMillis());
       bundle.putLong("google.ttl", ttl);
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
 
       restoreNotifications();
       assertRestoreRan();
@@ -893,30 +928,40 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void doNotRestoreNotificationsPastExpireTime() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void doNotRestoreNotificationsPastExpireTime() throws Exception {
       helperShouldRestoreNotificationsPastExpireTime(false);
    }
 
    @Test
-   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void restoreNotificationsPastExpireTimeIfSettingIsDisabled() throws Exception {
       TestOneSignalPrefs.saveBool(TestOneSignalPrefs.PREFS_ONESIGNAL, TestOneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, false);
       helperShouldRestoreNotificationsPastExpireTime(true);
    }
 
    @Test
-   public void badgeCountShouldNotIncludeOldNotifications() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void badgeCountShouldNotIncludeOldNotifications() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
+
+      // Should not count as a badge
+      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
+      OneSignalPackagePrivateHelper.BadgeCountUpdater.update(readableDb, blankActivity);
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
       // Go forward 1 week
       advanceSystemTimeBy(604_801);
 
       // Should not count as a badge
-      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
+      readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       OneSignalPackagePrivateHelper.BadgeCountUpdater.update(readableDb, blankActivity);
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldGenerate2BasicGroupNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
@@ -1009,7 +1054,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowFCMBroadcastReceiver.class})
+   @Config(shadows = { ShadowFCMBroadcastReceiver.class, ShadowNotificationWorker.class })
    public void shouldSetButtonsCorrectly() throws Exception {
       final Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
@@ -1035,10 +1080,12 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldSetAlertnessFieldsOnNormalPriority() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldSetAlertnessFieldsOnNormalPriority() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "5"); // Notifications from dashboard have priority 5 by default
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
 
       assertEquals(NotificationCompat.PRIORITY_DEFAULT, ShadowRoboNotificationManager.getLastNotif().priority);
       final int alertnessFlags = Notification.DEFAULT_SOUND | Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE;
@@ -1046,6 +1093,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldNotSetAlertnessFieldsOnLowPriority() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "4");
@@ -1057,7 +1105,8 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() throws Exception {
       long sentTime = 1_553_035_338_000L;
       long ttl = 60L;
 
@@ -1065,6 +1114,7 @@ public class GenerateNotificationRunner {
       bundle.putLong("google.sent_time", sentTime);
       bundle.putLong("google.ttl", ttl);
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
 
       HashMap<String, Object> notification = TestHelpers.getAllNotificationRecords(dbHelper).get(0);
       long expireTime = (Long)notification.get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
@@ -1072,8 +1122,10 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() {
+   @Config(shadows = { ShadowNotificationWorker.class })
+   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle(), null);
+      threadAndTaskWait();
 
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
       assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);
@@ -1152,7 +1204,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowReceiveReceiptController.class })
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowReceiveReceiptController.class })
    public void shouldSendReceivedReceiptWhenEnabled() throws Exception {
       String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
       OneSignal.setAppId(appId);
@@ -1169,6 +1221,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void shouldNotSendReceivedReceiptWhenDisabled() throws Exception {
       String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
       OneSignal.setAppId(appId);
@@ -1182,7 +1235,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = 17)
+   @Config(sdk = 17, shadows = { ShadowNotificationWorker.class })
    public void testNotificationExtensionServiceOverridePropertiesWithSummaryApi17() throws Exception {
       // 1. Setup notification extension service as well as notifications to receive
       setupNotificationExtensionServiceOverridePropertiesWithSummary();
@@ -1200,7 +1253,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(sdk = 21)
+   @Config(sdk = 21, shadows = { ShadowNotificationWorker.class })
    public void testNotificationExtensionServiceOverridePropertiesWithSummary() throws Exception {
       // 1. Setup notification extension service as well as received notifications/summary
       setupNotificationExtensionServiceOverridePropertiesWithSummary();
@@ -1308,7 +1361,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowOneSignal.class})
+   // We need ShadowNotificationReceived because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowOneSignal.class, ShadowNotificationWorker.class, ShadowNotificationReceived.class })
    public void testNotificationExtensionService_notificationProcessingProperties() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1370,15 +1425,35 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
       assertFalse(ShadowOneSignal.messages.contains("Error assigning"));
 
-      // 8. Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception
+      // 8. Make sure 2 notifications have been posted
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      assertEquals(2, postedNotifs.size());
+   }
+
+   @Test
+   @Config(shadows = { ShadowOneSignal.class, ShadowNotificationWorker.class })
+   public void testNotificationExtensionService_notificationProcessingUnderException() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingProperties");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Test that a notification is still displayed if the developer's code in onNotificationProcessing throws an Exception
+
       NotificationExtensionService_notificationProcessingProperties.throwInAppCode = true;
+      // This will avoid calling callProcessingHandler under a worker thread,
+      // in that way TestHelper Thread.UncaughtExceptionHandler won't catch the error
+      ShadowNotificationWorker.callProcessingHandlerUnderThread = false;
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle("NewUUID1"));
       threadAndTaskWait();
 
-      // 9. Make sure 3 notifications have been posted
+      // 4. Make sure 3 notifications have been posted
       assertTrue(ShadowOneSignal.messages.contains("onNotificationProcessing throw an exception"));
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-      assertEquals(3, postedNotifs.size());
+      assertEquals(1, postedNotifs.size());
    }
 
    /**
@@ -1481,6 +1556,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1595,6 +1673,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent_andThenToNotification() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1643,6 +1724,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_completeBubbles_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1675,6 +1759,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_completeBubbles_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1687,7 +1774,7 @@ public class GenerateNotificationRunner {
 
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
-      // threadTaskAndWait(); is inside of the ExtNotificationWillShowInForegroundHandler implementation
+      threadAndTaskWait();
 
       // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
       assertNotNull(lastExtNotifJob);
@@ -1699,6 +1786,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void testNotificationWillShowInForegroundHandler_doesNotFireWhenAppBackgrounded() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1748,6 +1836,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1780,6 +1871,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_completeDoesNotBubble_toNullAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1817,6 +1911,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowTimeoutHandler.class })
    public void testNotificationWillShowInForegroundHandler_bubbles30SecondTimeout_forExtAndAppHandlers() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1830,13 +1925,15 @@ public class GenerateNotificationRunner {
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
             callbackCounter++;
             lastAppNotifJob = notifJob;
+            Log.i(GenerateNotificationRunner.class.getCanonicalName(), "Thread: " + Thread.currentThread() + " notifJob: " + notifJob.toString());
             // Call complete to end without waiting default 30 second timeout
             notifJob.complete();
          }
       });
       threadAndTaskWait();
 
-      // 3. Receive a notification
+      // 3. Receive a notification, we want to test bubble so we remove the waiting time
+      ShadowTimeoutHandler.setMockDelayMillis(1);
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
 
       // 4. Make sure the ExtNotifJob is not null and AppNotifJob is not null
@@ -1852,6 +1949,8 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowExtNotificationGenerationJob tu make handler runnable timer run under worker thread
+   @Config(shadows = { ShadowExtNotificationGenerationJob.class })
    public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1879,6 +1978,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1892,11 +1992,14 @@ public class GenerateNotificationRunner {
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
             callbackCounter++;
             lastAppNotifJob = notifJob;
+            Log.i(GenerateNotificationRunner.class.getCanonicalName(), "Thread: " + Thread.currentThread() + " notifJob: " + notifJob.toString());
             // Complete is not called, so we rely on 30 second timeout until bubbling by default out of the AppNotificationWillShowInForegroundHandler
          }
       });
       threadAndTaskWait();
 
+      // We want to test bubble so we remove the waiting time
+      ShadowTimeoutHandler.setMockDelayMillis(0);
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -1928,6 +2031,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testNotificationWillShowInForegroundHandler_notifJobPayload() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -2001,12 +2107,6 @@ public class GenerateNotificationRunner {
 
          // Complete is called with true, so bubbling to AppNotificationWillShowInForegroundHandler
          notifJob.complete(true);
-
-         try {
-            threadAndTaskWait();
-         } catch (Exception e) {
-            e.printStackTrace();
-         }
       }
    }
 
@@ -2073,6 +2173,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowNotificationWorker.class })
    public void testNullExtAndAppNotificationWillShowInForegroundHandlers() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");

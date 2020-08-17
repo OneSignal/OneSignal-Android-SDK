@@ -34,6 +34,7 @@ import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationWorker;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
@@ -42,6 +43,7 @@ import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.model.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
@@ -117,6 +119,8 @@ public class TestHelpers {
       OneSignalShadowPackageManager.resetStatics();
 
       ShadowOSUtils.resetStatics();
+      ShadowTimeoutHandler.resetStatics();
+      ShadowNotificationWorker.resetStatics();
 
       lastException = null;
    }

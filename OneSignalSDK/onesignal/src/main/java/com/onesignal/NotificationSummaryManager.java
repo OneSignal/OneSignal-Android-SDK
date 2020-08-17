@@ -6,10 +6,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.onesignal.OneSignalDbContract.NotificationTable;
+
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import com.onesignal.OneSignalDbContract.NotificationTable;
 
 class NotificationSummaryManager {
    
@@ -20,16 +20,16 @@ class NotificationSummaryManager {
           new String[] { NotificationTable.COLUMN_NAME_GROUP_ID }, // retColumn
           NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidNotificationId,
           null, null, null, null);
-      
+
       if (cursor.moveToFirst()) {
          String group = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_GROUP_ID));
          cursor.close();
-         
+
          if (group != null)
             updateSummaryNotificationAfterChildRemoved(context, writableDb, group, true);
-      }
-      else
+      } else {
          cursor.close();
+      }
    }
    
    // Called from an opened / dismissed / cancel event of a single notification to update it's parent the summary notification.
@@ -162,19 +162,19 @@ class NotificationSummaryManager {
               NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
               NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
               NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1";
-      String[] whereArgs = new String[] { group };
+      String[] whereArgs = new String[]{group};
 
       try {
          // Get the Android Notification ID of the summary notification
          cursor = writableDb.query(
-             NotificationTable.TABLE_NAME,
-                 new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID }, // retColumn
+                 NotificationTable.TABLE_NAME,
+                 new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
                  whereStr,
                  whereArgs,
                  null,
                  null,
                  null);
-      
+
          boolean hasRecord = cursor.moveToFirst();
          if (!hasRecord) {
             cursor.close();

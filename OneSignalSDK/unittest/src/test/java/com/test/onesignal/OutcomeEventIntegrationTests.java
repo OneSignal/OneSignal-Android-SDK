@@ -21,6 +21,7 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationWorker;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
@@ -160,6 +161,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testAppSessions_beforeOnSessionCalls() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -190,6 +192,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testAppSessions_afterOnSessionCalls() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -221,6 +224,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectAttributionWindow_withNoNotifications() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -294,6 +298,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testUniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -326,6 +331,7 @@ public class OutcomeEventIntegrationTests {
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
         FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
+        threadAndTaskWait();
 
         // Wait 31 seconds to start new session
         advanceSystemTimeBy(31);
@@ -349,6 +355,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testOnV2UniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         // Enable IAM v2
         preferences = new MockOSSharedPreferences();
@@ -387,6 +394,7 @@ public class OutcomeEventIntegrationTests {
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
         FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
+        threadAndTaskWait();
 
         // Wait 31 seconds to start new session
         advanceSystemTimeBy(31);
@@ -626,6 +634,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testDirectSession_willOverrideIndirectSession_whenAppIsInBackground() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -687,6 +696,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectSession_fromDirectSession_afterNewSession() throws Exception {
         foregroundAppAfterClickingNotification();
 
@@ -750,6 +760,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectSession_wontOverrideIndirectSession_beforeNewSession() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -776,6 +787,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectSession_sendsOnFocusFromSyncJob_after10SecondSession() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -798,6 +810,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectSession_sendsOnFocusFromSyncJob_evenAfterKillingApp_after10SecondSession() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -822,6 +835,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectSession_sendsOnFocusAttributionForPushPlayer_butNotEmailPlayer() throws Exception {
         OneSignal.setEmail("test@test.com");
         foregroundAppAfterReceivingNotification();
@@ -852,6 +866,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testIndirectSessionNotificationsUpdated_onNewIndirectSession() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -866,7 +881,7 @@ public class OutcomeEventIntegrationTests {
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
         FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
-        indirectNotificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
+        threadAndTaskWait();
 
         // App in background for 31 seconds to trigger new session
         advanceSystemTimeBy(31);
@@ -875,6 +890,7 @@ public class OutcomeEventIntegrationTests {
         blankActivityController.resume();
         threadAndTaskWait();
 
+        indirectNotificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
         // Make sure indirectNotificationIds are updated and correct
         assertEquals(indirectNotificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
 
@@ -887,6 +903,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowNotificationWorker.class })
     public void testCleaningCachedNotifications_after7Days_willAlsoCleanUniqueOutcomeNotifications() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -914,6 +931,7 @@ public class OutcomeEventIntegrationTests {
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
         FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
+        threadAndTaskWait();
 
         // Foreground app through icon
         blankActivityController.resume();
@@ -1007,6 +1025,7 @@ public class OutcomeEventIntegrationTests {
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "1");
         FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
+        threadAndTaskWait();
 
         // Check notification was saved
         assertEquals(1, trackerFactory.getNotificationChannelTracker().getLastReceivedIds().length());

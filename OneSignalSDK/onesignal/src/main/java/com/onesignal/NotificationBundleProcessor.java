@@ -38,6 +38,7 @@ import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -114,10 +115,12 @@ class NotificationBundleProcessor {
      * Only use the {@link NotificationBundleProcessor#processJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
      *  in the event where you want to mark a notification as opened or displayed different than the defaults
      */
+    @WorkerThread
     static int processJobForDisplay(OSNotificationGenerationJob notifJob) {
         return processJobForDisplay(notifJob, false, true);
     }
 
+    @WorkerThread
     static int processJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
         processCollapseKey(notifJob);
 

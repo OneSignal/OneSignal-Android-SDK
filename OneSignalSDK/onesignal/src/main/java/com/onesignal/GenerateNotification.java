@@ -47,6 +47,7 @@ import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
 
 import androidx.annotation.RequiresApi;
+import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -105,6 +106,7 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
+   @WorkerThread
    static void fromJsonPayload(OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
@@ -607,7 +609,7 @@ class GenerateNotification {
             inboxStyle.addLine(spannableString);
          }
 
-         for(SpannableString line : summaryList)
+         for (SpannableString line : summaryList)
             inboxStyle.addLine(line);
          inboxStyle.setBigContentTitle(summaryMessage);
          summaryBuilder.setStyle(inboxStyle);

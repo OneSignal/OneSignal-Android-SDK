@@ -84,12 +84,14 @@ import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationWorker;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowRoboNotificationManager;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
@@ -128,6 +130,7 @@ import java.util.regex.Pattern;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
@@ -1036,7 +1039,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
 
       threadAndTaskWait();
 
@@ -1115,7 +1118,11 @@ public class MainOneSignalClassRunner {
 
    private static String notificationReceivedBody;
    private static int androidNotificationId;
+
    @Test
+   // We need ShadowTimeoutHandler because Roboelectric runs everything under MainThread, also because it shadow Loopers they only work for main thread loopers
+   // given that ShadowNotificationWorker will create a new Thread we need to emulate Handler postDelay to a avoid deadlock
+   @Config(shadows = { ShadowNotificationWorker.class, ShadowTimeoutHandler.class })
    public void testNotificationReceivedWhenAppInFocus() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId(ONESIGNAL_APP_ID);
@@ -1149,6 +1156,7 @@ public class MainOneSignalClassRunner {
       notificationReceivedBody = null;
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
 
       assertNull(lastNotificationOpenedBody);
       assertNull(notificationReceivedBody);
@@ -1165,7 +1173,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowBadgeCountUpdater.class})
+   @Config(shadows = { ShadowBadgeCountUpdater.class })
    public void testBadgeClearOnFirstStart() throws Exception {
       ShadowBadgeCountUpdater.lastCount = -1;
 
@@ -3759,9 +3767,10 @@ public class MainOneSignalClassRunner {
       assertNotNull(postNotificationFailure);
    }
 
-
    @Test
-   @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class })
+   // ShadowNotificationWorker shadow to make completeWork call being call from worker thread
+   // Roboelectric makes workers run on main thread
+   @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class, ShadowNotificationWorker.class })
    public void shouldCancelAndClearNotifications() throws Exception {
       ShadowRoboNotificationManager.notifications.clear();
       OneSignal.setAppId(ONESIGNAL_APP_ID);
@@ -3770,9 +3779,11 @@ public class MainOneSignalClassRunner {
 
       // Create 2 notifications
       Bundle bundle = getBaseNotifBundle();
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      threadAndTaskWait();
+
       bundle = getBaseNotifBundle("UUID2");
-      OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle, null);
       threadAndTaskWait();
 
       // Test canceling
@@ -3923,7 +3934,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = {ShadowBadgeCountUpdater.class})
+   @Config(shadows = { ShadowBadgeCountUpdater.class })
    public void shouldClearBadgesWhenPermissionIsDisabled() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
@@ -4207,11 +4218,20 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      JSONObject openPayload = new JSONObject();
+      final JSONObject openPayload = new JSONObject();
       openPayload.put("title", "Test title");
       openPayload.put("alert", "Test Msg");
       openPayload.put("custom", new JSONObject("{ \"i\": \"UUID\" }"));
-      NotificationBundleProcessor_Process(blankActivity, false, openPayload, null);
+
+      new Thread(new Runnable() {
+         @Override
+         public void run() {
+            // processJobForDisplay usually won't be called from Main Thread
+            // This will emulate being call from worker thread
+            NotificationBundleProcessor_Process(blankActivity, false, openPayload, null);
+         }
+      }, "OS_NOTIFICATION_BUNDLE_PROCESS").start();
+      threadAndTaskWait();
 
       assertEquals("os_notification_received", ShadowFirebaseAnalytics.lastEventString);
       Bundle expectedBundle = new Bundle();
