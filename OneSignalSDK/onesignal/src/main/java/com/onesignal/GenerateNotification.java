@@ -47,6 +47,7 @@ import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
 
 import androidx.annotation.RequiresApi;
+import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -105,17 +106,25 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   static void fromJsonPayload(final OSNotificationGenerationJob notifJob) {
+   @WorkerThread
+   static void fromJsonPayload(OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
       if (notifJob.displayOption.isSilent())
          return;
 
+      isRunningOnMainThreadCheck();
+
+      showNotification(notifJob);
+   }
+
+   /**
+    * For shadow test purpose
+    */
+   static void isRunningOnMainThreadCheck() {
       // Runtime check against showing the notification from the main thread
       if (OSUtils.isRunningOnMainThread())
          throw new OSThrowable.OSMainThreadException("Process for showing a notification should never been done on Main Thread!");
-
-      showNotification(notifJob);
    }
    
    private static CharSequence getTitle(JSONObject fcmJson) {
@@ -607,7 +616,7 @@ class GenerateNotification {
             inboxStyle.addLine(spannableString);
          }
 
-         for(SpannableString line : summaryList)
+         for (SpannableString line : summaryList)
             inboxStyle.addLine(line);
          inboxStyle.setBigContentTitle(summaryMessage);
          summaryBuilder.setStyle(inboxStyle);

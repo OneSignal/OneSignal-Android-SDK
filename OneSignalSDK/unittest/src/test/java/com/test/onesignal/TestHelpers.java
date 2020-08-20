@@ -1,7 +1,6 @@
 package com.test.onesignal;
 
 import android.app.AlarmManager;
-import android.app.Application;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.app.job.JobService;
@@ -43,6 +42,7 @@ import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.model.OSInfluenceType;
 import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
@@ -118,6 +118,7 @@ public class TestHelpers {
       OneSignalShadowPackageManager.resetStatics();
 
       ShadowOSUtils.resetStatics();
+      ShadowTimeoutHandler.resetStatics();
 
       lastException = null;
    }

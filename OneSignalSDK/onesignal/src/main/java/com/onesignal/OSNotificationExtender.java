@@ -57,6 +57,14 @@ public class OSNotificationExtender {
          if (overrideSettings.extender != null)
             extender = overrideSettings.extender;
       }
+
+      @Override
+      public String toString() {
+         return "OverrideSettings{" +
+                 "extender=" + extender +
+                 ", androidNotificationId=" + androidNotificationId +
+                 '}';
+      }
    }
 
    private Context context;
@@ -220,5 +228,18 @@ public class OSNotificationExtender {
       } catch (ClassNotFoundException e) {
          e.printStackTrace();
       }
+   }
+
+   @Override
+   public String toString() {
+      return "OSNotificationExtender{" +
+              "context=" + context +
+              ", jsonPayload=" + jsonPayload +
+              ", isRestoring=" + isRestoring +
+              ", timestamp=" + timestamp +
+              ", currentBaseOverrideSettings=" + currentBaseOverrideSettings +
+              ", notificationDisplayedResult=" + notificationDisplayedResult +
+              ", developerProcessed=" + developerProcessed +
+              '}';
    }
 }
