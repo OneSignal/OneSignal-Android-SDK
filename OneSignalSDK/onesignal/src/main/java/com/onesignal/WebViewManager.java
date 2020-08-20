@@ -239,6 +239,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     // Every time an Activity is shown we update the height of the WebView since the available
     //   screen size may have changed. (Expect for Fullscreen)
     private void calculateHeightAndShowWebViewAfterNewActivity() {
+        if (messageView == null)
+            return;
+
         // Don't need a CSS / HTML height update for fullscreen
         if (messageView.getDisplayPosition() == Position.FULL_SCREEN) {
             showMessageView(null);

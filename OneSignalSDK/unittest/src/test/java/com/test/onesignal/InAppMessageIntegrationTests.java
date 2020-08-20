@@ -242,6 +242,26 @@ public class InAppMessageIntegrationTests {
         assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
+    // This test reproduces https://github.com/OneSignal/OneSignal-Android-SDK/issues/1000
+    @Test
+    public void testMessageDismissingWhileNewActivityIsBeingStarted() throws Exception {
+        initializeSdkWithMultiplePendingMessages();
+
+        // 1. Add trigger to show IAM
+        OneSignal.addTriggers(new HashMap<String, Object>() {{
+            put("test_2", 2);
+        }});
+
+        // 2. Activity IAM is displaying over is dismissed
+        blankActivityController.stop();
+
+        // 3. IAM is dismissed before a new Activity is shown
+        OneSignalPackagePrivateHelper.WebViewManager.callDismissAndAwaitNextMessage();
+
+        // 4. An Activity put in to focus, successful we don't throw.
+        blankActivityController.resume();
+    }
+
 
     private void nextResponseMultiplePendingMessages() throws JSONException {
         final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
