@@ -29,4 +29,11 @@ package com.onesignal;
 
 public class OSNotificationDisplayedResult {
    public int androidNotificationId;
+
+   @Override
+   public String toString() {
+      return "OSNotificationDisplayedResult{" +
+              "androidNotificationId=" + androidNotificationId +
+              '}';
+   }
 }

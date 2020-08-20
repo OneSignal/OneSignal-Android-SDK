@@ -100,7 +100,7 @@ class OneSignalRestClient {
    
    private static void makeRequest(final String url, final String method, final JSONObject jsonBody, final ResponseHandler responseHandler, final int timeout, final String cacheKey) {
       if (OSUtils.isRunningOnMainThread())
-         throw new OneSignalNetworkCallException("Method: " + method + " was called from the Main Thread!");
+         throw new OSThrowable.OSMainThreadException("Method: " + method + " was called from the Main Thread!");
 
       // If not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
       if (method != null && OneSignal.shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
@@ -290,11 +290,5 @@ class OneSignalRestClient {
 
    private static HttpURLConnection newHttpURLConnection(String url) throws IOException {
       return (HttpURLConnection)new URL(BASE_URL + url).openConnection();
-   }
-
-   private static class OneSignalNetworkCallException extends RuntimeException {
-      public OneSignalNetworkCallException(String message) {
-         super(message);
-      }
    }
 }

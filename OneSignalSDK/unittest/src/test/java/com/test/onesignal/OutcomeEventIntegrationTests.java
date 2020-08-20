@@ -20,6 +20,7 @@ import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGMSLocationController;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -51,7 +52,7 @@ import org.robolectric.shadows.ShadowPausedSystemClock;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived;
+import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_onReceived_withBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
@@ -167,6 +168,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testAppSessions_beforeOnSessionCalls() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -197,6 +199,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testAppSessions_afterOnSessionCalls() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -228,6 +231,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectAttributionWindow_withNoNotifications() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -301,6 +305,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testUniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -332,7 +337,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Wait 31 seconds to start new session
         time.advanceSystemTimeBy(31);
@@ -356,6 +361,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testOnV2UniqueOutcomeMeasureOnlySentOncePerNotification_whenSendingMultipleUniqueOutcomes_inIndirectSessions() throws Exception {
         // Enable IAM v2
         preferences = new MockOSSharedPreferences();
@@ -393,7 +399,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Wait 31 seconds to start new session
         time.advanceSystemTimeBy(31);
@@ -622,7 +628,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID);
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Make sure notification influence is not INDIRECT
         assertFalse(trackerFactory.getNotificationChannelTracker().getInfluenceType().isIndirect());
@@ -633,6 +639,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testDirectSession_willOverrideIndirectSession_whenAppIsInBackground() throws Exception {
         time.advanceSystemAndElapsedTimeBy(0);
         foregroundAppAfterReceivingNotification();
@@ -692,6 +699,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectSession_fromDirectSession_afterNewSession() throws Exception {
         foregroundAppAfterClickingNotification();
 
@@ -701,7 +709,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
         threadAndTaskWait();
 
         // Wait 31 seconds
@@ -738,7 +746,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -755,6 +763,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectSession_wontOverrideIndirectSession_beforeNewSession() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -764,7 +773,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive another notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Foreground app through icon before new session
         blankActivityController.resume();
@@ -781,6 +790,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectSession_sendsOnFocusFromSyncJob_after10SecondSession() throws Exception {
         time.advanceSystemAndElapsedTimeBy(0);
         foregroundAppAfterReceivingNotification();
@@ -804,6 +814,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectSession_sendsOnFocusFromSyncJob_evenAfterKillingApp_after10SecondSession() throws Exception {
         time.advanceSystemAndElapsedTimeBy(0);
         foregroundAppAfterReceivingNotification();
@@ -829,6 +840,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectSession_sendsOnFocusAttributionForPushPlayer_butNotEmailPlayer() throws Exception {
         time.advanceSystemAndElapsedTimeBy(0);
         OneSignal.setEmail("test@test.com");
@@ -860,6 +872,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testIndirectSessionNotificationsUpdated_onNewIndirectSession() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -873,7 +886,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
         indirectNotificationIds.put(ONESIGNAL_NOTIFICATION_ID + "2");
 
         // App in background for 31 seconds to trigger new session
@@ -895,6 +908,7 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void testCleaningCachedNotifications_after7Days_willAlsoCleanUniqueOutcomeNotifications() throws Exception {
         foregroundAppAfterReceivingNotification();
 
@@ -921,7 +935,7 @@ public class OutcomeEventIntegrationTests {
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Foreground app through icon
         blankActivityController.resume();
@@ -1014,7 +1028,7 @@ public class OutcomeEventIntegrationTests {
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "1");
-        FCMBroadcastReceiver_onReceived(blankActivity, bundle);
+        FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
 
         // Check notification was saved
         assertEquals(1, trackerFactory.getNotificationChannelTracker().getLastReceivedIds().length());

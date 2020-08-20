@@ -185,7 +185,6 @@ public class OneSignal {
     * Finally, to notify the SDK that the processing work is done, call {@link OSNotificationReceived#complete()}
     * <br/><br/>
     * TODO: Update docs with new NotificationProcessingHandler, this would be replacing the old NotificationExtenderService
-    * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationreceivedhandler">NotificationReceivedHandler | OneSignal Docs</a>
     */
    public interface NotificationProcessingHandler {
 
@@ -236,7 +235,6 @@ public class OneSignal {
     * Set this during OneSignal init in
     * {@link OneSignal#setNotificationOpenedHandler(NotificationOpenedHandler)}
     * <br/><br/>
-    * TODO: Update docs with new NotificationOpenedHandler
     * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationopenedhandler">NotificationOpenedHandler | OneSignal Docs</a>
     */
    public interface NotificationOpenedHandler {

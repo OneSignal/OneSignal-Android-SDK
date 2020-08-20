@@ -33,25 +33,27 @@ import com.onesignal.OSNotificationExtender.OverrideSettings;
 
 import org.json.JSONObject;
 
-public class OSNotificationReceived extends OSTimeoutHandler {
+public class OSNotificationReceived {
 
    // Timeout in seconds before auto calling
    private static final long PROCESS_NOTIFICATION_TIMEOUT = 5 * 1_000L;
 
-   // Used to toggle when complete is called so it can not be called more than once
-   private boolean isComplete = false;
+   private final OSTimeoutHandler timeoutHandler;
+   private OSNotificationExtender notificationExtender;
 
    public OSNotificationPayload payload;
    public boolean isRestoring;
    public boolean isAppInFocus;
+   // Used to toggle when complete is called so it can not be called more than once
+   private boolean isComplete = false;
 
-   private OSNotificationExtender notificationExtender;
-
-   OSNotificationReceived(Context context, int androidNotificationId, JSONObject jsonPayload, boolean isRestoring, boolean isAppInFocus, long timestamp) {
+   OSNotificationReceived(Context context, int androidNotificationId, JSONObject jsonPayload,
+                          boolean isRestoring, boolean isAppInFocus, long timestamp) {
       this.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(jsonPayload);
       this.isRestoring = isRestoring;
       this.isAppInFocus = isAppInFocus;
 
+      timeoutHandler = new OSTimeoutHandler();
       notificationExtender = new OSNotificationExtender(
               context,
               androidNotificationId,
@@ -60,8 +62,7 @@ public class OSNotificationReceived extends OSTimeoutHandler {
               timestamp
       );
 
-      setTimeout(PROCESS_NOTIFICATION_TIMEOUT);
-      startTimeout(new Runnable() {
+      timeoutHandler.startTimeout(PROCESS_NOTIFICATION_TIMEOUT, new Runnable() {
          @Override
          public void run() {
             complete();
@@ -115,7 +116,7 @@ public class OSNotificationReceived extends OSTimeoutHandler {
     *  a runnable will fire after a 5 second timer and complete by default
     */
    public synchronized void complete() {
-      destroyTimeout();
+      timeoutHandler.destroyTimeout();
 
       if (isComplete)
          return;
@@ -125,4 +126,14 @@ public class OSNotificationReceived extends OSTimeoutHandler {
       notificationExtender.processNotification();
    }
 
+   @Override
+   public String toString() {
+      return "OSNotificationReceived{" +
+              "notificationExtender=" + notificationExtender +
+              ", payload=" + payload +
+              ", isRestoring=" + isRestoring +
+              ", isAppInFocus=" + isAppInFocus +
+              ", isComplete=" + isComplete +
+              '}';
+   }
 }

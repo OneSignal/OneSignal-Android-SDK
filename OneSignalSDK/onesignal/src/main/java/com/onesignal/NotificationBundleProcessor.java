@@ -38,6 +38,7 @@ import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -67,6 +68,8 @@ class NotificationBundleProcessor {
     private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     static final String DEFAULT_ACTION = "__DEFAULT__";
 
+    static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
+
     static void processFromFCMIntentService(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
         OneSignal.setAppContext(context);
         try {
@@ -76,29 +79,31 @@ class NotificationBundleProcessor {
                 return;
             }
 
-            OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-            notifJob.jsonPayload = new JSONObject(jsonStrPayload);
-            notifJob.isRestoring = bundle.getBoolean("is_restoring", false);
-            notifJob.shownTimeStamp = bundle.getLong("timestamp");
-            notifJob.isIamPreview = inAppPreviewPushUUID(notifJob.jsonPayload) != null;
+            JSONObject jsonPayload = new JSONObject(jsonStrPayload);
+            boolean isRestoring = bundle.getBoolean("is_restoring", false);
+            long shownTimeStamp = bundle.getLong("timestamp");
+            boolean isIamPreview = inAppPreviewPushUUID(jsonPayload) != null;
 
-            if (!notifJob.isRestoring &&
-                    !notifJob.isIamPreview &&
-                    OneSignal.notValidOrDuplicated(context, notifJob.jsonPayload))
+            int androidNotificationId = 0;
+            if (bundle.containsKey("android_notif_id"))
+                androidNotificationId = bundle.getInt("android_notif_id");
+
+            if (!isRestoring
+                    && !isIamPreview
+                    && OneSignal.notValidOrDuplicated(context, jsonPayload))
                 return;
 
-            if (bundle.containsKey("android_notif_id")) {
-                if (overrideSettings == null)
-                    overrideSettings = new OSNotificationExtender.OverrideSettings();
-                overrideSettings.androidNotificationId = bundle.getInt("android_notif_id");
-            }
-
-            notifJob.overrideSettings = overrideSettings;
-            processJobForDisplay(notifJob);
+            OSNotificationWorkManager.beginEnqueueingWork(
+                    context,
+                    androidNotificationId,
+                    jsonStrPayload,
+                    isRestoring,
+                    shownTimeStamp,
+                    false);
 
             // Delay to prevent CPU spikes.
             //    Normally more than one notification is restored at a time.
-            if (notifJob.isRestoring)
+            if (isRestoring)
                 OSUtils.sleep(100);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -110,10 +115,12 @@ class NotificationBundleProcessor {
      * Only use the {@link NotificationBundleProcessor#processJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
      *  in the event where you want to mark a notification as opened or displayed different than the defaults
      */
+    @WorkerThread
     static int processJobForDisplay(OSNotificationGenerationJob notifJob) {
         return processJobForDisplay(notifJob, false, true);
     }
 
+    @WorkerThread
     static int processJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
         processCollapseKey(notifJob);
 
@@ -143,6 +150,15 @@ class NotificationBundleProcessor {
 
         // Otherwise, this is a normal notification and should be shown
         return notifJob.hasExtender() || shouldDisplay(notifJob.jsonPayload.optString("alert"));
+    }
+
+    private static void saveAndProcessDupNotification(Context context, Bundle bundle) {
+        OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
+        notifJob.jsonPayload = bundleAsJSONObject(bundle);
+        notifJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
+        notifJob.overrideSettings.androidNotificationId = -1;
+
+        processNotification(notifJob, true);
     }
 
     /**
@@ -487,13 +503,17 @@ class NotificationBundleProcessor {
         notifJob.jsonPayload = bundleAsJSONObject(bundle);
         notifJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
 
-        // Process and save as a opened notification to prevent duplicates.
+        // Save as a opened notification to prevent duplicates
         String alert = bundle.getString("alert");
         if (!shouldDisplay(alert)) {
-            notifJob.overrideSettings.androidNotificationId = -1;
-            NotificationBundleProcessor.processJobForDisplay(notifJob, true, false);
-        } else {
-            NotificationBundleProcessor.processJobForDisplay(notifJob);
+            saveAndProcessDupNotification(context, bundle);
+            // Current thread is meant to be short lived
+            // Make a new thread to do our OneSignal work on
+            new Thread(new Runnable() {
+                public void run() {
+                    OneSignal.handleNotificationReceived(notifJob, false);
+                }
+            }, OS_NOTIFICATION_PROCESSING_THREAD).start();
         }
 
         return result;
@@ -535,7 +555,8 @@ class NotificationBundleProcessor {
         if (bundle.containsKey("android_notif_id"))
             androidNotificationId = bundle.getInt("android_notif_id");
 
-        if (!isRestoring && OneSignal.notValidOrDuplicated(context, jsonPayload))
+        if (!isRestoring
+                && OneSignal.notValidOrDuplicated(context, jsonPayload))
             return false;
 
         String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
@@ -546,8 +567,7 @@ class NotificationBundleProcessor {
                 jsonPayload.toString(),
                 isRestoring,
                 timestamp,
-                isHighPriority
-        );
+                isHighPriority);
 
         result.isWorkManagerProcessing = true;
         return true;

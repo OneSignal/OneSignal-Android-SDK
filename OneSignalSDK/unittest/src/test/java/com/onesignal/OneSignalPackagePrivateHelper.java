@@ -167,12 +167,22 @@ public class OneSignalPackagePrivateHelper {
       return processedResult.processed();
    }
 
-   public static void FCMBroadcastReceiver_onReceived(Context context, Bundle bundle) {
+   public static void FCMBroadcastReceiver_onReceived_withIntent(Context context, Intent intent) {
+      FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      receiver.onReceive(context, intent);
+   }
+
+   public static void FCMBroadcastReceiver_onReceived_withBundle(Context context, Bundle bundle) {
       FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtras(bundle);
       receiver.onReceive(context,intent);
+   }
+
+   public static void HMSProcessor_processDataMessageReceived(final Context context, final String jsonStrPayload) {
+      NotificationPayloadProcessorHMS.processDataMessageReceived(context, jsonStrPayload);
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, OSNotificationExtender.OverrideSettings overrideSettings) {

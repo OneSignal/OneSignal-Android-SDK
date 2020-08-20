@@ -44,6 +44,7 @@ import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.domain.OSInfluenceType;
 import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
@@ -119,6 +120,7 @@ public class TestHelpers {
       OneSignalShadowPackageManager.resetStatics();
 
       ShadowOSUtils.resetStatics();
+      ShadowTimeoutHandler.resetStatics();
 
       lastException = null;
    }

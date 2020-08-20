@@ -77,6 +77,7 @@ import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowGMSLocationUpdateListener;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
@@ -156,6 +157,7 @@ import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.getNextJob;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
 import static com.test.onesignal.TestHelpers.runNextJob;
+import static com.test.onesignal.TestHelpers.runOSThreads;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -1167,12 +1169,12 @@ public class MainOneSignalClassRunner {
 
       Bundle bundle = getBaseNotifBundle();
       boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait();
 
       assertTrue(processResult);
       assertNull(lastNotificationOpenedBody);
 
       NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle), null);
+
       assertEquals("Robo test message", notificationReceivedBody);
       assertNotEquals(0, androidNotificationId);
 
@@ -1181,7 +1183,7 @@ public class MainOneSignalClassRunner {
       notificationReceivedBody = null;
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait();
+
       assertNull(lastNotificationOpenedBody);
       assertNull(notificationReceivedBody);
 
@@ -1190,9 +1192,8 @@ public class MainOneSignalClassRunner {
 
       // Test that only NotificationReceivedHandler fires
       bundle = getBaseNotifBundle("UUID2");
-
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
-      threadAndTaskWait();
+
       assertNull(lastNotificationOpenedBody);
       assertEquals("Robo test message", notificationReceivedBody);
    }
@@ -3809,7 +3810,7 @@ public class MainOneSignalClassRunner {
 
 
    @Test
-   @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class })
+   @Config(shadows = { ShadowRoboNotificationManager.class, ShadowBadgeCountUpdater.class, ShadowGenerateNotification.class })
    public void shouldCancelAndClearNotifications() throws Exception {
       ShadowRoboNotificationManager.notifications.clear();
       OneSignal.setAppId(ONESIGNAL_APP_ID);
@@ -4256,7 +4257,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowFirebaseAnalytics.class })
+   @Config(shadows = { ShadowFirebaseAnalytics.class, ShadowGenerateNotification.class })
    public void shouldSendFirebaseAnalyticsNotificationReceived() throws Exception {
       ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(new JSONObject().put("fba", true));
       OneSignalInit();
