@@ -79,7 +79,6 @@ public class ShadowOSUtils {
       hasHMSPushKitLibrary = false;
       hasHMSAGConnectLibrary = false;
       isHMSCoreInstalledAndEnabled = false;
-
    }
 
    public String getCarrierName() {

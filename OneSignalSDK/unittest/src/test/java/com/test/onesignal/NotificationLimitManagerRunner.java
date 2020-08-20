@@ -10,6 +10,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowNotificationLimitManager;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -120,6 +121,7 @@ public class NotificationLimitManagerRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void clearFallbackMakingRoomForOneWhenAtLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
       threadAndTaskWait();
@@ -132,6 +134,7 @@ public class NotificationLimitManagerRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
       threadAndTaskWait();

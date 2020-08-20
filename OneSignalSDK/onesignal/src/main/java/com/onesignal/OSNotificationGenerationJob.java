@@ -43,10 +43,10 @@ public class OSNotificationGenerationJob {
     // Timeout in seconds before applying defaults
     private static final long SHOW_NOTIFICATION_TIMEOUT = 25 * 1_000L;
 
-    private final String TITLE_PAYLOAD_PARAM = "title";
-    private final String ALERT_PAYLOAD_PARAM = "alert";
-    private final String CUSTOM_PAYLOAD_PARAM = "custom";
-    private final String ADDITIONAL_DATA_PAYLOAD_PARAM = "a";
+    private static final String TITLE_PAYLOAD_PARAM = "title";
+    private static final String ALERT_PAYLOAD_PARAM = "alert";
+    private static final String CUSTOM_PAYLOAD_PARAM = "custom";
+    private static final String ADDITIONAL_DATA_PAYLOAD_PARAM = "a";
 
     Context context;
     JSONObject jsonPayload;
@@ -176,21 +176,30 @@ public class OSNotificationGenerationJob {
      *    1. {@link ExtNotificationGenerationJob}
      *    2. {@link AppNotificationGenerationJob}
      */
-    static class NotificationGenerationJob extends OSTimeoutHandler {
+    static class NotificationGenerationJob {
 
         // Used to toggle when complete is called so it can not be called more than once
         boolean isComplete = false;
 
+        private final OSTimeoutHandler timeoutHandler;
         // The actual notifJob with notification payload data
         private OSNotificationGenerationJob notifJob;
 
         NotificationGenerationJob(OSNotificationGenerationJob notifJob) {
             this.notifJob = notifJob;
-            setTimeout(SHOW_NOTIFICATION_TIMEOUT);
+            timeoutHandler = new OSTimeoutHandler();
         }
 
         OSNotificationGenerationJob getNotifJob() {
             return notifJob;
+        }
+
+        protected void startTimeout(Runnable runnable) {
+            timeoutHandler.startTimeout(SHOW_NOTIFICATION_TIMEOUT, runnable);
+        }
+
+        protected void destroyTimeout() {
+            timeoutHandler.destroyTimeout();
         }
 
         public String getApiNotificationId() {
@@ -219,6 +228,14 @@ public class OSNotificationGenerationJob {
 
         public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
             notifJob.setNotificationDisplayOption(displayOption);
+        }
+
+        @Override
+        public String toString() {
+            return "NotificationGenerationJob{" +
+                    "isComplete=" + isComplete +
+                    ", notifJob=" + notifJob +
+                    '}';
         }
     }
 
@@ -274,7 +291,6 @@ public class OSNotificationGenerationJob {
         AppNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
             super(notifJob);
 
-
             startTimeout(new Runnable() {
                 @Override
                 public void run() {
@@ -300,4 +316,21 @@ public class OSNotificationGenerationJob {
         }
     }
 
+    @Override
+    public String toString() {
+        return "OSNotificationGenerationJob{" +
+                "jsonPayload=" + jsonPayload +
+                ", isRestoring=" + isRestoring +
+                ", isIamPreview=" + isIamPreview +
+                ", displayOption=" + displayOption +
+                ", shownTimeStamp=" + shownTimeStamp +
+                ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
+                ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
+                ", overriddenSound=" + overriddenSound +
+                ", overriddenFlags=" + overriddenFlags +
+                ", orgFlags=" + orgFlags +
+                ", orgSound=" + orgSound +
+                ", overrideSettings=" + overrideSettings +
+                '}';
+    }
 }

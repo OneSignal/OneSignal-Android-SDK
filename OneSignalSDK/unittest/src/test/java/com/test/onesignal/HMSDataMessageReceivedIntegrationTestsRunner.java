@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationPayloadProcessorHMS;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowRoboNotificationManager;
@@ -25,6 +26,7 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.HMSProcessor_processDataMessageReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_ROOT_CUSTOM;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
@@ -85,9 +87,10 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
     }
 
     @Test
+    @Config(shadows = { ShadowGenerateNotification.class })
     public void basicPayload_shouldDisplayNotification() throws Exception {
         blankActivityController.pause();
-        NotificationPayloadProcessorHMS.processDataMessageReceived(blankActivity, helperBasicOSPayload());
+        HMSProcessor_processDataMessageReceived(blankActivity, helperBasicOSPayload());
         threadAndTaskWait();
 
         assertEquals(ALERT_TEST_MESSAGE_BODY, ShadowRoboNotificationManager.getLastShadowNotif().getBigText());
