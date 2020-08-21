@@ -1007,6 +1007,19 @@ public class OneSignal {
       return appContext == null || isUserPrivacyConsentRequired() && !userProvidedPrivacyConsent();
    }
 
+   /**
+    * This method will be replaced by remote params set
+    */
+   @Deprecated
+   public static void setRequiresUserPrivacyConsent(boolean required) {
+      if (requiresUserPrivacyConsent() && !required) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Cannot change requiresUserPrivacyConsent() from TRUE to FALSE");
+         return;
+      }
+
+      getRemoteParamController().savePrivacyConsentRequired(required);
+   }
+
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
       if (requiresUserPrivacyConsent()) {
          if (methodName != null)
@@ -2442,7 +2455,16 @@ public class OneSignal {
       OneSignalStateSynchronizer.setSubscription(enable);
    }
 
-   static void setSharedLocation(boolean enable) {
+   /**
+    * This method will be replaced by remote params set
+    */
+   @Deprecated
+   public static void setLocationShared(boolean enable) {
+
+      //if applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLocationShared()"))
+         return;
+
       if (!enable)
          OneSignalStateSynchronizer.clearLocation();
       logger.debug("OneSignal is shareLocation enabled: " + enable);

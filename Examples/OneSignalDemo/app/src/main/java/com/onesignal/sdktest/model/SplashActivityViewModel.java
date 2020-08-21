@@ -85,8 +85,16 @@ public class SplashActivityViewModel implements ActivityViewModel {
     }
 
     private void setupOneSignalSDK() {
+        boolean privacyConsent = true;
+        OneSignal.setRequiresUserPrivacyConsent(privacyConsent);
+
+        boolean isLocationShared = OneSignalPrefs.getCachedLocationSharedStatus(context);
+        OneSignal.setLocationShared(isLocationShared);
+
         boolean isInAppMessagingPaused = OneSignalPrefs.getCachedInAppMessagingPausedStatus(context);
         OneSignal.pauseInAppMessages(isInAppMessagingPaused);
+
+        Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
 
         boolean isEmailCached = attemptSignIn(new EmailUpdateCallback() {
             @Override
