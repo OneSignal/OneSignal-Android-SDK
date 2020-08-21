@@ -3,8 +3,12 @@ package com.onesignal;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Bundle;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+
+import static com.onesignal.NotificationBundleProcessor.processBundleFromReceiver;
 
 /**
  * Uses modified JobIntentService class that's part of the onesignal package
@@ -17,10 +21,11 @@ public class FCMIntentJobService extends JobIntentService {
 
     @Override
     protected void onHandleWork(@NonNull Intent intent) {
-        BundleCompat bundle = BundleCompatFactory.getInstance();
-        bundle.setBundle(intent.getExtras().getParcelable(BUNDLE_EXTRA));
+        Bundle bundle = intent.getExtras();
+        if (bundle == null)
+            return;
 
-        NotificationBundleProcessor.ProcessFromFCMIntentService(this, bundle, null);
+        processBundleFromReceiver(this, bundle);
     }
 
     public static void enqueueWork(Context context, Intent intent) {

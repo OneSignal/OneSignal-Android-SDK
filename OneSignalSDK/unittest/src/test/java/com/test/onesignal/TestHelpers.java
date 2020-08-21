@@ -44,6 +44,7 @@ import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.domain.OSInfluenceType;
 import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
@@ -119,6 +120,7 @@ public class TestHelpers {
       OneSignalShadowPackageManager.resetStatics();
 
       ShadowOSUtils.resetStatics();
+      ShadowTimeoutHandler.resetStatics();
 
       lastException = null;
    }
@@ -434,7 +436,7 @@ public class TestHelpers {
       return cachedUniqueOutcomes;
    }
 
-   synchronized static void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
+   static synchronized void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
       SQLiteDatabase writableDatabase = db.getSQLiteDatabaseWithRetries();
 
       ContentValues values = new ContentValues();
@@ -448,7 +450,7 @@ public class TestHelpers {
       writableDatabase.close();
    }
 
-   synchronized static List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
+   static synchronized List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
       SQLiteDatabase readableDatabase = db.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDatabase.query(
               OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,

@@ -108,12 +108,20 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
 
-   public static OSRemoteParamController OneSignal_getRemoteParamController() {
-      return OneSignal.getRemoteParamController();
+   /**
+    * Only necessary when not fully init OneSignal SDK
+    * setAppContext required to setup a notification extension service
+    */
+   public static void OneSignal_setupNotificationExtensionServiceClass() {
+      OSNotificationExtender.setupNotificationExtensionServiceClass();
    }
 
    public static void OneSignal_savePrivacyConsentRequired(boolean required) {
       OneSignal_getRemoteParamController().savePrivacyConsentRequired(required);
+   }
+
+   public static OSRemoteParamController OneSignal_getRemoteParamController() {
+      return OneSignal.getRemoteParamController();
    }
 
    public static OSSessionManager.SessionListener OneSignal_getSessionListener() {
@@ -146,12 +154,12 @@ public class OneSignalPackagePrivateHelper {
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.ProcessFromFCMIntentService(context, bundle, overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
+      NotificationBundleProcessor.processFromFCMIntentService(context, bundle, overrideSettings);
    }
 
    public static boolean FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
@@ -159,7 +167,13 @@ public class OneSignalPackagePrivateHelper {
       return processedResult.processed();
    }
 
-   public static void FCMBroadcastReceiver_onReceived(Context context, Bundle bundle) {
+   public static void FCMBroadcastReceiver_onReceived_withIntent(Context context, Intent intent) {
+      FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
+      intent.setAction("com.google.android.c2dm.intent.RECEIVE");
+      receiver.onReceive(context, intent);
+   }
+
+   public static void FCMBroadcastReceiver_onReceived_withBundle(Context context, Bundle bundle) {
       FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
@@ -167,22 +181,26 @@ public class OneSignalPackagePrivateHelper {
       receiver.onReceive(context,intent);
    }
 
-   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, NotificationExtenderService.OverrideSettings overrideSettings) {
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+   public static void HMSProcessor_processDataMessageReceived(final Context context, final String jsonStrPayload) {
+      NotificationPayloadProcessorHMS.processDataMessageReceived(context, jsonStrPayload);
+   }
+
+   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, OSNotificationExtender.OverrideSettings overrideSettings) {
+      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = jsonPayload;
       notifJob.overrideSettings = overrideSettings;
-      notifJob.restoring = restoring;
-      return NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      notifJob.isRestoring = restoring;
+      return NotificationBundleProcessor.processJobForDisplay(notifJob);
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
    public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
-   public static class NotificationRestorer extends com.onesignal.NotificationRestorer { }
-   public static class NotificationGenerationJob extends com.onesignal.NotificationGenerationJob {
-      NotificationGenerationJob(Context context) {
-         super(context);
-      }
-   }
+   public static class OSNotificationRestoreWorkManager extends com.onesignal.OSNotificationRestoreWorkManager { }
+    public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
+        OSNotificationGenerationJob(Context context) {
+            super(context);
+        }
+    }
 
    public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
       @Override
@@ -204,7 +222,7 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = payload;
       return NotificationChannelManager.createNotificationChannel(notifJob);
    }
@@ -253,10 +271,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() {
       return OneSignal.appId;
-   }
-
-   public static void OneSignal_setAppId(String appId) {
-      OneSignal.appId = appId;
    }
 
    static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}

@@ -28,13 +28,10 @@
 package com.onesignal;
 
 import android.R.drawable;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -45,12 +42,14 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import androidx.annotation.RequiresApi;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
+
+import androidx.annotation.RequiresApi;
+import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -71,6 +70,8 @@ import java.util.Random;
 import static com.onesignal.OSUtils.getResourceString;
 
 class GenerateNotification {
+
+   public static final String OS_SHOW_NOTIFICATION_THREAD = "OS_SHOW_NOTIFICATION_THREAD";
 
    public static final String BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId";
    public static final String BUNDLE_KEY_ACTION_ID = "actionId";
@@ -105,80 +106,25 @@ class GenerateNotification {
          notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
-   static void fromJsonPayload(NotificationGenerationJob notifJob) {
+   @WorkerThread
+   static void fromJsonPayload(OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
-      if (!notifJob.restoring && notifJob.showAsAlert && ActivityLifecycleHandler.curActivity != null) {
-         showNotificationAsAlert(notifJob.jsonPayload, ActivityLifecycleHandler.curActivity, notifJob.getAndroidId());
+      if (notifJob.displayOption.isSilent())
          return;
-      }
+
+      isRunningOnMainThreadCheck();
 
       showNotification(notifJob);
    }
 
-   private static void showNotificationAsAlert(final JSONObject fcmJson, final Activity activity, final int notificationId) {
-      activity.runOnUiThread(new Runnable() {
-         @Override
-         public void run() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle(getTitle(fcmJson));
-            builder.setMessage(fcmJson.optString("alert"));
-
-            List<String> buttonsLabels = new ArrayList<>();
-            List<String> buttonIds = new ArrayList<>();
-
-            addAlertButtons(activity, fcmJson, buttonsLabels, buttonIds);
-
-            final List<String> finalButtonIds = buttonIds;
-
-            Intent buttonIntent = getNewBaseIntent(notificationId);
-            buttonIntent.putExtra("action_button", true);
-            buttonIntent.putExtra("from_alert", true);
-            buttonIntent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString());
-            if (fcmJson.has("grp"))
-               buttonIntent.putExtra("grp", fcmJson.optString("grp"));
-
-            final Intent finalButtonIntent = buttonIntent;
-
-            DialogInterface.OnClickListener buttonListener = new DialogInterface.OnClickListener() {
-               public void onClick(DialogInterface dialog, int which) {
-                  int index = which + 3;
-
-                  if (finalButtonIds.size() > 1) {
-                     try {
-                        JSONObject newJsonData = new JSONObject(fcmJson.toString());
-                        newJsonData.put(BUNDLE_KEY_ACTION_ID, finalButtonIds.get(index));
-                        finalButtonIntent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, newJsonData.toString());
-
-                        NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-                     } catch (Throwable t) {}
-                  } else // No action buttons, close button simply pressed.
-                     NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            };
-
-            // Back button pressed
-            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-               @Override
-               public void onCancel(DialogInterface dialogInterface) {
-                  NotificationOpenedProcessor.processIntent(activity, finalButtonIntent);
-               }
-            });
-
-            for (int i = 0; i < buttonsLabels.size(); i++) {
-               if (i == 0)
-                  builder.setNeutralButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 1)
-                  builder.setNegativeButton(buttonsLabels.get(i), buttonListener);
-               else if (i == 2)
-                  builder.setPositiveButton(buttonsLabels.get(i), buttonListener);
-            }
-
-            AlertDialog alertDialog = builder.create();
-            alertDialog.setCanceledOnTouchOutside(false);
-            alertDialog.show();
-         }
-      });
+   /**
+    * For shadow test purpose
+    */
+   static void isRunningOnMainThreadCheck() {
+      // Runtime check against showing the notification from the main thread
+      if (OSUtils.isRunningOnMainThread())
+         throw new OSThrowable.OSMainThreadException("Process for showing a notification should never been done on Main Thread!");
    }
    
    private static CharSequence getTitle(JSONObject fcmJson) {
@@ -209,13 +155,13 @@ class GenerateNotification {
       Intent intent = new Intent(currentContext, notificationOpenedClass)
           .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
           .putExtra("dismissed", true);
-      
+
       if (openerIsBroadcast)
          return intent;
       return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
    }
    
-   private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(NotificationGenerationJob notifJob) {
+   private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(OSNotificationGenerationJob notifJob) {
       JSONObject fcmJson = notifJob.jsonPayload;
       OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
       
@@ -332,7 +278,7 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   private static void showNotification(NotificationGenerationJob notifJob) {
+   private static void showNotification(OSNotificationGenerationJob notifJob) {
       int notificationId = notifJob.getAndroidId();
       JSONObject fcmJson = notifJob.jsonPayload;
       String group = fcmJson.optString("grp", null);
@@ -363,7 +309,7 @@ class GenerateNotification {
       applyNotificationExtender(notifJob, notifBuilder);
       
       // Keeps notification from playing sound + vibrating again
-      if (notifJob.restoring)
+      if (notifJob.isRestoring)
          removeNotifyOptions(notifBuilder);
 
       int makeRoomFor = 1;
@@ -424,7 +370,7 @@ class GenerateNotification {
    }
 
    private static void applyNotificationExtender(
-           NotificationGenerationJob notifJob,
+           OSNotificationGenerationJob notifJob,
            NotificationCompat.Builder notifBuilder) {
       if (notifJob.overrideSettings == null || notifJob.overrideSettings.extender == null)
          return;
@@ -432,7 +378,7 @@ class GenerateNotification {
       try {
          Field mNotificationField = NotificationCompat.Builder.class.getDeclaredField("mNotification");
          mNotificationField.setAccessible(true);
-         Notification mNotification = (Notification) mNotificationField.get(notifBuilder);
+         Notification mNotification = (Notification)mNotificationField.get(notifBuilder);
 
          notifJob.orgFlags = mNotification.flags;
          notifJob.orgSound = mNotification.sound;
@@ -450,7 +396,7 @@ class GenerateNotification {
 
          notifJob.overriddenBodyFromExtender = mContentText;
          notifJob.overriddenTitleFromExtender = mContentTitle;
-         if (!notifJob.restoring) {
+         if (!notifJob.isRestoring) {
             notifJob.overriddenFlags = mNotification.flags;
             notifJob.overriddenSound = mNotification.sound;
          }
@@ -462,11 +408,11 @@ class GenerateNotification {
    
    // Removes custom sound set from the extender from non-summary notification before building it.
    //   This prevents the sound from playing twice or both the default sound + a custom one.
-   private static Notification createSingleNotificationBeforeSummaryBuilder(NotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
+   private static Notification createSingleNotificationBeforeSummaryBuilder(OSNotificationGenerationJob notifJob, NotificationCompat.Builder notifBuilder) {
       // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
       // Android 4.2 and older just post the summary only.
       boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N
-                                       && !notifJob.restoring;
+                                       && !notifJob.isRestoring;
       
       if (singleNotifWorkArounds) {
          if (notifJob.overriddenSound != null && !notifJob.overriddenSound.equals(notifJob.orgSound))
@@ -501,15 +447,15 @@ class GenerateNotification {
          extraNotificationField.set(notification, miuiNotification);
       } catch (Throwable t) {} // Ignore if not a Xiaomi device
    }
-   
-   static void updateSummaryNotification(NotificationGenerationJob notifJob) {
+
+   static void updateSummaryNotification(OSNotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
       createSummaryNotification(notifJob, null);
    }
-   
+
    // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
-   private static void createSummaryNotification(NotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
-      boolean updateSummary = notifJob.restoring;
+   private static void createSummaryNotification(OSNotificationGenerationJob notifJob, OneSignalNotificationBuilder notifBuilder) {
+      boolean updateSummary = notifJob.isRestoring;
       JSONObject fcmJson = notifJob.jsonPayload;
 
       String group = fcmJson.optString("grp", null);
@@ -549,9 +495,9 @@ class GenerateNotification {
              retColumn,
              whereStr,
              whereArgs,
-             null,                                                    // group by
-             null,                                                    // filter by row groups
-             NotificationTable._ID + " DESC"                          // sort order, new to old
+             null,                              // group by
+             null,                              // filter by row groups
+             NotificationTable._ID + " DESC"    // sort order, new to old
          );
          
          if (cursor.moveToFirst()) {
@@ -670,7 +616,7 @@ class GenerateNotification {
             inboxStyle.addLine(spannableString);
          }
 
-         for(SpannableString line : summaryList)
+         for (SpannableString line : summaryList)
             inboxStyle.addLine(line);
          inboxStyle.setBigContentTitle(summaryMessage);
          summaryBuilder.setStyle(inboxStyle);
@@ -709,7 +655,7 @@ class GenerateNotification {
    }
 
    @RequiresApi(api = Build.VERSION_CODES.M)
-   private static void createGrouplessSummaryNotification(NotificationGenerationJob notifJob, int grouplessNotifCount) {
+   private static void createGrouplessSummaryNotification(OSNotificationGenerationJob notifJob, int grouplessNotifCount) {
       JSONObject fcmJson = notifJob.jsonPayload;
 
       Notification summaryNotification;

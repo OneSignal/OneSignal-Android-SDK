@@ -18,10 +18,11 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
 
-        <service android:name=".application.MainApplication" />
+        <meta-data android:name="com.onesignal.NotificationExtensionServiceClass"
+            android:value="com.onesignal.sdktest.notification.AppNotificationExtensionService" />
 
         <service
-            android:name=".notification.AppNotificationExtenderService"
+            android:name=".notification.AppNotificationExtensionService"
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false">
             <intent-filter>

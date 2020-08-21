@@ -109,8 +109,8 @@ class NotificationSummaryManager {
          if (androidNotifId == null)
             return cursor;
          
-         NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
-         notifJob.restoring = true;
+         OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
+         notifJob.isRestoring = true;
          notifJob.shownTimeStamp = datetime;
       
          JSONObject payload = new JSONObject();
@@ -134,7 +134,7 @@ class NotificationSummaryManager {
          SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
          cursor = readableDb.query(
              NotificationTable.TABLE_NAME,
-             NotificationRestorer.COLUMNS_FOR_RESTORE,
+             OSNotificationRestoreWorkManager.COLUMNS_FOR_RESTORE,
             NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
              NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
              NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
@@ -144,8 +144,8 @@ class NotificationSummaryManager {
              null,                            // filter by row groups
              null
          );
-   
-         NotificationRestorer.showNotificationsFromCursor(context, cursor, 0);
+
+         OSNotificationRestoreWorkManager.showNotificationsFromCursor(context, cursor, 0);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
       } finally {

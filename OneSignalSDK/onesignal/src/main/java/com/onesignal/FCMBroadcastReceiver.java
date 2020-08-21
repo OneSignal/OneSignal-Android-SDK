@@ -66,7 +66,6 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          return;
 
       OneSignal.setAppContext(context);
-
       ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
 
       // Null means this isn't a FCM message
@@ -76,10 +75,10 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       }
 
       // Prevent other FCM receivers from firing if:
-      //   1. This is a duplicated GCM message
-      //   2. OR app developer setup a extender service to handle the notification.
-      if (processedResult.isDup || processedResult.hasExtenderService) {
-         // Abort to prevent other GCM receivers from process this Intent.
+      //   1. This is a duplicated FCM message
+      //   2. OR work manager is processing the notification
+      if (processedResult.isDup || processedResult.isWorkManagerProcessing) {
+         // Abort to prevent other FCM receivers from process this Intent.
          setAbort();
          return;
       }
@@ -129,7 +128,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
          BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
-         NotificationBundleProcessor.ProcessFromFCMIntentService(context, taskExtras, null);
+         NotificationBundleProcessor.processFromFCMIntentService(context, taskExtras, null);
          return;
       }
 

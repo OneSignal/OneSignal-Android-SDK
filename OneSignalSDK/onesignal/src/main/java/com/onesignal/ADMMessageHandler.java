@@ -54,14 +54,16 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       Bundle bundle = intent.getExtras();
       
       NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+      // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+//      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
       if (processedResult.processed())
          return;
       
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
+      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
       notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
-      NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      NotificationBundleProcessor.processJobForDisplay(notifJob);
    }
 
    @Override

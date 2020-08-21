@@ -10,6 +10,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowNotificationLimitManager;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -71,7 +72,6 @@ public class NotificationLimitManagerRunner {
       setRemoteParamsGetHtmlResponse();
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
       threadAndTaskWait();
    }
 
@@ -126,9 +126,12 @@ public class NotificationLimitManagerRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void clearFallbackMakingRoomForOneWhenAtLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
+      threadAndTaskWait();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID2"), null);
+      threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
       threadAndTaskWait();
@@ -137,8 +140,10 @@ public class NotificationLimitManagerRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
+      threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
       threadAndTaskWait();

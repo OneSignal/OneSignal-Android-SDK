@@ -35,6 +35,6 @@ public class BootUpReceiver extends BroadcastReceiver {
 
    @Override
    public void onReceive(Context context, Intent intent) {
-      NotificationRestorer.startDelayedRestoreTaskFromReceiver(context);
+      OSNotificationRestoreWorkManager.beginEnqueueingWork(context, true);
    }
 }

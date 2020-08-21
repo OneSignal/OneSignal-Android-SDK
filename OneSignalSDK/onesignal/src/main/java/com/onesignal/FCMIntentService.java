@@ -34,6 +34,8 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.os.Bundle;
 
+import static com.onesignal.NotificationBundleProcessor.processBundleFromReceiver;
+
 /**
  * This {@code IntentService} does the actual handling of the FCM message.
  * {@code FCMBroadcastReceiver} (a {@code WakefulBroadcastReceiver}) holds a
@@ -55,13 +57,11 @@ public class FCMIntentService extends IntentService {
     */
    @Override
    protected void onHandleIntent(Intent intent) {
-      Bundle extras = intent.getExtras();
-      if (extras == null)
+      Bundle bundle = intent.getExtras();
+      if (bundle == null)
          return;
 
-      NotificationBundleProcessor.ProcessFromFCMIntentService(this,
-          new BundleCompatBundle(extras),
-          null);
+      processBundleFromReceiver(this, bundle);
 
       // Release the wake lock provided by the WakefulBroadcastReceiver.
       FCMBroadcastReceiver.completeWakefulIntent(intent);
