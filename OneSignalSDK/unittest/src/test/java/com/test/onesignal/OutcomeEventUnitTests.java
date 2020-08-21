@@ -61,7 +61,6 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.List;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setAppId;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -137,7 +136,7 @@ public class OutcomeEventUnitTests {
         repository = factory.getRepository();
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
-        OneSignal_setAppId(APP_ID);
+        OneSignal.setAppId(APP_ID);
     }
 
     @After

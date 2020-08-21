@@ -42,7 +42,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -51,7 +50,6 @@ import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.BundleCompat;
 import com.onesignal.FCMBroadcastReceiver;
-import com.onesignal.FCMIntentService;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.OSNotificationDisplayedResult;
@@ -63,8 +61,8 @@ import com.onesignal.OSNotificationReceived;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalNotificationManagerPackageHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.OSNotificationRestoreWorkManager;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
+import com.onesignal.OneSignalPackagePrivateHelper.OSNotificationRestoreWorkManager;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.ShadowBadgeCountUpdater;
@@ -1039,10 +1037,10 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
-      // 2 open calls should fire + remote params + players call
-      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
-      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(1).url);
-      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(2).url);
+      // 2 open calls should fire + remote params + 2 players call
+      assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(3).url);
+      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(4).url);
       ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification

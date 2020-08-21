@@ -961,7 +961,7 @@ public class OneSignal {
 
    private static void fireCallbackForOpenedNotifications() {
       for (JSONArray dataArray : unprocessedOpenedNotifs)
-         runNotificationOpenedCallback(dataArray, true, false);
+         runNotificationOpenedCallback(dataArray, true);
 
       unprocessedOpenedNotifs.clear();
    }

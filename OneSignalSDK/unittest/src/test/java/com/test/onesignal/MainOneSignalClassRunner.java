@@ -132,7 +132,6 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getRemoteParamController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
@@ -157,7 +156,6 @@ import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.getNextJob;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
 import static com.test.onesignal.TestHelpers.runNextJob;
-import static com.test.onesignal.TestHelpers.runOSThreads;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -196,7 +194,6 @@ public class MainOneSignalClassRunner {
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
-   private static JSONObject lastGetTags;
    private MockOSTimeImpl time;
    private OSTrackerFactory trackerFactory;
    private MockSessionManager sessionManager;
@@ -2765,7 +2762,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Permission subscription wont return until OneSignal init is done
-      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+      assertNull(OneSignal.getPermissionSubscriptionState());
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
