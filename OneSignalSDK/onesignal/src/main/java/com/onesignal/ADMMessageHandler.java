@@ -60,10 +60,10 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       if (processedResult.processed())
          return;
       
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-      notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      notificationJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
-      NotificationBundleProcessor.processJobForDisplay(notifJob);
+      NotificationBundleProcessor.processJobForDisplay(notificationJob);
    }
 
    @Override

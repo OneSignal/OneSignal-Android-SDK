@@ -109,15 +109,15 @@ class NotificationSummaryManager {
          if (androidNotifId == null)
             return cursor;
          
-         OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-         notifJob.isRestoring = true;
-         notifJob.shownTimeStamp = datetime;
+         OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+         notificationJob.isRestoring = true;
+         notificationJob.shownTimeStamp = datetime;
       
          JSONObject payload = new JSONObject();
          payload.put("grp", group);
-         notifJob.jsonPayload = payload;
+         notificationJob.jsonPayload = payload;
       
-         GenerateNotification.updateSummaryNotification(notifJob);
+         GenerateNotification.updateSummaryNotification(notificationJob);
       } catch (JSONException e) {}
       
       return cursor;

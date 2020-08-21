@@ -214,8 +214,8 @@ public class MainOneSignalClassRunner {
    private static OneSignal.AppNotificationWillShowInForegroundHandler getAppNotificationWillShowInForegroundHandler() {
       return new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(AppNotificationGenerationJob notifJob) {
-            lastNotificationGenerationJob = notifJob;
+         public void notificationWillShowInForeground(AppNotificationGenerationJob notificationJob) {
+            lastNotificationGenerationJob = notificationJob;
          }
       };
    }
@@ -1153,9 +1153,9 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(AppNotificationGenerationJob notifJob) {
-            androidNotificationId = notifJob.getAndroidNotificationId();
-            notificationReceivedBody = notifJob.getBody();
+         public void notificationWillShowInForeground(AppNotificationGenerationJob notificationJob) {
+            androidNotificationId = notificationJob.getAndroidNotificationId();
+            notificationReceivedBody = notificationJob.getBody();
          }
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
@@ -4279,7 +4279,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
          @Override
-         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notifJob) {
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
 
          }
       });

@@ -186,11 +186,11 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, OSNotificationExtender.OverrideSettings overrideSettings) {
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-      notifJob.jsonPayload = jsonPayload;
-      notifJob.overrideSettings = overrideSettings;
-      notifJob.isRestoring = restoring;
-      return NotificationBundleProcessor.processJobForDisplay(notifJob);
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      notificationJob.jsonPayload = jsonPayload;
+      notificationJob.overrideSettings = overrideSettings;
+      notificationJob.isRestoring = restoring;
+      return NotificationBundleProcessor.processJobForDisplay(notificationJob);
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
@@ -222,9 +222,9 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-      notifJob.jsonPayload = payload;
-      return NotificationChannelManager.createNotificationChannel(notifJob);
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      notificationJob.jsonPayload = payload;
+      return NotificationChannelManager.createNotificationChannel(notificationJob);
    }
 
    public static void NotificationChannelManager_processChannelList(Context context, JSONArray jsonArray) {

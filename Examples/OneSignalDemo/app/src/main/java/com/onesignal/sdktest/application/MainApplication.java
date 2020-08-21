@@ -28,14 +28,12 @@ public class MainApplication extends Application {
         OneSignal.setAppId(appId);
         OneSignal.setAppContext(this);
 
-        OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
-            @Override
-            public void notificationWillShowInForeground(AppNotificationGenerationJob notifJob) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "AppNotificationWillShowInForeground fired!");
+        OneSignal.setNotificationWillShowInForegroundHandler(notificationJob -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "AppNotificationWillShowInForeground fired!" +
+                    " with AppNotificationWillShowInForegroundHandler: " + notificationJob.toString());
 
-                notifJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
-                notifJob.complete();
-            }
+            notificationJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
+            notificationJob.complete();
         });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);

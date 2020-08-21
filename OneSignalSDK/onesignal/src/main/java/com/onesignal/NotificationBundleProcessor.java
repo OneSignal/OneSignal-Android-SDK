@@ -118,61 +118,61 @@ class NotificationBundleProcessor {
      *  in the event where you want to mark a notification as opened or displayed different than the defaults
      */
     @WorkerThread
-    static int processJobForDisplay(OSNotificationGenerationJob notifJob) {
-        return processJobForDisplay(notifJob, false, true);
+    static int processJobForDisplay(OSNotificationGenerationJob notificationJob) {
+        return processJobForDisplay(notificationJob, false, true);
     }
 
     @WorkerThread
-    static int processJobForDisplay(OSNotificationGenerationJob notifJob, boolean opened, boolean displayed) {
-        processCollapseKey(notifJob);
+    static int processJobForDisplay(OSNotificationGenerationJob notificationJob, boolean opened, boolean displayed) {
+        processCollapseKey(notificationJob);
 
-        int androidNotifId = notifJob.getAndroidIdWithoutCreate();
-        boolean doDisplay = shouldDisplayNotif(notifJob);
+        int androidNotifId = notificationJob.getAndroidIdWithoutCreate();
+        boolean doDisplay = shouldDisplayNotif(notificationJob);
         if (doDisplay) {
-            androidNotifId = notifJob.getAndroidId();
+            androidNotifId = notificationJob.getAndroidId();
             if (OneSignal.shouldFireForegroundHandlers())
-                OneSignal.fireForegroundHandlers(notifJob);
+                OneSignal.fireForegroundHandlers(notificationJob);
             else
-                GenerateNotification.fromJsonPayload(notifJob);
+                GenerateNotification.fromJsonPayload(notificationJob);
         }
 
-        if (!notifJob.isRestoring && !notifJob.isIamPreview) {
-            processNotification(notifJob, opened);
-            OneSignal.handleNotificationReceived(notifJob, displayed);
+        if (!notificationJob.isRestoring && !notificationJob.isIamPreview) {
+            processNotification(notificationJob, opened);
+            OneSignal.handleNotificationReceived(notificationJob, displayed);
         }
 
         return androidNotifId;
     }
 
-    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notifJob) {
+    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notificationJob) {
         // Validate that the current Android device is Android 4.4 or higher and the current job is a
         //    preview push
-        if (notifJob.isIamPreview && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
+        if (notificationJob.isIamPreview && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
             return false;
 
         // Otherwise, this is a normal notification and should be shown
-        return notifJob.hasExtender() || shouldDisplay(notifJob.jsonPayload.optString("alert"));
+        return notificationJob.hasExtender() || shouldDisplay(notificationJob.jsonPayload.optString("alert"));
     }
 
     private static void saveAndProcessDupNotification(Context context, Bundle bundle) {
-        OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-        notifJob.jsonPayload = bundleAsJSONObject(bundle);
-        notifJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
-        notifJob.overrideSettings.androidNotificationId = -1;
+        OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+        notificationJob.jsonPayload = bundleAsJSONObject(bundle);
+        notificationJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
+        notificationJob.overrideSettings.androidNotificationId = -1;
 
-        processNotification(notifJob, true);
+        processNotification(notificationJob, true);
     }
 
     /**
      * Save notification, updates Outcomes, and sends Received Receipt if they are enabled.
      */
-    static void processNotification(OSNotificationGenerationJob notifJob, boolean opened) {
-        saveNotification(notifJob, opened);
+    static void processNotification(OSNotificationGenerationJob notificationJob, boolean opened) {
+        saveNotification(notificationJob, opened);
 
-        if (!notifJob.isNotificationToDisplay())
+        if (!notificationJob.isNotificationToDisplay())
             return;
 
-        String notificationId = notifJob.getApiNotificationId();
+        String notificationId = notificationJob.getApiNotificationId();
         OneSignal.getSessionManager().onNotificationReceived(notificationId);
         OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
     }
@@ -183,14 +183,14 @@ class NotificationBundleProcessor {
     //   * Collapse key / id support - Used to lookup the android notification id later
     //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
     //   * Future - Public API to get a list of notifications
-    private static void saveNotification(OSNotificationGenerationJob notifJob, boolean opened) {
-        Context context = notifJob.context;
-        JSONObject jsonPayload = notifJob.jsonPayload;
+    private static void saveNotification(OSNotificationGenerationJob notificationJob, boolean opened) {
+        Context context = notificationJob.context;
+        JSONObject jsonPayload = notificationJob.jsonPayload;
 
         try {
-            JSONObject customJSON = getCustomJSONObject(notifJob.jsonPayload);
+            JSONObject customJSON = getCustomJSONObject(notificationJob.jsonPayload);
 
-            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.context);
             SQLiteDatabase writableDb = null;
 
             try {
@@ -200,8 +200,8 @@ class NotificationBundleProcessor {
 
                 // Count any notifications with duplicated android notification ids as dismissed.
                 // -1 is used to note never displayed
-                if (notifJob.isNotificationToDisplay()) {
-                    String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifJob.getAndroidIdWithoutCreate();
+                if (notificationJob.isNotificationToDisplay()) {
+                    String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationJob.getAndroidIdWithoutCreate();
 
                     ContentValues values = new ContentValues();
                     values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
@@ -220,12 +220,12 @@ class NotificationBundleProcessor {
 
                 values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
                 if (!opened)
-                    values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notifJob.getAndroidIdWithoutCreate());
+                    values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationJob.getAndroidIdWithoutCreate());
 
-                if (notifJob.getTitle() != null)
-                    values.put(NotificationTable.COLUMN_NAME_TITLE, notifJob.getTitle().toString());
-                if (notifJob.getBody() != null)
-                    values.put(NotificationTable.COLUMN_NAME_MESSAGE, notifJob.getBody().toString());
+                if (notificationJob.getTitle() != null)
+                    values.put(NotificationTable.COLUMN_NAME_TITLE, notificationJob.getTitle().toString());
+                if (notificationJob.getBody() != null)
+                    values.put(NotificationTable.COLUMN_NAME_MESSAGE, notificationJob.getBody().toString());
 
                 // Set expire_time
                 long sentTime = jsonPayload.optLong("google.sent_time", OneSignal.getTime().getCurrentThreadTimeMillis()) / 1_000L;
@@ -432,15 +432,15 @@ class NotificationBundleProcessor {
         }
     }
 
-    private static void processCollapseKey(OSNotificationGenerationJob notifJob) {
-        if (notifJob.isRestoring)
+    private static void processCollapseKey(OSNotificationGenerationJob notificationJob) {
+        if (notificationJob.isRestoring)
             return;
-        if (!notifJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notifJob.jsonPayload.optString("collapse_key")))
+        if (!notificationJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notificationJob.jsonPayload.optString("collapse_key")))
             return;
-        String collapse_id = notifJob.jsonPayload.optString("collapse_key");
+        String collapse_id = notificationJob.jsonPayload.optString("collapse_key");
 
 
-        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifJob.context);
+        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.context);
         Cursor cursor = null;
 
         try {
@@ -456,7 +456,7 @@ class NotificationBundleProcessor {
 
             if (cursor.moveToFirst()) {
                 int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-                notifJob.setAndroidIdWithoutOverriding(androidNotificationId);
+                notificationJob.setAndroidIdWithoutOverriding(androidNotificationId);
             }
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not read DB to find existing collapse_key!", t);
@@ -500,10 +500,10 @@ class NotificationBundleProcessor {
         if (result.isDup)
             return result;
 
-        // Create new notifJob to be processed for display
-        final OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-        notifJob.jsonPayload = bundleAsJSONObject(bundle);
-        notifJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
+        // Create new notificationJob to be processed for display
+        final OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+        notificationJob.jsonPayload = bundleAsJSONObject(bundle);
+        notificationJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
 
         // Save as a opened notification to prevent duplicates
         String alert = bundle.getString("alert");
@@ -513,7 +513,7 @@ class NotificationBundleProcessor {
             // Make a new thread to do our OneSignal work on
             new Thread(new Runnable() {
                 public void run() {
-                    OneSignal.handleNotificationReceived(notifJob, false);
+                    OneSignal.handleNotificationReceived(notificationJob, false);
                 }
             }, OS_NOTIFICATION_PROCESSING_THREAD).start();
         }

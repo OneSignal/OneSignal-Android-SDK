@@ -60,16 +60,16 @@ class NotificationChannelManager {
    private static final String RESTORE_CHANNEL_ID = "restored_OS_notifications";
    private static final Pattern hexPattern = Pattern.compile("^([A-Fa-f0-9]{8})$");
    
-   static String createNotificationChannel(OSNotificationGenerationJob notifJob) {
+   static String createNotificationChannel(OSNotificationGenerationJob notificationJob) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
          return DEFAULT_CHANNEL_ID;
 
-      Context context = notifJob.context;
-      JSONObject jsonPayload = notifJob.jsonPayload;
+      Context context = notificationJob.context;
+      JSONObject jsonPayload = notificationJob.jsonPayload;
 
       NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
 
-      if (notifJob.isRestoring)
+      if (notificationJob.isRestoring)
          return createRestoreChannel(notificationManager);
       
       // Allow channels created outside the SDK

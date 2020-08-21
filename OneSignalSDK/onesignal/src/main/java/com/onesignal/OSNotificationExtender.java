@@ -122,8 +122,8 @@ public class OSNotificationExtender {
 
       notificationDisplayedResult = new OSNotificationDisplayedResult();
 
-      OSNotificationGenerationJob notifJob = createNotifJobFromCurrent(context);
-      notificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.processJobForDisplay(notifJob);
+      OSNotificationGenerationJob notificationJob = createnotificationJobFromCurrent(context);
+      notificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.processJobForDisplay(notificationJob);
 
       return notificationDisplayedResult;
    }
@@ -141,21 +141,21 @@ public class OSNotificationExtender {
          boolean display = NotificationBundleProcessor.shouldDisplay(jsonPayload.optString("alert"));
          if (!display) {
             if (!isRestoring) {
-               OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-               notifJob.jsonPayload = jsonPayload;
-               notifJob.overrideSettings = new OverrideSettings();
-               notifJob.overrideSettings.androidNotificationId = -1;
+               OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+               notificationJob.jsonPayload = jsonPayload;
+               notificationJob.overrideSettings = new OverrideSettings();
+               notificationJob.overrideSettings.androidNotificationId = -1;
 
-               NotificationBundleProcessor.processNotification(notifJob, true);
-               OneSignal.handleNotificationReceived(notifJob, false);
+               NotificationBundleProcessor.processNotification(notificationJob, true);
+               OneSignal.handleNotificationReceived(notificationJob, false);
             }
             // If are are not displaying a restored notification make sure we mark it as dismissed
             //   This will prevent it from being restored again
             else if (currentBaseOverrideSettings != null)
-               NotificationBundleProcessor.markRestoredNotificationAsDismissed(createNotifJobFromCurrent(context));
+               NotificationBundleProcessor.markRestoredNotificationAsDismissed(createnotificationJobFromCurrent(context));
          }
          else
-            NotificationBundleProcessor.processJobForDisplay(createNotifJobFromCurrent(context));
+            NotificationBundleProcessor.processJobForDisplay(createnotificationJobFromCurrent(context));
 
          // Delay to prevent CPU spikes
          //    Normally more than one notification is restored at a time
@@ -170,14 +170,14 @@ public class OSNotificationExtender {
     * <br/><br/>
     * @see OSNotificationGenerationJob
     */
-   private OSNotificationGenerationJob createNotifJobFromCurrent(Context context) {
-      OSNotificationGenerationJob notifJob = new OSNotificationGenerationJob(context);
-      notifJob.isRestoring = isRestoring;
-      notifJob.jsonPayload = jsonPayload;
-      notifJob.shownTimeStamp = timestamp;
-      notifJob.overrideSettings = currentBaseOverrideSettings;
+   private OSNotificationGenerationJob createnotificationJobFromCurrent(Context context) {
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      notificationJob.isRestoring = isRestoring;
+      notificationJob.jsonPayload = jsonPayload;
+      notificationJob.shownTimeStamp = timestamp;
+      notificationJob.overrideSettings = currentBaseOverrideSettings;
 
-      return notifJob;
+      return notificationJob;
    }
 
    /**

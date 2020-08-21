@@ -182,16 +182,16 @@ public class OSNotificationGenerationJob {
         boolean isComplete = false;
 
         private final OSTimeoutHandler timeoutHandler;
-        // The actual notifJob with notification payload data
-        private OSNotificationGenerationJob notifJob;
+        // The actual notificationJob with notification payload data
+        private OSNotificationGenerationJob notificationJob;
 
-        NotificationGenerationJob(OSNotificationGenerationJob notifJob) {
-            this.notifJob = notifJob;
+        NotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
+            this.notificationJob = notificationJob;
             timeoutHandler = new OSTimeoutHandler();
         }
 
-        OSNotificationGenerationJob getNotifJob() {
-            return notifJob;
+        OSNotificationGenerationJob getNotificationJob() {
+            return notificationJob;
         }
 
         protected void startTimeout(Runnable runnable) {
@@ -203,50 +203,50 @@ public class OSNotificationGenerationJob {
         }
 
         public String getApiNotificationId() {
-            return notifJob.getApiNotificationId();
+            return notificationJob.getApiNotificationId();
         }
 
         public int getAndroidNotificationId() {
-            return notifJob.getAndroidIdWithoutCreate();
+            return notificationJob.getAndroidIdWithoutCreate();
         }
 
         public String getTitle() {
-            return notifJob.getTitle().toString();
+            return notificationJob.getTitle().toString();
         }
 
         public String getBody() {
-            return notifJob.getBody().toString();
+            return notificationJob.getBody().toString();
         }
 
         public JSONObject getAdditionalData() {
-            return notifJob.getAdditionalData();
+            return notificationJob.getAdditionalData();
         }
 
         public OSNotificationDisplay getNotificationDisplayOption() {
-            return notifJob.getNotificationDisplayOption();
+            return notificationJob.getNotificationDisplayOption();
         }
 
         public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
-            notifJob.setNotificationDisplayOption(displayOption);
+            notificationJob.setNotificationDisplayOption(displayOption);
         }
 
         @Override
         public String toString() {
             return "NotificationGenerationJob{" +
                     "isComplete=" + isComplete +
-                    ", notifJob=" + notifJob +
+                    ", notificationJob=" + notificationJob +
                     '}';
         }
     }
 
     /**
      * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler}
-     *    without exposing internals publicly
+     * without exposing internals publicly
      */
     public static class ExtNotificationGenerationJob extends NotificationGenerationJob {
 
-        ExtNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
-            super(notifJob);
+        ExtNotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
+            super(notificationJob);
 
             startTimeout(new Runnable() {
                 @Override
@@ -272,24 +272,24 @@ public class OSNotificationGenerationJob {
             // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists
             //  or bubbling is set false
             if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
-                GenerateNotification.fromJsonPayload(getNotifJob());
+                GenerateNotification.fromJsonPayload(getNotificationJob());
                 return;
             }
 
             // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
             //  the notificationWillShowInForeground implementation
-            OneSignal.fireAppNotificationWillShowInForegroundHandler(getNotifJob().toAppNotificationGenerationJob());
+            OneSignal.fireAppNotificationWillShowInForegroundHandler(getNotificationJob().toAppNotificationGenerationJob());
         }
     }
 
    /**
     * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
-    *    without exposing internals publicly
+    * without exposing internals publicly
     */
    public static class AppNotificationGenerationJob extends NotificationGenerationJob {
 
-        AppNotificationGenerationJob(OSNotificationGenerationJob notifJob) {
-            super(notifJob);
+        AppNotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
+            super(notificationJob);
 
             startTimeout(new Runnable() {
                 @Override
@@ -312,7 +312,7 @@ public class OSNotificationGenerationJob {
 
             isComplete = true;
 
-            GenerateNotification.fromJsonPayload(getNotifJob());
+            GenerateNotification.fromJsonPayload(getNotificationJob());
         }
     }
 
