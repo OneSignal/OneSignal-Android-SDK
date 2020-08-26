@@ -64,6 +64,11 @@ class OSTimeoutHandler {
         removeCallbacks(timeoutRunnable);
         timeoutHandler = null;
         timeoutRunnable = null;
+
+        // TODO: This line stops the Looper.loop call once the notification processing is all done
+        //  The reason for all of this is because we are firing handlers while running a background thread using the Worker
+        if (!OSUtils.isRunningOnMainThread())
+            Looper.myLooper().quit();
     }
 
     public void removeCallbacks(Runnable runnable) {

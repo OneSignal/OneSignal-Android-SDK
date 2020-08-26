@@ -66,11 +66,6 @@ class OSNotificationWorkManager {
                 e.printStackTrace();
                 return Result.failure();
             }
-
-            // TODO: This line stops the Looper.loop call once the notification processing is all done
-            //  The reason for all of this is because we are firing handlers while running a background thread using the Worker
-            if (!OSUtils.isRunningOnMainThread())
-                Looper.myLooper().quit();
             return Result.success();
         }
 
