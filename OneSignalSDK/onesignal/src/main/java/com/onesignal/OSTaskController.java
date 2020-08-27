@@ -26,6 +26,9 @@ class OSTaskController {
     static final String IDS_AVAILABLE = "idsAvailable()";
     static final String SEND_TAG = "sendTag()";
     static final String SEND_TAGS = "sendTags()";
+    static final String SET_LOCATION_SHARED = "setLocationShared()";
+    static final String SET_REQUIRES_USER_PRIVACY_CONSENT = "setRequiresUserPrivacyConsent()";
+    static final String UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED = "unsubscribeWhenNotificationsAreDisabled()";
     static final String HANDLE_NOTIFICATION_OPEN = "handleNotificationOpen()";
     static final String CANCEL_GROUPED_NOTIFICATIONS = "cancelGroupedNotifications()";
     static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
@@ -37,6 +40,9 @@ class OSTaskController {
             IDS_AVAILABLE,
             SEND_TAG,
             SEND_TAGS,
+            SET_LOCATION_SHARED,
+            SET_REQUIRES_USER_PRIVACY_CONSENT,
+            UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED,
             HANDLE_NOTIFICATION_OPEN,
             SET_EMAIL));
 

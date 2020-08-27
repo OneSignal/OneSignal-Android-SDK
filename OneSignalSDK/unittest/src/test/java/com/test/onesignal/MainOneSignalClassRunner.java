@@ -2761,8 +2761,8 @@ public class MainOneSignalClassRunner {
       OneSignal.removeNotificationWillShowInForegroundHandler();
       threadAndTaskWait();
 
-      // Permission subscription wont return until OneSignal init is done
-      assertNull(OneSignal.getPermissionSubscriptionState());
+      // TODO change to assertNull(OneSignal.getPermissionSubscriptionState()); when privacy consent public set is removed
+      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();

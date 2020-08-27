@@ -254,7 +254,7 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static boolean OneSignal_requiresUserPrivacyConsent() {
-      return OneSignal.isUserPrivacyConsentRequired();
+      return OneSignal.requiresUserPrivacyConsent();
    }
 
    public static boolean OneSignal_locationShared() {
