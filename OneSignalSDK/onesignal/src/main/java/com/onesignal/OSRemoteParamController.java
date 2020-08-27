@@ -40,16 +40,6 @@ class OSRemoteParamController {
         );
         OneSignalPrefs.saveBool(
                 OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_UNSUBSCRIBE_WHEN_NOTIFICATIONS_DISABLED,
-                remoteParams.unsubscribeWhenNotificationsDisabled
-        );
-        OneSignalPrefs.saveBool(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_DISABLE_GMS_MISSING_PROMPT,
-                remoteParams.disableGMSMissingPrompt
-        );
-        OneSignalPrefs.saveBool(
-                OneSignalPrefs.PREFS_ONESIGNAL,
                 preferences.getOutcomesV2KeyName(),
                 remoteParams.influenceParams.outcomesV2ServiceEnabled
         );
@@ -57,9 +47,13 @@ class OSRemoteParamController {
         logger.debug("OneSignal saveInfluenceParams: " + remoteParams.influenceParams.toString());
         trackerFactory.saveInfluenceParams(remoteParams.influenceParams);
 
-        saveLocationShared(remoteParams.locationShared);
-        OneSignal.setSharedLocation(remoteParams.locationShared);
-        savePrivacyConsentRequired(remoteParams.requiresUserPrivacyConsent);
+        saveGMSMissingPromptDisable(remoteParams.disableGMSMissingPrompt);
+        if (remoteParams.unsubscribeWhenNotificationsDisabled != null)
+            saveUnsubscribeWhenNotificationsAreDisabled(remoteParams.unsubscribeWhenNotificationsDisabled);
+        if (remoteParams.locationShared != null)
+            saveLocationShared(remoteParams.locationShared);
+        if (remoteParams.requiresUserPrivacyConsent != null)
+            savePrivacyConsentRequired(remoteParams.requiresUserPrivacyConsent);
     }
 
     boolean isRemoteParamsCallDone() {
@@ -68,6 +62,18 @@ class OSRemoteParamController {
 
     OneSignalRemoteParams.Params getRemoteParams() {
         return remoteParams;
+    }
+
+    boolean hasLocationKey() {
+        return remoteParams != null && remoteParams.locationShared != null;
+    }
+
+    boolean hasPrivacyConsentKey() {
+        return remoteParams != null && remoteParams.requiresUserPrivacyConsent != null;
+    }
+
+    boolean hasUnsubscribeNotificationKey() {
+        return remoteParams != null && remoteParams.unsubscribeWhenNotificationsDisabled != null;
     }
 
     void clearRemoteParams() {
@@ -95,11 +101,27 @@ class OSRemoteParamController {
                 true);
     }
 
+    void saveUnsubscribeWhenNotificationsAreDisabled(boolean unsubscribe) {
+        OneSignalPrefs.saveBool(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_UNSUBSCRIBE_WHEN_NOTIFICATIONS_DISABLED,
+                unsubscribe
+        );
+    }
+
     boolean isGMSMissingPromptDisable() {
         return OneSignalPrefs.getBool(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_DISABLE_GMS_MISSING_PROMPT,
                 false);
+    }
+
+    void saveGMSMissingPromptDisable(boolean promptDisable) {
+        OneSignalPrefs.saveBool(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_DISABLE_GMS_MISSING_PROMPT,
+                promptDisable
+        );
     }
 
     boolean isLocationShared() {
@@ -120,9 +142,8 @@ class OSRemoteParamController {
         return OneSignalPrefs.getBool(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_REQUIRES_USER_PRIVACY_CONSENT,
-                true);
+                false);
     }
-
 
     void savePrivacyConsentRequired(boolean required) {
         OneSignalPrefs.saveBool(

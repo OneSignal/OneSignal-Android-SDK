@@ -205,6 +205,14 @@ public class ShadowOneSignalRestClient {
       remoteParamsGetHtmlResponse = remoteParams.toString();
    }
 
+   public static void setAndRemoveKeyFromRemoteParams(String key) throws JSONException {
+      JSONObject remoteParams = new JSONObject(REMOTE_PARAMS);
+      if (remoteParams.has(key)) {
+         remoteParams.remove(key);
+      }
+      remoteParamsGetHtmlResponse = remoteParams.toString();
+   }
+
    public static void setRemoteParamsGetHtmlResponse(String response) {
       remoteParamsGetHtmlResponse = response;
    }

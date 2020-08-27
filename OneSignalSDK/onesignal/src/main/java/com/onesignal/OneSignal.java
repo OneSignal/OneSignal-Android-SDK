@@ -34,6 +34,7 @@ import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -93,8 +94,7 @@ public class OneSignal {
    /**
     * A display type enum for notifications when the app receives and tries shows them.
     * <br/><br/>
-    * Used with the {@link OneSignal#setNotificationDisplayOption(OSNotificationDisplay)} and
-    *  {@link OSNotificationGenerationJob#setNotificationDisplayOption(OSNotificationDisplay)}
+    * Used with the {@link OSNotificationGenerationJob#setNotificationDisplayOption(OSNotificationDisplay)}
     * Determines how the notification will show to the user when inside of the
     *  {@link ExtNotificationWillShowInForegroundHandler#notificationWillShowInForeground(ExtNotificationGenerationJob)}
     *  {@link AppNotificationWillShowInForegroundHandler#notificationWillShowInForeground(AppNotificationGenerationJob)}
@@ -134,9 +134,9 @@ public class OneSignal {
     * The enum also helps decide the type of session the user is in an is tracked in {@link OneSignal#sessionManager}
     *  from the {@link OSSessionManager}.
     * <br/><br/>
-    * {@link AppEntryAction#NOTIFICATION_CLICK} will always lead a overridden {@link com.onesignal.OSSessionManager.Session#DIRECT}.
+    * {@link AppEntryAction#NOTIFICATION_CLICK} will always lead a overridden {@link com.onesignal.influence.domain.OSInfluenceType#DIRECT}.
     * {@link AppEntryAction#APP_OPEN} on a new session notifications within the attribution window
-    *  parameter, this will lead to a {@link com.onesignal.OSSessionManager.Session#INDIRECT}.
+    *  parameter, this will lead to a {@link com.onesignal.influence.domain.OSInfluenceType#DIRECT}.
     * <br/><br/>
     * @see OneSignal#onAppFocus
     * @see OneSignal#onAppLostFocus
@@ -366,7 +366,6 @@ public class OneSignal {
    static InAppMessageClickHandler inAppMessageClickHandler;
 
    static boolean mAutoPromptLocation;
-   static boolean mUnsubscribeWhenNotificationsAreDisabled = true;
    // TODO: End of old mInitBuilder params
 
    // Is the init() of OneSignal SDK finished yet
@@ -589,8 +588,25 @@ public class OneSignal {
     *            the default is {@code false}
     * @return the builder you called this method on
     */
-   public static void unsubscribeWhenNotificationsAreDisabled(boolean set) {
-      mUnsubscribeWhenNotificationsAreDisabled = set;
+   public static void unsubscribeWhenNotificationsAreDisabled(final boolean set) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED + " operation from pending task queue.");
+               unsubscribeWhenNotificationsAreDisabled(set);
+            }
+         });
+         return;
+      }
+
+      // Already set by remote params
+      if (getRemoteParamController().hasUnsubscribeNotificationKey())
+         return;
+
+      getRemoteParamController().saveUnsubscribeWhenNotificationsAreDisabled(set);
    }
 
    /**
@@ -641,6 +657,7 @@ public class OneSignal {
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
       setupActivityLifecycleListener(wasAppContextNull);
+      setupPrivacyConsent(appContext);
 
       logger.verbose("setAppContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
@@ -775,6 +792,19 @@ public class OneSignal {
          OneSignalPrefs.startDelayedWrite();
          // Cleans out old cached data to prevent over using the storage on devices
          OneSignalCacheCleaner.cleanOldCachedData(appContext);
+      }
+   }
+
+   private static void setupPrivacyConsent(Context context) {
+      try {
+         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+         Bundle bundle = ai.metaData;
+
+         // Read the current privacy consent setting from AndroidManifest.xml
+         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
+         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
+      } catch (Throwable t) {
+         t.printStackTrace();
       }
    }
 
@@ -1005,6 +1035,35 @@ public class OneSignal {
     */
    public static boolean requiresUserPrivacyConsent() {
       return appContext == null || isUserPrivacyConsentRequired() && !userProvidedPrivacyConsent();
+   }
+
+   /**
+    * This method will be replaced by remote params set
+    */
+   public static void setRequiresUserPrivacyConsent(final boolean required) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT + " operation from pending task queue.");
+               setRequiresUserPrivacyConsent(required);
+            }
+         });
+         return;
+      }
+
+      // Already set by remote params
+      if (getRemoteParamController().hasPrivacyConsentKey())
+         return;
+
+      if (requiresUserPrivacyConsent() && !required) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "Cannot change requiresUserPrivacyConsent() from TRUE to FALSE");
+         return;
+      }
+
+      getRemoteParamController().savePrivacyConsentRequired(required);
    }
 
    static boolean shouldLogUserPrivacyConsentErrorMessageForMethodName(String methodName) {
@@ -2442,10 +2501,39 @@ public class OneSignal {
       OneSignalStateSynchronizer.setSubscription(enable);
    }
 
-   static void setSharedLocation(boolean enable) {
+   /**
+    * This method will be replaced by remote params set
+    */
+   public static void setLocationShared(final boolean enable) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_LOCATION_SHARED)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.SET_LOCATION_SHARED + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.SET_LOCATION_SHARED + " operation from pending task queue.");
+               setLocationShared(enable);
+            }
+         });
+         return;
+      }
+
+      // Already set by remote params
+      if (getRemoteParamController().hasLocationKey())
+         return;
+
+      getRemoteParamController().saveLocationShared(enable);
       if (!enable)
-         OneSignalStateSynchronizer.clearLocation();
+         clearLocation();
       logger.debug("OneSignal is shareLocation enabled: " + enable);
+   }
+
+   private static void clearLocation() {
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_LOCATION_SHARED))
+         return;
+
+      OneSignalStateSynchronizer.clearLocation();
    }
 
    /**

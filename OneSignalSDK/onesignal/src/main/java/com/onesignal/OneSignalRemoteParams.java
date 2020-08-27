@@ -81,10 +81,10 @@ public class OneSignalRemoteParams {
       boolean restoreTTLFilter;
       boolean clearGroupOnSummaryClick;
       boolean receiveReceiptEnabled;
-      boolean unsubscribeWhenNotificationsDisabled;
       boolean disableGMSMissingPrompt;
-      boolean locationShared;
-      boolean requiresUserPrivacyConsent;
+      Boolean unsubscribeWhenNotificationsDisabled;
+      Boolean locationShared;
+      Boolean requiresUserPrivacyConsent;
       InfluenceParams influenceParams;
       FCMParams fcmParams;
    }
@@ -179,10 +179,12 @@ public class OneSignalRemoteParams {
          clearGroupOnSummaryClick = responseJson.optBoolean("clear_group_on_summary_click", true);
          receiveReceiptEnabled = responseJson.optBoolean("receive_receipts_enable", false);
 
-         unsubscribeWhenNotificationsDisabled = responseJson.optBoolean(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE, true);
          disableGMSMissingPrompt = responseJson.optBoolean(DISABLE_GMS_MISSING_PROMPT, false);
-         locationShared = responseJson.optBoolean(LOCATION_SHARED, true);
-         requiresUserPrivacyConsent = responseJson.optBoolean(REQUIRES_USER_PRIVACY_CONSENT, false);
+         // Null assignation to avoid remote param override user configuration until backend is done
+         // TODO remove has check when backend has new remote params and user sets inside OneSignal.java were removed
+         unsubscribeWhenNotificationsDisabled = !responseJson.has(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE) ? null : responseJson.optBoolean(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE, true);
+         locationShared = !responseJson.has(LOCATION_SHARED) ? null : responseJson.optBoolean(LOCATION_SHARED, true);
+         requiresUserPrivacyConsent = !responseJson.has(REQUIRES_USER_PRIVACY_CONSENT) ? null : responseJson.optBoolean(REQUIRES_USER_PRIVACY_CONSENT, false);
 
          influenceParams = new InfluenceParams();
          // Process outcomes params

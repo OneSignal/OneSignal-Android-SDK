@@ -99,6 +99,24 @@ public class RemoteParamsTests {
     }
 
     @Test
+    public void testUserPrivacyConsentRequired_ByUser() throws Exception {
+        ShadowOneSignalRestClient.setAndRemoveKeyFromRemoteParams("requires_user_privacy_consent");
+        OneSignal.setRequiresUserPrivacyConsent(true);
+        OneSignalInit();
+        threadAndTaskWait();
+        assertTrue(OneSignal.requiresUserPrivacyConsent());
+    }
+
+    @Test
+    public void testUserPrivacyConsentNotRequired_ByUser() throws Exception {
+        ShadowOneSignalRestClient.setAndRemoveKeyFromRemoteParams("requires_user_privacy_consent");
+        OneSignal.setRequiresUserPrivacyConsent(false);
+        OneSignalInit();
+        threadAndTaskWait();
+        assertFalse(OneSignal.requiresUserPrivacyConsent());
+    }
+
+    @Test
     public void testUserPrivacyConsentRequired() throws Exception {
         JSONObject remoteParams = new JSONObject();
         remoteParams.put("requires_user_privacy_consent", true);
@@ -119,7 +137,47 @@ public class RemoteParamsTests {
     }
 
     @Test
+    public void testUserPrivacyConsentRequired_UserConfigurationOverrideByRemoteParams() throws Exception {
+        JSONObject remoteParams = new JSONObject();
+        remoteParams.put("requires_user_privacy_consent", true);
+        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+
+        OneSignalInit();
+        OneSignal.setRequiresUserPrivacyConsent(false);
+        threadAndTaskWait();
+        assertTrue(OneSignal.requiresUserPrivacyConsent());
+    }
+
+    @Test
+    public void testUserPrivacyConsentNotRequired_UserConfigurationOverrideByRemoteParams() throws Exception {
+        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse();
+
+        OneSignalInit();
+        OneSignal.setRequiresUserPrivacyConsent(true);
+        threadAndTaskWait();
+        assertFalse(OneSignal.requiresUserPrivacyConsent());
+    }
+
+    @Test
+    public void testLocationSharedEnable_ByUser() throws Exception {
+        OneSignal.setLocationShared(true);
+        OneSignalInit();
+        threadAndTaskWait();
+        assertTrue(OneSignal_locationShared());
+    }
+
+    @Test
+    public void testLocationSharedDisable_ByUser() throws Exception {
+        ShadowOneSignalRestClient.setAndRemoveKeyFromRemoteParams("location_shared");
+        OneSignal.setLocationShared(false);
+        OneSignalInit();
+        threadAndTaskWait();
+        assertFalse(OneSignal_locationShared());
+    }
+
+    @Test
     public void testLocationSharedEnable() throws Exception {
+        ShadowOneSignalRestClient.setAndRemoveKeyFromRemoteParams("location_shared");
         ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse();
 
         OneSignalInit();
@@ -136,6 +194,48 @@ public class RemoteParamsTests {
         OneSignalInit();
         threadAndTaskWait();
         assertFalse(OneSignal_locationShared());
+    }
+
+    @Test
+    public void testLocationSharedEnable_UserConfigurationOverrideByRemoteParams() throws Exception {
+        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse();
+        OneSignalInit();
+        OneSignal.setLocationShared(false);
+        threadAndTaskWait();
+        assertTrue(OneSignal_locationShared());
+    }
+
+    @Test
+    public void testLocationSharedDisable_UserConfigurationOverrideByRemoteParams() throws Exception {
+        JSONObject remoteParams = new JSONObject();
+        remoteParams.put("location_shared", false);
+        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+
+        OneSignalInit();
+        OneSignal.setLocationShared(true);
+        threadAndTaskWait();
+        assertFalse(OneSignal_locationShared());
+    }
+
+    @Test
+    @Config(shadows = {ShadowNotificationManagerCompat.class})
+    public void testUnsubscribeOnNotificationsDisable_EnableByUser() throws Exception {
+        ShadowNotificationManagerCompat.enabled = false;
+        OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
+        OneSignalInit();
+        threadAndTaskWait();
+        assertFalse(OneSignal_areNotificationsEnabledForSubscribedState());
+    }
+
+    @Test
+    @Config(shadows = {ShadowNotificationManagerCompat.class})
+    public void testUnsubscribeOnNotificationsDisable_DisableByUser() throws Exception {
+        ShadowNotificationManagerCompat.enabled = false;
+        ShadowOneSignalRestClient.setAndRemoveKeyFromRemoteParams("unsubscribe_on_notifications_disabled");
+        OneSignal.unsubscribeWhenNotificationsAreDisabled(false);
+        OneSignalInit();
+        threadAndTaskWait();
+        assertTrue(OneSignal_areNotificationsEnabledForSubscribedState());
     }
 
     @Test
@@ -156,6 +256,30 @@ public class RemoteParamsTests {
         ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
 
         OneSignalInit();
+        threadAndTaskWait();
+        assertTrue(OneSignal_areNotificationsEnabledForSubscribedState());
+    }
+
+    @Test
+    @Config(shadows = {ShadowNotificationManagerCompat.class})
+    public void testUnsubscribeOnNotificationsDisable_Enable_UserConfigurationOverrideByRemoteParams() throws Exception {
+        ShadowNotificationManagerCompat.enabled = false;
+        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse();
+
+        OneSignalInit();
+        OneSignal.unsubscribeWhenNotificationsAreDisabled(false);
+        threadAndTaskWait();
+        assertFalse(OneSignal_areNotificationsEnabledForSubscribedState());
+    }
+
+    @Test
+    public void testUnsubscribeOnNotificationsDisable_Disable_UserConfigurationOverrideByRemoteParams() throws Exception {
+        JSONObject remoteParams = new JSONObject();
+        remoteParams.put("unsubscribe_on_notifications_disabled", false);
+        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+
+        OneSignalInit();
+        OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
         threadAndTaskWait();
         assertTrue(OneSignal_areNotificationsEnabledForSubscribedState());
     }

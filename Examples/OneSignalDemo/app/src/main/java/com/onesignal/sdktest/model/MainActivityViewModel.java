@@ -446,7 +446,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         locationSharedSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // TODO remove element, was replaced by remote params
+                OneSignal.setLocationShared(isChecked);
             }
         });
     }
