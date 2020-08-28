@@ -39,8 +39,8 @@ public class OSNotificationReceived {
    private static final long PROCESS_NOTIFICATION_TIMEOUT = 5 * 1_000L;
 
    private final OSTimeoutHandler timeoutHandler;
+   private Runnable timeoutRunnable;
    private OSNotificationExtender notificationExtender;
-
    public OSNotificationPayload payload;
    public boolean isRestoring;
    public boolean isAppInFocus;
@@ -53,7 +53,7 @@ public class OSNotificationReceived {
       this.isRestoring = isRestoring;
       this.isAppInFocus = isAppInFocus;
 
-      timeoutHandler = new OSTimeoutHandler();
+      timeoutHandler = OSTimeoutHandler.getTimeoutHandler();
       notificationExtender = new OSNotificationExtender(
               context,
               androidNotificationId,
@@ -62,12 +62,14 @@ public class OSNotificationReceived {
               timestamp
       );
 
-      timeoutHandler.startTimeout(PROCESS_NOTIFICATION_TIMEOUT, new Runnable() {
+      timeoutRunnable = new Runnable() {
          @Override
          public void run() {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running complete from OSNotificationReceived timeout runnable!");
             complete();
          }
-      });
+      };
+      timeoutHandler.startTimeout(PROCESS_NOTIFICATION_TIMEOUT, timeoutRunnable);
    }
 
    private boolean isDeveloperProcessed() {
@@ -116,7 +118,7 @@ public class OSNotificationReceived {
     *  a runnable will fire after a 5 second timer and complete by default
     */
    public synchronized void complete() {
-      timeoutHandler.destroyTimeout();
+      timeoutHandler.destroyTimeout(timeoutRunnable);
 
       if (isComplete)
          return;

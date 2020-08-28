@@ -181,13 +181,12 @@ public class OSNotificationGenerationJob {
         // Used to toggle when complete is called so it can not be called more than once
         boolean isComplete = false;
 
-        private final OSTimeoutHandler timeoutHandler;
+        private Runnable timeoutRunnable;
         // The actual notificationJob with notification payload data
         private OSNotificationGenerationJob notificationJob;
 
         NotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
             this.notificationJob = notificationJob;
-            timeoutHandler = new OSTimeoutHandler();
         }
 
         OSNotificationGenerationJob getNotificationJob() {
@@ -195,11 +194,12 @@ public class OSNotificationGenerationJob {
         }
 
         protected void startTimeout(Runnable runnable) {
-            timeoutHandler.startTimeout(SHOW_NOTIFICATION_TIMEOUT, runnable);
+            timeoutRunnable = runnable;
+            OSTimeoutHandler.getTimeoutHandler().startTimeout(SHOW_NOTIFICATION_TIMEOUT, runnable);
         }
 
         protected void destroyTimeout() {
-            timeoutHandler.destroyTimeout();
+            OSTimeoutHandler.getTimeoutHandler().destroyTimeout(timeoutRunnable);
         }
 
         public String getApiNotificationId() {
@@ -251,6 +251,7 @@ public class OSNotificationGenerationJob {
             startTimeout(new Runnable() {
                 @Override
                 public void run() {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running complete from ExtNotificationGenerationJob timeout runnable!");
                     ExtNotificationGenerationJob.this.complete(true);
                 }
             });
@@ -294,6 +295,7 @@ public class OSNotificationGenerationJob {
             startTimeout(new Runnable() {
                 @Override
                 public void run() {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running complete from AppNotificationGenerationJob timeout runnable!");
                     AppNotificationGenerationJob.this.complete();
                 }
             });
