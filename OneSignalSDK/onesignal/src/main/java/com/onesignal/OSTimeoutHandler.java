@@ -28,46 +28,46 @@
 package com.onesignal;
 
 import android.os.Handler;
-import android.os.Looper;
+import android.os.HandlerThread;
 
 import androidx.annotation.NonNull;
 
-class OSTimeoutHandler {
+class OSTimeoutHandler extends HandlerThread {
 
-    private Handler timeoutHandler;
-    private Runnable timeoutRunnable;
+    private static final String TAG = OSTimeoutHandler.class.getCanonicalName();
+    private static final Object SYNC_LOCK = new Object();
 
-    public OSTimeoutHandler() {
+    private static OSTimeoutHandler timeoutHandler;
+
+    static OSTimeoutHandler getTimeoutHandler() {
+        if (timeoutHandler == null) {
+            synchronized (SYNC_LOCK) {
+                if (timeoutHandler == null)
+                    timeoutHandler = new OSTimeoutHandler();
+            }
+        }
+        return timeoutHandler;
     }
 
-    synchronized void startTimeout(long timeout, @NonNull final Runnable runnable) {
-        // If the handler or runnable isn't null we do not want to start another
-        if (timeoutRunnable != null)
-            return;
+    private final Handler mHandler;
 
-        timeoutRunnable = runnable;
-
-        postDelayed(timeoutRunnable, timeout);
+    private OSTimeoutHandler() {
+        super(TAG);
+        start();
+        this.mHandler = new Handler(getLooper());
     }
 
-    public void postDelayed(final Runnable runnable, final long delayMillis) {
-        if (Looper.myLooper() == null)
-            Looper.prepare();
-
-        timeoutHandler = new Handler();
-        timeoutHandler.postDelayed(runnable, delayMillis);
-
-        Looper.loop();
+    void startTimeout(long timeout, @NonNull Runnable runnable) {
+        synchronized (SYNC_LOCK) {
+            // Avoid duplicate runnable postDelayed
+            destroyTimeout(runnable);
+            mHandler.postDelayed(runnable, timeout);
+        }
     }
 
-    synchronized void destroyTimeout() {
-        removeCallbacks(timeoutRunnable);
-        timeoutHandler = null;
-        timeoutRunnable = null;
-    }
-
-    public void removeCallbacks(Runnable runnable) {
-        if (timeoutHandler != null)
-            timeoutHandler.removeCallbacks(runnable);
+    void destroyTimeout(Runnable runnable) {
+        synchronized (SYNC_LOCK) {
+            mHandler.removeCallbacks(runnable);
+        }
     }
 }

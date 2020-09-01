@@ -1,6 +1,8 @@
 package com.onesignal;
 
 
+import androidx.annotation.NonNull;
+
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
@@ -29,15 +31,14 @@ public class ShadowTimeoutHandler {
     }
 
     @Implementation
-    public boolean postDelayed(final Runnable runnable, final long delayMillis) {
+    public void startTimeout(long timeout, @NonNull Runnable runnable) {
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
-        executor.schedule(runnable, mockDelay ? mockDelayMillis : delayMillis, TimeUnit.MILLISECONDS);
+        executor.schedule(runnable, mockDelay ? mockDelayMillis : timeout, TimeUnit.MILLISECONDS);
         executorHashMap.put(runnable, executor);
-        return true;
     }
 
     @Implementation
-    public void removeCallbacks(Runnable runnable) {
+    public void destroyTimeout(Runnable runnable) {
         ScheduledThreadPoolExecutor executor = executorHashMap.get(runnable);
         if (executor != null) {
             executor.shutdownNow();

@@ -39,7 +39,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -1910,7 +1909,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowTimeoutHandler.class })
    public void testNotificationWillShowInForegroundHandler_bubbles30SecondTimeout_forExtAndAppHandlers() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1933,6 +1932,8 @@ public class GenerateNotificationRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
+      // Mock timeout to 1, given that we are not calling complete inside NotificationExtensionService we depend on the timeout complete
+      ShadowTimeoutHandler.setMockDelayMillis(1);
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -1981,7 +1982,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowTimeoutHandler.class })
    public void testExtNotificationWillShowInForegroundHandler_bubblesAfter30SecondTimeout_toAppNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -2002,6 +2003,9 @@ public class GenerateNotificationRunner {
 
       blankActivityController.resume();
       threadAndTaskWait();
+
+      // Mock timeout to 1, given that we are not calling complete inside NotificationExtensionService we depend on the timeout complete
+      ShadowTimeoutHandler.setMockDelayMillis(1);
 
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
@@ -2121,7 +2125,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(shadows = { ShadowTimeoutHandler.class })
    public void testNotificationWillShowInForegroundHandler_workTimeLongerThanTimeout() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
               "NotificationExtensionService_workTimeLongerThanTimeout");
@@ -2135,14 +2141,13 @@ public class GenerateNotificationRunner {
             callbackCounter++;
             lastAppnotificationJob = notificationJob;
 
-            // Simulate doing work for more than 30 seconds
-            new Handler().postDelayed(new Runnable() {
-               @Override
-               public void run() {
-                  // After 35 seconds call complete to try after the timeout ended already
-                  notificationJob.complete();
-               }
-            }, 35_000L);
+            // Simulate doing work for 3 seconds
+            try {
+               Thread.sleep(3_000L);
+               notificationJob.complete();
+            } catch (InterruptedException e) {
+               e.printStackTrace();
+            }
          }
       });
       threadAndTaskWait();
@@ -2150,6 +2155,9 @@ public class GenerateNotificationRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
+      // Mock timeout to 1, given that we are delaying the complete inside NotificationExtensionService and AppNotificationWillShowInForegroundHandler
+      // We depend on the timeout complete
+      ShadowTimeoutHandler.setMockDelayMillis(1);
       // 3. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
@@ -2175,13 +2183,13 @@ public class GenerateNotificationRunner {
          callbackCounter++;
          lastExtnotificationJob = notificationJob;
 
-         new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-               // After 35 seconds call complete to try after the timeout ended already
-               notificationJob.complete(true);
-            }
-         }, 35_000L);
+         try {
+            Thread.sleep(3_000L);
+            // After 3 seconds call complete to try after the timeout ended already
+            notificationJob.complete(true);
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
       }
    }
 
