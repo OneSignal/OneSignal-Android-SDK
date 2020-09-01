@@ -51,7 +51,7 @@ class OSRemoteParamController {
         if (remoteParams.unsubscribeWhenNotificationsDisabled != null)
             saveUnsubscribeWhenNotificationsAreDisabled(remoteParams.unsubscribeWhenNotificationsDisabled);
         if (remoteParams.locationShared != null)
-            saveLocationShared(remoteParams.locationShared);
+            OneSignal.startLocationShared(remoteParams.locationShared);
         if (remoteParams.requiresUserPrivacyConsent != null)
             savePrivacyConsentRequired(remoteParams.requiresUserPrivacyConsent);
     }

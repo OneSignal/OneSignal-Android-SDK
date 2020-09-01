@@ -2522,18 +2522,17 @@ public class OneSignal {
       if (getRemoteParamController().hasLocationKey())
          return;
 
-      getRemoteParamController().saveLocationShared(enable);
-      if (!enable)
-         clearLocation();
-      logger.debug("OneSignal is shareLocation enabled: " + enable);
+      startLocationShared(enable);
    }
 
-   private static void clearLocation() {
-      // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_LOCATION_SHARED))
-         return;
+   static void startLocationShared(boolean enable) {
+      logger.debug("OneSignal is shareLocation enabled: " + enable);
+      getRemoteParamController().saveLocationShared(enable);
 
-      OneSignalStateSynchronizer.clearLocation();
+      if (!enable) {
+         logger.debug("OneSignal is shareLocation set false, clearing last location!");
+         OneSignalStateSynchronizer.clearLocation();
+      }
    }
 
    /**
