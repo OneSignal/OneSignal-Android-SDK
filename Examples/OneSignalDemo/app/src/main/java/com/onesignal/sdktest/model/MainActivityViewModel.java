@@ -40,12 +40,11 @@ import com.onesignal.sdktest.util.Animate;
 import com.onesignal.sdktest.util.Dialog;
 import com.onesignal.sdktest.util.Font;
 import com.onesignal.sdktest.util.IntentTo;
-import com.onesignal.sdktest.util.OneSignalPrefs;
+import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import com.onesignal.sdktest.util.ProfileUtil;
 import com.onesignal.sdktest.util.Toaster;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -268,7 +267,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(pauseInAppMessagesDescriptionTextView, font.saralaRegular);
         font.applyFont(revokeConsentButton, font.saralaBold);
 
-        boolean hasConsent = OneSignalPrefs.getUserPrivacyConsent(context);
+        boolean hasConsent = SharedPreferenceUtil.getUserPrivacyConsent(context);
         setupConsentLayout(hasConsent);
 
         if (hasConsent)
@@ -300,10 +299,11 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     @Override
     public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
-        final boolean isSubscribed = OneSignal
-                .getPermissionSubscriptionState()
-                .getSubscriptionStatus()
-                .getSubscribed();
+        final boolean isSubscribed = OneSignal.getPermissionSubscriptionState() != null &&
+                OneSignal
+                        .getPermissionSubscriptionState()
+                        .getSubscriptionStatus()
+                        .getSubscribed();
 
         boolean isPermissionEnabled = stateChanges.getTo().getEnabled();
         subscriptionSwitch.setEnabled(isPermissionEnabled);
@@ -314,7 +314,7 @@ public class MainActivityViewModel implements ActivityViewModel {
     public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
         boolean isSubscribed = stateChanges.getTo().getSubscribed();
         subscriptionSwitch.setChecked(isSubscribed);
-        OneSignalPrefs.cacheLocationSharedStatus(context, isSubscribed);
+        SharedPreferenceUtil.cacheLocationSharedStatus(context, isSubscribed);
     }
 
     private void setupConsentLayout(boolean hasConsent) {
@@ -324,12 +324,9 @@ public class MainActivityViewModel implements ActivityViewModel {
         nestedScrollView.setVisibility(scrollVisibility);
         appBarLayout.setExpanded(true);
 
-        privacyConsentAllowButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                togglePrivacyConsent(true);
-                postPrivacyConsentSetup();
-            }
+        privacyConsentAllowButton.setOnClickListener(v -> {
+            togglePrivacyConsent(true);
+            postPrivacyConsentSetup();
         });
     }
 
@@ -364,7 +361,7 @@ public class MainActivityViewModel implements ActivityViewModel {
                     @Override
                     public void onSuccess(String update) {
                         appIdTextView.setText(update);
-                        OneSignalPrefs.cacheOneSignalAppId(getActivity(), update);
+                        SharedPreferenceUtil.cacheOneSignalAppId(getActivity(), update);
                         intentTo.resetApplication();
                     }
 
@@ -408,22 +405,17 @@ public class MainActivityViewModel implements ActivityViewModel {
         String externalUserId = isExternalUserSet ? currentUser.getExternalUserId(context) : Text.EXTERNAL_USER_ID_NOT_SET;
         userExternalUserIdTextView.setText(externalUserId);
 
-        externalUserIdRelativeLayout.setOnClickListener(new View.OnClickListener() {
+        externalUserIdRelativeLayout.setOnClickListener(v -> dialog.createUpdateAlertDialog(currentUser.getExternalUserId(context), ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
             @Override
-            public void onClick(View v) {
-                dialog.createUpdateAlertDialog(currentUser.getExternalUserId(context), ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-                    @Override
-                    public void onSuccess(String update) {
-                        userExternalUserIdTextView.setText(update);
-                    }
-
-                    @Override
-                    public void onFailure() {
-
-                    }
-                });
+            public void onSuccess(String update) {
+                userExternalUserIdTextView.setText(update);
             }
-        });
+
+            @Override
+            public void onFailure() {
+
+            }
+        }));
     }
 
     private void setupLocationLayout() {
@@ -437,11 +429,11 @@ public class MainActivityViewModel implements ActivityViewModel {
             public void onClick(View v) {
                 boolean isLocationShared = !locationSharedSwitch.isChecked();
                 locationSharedSwitch.setChecked(isLocationShared);
-                OneSignalPrefs.cacheLocationSharedStatus(context, isLocationShared);
+                SharedPreferenceUtil.cacheLocationSharedStatus(context, isLocationShared);
             }
         });
 
-        boolean isLocationShared = OneSignalPrefs.getCachedLocationSharedStatus(context);
+        boolean isLocationShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context);
         locationSharedSwitch.setChecked(isLocationShared);
         locationSharedSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -468,71 +460,53 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupSubscriptionSwitch() {
         boolean isPermissionEnabled = OneSignal
-                .getPermissionSubscriptionState()
-                .getPermissionStatus()
-                .getEnabled();
+                .getPermissionSubscriptionState() != null &&
+                OneSignal
+                        .getPermissionSubscriptionState()
+                        .getPermissionStatus()
+                        .getEnabled();
 
         final boolean isSubscribed = OneSignal
-                .getPermissionSubscriptionState()
-                .getSubscriptionStatus()
-                .getSubscribed();
+                .getPermissionSubscriptionState() != null &&
+                OneSignal
+                        .getPermissionSubscriptionState()
+                        .getSubscriptionStatus()
+                        .getSubscribed();
 
         subscriptionSwitch.setEnabled(isPermissionEnabled);
         subscriptionSwitch.setChecked(isSubscribed);
 
         if (isPermissionEnabled) {
-            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    boolean isSubscribed = subscriptionSwitch.isChecked();
-                    subscriptionSwitch.setChecked(!isSubscribed);
-                    OneSignal.setSubscription(!isSubscribed);
-                }
+            subscriptionRelativeLayout.setOnClickListener(v -> {
+                boolean isSubscribed1 = subscriptionSwitch.isChecked();
+                subscriptionSwitch.setChecked(!isSubscribed1);
+                OneSignal.setSubscription(!isSubscribed1);
             });
         } else {
-            subscriptionRelativeLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    intentTo.notificationPermissions();
-                }
-            });
+            subscriptionRelativeLayout.setOnClickListener(v -> intentTo.notificationPermissions());
         }
 
-        subscriptionSwitch.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                boolean isSubscribed = subscriptionSwitch.isChecked();
-                OneSignal.setSubscription(!isSubscribed);
-            }
+        subscriptionSwitch.setOnClickListener(v -> {
+            boolean isSubscribed12 = subscriptionSwitch.isChecked();
+            OneSignal.setSubscription(!isSubscribed12);
         });
     }
 
     private void setupPauseInAppMessagesSwitch() {
-        pauseInAppMessagesRelativeLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
-                pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
-            }
+        pauseInAppMessagesRelativeLayout.setOnClickListener(v -> {
+            boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
+            pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
         });
 
-        pauseInAppMessagesSwitch.setChecked(OneSignalPrefs.getCachedInAppMessagingPausedStatus(context));
-        pauseInAppMessagesSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                OneSignal.pauseInAppMessages(isChecked);
-                OneSignalPrefs.cacheInAppMessagingPausedStatus(context, isChecked);
-            }
+        pauseInAppMessagesSwitch.setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
+        pauseInAppMessagesSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            OneSignal.pauseInAppMessages(isChecked);
+            SharedPreferenceUtil.cacheInAppMessagingPausedStatus(context, isChecked);
         });
     }
 
     private void setupRevokeConsentButton() {
-        revokeConsentButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                togglePrivacyConsent(false);
-            }
-        });
+        revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
     }
 
     private void setupTagsLayout() {
@@ -540,51 +514,43 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         setupTagRecyclerView();
 
-        OneSignal.getTags(new OneSignal.GetTagsHandler() {
-            @Override
-            public void tagsAvailable(JSONObject tags) {
-                if (tags == null || tags.toString().isEmpty())
-                    return;
+        OneSignal.getTags(tags -> {
+            if (tags == null || tags.toString().isEmpty())
+                return;
 
-                try {
-                    for (Iterator<String> it = tags.keys(); it.hasNext();) {
-                        String key = it.next();
-                        tagSet.put(key, tags.get(key));
-                    }
-
-                    refreshTagRecyclerView();
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
+            try {
+                for (Iterator<String> it = tags.keys(); it.hasNext();) {
+                    String key = it.next();
+                    tagSet.put(key, tags.get(key));
                 }
+
+                refreshTagRecyclerView();
+
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
 
-        addTagButton.setOnClickListener(new View.OnClickListener() {
+        addTagButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Tag", ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {
             @Override
-            public void onClick(View v) {
-                dialog.createAddPairAlertDialog("Add Tag", ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {
-                    @Override
-                    public void onSuccess(Pair<String, Object> pair) {
-                        if (pair.second == null || pair.second.toString().isEmpty()) {
-                            OneSignal.deleteTag(pair.first);
-                            tagSet.remove(pair.first);
-                            toaster.makeCustomViewToast("Deleted tag " + pair.first, ToastType.SUCCESS);
-                        } else {
-                            tagSet.put(pair.first, pair.second);
-                            toaster.makeCustomViewToast("Added tag " + pair.first, ToastType.SUCCESS);
-                        }
+            public void onSuccess(Pair<String, Object> pair) {
+                if (pair.second == null || pair.second.toString().isEmpty()) {
+                    OneSignal.deleteTag(pair.first);
+                    tagSet.remove(pair.first);
+                    toaster.makeCustomViewToast("Deleted tag " + pair.first, ToastType.SUCCESS);
+                } else {
+                    tagSet.put(pair.first, pair.second);
+                    toaster.makeCustomViewToast("Added tag " + pair.first, ToastType.SUCCESS);
+                }
 
-                        refreshTagRecyclerView();
-                    }
-
-                    @Override
-                    public void onFailure() {
-                        refreshTagRecyclerView();
-                    }
-                });
+                refreshTagRecyclerView();
             }
-        });
+
+            @Override
+            public void onFailure() {
+                refreshTagRecyclerView();
+            }
+        }));
     }
 
     private void setupTagRecyclerView() {
@@ -632,59 +598,46 @@ public class MainActivityViewModel implements ActivityViewModel {
         pushNotificationRecyclerView.setAdapter(pushNotificationRecyclerViewAdapter);
     }
     private void setupOutcomeLayout() {
-        sendOutcomeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.createSendOutcomeAlertDialog("Select an Outcome Type...");
-            }
-        });
+        sendOutcomeButton.setOnClickListener(v -> dialog.createSendOutcomeAlertDialog("Select an Outcome Type..."));
     }
 
     private void setupTriggersLayout() {
         animate.toggleAnimationView(true, View.GONE, triggersRecyclerView, noTriggersTextView);
 
         setupTriggerRecyclerView();
-        addTriggerButton.setOnClickListener(new View.OnClickListener() {
+        addTriggerButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Trigger", ProfileUtil.FieldType.TRIGGER, new AddPairAlertDialogCallback() {
             @Override
-            public void onClick(View v) {
-                dialog.createAddPairAlertDialog("Add Trigger", ProfileUtil.FieldType.TRIGGER, new AddPairAlertDialogCallback() {
-                    @Override
-                    public void onSuccess(Pair<String, Object> pair) {
-                        if (pair.second == null || pair.second.toString().isEmpty()) {
-                            OneSignal.removeTriggerForKey(pair.first);
-                            triggerSet.remove(pair.first);
-                            toaster.makeCustomViewToast("Deleted trigger " + pair.first, ToastType.SUCCESS);
-                        } else {
-                            triggerSet.put(pair.first, pair.second);
-                            toaster.makeCustomViewToast("Added trigger " + pair.first, ToastType.SUCCESS);
-                        }
+            public void onSuccess(Pair<String, Object> pair) {
+                if (pair.second == null || pair.second.toString().isEmpty()) {
+                    OneSignal.removeTriggerForKey(pair.first);
+                    triggerSet.remove(pair.first);
+                    toaster.makeCustomViewToast("Deleted trigger " + pair.first, ToastType.SUCCESS);
+                } else {
+                    triggerSet.put(pair.first, pair.second);
+                    toaster.makeCustomViewToast("Added trigger " + pair.first, ToastType.SUCCESS);
+                }
 
-                        refreshTriggerRecyclerView();
-                    }
-
-                    @Override
-                    public void onFailure() {
-                        refreshTriggerRecyclerView();
-                    }
-                });
+                refreshTriggerRecyclerView();
             }
-        });
+
+            @Override
+            public void onFailure() {
+                refreshTriggerRecyclerView();
+            }
+        }));
     }
 
     private void setupTriggerRecyclerView() {
         recyclerViewBuilder.setupRecyclerView(triggersRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         triggersRecyclerView.setLayoutManager(linearLayoutManager);
-        triggerPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, triggerArrayList, new PairItemActionCallback() {
-            @Override
-            public void onLongClick(String key) {
-                OneSignal.removeTriggerForKey(key);
-                triggerSet.remove(key);
+        triggerPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, triggerArrayList, key -> {
+            OneSignal.removeTriggerForKey(key);
+            triggerSet.remove(key);
 
-                refreshTriggerRecyclerView();
+            refreshTriggerRecyclerView();
 
-                toaster.makeCustomViewToast("Deleted trigger " + key, ToastType.SUCCESS);
-            }
+            toaster.makeCustomViewToast("Deleted trigger " + key, ToastType.SUCCESS);
         });
         triggersRecyclerView.setAdapter(triggerPairRecyclerViewAdapter);
     }
@@ -716,17 +669,23 @@ public class MainActivityViewModel implements ActivityViewModel {
         inAppMessagingRecyclerView.setAdapter(inAppMessagingRecyclerViewAdapter);
     }
 
-    public boolean shouldScrollToTop() {
+    public boolean scrollToTopIfAvailable() {
+        if (shouldScrollTop) {
+            if (nestedScrollView != null) {
+                nestedScrollView.smoothScrollTo(0, 0);
+                appBarLayout.setExpanded(true);
+            }
+        }
         return shouldScrollTop;
     }
 
     private String getOneSignalAppId() {
-        return OneSignalPrefs.getOneSignalAppId(context);
+        return SharedPreferenceUtil.getOneSignalAppId(context);
     }
 
     private void togglePrivacyConsent(boolean hasConsent) {
         OneSignal.provideUserConsent(hasConsent);
-        OneSignalPrefs.cacheUserPrivacyConsent(context, hasConsent);
+        SharedPreferenceUtil.cacheUserPrivacyConsent(context, hasConsent);
 
         shouldScrollTop = hasConsent;
 

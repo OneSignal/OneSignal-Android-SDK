@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 
 import com.onesignal.sdktest.constant.Text;
 
-public class OneSignalPrefs {
+public class SharedPreferenceUtil {
 
     private static final String APP_SHARED_PREFS = "com.onesignal.sdktest";
 

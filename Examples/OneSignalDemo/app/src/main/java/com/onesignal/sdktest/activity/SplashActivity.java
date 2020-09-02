@@ -1,28 +1,20 @@
 package com.onesignal.sdktest.activity;
 
 import android.os.Bundle;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.model.ActivityViewModel;
 import com.onesignal.sdktest.model.SplashActivityViewModel;
-import com.onesignal.sdktest.util.IntentTo;
 
 public class SplashActivity extends AppCompatActivity {
-
-    private IntentTo intentTo;
-
-    private ActivityViewModel viewModel;
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.splash_activity_layout);
 
-        intentTo = new IntentTo(this);
-
-        viewModel = new SplashActivityViewModel()
+        new SplashActivityViewModel()
                 .onActivityCreated(this)
                 .setupInterfaceElements();
     }

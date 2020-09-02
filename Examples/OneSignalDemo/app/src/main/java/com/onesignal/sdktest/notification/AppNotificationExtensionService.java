@@ -1,9 +1,6 @@
 package com.onesignal.sdktest.notification;
 
 import android.content.Context;
-import android.util.Log;
-
-import androidx.core.app.NotificationCompat;
 
 import com.onesignal.OSNotificationDisplayedResult;
 import com.onesignal.OSNotificationExtender;

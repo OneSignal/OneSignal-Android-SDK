@@ -3,8 +3,9 @@ package com.onesignal.sdktest.model;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSPermissionStateChanges;
@@ -15,7 +16,7 @@ import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.user.CurrentUser;
 import com.onesignal.sdktest.util.IntentTo;
-import com.onesignal.sdktest.util.OneSignalPrefs;
+import com.onesignal.sdktest.util.SharedPreferenceUtil;
 
 public class SplashActivityViewModel implements ActivityViewModel {
 
@@ -50,7 +51,6 @@ public class SplashActivityViewModel implements ActivityViewModel {
 
     @Override
     public ActivityViewModel setupInterfaceElements() {
-
         return this;
     }
 
@@ -88,10 +88,10 @@ public class SplashActivityViewModel implements ActivityViewModel {
         boolean privacyConsent = true;
         OneSignal.setRequiresUserPrivacyConsent(privacyConsent);
 
-        boolean isLocationShared = OneSignalPrefs.getCachedLocationSharedStatus(context);
+        boolean isLocationShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context);
         OneSignal.setLocationShared(isLocationShared);
 
-        boolean isInAppMessagingPaused = OneSignalPrefs.getCachedInAppMessagingPausedStatus(context);
+        boolean isInAppMessagingPaused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context);
         OneSignal.pauseInAppMessages(isInAppMessagingPaused);
 
         Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
@@ -125,7 +125,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
 
         new Thread() {
             public void run() {
-                boolean hasConsent = OneSignalPrefs.getUserPrivacyConsent(context);
+                boolean hasConsent = SharedPreferenceUtil.getUserPrivacyConsent(context);
                 OneSignal.provideUserConsent(hasConsent);
                 tasks[2] = true;
 
@@ -135,18 +135,18 @@ public class SplashActivityViewModel implements ActivityViewModel {
     }
 
     public boolean attemptSignIn(EmailUpdateCallback callback) {
-        boolean isEmailCached = OneSignalPrefs.exists(context, OneSignalPrefs.USER_EMAIL_SHARED_PREF);
+        boolean isEmailCached = SharedPreferenceUtil.exists(context, SharedPreferenceUtil.USER_EMAIL_SHARED_PREF);
         if (isEmailCached) {
-            String email = OneSignalPrefs.getCachedUserEmail(context);
+            String email = SharedPreferenceUtil.getCachedUserEmail(context);
             currentUser.setEmail(email, callback);
         }
         return isEmailCached;
     }
 
     public boolean attemptExternalUserId() {
-        boolean isExternalUserIdCached = OneSignalPrefs.exists(context, OneSignalPrefs.USER_EXTERNAL_USER_ID_SHARED_PREF);
+        boolean isExternalUserIdCached = SharedPreferenceUtil.exists(context, SharedPreferenceUtil.USER_EXTERNAL_USER_ID_SHARED_PREF);
         if (isExternalUserIdCached) {
-            String externalUserId = OneSignalPrefs.getCachedUserExternalUserId(context);
+            String externalUserId = SharedPreferenceUtil.getCachedUserExternalUserId(context);
             currentUser.setExternalUserId(context, externalUserId);
         }
         return isExternalUserIdCached;

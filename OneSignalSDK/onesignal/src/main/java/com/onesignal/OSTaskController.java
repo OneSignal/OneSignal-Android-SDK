@@ -31,6 +31,7 @@ class OSTaskController {
     static final String UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED = "unsubscribeWhenNotificationsAreDisabled()";
     static final String HANDLE_NOTIFICATION_OPEN = "handleNotificationOpen()";
     static final String CANCEL_GROUPED_NOTIFICATIONS = "cancelGroupedNotifications()";
+    static final String PAUSE_IN_APP_MESSAGES = "pauseInAppMessages()";
     static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
             GET_TAGS,
             SYNC_HASHED_EMAIL,

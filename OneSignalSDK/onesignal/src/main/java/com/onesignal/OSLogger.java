@@ -15,6 +15,6 @@ public interface OSLogger {
 
     void error(@NonNull String message);
 
-    void error(@NonNull String message, @Nullable Throwable throwable);
+    void error(@NonNull String message, @NonNull Throwable throwable);
 
 }
