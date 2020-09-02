@@ -1,11 +1,22 @@
+ext {
+    buildVersions = [
+            minSdkVersion: 16
+    ]
+
+    androidXVersion = '[1.0.0, 1.99.99]'
+    androidWorkVersion = '[2.0.0, 2.99.99]'
+    firebaseMessagingVersion = '[19.0.0, 20.99.99]'
+    googleGMSVersion = '[17.0.0, 17.99.99]'
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion rootProject.buildVersions.compileSdkVersion
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion buildVersions.minSdkVersion
         consumerProguardFiles 'consumer-proguard-rules.pro'
     }
 
@@ -29,36 +40,36 @@ android {
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+
     // play-services-location:16.0.0 is the last version before going to AndroidX
     // play-services-location:17.0.0 is the first version using AndroidX
-    compileOnly 'com.google.android.gms:play-services-location:[17.0.0, 17.99.99]'
+    compileOnly "com.google.android.gms:play-services-location:$googleGMSVersion"
 
     // play-services-ads-identifier:16.0.0 is the last version before going to AndroidX
     // play-services-ads-identifier:17.0.0 is the first version using AndroidX
     // Classes used to live in play-services-base before this
-    implementation 'com.google.android.gms:play-services-ads-identifier:[17.0.0, 17.99.99]'
+    implementation "com.google.android.gms:play-services-ads-identifier:$googleGMSVersion"
 
     // play-services-base:16.1.0 is the last version before going to AndroidX
     // play-services-base:17.0.0 is the first version using AndroidX
     // Required for GoogleApiAvailability
-    implementation 'com.google.android.gms:play-services-base:[17.0.0, 17.99.99]'
+    implementation "com.google.android.gms:play-services-base:$googleGMSVersion"
 
     // firebase-messaging:18.0.0 is the last version before going to AndroidX
     // firebase-messaging:19.0.0 is the first version using AndroidX
-    api 'com.google.firebase:firebase-messaging:[19.0.0, 20.99.99]'
+    api "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
 
     // Huawei PushKit
     // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
-    compileOnly 'com.huawei.hms:push:4.0.3.301'
-    compileOnly 'com.huawei.hms:location:4.0.0.300'
+    compileOnly "com.huawei.hms:push:$huaweiHMSPushVersion"
+    compileOnly "com.huawei.hms:location:$huaweiHMSLocationVersion"
 
-    api 'androidx.cardview:cardview:[1.0.0, 1.99.99]'
-    api 'androidx.legacy:legacy-support-v4:[1.0.0, 1.99.99]'
-    api 'androidx.browser:browser:[1.0.0, 1.99.99]'
-    api 'androidx.appcompat:appcompat:[1.0.0, 1.99.99]'
-    api 'androidx.work:work-runtime:[2.0.0, 2.99.99]'
-
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    api "androidx.cardview:cardview:$androidXVersion"
+    api "androidx.legacy:legacy-support-v4:$androidXVersion"
+    api "androidx.browser:browser:$androidXVersion"
+    api "androidx.appcompat:appcompat:$androidXVersion"
+    api "androidx.work:work-runtime:$androidWorkVersion"
 }
 
 apply from: 'maven-push.gradle'
