@@ -33,7 +33,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
@@ -71,7 +70,7 @@ class NotificationBundleProcessor {
     static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
 
     static void processFromFCMIntentService(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
-        OneSignal.setAppContext(context);
+        OneSignal.initWithContext(context);
         try {
             String jsonStrPayload = bundle.getString("json_payload");
             if (jsonStrPayload == null) {

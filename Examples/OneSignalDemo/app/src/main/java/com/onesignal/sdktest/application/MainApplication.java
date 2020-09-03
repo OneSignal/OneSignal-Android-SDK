@@ -25,7 +25,7 @@ public class MainApplication extends Application {
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
         }
         OneSignal.setAppId(appId);
-        OneSignal.setAppContext(this);
+        OneSignal.initWithContext(this);
 
         OneSignal.setNotificationWillShowInForegroundHandler(notificationJob -> {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "AppNotificationWillShowInForeground fired!" +

@@ -92,7 +92,7 @@ public class PushRegistratorHMSIntegrationTestsRunner {
     private void OneSignalInit() throws Exception {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         OneSignal.setAppId(InAppMessagingHelpers.ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(blankActivity.getApplicationContext());
+        OneSignal.initWithContext(blankActivity.getApplicationContext());
         blankActivityController.resume();
         threadAndTaskWait();
     }

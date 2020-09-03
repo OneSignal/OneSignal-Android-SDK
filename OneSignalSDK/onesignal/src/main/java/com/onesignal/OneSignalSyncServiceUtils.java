@@ -196,7 +196,7 @@ class OneSignalSyncServiceUtils {
    private static Thread syncBgThread;
    // Entry point from SyncJobService and SyncService when the job is kicked off
    static void doBackgroundSync(Context context, SyncRunnable runnable) {
-      OneSignal.setAppContext(context);
+      OneSignal.initWithContext(context);
       syncBgThread = new Thread(runnable, "OS_SYNCSRV_BG_SYNC");
       syncBgThread.start();
    }

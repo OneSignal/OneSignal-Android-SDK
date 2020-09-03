@@ -65,7 +65,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
          return;
 
-      OneSignal.setAppContext(context);
+      OneSignal.initWithContext(context);
       ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
 
       // Null means this isn't a FCM message

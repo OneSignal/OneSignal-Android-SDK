@@ -40,7 +40,7 @@ public class DeviceTypeTestsRunner {
     @Before
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
-        OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+        OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
     }
 
     @Test
