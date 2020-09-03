@@ -516,12 +516,11 @@ public class OneSignal {
    }
    // End EmailSubscriptionState
 
-   private static OSDevice userDevice;
+   @Nullable
    public static OSDevice getUserDevice() {
-      if (userDevice == null)
-         userDevice = new OSDevice();
-
-      return userDevice;
+      if (getPermissionSubscriptionState() == null)
+         return null;
+      return new OSDevice(getPermissionSubscriptionState());
    }
 
    private static class IAPUpdateJob {
@@ -2900,7 +2899,7 @@ public class OneSignal {
     */
    public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
 
-      //if applicable, check if the user provided privacy consent
+      // If applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getPermissionSubscriptionState()"))
          return null;
 
