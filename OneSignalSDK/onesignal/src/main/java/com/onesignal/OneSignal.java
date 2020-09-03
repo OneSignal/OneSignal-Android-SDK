@@ -1047,7 +1047,7 @@ public class OneSignal {
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT + " operation from pending task queue.");
+               logger.debug("Running " + OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT + " with " + required + " operation from pending task queue.");
                setRequiresUserPrivacyConsent(required);
             }
          });
@@ -3049,7 +3049,20 @@ public class OneSignal {
     *
     * @param pause The boolean that pauses/resumes in-app messages
     */
-   public static void pauseInAppMessages(boolean pause) {
+   public static void pauseInAppMessages(final boolean pause) {
+      if (appContext == null) {
+         logger.error("Waiting sepAppContext. " +
+                 "Moving " + OSTaskController.PAUSE_IN_APP_MESSAGES + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.PAUSE_IN_APP_MESSAGES + " operation from pending queue.");
+               pauseInAppMessages(pause);
+            }
+         });
+         return;
+      }
+
       OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
    }
 

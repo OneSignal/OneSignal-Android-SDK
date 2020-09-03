@@ -3,7 +3,7 @@ package com.onesignal.sdktest.type;
 public enum OutcomeEvent {
 
     OUTCOME("Normal Outcome"),
-    UNIQUE_OUTOME("Unique Outcome"),
+    UNIQUE_OUTCOME("Unique Outcome"),
     OUTCOME_WITH_VALUE("Outcome with Value");
 
     String title;

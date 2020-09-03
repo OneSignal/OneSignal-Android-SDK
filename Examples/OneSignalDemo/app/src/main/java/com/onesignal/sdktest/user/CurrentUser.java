@@ -6,26 +6,28 @@ import android.util.Log;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.callback.EmailUpdateCallback;
 import com.onesignal.sdktest.constant.Tag;
-import com.onesignal.sdktest.util.OneSignalPrefs;
+import com.onesignal.sdktest.util.SharedPreferenceUtil;
 
 public class CurrentUser {
 
     private static CurrentUser currentUser;
 
     public String getEmail() {
-        return OneSignal
+        if (OneSignal.getPermissionSubscriptionState() != null)
+            return OneSignal
                 .getPermissionSubscriptionState()
                 .getEmailSubscriptionStatus()
                 .getEmailAddress();
+        return null;
     }
 
     public String getExternalUserId(Context context) {
-        return OneSignalPrefs.getCachedUserExternalUserId(context);
+        return SharedPreferenceUtil.getCachedUserExternalUserId(context);
     }
 
     public void setExternalUserId(Context context, String userId) {
         OneSignal.setExternalUserId(userId);
-        OneSignalPrefs.cacheUserExternalUserId(context, userId);
+        SharedPreferenceUtil.cacheUserExternalUserId(context, userId);
     }
 
     public void setEmail(String email, final EmailUpdateCallback callback) {
@@ -52,8 +54,8 @@ public class CurrentUser {
 
     public boolean isEmailSet() {
         return OneSignal
-                .getPermissionSubscriptionState()
-                .getEmailSubscriptionStatus()
+                .getPermissionSubscriptionState() != null && OneSignal
+                .getPermissionSubscriptionState().getEmailSubscriptionStatus()
                 .getEmailAddress() != null;
     }
 

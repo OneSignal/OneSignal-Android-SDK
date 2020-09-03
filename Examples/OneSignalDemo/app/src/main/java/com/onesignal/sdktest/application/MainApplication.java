@@ -3,12 +3,11 @@ package com.onesignal.sdktest.application;
 import android.app.Application;
 import android.util.Log;
 
-import com.onesignal.OSNotificationGenerationJob.AppNotificationGenerationJob;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
-import com.onesignal.sdktest.util.OneSignalPrefs;
+import com.onesignal.sdktest.util.SharedPreferenceUtil;
 
 public class MainApplication extends Application {
 
@@ -19,11 +18,11 @@ public class MainApplication extends Application {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
         // OneSignal Initialization
-        String appId = OneSignalPrefs.getOneSignalAppId(this);
+        String appId = SharedPreferenceUtil.getOneSignalAppId(this);
         // If cached app id is null use the default, otherwise use cached.
         if (appId == null) {
             appId = getString(R.string.onesignal_app_id);
-            OneSignalPrefs.cacheOneSignalAppId(this, appId);
+            SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
         }
         OneSignal.setAppId(appId);
         OneSignal.setAppContext(this);

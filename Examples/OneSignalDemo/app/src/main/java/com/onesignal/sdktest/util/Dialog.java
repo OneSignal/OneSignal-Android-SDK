@@ -131,7 +131,7 @@ public class Dialog {
              */
             private void updateAppId(DialogInterface dialog, String appId) {
                 OneSignal.setAppId(appId);
-                OneSignalPrefs.cacheOneSignalAppId(context, appId);
+                SharedPreferenceUtil.cacheOneSignalAppId(context, appId);
 
                 toggleUpdateAlertDialogAttributes(false);
                 dialog.dismiss();
@@ -145,7 +145,7 @@ public class Dialog {
                 currentUser.setEmail(email, new EmailUpdateCallback() {
                     @Override
                     public void onSuccess() {
-                        OneSignalPrefs.cacheUserEmail(context, email);
+                        SharedPreferenceUtil.cacheUserEmail(context, email);
                         Log.d(Tag.DEBUG, Text.EMAIL_SET_SUCCESSFULLY);
 
                         ((Activity) context).runOnUiThread(new Runnable() {
@@ -189,7 +189,7 @@ public class Dialog {
                         // Check push exists with success status and success status is true
                         if (isExternalUserIdPushSuccessful(results)) {
                             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Push channel external user id set successfully");
-                            OneSignalPrefs.cacheUserExternalUserId(context, externalUserId);
+                            SharedPreferenceUtil.cacheUserExternalUserId(context, externalUserId);
                             successful = true;
                         }
 
@@ -386,7 +386,7 @@ public class Dialog {
 
                 switch(outcomeEvent) {
                     case OUTCOME:
-                    case UNIQUE_OUTOME:
+                    case UNIQUE_OUTCOME:
                         nameVisibility = View.VISIBLE;
                         break;
                     case OUTCOME_WITH_VALUE:
@@ -440,7 +440,7 @@ public class Dialog {
                 if (!showMenu) {
                     switch (outcomeEvent) {
                         case OUTCOME:
-                        case UNIQUE_OUTOME:
+                        case UNIQUE_OUTCOME:
                             nameVisibility = View.VISIBLE;
                             break;
                         case OUTCOME_WITH_VALUE:
@@ -499,7 +499,7 @@ public class Dialog {
                             }
                         });
                         break;
-                    case UNIQUE_OUTOME:
+                    case UNIQUE_OUTCOME:
                         OneSignal.sendUniqueOutcome(name, new OneSignal.OutcomeCallback() {
                             @Override
                             public void onSuccess(@Nullable com.onesignal.OutcomeEvent outcomeEvent) {
