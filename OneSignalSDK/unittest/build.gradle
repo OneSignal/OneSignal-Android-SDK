@@ -1,15 +1,31 @@
+ext {
+    buildVersions = [
+            minSdkVersion: 17,
+            versionCode: 1,
+            versionName: '1.0'
+    ]
+    androidTestCoreVersion = '1.2.0'
+    androidWorkTestVersion = '2.3.4'
+    awaitilityVersion = '3.1.5'
+    firebaseCoreVersion = '17.2.2'
+    googlePlayServicesVersion = '17.0.0'
+    jUnitVersion = '4.12'
+    reflectionsVersion = '0.9.12'
+    roboelectricVersion = '4.3.1'
+}
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion rootProject.buildVersions.compileSdkVersion
     defaultConfig {
         applicationId 'com.onesignal.example'
-        minSdkVersion 17
-        targetSdkVersion 28
-        versionCode 1
-        versionName '1.0'
+        targetSdkVersion rootProject.buildVersions.targetSdkVersion
+        minSdkVersion buildVersions.minSdkVersion
+        versionCode buildVersions.versionCode
+        versionName buildVersions.versionName
         testOptions.unitTests.includeAndroidResources = true
     }
     buildTypes {
@@ -40,23 +56,23 @@ tasks.withType(Test) {
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
-    // Use local onesignal SDK
+    // Use local OneSignal SDK
     implementation(project(':onesignal'))
 
     // Required to shadow firebase analytics classes
-    implementation 'com.google.android.gms:play-services-location:17.0.0'
+    implementation "com.google.android.gms:play-services-location:$googlePlayServicesVersion"
+    implementation "com.google.firebase:firebase-core:$firebaseCoreVersion"
 
-    implementation 'com.google.firebase:firebase-core:17.2.2'
+    implementation "com.huawei.hms:push:$huaweiHMSPushVersion"
+    implementation "com.huawei.hms:location:$huaweiHMSLocationVersion"
 
-    implementation 'com.huawei.hms:push:4.0.2.300'
-    implementation 'com.huawei.hms:location:4.0.0.300'
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+    testImplementation "junit:junit:$jUnitVersion"
 
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'androidx.test:core:1.2.0'
-    testImplementation 'androidx.work:work-testing:2.3.4'
-    testImplementation 'org.robolectric:robolectric:4.3.1'
-    testImplementation 'org.awaitility:awaitility:3.1.5'
-    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    testImplementation "androidx.test:core:$androidTestCoreVersion"
+    testImplementation "androidx.work:work-testing:$androidWorkTestVersion"
 
-    testImplementation 'org.reflections:reflections:0.9.12'
+    testImplementation "org.robolectric:robolectric:$roboelectricVersion"
+    testImplementation "org.awaitility:awaitility:$awaitilityVersion"
+    testImplementation "org.reflections:reflections:$reflectionsVersion"
 }

@@ -28,6 +28,8 @@ proguard/
 
 # Examples
 
+.idea/
+Examples/.idea/
 Examples/AndroidStudio/
 Examples/OneSignalDemo/app/build/
 OneSignalSDK/app/build/
