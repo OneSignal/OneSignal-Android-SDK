@@ -1537,8 +1537,43 @@ public class GenerateNotificationRunner {
       assertNotificationDbRecords(1);
    }
 
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessing_whenAppSwipedAway() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingDisplayAndComplete");
+
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.setAppContext(blankActivity);
+      threadAndTaskWait();
+      fastColdRestartApp();
+      // We only care about request post first init
+      ShadowOneSignalRestClient.resetStatics();
+
+      // 2. Add app context and setup the established notification extension service under init
+      // We should not wait for thread to finish since in true behaviour app will continue processing even if thread are running
+      // Example: don't wait for remote param call Extension Service should be set independently of the threads
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+
+      // 3. Receive a notification
+      Bundle bundle = getBaseNotifBundle();
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastNotificationReceived);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
    /**
     * @see #testNotificationProcessing_whenAlertIsNull
+    * @see #testNotificationProcessing_whenAppSwipedAway
     */
    public static class NotificationExtensionService_notificationProcessingDisplayAndComplete implements OneSignal.NotificationProcessingHandler {
 

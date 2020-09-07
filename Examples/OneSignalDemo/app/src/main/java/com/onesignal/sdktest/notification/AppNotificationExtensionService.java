@@ -16,6 +16,8 @@ public class AppNotificationExtensionService implements
 
    @Override
    public void notificationProcessing(Context context, OSNotificationReceived notification) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "NotificationProcessingHandler fired!" +
+              " with OSNotificationReceived: " + notification.toString());
       if (notification.payload.actionButtons != null) {
          for (OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "ActionButton: " + button.toString());
