@@ -4,7 +4,6 @@ import android.content.Context;
 
 import com.onesignal.OSNotificationDisplayedResult;
 import com.onesignal.OSNotificationExtender;
-import com.onesignal.OSNotificationGenerationJob.ExtNotificationGenerationJob;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.OSNotificationReceived;
@@ -13,7 +12,6 @@ import com.onesignal.sdktest.R;
 
 public class AppNotificationExtensionService implements
         OneSignal.NotificationProcessingHandler,
-        OneSignal.ExtNotificationWillShowInForegroundHandler,
         OneSignal.NotificationOpenedHandler {
 
    @Override
@@ -29,25 +27,14 @@ public class AppNotificationExtensionService implements
 
       notification.setModifiedContent(overrideSettings);
 
-      // If Developer doesn't call notification.display() ExtNotificationWillShowInForegroundHandler
-      // and AppNotificationWillShowInForegroundHandler won't be call
+      // If Developer doesn't call notification.display()
+      // AppNotificationWillShowInForegroundHandler won't be call
       OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Android notification id: " + notificationDisplayedResult.androidNotificationId);
 
       // If complete isn't call and notification.display() was called, after 5 seconds
-      // OneSignal will continue calling ExtNotificationWillShowInForegroundHandler
+      // OneSignal will continue calling AppNotificationWillShowInForegroundHandler
       notification.complete();
-   }
-
-   @Override
-   public void notificationWillShowInForeground(ExtNotificationGenerationJob notificationJob) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "ExtNotificationWillShowInForeground fired! " +
-              "with ExtNotificationGenerationJob: " + notificationJob.toString());
-
-      notificationJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
-
-      // If bubble set to false AppNotificationWillShowInForegroundHandler won't be called
-      notificationJob.complete(true);
    }
 
    @Override

@@ -155,14 +155,6 @@ public class OSNotificationGenerationJob {
     }
 
     /**
-     * Create a {@link ExtNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
-     *  while the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} is being fired
-     */
-    ExtNotificationGenerationJob toExtNotificationGenerationJob() {
-        return new ExtNotificationGenerationJob(this);
-    }
-
-    /**
      * Create a {@link AppNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
      *  while the {@link OneSignal.AppNotificationWillShowInForegroundHandler} is being fired
      */
@@ -172,9 +164,8 @@ public class OSNotificationGenerationJob {
 
     /**
      * A wrapper for the {@link OSNotificationGenerationJob}
-     * Contains two other classes which implement this one {@link NotificationGenerationJob}:
-     *    1. {@link ExtNotificationGenerationJob}
-     *    2. {@link AppNotificationGenerationJob}
+     * Contains other class which implement this one {@link NotificationGenerationJob}:
+     *    1. {@link AppNotificationGenerationJob}
      */
     static class NotificationGenerationJob {
 
@@ -236,50 +227,6 @@ public class OSNotificationGenerationJob {
                     "isComplete=" + isComplete +
                     ", notificationJob=" + notificationJob +
                     '}';
-        }
-    }
-
-    /**
-     * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler}
-     * without exposing internals publicly
-     */
-    public static class ExtNotificationGenerationJob extends NotificationGenerationJob {
-
-        ExtNotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
-            super(notificationJob);
-
-            startTimeout(new Runnable() {
-                @Override
-                public void run() {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running complete from ExtNotificationGenerationJob timeout runnable!");
-                    ExtNotificationGenerationJob.this.complete(true);
-                }
-            });
-        }
-
-        /**
-         * Method controlling bubbling from the ExtNotificationWillShowInForegroundHandler to the AppNotificationWillShowInForegroundHandler
-         *    If a dev does not call this at the end of the notificationWillShowInForeground implementation, a runnable will fire after
-         *    a 30 second timer and attempt to bubble to the AppNotificationWillShowInForegroundHandler automatically
-         */
-        public synchronized void complete(boolean bubble) {
-            destroyTimeout();
-
-            if (isComplete)
-                return;
-
-            isComplete = true;
-
-            // Move on to showing notification if no AppNotificationWillShowInForegroundHandler exists
-            //  or bubbling is set false
-            if (OneSignal.appNotificationWillShowInForegroundHandler == null || !bubble) {
-                GenerateNotification.fromJsonPayload(getNotificationJob());
-                return;
-            }
-
-            // If the appNotificationWillShowInForegroundHandler exists and we want to bubble, call
-            //  the notificationWillShowInForeground implementation
-            OneSignal.fireAppNotificationWillShowInForegroundHandler(getNotificationJob().toAppNotificationGenerationJob());
         }
     }
 
