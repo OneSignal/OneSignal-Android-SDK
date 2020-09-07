@@ -46,6 +46,8 @@ public class OSNotificationReceived {
    public boolean isAppInFocus;
    // Used to toggle when complete is called so it can not be called more than once
    private boolean isComplete = false;
+   // Flag that differentiate user custom flow from OneSignal
+   private boolean internalComplete = false;
 
    OSNotificationReceived(Context context, int androidNotificationId, JSONObject jsonPayload,
                           boolean isRestoring, boolean isAppInFocus, long timestamp) {
@@ -112,6 +114,11 @@ public class OSNotificationReceived {
       return notificationExtender.displayNotification();
    }
 
+   synchronized void internalComplete() {
+      internalComplete = true;
+      complete();
+   }
+
    /**
     * Method controlling completion from the NotificationProcessingHandler
     * If a dev does not call this at the end of the notificationProcessing implementation,
@@ -125,7 +132,7 @@ public class OSNotificationReceived {
 
       isComplete = true;
 
-      notificationExtender.processNotification();
+      notificationExtender.processNotification(internalComplete);
    }
 
    @Override
