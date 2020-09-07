@@ -85,7 +85,7 @@ class OSNotificationWorkManager {
                 } catch (Throwable t) {
                     if (!notificationReceived.displayed()) {
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
-                        notificationReceived.complete();
+                        notificationReceived.internalComplete();
                     }
                     else
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
@@ -94,7 +94,7 @@ class OSNotificationWorkManager {
                 }
             else if (!notificationReceived.displayed()) {
                 OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
-                notificationReceived.complete();
+                notificationReceived.internalComplete();
             }
         }
     }

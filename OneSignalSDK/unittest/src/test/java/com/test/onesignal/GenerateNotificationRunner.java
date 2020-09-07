@@ -1514,6 +1514,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   // No MainThread mock since notification is not being display
    public void testNotificationProcessing_whenAlertIsNull() throws Exception {
       // 1. Setup correct notification extension service class
       startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
@@ -1550,6 +1551,167 @@ public class GenerateNotificationRunner {
 
          // Complete is called to end NotificationProcessingHandler
          notification.complete();
+      }
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessing_displayNotCalled() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingDisplayNotCalled");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Receive a notification
+      Bundle bundle = getBaseNotifBundle();
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastNotificationReceived);
+
+      // 5. Make sure running on main thread check was not called, this is only called for showing the notification
+      assertFalse(ShadowGenerateNotification.isRunningOnMainThreadCheckCalled());
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessingAndForegroundHandler_displayNotCalled_notCallsForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingDisplayNotCalled");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
+            lastAppNotificationJob = notificationJob;
+            // Call complete to end without waiting default 30 second timeout
+            notificationJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 3. Receive a notification in foreground
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastNotificationReceived);
+
+      // 5. Make sure running on main thread check was not called, this is only called for showing the notification
+      assertFalse(ShadowGenerateNotification.isRunningOnMainThreadCheckCalled());
+
+      // 6. Make sure the AppNotificationJob is null
+      assertNull(lastAppNotificationJob);
+
+      // 7. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationProcessing_displayNotCalled
+    * @see #testNotificationProcessingAndForegroundHandler_displayNotCalled_notCallsForegroundHandler
+    */
+   public static class NotificationExtensionService_notificationProcessingDisplayNotCalled implements OneSignal.NotificationProcessingHandler {
+
+      @Override
+      public void notificationProcessing(Context context, OSNotificationReceived notification) {
+         lastNotificationReceived = notification;
+
+         // No call display, this will avoid notification display
+
+         // Complete is called to end NotificationProcessingHandler
+         notification.complete();
+      }
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessing_completeNotCalled() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingCompleteNotCalled");
+
+      // 2. Add app context and setup the established notification extension service
+      OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+      OneSignal_setupNotificationExtensionServiceClass();
+
+      // 3. Receive a notification
+      Bundle bundle = getBaseNotifBundle();
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastNotificationReceived);
+
+      // 5. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessingAndForegroundHandler_completeNotCalled_callsForegroundHandler() throws Exception {
+      // 1. Setup correct notification extension service class
+      startNotificationExtensionService("com.test.onesignal.GenerateNotificationRunner$" +
+              "NotificationExtensionService_notificationProcessingCompleteNotCalled");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.setAppContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
+         @Override
+         public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
+            lastAppNotificationJob = notificationJob;
+            // Call complete to end without waiting default 30 second timeout
+            notificationJob.complete();
+         }
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 3. Receive a notification in foreground
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastNotificationReceived);
+
+      // 5. Make sure the AppNotificationJob is not null
+      assertNotNull(lastAppNotificationJob);
+      assertEquals(OneSignal.OSNotificationDisplay.NOTIFICATION, lastAppNotificationJob.getNotificationDisplayOption());
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationProcessing_completeNotCalled
+    * @see #testNotificationProcessingAndForegroundHandler_completeNotCalled_callsForegroundHandler
+    */
+   public static class NotificationExtensionService_notificationProcessingCompleteNotCalled implements OneSignal.NotificationProcessingHandler {
+
+      @Override
+      public void notificationProcessing(Context context, OSNotificationReceived notification) {
+         lastNotificationReceived = notification;
+
+         // Display called to show notification
+         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
+
+         // Complete not called to end NotificationProcessingHandler, depend on timeout to finish
       }
    }
 

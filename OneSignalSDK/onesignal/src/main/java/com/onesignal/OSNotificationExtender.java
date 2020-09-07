@@ -133,27 +133,14 @@ public class OSNotificationExtender {
     * <br/><br/>
     * @see OSNotificationReceived#complete()
     */
-   void processNotification() {
-      // If the developer did not call display from notificationProcessing handler
-      if (!developerProcessed) {
-
+   void processNotification(boolean internalComplete) {
+      // If processNotification comes from an OneSignal flow, no callbacks/extenders/services called then continue with common flow.
+      // Check for display not called by developer to avoid duplicated handles under developer extenders service implementation failure
+      if (internalComplete && !developerProcessed) {
          // Save as processed to prevent possible duplicate calls from canonical ids
          boolean display = NotificationBundleProcessor.shouldDisplay(jsonPayload.optString("alert"));
-         if (!display) {
-            if (!isRestoring) {
-               OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-               notificationJob.jsonPayload = jsonPayload;
-               notificationJob.overrideSettings = new OverrideSettings();
-               notificationJob.overrideSettings.androidNotificationId = -1;
-
-               NotificationBundleProcessor.processNotification(notificationJob, true);
-               OneSignal.handleNotificationReceived(notificationJob, false);
-            }
-            // If are are not displaying a restored notification make sure we mark it as dismissed
-            //   This will prevent it from being restored again
-            else if (currentBaseOverrideSettings != null)
-               NotificationBundleProcessor.markRestoredNotificationAsDismissed(createnotificationJobFromCurrent(context));
-         }
+         if (!display)
+            notDisplayNotificationLogic();
          else
             NotificationBundleProcessor.processJobForDisplay(createnotificationJobFromCurrent(context));
 
@@ -161,6 +148,27 @@ public class OSNotificationExtender {
          //    Normally more than one notification is restored at a time
          if (isRestoring)
             OSUtils.sleep(100);
+      } else if (!developerProcessed) { // If processNotification stated from user callbacks
+         // If the developer did not call display from notificationProcessing handler
+         notDisplayNotificationLogic();
+      }
+   }
+
+   private void notDisplayNotificationLogic() {
+      // Save as processed to prevent possible duplicate calls from canonical ids
+      if (!isRestoring) {
+         OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+         notificationJob.jsonPayload = jsonPayload;
+         notificationJob.overrideSettings = new OverrideSettings();
+         // -1 is used to note never displayed
+         notificationJob.overrideSettings.androidNotificationId = -1;
+
+         NotificationBundleProcessor.processNotification(notificationJob, true);
+         OneSignal.handleNotificationReceived(notificationJob, false);
+      } else if (currentBaseOverrideSettings != null) {
+         // If we are not displaying a restored notification make sure we mark it as dismissed
+         // This will prevent it from being restored again
+         NotificationBundleProcessor.markRestoredNotificationAsDismissed(createnotificationJobFromCurrent(context));
       }
    }
 
