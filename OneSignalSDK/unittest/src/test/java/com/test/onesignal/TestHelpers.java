@@ -32,6 +32,7 @@ import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHmsInstanceId;
@@ -121,6 +122,7 @@ public class TestHelpers {
 
       ShadowOSUtils.resetStatics();
       ShadowTimeoutHandler.resetStatics();
+      ShadowGenerateNotification.resetStatics();
 
       lastException = null;
    }
