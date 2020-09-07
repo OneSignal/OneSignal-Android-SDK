@@ -6,8 +6,19 @@ import org.robolectric.annotation.Implements;
 @Implements(GenerateNotification.class)
 public class ShadowGenerateNotification {
 
-   @Implementation
+    private static boolean runningOnMainThreadCheck = false;
+
+    @Implementation
     public static void isRunningOnMainThreadCheck() {
-      // Remove Main thread check and throw
+        // Remove Main thread check and throw
+        runningOnMainThreadCheck = true;
+    }
+
+    public static boolean isRunningOnMainThreadCheckCalled() {
+        return runningOnMainThreadCheck;
+    }
+
+    public static void resetStatics() {
+        runningOnMainThreadCheck = false;
     }
 }
