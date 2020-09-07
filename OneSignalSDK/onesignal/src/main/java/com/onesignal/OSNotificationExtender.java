@@ -188,7 +188,7 @@ public class OSNotificationExtender {
     * <br/><br/>
     * There is only one way to implement the {@link OneSignal.NotificationProcessingHandler}
     * <br/><br/>
-    * In the case of the {@link OneSignal.ExtNotificationWillShowInForegroundHandler} and the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
+    * In the case of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
     *  there are also setters for these handlers. So why create this new class and implement
     *  the same handlers, won't they just overwrite each other?
     * No, the idea here is to keep track of two separate handlers and keep them both
@@ -197,7 +197,6 @@ public class OSNotificationExtender {
     * The extension handlers will always be called first and then bubble to the app handlers
     * <br/><br/>
     * @see OneSignal.NotificationProcessingHandler
-    * @see OneSignal.ExtNotificationWillShowInForegroundHandler
     */
    static void setupNotificationExtensionServiceClass() {
       String className = OSUtils.getManifestMeta(OneSignal.appContext, EXTENSION_SERVICE_META_DATA_TAG_NAME);
@@ -216,10 +215,6 @@ public class OSNotificationExtender {
          // Make sure a NotificationProcessingHandler exists and notificationProcessingHandler has not been set yet
          if (clazzInstance instanceof OneSignal.NotificationProcessingHandler && OneSignal.notificationProcessingHandler == null) {
             OneSignal.setNotificationProcessingHandler((OneSignal.NotificationProcessingHandler) clazzInstance);
-         }
-         // Make sure a ExtNotificationWillShowInForegroundHandler exists and extNotificationWillShowInForegroundHandler has not been set yet
-         if (clazzInstance instanceof OneSignal.ExtNotificationWillShowInForegroundHandler && OneSignal.extNotificationWillShowInForegroundHandler == null) {
-            OneSignal.setExtNotificationWillShowInForegroundHandler((OneSignal.ExtNotificationWillShowInForegroundHandler) clazzInstance);
          }
       } catch (IllegalAccessException e) {
          e.printStackTrace();
