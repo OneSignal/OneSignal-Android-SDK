@@ -649,7 +649,8 @@ public class OneSignal {
    }
 
    static void setNotificationProcessingHandler(NotificationProcessingHandler callback) {
-      notificationProcessingHandler = callback;
+      if (notificationProcessingHandler == null)
+         notificationProcessingHandler = callback;
    }
 
    public static void setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler callback) {
@@ -671,6 +672,8 @@ public class OneSignal {
     * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
     */
    synchronized private static void init(Context context) {
+      OSNotificationExtender.setupNotificationExtensionServiceClass();
+
       if (requiresUserPrivacyConsent() || !remoteParamController.isRemoteParamsCallDone()) {
          if (!remoteParamController.isRemoteParamsCallDone())
             logger.verbose("OneSignal SDK initialization delayed, " +
@@ -701,8 +704,6 @@ public class OneSignal {
          logger.debug("OneSignal SDK initialization already completed.");
          return;
       }
-
-      OSNotificationExtender.setupNotificationExtensionServiceClass();
 
       handleActivityLifecycleHandler(context);
 
