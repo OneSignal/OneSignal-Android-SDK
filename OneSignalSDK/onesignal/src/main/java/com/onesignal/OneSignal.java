@@ -517,10 +517,10 @@ public class OneSignal {
    // End EmailSubscriptionState
 
    @Nullable
-   public static OSDevice getUserDevice() {
+   public static OSDeviceState getDeviceState() {
       if (getPermissionSubscriptionState() == null)
          return null;
-      return new OSDevice(getPermissionSubscriptionState());
+      return new OSDeviceState(getPermissionSubscriptionState());
    }
 
    private static class IAPUpdateJob {

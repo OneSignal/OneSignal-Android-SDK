@@ -49,7 +49,7 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
-import com.onesignal.OSDevice;
+import com.onesignal.OSDeviceState;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -4589,15 +4589,15 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testOSDeviceHasEmailAddress() throws Exception {
+   public void testDeviceStateHasEmailAddress() throws Exception {
       String testEmail = "test@onesignal.com";
 
-      assertNull(OneSignal.getUserDevice());
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      OSDevice device = OneSignal.getUserDevice();
+      OSDeviceState device = OneSignal.getDeviceState();
       assertNull(device.getEmailAddress());
 
       OneSignal.setEmail(testEmail);
@@ -4606,19 +4606,19 @@ public class MainOneSignalClassRunner {
       // Device is a snapshot, last value should not change
       assertNull(device.getEmailAddress());
       // Retrieve new user device
-      assertEquals(testEmail, OneSignal.getUserDevice().getEmailAddress());
+      assertEquals(testEmail, OneSignal.getDeviceState().getEmailAddress());
    }
 
    @Test
-   public void testOSDeviceHasEmailId() throws Exception {
+   public void testDeviceStateHasEmailId() throws Exception {
       String testEmail = "test@onesignal.com";
 
-      assertNull(OneSignal.getUserDevice());
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      OSDevice device = OneSignal.getUserDevice();
+      OSDeviceState device = OneSignal.getDeviceState();
       assertNull(device.getEmailUserId());
 
       OneSignal.setEmail(testEmail);
@@ -4627,38 +4627,38 @@ public class MainOneSignalClassRunner {
       // Device is a snapshot, last value should not change
       assertNull(device.getEmailUserId());
       // Retrieve new user device
-      assertNotNull(OneSignal.getUserDevice().getEmailUserId());
+      assertNotNull(OneSignal.getDeviceState().getEmailUserId());
    }
 
    @Test
-   public void testOSDeviceHasUserId() throws Exception {
-      assertNull(OneSignal.getUserDevice());
+   public void testDeviceStateHasUserId() throws Exception {
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      assertNotNull(OneSignal.getUserDevice().getUserId());
+      assertNotNull(OneSignal.getDeviceState().getUserId());
    }
 
    @Test
-   public void testOSDeviceHasPushToken() throws Exception {
-      assertNull(OneSignal.getUserDevice());
+   public void testDeviceStateHasPushToken() throws Exception {
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      assertNotNull(OneSignal.getUserDevice().getPushToken());
+      assertNotNull(OneSignal.getDeviceState().getPushToken());
    }
 
    @Test
-   public void testOSDeviceNotificationPermission() throws Exception {
-      assertNull(OneSignal.getUserDevice());
+   public void testDeviceStateAreNotificationsEnabled() throws Exception {
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      OSDevice device = OneSignal.getUserDevice();
-      assertTrue(device.isNotificationEnabled());
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertTrue(device.areNotificationsEnabled());
 
       fastColdRestartApp();
 
@@ -4668,29 +4668,29 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Device is a snapshot, last value should not change
-      assertTrue(device.isNotificationEnabled());
+      assertTrue(device.areNotificationsEnabled());
       // Retrieve new user device
-      assertFalse(OneSignal.getUserDevice().isNotificationEnabled());
+      assertFalse(OneSignal.getDeviceState().areNotificationsEnabled());
    }
 
    @Test
-   public void testOSDeviceUserSubscriptionSetting() throws Exception {
-      assertNull(OneSignal.getUserDevice());
+   public void testDeviceStateIsPushDisabled() throws Exception {
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getUserDevice().isUserSubscribed());
+      assertFalse(OneSignal.getDeviceState().isPushDisabled());
    }
 
    @Test
-   public void testOSDeviceSubscribed() throws Exception {
-      assertNull(OneSignal.getUserDevice());
+   public void testDeviceStateIsSubscribed() throws Exception {
+      assertNull(OneSignal.getDeviceState());
 
       OneSignalInit();
       threadAndTaskWait();
 
-      OSDevice device = OneSignal.getUserDevice();
+      OSDeviceState device = OneSignal.getDeviceState();
       assertTrue(device.isSubscribed());
 
       fastColdRestartApp();
@@ -4703,7 +4703,7 @@ public class MainOneSignalClassRunner {
       // Device is a snapshot, last value should not change
       assertTrue(device.isSubscribed());
       // Retrieve new user device
-      assertFalse(OneSignal.getUserDevice().isSubscribed());
+      assertFalse(OneSignal.getDeviceState().isSubscribed());
    }
 
    @Test
