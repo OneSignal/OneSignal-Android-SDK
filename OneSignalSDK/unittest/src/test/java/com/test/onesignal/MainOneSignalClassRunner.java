@@ -210,23 +210,11 @@ public class MainOneSignalClassRunner {
       });
    }
 
-   private static AppNotificationGenerationJob lastNotificationGenerationJob;
-   private static OneSignal.AppNotificationWillShowInForegroundHandler getAppNotificationWillShowInForegroundHandler() {
-      return new OneSignal.AppNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(AppNotificationGenerationJob notificationJob) {
-            lastNotificationGenerationJob = notificationJob;
-         }
-      };
-   }
-
-   private static OSNotificationOpenResult lastNotificationOpenResult;
    private static String lastNotificationOpenedBody;
    private static OneSignal.NotificationOpenedHandler getNotificationOpenedHandler() {
       return new OneSignal.NotificationOpenedHandler() {
          @Override
          public void notificationOpened(OSNotificationOpenResult openedResult) {
-            lastNotificationOpenResult = openedResult;
 
             // TODO: Double check if we should use this or not
             lastNotificationOpenedBody = openedResult.notification.payload.body;
@@ -1151,7 +1139,7 @@ public class MainOneSignalClassRunner {
       // 1. Init OneSignal
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(AppNotificationGenerationJob notificationJob) {
             androidNotificationId = notificationJob.getAndroidNotificationId();
@@ -4277,7 +4265,7 @@ public class MainOneSignalClassRunner {
       // Assert that another receive isn't trigger later when the unprocessed receives are fired
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
 

@@ -156,7 +156,7 @@ public class OSNotificationGenerationJob {
 
     /**
      * Create a {@link AppNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
-     *  while the {@link OneSignal.AppNotificationWillShowInForegroundHandler} is being fired
+     *  while the {@link OneSignal.NotificationWillShowInForegroundHandler} is being fired
      */
     AppNotificationGenerationJob toAppNotificationGenerationJob() {
         return new AppNotificationGenerationJob(this);
@@ -231,7 +231,7 @@ public class OSNotificationGenerationJob {
     }
 
    /**
-    * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
+    * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.NotificationWillShowInForegroundHandler}
     * without exposing internals publicly
     */
    public static class AppNotificationGenerationJob extends NotificationGenerationJob {
@@ -249,7 +249,7 @@ public class OSNotificationGenerationJob {
         }
 
         /**
-         * Method controlling completion from the AppNotificationWillShowInForegroundHandler
+         * Method controlling completion from the NotificationWillShowInForegroundHandler
          * If a dev does not call this at the end of the notificationWillShowInForeground implementation,
          *  a runnable will fire after a 30 second timer and complete by default
          */

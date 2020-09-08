@@ -95,12 +95,12 @@ public class OneSignal {
     * <br/><br/>
     * Used with the {@link OSNotificationGenerationJob#setNotificationDisplayOption(OSNotificationDisplay)}
     * Determines how the notification will show to the user when inside of the
-    *  {@link AppNotificationWillShowInForegroundHandler#notificationWillShowInForeground(AppNotificationGenerationJob)}
+    *  {@link NotificationWillShowInForegroundHandler#notificationWillShowInForeground(AppNotificationGenerationJob)}
     * <br/><br/>
     * Default for {@link OSNotificationGenerationJob#displayOption} is {@link OSNotificationDisplay#NOTIFICATION}
     * <br/><br/>
     * @see OSNotificationGenerationJob
-    * @see AppNotificationWillShowInForegroundHandler
+    * @see NotificationWillShowInForegroundHandler
     */
    public enum OSNotificationDisplay {
 
@@ -189,7 +189,7 @@ public class OneSignal {
    }
 
    /**
-    * Meant to be implemented with {@link OneSignal#setNotificationWillShowInForegroundHandler(AppNotificationWillShowInForegroundHandler)}
+    * Meant to be implemented with {@link OneSignal#setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler)}
     * <br/><br/>
     * Call setters from the {@link AppNotificationGenerationJob} to modify the {@link OSNotificationGenerationJob}
     *    before the notification is shown on the device
@@ -199,7 +199,7 @@ public class OneSignal {
     * TODO: Update docs with new NotificationReceivedHandler
     * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationreceivedhandler">NotificationReceivedHandler | OneSignal Docs</a>
     */
-   public interface AppNotificationWillShowInForegroundHandler {
+   public interface NotificationWillShowInForegroundHandler {
 
       void notificationWillShowInForeground(AppNotificationGenerationJob notificationJob);
    }
@@ -330,7 +330,7 @@ public class OneSignal {
    private static int subscribableStatus = Integer.MAX_VALUE;
 
    static NotificationProcessingHandler notificationProcessingHandler;
-   static AppNotificationWillShowInForegroundHandler appNotificationWillShowInForegroundHandler;
+   static NotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
 
    // TODO: Start of old mInitBuilder params
    //    These should be cleaned up and managed else where maybe?
@@ -652,8 +652,8 @@ public class OneSignal {
       notificationProcessingHandler = callback;
    }
 
-   public static void setNotificationWillShowInForegroundHandler(AppNotificationWillShowInForegroundHandler callback) {
-      appNotificationWillShowInForegroundHandler = callback;
+   public static void setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler callback) {
+      notificationWillShowInForegroundHandler = callback;
    }
 
    public static void setNotificationOpenedHandler(NotificationOpenedHandler callback) {
@@ -2083,9 +2083,9 @@ public class OneSignal {
 
    /**
     * Checks if the app is in the background
-    * Checks if appNotificationWillShowInForegroundHandler are setup
+    * Checks if notificationWillShowInForegroundHandler is setup
     * <br/><br/>
-    * @see OneSignal.AppNotificationWillShowInForegroundHandler
+    * @see NotificationWillShowInForegroundHandler
     */
    static boolean shouldFireForegroundHandlers() {
       if (!isInForeground()) {
@@ -2093,8 +2093,8 @@ public class OneSignal {
          return false;
       }
 
-      if (appNotificationWillShowInForegroundHandler == null) {
-         OneSignal.onesignalLog(LOG_LEVEL.INFO, "No AppNotificationWillShowInForegroundHandler setup, show notification");
+      if (notificationWillShowInForegroundHandler == null) {
+         OneSignal.onesignalLog(LOG_LEVEL.INFO, "No NotificationWillShowInForegroundHandler setup, show notification");
          return false;
       }
 
@@ -2102,17 +2102,17 @@ public class OneSignal {
    }
 
    /**
-    * Responsible for firing the appNotificationWillShowInForegroundHandler
+    * Responsible for firing the notificationWillShowInForegroundHandler
     * <br/><br/>
-    * @see OneSignal.AppNotificationWillShowInForegroundHandler
+    * @see NotificationWillShowInForegroundHandler
     */
    static void fireForegroundHandlers(OSNotificationGenerationJob notificationJob) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Fire appNotificationWillShowInForegroundHandler");
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Fire notificationWillShowInForegroundHandler");
       AppNotificationGenerationJob appnotificationJob = notificationJob.toAppNotificationGenerationJob();
       try {
-         OneSignal.appNotificationWillShowInForegroundHandler.notificationWillShowInForeground(appnotificationJob);
+         OneSignal.notificationWillShowInForegroundHandler.notificationWillShowInForeground(appnotificationJob);
       } catch (Throwable t) {
-         OneSignal.onesignalLog(LOG_LEVEL.ERROR, "Exception thrown while notification was being processed for display by appNotificationWillShowInForegroundHandler, showing notification in foreground!");
+         OneSignal.onesignalLog(LOG_LEVEL.ERROR, "Exception thrown while notification was being processed for display by notificationWillShowInForegroundHandler, showing notification in foreground!");
          appnotificationJob.complete();
          throw t;
       }
@@ -2774,7 +2774,7 @@ public class OneSignal {
    }
 
    public static void removeNotificationWillShowInForegroundHandler() {
-      OneSignal.appNotificationWillShowInForegroundHandler = null;
+      OneSignal.notificationWillShowInForegroundHandler = null;
    }
 
    public static void removeNotificationOpenedHandler() {
