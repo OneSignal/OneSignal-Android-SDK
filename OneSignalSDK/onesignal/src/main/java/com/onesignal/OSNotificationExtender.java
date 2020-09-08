@@ -188,7 +188,7 @@ public class OSNotificationExtender {
     * <br/><br/>
     * There is only one way to implement the {@link OneSignal.NotificationProcessingHandler}
     * <br/><br/>
-    * In the case of the {@link OneSignal.AppNotificationWillShowInForegroundHandler}
+    * In the case of the {@link OneSignal.NotificationWillShowInForegroundHandler}
     *  there are also setters for these handlers. So why create this new class and implement
     *  the same handlers, won't they just overwrite each other?
     * No, the idea here is to keep track of two separate handlers and keep them both

@@ -29,7 +29,7 @@ public class MainApplication extends Application {
 
         OneSignal.setNotificationWillShowInForegroundHandler(notificationJob -> {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "AppNotificationWillShowInForeground fired!" +
-                    " with AppNotificationWillShowInForegroundHandler: " + notificationJob.toString());
+                    " with NotificationWillShowInForegroundHandler: " + notificationJob.toString());
 
             notificationJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
             notificationJob.complete();

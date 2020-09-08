@@ -28,12 +28,12 @@ public class AppNotificationExtensionService implements
       notification.setModifiedContent(overrideSettings);
 
       // If Developer doesn't call notification.display()
-      // AppNotificationWillShowInForegroundHandler won't be call
+      // NotificationWillShowInForegroundHandler won't be call
       OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Android notification id: " + notificationDisplayedResult.androidNotificationId);
 
       // If complete isn't call and notification.display() was called, after 5 seconds
-      // OneSignal will continue calling AppNotificationWillShowInForegroundHandler
+      // OneSignal will continue calling NotificationWillShowInForegroundHandler
       notification.complete();
    }
 

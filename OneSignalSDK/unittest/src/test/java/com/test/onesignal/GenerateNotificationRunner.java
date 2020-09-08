@@ -1555,11 +1555,11 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void testAppNotificationWillShowInForegroundHandlerIsCallWhenReceivingNotificationInForeground() throws Exception {
+   public void testNotificationWillShowInForegroundHandlerIsCallWhenReceivingNotificationInForeground() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             lastAppNotificationJob = notificationJob;
@@ -1586,11 +1586,11 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void testAppNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToNotification() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             notificationJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
@@ -1618,11 +1618,11 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void testAppNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent() throws Exception {
+   public void testNotificationWillShowInForegroundHandler_setNotificationDisplayOptionToSilent() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             notificationJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.SILENT);
@@ -1650,7 +1650,7 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void testNotificationCompletesFlows_withNullAppNotificationWillShowInForegroundHandler() throws Exception {
+   public void testNotificationCompletesFlows_withNullNotificationWillShowInForegroundHandler() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
@@ -1676,7 +1676,7 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             lastAppNotificationJob = notificationJob;
@@ -1707,7 +1707,7 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             callbackCounter++;
@@ -1719,7 +1719,7 @@ public class GenerateNotificationRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      // Mock timeout to 1, given that we are not calling complete inside AppNotificationWillShowInForegroundHandler we depend on the timeout complete
+      // Mock timeout to 1, given that we are not calling complete inside NotificationWillShowInForegroundHandler we depend on the timeout complete
       ShadowTimeoutHandler.setMockDelayMillis(1);
       // 2. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
@@ -1742,7 +1742,7 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             lastAppNotificationJob = notificationJob;
@@ -1795,7 +1795,7 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.setAppContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.AppNotificationWillShowInForegroundHandler() {
+      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(final OSNotificationGenerationJob.AppNotificationGenerationJob notificationJob) {
             callbackCounter++;
@@ -1815,7 +1815,7 @@ public class GenerateNotificationRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      // Mock timeout to 1, given that we are delaying the complete inside NotificationExtensionService and AppNotificationWillShowInForegroundHandler
+      // Mock timeout to 1, given that we are delaying the complete inside NotificationExtensionService and NotificationWillShowInForegroundHandler
       // We depend on the timeout complete
       ShadowTimeoutHandler.setMockDelayMillis(1);
       // 2. Receive a notification
