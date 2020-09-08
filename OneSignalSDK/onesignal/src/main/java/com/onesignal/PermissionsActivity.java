@@ -56,7 +56,7 @@ public class PermissionsActivity extends Activity {
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
 
-      OneSignal.setAppContext(this);
+      OneSignal.initWithContext(this);
 
       // Android sets android:hasCurrentPermissionsRequest if the Activity was recreated while
       //  the permission prompt is showing to the user.

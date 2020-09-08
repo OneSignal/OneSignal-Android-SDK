@@ -29,7 +29,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
@@ -125,7 +124,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     private static void helper_initSDKAndFireHMSNotificationOpenWithIntent(@NonNull Intent intent) throws Exception {
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+        OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
         fastColdRestartApp();
 
         helper_startHMSOpenActivity(intent);
@@ -158,7 +157,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         helper_initSDKAndFireHMSNotificationActionButtonTapIntent(TEST_ACTION_ID);
 
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(ApplicationProvider.getApplicationContext());
+        OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
         OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
             @Override
             public void notificationOpened(OSNotificationOpenResult result) {
@@ -174,7 +173,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         ActivityController<BlankActivity> blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         Activity blankActivity = blankActivityController.get();
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(blankActivity);
+        OneSignal.initWithContext(blankActivity);
         threadAndTaskWait();
 
         blankActivityController.resume();

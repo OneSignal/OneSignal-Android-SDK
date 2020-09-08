@@ -389,7 +389,7 @@ public class RemoteParamsTests {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
         ShadowOSUtils.subscribableStatus = 1;
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(blankActivity);
+        OneSignal.initWithContext(blankActivity);
         blankActivityController.resume();
     }
 }

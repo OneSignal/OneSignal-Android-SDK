@@ -1093,7 +1093,7 @@ public class OutcomeEventIntegrationTests {
         OneSignal_setTrackerFactory(trackerFactory);
         OneSignal_setSessionManager(sessionManager);
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(blankActivity);
+        OneSignal.initWithContext(blankActivity);
         OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
         threadAndTaskWait();
         blankActivityController.resume();
@@ -1107,7 +1107,7 @@ public class OutcomeEventIntegrationTests {
         OneSignal_setTrackerFactory(trackerFactory);
         OneSignal_setSessionManager(sessionManager);
         OneSignal.setAppId(ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(blankActivity);
+        OneSignal.initWithContext(blankActivity);
         OneSignal.setNotificationOpenedHandler(notificationOpenedHandler);
         threadAndTaskWait();
         blankActivityController.resume();

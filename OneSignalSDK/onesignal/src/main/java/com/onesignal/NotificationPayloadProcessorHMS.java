@@ -16,7 +16,7 @@ import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 class NotificationPayloadProcessorHMS {
 
     static void handleHMSNotificationOpenIntent(@NonNull Activity activity, @Nullable Intent intent) {
-        OneSignal.setAppContext(activity);
+        OneSignal.initWithContext(activity);
         if (intent == null)
             return;
 
@@ -74,7 +74,7 @@ class NotificationPayloadProcessorHMS {
     }
 
     public static void processDataMessageReceived(@NonNull Context context, @Nullable String data) {
-        OneSignal.setAppContext(context);
+        OneSignal.initWithContext(context);
         if (data == null)
             return;
 

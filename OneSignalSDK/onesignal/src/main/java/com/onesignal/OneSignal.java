@@ -583,7 +583,7 @@ public class OneSignal {
    }
 
    /**
-    * 1/2 steps in OneSignal init, relying on setAppContext (usage order does not matter)
+    * 1/2 steps in OneSignal init, relying on initWithContext (usage order does not matter)
     * Sets the app id OneSignal should use in the application
     * This is should be set from all OneSignal entry points
     * @param newAppId - String app id associated with the OneSignal dashboard app
@@ -604,7 +604,7 @@ public class OneSignal {
 
       logger.verbose("setAppId(id) finished, checking if appContext has been set before proceeding...");
       if (appContext == null) {
-         logger.warning("appId set, but please call setAppContext(appContext) with Application context to complete OneSignal init!");
+         logger.warning("appId set, but please call initWithContext(appContext) with Application context to complete OneSignal init!");
          return;
       }
 
@@ -619,8 +619,8 @@ public class OneSignal {
     *   - BroadcastReceivers, Services, and Activities
     * @param context - Context used by the Application of the app
     */
-   public static void setAppContext(@NonNull Context context) {
-      logger.verbose("setAppContext(context) called!");
+   public static void initWithContext(@NonNull Context context) {
+      logger.verbose("initWithContext(context) called!");
 
       if (context == null) {
          Log(LOG_LEVEL.WARN, "context is null, ignoring!");
@@ -632,7 +632,7 @@ public class OneSignal {
       setupActivityLifecycleListener(wasAppContextNull);
       setupPrivacyConsent(appContext);
 
-      logger.verbose("setAppContext(context) finished, checking if appId has been set before proceeding...");
+      logger.verbose("initWithContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
          // Get the cached app id, if it exists
          String oldAppId = getSavedAppId();
@@ -644,7 +644,7 @@ public class OneSignal {
          }
          return;
       }
-      logger.verbose("setAppContext(context) successful and appId is set, continuing OneSignal init...");
+      logger.verbose("initWithContext(context) successful and appId is set, continuing OneSignal init...");
       init(context);
    }
 
@@ -669,7 +669,7 @@ public class OneSignal {
    }
 
    /**
-    * Called after setAppId and setAppContext, depending on which one is called last (order does not matter)
+    * Called after setAppId and initWithContext, depending on which one is called last (order does not matter)
     */
    synchronized private static void init(Context context) {
       OSNotificationExtender.setupNotificationExtensionServiceClass();
@@ -993,7 +993,7 @@ public class OneSignal {
       delayedInitParams = null;
 
       setAppId(delayedAppId);
-      setAppContext(delayedContext);
+      initWithContext(delayedContext);
    }
 
    static OneSignalRemoteParams.Params getRemoteParams() {

@@ -110,7 +110,7 @@ public class OneSignalPackagePrivateHelper {
 
    /**
     * Only necessary when not fully init OneSignal SDK
-    * setAppContext required to setup a notification extension service
+    * initWithContext required to setup a notification extension service
     */
    public static void OneSignal_setupNotificationExtensionServiceClass() {
       OSNotificationExtender.setupNotificationExtensionServiceClass();

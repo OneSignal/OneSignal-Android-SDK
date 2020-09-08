@@ -547,7 +547,7 @@ public class InAppMessagingUnitTests {
         setRemoteParamsGetHtmlResponse();
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
         OneSignal.setAppId(InAppMessagingHelpers.ONESIGNAL_APP_ID);
-        OneSignal.setAppContext(blankActivity);
+        OneSignal.initWithContext(blankActivity);
         blankActivityController.resume();
     }
 

@@ -6,8 +6,6 @@ import android.content.SharedPreferences;
 
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
-import com.onesignal.ShadowCustomTabsClient;
-import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.StaticResetHelper;
@@ -76,7 +74,7 @@ public class OneSignalPrefsRunner {
 
    @Test
    public void tesWriteWithNullAppId_andSavesAfterSetting() throws Exception {
-      OneSignal.setAppContext(blankActivity);
+      OneSignal.initWithContext(blankActivity);
       TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL, KEY, VALUE);
       TestHelpers.flushBufferedSharedPrefs();
 
@@ -95,7 +93,7 @@ public class OneSignalPrefsRunner {
       TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL, KEY, VALUE);
       TestHelpers.flushBufferedSharedPrefs();
 
-      OneSignal.setAppContext(blankActivity);
+      OneSignal.initWithContext(blankActivity);
       threadAndTaskWait();
       TestHelpers.flushBufferedSharedPrefs();
 
@@ -110,7 +108,7 @@ public class OneSignalPrefsRunner {
       TestOneSignalPrefs.saveString(TestOneSignalPrefs.PREFS_ONESIGNAL, KEY, VALUE);
       TestHelpers.flushBufferedSharedPrefs();
 
-      OneSignal.setAppContext(blankActivity);
+      OneSignal.initWithContext(blankActivity);
       threadAndTaskWait();
       TestHelpers.flushBufferedSharedPrefs();
 
