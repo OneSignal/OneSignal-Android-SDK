@@ -27,14 +27,14 @@
 
 package com.onesignal;
 
+import com.onesignal.OneSignal.OSNotificationDisplay;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.onesignal.OneSignal.OSNotificationDisplay;
 
 /**
  * The notification the user received
@@ -51,10 +51,41 @@ import com.onesignal.OneSignal.OSNotificationDisplay;
  * all notification payloads it was created from.
  */
 public class OSNotification {
-   
-   public OSNotification() {
+
+   // Will be set if a summary notification is opened.
+   // The payload will be the most recent notification received.
+   private List<OSNotificationPayload> groupedNotifications;
+
+   // Notification payload received from OneSignal
+   private OSNotificationPayload payload;
+
+   private OSNotificationDisplay displayOption;
+
+   // Is app Active.
+   private boolean isAppInFocus;
+
+   // Was it displayed to the user.
+   private boolean shown;
+
+   // Android notification id. Can later be used to dismiss the notification programmatically.
+   private int androidNotificationId;
+
+   public OSNotification(List<OSNotificationPayload> groupedNotifications, OSNotificationPayload payload,
+                         OSNotificationDisplay displayOption) {
+      this(groupedNotifications, payload, displayOption, false, false, 0);
    }
-   
+
+   public OSNotification(List<OSNotificationPayload> groupedNotifications, OSNotificationPayload payload,
+                         OSNotificationDisplay displayOption, boolean isAppInFocus,
+                         boolean shown, int androidNotificationId) {
+      this.groupedNotifications = groupedNotifications;
+      this.payload = payload;
+      this.displayOption = displayOption;
+      this.isAppInFocus = isAppInFocus;
+      this.shown = shown;
+      this.androidNotificationId = androidNotificationId;
+   }
+
    public OSNotification(JSONObject jsonObject) {
       isAppInFocus = jsonObject.optBoolean("isAppInFocus");
       shown = jsonObject.optBoolean("shown", shown);
@@ -67,28 +98,10 @@ public class OSNotification {
          for (int i = 0; i < jsonArray.length(); i++)
             groupedNotifications.add(new OSNotificationPayload(jsonArray.optJSONObject(i)));
       }
-   
+
       if (jsonObject.has("payload"))
          payload = new OSNotificationPayload(jsonObject.optJSONObject("payload"));
    }
-
-   // Is app Active.
-   public boolean isAppInFocus;
-
-   // Was it displayed to the user.
-   public boolean shown;
-
-   // Android notification id. Can later be used to dismiss the notification programmatically.
-   public int androidNotificationId;
-
-   // Notification payload received from OneSignal
-   public OSNotificationPayload payload;
-
-   public OSNotificationDisplay displayOption;
-
-   // Will be set if a summary notification is opened.
-   //    The payload will be the most recent notification received.
-   public List<OSNotificationPayload> groupedNotifications;
 
    public JSONObject toJSONObject() {
       JSONObject mainObj = new JSONObject();
@@ -115,4 +128,27 @@ public class OSNotification {
       return mainObj;
    }
 
+   public OSNotificationPayload getPayload() {
+      return payload;
+   }
+
+   public OSNotificationDisplay getDisplayOption() {
+      return displayOption;
+   }
+
+   public List<OSNotificationPayload> getGroupedNotifications() {
+      return groupedNotifications;
+   }
+
+   public boolean isAppInFocus() {
+      return isAppInFocus;
+   }
+
+   public boolean isShown() {
+      return shown;
+   }
+
+   public int getAndroidNotificationId() {
+      return androidNotificationId;
+   }
 }

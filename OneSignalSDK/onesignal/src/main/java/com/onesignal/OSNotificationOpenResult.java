@@ -39,8 +39,13 @@ import org.json.JSONObject;
  */
 public class OSNotificationOpenResult {
 
-   public OSNotification notification;
-   public OSNotificationAction action;
+   private OSNotification notification;
+   private OSNotificationAction action;
+
+   public OSNotificationOpenResult(OSNotification notification, OSNotificationAction action) {
+      this.notification = notification;
+      this.action = action;
+   }
 
    /**
     * @deprecated  As of release 3.4.1, replaced by {@link #toJSONObject()}
@@ -50,8 +55,8 @@ public class OSNotificationOpenResult {
       JSONObject mainObj = new JSONObject();
       try {
          JSONObject ac = new JSONObject();
-         ac.put("actionID", action.actionID);
-         ac.put("type", action.type.ordinal());
+         ac.put("actionID", action.getActionID());
+         ac.put("type", action.getType().ordinal());
 
          mainObj.put("action", ac);
 
@@ -67,8 +72,8 @@ public class OSNotificationOpenResult {
       JSONObject mainObj = new JSONObject();
       try {
          JSONObject jsonObjAction = new JSONObject();
-         jsonObjAction.put("actionID", action.actionID);
-         jsonObjAction.put("type", action.type.ordinal());
+         jsonObjAction.put("actionID", action.getActionID());
+         jsonObjAction.put("type", action.getType().ordinal());
 
          mainObj.put("action", jsonObjAction);
          mainObj.put("notification", notification.toJSONObject());
@@ -78,5 +83,13 @@ public class OSNotificationOpenResult {
       }
 
       return mainObj;
+   }
+
+   public OSNotification getNotification() {
+      return notification;
+   }
+
+   public OSNotificationAction getAction() {
+      return action;
    }
 }

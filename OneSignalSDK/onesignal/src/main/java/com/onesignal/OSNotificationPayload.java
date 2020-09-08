@@ -33,6 +33,9 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
+
 // Notification properties received from OneSignal.
 
 /**
@@ -42,26 +45,26 @@ import java.util.List;
  * </a> for a list of explanations for each field.
  */
 public class OSNotificationPayload {
-   public String notificationID;
-   public String templateName, templateId;
-   public String title, body;
-   public JSONObject additionalData;
-   public String smallIcon;
-   public String largeIcon;
-   public String bigPicture;
-   public String smallIconAccentColor;
-   public String launchURL;
-   public String sound;
-   public String ledColor;
-   public int lockScreenVisibility = 1;
-   public String groupKey;
-   public String groupMessage;
-   public List<ActionButton> actionButtons;
-   public String fromProjectNumber;
-   public BackgroundImageLayout backgroundImageLayout;
-   public String collapseId;
-   public int priority;
-   public String rawPayload;
+   private String notificationID;
+   private String templateName, templateId;
+   private String title, body;
+   private JSONObject additionalData;
+   private String smallIcon;
+   private String largeIcon;
+   private String bigPicture;
+   private String smallIconAccentColor;
+   private String launchURL;
+   private String sound;
+   private String ledColor;
+   private int lockScreenVisibility = 1;
+   private String groupKey;
+   private String groupMessage;
+   private List<ActionButton> actionButtons;
+   private String fromProjectNumber;
+   private BackgroundImageLayout backgroundImageLayout;
+   private String collapseId;
+   private int priority;
+   private String rawPayload;
    
    public OSNotificationPayload() {
    }
@@ -96,13 +99,101 @@ public class OSNotificationPayload {
       rawPayload = jsonObject.optString("rawPayload");
    }
 
+   public String getNotificationID() {
+      return notificationID;
+   }
+
+   public String getTemplateName() {
+      return templateName;
+   }
+
+   public String getTemplateId() {
+      return templateId;
+   }
+
+   public String getTitle() {
+      return title;
+   }
+
+   public String getBody() {
+      return body;
+   }
+
+   public JSONObject getAdditionalData() {
+      return additionalData;
+   }
+
+   public String getSmallIcon() {
+      return smallIcon;
+   }
+
+   public String getLargeIcon() {
+      return largeIcon;
+   }
+
+   public String getBigPicture() {
+      return bigPicture;
+   }
+
+   public String getSmallIconAccentColor() {
+      return smallIconAccentColor;
+   }
+
+   public String getLaunchURL() {
+      return launchURL;
+   }
+
+   public String getSound() {
+      return sound;
+   }
+
+   public String getLedColor() {
+      return ledColor;
+   }
+
+   public int getLockScreenVisibility() {
+      return lockScreenVisibility;
+   }
+
+   public String getGroupKey() {
+      return groupKey;
+   }
+
+   public String getGroupMessage() {
+      return groupMessage;
+   }
+
+   public List<ActionButton> getActionButtons() {
+      return actionButtons;
+   }
+
+   public String getFromProjectNumber() {
+      return fromProjectNumber;
+   }
+
+   public BackgroundImageLayout getBackgroundImageLayout() {
+      return backgroundImageLayout;
+   }
+
+   public String getCollapseId() {
+      return collapseId;
+   }
+
+   public int getPriority() {
+      return priority;
+   }
+
+   public String getRawPayload() {
+      return rawPayload;
+   }
+
    /**
     * List of action buttons on the notification. Part of {@link OSNotificationPayload}.
     */
    public static class ActionButton {
-      public String id;
-      public String text;
-      public String icon;
+      private String id;
+      private String text;
+      private String icon;
    
       public ActionButton() {}
       
@@ -111,7 +202,13 @@ public class OSNotificationPayload {
          text = jsonObject.optString("text");
          icon = jsonObject.optString("icon");
       }
-   
+
+      public ActionButton(String id, String text, String icon) {
+         this.id = id;
+         this.text = text;
+         this.icon = icon;
+      }
+
       public JSONObject toJSONObject() {
          JSONObject json = new JSONObject();
          try {
@@ -125,15 +222,39 @@ public class OSNotificationPayload {
 
          return json;
       }
+
+      public String getId() {
+         return id;
+      }
+
+      public String getText() {
+         return text;
+      }
+
+      public String getIcon() {
+         return icon;
+      }
    }
 
    /**
     * If a background image was set, this object will be available. Part of {@link OSNotificationPayload}.
     */
    public static class BackgroundImageLayout {
-      public String image;
-      public String titleTextColor;
-      public String bodyTextColor;
+      private String image;
+      private String titleTextColor;
+      private String bodyTextColor;
+
+      public String getImage() {
+         return image;
+      }
+
+      public String getTitleTextColor() {
+         return titleTextColor;
+      }
+
+      public String getBodyTextColor() {
+         return bodyTextColor;
+      }
    }
 
    public JSONObject toJSONObject() {
@@ -212,6 +333,243 @@ public class OSNotificationPayload {
       }
       catch (Throwable t) {
          t.printStackTrace();
+      }
+   }
+
+   static OSNotificationPayload OSNotificationPayloadFrom(JSONObject currentJsonPayload, JSONObject customJson) {
+      OSNotificationPayload notification = new OSNotificationPayload();
+      notification.notificationID = customJson.optString("i");
+      notification.templateId = customJson.optString("ti");
+      notification.templateName = customJson.optString("tn");
+      notification.rawPayload = currentJsonPayload.toString();
+      notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
+      notification.launchURL = customJson.optString("u", null);
+
+      notification.body = currentJsonPayload.optString("alert", null);
+      notification.title = currentJsonPayload.optString("title", null);
+      notification.smallIcon = currentJsonPayload.optString("sicon", null);
+      notification.bigPicture = currentJsonPayload.optString("bicon", null);
+      notification.largeIcon = currentJsonPayload.optString("licon", null);
+      notification.sound = currentJsonPayload.optString("sound", null);
+      notification.groupKey = currentJsonPayload.optString("grp", null);
+      notification.groupMessage = currentJsonPayload.optString("grp_msg", null);
+      notification.smallIconAccentColor = currentJsonPayload.optString("bgac", null);
+      notification.ledColor = currentJsonPayload.optString("ledc", null);
+      String visibility = currentJsonPayload.optString("vis", null);
+      if (visibility != null)
+         notification.lockScreenVisibility = Integer.parseInt(visibility);
+      notification.fromProjectNumber = currentJsonPayload.optString("from", null);
+      notification.priority = currentJsonPayload.optInt("pri", 0);
+      String collapseKey = currentJsonPayload.optString("collapse_key", null);
+      if (!"do_not_collapse".equals(collapseKey))
+         notification.collapseId = collapseKey;
+
+      try {
+         setActionButtons(notification);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.actionButtons values!", t);
+      }
+
+      try {
+         setBackgroundImageLayout(notification, currentJsonPayload);
+      } catch (Throwable t) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.backgroundImageLayout values!", t);
+      }
+
+      return notification;
+   }
+
+   private static void setActionButtons(OSNotificationPayload notification) throws Throwable {
+      if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {
+         JSONArray jsonActionButtons = notification.additionalData.getJSONArray("actionButtons");
+         notification.actionButtons = new ArrayList<>();
+
+         for (int i = 0; i < jsonActionButtons.length(); i++) {
+            JSONObject jsonActionButton = jsonActionButtons.getJSONObject(i);
+            OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
+            actionButton.id = jsonActionButton.optString("id", null);
+            actionButton.text = jsonActionButton.optString("text", null);
+            actionButton.icon = jsonActionButton.optString("icon", null);
+            notification.actionButtons.add(actionButton);
+         }
+         notification.additionalData.remove(BUNDLE_KEY_ACTION_ID);
+         notification.additionalData.remove("actionButtons");
+      }
+   }
+
+   private static void setBackgroundImageLayout(OSNotificationPayload notification, JSONObject currentJsonPayload) throws Throwable {
+      String jsonStrBgImage = currentJsonPayload.optString("bg_img", null);
+      if (jsonStrBgImage != null) {
+         JSONObject jsonBgImage = new JSONObject(jsonStrBgImage);
+         notification.backgroundImageLayout = new OSNotificationPayload.BackgroundImageLayout();
+         notification.backgroundImageLayout.image = jsonBgImage.optString("img");
+         notification.backgroundImageLayout.titleTextColor = jsonBgImage.optString("tc");
+         notification.backgroundImageLayout.bodyTextColor = jsonBgImage.optString("bc");
+      }
+   }
+
+   // For testing purposes
+   public static class OSNotificationPayloadBuilder {
+
+      private String notificationID;
+      private String templateName, templateId;
+      private String title, body;
+      private JSONObject additionalData;
+      private String smallIcon;
+      private String largeIcon;
+      private String bigPicture;
+      private String smallIconAccentColor;
+      private String launchURL;
+      private String sound;
+      private String ledColor;
+      private int lockScreenVisibility = 1;
+      private String groupKey;
+      private String groupMessage;
+      private List<ActionButton> actionButtons;
+      private String fromProjectNumber;
+      private BackgroundImageLayout backgroundImageLayout;
+      private String collapseId;
+      private int priority;
+      private String rawPayload;
+
+      public OSNotificationPayloadBuilder() {
+      }
+
+      public OSNotificationPayloadBuilder setNotificationID(String notificationID) {
+         this.notificationID = notificationID;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setTemplateName(String templateName) {
+         this.templateName = templateName;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setTemplateId(String templateId) {
+         this.templateId = templateId;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setTitle(String title) {
+         this.title = title;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setBody(String body) {
+         this.body = body;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setAdditionalData(JSONObject additionalData) {
+         this.additionalData = additionalData;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setSmallIcon(String smallIcon) {
+         this.smallIcon = smallIcon;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setLargeIcon(String largeIcon) {
+         this.largeIcon = largeIcon;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setBigPicture(String bigPicture) {
+         this.bigPicture = bigPicture;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setSmallIconAccentColor(String smallIconAccentColor) {
+         this.smallIconAccentColor = smallIconAccentColor;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setLaunchURL(String launchURL) {
+         this.launchURL = launchURL;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setSound(String sound) {
+         this.sound = sound;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setLedColor(String ledColor) {
+         this.ledColor = ledColor;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setLockScreenVisibility(int lockScreenVisibility) {
+         this.lockScreenVisibility = lockScreenVisibility;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setGroupKey(String groupKey) {
+         this.groupKey = groupKey;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setGroupMessage(String groupMessage) {
+         this.groupMessage = groupMessage;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setActionButtons(List<ActionButton> actionButtons) {
+         this.actionButtons = actionButtons;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setFromProjectNumber(String fromProjectNumber) {
+         this.fromProjectNumber = fromProjectNumber;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setBackgroundImageLayout(BackgroundImageLayout backgroundImageLayout) {
+         this.backgroundImageLayout = backgroundImageLayout;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setCollapseId(String collapseId) {
+         this.collapseId = collapseId;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setPriority(int priority) {
+         this.priority = priority;
+         return this;
+      }
+
+      public OSNotificationPayloadBuilder setRawPayload(String rawPayload) {
+         this.rawPayload = rawPayload;
+         return this;
+      }
+
+      public OSNotificationPayload build() {
+         OSNotificationPayload payload = new OSNotificationPayload();
+         payload.notificationID = notificationID;
+         payload.templateName = templateName;
+         payload.templateId = templateId;
+         payload.title = title;
+         payload.body = body;
+         payload.additionalData = additionalData;
+         payload.smallIcon = smallIcon;
+         payload.largeIcon = largeIcon;
+         payload.bigPicture = bigPicture;
+         payload.smallIconAccentColor = smallIconAccentColor;
+         payload.launchURL = launchURL;
+         payload.sound = sound;
+         payload.ledColor = ledColor;
+         payload.lockScreenVisibility = lockScreenVisibility;
+         payload.groupKey = groupKey;
+         payload.groupMessage = groupMessage;
+         payload.actionButtons = actionButtons;
+         payload.fromProjectNumber = fromProjectNumber;
+         payload.backgroundImageLayout = backgroundImageLayout;
+         payload.collapseId = collapseId;
+         payload.priority = priority;
+         payload.rawPayload = rawPayload;
+         return payload;
       }
    }
 }

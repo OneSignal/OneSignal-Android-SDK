@@ -2011,42 +2011,37 @@ public class OneSignal {
       int jsonArraySize = jsonArray.length();
 
       boolean firstMessage = true;
+      boolean isAppInFocus = isAppActive();
+      int androidNotificationId = jsonArray.optJSONObject(0).optInt(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
+      OSNotificationDisplay displayOption = OSNotificationDisplay.NOTIFICATION;
 
-      OSNotificationOpenResult openResult = new OSNotificationOpenResult();
-      OSNotification notification = new OSNotification();
-      notification.isAppInFocus = isAppActive();
-      notification.shown = shown;
-      notification.androidNotificationId = jsonArray.optJSONObject(0).optInt(BUNDLE_KEY_ANDROID_NOTIFICATION_ID);
-
+      List<OSNotificationPayload> groupedNotifications = new ArrayList<>();
       String actionSelected = null;
+      OSNotificationPayload payload = null;
 
       for (int i = 0; i < jsonArraySize; i++) {
          try {
             JSONObject data = jsonArray.getJSONObject(i);
 
-            notification.payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
+            payload = NotificationBundleProcessor.OSNotificationPayloadFrom(data);
             if (actionSelected == null && data.has(BUNDLE_KEY_ACTION_ID))
                actionSelected = data.optString(BUNDLE_KEY_ACTION_ID, null);
 
             if (firstMessage)
                firstMessage = false;
             else {
-               if (notification.groupedNotifications == null)
-                  notification.groupedNotifications = new ArrayList<>();
-               notification.groupedNotifications.add(notification.payload);
+               groupedNotifications.add(payload);
             }
          } catch (Throwable t) {
             Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for callback.", t);
          }
       }
 
-      openResult.notification = notification;
-      openResult.action = new OSNotificationAction();
-      openResult.action.actionID = actionSelected;
-      openResult.action.type = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
-      openResult.notification.displayOption = OSNotificationDisplay.NOTIFICATION;
+      OSNotificationAction.ActionType actionType = actionSelected != null ? OSNotificationAction.ActionType.ActionTaken : OSNotificationAction.ActionType.Opened;
+      OSNotificationAction notificationAction = new OSNotificationAction(actionType, actionSelected);
 
-      return openResult;
+      OSNotification notification = new OSNotification(groupedNotifications, payload, displayOption, isAppInFocus, shown, androidNotificationId);
+      return new OSNotificationOpenResult(notification, notificationAction);
    }
 
    private static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {

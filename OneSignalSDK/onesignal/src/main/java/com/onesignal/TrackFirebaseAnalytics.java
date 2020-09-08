@@ -86,7 +86,7 @@ class TrackFirebaseAnalytics {
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
          bundle.putString("medium", "notification");
-         bundle.putString("notification_id", lastReceivedPayload.notificationID);
+         bundle.putString("notification_id", lastReceivedPayload.getNotificationID());
          bundle.putString("campaign", getCampaignNameFromPayload(lastReceivedPayload));
 
          trackMethod.invoke(firebaseAnalyticsInstance, event, bundle);
@@ -110,8 +110,8 @@ class TrackFirebaseAnalytics {
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
          bundle.putString("medium", "notification");
-         bundle.putString("notification_id", openResult.notification.payload.notificationID);
-         bundle.putString("campaign", getCampaignNameFromPayload(openResult.notification.payload));
+         bundle.putString("notification_id", openResult.getNotification().getPayload().getNotificationID());
+         bundle.putString("campaign", getCampaignNameFromPayload(openResult.getNotification().getPayload()));
 
          trackMethod.invoke(firebaseAnalyticsInstance, EVENT_NOTIFICATION_OPENED, bundle);
 
@@ -132,8 +132,8 @@ class TrackFirebaseAnalytics {
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
          bundle.putString("medium", "notification");
-         bundle.putString("notification_id", receivedResult.notification.payload.notificationID);
-         bundle.putString("campaign", getCampaignNameFromPayload(receivedResult.notification.payload));
+         bundle.putString("notification_id", receivedResult.getNotification().getPayload().getNotificationID());
+         bundle.putString("campaign", getCampaignNameFromPayload(receivedResult.getNotification().getPayload()));
 
          trackMethod.invoke(firebaseAnalyticsInstance, EVENT_NOTIFICATION_RECEIVED, bundle);
 
@@ -141,7 +141,7 @@ class TrackFirebaseAnalytics {
             lastReceivedTime = new AtomicLong();
          lastReceivedTime.set(OneSignal.getTime().getCurrentTimeMillis());
 
-         lastReceivedPayload = receivedResult.notification.payload;
+         lastReceivedPayload = receivedResult.getNotification().getPayload();
 
       } catch (Throwable t) {
          t.printStackTrace();
@@ -149,10 +149,10 @@ class TrackFirebaseAnalytics {
    }
 
    private String getCampaignNameFromPayload(OSNotificationPayload payload) {
-      if (!payload.templateName.isEmpty() && !payload.templateId.isEmpty())
-         return payload.templateName + " - " + payload.templateId;
-      else if (payload.title != null)
-         return payload.title.substring(0, Math.min(10, payload.title.length()));
+      if (!payload.getTemplateName().isEmpty() && !payload.getTemplateId().isEmpty())
+         return payload.getTemplateName() + " - " + payload.getTemplateId();
+      else if (payload.getTitle() != null)
+         return payload.getTitle().substring(0, Math.min(10, payload.getTitle().length()));
       
       return "";
    }

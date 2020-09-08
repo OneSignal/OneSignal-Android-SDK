@@ -218,7 +218,7 @@ public class MainOneSignalClassRunner {
          public void notificationOpened(OSNotificationOpenResult openedResult) {
 
             // TODO: Double check if we should use this or not
-            lastNotificationOpenedBody = openedResult.notification.payload.body;
+            lastNotificationOpenedBody = openedResult.getNotification().getPayload().getBody();
          }
       };
    }
@@ -3850,10 +3850,8 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testOSNotificationOpenResultToJSONObject() throws Exception {
-      OSNotificationOpenResult osNotificationOpenResult = new OSNotificationOpenResult();
-      osNotificationOpenResult.notification = createTestOSNotification();
-      osNotificationOpenResult.action = new OSNotificationAction();
-      osNotificationOpenResult.action.type = OSNotificationAction.ActionType.Opened;
+      OSNotificationAction action = new OSNotificationAction(OSNotificationAction.ActionType.Opened, null);
+      OSNotificationOpenResult osNotificationOpenResult = new OSNotificationOpenResult(createTestOSNotification(), action);
 
       JSONObject testJsonObj = osNotificationOpenResult.toJSONObject();
 
@@ -4799,25 +4797,28 @@ public class MainOneSignalClassRunner {
    // ####### Unit test helper methods ########
 
    private static OSNotification createTestOSNotification() throws Exception {
-      OSNotification osNotification = new OSNotification();
 
-      osNotification.payload = new OSNotificationPayload();
-      osNotification.payload.body = "msg_body";
-      osNotification.payload.additionalData = new JSONObject("{\"foo\": \"bar\"}");
-      osNotification.payload.actionButtons = new ArrayList<>();
-      OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
-      actionButton.text = "text";
-      actionButton.id = "id";
-      osNotification.payload.actionButtons.add(actionButton);
+      OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton("id", "text", null);
+      List<OSNotificationPayload.ActionButton> actionButtons = new ArrayList<>();
+      actionButtons.add(actionButton);
 
-      osNotification.displayOption = OneSignal.OSNotificationDisplay.SILENT;
+      OSNotificationPayload payload = new OSNotificationPayload.OSNotificationPayloadBuilder()
+              .setBody("msg_body")
+              .setAdditionalData(new JSONObject("{\"foo\": \"bar\"}"))
+              .setActionButtons(actionButtons)
+              .build();
 
-      osNotification.groupedNotifications = new ArrayList<>();
-      OSNotificationPayload groupedPayload = new OSNotificationPayload();
-      groupedPayload.collapseId = "collapseId1";
-      osNotification.groupedNotifications.add(groupedPayload);
+      OneSignal.OSNotificationDisplay displayOption = OneSignal.OSNotificationDisplay.SILENT;
 
-      return osNotification;
+      List<OSNotificationPayload> groupedNotifications = new ArrayList<>();
+
+      OSNotificationPayload groupedPayload = new OSNotificationPayload.OSNotificationPayloadBuilder()
+              .setCollapseId("collapseId1")
+              .build();
+
+      groupedNotifications.add(groupedPayload);
+
+      return new OSNotification(groupedNotifications, payload, displayOption);
    }
 
    private void OneSignalInit() {
