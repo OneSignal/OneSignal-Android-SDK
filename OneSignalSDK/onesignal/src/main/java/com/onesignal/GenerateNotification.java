@@ -372,7 +372,7 @@ class GenerateNotification {
    private static void applyNotificationExtender(
            OSNotificationGenerationJob notificationJob,
            NotificationCompat.Builder notifBuilder) {
-      if (notificationJob.overrideSettings == null || notificationJob.overrideSettings.extender == null)
+      if (notificationJob.overrideSettings == null || notificationJob.overrideSettings.getExtender() == null)
          return;
 
       try {
@@ -382,7 +382,7 @@ class GenerateNotification {
 
          notificationJob.orgFlags = mNotification.flags;
          notificationJob.orgSound = mNotification.sound;
-         notifBuilder.extend(notificationJob.overrideSettings.extender);
+         notifBuilder.extend(notificationJob.overrideSettings.getExtender());
 
          mNotification = (Notification)mNotificationField.get(notifBuilder);
 

@@ -45,7 +45,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.Set;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
@@ -157,7 +156,7 @@ class NotificationBundleProcessor {
         OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
         notificationJob.jsonPayload = bundleAsJSONObject(bundle);
         notificationJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
-        notificationJob.overrideSettings.androidNotificationId = -1;
+        notificationJob.overrideSettings.setAndroidNotificationId(-1);
 
         processNotification(notificationJob, true);
     }
@@ -355,80 +354,13 @@ class NotificationBundleProcessor {
     }
 
     static OSNotificationPayload OSNotificationPayloadFrom(JSONObject currentJsonPayload) {
-        OSNotificationPayload notification = new OSNotificationPayload();
+        JSONObject customJson = null;
         try {
-            JSONObject customJson = getCustomJSONObject(currentJsonPayload);
-            notification.notificationID = customJson.optString("i");
-            notification.templateId = customJson.optString("ti");
-            notification.templateName = customJson.optString("tn");
-            notification.rawPayload = currentJsonPayload.toString();
-            notification.additionalData = customJson.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
-            notification.launchURL = customJson.optString("u", null);
-
-            notification.body = currentJsonPayload.optString("alert", null);
-            notification.title = currentJsonPayload.optString("title", null);
-            notification.smallIcon = currentJsonPayload.optString("sicon", null);
-            notification.bigPicture = currentJsonPayload.optString("bicon", null);
-            notification.largeIcon = currentJsonPayload.optString("licon", null);
-            notification.sound = currentJsonPayload.optString("sound", null);
-            notification.groupKey = currentJsonPayload.optString("grp", null);
-            notification.groupMessage = currentJsonPayload.optString("grp_msg", null);
-            notification.smallIconAccentColor = currentJsonPayload.optString("bgac", null);
-            notification.ledColor = currentJsonPayload.optString("ledc", null);
-            String visibility = currentJsonPayload.optString("vis", null);
-            if (visibility != null)
-                notification.lockScreenVisibility = Integer.parseInt(visibility);
-            notification.fromProjectNumber = currentJsonPayload.optString("from", null);
-            notification.priority = currentJsonPayload.optInt("pri", 0);
-            String collapseKey = currentJsonPayload.optString("collapse_key", null);
-            if (!"do_not_collapse".equals(collapseKey))
-                notification.collapseId = collapseKey;
-
-            try {
-                setActionButtons(notification);
-            } catch (Throwable t) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.actionButtons values!", t);
-            }
-
-            try {
-                setBackgroundImageLayout(notification, currentJsonPayload);
-            } catch (Throwable t) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload.backgroundImageLayout values!", t);
-            }
+            customJson = NotificationBundleProcessor.getCustomJSONObject(currentJsonPayload);
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload values!", t);
         }
-
-        return notification;
-    }
-
-    private static void setActionButtons(OSNotificationPayload notification) throws Throwable {
-        if (notification.additionalData != null && notification.additionalData.has("actionButtons")) {
-            JSONArray jsonActionButtons = notification.additionalData.getJSONArray("actionButtons");
-            notification.actionButtons = new ArrayList<>();
-
-            for (int i = 0; i < jsonActionButtons.length(); i++) {
-                JSONObject jsonActionButton = jsonActionButtons.getJSONObject(i);
-                OSNotificationPayload.ActionButton actionButton = new OSNotificationPayload.ActionButton();
-                actionButton.id = jsonActionButton.optString("id", null);
-                actionButton.text = jsonActionButton.optString("text", null);
-                actionButton.icon = jsonActionButton.optString("icon", null);
-                notification.actionButtons.add(actionButton);
-            }
-            notification.additionalData.remove(BUNDLE_KEY_ACTION_ID);
-            notification.additionalData.remove("actionButtons");
-        }
-    }
-
-    private static void setBackgroundImageLayout(OSNotificationPayload notification, JSONObject currentJsonPayload) throws Throwable {
-        String jsonStrBgImage = currentJsonPayload.optString("bg_img", null);
-        if (jsonStrBgImage != null) {
-            JSONObject jsonBgImage = new JSONObject(jsonStrBgImage);
-            notification.backgroundImageLayout = new OSNotificationPayload.BackgroundImageLayout();
-            notification.backgroundImageLayout.image = jsonBgImage.optString("img");
-            notification.backgroundImageLayout.titleTextColor = jsonBgImage.optString("tc");
-            notification.backgroundImageLayout.bodyTextColor = jsonBgImage.optString("bc");
-        }
+        return customJson == null ? new OSNotificationPayload() : OSNotificationPayload.OSNotificationPayloadFrom(currentJsonPayload, customJson);
     }
 
     private static void processCollapseKey(OSNotificationGenerationJob notificationJob) {

@@ -314,7 +314,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // Make sure we get a payload when it is opened.
-      assertNotNull(lastOpenResult.notification.payload);
+      assertNotNull(lastOpenResult.getNotification().getPayload());
    }
 
    @Test
@@ -1332,7 +1332,7 @@ public class GenerateNotificationRunner {
       @Override
       public void notificationProcessing(Context context, OSNotificationReceived notification) {
          OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
-         overrideSettings.extender = new NotificationCompat.Extender() {
+         overrideSettings.setExtender(new NotificationCompat.Extender() {
             @Override
             public NotificationCompat.Builder extend(NotificationCompat.Builder builder) {
                // Must disable the default sound when setting a custom one
@@ -1353,7 +1353,7 @@ public class GenerateNotificationRunner {
                        .setStyle(new NotificationCompat.BigTextStyle().bigText("[Modified Body(bigText)]"))
                        .setContentText("[Modified Body(ContentText)]");
             }
-         };
+         });
          notification.setModifiedContent(overrideSettings);
 
          // Display called to show notification
@@ -1386,36 +1386,36 @@ public class GenerateNotificationRunner {
 
       // 5. Evaluate the notification received within the NotificationProcessingHandler
       OSNotificationReceived notificationReceived = NotificationExtensionService_notificationProcessingProperties.notification;
-      OSNotificationPayload notificationPayload = notificationReceived.payload;
-      assertEquals("Test H", notificationPayload.title);
-      assertEquals("Test B", notificationPayload.body);
-      assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.notificationID);
+      OSNotificationPayload notificationPayload = notificationReceived.getPayload();
+      assertEquals("Test H", notificationPayload.getTitle());
+      assertEquals("Test B", notificationPayload.getBody());
+      assertEquals("9764eaeb-10ce-45b1-a66d-8f95938aaa51", notificationPayload.getNotificationID());
 
-      assertEquals(0, notificationPayload.lockScreenVisibility);
-      assertEquals("FF0000FF", notificationPayload.smallIconAccentColor);
-      assertEquals("703322744261", notificationPayload.fromProjectNumber);
-      assertEquals("FFFFFF00", notificationPayload.ledColor);
-      assertEquals("big_picture", notificationPayload.bigPicture);
-      assertEquals("large_icon", notificationPayload.largeIcon);
-      assertEquals("small_icon", notificationPayload.smallIcon);
-      assertEquals("test_sound", notificationPayload.sound);
-      assertEquals("You test $[notif_count] MSGs!", notificationPayload.groupMessage);
-      assertEquals("http://google.com", notificationPayload.launchURL);
-      assertEquals(10, notificationPayload.priority);
-      assertEquals("a_key", notificationPayload.collapseId);
+      assertEquals(0, notificationPayload.getLockScreenVisibility());
+      assertEquals("FF0000FF", notificationPayload.getSmallIconAccentColor());
+      assertEquals("703322744261", notificationPayload.getFromProjectNumber());
+      assertEquals("FFFFFF00", notificationPayload.getLedColor());
+      assertEquals("big_picture", notificationPayload.getBigPicture());
+      assertEquals("large_icon", notificationPayload.getLargeIcon());
+      assertEquals("small_icon", notificationPayload.getSmallIcon());
+      assertEquals("test_sound", notificationPayload.getSound());
+      assertEquals("You test $[notif_count] MSGs!", notificationPayload.getGroupMessage());
+      assertEquals("http://google.com", notificationPayload.getLaunchURL());
+      assertEquals(10, notificationPayload.getPriority());
+      assertEquals("a_key", notificationPayload.getCollapseId());
 
-      assertEquals("id1", notificationPayload.actionButtons.get(0).id);
-      assertEquals("button1", notificationPayload.actionButtons.get(0).text);
-      assertEquals("ic_menu_share", notificationPayload.actionButtons.get(0).icon);
-      assertEquals("id2", notificationPayload.actionButtons.get(1).id);
-      assertEquals("button2", notificationPayload.actionButtons.get(1).text);
-      assertEquals("ic_menu_send", notificationPayload.actionButtons.get(1).icon);
+      assertEquals("id1", notificationPayload.getActionButtons().get(0).getId());
+      assertEquals("button1", notificationPayload.getActionButtons().get(0).getText());
+      assertEquals("ic_menu_share", notificationPayload.getActionButtons().get(0).getIcon());
+      assertEquals("id2", notificationPayload.getActionButtons().get(1).getId());
+      assertEquals("button2", notificationPayload.getActionButtons().get(1).getText());
+      assertEquals("ic_menu_send", notificationPayload.getActionButtons().get(1).getIcon());
 
-      assertEquals("test_image_url", notificationPayload.backgroundImageLayout.image);
-      assertEquals("FF000000", notificationPayload.backgroundImageLayout.titleTextColor);
-      assertEquals("FFFFFFFF", notificationPayload.backgroundImageLayout.bodyTextColor);
+      assertEquals("test_image_url", notificationPayload.getBackgroundImageLayout().getImage());
+      assertEquals("FF000000", notificationPayload.getBackgroundImageLayout().getTitleTextColor());
+      assertEquals("FFFFFFFF", notificationPayload.getBackgroundImageLayout().getBodyTextColor());
 
-      JSONObject additionalData = notificationPayload.additionalData;
+      JSONObject additionalData = notificationPayload.getAdditionalData();
       assertEquals("myValue", additionalData.getString("myKey"));
       assertEquals("nValue", additionalData.getJSONObject("nested").getString("nKey"));
 
@@ -1502,7 +1502,7 @@ public class GenerateNotificationRunner {
          lastNotificationReceived = notification;
 
          OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
-         overrideSettings.androidNotificationId = 1;
+         overrideSettings.setAndroidNotificationId(1);
          notification.setModifiedContent(overrideSettings);
 
          // Display called to show notification

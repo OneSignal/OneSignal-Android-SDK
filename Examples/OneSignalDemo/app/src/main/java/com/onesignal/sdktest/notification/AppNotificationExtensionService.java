@@ -18,14 +18,14 @@ public class AppNotificationExtensionService implements
    public void notificationProcessing(Context context, OSNotificationReceived notification) {
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "NotificationProcessingHandler fired!" +
               " with OSNotificationReceived: " + notification.toString());
-      if (notification.payload.actionButtons != null) {
-         for (OSNotificationPayload.ActionButton button : notification.payload.actionButtons) {
+      if (notification.getPayload().getActionButtons() != null) {
+         for (OSNotificationPayload.ActionButton button : notification.getPayload().getActionButtons()) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "ActionButton: " + button.toString());
          }
       }
 
       OSNotificationExtender.OverrideSettings overrideSettings = new OSNotificationExtender.OverrideSettings();
-      overrideSettings.extender = builder -> builder.setColor(context.getResources().getColor(R.color.colorPrimary));
+      overrideSettings.setExtender(builder -> builder.setColor(context.getResources().getColor(R.color.colorPrimary)));
 
       notification.setModifiedContent(overrideSettings);
 

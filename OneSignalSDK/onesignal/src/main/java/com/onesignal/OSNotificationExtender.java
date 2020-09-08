@@ -39,8 +39,8 @@ public class OSNotificationExtender {
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationExtensionServiceClass";
 
    public static class OverrideSettings {
-      public NotificationCompat.Extender extender;
-      public Integer androidNotificationId;
+      private NotificationCompat.Extender extender;
+      private Integer androidNotificationId;
 
       // Note: Make sure future fields are nullable.
       // Possible future options
@@ -56,6 +56,22 @@ public class OSNotificationExtender {
 
          if (overrideSettings.extender != null)
             extender = overrideSettings.extender;
+      }
+
+      public Integer getAndroidNotificationId() {
+         return androidNotificationId;
+      }
+
+      public void setAndroidNotificationId(Integer androidNotificationId) {
+         this.androidNotificationId = androidNotificationId;
+      }
+
+      public NotificationCompat.Extender getExtender() {
+         return extender;
+      }
+
+      public void setExtender(NotificationCompat.Extender extender) {
+         this.extender = extender;
       }
 
       @Override
