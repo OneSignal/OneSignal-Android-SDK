@@ -276,32 +276,32 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-        action.firstClick = message.takeActionAsUnique();
+        action.setFirstClick(message.takeActionAsUnique());
 
         firePublicClickHandler(message.messageId, action);
-        beginProcessingPrompts(message, action.prompts);
+        beginProcessingPrompts(message, action.getPrompts());
         fireClickAction(action);
         fireRESTCallForClick(message, action);
         fireTagCallForClick(action);
-        fireOutcomesForClick(message.messageId, action.outcomes);
+        fireOutcomesForClick(message.messageId, action.getOutcomes());
     }
 
     void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-        action.firstClick = message.takeActionAsUnique();
+        action.setFirstClick(message.takeActionAsUnique());
 
         firePublicClickHandler(message.messageId, action);
-        beginProcessingPrompts(message, action.prompts);
+        beginProcessingPrompts(message, action.getPrompts());
         fireClickAction(action);
         logInAppMessagePreviewActions(action);
     }
 
     private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
-        if (action.tags != null)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString());
+        if (action.getTags() != null)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.getTags().toString());
 
-        if (action.outcomes.size() > 0)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString());
+        if (action.getOutcomes().size() > 0)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.getOutcomes().toString());
 
         // TODO: Add more action payload preview logs here in future
     }
@@ -366,8 +366,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void fireTagCallForClick(@NonNull final OSInAppMessageAction action) {
-        if (action.tags != null) {
-            OSInAppMessageTag tags = action.tags;
+        if (action.getTags() != null) {
+            OSInAppMessageTag tags = action.getTags();
 
             if (tags.getTagsToAdd() != null)
                 OneSignal.sendTags(tags.getTagsToAdd());
@@ -394,11 +394,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void fireClickAction(@NonNull final OSInAppMessageAction action) {
-        if (action.clickUrl != null && !action.clickUrl.isEmpty()) {
-            if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
-                OSUtils.openURLInBrowser(action.clickUrl);
-            else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
-                OneSignalChromeTab.open(action.clickUrl, true);
+        if (action.getClickUrl() != null && !action.getClickUrl().isEmpty()) {
+            if (action.getUrlTarget() == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
+                OSUtils.openURLInBrowser(action.getClickUrl());
+            else if (action.getUrlTarget() == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
+                OneSignalChromeTab.open(action.getClickUrl(), true);
         }
     }
 
@@ -407,7 +407,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (variantId == null)
             return;
 
-        final String clickId = action.clickId;
+        final String clickId = action.getClickId();
         // If IAM has redisplay the clickId may be available
         boolean clickAvailableByRedisplay = message.getRedisplayStats().isRedisplayEnabled() && message.isClickAvailable(clickId);
 
@@ -426,7 +426,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 put("player_id", OneSignal.getUserId());
                 put("click_id", clickId);
                 put("variant_id", variantId);
-                if (action.firstClick)
+                if (action.isFirstClick())
                     put("first_click", true);
             }};
 
@@ -445,7 +445,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("engagement", statusCode, response);
-                    clickedClickIds.remove(action.clickId);
+                    clickedClickIds.remove(action.getClickId());
                 }
             });
         } catch (JSONException e) {

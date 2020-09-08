@@ -484,9 +484,9 @@ public class OneSignalPackagePrivateHelper {
 
    public static class OSTestInAppMessageAction extends com.onesignal.OSInAppMessageAction {
       public boolean closes() {
-         return closesMessage;
+         return super.doesCloseMessage();
       }
-      public String getClickId() { return clickId; }
+      public String getClickId() { return super.getClickId(); }
 
       public OSTestInAppMessageAction(JSONObject json) throws JSONException {
          super(json);

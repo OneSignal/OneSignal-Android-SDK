@@ -689,7 +689,7 @@ public class InAppMessageIntegrationTests {
         );
 
         // Ensure we fire public callback that In-App was clicked.
-        assertEquals(lastAction[0].clickName, "my_click_name");
+        assertEquals(lastAction[0].getClickName(), "my_click_name");
     }
 
     @Test
@@ -742,7 +742,7 @@ public class InAppMessageIntegrationTests {
         );
 
         // Ensure we fire public callback that In-App was clicked.
-        assertEquals(lastAction[0].clickName, "my_click_name");
+        assertEquals(lastAction[0].getClickName(), "my_click_name");
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
 
