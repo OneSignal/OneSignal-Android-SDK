@@ -264,10 +264,10 @@ public class InAppMessagingUnitTests {
         OSTestInAppMessageAction action = new OSTestInAppMessageAction(InAppMessagingHelpers.buildTestActionJson());
 
         assertEquals(action.getClickId(), InAppMessagingHelpers.IAM_CLICK_ID);
-        assertEquals(action.clickName, "click_name");
-        assertEquals(action.clickUrl, "https://www.onesignal.com");
+        assertEquals(action.getClickName(), "click_name");
+        assertEquals(action.getClickUrl(), "https://www.onesignal.com");
         assertTrue(action.closes());
-        assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
+        assertEquals(action.getUrlTarget(), OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
     }
 
     @Test
@@ -583,7 +583,7 @@ public class InAppMessagingUnitTests {
         assertEquals("button_id_123", iamClickRequest.payload.get("click_id"));
 
         // Ensure we fire public callback that In-App was clicked.
-        assertEquals(lastAction.clickName, "my_click_name");
+        assertEquals(lastAction.getClickName(), "my_click_name");
     }
 
     @Test
