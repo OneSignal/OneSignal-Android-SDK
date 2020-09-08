@@ -27,23 +27,23 @@
 
 package com.onesignal;
 
-public class OSDevice {
+public class OSDeviceState {
 
     private final boolean notificationEnabled;
-    private final boolean userSubscribed;
+    private final boolean pushDisabled;
     private final boolean subscribed;
     private final String userId;
     private final String pushToken;
     private final String emailUserId;
     private final String emailAddress;
 
-    public OSDevice(OSPermissionSubscriptionState permissionSubscriptionState) {
+    public OSDeviceState(OSPermissionSubscriptionState permissionSubscriptionState) {
         OSSubscriptionState subscriptionStatus = permissionSubscriptionState.subscriptionStatus;
         OSPermissionState permissionStatus = permissionSubscriptionState.permissionStatus;
         OSEmailSubscriptionState emailSubscriptionStatus = permissionSubscriptionState.emailSubscriptionStatus;
 
         notificationEnabled = permissionStatus.getEnabled();
-        userSubscribed = subscriptionStatus.getUserSubscriptionSetting();
+        pushDisabled = !subscriptionStatus.getUserSubscriptionSetting();
         subscribed = subscriptionStatus.getSubscribed();
         userId = subscriptionStatus.getUserId();
         pushToken = subscriptionStatus.getPushToken();
@@ -56,7 +56,7 @@ public class OSDevice {
      *
      * @return false if the user disabled notifications for the app, otherwise true
      */
-    public boolean isNotificationEnabled() {
+    public boolean areNotificationsEnabled() {
         return notificationEnabled;
     }
 
@@ -65,14 +65,14 @@ public class OSDevice {
      *
      * @return false if the user is not subscribed to OneSignal notifications, otherwise true
      */
-    public boolean isUserSubscribed() {
-        return userSubscribed;
+    public boolean isPushDisabled() {
+        return pushDisabled;
     }
 
     /**
      * Get whether the user is subscribed
      *
-     * @return true if {@link #isNotificationEnabled}, {@link #isUserSubscribed}, {@link #getUserId} and {@link #getPushToken} are true, otherwise false
+     * @return true if {@link #areNotificationsEnabled}, {@link #isPushDisabled}, {@link #getUserId} and {@link #getPushToken} are true, otherwise false
      */
     public boolean isSubscribed() {
         return subscribed;
