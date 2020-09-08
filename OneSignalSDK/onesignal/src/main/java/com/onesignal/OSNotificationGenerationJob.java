@@ -74,20 +74,20 @@ public class OSNotificationGenerationJob {
     }
 
     int getAndroidIdWithoutCreate() {
-        if (overrideSettings == null || overrideSettings.androidNotificationId == null)
+        if (overrideSettings == null || overrideSettings.getAndroidNotificationId() == null)
             return -1;
 
-        return overrideSettings.androidNotificationId;
+        return overrideSettings.getAndroidNotificationId();
     }
 
     Integer getAndroidId() {
         if (overrideSettings == null)
             overrideSettings = new OSNotificationExtender.OverrideSettings();
 
-        if (overrideSettings.androidNotificationId == null)
-            overrideSettings.androidNotificationId = new SecureRandom().nextInt();
+        if (overrideSettings.getAndroidNotificationId() == null)
+            overrideSettings.setAndroidNotificationId(new SecureRandom().nextInt());
 
-        return overrideSettings.androidNotificationId;
+        return overrideSettings.getAndroidNotificationId();
     }
 
     /**
@@ -131,19 +131,20 @@ public class OSNotificationGenerationJob {
     }
 
     boolean hasExtender() {
-        return overrideSettings != null && overrideSettings.extender != null;
+        return overrideSettings != null && overrideSettings.getExtender() != null;
     }
 
     void setAndroidIdWithoutOverriding(Integer id) {
         if (id == null)
             return;
 
-        if (overrideSettings != null && overrideSettings.androidNotificationId != null)
+        if (overrideSettings != null && overrideSettings.getAndroidNotificationId() != null)
             return;
 
         if (overrideSettings == null)
             overrideSettings = new OSNotificationExtender.OverrideSettings();
-        overrideSettings.androidNotificationId = id;
+
+        overrideSettings.setAndroidNotificationId(id);
     }
 
     private OSNotificationDisplay getNotificationDisplayOption() {
@@ -169,12 +170,12 @@ public class OSNotificationGenerationJob {
      */
     static class NotificationGenerationJob {
 
-        // Used to toggle when complete is called so it can not be called more than once
-        boolean isComplete = false;
-
         private Runnable timeoutRunnable;
         // The actual notificationJob with notification payload data
         private OSNotificationGenerationJob notificationJob;
+
+        // Used to toggle when complete is called so it can not be called more than once
+        protected boolean isComplete = false;
 
         NotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
             this.notificationJob = notificationJob;

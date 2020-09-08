@@ -121,7 +121,7 @@ public class OutcomeEventIntegrationTests {
         return new OneSignal.NotificationOpenedHandler() {
             @Override
             public void notificationOpened(OSNotificationOpenResult openedResult) {
-                notificationOpenedMessage = openedResult.notification.payload.body;
+                notificationOpenedMessage = openedResult.getNotification().getPayload().getBody();
             }
         };
     }

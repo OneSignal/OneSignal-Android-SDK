@@ -161,7 +161,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
             @Override
             public void notificationOpened(OSNotificationOpenResult result) {
-                lastActionId = result.action.actionID;
+                lastActionId = result.getAction().getActionID();
             }
         });
 

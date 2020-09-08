@@ -41,9 +41,9 @@ public class OSNotificationReceived {
    private final OSTimeoutHandler timeoutHandler;
    private Runnable timeoutRunnable;
    private OSNotificationExtender notificationExtender;
-   public OSNotificationPayload payload;
-   public boolean isRestoring;
-   public boolean isAppInFocus;
+   private OSNotificationPayload payload;
+   private boolean isRestoring;
+   private boolean isAppInFocus;
    // Used to toggle when complete is called so it can not be called more than once
    private boolean isComplete = false;
    // Flag that differentiate user custom flow from OneSignal
@@ -112,6 +112,14 @@ public class OSNotificationReceived {
     */
    public synchronized OSNotificationDisplayedResult display() {
       return notificationExtender.displayNotification();
+   }
+
+   public boolean isRestoring() {
+      return isRestoring;
+   }
+
+   public OSNotificationPayload getPayload() {
+      return payload;
    }
 
    synchronized void internalComplete() {
