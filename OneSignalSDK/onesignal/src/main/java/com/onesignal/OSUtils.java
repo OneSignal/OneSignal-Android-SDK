@@ -46,6 +46,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 
 import androidx.legacy.content.WakefulBroadcastReceiver;
 
@@ -447,6 +448,10 @@ class OSUtils {
       String emRegex = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$";
       Pattern pattern = Pattern.compile(emRegex);
       return pattern.matcher(email).matches();
+   }
+
+   static boolean isStringEmpty(String body) {
+      return !TextUtils.isEmpty(body);
    }
 
    // Get the app's permission which will be false if the user disabled notifications for the app

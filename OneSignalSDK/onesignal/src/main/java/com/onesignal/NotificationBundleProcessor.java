@@ -33,7 +33,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -48,6 +47,7 @@ import org.json.JSONObject;
 import java.util.Set;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.OSUtils.isStringEmpty;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
@@ -149,7 +149,7 @@ class NotificationBundleProcessor {
             return false;
 
         // Otherwise, this is a normal notification and should be shown
-        return notificationJob.hasExtender() || shouldDisplay(notificationJob.jsonPayload.optString("alert"));
+        return notificationJob.hasExtender() || isStringEmpty(notificationJob.jsonPayload.optString("alert"));
     }
 
     private static void saveAndProcessDupNotification(Context context, Bundle bundle) {
@@ -438,7 +438,8 @@ class NotificationBundleProcessor {
 
         // Save as a opened notification to prevent duplicates
         String alert = bundle.getString("alert");
-        if (!shouldDisplay(alert)) {
+        boolean display = isStringEmpty(alert);
+        if (!display) {
             saveAndProcessDupNotification(context, bundle);
             // Current thread is meant to be short lived
             // Make a new thread to do our OneSignal work on
@@ -504,10 +505,6 @@ class NotificationBundleProcessor {
 
         result.isWorkManagerProcessing = true;
         return true;
-    }
-
-    static boolean shouldDisplay(String body) {
-        return !TextUtils.isEmpty(body);
     }
 
     static @NonNull

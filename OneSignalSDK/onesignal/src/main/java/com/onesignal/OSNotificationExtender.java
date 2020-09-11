@@ -33,6 +33,8 @@ import androidx.core.app.NotificationCompat;
 
 import org.json.JSONObject;
 
+import static com.onesignal.OSUtils.isStringEmpty;
+
 public class OSNotificationExtender {
 
    // The extension service app AndroidManifest.xml meta data tag key name
@@ -154,7 +156,7 @@ public class OSNotificationExtender {
       // Check for display not called by developer to avoid duplicated handles under developer extenders service implementation failure
       if (internalComplete && !developerProcessed) {
          // Save as processed to prevent possible duplicate calls from canonical ids
-         boolean display = NotificationBundleProcessor.shouldDisplay(jsonPayload.optString("alert"));
+         boolean display = isStringEmpty(jsonPayload.optString("alert"));
          if (!display)
             notDisplayNotificationLogic();
          else
