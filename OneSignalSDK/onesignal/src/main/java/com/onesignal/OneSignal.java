@@ -2416,9 +2416,9 @@ public class OneSignal {
    /**
     * You can call this method with {@code false} to opt users out of receiving all notifications through
     * OneSignal. You can pass {@code true} later to opt users back into notifications.
-    * @param enable whether to subscribe the user to notifications or not
+    * @param disable whether to subscribe the user to notifications or not
     */
-   public static void setSubscription(final boolean enable) {
+   public static void disablePush(final boolean disable) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.SET_SUBSCRIPTION)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.SET_SUBSCRIPTION + " operation to a pending queue.");
@@ -2426,7 +2426,7 @@ public class OneSignal {
             @Override
             public void run() {
                logger.debug("Running " + OSTaskController.SET_SUBSCRIPTION + " operation from pending queue.");
-               setSubscription(enable);
+               disablePush(disable);
             }
          });
          return;
@@ -2436,8 +2436,8 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_SUBSCRIPTION))
          return;
 
-      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(enable);
-      OneSignalStateSynchronizer.setSubscription(enable);
+      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(disable);
+      OneSignalStateSynchronizer.setSubscription(disable);
    }
 
    /**
@@ -2823,7 +2823,7 @@ public class OneSignal {
     * <br/>
     * - Getting a player/user ID from OneSignal
     * <br/>
-    * - {@link OneSignal#setSubscription(boolean)} is called
+    * - {@link OneSignal#disablePush(boolean)} is called
     * <br/>
     * - User disables or enables notifications
     * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer

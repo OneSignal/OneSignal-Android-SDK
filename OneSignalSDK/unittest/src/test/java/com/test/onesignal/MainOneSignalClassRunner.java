@@ -1281,7 +1281,7 @@ public class MainOneSignalClassRunner {
       Robolectric.getForegroundThreadScheduler().runOneTask();
       assertEquals(ShadowPushRegistratorFCM.regId, lastRegistrationId);
 
-      OneSignal.setSubscription(false);
+      OneSignal.disablePush(false);
       getIdsAvailableHandler();
       threadAndTaskWait();
       assertNull(lastRegistrationId);
@@ -1296,7 +1296,7 @@ public class MainOneSignalClassRunner {
 
       // Should not try to update server
       ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Restart app - Should omit notification_types
@@ -1312,7 +1312,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldNotResetSubscriptionOnSession() throws Exception {
       OneSignalInit();
-      OneSignal.setSubscription(false);
+      OneSignal.disablePush(false);
       threadAndTaskWait();
       assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
@@ -1328,7 +1328,7 @@ public class MainOneSignalClassRunner {
       // Failed to register with OneSignal but SetSubscription was called with false
       ShadowOneSignalRestClient.failAll = true;
       OneSignalInit();
-      OneSignal.setSubscription(false);
+      OneSignal.disablePush(false);
       threadAndTaskWait();
       ShadowOneSignalRestClient.failAll = false;
 
@@ -1351,7 +1351,7 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorFCM.fail = true;
       OneSignalInit();
       threadAndTaskWait();
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
 
       // Restart app - Should send subscribe with on_session call.
       fastColdRestartApp();
@@ -1367,25 +1367,25 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      OneSignal.setSubscription(false);
+      OneSignal.disablePush(false);
       threadAndTaskWait();
 
       assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value
       ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.setSubscription(false);
+      OneSignal.disablePush(false);
       assertNull(ShadowOneSignalRestClient.lastPost);
 
 
 
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       threadAndTaskWait();
       assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value
       ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       threadAndTaskWait();
       assertNull(ShadowOneSignalRestClient.lastPost);
    }
@@ -1512,7 +1512,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("key", "value");
       threadAndTaskWait();
 
-      OneSignal.setSubscription(false);
+      OneSignal.disablePush(false);
       threadAndTaskWait();
    }
 
@@ -2704,7 +2704,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2736,7 +2736,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2766,7 +2766,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2796,7 +2796,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.setSubscription(true);
+      OneSignal.disablePush(true);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
