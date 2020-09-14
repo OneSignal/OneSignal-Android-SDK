@@ -19,11 +19,11 @@ public class InAppMessagingHelpers {
     public static final String IAM_CLICK_ID = "12345678-1234-1234-1234-123456789012";
 
     public static boolean evaluateMessage(OSInAppMessage message) {
-        return OSInAppMessageController.getController().triggerController.evaluateMessageTriggers(message);
+        return OSInAppMessageController.getController(OneSignal.getLogger()).triggerController.evaluateMessageTriggers(message);
     }
 
     public static boolean dynamicTriggerShouldFire(OSTrigger trigger) {
-        return OSInAppMessageController.getController().triggerController.dynamicTriggerController.dynamicTriggerShouldFire(trigger);
+        return OSInAppMessageController.getController(OneSignal.getLogger()).triggerController.dynamicTriggerController.dynamicTriggerShouldFire(trigger);
     }
 
     public static void resetSessionLaunchTime() {
@@ -32,7 +32,7 @@ public class InAppMessagingHelpers {
 
     public static void clearTestState() {
         OneSignal.pauseInAppMessages(false);
-        OSInAppMessageController.getController().getInAppMessageDisplayQueue().clear();
+        OSInAppMessageController.getController(OneSignal.getLogger()).getInAppMessageDisplayQueue().clear();
     }
 
     // Convenience method that wraps an object in a JSON Array

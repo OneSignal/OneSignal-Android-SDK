@@ -575,8 +575,10 @@ public class OneSignal {
       }
 
       // Already set by remote params
-      if (getRemoteParamController().hasUnsubscribeNotificationKey())
+      if (getRemoteParamController().hasUnsubscribeNotificationKey()) {
+         logger.warning("unsubscribeWhenNotificationsAreDisabled already called by remote params!, ignoring user set");
          return;
+      }
 
       getRemoteParamController().saveUnsubscribeWhenNotificationsAreDisabled(set);
    }
@@ -837,7 +839,7 @@ public class OneSignal {
             sessionManager.restartSessionIfNeeded(getAppEntryState());
          }
       } else if (inForeground) {
-         OSInAppMessageController.getController().initWithCachedInAppMessages();
+         OSInAppMessageController.getController(OneSignal.getLogger()).initWithCachedInAppMessages();
          sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
 
@@ -1024,8 +1026,10 @@ public class OneSignal {
       }
 
       // Already set by remote params
-      if (getRemoteParamController().hasPrivacyConsentKey())
+      if (getRemoteParamController().hasPrivacyConsentKey()) {
+         logger.warning("setRequiresUserPrivacyConsent already called by remote params!, ignoring user set");
          return;
+      }
 
       if (requiresUserPrivacyConsent() && !required) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Cannot change requiresUserPrivacyConsent() from TRUE to FALSE");
@@ -1154,6 +1158,10 @@ public class OneSignal {
       if (errorResponse != null && atLogLevel(LOG_LEVEL.INFO))
          jsonError = "\n" + errorResponse + "\n";
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
+   }
+
+   static OSLogger getLogger() {
+      return logger;
    }
 
    // Returns true if there is active time that is unsynced.
@@ -1337,8 +1345,10 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SYNC_HASHED_EMAIL))
          return;
 
-      if (!OSUtils.isValidEmail(email))
+      if (!OSUtils.isValidEmail(email)) {
+         logger.error("syncHashedEmail called with an invalid email!, ignoring");
          return;
+      }
 
       String trimmedEmail = email.trim();
       OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
@@ -1441,7 +1451,7 @@ public class OneSignal {
          final String message = "logoutEmail not valid as email was not set or already logged out!";
          if (callback != null)
             callback.onFailure(new EmailUpdateError(EmailErrorType.INVALID_OPERATION, message));
-         Log(LOG_LEVEL.ERROR, message);
+         logger.error(message);
          return;
       }
 
@@ -1594,6 +1604,7 @@ public class OneSignal {
          @Override
          public void run() {
             if (keyValues == null) {
+               logger.error("Attempted to send null tags");
                if (changeTagsUpdateHandler != null)
                   changeTagsUpdateHandler.onFailure(new SendTagsError(-1, "Attempted to send null tags"));
                return;
@@ -1623,9 +1634,12 @@ public class OneSignal {
             }
 
             if (!toSend.toString().equals("{}")) {
+               logger.debug("Available tags to send: " + toSend.toString());
                OneSignalStateSynchronizer.sendTags(toSend, changeTagsUpdateHandler);
-            } else if (changeTagsUpdateHandler != null) {
-               changeTagsUpdateHandler.onSuccess(existingKeys);
+            } else {
+               logger.debug("Send tags ended successfully");
+               if (changeTagsUpdateHandler != null)
+                  changeTagsUpdateHandler.onSuccess(existingKeys);
             }
          }
       };
@@ -1662,7 +1676,7 @@ public class OneSignal {
     */
    public static void postNotification(JSONObject json, final PostNotificationResponseHandler handler) {
 
-      //if applicable, check if the user provided privacy consent
+      // If applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("postNotification()"))
          return;
 
@@ -1680,7 +1694,7 @@ public class OneSignal {
          OneSignalRestClient.post("notifications/", json, new OneSignalRestClient.ResponseHandler() {
             @Override
             public void onSuccess(String response) {
-               Log(LOG_LEVEL.DEBUG, "HTTP create notification success: " + (response != null ? response : "null"));
+               logger.debug("HTTP create notification success: " + (response != null ? response : "null"));
                if (handler != null) {
                   try {
                      JSONObject jsonObject = new JSONObject(response);
@@ -1714,7 +1728,7 @@ public class OneSignal {
             }
          });
       } catch (JSONException e) {
-         Log(LOG_LEVEL.ERROR, "HTTP create notification json exception!", e);
+         logger.error("HTTP create notification json exception!", e);
          if (handler != null) {
             try {
                handler.onFailure(new JSONObject("{'error': 'HTTP create notification json exception!'}"));
@@ -1746,11 +1760,11 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (remoteParamController.isRemoteParamsCallDone() && shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.GET_TAGS))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.GET_TAGS))
          return;
 
       if (getTagsHandler == null) {
-         logger.error("getTagsHandler is null!");
+         logger.error("getTags called with null GetTagsHandler!");
          return;
       }
 
@@ -2115,7 +2129,7 @@ public class OneSignal {
 
    /**
     * Method called when opening a notification
-    * */
+    */
    public static void handleNotificationOpen(Context inContext, final JSONArray data, final boolean fromAlert, @Nullable final String notificationId) {
       // Delay call until remote params are set
       if (taskController.shouldQueueTaskForInit(OSTaskController.HANDLE_NOTIFICATION_OPEN)) {
@@ -2359,8 +2373,10 @@ public class OneSignal {
     * @param enable Passing {@code false} means that the device will only vibrate lightly when the device is in it's vibrate only mode.
     */
    public static void enableVibrate(boolean enable) {
-      if (appContext == null)
+      if (appContext == null) {
+         logger.error("enableVibrate called before initWithContext!");
          return;
+      }
 
       OneSignalPrefs.saveBool(
               OneSignalPrefs.PREFS_ONESIGNAL,
@@ -2385,8 +2401,10 @@ public class OneSignal {
     * @param enable Passing {@code false} means that the device will only vibrate unless the device is set to a total silent mode.
     */
    public static void enableSound(boolean enable) {
-      if (appContext == null)
+      if (appContext == null) {
+         logger.error("enableSound called before initWithContext!");
          return;
+      }
 
       OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_GT_SOUND_ENABLED,enable);
@@ -2794,7 +2812,7 @@ public class OneSignal {
    public static void addPermissionObserver(OSPermissionObserver observer) {
 
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add permission observer");
+         logger.error("OneSignal.initWithContext has not been called. Could not add permission observer");
          return;
       }
 
@@ -2806,7 +2824,7 @@ public class OneSignal {
 
    public static void removePermissionObserver(OSPermissionObserver observer) {
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify permission observer");
+         logger.error("OneSignal.initWithContext has not been called. Could not modify permission observer");
          return;
       }
 
@@ -2830,7 +2848,7 @@ public class OneSignal {
     */
    public static void addSubscriptionObserver(OSSubscriptionObserver observer) {
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add subscription observer");
+         logger.error("OneSignal.initWithContext has not been called. Could not add subscription observer");
          return;
       }
 
@@ -2842,7 +2860,7 @@ public class OneSignal {
 
    public static void removeSubscriptionObserver(OSSubscriptionObserver observer) {
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify subscription observer");
+         logger.error("OneSignal.initWithContext has not been called. Could not modify subscription observer");
          return;
       }
 
@@ -2863,7 +2881,7 @@ public class OneSignal {
    public static void addEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
 
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not add email subscription observer");
+         logger.error("OneSignal.initWithContext has not been called. Could not add email subscription observer");
          return;
       }
 
@@ -2875,7 +2893,7 @@ public class OneSignal {
 
    public static void removeEmailSubscriptionObserver(@NonNull OSEmailSubscriptionObserver observer) {
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not modify email subscription observer");
+         logger.error("OneSignal.initWithContext has not been called. Could not modify email subscription observer");
          return;
       }
 
@@ -2899,7 +2917,7 @@ public class OneSignal {
          return null;
 
       if (appContext == null) {
-         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. Could not get OSPermissionSubscriptionState");
+         logger.error("OneSignal.initWithContext has not been called. Could not get OSPermissionSubscriptionState");
          return null;
       }
 
@@ -2918,7 +2936,7 @@ public class OneSignal {
     * Triggers are used for targeting in-app messages.
     */
    public static void addTriggers(Map<String, Object> triggers) {
-      OSInAppMessageController.getController().addTriggers(triggers);
+      OSInAppMessageController.getController(logger).addTriggers(triggers);
    }
 
    /**
@@ -2930,7 +2948,7 @@ public class OneSignal {
          JSONObject jsonObject = new JSONObject(triggersJsonString);
          addTriggers(JSONUtils.jsonObjectToMap(jsonObject));
       } catch (JSONException e) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "addTriggersFromJsonString, invalid json", e);
+         logger.error("addTriggersFromJsonString, invalid json", e);
       }
    }
 
@@ -2941,13 +2959,12 @@ public class OneSignal {
       HashMap<String, Object> triggerMap = new HashMap<>();
       triggerMap.put(key, object);
 
-      OSInAppMessageController.getController().addTriggers(triggerMap);
+      OSInAppMessageController.getController(logger).addTriggers(triggerMap);
    }
-
 
    /** Removes a list/collection of triggers from their keys with a Collection of Strings */
    public static void removeTriggersForKeys(Collection<String> keys) {
-      OSInAppMessageController.getController().removeTriggersForKeys(keys);
+      OSInAppMessageController.getController(logger).removeTriggersForKeys(keys);
    }
 
    /** Removes a list/collection of triggers from their keys with a JSONArray String.
@@ -2960,10 +2977,10 @@ public class OneSignal {
          );
          // Some keys were filtered, log as warning
          if (jsonArray.length() != keysCollection.size())
-            OneSignal.Log(LOG_LEVEL.WARN, "removeTriggersForKeysFromJsonArrayString: Skipped removing non-String type keys ");
-         OSInAppMessageController.getController().removeTriggersForKeys(keysCollection);
+            logger.warning("removeTriggersForKeysFromJsonArrayString: Skipped removing non-String type keys ");
+         OSInAppMessageController.getController(logger).removeTriggersForKeys(keysCollection);
       } catch (JSONException e) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "removeTriggersForKeysFromJsonArrayString, invalid json", e);
+         logger.error("removeTriggersForKeysFromJsonArrayString, invalid json", e);
       }
    }
 
@@ -2972,13 +2989,13 @@ public class OneSignal {
       ArrayList<String> triggerKeys = new ArrayList<>();
       triggerKeys.add(key);
 
-      OSInAppMessageController.getController().removeTriggersForKeys(triggerKeys);
+      OSInAppMessageController.getController(logger).removeTriggersForKeys(triggerKeys);
    }
 
    /** Returns a single trigger value for the given key (if it exists, otherwise returns null) */
    @Nullable
    public static Object getTriggerValueForKey(String key) {
-      return OSInAppMessageController.getController().getTriggerValue(key);
+      return OSInAppMessageController.getController(logger).getTriggerValue(key);
    }
 
    /***
@@ -2989,7 +3006,7 @@ public class OneSignal {
     */
    public static void pauseInAppMessages(final boolean pause) {
       if (appContext == null) {
-         logger.error("Waiting sepAppContext. " +
+         logger.error("Waiting initWithContext. " +
                  "Moving " + OSTaskController.PAUSE_IN_APP_MESSAGES + " operation to a pending task queue.");
          taskController.addTaskToQueue(new Runnable() {
             @Override
@@ -3001,7 +3018,7 @@ public class OneSignal {
          return;
       }
 
-      OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
+      OSInAppMessageController.getController(logger).setInAppMessagingEnabled(!pause);
    }
 
    private static boolean isDuplicateNotification(Context context, String id) {
@@ -3031,7 +3048,7 @@ public class OneSignal {
          exists = cursor.moveToFirst();
       }
       catch (Throwable t) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Could not check for duplicate, assuming unique.", t);
+         logger.error("Could not check for duplicate, assuming unique.", t);
       }
       finally {
          if (cursor != null)
@@ -3039,7 +3056,7 @@ public class OneSignal {
       }
 
       if (exists) {
-         Log(LOG_LEVEL.DEBUG, "Duplicate FCM message received, skip processing of " + id);
+         logger.debug("Duplicate FCM message received, skip processing of " + id);
          return true;
       }
 
@@ -3060,9 +3077,9 @@ public class OneSignal {
          if (customJSON.has("i"))
             return customJSON.optString("i", null);
          else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'i' field in custom.");
+            logger.debug("Not a OneSignal formatted FCM message. No 'i' field in custom.");
       } catch (JSONException e) {
-         Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'custom' field in the JSONObject.");
+         logger.debug("Not a OneSignal formatted FCM message. No 'custom' field in the JSONObject.");
       }
 
       return null;
@@ -3200,11 +3217,13 @@ public class OneSignal {
    }
 
    public static void sendOutcome(@NonNull String name, OutcomeCallback callback) {
-      if (!isValidOutcomeEntry(name))
+      if (!isValidOutcomeEntry(name)) {
+         logger.error("Make sure OneSignal initWithContext and setAppId is called first");
          return;
+      }
 
       if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         logger.error("Make sure OneSignal initWithContext and setAppId is called first");
          return;
       }
 
@@ -3220,7 +3239,7 @@ public class OneSignal {
          return;
 
       if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         logger.error("Make sure OneSignal initWithContext and setAppId is called first");
          return;
       }
 
@@ -3236,7 +3255,7 @@ public class OneSignal {
          return;
 
       if (outcomeEventsController == null) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
+         logger.error("Make sure OneSignal.init is called first");
          return;
       }
 

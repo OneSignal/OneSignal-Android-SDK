@@ -417,7 +417,7 @@ class NotificationBundleProcessor {
             // If app is in focus display the IAMs preview now
             if (OneSignal.isAppActive()) {
                 result.inAppPreviewShown = true;
-                OSInAppMessageController.getController().displayPreviewMessage(previewUUID);
+                OSInAppMessageController.getController(OneSignal.getLogger()).displayPreviewMessage(previewUUID);
             }
             // Return early, we don't want the extender service or etc. to fire for IAM previews
             return result;

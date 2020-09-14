@@ -140,7 +140,7 @@ class NotificationOpenedProcessor {
          return false;
 
       OneSignal.startOrResumeApp(context);
-      OSInAppMessageController.getController().displayPreviewMessage(previewUUID);
+      OSInAppMessageController.getController(OneSignal.getLogger()).displayPreviewMessage(previewUUID);
       return true;
    }
 
