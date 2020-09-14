@@ -114,7 +114,7 @@ public class OSNotification {
 
          if (groupedNotifications != null) {
             JSONArray payloadJsonArray = new JSONArray();
-            for(OSNotificationPayload payload : groupedNotifications)
+            for (OSNotificationPayload payload : groupedNotifications)
                payloadJsonArray.put(payload.toJSONObject());
             mainObj.put("groupedNotifications", payloadJsonArray);
          }

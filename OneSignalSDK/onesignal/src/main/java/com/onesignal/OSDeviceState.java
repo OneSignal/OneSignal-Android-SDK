@@ -27,9 +27,11 @@
 
 package com.onesignal;
 
+import org.json.JSONObject;
+
 public class OSDeviceState {
 
-    private final boolean notificationEnabled;
+    private final boolean areNotificationsEnabled;
     private final boolean pushDisabled;
     private final boolean subscribed;
     private final String userId;
@@ -42,7 +44,7 @@ public class OSDeviceState {
         OSPermissionState permissionStatus = permissionSubscriptionState.permissionStatus;
         OSEmailSubscriptionState emailSubscriptionStatus = permissionSubscriptionState.emailSubscriptionStatus;
 
-        notificationEnabled = permissionStatus.getEnabled();
+        areNotificationsEnabled = permissionStatus.getEnabled();
         pushDisabled = !subscriptionStatus.getUserSubscriptionSetting();
         subscribed = subscriptionStatus.getSubscribed();
         userId = subscriptionStatus.getUserId();
@@ -57,7 +59,7 @@ public class OSDeviceState {
      * @return false if the user disabled notifications for the app, otherwise true
      */
     public boolean areNotificationsEnabled() {
-        return notificationEnabled;
+        return areNotificationsEnabled;
     }
 
     /**
@@ -112,5 +114,23 @@ public class OSDeviceState {
      */
     public String getEmailAddress() {
         return emailAddress;
+    }
+
+    public JSONObject toJSONObject() {
+        JSONObject mainObj = new JSONObject();
+
+        try {
+            mainObj.put("areNotificationsEnabled", areNotificationsEnabled);
+            mainObj.put("isPushDisabled", pushDisabled);
+            mainObj.put("isSubscribed", subscribed);
+            mainObj.put("userId", userId);
+            mainObj.put("pushToken", pushToken);
+            mainObj.put("emailUserId", emailUserId);
+            mainObj.put("emailAddress", emailAddress);
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
+
+        return mainObj;
     }
 }

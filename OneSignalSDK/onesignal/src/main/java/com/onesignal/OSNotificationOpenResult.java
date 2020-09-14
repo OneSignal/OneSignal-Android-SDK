@@ -54,14 +54,8 @@ public class OSNotificationOpenResult {
    public String stringify() {
       JSONObject mainObj = new JSONObject();
       try {
-         JSONObject ac = new JSONObject();
-         ac.put("actionID", action.getActionID());
-         ac.put("type", action.getType().ordinal());
-
-         mainObj.put("action", ac);
-
-         JSONObject notifObject = notification.toJSONObject();
-         mainObj.put("notification", notifObject);
+         mainObj.put("action", action.toJSONObject());
+         mainObj.put("notification", notification.toJSONObject());
       }
       catch(JSONException e) {e.printStackTrace();}
 
@@ -71,11 +65,7 @@ public class OSNotificationOpenResult {
    public JSONObject toJSONObject() {
       JSONObject mainObj = new JSONObject();
       try {
-         JSONObject jsonObjAction = new JSONObject();
-         jsonObjAction.put("actionID", action.getActionID());
-         jsonObjAction.put("type", action.getType().ordinal());
-
-         mainObj.put("action", jsonObjAction);
+         mainObj.put("action", action.toJSONObject());
          mainObj.put("notification", notification.toJSONObject());
       }
       catch(JSONException e) {

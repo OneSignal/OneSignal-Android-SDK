@@ -1457,7 +1457,7 @@ public class GenerateNotificationRunner {
          notification.setModifiedContent(overrideSettings);
 
          OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
-         notificationId = notificationDisplayedResult.androidNotificationId;
+         notificationId = notificationDisplayedResult.getAndroidNotificationId();
 
          notification.complete();
       }

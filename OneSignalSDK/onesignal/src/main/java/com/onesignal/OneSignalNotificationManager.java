@@ -18,7 +18,6 @@ public class OneSignalNotificationManager {
     private static final String GROUPLESS_SUMMARY_KEY = "os_group_undefined";
     private static final int GROUPLESS_SUMMARY_ID = -718463522;
 
-
     static String getGrouplessSummaryKey() {
         return GROUPLESS_SUMMARY_KEY;
     }
