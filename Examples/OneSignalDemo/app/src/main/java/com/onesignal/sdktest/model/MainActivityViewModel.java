@@ -480,7 +480,7 @@ public class MainActivityViewModel implements ActivityViewModel {
             subscriptionRelativeLayout.setOnClickListener(v -> {
                 boolean isSubscribed1 = subscriptionSwitch.isChecked();
                 subscriptionSwitch.setChecked(!isSubscribed1);
-                OneSignal.setSubscription(!isSubscribed1);
+                OneSignal.disablePush(!isSubscribed1);
             });
         } else {
             subscriptionRelativeLayout.setOnClickListener(v -> intentTo.notificationPermissions());
@@ -488,7 +488,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         subscriptionSwitch.setOnClickListener(v -> {
             boolean isSubscribed12 = subscriptionSwitch.isChecked();
-            OneSignal.setSubscription(!isSubscribed12);
+            OneSignal.disablePush(!isSubscribed12);
         });
     }
 
