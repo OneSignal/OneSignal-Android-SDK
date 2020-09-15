@@ -9,6 +9,8 @@ import com.onesignal.OSTrigger.OSTriggerOperator;
 class OSDynamicTriggerController {
 
     interface OSDynamicTriggerControllerObserver {
+        // Alerts the observer that a trigger evaluated to true
+        void messageDynamicTriggerCompleted(String triggerId);
         // Alerts the observer that a trigger timer has fired
         void messageTriggerConditionChanged();
     }
@@ -28,7 +30,7 @@ class OSDynamicTriggerController {
         observer = triggerObserver;
     }
 
-    boolean dynamicTriggerShouldFire(final OSTrigger trigger) {
+    boolean dynamicTriggerShouldFire(OSTrigger trigger) {
         if (trigger.value == null)
             return false;
 
@@ -53,27 +55,30 @@ class OSDynamicTriggerController {
                     break;
             }
 
+            final String triggerId = trigger.triggerId;
             long requiredTimeInterval = (long) (((Number) trigger.value).doubleValue() * 1_000);
-            if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimeInterval, trigger.operatorType))
+            if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimeInterval, trigger.operatorType)) {
+                observer.messageDynamicTriggerCompleted(triggerId);
                 return true;
+            }
 
             long offset = requiredTimeInterval - currentTimeInterval;
             if (offset <= 0L)
                 return false;
 
             // Prevents re-scheduling timers for messages that we're already waiting on
-            if (scheduledMessages.contains(trigger.triggerId))
+            if (scheduledMessages.contains(triggerId))
                 return false;
 
             OSDynamicTriggerTimer.scheduleTrigger(new TimerTask() {
                 @Override
                 public void run() {
-                    scheduledMessages.remove(trigger.triggerId);
+                    scheduledMessages.remove(triggerId);
                     observer.messageTriggerConditionChanged();
                 }
-            }, trigger.triggerId, offset);
+            }, triggerId, offset);
 
-            scheduledMessages.add(trigger.triggerId);
+            scheduledMessages.add(triggerId);
         }
 
         return false;

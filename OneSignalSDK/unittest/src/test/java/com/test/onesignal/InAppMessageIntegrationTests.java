@@ -1184,6 +1184,65 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
+    public void testInAppMessageDisplayMultipleTimes_sessionDurationTrigger() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(OSTriggerKind.SESSION_TIME, "",
+                OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05, LIMIT, DELAY);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // Init OneSignal IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // No schedule should happen, IAM should evaluate to true
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+
+        // Dismiss IAM will make display quantity increase and last display time to change
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        // Check IAMs was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Check if data after dismiss is set correctly
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime =  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
+        assertTrue(lastDisplayTime > 0);
+
+        // Change time for delay to be covered
+        advanceSystemTimeBy(DELAY);
+        fastColdRestartApp();
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // Init OneSignal IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // No schedule should happen since session time period is very small, should evaluate to true on first run
+        // Wait for redisplay logic
+        Awaitility.await()
+                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                    }
+                });
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        // Check IAMs was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Check if data after dismiss is set correctly
+        assertEquals(1,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(2,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        assertTrue( OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
+    }
+
+    @Test
     public void testInAppMessageDisplayMultipleTimes_NoTriggers() throws Exception {
         final long currentTimeInSeconds = System.currentTimeMillis() / 1000;
 
