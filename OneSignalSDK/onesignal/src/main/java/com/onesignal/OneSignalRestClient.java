@@ -52,11 +52,15 @@ class OneSignalRestClient {
 
    private static final String OS_API_VERSION = "1";
    private static final String OS_ACCEPT_HEADER = "application/vnd.onesignal.v" + OS_API_VERSION + "+json";
-   private static final String BASE_URL = "https://api.onesignal.com/";
+   private static String BASE_URL = "https://api.onesignal.com/";
    
    private static final int THREAD_ID = 10000;
    private static final int TIMEOUT = 120_000;
    private static final int GET_TIMEOUT = 60_000;
+
+   public static void updateBaseURL(String baseUrl){
+      if(baseUrl != null) BASE_URL = baseUrl + (baseUrl.endsWith("/") ? "" : "/");
+   }
    
    private static int getThreadTimeout(int timeout) {
       return timeout + 5_000;

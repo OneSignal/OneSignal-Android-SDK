@@ -699,6 +699,11 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      init(context, googleProjectNumber, oneSignalAppId, null, notificationOpenedHandler, null);
+   }
+
+   public static void init(Context context, String googleProjectNumber, String oneSignalAppId, String baseUrl, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      OneSignalRestClient.updateBaseURL(baseUrl);
       mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
       OneSignal.setAppContext(context);
       setupPrivacyConsent(context);
