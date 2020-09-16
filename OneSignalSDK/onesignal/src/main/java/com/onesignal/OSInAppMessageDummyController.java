@@ -17,8 +17,8 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
      * This is a dummy controller that will be used for Android 4.3 and older devices
      * All methods should be overridden and as empty as possible (few return exceptions)
      */
-    OSInAppMessageDummyController(OneSignalDbHelper dbHelper) {
-        super(dbHelper);
+    OSInAppMessageDummyController(OneSignalDbHelper dbHelper, OSLogger logger) {
+        super(dbHelper, logger);
     }
 
     @Override

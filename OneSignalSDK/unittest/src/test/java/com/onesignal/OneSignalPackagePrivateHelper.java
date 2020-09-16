@@ -494,33 +494,33 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void dismissCurrentMessage() {
-      com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage();
+      com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getCurrentDisplayedInAppMessage();
       if (message != null)
-         com.onesignal.OSInAppMessageController.getController().messageWasDismissed(message);
+         com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).messageWasDismissed(message);
    }
 
    public static boolean isInAppMessageShowing() {
-      return com.onesignal.OSInAppMessageController.getController().isInAppMessageShowing();
+      return com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).isInAppMessageShowing();
    }
 
    public static String getShowingInAppMessageId() {
-      return com.onesignal.OSInAppMessageController.getController().getCurrentDisplayedInAppMessage().messageId;
+      return com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getCurrentDisplayedInAppMessage().messageId;
    }
 
    public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
-      return com.onesignal.OSInAppMessageController.getController().getInAppMessageDisplayQueue();
+      return com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getInAppMessageDisplayQueue();
    }
 
    public static void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
-      com.onesignal.OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, actionJson);
+      com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).onMessageActionOccurredOnMessage(message, actionJson);
    }
 
    public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
-      com.onesignal.OSInAppMessageController.getController().onMessageWasShown(message);
+      com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).onMessageWasShown(message);
    }
 
    public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
-      List<OSInAppMessage> messages = com.onesignal.OSInAppMessageController.getController().getRedisplayedInAppMessages();
+      List<OSInAppMessage> messages = com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getRedisplayedInAppMessages();
       List<OSTestInAppMessage> testMessages = new ArrayList<>();
 
       for (OSInAppMessage message : messages) {
