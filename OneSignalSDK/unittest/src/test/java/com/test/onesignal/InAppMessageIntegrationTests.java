@@ -66,6 +66,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionMa
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSharedPreferences;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
+import static com.onesignal.OneSignalPackagePrivateHelper.dismissCurrentMessage;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertMeasureOnV2AtIndex;
 import static com.test.onesignal.TestHelpers.assertMainThread;
@@ -396,6 +397,55 @@ public class InAppMessageIntegrationTests {
         // the message should now have been displayed
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         assertFalse(ShadowDynamicTimer.hasScheduledTimer);
+    }
+
+    @Test
+    public void testMessageDisplayedAfterAddTriggerEqualWithStringVsNumber() throws Exception {
+        // Set IAM with EQUAL trigger with number value as string
+        final OSTestInAppMessage message =
+                InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), "5");
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        OneSignalInit();
+        threadAndTaskWait();
+
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+
+        // after setting this trigger the message should be displayed immediately
+        OneSignal.addTrigger("test", 5.0);
+        threadAndTaskWait();
+
+        // the message should now have been displayed
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        dismissCurrentMessage();
+    }
+
+
+    @Test
+    public void testMessageDisplayedAfterAddTriggerEqualWithStringVsNumberFloat() throws Exception {
+        // Set IAM with EQUAL trigger with number value as string
+        final OSTestInAppMessage message =
+                InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), "5.5");
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        OneSignalInit();
+        threadAndTaskWait();
+
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+
+        // after setting this trigger the message should be displayed immediately
+        OneSignal.addTrigger("test", 5.50);
+        threadAndTaskWait();
+
+        // the message should now have been displayed
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        dismissCurrentMessage();
     }
 
     @Test
