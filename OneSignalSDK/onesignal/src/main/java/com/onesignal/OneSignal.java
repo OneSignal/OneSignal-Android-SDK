@@ -811,9 +811,8 @@ public class OneSignal {
    }
 
    private static void handleActivityLifecycleHandler(Context context) {
-      inForeground = isContextActivity(context);
+      inForeground = ActivityLifecycleHandler.curActivity != null;
       if (inForeground) {
-         ActivityLifecycleHandler.curActivity = (Activity) context;
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
          FocusTimeController.getInstance().appForegrounded();
       }

@@ -273,6 +273,10 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.appId;
    }
 
+   public static boolean OneSignal_isInForeground() {
+      return OneSignal.isInForeground();
+   }
+
    static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}
 
    static public class RemoteOutcomeParams extends OneSignalRemoteParams.InfluenceParams {
