@@ -331,4 +331,9 @@ class RestClientAsserts {
       else
          fail("Invalid format");
    }
+
+   public static void assertRemoteParamsWasTheOnlyNetworkCall() {
+      assertRemoteParamsAtIndex(0);
+      assertRestCalls(1);
+   }
 }
