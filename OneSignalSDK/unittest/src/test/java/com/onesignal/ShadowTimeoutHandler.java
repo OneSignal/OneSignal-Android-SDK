@@ -32,6 +32,8 @@ public class ShadowTimeoutHandler {
 
     @Implementation
     public void startTimeout(long timeout, @NonNull Runnable runnable) {
+        destroyTimeout(runnable);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running startTimeout with timeout: " + timeout + " and runnable: " + runnable.toString());
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         executor.schedule(runnable, mockDelay ? mockDelayMillis : timeout, TimeUnit.MILLISECONDS);
         executorHashMap.put(runnable, executor);
@@ -39,6 +41,7 @@ public class ShadowTimeoutHandler {
 
     @Implementation
     public void destroyTimeout(Runnable runnable) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running destroyTimeout with runnable: " + runnable.toString());
         ScheduledThreadPoolExecutor executor = executorHashMap.get(runnable);
         if (executor != null) {
             executor.shutdownNow();

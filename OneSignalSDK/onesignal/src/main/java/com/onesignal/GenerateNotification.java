@@ -108,10 +108,7 @@ class GenerateNotification {
 
    @WorkerThread
    static void fromJsonPayload(OSNotificationGenerationJob notificationJob) {
-      setStatics(notificationJob.context);
-
-      if (notificationJob.displayOption.isSilent())
-         return;
+      setStatics(notificationJob.getContext());
 
       isRunningOnMainThreadCheck();
 
@@ -162,7 +159,7 @@ class GenerateNotification {
    }
    
    private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(OSNotificationGenerationJob notificationJob) {
-      JSONObject fcmJson = notificationJob.jsonPayload;
+      JSONObject fcmJson = notificationJob.getJsonPayload();
       OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
       
       NotificationCompat.Builder notifBuilder;
@@ -212,9 +209,9 @@ class GenerateNotification {
       if (bigPictureIcon != null)
          notifBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
 
-      if (notificationJob.shownTimeStamp != null) {
+      if (notificationJob.getShownTimeStamp() != null) {
          try {
-            notifBuilder.setWhen(notificationJob.shownTimeStamp * 1_000L);
+            notifBuilder.setWhen(notificationJob.getShownTimeStamp() * 1_000L);
          } catch (Throwable t) {} // Can throw if an old android support lib is used.
       }
 
@@ -280,7 +277,7 @@ class GenerateNotification {
    // Put the message into a notification and post it.
    private static void showNotification(OSNotificationGenerationJob notificationJob) {
       int notificationId = notificationJob.getAndroidId();
-      JSONObject fcmJson = notificationJob.jsonPayload;
+      JSONObject fcmJson = notificationJob.getJsonPayload();
       String group = fcmJson.optString("grp", null);
 
       ArrayList<StatusBarNotification> grouplessNotifs = new ArrayList<>();
@@ -309,7 +306,7 @@ class GenerateNotification {
       applyNotificationExtender(notificationJob, notifBuilder);
       
       // Keeps notification from playing sound + vibrating again
-      if (notificationJob.isRestoring)
+      if (notificationJob.isRestoring())
          removeNotifyOptions(notifBuilder);
 
       int makeRoomFor = 1;
@@ -371,34 +368,34 @@ class GenerateNotification {
 
    private static void applyNotificationExtender(
            OSNotificationGenerationJob notificationJob,
-           NotificationCompat.Builder notifBuilder) {
-      if (notificationJob.overrideSettings == null || notificationJob.overrideSettings.getExtender() == null)
+           NotificationCompat.Builder notificationBuilder) {
+      if (!notificationJob.hasExtender())
          return;
 
       try {
          Field mNotificationField = NotificationCompat.Builder.class.getDeclaredField("mNotification");
          mNotificationField.setAccessible(true);
-         Notification mNotification = (Notification)mNotificationField.get(notifBuilder);
+         Notification mNotification = (Notification)mNotificationField.get(notificationBuilder);
 
-         notificationJob.orgFlags = mNotification.flags;
-         notificationJob.orgSound = mNotification.sound;
-         notifBuilder.extend(notificationJob.overrideSettings.getExtender());
+         notificationJob.setOrgFlags(mNotification.flags);
+         notificationJob.setOrgSound(mNotification.sound);
+         notificationBuilder.extend(notificationJob.getNotification().getNotificationExtender());
 
-         mNotification = (Notification)mNotificationField.get(notifBuilder);
+         mNotification = (Notification)mNotificationField.get(notificationBuilder);
 
          Field mContentTextField = NotificationCompat.Builder.class.getDeclaredField("mContentText");
          mContentTextField.setAccessible(true);
-         CharSequence mContentText = (CharSequence)mContentTextField.get(notifBuilder);
+         CharSequence mContentText = (CharSequence)mContentTextField.get(notificationBuilder);
 
          Field mContentTitleField = NotificationCompat.Builder.class.getDeclaredField("mContentTitle");
          mContentTitleField.setAccessible(true);
-         CharSequence mContentTitle = (CharSequence)mContentTitleField.get(notifBuilder);
+         CharSequence mContentTitle = (CharSequence)mContentTitleField.get(notificationBuilder);
 
-         notificationJob.overriddenBodyFromExtender = mContentText;
-         notificationJob.overriddenTitleFromExtender = mContentTitle;
-         if (!notificationJob.isRestoring) {
-            notificationJob.overriddenFlags = mNotification.flags;
-            notificationJob.overriddenSound = mNotification.sound;
+         notificationJob.setOverriddenBodyFromExtender(mContentText);
+         notificationJob.setOverriddenTitleFromExtender(mContentTitle);
+         if (!notificationJob.isRestoring()) {
+            notificationJob.setOverriddenFlags(mNotification.flags);
+            notificationJob.setOverriddenSound(mNotification.sound);
          }
       } catch (Throwable t) {
          t.printStackTrace();
@@ -412,17 +409,17 @@ class GenerateNotification {
       // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
       // Android 4.2 and older just post the summary only.
       boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N
-                                       && !notificationJob.isRestoring;
+                                       && !notificationJob.isRestoring();
       
       if (singleNotifWorkArounds) {
-         if (notificationJob.overriddenSound != null && !notificationJob.overriddenSound.equals(notificationJob.orgSound))
+         if (notificationJob.getOverriddenSound() != null && !notificationJob.getOverriddenSound().equals(notificationJob.getOrgSound()))
             notifBuilder.setSound(null);
       }
 
       Notification notification = notifBuilder.build();
 
       if (singleNotifWorkArounds)
-         notifBuilder.setSound(notificationJob.overriddenSound);
+         notifBuilder.setSound(notificationJob.getOverriddenSound());
 
       return notification;
    }
@@ -449,14 +446,14 @@ class GenerateNotification {
    }
 
    static void updateSummaryNotification(OSNotificationGenerationJob notificationJob) {
-      setStatics(notificationJob.context);
+      setStatics(notificationJob.getContext());
       createSummaryNotification(notificationJob, null);
    }
 
    // This summary notification will be visible instead of the normal one on pre-Android 7.0 devices.
    private static void createSummaryNotification(OSNotificationGenerationJob notificationJob, OneSignalNotificationBuilder notifBuilder) {
-      boolean updateSummary = notificationJob.isRestoring;
-      JSONObject fcmJson = notificationJob.jsonPayload;
+      boolean updateSummary = notificationJob.isRestoring();
+      JSONObject fcmJson = notificationJob.getJsonPayload();
 
       String group = fcmJson.optString("grp", null);
 
@@ -563,11 +560,11 @@ class GenerateNotification {
          if (updateSummary)
             removeNotifyOptions(summaryBuilder);
          else {
-            if (notificationJob.overriddenSound != null)
-               summaryBuilder.setSound(notificationJob.overriddenSound);
+            if (notificationJob.getOverriddenSound() != null)
+               summaryBuilder.setSound(notificationJob.getOverriddenSound());
    
-            if (notificationJob.overriddenFlags != null)
-               summaryBuilder.setDefaults(notificationJob.overriddenFlags);
+            if (notificationJob.getOverriddenFlags() != null)
+               summaryBuilder.setDefaults(notificationJob.getOverriddenFlags());
          }
 
          // The summary is designed to fit all notifications.
@@ -656,7 +653,7 @@ class GenerateNotification {
 
    @RequiresApi(api = Build.VERSION_CODES.M)
    private static void createGrouplessSummaryNotification(OSNotificationGenerationJob notificationJob, int grouplessNotifCount) {
-      JSONObject fcmJson = notificationJob.jsonPayload;
+      JSONObject fcmJson = notificationJob.getJsonPayload();
 
       Notification summaryNotification;
 
@@ -669,11 +666,11 @@ class GenerateNotification {
       PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
 
       NotificationCompat.Builder summaryBuilder = getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder;
-      if (notificationJob.overriddenSound != null)
-         summaryBuilder.setSound(notificationJob.overriddenSound);
+      if (notificationJob.getOverriddenSound() != null)
+         summaryBuilder.setSound(notificationJob.getOverriddenSound());
 
-      if (notificationJob.overriddenFlags != null)
-         summaryBuilder.setDefaults(notificationJob.overriddenFlags);
+      if (notificationJob.getOverriddenFlags() != null)
+         summaryBuilder.setDefaults(notificationJob.getOverriddenFlags());
 
       // The summary is designed to fit all notifications.
       //   Default small and large icons are used instead of the payload options to enforce this.

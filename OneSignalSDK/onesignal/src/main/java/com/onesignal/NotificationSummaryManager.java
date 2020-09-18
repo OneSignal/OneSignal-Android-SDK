@@ -110,12 +110,12 @@ class NotificationSummaryManager {
             return cursor;
          
          OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-         notificationJob.isRestoring = true;
-         notificationJob.shownTimeStamp = datetime;
+         notificationJob.setRestoring(true);
+         notificationJob.setShownTimeStamp(datetime);
       
          JSONObject payload = new JSONObject();
          payload.put("grp", group);
-         notificationJob.jsonPayload = payload;
+         notificationJob.setJsonPayload(payload);
       
          GenerateNotification.updateSummaryNotification(notificationJob);
       } catch (JSONException e) {}

@@ -27,11 +27,10 @@
 
 package com.onesignal;
 
-
 import android.content.Context;
 import android.net.Uri;
 
-import com.onesignal.OneSignal.OSNotificationDisplay;
+import androidx.core.app.NotificationCompat;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -40,54 +39,34 @@ import java.security.SecureRandom;
 
 public class OSNotificationGenerationJob {
 
-    // Timeout in seconds before applying defaults
-    private static final long SHOW_NOTIFICATION_TIMEOUT = 25 * 1_000L;
+    private OSNotification notification;
+    private Context context;
+    private JSONObject jsonPayload;
+    private boolean restoring;
+    private boolean iamPreview;
+    private boolean processed;
 
-    private static final String TITLE_PAYLOAD_PARAM = "title";
-    private static final String ALERT_PAYLOAD_PARAM = "alert";
-    private static final String CUSTOM_PAYLOAD_PARAM = "custom";
-    private static final String ADDITIONAL_DATA_PAYLOAD_PARAM = "a";
+    private Long shownTimeStamp;
 
-    Context context;
-    JSONObject jsonPayload;
-    boolean isRestoring;
-    boolean isIamPreview;
-    OSNotificationDisplay displayOption = OSNotificationDisplay.NOTIFICATION;
-
-    Long shownTimeStamp;
-
-    CharSequence overriddenBodyFromExtender;
-    CharSequence overriddenTitleFromExtender;
-    Uri overriddenSound;
-    Integer overriddenFlags;
-    Integer orgFlags;
-    Uri orgSound;
-
-    OSNotificationExtender.OverrideSettings overrideSettings;
+    private CharSequence overriddenBodyFromExtender;
+    private CharSequence overriddenTitleFromExtender;
+    private Uri overriddenSound;
+    private Integer overriddenFlags;
+    private Integer orgFlags;
+    private Uri orgSound;
 
     OSNotificationGenerationJob(Context context) {
         this.context = context;
     }
 
-    String getApiNotificationId() {
-        return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
+    OSNotificationGenerationJob(Context context, JSONObject jsonPayload) {
+        this(context, new OSNotification(jsonPayload), jsonPayload);
     }
 
-    int getAndroidIdWithoutCreate() {
-        if (overrideSettings == null || overrideSettings.getAndroidNotificationId() == null)
-            return -1;
-
-        return overrideSettings.getAndroidNotificationId();
-    }
-
-    Integer getAndroidId() {
-        if (overrideSettings == null)
-            overrideSettings = new OSNotificationExtender.OverrideSettings();
-
-        if (overrideSettings.getAndroidNotificationId() == null)
-            overrideSettings.setAndroidNotificationId(new SecureRandom().nextInt());
-
-        return overrideSettings.getAndroidNotificationId();
+    OSNotificationGenerationJob(Context context, OSNotification notification, JSONObject jsonPayload) {
+        this.context = context;
+        this.jsonPayload = jsonPayload;
+        this.notification = notification;
     }
 
     /**
@@ -96,7 +75,7 @@ public class OSNotificationGenerationJob {
     CharSequence getTitle() {
         if (overriddenTitleFromExtender != null)
             return overriddenTitleFromExtender;
-        return jsonPayload.optString(TITLE_PAYLOAD_PARAM, null);
+        return notification.getTitle();
     }
 
     /**
@@ -105,22 +84,14 @@ public class OSNotificationGenerationJob {
     CharSequence getBody() {
         if (overriddenBodyFromExtender != null)
             return overriddenBodyFromExtender;
-        return jsonPayload.optString(ALERT_PAYLOAD_PARAM, null);
+        return notification.getBody();
     }
 
     /**
      * Get the notification additional data json from the payload
      */
     JSONObject getAdditionalData() {
-        try {
-            return new JSONObject(jsonPayload
-                    .optString(CUSTOM_PAYLOAD_PARAM))
-                    .getJSONObject(ADDITIONAL_DATA_PAYLOAD_PARAM);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        return new JSONObject();
+        return notification.getAdditionalData() != null ? notification.getAdditionalData() : new JSONObject();
     }
 
     /**
@@ -131,159 +102,148 @@ public class OSNotificationGenerationJob {
     }
 
     boolean hasExtender() {
-        return overrideSettings != null && overrideSettings.getExtender() != null;
+        return notification.getNotificationExtender() != null;
+    }
+
+    String getApiNotificationId() {
+        return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
+    }
+
+    int getAndroidIdWithoutCreate() {
+        if (!notification.hasNotificationId())
+            return -1;
+
+        return notification.getAndroidNotificationId();
+    }
+
+    Integer getAndroidId() {
+        if (!notification.hasNotificationId())
+            notification.setAndroidNotificationId(new SecureRandom().nextInt());
+
+        return notification.getAndroidNotificationId() ;
     }
 
     void setAndroidIdWithoutOverriding(Integer id) {
         if (id == null)
             return;
 
-        if (overrideSettings != null && overrideSettings.getAndroidNotificationId() != null)
+        if (notification.hasNotificationId())
             return;
 
-        if (overrideSettings == null)
-            overrideSettings = new OSNotificationExtender.OverrideSettings();
-
-        overrideSettings.setAndroidNotificationId(id);
+        notification.setAndroidNotificationId(id);
     }
 
-    private OSNotificationDisplay getNotificationDisplayOption() {
-        return this.displayOption;
+    public OSNotification getNotification() {
+        return notification;
     }
 
-    private void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
-        this.displayOption = displayOption;
+    public void setNotification(OSNotification notification) {
+        this.notification = notification;
     }
 
-    /**
-     * Create a {@link AppNotificationGenerationJob} to manage the {@link OSNotificationGenerationJob}
-     *  while the {@link OneSignal.NotificationWillShowInForegroundHandler} is being fired
-     */
-    AppNotificationGenerationJob toAppNotificationGenerationJob() {
-        return new AppNotificationGenerationJob(this);
+    public Context getContext() {
+        return context;
     }
 
-    /**
-     * A wrapper for the {@link OSNotificationGenerationJob}
-     * Contains other class which implement this one {@link NotificationGenerationJob}:
-     *    1. {@link AppNotificationGenerationJob}
-     */
-    static class NotificationGenerationJob {
-
-        private Runnable timeoutRunnable;
-        // The actual notificationJob with notification payload data
-        private OSNotificationGenerationJob notificationJob;
-
-        // Used to toggle when complete is called so it can not be called more than once
-        protected boolean isComplete = false;
-
-        NotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
-            this.notificationJob = notificationJob;
-        }
-
-        OSNotificationGenerationJob getNotificationJob() {
-            return notificationJob;
-        }
-
-        protected void startTimeout(Runnable runnable) {
-            timeoutRunnable = runnable;
-            OSTimeoutHandler.getTimeoutHandler().startTimeout(SHOW_NOTIFICATION_TIMEOUT, runnable);
-        }
-
-        protected void destroyTimeout() {
-            OSTimeoutHandler.getTimeoutHandler().destroyTimeout(timeoutRunnable);
-        }
-
-        public String getApiNotificationId() {
-            return notificationJob.getApiNotificationId();
-        }
-
-        public int getAndroidNotificationId() {
-            return notificationJob.getAndroidIdWithoutCreate();
-        }
-
-        public String getTitle() {
-            return notificationJob.getTitle().toString();
-        }
-
-        public String getBody() {
-            return notificationJob.getBody().toString();
-        }
-
-        public JSONObject getAdditionalData() {
-            return notificationJob.getAdditionalData();
-        }
-
-        public OSNotificationDisplay getNotificationDisplayOption() {
-            return notificationJob.getNotificationDisplayOption();
-        }
-
-        public void setNotificationDisplayOption(OSNotificationDisplay displayOption) {
-            notificationJob.setNotificationDisplayOption(displayOption);
-        }
-
-        @Override
-        public String toString() {
-            return "NotificationGenerationJob{" +
-                    "isComplete=" + isComplete +
-                    ", notificationJob=" + notificationJob +
-                    '}';
-        }
-
-        public JSONObject toJSONObject() {
-            JSONObject mainObj = new JSONObject();
-            try {
-                mainObj.put("completed", isComplete);
-            } catch(JSONException e) {
-                e.printStackTrace();
-            }
-
-            return mainObj;
-        }
+    public void setContext(Context context) {
+        this.context = context;
     }
 
-   /**
-    * Used to modify the {@link OSNotificationGenerationJob} inside of the {@link OneSignal.NotificationWillShowInForegroundHandler}
-    * without exposing internals publicly
-    */
-   public static class AppNotificationGenerationJob extends NotificationGenerationJob {
+    public JSONObject getJsonPayload() {
+        return jsonPayload;
+    }
 
-        AppNotificationGenerationJob(OSNotificationGenerationJob notificationJob) {
-            super(notificationJob);
+    public void setJsonPayload(JSONObject jsonPayload) {
+        this.jsonPayload = jsonPayload;
+    }
 
-            startTimeout(new Runnable() {
-                @Override
-                public void run() {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running complete from AppNotificationGenerationJob timeout runnable!");
-                    AppNotificationGenerationJob.this.complete();
-                }
-            });
-        }
+    public boolean isRestoring() {
+        return restoring;
+    }
 
-        /**
-         * Method controlling completion from the NotificationWillShowInForegroundHandler
-         * If a dev does not call this at the end of the notificationWillShowInForeground implementation,
-         *  a runnable will fire after a 30 second timer and complete by default
-         */
-        public synchronized void complete() {
-            destroyTimeout();
+    public void setRestoring(boolean restoring) {
+        this.restoring = restoring;
+    }
 
-            if (isComplete)
-                return;
+    public boolean isIamPreview() {
+        return iamPreview;
+    }
 
-            isComplete = true;
+    public void setIamPreview(boolean iamPreview) {
+        this.iamPreview = iamPreview;
+    }
 
-            GenerateNotification.fromJsonPayload(getNotificationJob());
-        }
+    public boolean isProcessed() {
+        return processed;
+    }
+
+    public void setProcessed(boolean processed) {
+        this.processed = processed;
+    }
+
+    public Long getShownTimeStamp() {
+        return shownTimeStamp;
+    }
+
+    public void setShownTimeStamp(Long shownTimeStamp) {
+        this.shownTimeStamp = shownTimeStamp;
+    }
+
+    public CharSequence getOverriddenBodyFromExtender() {
+        return overriddenBodyFromExtender;
+    }
+
+    public void setOverriddenBodyFromExtender(CharSequence overriddenBodyFromExtender) {
+        this.overriddenBodyFromExtender = overriddenBodyFromExtender;
+    }
+
+    public CharSequence getOverriddenTitleFromExtender() {
+        return overriddenTitleFromExtender;
+    }
+
+    public void setOverriddenTitleFromExtender(CharSequence overriddenTitleFromExtender) {
+        this.overriddenTitleFromExtender = overriddenTitleFromExtender;
+    }
+
+    public Uri getOverriddenSound() {
+        return overriddenSound;
+    }
+
+    public void setOverriddenSound(Uri overriddenSound) {
+        this.overriddenSound = overriddenSound;
+    }
+
+    public Integer getOverriddenFlags() {
+        return overriddenFlags;
+    }
+
+    public void setOverriddenFlags(Integer overriddenFlags) {
+        this.overriddenFlags = overriddenFlags;
+    }
+
+    public Integer getOrgFlags() {
+        return orgFlags;
+    }
+
+    public void setOrgFlags(Integer orgFlags) {
+        this.orgFlags = orgFlags;
+    }
+
+    public Uri getOrgSound() {
+        return orgSound;
+    }
+
+    public void setOrgSound(Uri orgSound) {
+        this.orgSound = orgSound;
     }
 
     @Override
     public String toString() {
         return "OSNotificationGenerationJob{" +
                 "jsonPayload=" + jsonPayload +
-                ", isRestoring=" + isRestoring +
-                ", isIamPreview=" + isIamPreview +
-                ", displayOption=" + displayOption +
+                ", isRestoring=" + restoring +
+                ", isIamPreview=" + iamPreview +
+                ", isProcessed=" + processed +
                 ", shownTimeStamp=" + shownTimeStamp +
                 ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
                 ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
@@ -291,7 +251,7 @@ public class OSNotificationGenerationJob {
                 ", overriddenFlags=" + overriddenFlags +
                 ", orgFlags=" + orgFlags +
                 ", orgSound=" + orgSound +
-                ", overrideSettings=" + overrideSettings +
+                ", notification=" + notification +
                 '}';
     }
 }

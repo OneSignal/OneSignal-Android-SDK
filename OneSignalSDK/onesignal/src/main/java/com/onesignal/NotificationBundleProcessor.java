@@ -68,7 +68,7 @@ class NotificationBundleProcessor {
 
     static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
 
-    static void processFromFCMIntentService(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
+    static void processFromFCMIntentService(Context context, BundleCompat bundle) {
         OneSignal.initWithContext(context);
         try {
             String jsonStrPayload = bundle.getString("json_payload");
@@ -102,7 +102,7 @@ class NotificationBundleProcessor {
                     false);
 
             // Delay to prevent CPU spikes.
-            //    Normally more than one notification is restored at a time.
+            // Normally more than one notification is restored at a time.
             if (isRestoring)
                 OSUtils.sleep(100);
         } catch (JSONException e) {
@@ -112,51 +112,62 @@ class NotificationBundleProcessor {
 
     /**
      * Recommended method to process notification before displaying
-     * Only use the {@link NotificationBundleProcessor#processJobForDisplay(OSNotificationGenerationJob, boolean, boolean)}
+     * Only use the {@link NotificationBundleProcessor#processJobForDisplay(OSNotificationGenerationJob, boolean)}
      *  in the event where you want to mark a notification as opened or displayed different than the defaults
      */
     @WorkerThread
-    static int processJobForDisplay(OSNotificationGenerationJob notificationJob) {
-        return processJobForDisplay(notificationJob, false, true);
+    static int processJobForDisplay(OSNotificationGenerationJob notificationJob, boolean callForegroundLogic) {
+        OSNotificationController notificationController = new OSNotificationController(notificationJob, notificationJob.isRestoring(), true);
+        return processJobForDisplay(notificationController, false, callForegroundLogic);
     }
 
     @WorkerThread
-    static int processJobForDisplay(OSNotificationGenerationJob notificationJob, boolean opened, boolean displayed) {
+    static int processJobForDisplay(OSNotificationController notificationController, boolean callForegroundLogic) {
+        return processJobForDisplay(notificationController, false, callForegroundLogic);
+    }
+
+    @WorkerThread
+    static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean callForegroundLogic) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting processJobForDisplay");
+        OSNotificationGenerationJob notificationJob = notificationController.getNotificationJob();
+
         processCollapseKey(notificationJob);
 
-        int androidNotifId = notificationJob.getAndroidIdWithoutCreate();
+        int androidNotificationId = notificationJob.getAndroidIdWithoutCreate();
         boolean doDisplay = shouldDisplayNotif(notificationJob);
         if (doDisplay) {
-            androidNotifId = notificationJob.getAndroidId();
-            if (OneSignal.shouldFireForegroundHandlers())
-                OneSignal.fireForegroundHandlers(notificationJob);
-            else
+            androidNotificationId = notificationJob.getAndroidId();
+            if (callForegroundLogic && OneSignal.shouldFireForegroundHandlers()) {
+                notificationController.setBackgroundLogic(false);
+                OneSignal.fireForegroundHandlers(notificationController);
+            } else {
                 GenerateNotification.fromJsonPayload(notificationJob);
+            }
         }
 
-        if (!notificationJob.isRestoring && !notificationJob.isIamPreview) {
+        if (!notificationJob.isRestoring() && !notificationJob.isIamPreview() && !notificationJob.isProcessed()) {
+            notificationJob.setProcessed(true);
             processNotification(notificationJob, opened);
-            OneSignal.handleNotificationReceived(notificationJob, displayed);
+            OneSignal.handleNotificationReceived(notificationJob);
         }
 
-        return androidNotifId;
+        return androidNotificationId;
     }
 
     private static boolean shouldDisplayNotif(OSNotificationGenerationJob notificationJob) {
         // Validate that the current Android device is Android 4.4 or higher and the current job is a
         //    preview push
-        if (notificationJob.isIamPreview && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
+        if (notificationJob.isIamPreview() && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
             return false;
 
         // Otherwise, this is a normal notification and should be shown
-        return notificationJob.hasExtender() || isStringEmpty(notificationJob.jsonPayload.optString("alert"));
+        return notificationJob.hasExtender() || isStringEmpty(notificationJob.getJsonPayload().optString("alert"));
     }
 
     private static void saveAndProcessDupNotification(Context context, Bundle bundle) {
-        OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-        notificationJob.jsonPayload = bundleAsJSONObject(bundle);
-        notificationJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
-        notificationJob.overrideSettings.setAndroidNotificationId(-1);
+        JSONObject jsonPayload = bundleAsJSONObject(bundle);
+        OSNotification notification = new OSNotification(jsonPayload, -1);
+        OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context, notification, jsonPayload);
 
         processNotification(notificationJob, true);
     }
@@ -182,13 +193,14 @@ class NotificationBundleProcessor {
     //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
     //   * Future - Public API to get a list of notifications
     private static void saveNotification(OSNotificationGenerationJob notificationJob, boolean opened) {
-        Context context = notificationJob.context;
-        JSONObject jsonPayload = notificationJob.jsonPayload;
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Saving Notification job: " + notificationJob.toString());
+        Context context = notificationJob.getContext();
+        JSONObject jsonPayload = notificationJob.getJsonPayload();
 
         try {
-            JSONObject customJSON = getCustomJSONObject(notificationJob.jsonPayload);
+            JSONObject customJSON = getCustomJSONObject(notificationJob.getJsonPayload());
 
-            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.context);
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
             SQLiteDatabase writableDb = null;
 
             try {
@@ -252,15 +264,17 @@ class NotificationBundleProcessor {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Finish saving notification");
     }
 
     static void markRestoredNotificationAsDismissed(OSNotificationGenerationJob notifiJob) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Marking restored notifications as dismissed: " + notifiJob.toString());
         if (notifiJob.getAndroidIdWithoutCreate() == -1)
             return;
 
         String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
 
-        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.context);
+        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.getContext());
         SQLiteDatabase writableDb = null;
 
         try {
@@ -271,7 +285,7 @@ class NotificationBundleProcessor {
             values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
 
             writableDb.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-            BadgeCountUpdater.update(writableDb, notifiJob.context);
+            BadgeCountUpdater.update(writableDb, notifiJob.getContext());
 
             writableDb.setTransactionSuccessful();
 
@@ -364,14 +378,14 @@ class NotificationBundleProcessor {
     }
 
     private static void processCollapseKey(OSNotificationGenerationJob notificationJob) {
-        if (notificationJob.isRestoring)
+        if (notificationJob.isRestoring())
             return;
-        if (!notificationJob.jsonPayload.has("collapse_key") || "do_not_collapse".equals(notificationJob.jsonPayload.optString("collapse_key")))
+        if (!notificationJob.getJsonPayload().has("collapse_key") || "do_not_collapse".equals(notificationJob.getJsonPayload().optString("collapse_key")))
             return;
-        String collapse_id = notificationJob.jsonPayload.optString("collapse_key");
+        String collapse_id = notificationJob.getJsonPayload().optString("collapse_key");
 
 
-        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.context);
+        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
         Cursor cursor = null;
 
         try {
@@ -431,10 +445,9 @@ class NotificationBundleProcessor {
         if (result.isDup)
             return result;
 
+        JSONObject payload = bundleAsJSONObject(bundle);
         // Create new notificationJob to be processed for display
-        final OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-        notificationJob.jsonPayload = bundleAsJSONObject(bundle);
-        notificationJob.overrideSettings = new OSNotificationExtender.OverrideSettings();
+        final OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context, payload);
 
         // Save as a opened notification to prevent duplicates
         String alert = bundle.getString("alert");
@@ -445,7 +458,7 @@ class NotificationBundleProcessor {
             // Make a new thread to do our OneSignal work on
             new Thread(new Runnable() {
                 public void run() {
-                    OneSignal.handleNotificationReceived(notificationJob, false);
+                    OneSignal.handleNotificationReceived(notificationJob);
                 }
             }, OS_NOTIFICATION_PROCESSING_THREAD).start();
         }

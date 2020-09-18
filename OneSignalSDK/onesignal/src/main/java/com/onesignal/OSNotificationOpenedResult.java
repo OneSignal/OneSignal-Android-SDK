@@ -37,12 +37,12 @@ import org.json.JSONObject;
  * <br/>
  * {@link #action} - The action the user took on the notification
  */
-public class OSNotificationOpenResult {
+public class OSNotificationOpenedResult {
 
    private OSNotification notification;
    private OSNotificationAction action;
 
-   public OSNotificationOpenResult(OSNotification notification, OSNotificationAction action) {
+   public OSNotificationOpenedResult(OSNotification notification, OSNotificationAction action) {
       this.notification = notification;
       this.action = action;
    }

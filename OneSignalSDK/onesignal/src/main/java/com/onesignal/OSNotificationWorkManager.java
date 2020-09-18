@@ -1,7 +1,6 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.work.Data;
@@ -70,31 +69,22 @@ class OSNotificationWorkManager {
         }
 
         private void processNotificationData(Context context, int androidNotificationId, JSONObject jsonPayload, boolean isRestoring, Long timestamp) {
-            OSNotificationReceived notificationReceived = new OSNotificationReceived(
-                    context,
-                    androidNotificationId,
-                    jsonPayload,
-                    isRestoring,
-                    OneSignal.isAppActive(),
-                    timestamp
-            );
+            OSNotification notification = new OSNotification(null, jsonPayload, androidNotificationId);
+            OSNotificationController controller = new OSNotificationController(context, jsonPayload, isRestoring, true, timestamp);
+            OSNotificationReceivedEvent notificationReceived = new OSNotificationReceivedEvent(controller, notification);
 
-            if (OneSignal.notificationProcessingHandler != null)
+            if (OneSignal.remoteNotificationReceivedHandler != null)
                 try {
-                    OneSignal.notificationProcessingHandler.notificationProcessing(context, notificationReceived);
+                    OneSignal.remoteNotificationReceivedHandler.remoteNotificationReceived(context, notificationReceived);
                 } catch (Throwable t) {
-                    if (!notificationReceived.displayed()) {
-                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Displaying normal OneSignal notification.", t);
-                        notificationReceived.internalComplete();
-                    }
-                    else
-                        OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "onNotificationProcessing throw an exception. Extended notification displayed but custom processing did not finish.", t);
+                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "remoteNotificationReceived throw an exception. Displaying normal OneSignal notification.", t);
+                    notificationReceived.complete(notification);
 
                     throw t;
                 }
-            else if (!notificationReceived.displayed()) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "notificationProcessingHandler not setup, displaying normal OneSignal notification");
-                notificationReceived.internalComplete();
+            else {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "remoteNotificationReceivedHandler not setup, displaying normal OneSignal notification");
+                notificationReceived.complete(notification);
             }
         }
     }

@@ -8,7 +8,7 @@ import android.support.annotation.NonNull;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.NotificationOpenedActivityHMS;
-import com.onesignal.OSNotificationOpenResult;
+import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowCustomTabsClient;
@@ -160,9 +160,9 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
         OneSignal.setAppId(ONESIGNAL_APP_ID);
         OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-        OneSignal.setNotificationOpenedHandler(new OneSignal.NotificationOpenedHandler() {
+        OneSignal.setNotificationOpenedHandler(new OneSignal.OSNotificationOpenedHandler() {
             @Override
-            public void notificationOpened(OSNotificationOpenResult result) {
+            public void notificationOpened(OSNotificationOpenedResult result) {
                 lastActionId = result.getAction().getActionID();
             }
         });

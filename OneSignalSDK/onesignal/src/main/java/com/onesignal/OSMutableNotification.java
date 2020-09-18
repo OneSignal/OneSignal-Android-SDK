@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2020 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,36 +27,26 @@
 
 package com.onesignal;
 
-import org.json.JSONObject;
+import androidx.core.app.NotificationCompat;
 
-public class OSNotificationDisplayedResult {
-   private int androidNotificationId;
+public class OSMutableNotification extends OSNotification {
 
-   public int getAndroidNotificationId() {
-      return androidNotificationId;
-   }
+    OSMutableNotification(OSNotification notification) {
+        super(notification);
+    }
 
-   public void setAndroidNotificationId(int androidNotificationId) {
-      this.androidNotificationId = androidNotificationId;
-   }
+    /**
+     * If a developer wants to override the data within a received notification, they can do so by
+     *    creating a {@link androidx.core.app.NotificationCompat.Extender} within the {@link OneSignal.OSRemoteNotificationReceivedHandler}
+     *    and override any notification data desired
+     * <br/><br/>
+     * @see OneSignal.OSRemoteNotificationReceivedHandler
+     */
+    public void setExtender(NotificationCompat.Extender extender) {
+        setNotificationExtender(extender);
+    }
 
-   @Override
-   public String toString() {
-      return "OSNotificationDisplayedResult{" +
-              "androidNotificationId=" + androidNotificationId +
-              '}';
-   }
-
-   public JSONObject toJSONObject() {
-      JSONObject mainObj = new JSONObject();
-
-      try {
-         mainObj.put("androidNotificationId", androidNotificationId);
-      }
-      catch(Throwable t) {
-         t.printStackTrace();
-      }
-
-      return mainObj;
-   }
+    public void setAndroidNotificationId(int androidNotificationId) {
+        super.setAndroidNotificationId(androidNotificationId);
+    }
 }
