@@ -42,7 +42,7 @@ class TrackFirebaseAnalytics {
    private static AtomicLong lastReceivedTime;
    private static AtomicLong lastOpenedTime;
    
-   private static OSNotificationPayload lastReceivedPayload;
+   private static OSNotification lastReceivedNotification;
 
    private static final String EVENT_NOTIFICATION_OPENED = "os_notification_opened";
    private static final String EVENT_NOTIFICATION_INFLUENCE_OPEN = "os_notification_influence_open";
@@ -62,7 +62,7 @@ class TrackFirebaseAnalytics {
    }
 
    void trackInfluenceOpenEvent() {
-      if (lastReceivedTime == null || lastReceivedPayload == null)
+      if (lastReceivedTime == null || lastReceivedNotification == null)
          return;
    
       // Attribute if app was opened in 2 minutes or less after displaying the notification
@@ -86,8 +86,8 @@ class TrackFirebaseAnalytics {
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
          bundle.putString("medium", "notification");
-         bundle.putString("notification_id", lastReceivedPayload.getNotificationID());
-         bundle.putString("campaign", getCampaignNameFromPayload(lastReceivedPayload));
+         bundle.putString("notification_id", lastReceivedNotification.getNotificationId());
+         bundle.putString("campaign", getCampaignNameFromNotification(lastReceivedNotification));
 
          trackMethod.invoke(firebaseAnalyticsInstance, event, bundle);
       } catch (Throwable t) {
@@ -95,7 +95,7 @@ class TrackFirebaseAnalytics {
       }
    }
 
-   void trackOpenedEvent(OSNotificationOpenResult openResult) {
+   void trackOpenedEvent(OSNotificationOpenedResult openResult) {
       if(lastOpenedTime == null)
          lastOpenedTime = new AtomicLong();
       lastOpenedTime.set(OneSignal.getTime().getCurrentTimeMillis());
@@ -110,8 +110,8 @@ class TrackFirebaseAnalytics {
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
          bundle.putString("medium", "notification");
-         bundle.putString("notification_id", openResult.getNotification().getPayload().getNotificationID());
-         bundle.putString("campaign", getCampaignNameFromPayload(openResult.getNotification().getPayload()));
+         bundle.putString("notification_id", openResult.getNotification().getNotificationId());
+         bundle.putString("campaign", getCampaignNameFromNotification(openResult.getNotification()));
 
          trackMethod.invoke(firebaseAnalyticsInstance, EVENT_NOTIFICATION_OPENED, bundle);
 
@@ -122,7 +122,7 @@ class TrackFirebaseAnalytics {
 
    }
 
-   void trackReceivedEvent(OSNotificationOpenResult receivedResult) {
+   void trackReceivedEvent(OSNotificationOpenedResult receivedResult) {
       try {
          //get the source, medium, campaign params from the openResult
          Object firebaseAnalyticsInstance = getFirebaseAnalyticsInstance(appContext);
@@ -132,8 +132,8 @@ class TrackFirebaseAnalytics {
          Bundle bundle = new Bundle();
          bundle.putString("source", "OneSignal");
          bundle.putString("medium", "notification");
-         bundle.putString("notification_id", receivedResult.getNotification().getPayload().getNotificationID());
-         bundle.putString("campaign", getCampaignNameFromPayload(receivedResult.getNotification().getPayload()));
+         bundle.putString("notification_id", receivedResult.getNotification().getNotificationId());
+         bundle.putString("campaign", getCampaignNameFromNotification(receivedResult.getNotification()));
 
          trackMethod.invoke(firebaseAnalyticsInstance, EVENT_NOTIFICATION_RECEIVED, bundle);
 
@@ -141,18 +141,18 @@ class TrackFirebaseAnalytics {
             lastReceivedTime = new AtomicLong();
          lastReceivedTime.set(OneSignal.getTime().getCurrentTimeMillis());
 
-         lastReceivedPayload = receivedResult.getNotification().getPayload();
+         lastReceivedNotification = receivedResult.getNotification();
 
       } catch (Throwable t) {
          t.printStackTrace();
       }
    }
 
-   private String getCampaignNameFromPayload(OSNotificationPayload payload) {
-      if (!payload.getTemplateName().isEmpty() && !payload.getTemplateId().isEmpty())
-         return payload.getTemplateName() + " - " + payload.getTemplateId();
-      else if (payload.getTitle() != null)
-         return payload.getTitle().substring(0, Math.min(10, payload.getTitle().length()));
+   private String getCampaignNameFromNotification(OSNotification notification) {
+      if (!notification.getTemplateName().isEmpty() && !notification.getTemplateId().isEmpty())
+         return notification.getTemplateName() + " - " + notification.getTemplateId();
+      else if (notification.getTitle() != null)
+         return notification.getTitle().substring(0, Math.min(10, notification.getTitle().length()));
       
       return "";
    }

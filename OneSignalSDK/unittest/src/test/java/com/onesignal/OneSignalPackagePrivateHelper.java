@@ -114,7 +114,7 @@ public class OneSignalPackagePrivateHelper {
     * initWithContext required to setup a notification extension service
     */
    public static void OneSignal_setupNotificationExtensionServiceClass() {
-      OSNotificationExtender.setupNotificationExtensionServiceClass();
+      OSNotificationController.setupNotificationExtensionServiceClass(OneSignal.appContext);
    }
 
    public static void OneSignal_savePrivacyConsentRequired(boolean required) {
@@ -149,18 +149,22 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
+   public static void OneSignal_handleNotificationOpen(Context context, final JSONArray data, final boolean fromAlert, final String notificationId) {
+      OneSignal.handleNotificationOpen(context, data, fromAlert, notificationId);
+   }
+
    public static BundleCompat createInternalPayloadBundle(Bundle bundle) {
       BundleCompat retBundle = BundleCompatFactory.getInstance();
       retBundle.putString("json_payload", OneSignalPackagePrivateHelper.bundleAsJSONObject(bundle).toString());
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle), overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle) {
+      NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle));
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle, OSNotificationExtender.OverrideSettings overrideSettings) {
-      NotificationBundleProcessor.processFromFCMIntentService(context, bundle, overrideSettings);
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle) {
+      NotificationBundleProcessor.processFromFCMIntentService(context, bundle);
    }
 
    public static boolean FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
@@ -186,22 +190,29 @@ public class OneSignalPackagePrivateHelper {
       NotificationPayloadProcessorHMS.processDataMessageReceived(context, jsonStrPayload);
    }
 
-   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload, OSNotificationExtender.OverrideSettings overrideSettings) {
+   public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload) {
+      OSNotification notification = new OSNotification(jsonPayload);
       OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-      notificationJob.jsonPayload = jsonPayload;
-      notificationJob.overrideSettings = overrideSettings;
-      notificationJob.isRestoring = restoring;
-      return NotificationBundleProcessor.processJobForDisplay(notificationJob);
+      notificationJob.setJsonPayload(jsonPayload);
+      notificationJob.setRestoring(restoring);
+      notificationJob.setNotification(notification);
+      return NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
    }
 
-   public static class NotificationTable extends OneSignalDbContract.NotificationTable { }
-   public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable { }
-   public static class OSNotificationRestoreWorkManager extends com.onesignal.OSNotificationRestoreWorkManager { }
-    public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
-        OSNotificationGenerationJob(Context context) {
-            super(context);
-        }
-    }
+   public static class NotificationTable extends OneSignalDbContract.NotificationTable {
+   }
+
+   public static class InAppMessageTable extends OneSignalDbContract.InAppMessageTable {
+   }
+
+   public static class OSNotificationRestoreWorkManager extends com.onesignal.OSNotificationRestoreWorkManager {
+   }
+
+   public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
+      OSNotificationGenerationJob(Context context) {
+         super(context);
+      }
+   }
 
    public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
       @Override
@@ -224,7 +235,7 @@ public class OneSignalPackagePrivateHelper {
 
    public static String NotificationChannelManager_createNotificationChannel(Context context, JSONObject payload) {
       OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-      notificationJob.jsonPayload = payload;
+      notificationJob.setJsonPayload(payload);
       return NotificationChannelManager.createNotificationChannel(notificationJob);
    }
 
@@ -570,11 +581,7 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-
-   public static class JSONUtils extends com.onesignal.JSONUtils {
-
-
-   }
+   public static class JSONUtils extends com.onesignal.JSONUtils {}
 
    public static class GenerateNotification extends com.onesignal.GenerateNotification {}
 
@@ -583,4 +590,183 @@ public class OneSignalPackagePrivateHelper {
    public static class OSNotificationFormatHelper extends com.onesignal.OSNotificationFormatHelper {}
 
    public static class NotificationPayloadProcessorHMS extends com.onesignal.NotificationPayloadProcessorHMS {}
+
+   public static class OSTestNotification extends com.onesignal.OSNotification {
+      public OSTestNotification(@NonNull JSONObject payload) {
+         super(payload);
+      }
+
+      // For testing purposes
+      public static class OSTestNotificationBuilder {
+
+         private List<OSNotification> groupedNotifications;
+
+         private String notificationID;
+         private String templateName, templateId;
+         private String title, body;
+         private JSONObject additionalData;
+         private String smallIcon;
+         private String largeIcon;
+         private String bigPicture;
+         private String smallIconAccentColor;
+         private String launchURL;
+         private String sound;
+         private String ledColor;
+         private int lockScreenVisibility = 1;
+         private String groupKey;
+         private String groupMessage;
+         private List<ActionButton> actionButtons;
+         private String fromProjectNumber;
+         private BackgroundImageLayout backgroundImageLayout;
+         private String collapseId;
+         private int priority;
+         private String rawPayload;
+
+         public OSTestNotificationBuilder() {
+         }
+
+         public OSTestNotificationBuilder setGroupedNotifications(List<OSNotification> groupedNotifications) {
+            this.groupedNotifications = groupedNotifications;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setNotificationID(String notificationID) {
+            this.notificationID = notificationID;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setTemplateName(String templateName) {
+            this.templateName = templateName;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setTemplateId(String templateId) {
+            this.templateId = templateId;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setTitle(String title) {
+            this.title = title;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setBody(String body) {
+            this.body = body;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setAdditionalData(JSONObject additionalData) {
+            this.additionalData = additionalData;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setSmallIcon(String smallIcon) {
+            this.smallIcon = smallIcon;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setLargeIcon(String largeIcon) {
+            this.largeIcon = largeIcon;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setBigPicture(String bigPicture) {
+            this.bigPicture = bigPicture;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setSmallIconAccentColor(String smallIconAccentColor) {
+            this.smallIconAccentColor = smallIconAccentColor;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setLaunchURL(String launchURL) {
+            this.launchURL = launchURL;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setSound(String sound) {
+            this.sound = sound;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setLedColor(String ledColor) {
+            this.ledColor = ledColor;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setLockScreenVisibility(int lockScreenVisibility) {
+            this.lockScreenVisibility = lockScreenVisibility;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setGroupKey(String groupKey) {
+            this.groupKey = groupKey;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setGroupMessage(String groupMessage) {
+            this.groupMessage = groupMessage;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setActionButtons(List<ActionButton> actionButtons) {
+            this.actionButtons = actionButtons;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setFromProjectNumber(String fromProjectNumber) {
+            this.fromProjectNumber = fromProjectNumber;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setBackgroundImageLayout(BackgroundImageLayout backgroundImageLayout) {
+            this.backgroundImageLayout = backgroundImageLayout;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setCollapseId(String collapseId) {
+            this.collapseId = collapseId;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setPriority(int priority) {
+            this.priority = priority;
+            return this;
+         }
+
+         public OSTestNotificationBuilder setRawPayload(String rawPayload) {
+            this.rawPayload = rawPayload;
+            return this;
+         }
+
+         public OSNotification build() {
+            OSNotification payload = new OSNotification();
+            payload.setGroupedNotifications(groupedNotifications);
+            payload.setNotificationId(notificationID);
+            payload.setTemplateName(templateName);
+            payload.setTemplateId(templateId);
+            payload.setTitle(title);
+            payload.setBody(body);
+            payload.setAdditionalData(additionalData);
+            payload.setSmallIcon(smallIcon);
+            payload.setLargeIcon(largeIcon);
+            payload.setBigPicture(bigPicture);
+            payload.setSmallIconAccentColor(smallIconAccentColor);
+            payload.setLaunchURL(launchURL);
+            payload.setSound(sound);
+            payload.setLedColor(ledColor);
+            payload.setLockScreenVisibility(lockScreenVisibility);
+            payload.setGroupKey(groupKey);
+            payload.setGroupMessage(groupMessage);
+            payload.setActionButtons(actionButtons);
+            payload.setFromProjectNumber(fromProjectNumber);
+            payload.setBackgroundImageLayout(backgroundImageLayout);
+            payload.setCollapseId(collapseId);
+            payload.setPriority(priority);
+            payload.setRawPayload(rawPayload);
+            return payload;
+         }
+      }
+   }
 }

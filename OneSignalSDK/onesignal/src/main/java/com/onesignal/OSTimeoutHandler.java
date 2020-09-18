@@ -61,12 +61,14 @@ class OSTimeoutHandler extends HandlerThread {
         synchronized (SYNC_LOCK) {
             // Avoid duplicate runnable postDelayed
             destroyTimeout(runnable);
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running startTimeout with timeout: " + timeout + " and runnable: " + runnable.toString());
             mHandler.postDelayed(runnable, timeout);
         }
     }
 
     void destroyTimeout(Runnable runnable) {
         synchronized (SYNC_LOCK) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running destroyTimeout with runnable: " + runnable.toString());
             mHandler.removeCallbacks(runnable);
         }
     }

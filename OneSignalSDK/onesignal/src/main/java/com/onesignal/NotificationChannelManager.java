@@ -64,12 +64,12 @@ class NotificationChannelManager {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
          return DEFAULT_CHANNEL_ID;
 
-      Context context = notificationJob.context;
-      JSONObject jsonPayload = notificationJob.jsonPayload;
+      Context context = notificationJob.getContext();
+      JSONObject jsonPayload = notificationJob.getJsonPayload();
 
       NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
 
-      if (notificationJob.isRestoring)
+      if (notificationJob.isRestoring())
          return createRestoreChannel(notificationManager);
       
       // Allow channels created outside the SDK

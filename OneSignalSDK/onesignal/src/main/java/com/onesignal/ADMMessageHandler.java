@@ -34,6 +34,8 @@ import android.os.Bundle;
 import com.amazon.device.messaging.ADMMessageHandlerBase;
 import com.amazon.device.messaging.ADMMessageReceiver;
 
+import org.json.JSONObject;
+
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors
 //             when "proguard-android-optimize.txt" is used.
 public class ADMMessageHandler extends ADMMessageHandlerBase {
@@ -59,11 +61,15 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
       if (processedResult.processed())
          return;
-      
-      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-      notificationJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
-      NotificationBundleProcessor.processJobForDisplay(notificationJob);
+      JSONObject payload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
+      OSNotification notification = new OSNotification(payload);
+
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      notificationJob.setJsonPayload(payload);
+      notificationJob.setContext(context);
+      notificationJob.setNotification(notification);
+      NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
    }
 
    @Override

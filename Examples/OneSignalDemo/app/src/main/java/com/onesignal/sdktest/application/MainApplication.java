@@ -3,11 +3,15 @@ package com.onesignal.sdktest.application;
 import android.app.Application;
 import android.util.Log;
 
+import com.onesignal.OSNotification;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainApplication extends Application {
 
@@ -27,12 +31,25 @@ public class MainApplication extends Application {
         OneSignal.setAppId(appId);
         OneSignal.initWithContext(this);
 
-        OneSignal.setNotificationWillShowInForegroundHandler(notificationJob -> {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "AppNotificationWillShowInForeground fired!" +
-                    " with NotificationWillShowInForegroundHandler: " + notificationJob.toString());
+        OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "NotificationWillShowInForegroundHandler fired!" +
+                    " with notification event: " + notificationReceivedEvent.toString());
 
-            notificationJob.setNotificationDisplayOption(OneSignal.OSNotificationDisplay.NOTIFICATION);
-            notificationJob.complete();
+            OSNotification notification = notificationReceivedEvent.getNotification();
+            JSONObject data = notification.getAdditionalData();
+
+            try {
+                if (data.has("show") && data.getBoolean("show")) {
+                    // Complete with a notification means it will show
+                    notificationReceivedEvent.complete(notification);
+                } else {
+                    // Complete with null means don't show a notification.
+                    notificationReceivedEvent.complete(null);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
         });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);

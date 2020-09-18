@@ -16,7 +16,7 @@ public class ShadowOneSignal {
    }
 
    @Implementation
-   public static void fireNotificationOpenedHandler(final OSNotificationOpenResult openedResult) {
+   public static void fireNotificationOpenedHandler(final OSNotificationOpenedResult openedResult) {
       OneSignal.notificationOpenedHandler.notificationOpened(openedResult);
    }
 }
