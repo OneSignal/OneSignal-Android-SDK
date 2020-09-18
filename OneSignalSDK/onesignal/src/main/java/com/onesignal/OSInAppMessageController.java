@@ -349,7 +349,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void showAlertDialogMessage(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
         final String messageTitle = OneSignal.appContext.getString(R.string.location_not_available_title);
         final String message = OneSignal.appContext.getString(R.string.location_not_available_message);
-        new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+        new AlertDialog.Builder(OneSignal.getCurrentActivity())
                 .setTitle(messageTitle)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {

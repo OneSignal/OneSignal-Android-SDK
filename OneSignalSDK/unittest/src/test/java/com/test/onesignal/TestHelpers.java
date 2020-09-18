@@ -245,7 +245,7 @@ public class TestHelpers {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      Log.d(TAG, "fastColdRestartApp finished");
+      Log.d(TAG, "************ FAST COLD RESTART FINISHED! ************");
    }
 
    static void restartAppAndElapseTimeToNextSession(MockOSTimeImpl time) throws Exception {
@@ -253,7 +253,7 @@ public class TestHelpers {
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
       time.advanceSystemAndElapsedTimeBy(31);
-      Log.d(TAG, "restartAppAndElapseTimeToNextSession finished");
+      Log.d(TAG, "************ restartAppAndElapseTimeToNextSession finished ************");
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords(OneSignalDb db) {

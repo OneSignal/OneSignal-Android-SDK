@@ -4863,7 +4863,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void OneSignalInit() {
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal_setTime(time);
       OneSignal_setTrackerFactory(trackerFactory);

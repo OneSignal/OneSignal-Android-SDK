@@ -43,7 +43,7 @@ class GooglePlayServicesUpgradePrompt {
       OSUtils.runOnMainUIThread(new Runnable() {
          @Override
          public void run() {
-            final Activity activity = ActivityLifecycleHandler.curActivity;
+            final Activity activity = OneSignal.getCurrentActivity();
             if (activity == null)
                return;
 
