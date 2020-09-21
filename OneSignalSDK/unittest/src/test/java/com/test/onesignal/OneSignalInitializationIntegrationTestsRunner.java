@@ -21,6 +21,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 @Config(
@@ -49,6 +50,7 @@ public class OneSignalInitializationIntegrationTestsRunner {
     @Before
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
+        setRemoteParamsGetHtmlResponse();
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
     }
 

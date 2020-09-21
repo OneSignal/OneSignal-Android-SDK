@@ -110,8 +110,7 @@ public class ShadowOneSignalRestClient {
            "\"receive_receipts_enable\":false," +
            "\"unsubscribe_on_notifications_disabled\":true," +
            "\"disable_gms_missing_prompt\":true," +
-           "\"location_shared\":true," +
-           "\"requires_user_privacy_consent\":false" +
+           "\"location_shared\":true" +
            "}";
    private static final String IAM_GET_HTML_RESPONSE;
    static {
