@@ -45,6 +45,7 @@ import static com.test.onesignal.RestClientAsserts.assertNotificationOpenAtIndex
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(
@@ -142,6 +143,7 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         helper_initSDKAndFireHMSNotificationBarebonesOSOpenIntent();
 
         Intent startedActivity = shadowOf((Application) ApplicationProvider.getApplicationContext()).getNextStartedActivity();
+        assertNotNull(startedActivity);
         assertEquals(startedActivity.getComponent().getClassName(), BlankActivity.class.getName());
     }
 

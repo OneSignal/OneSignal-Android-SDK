@@ -83,7 +83,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param htmlStr the html to display on the WebView
      */
     static void showHTMLString(@NonNull final OSInAppMessage message, @NonNull final String htmlStr) {
-        final Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        final Activity currentActivity = OneSignal.getCurrentActivity();
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
         if (currentActivity != null) {
@@ -339,6 +339,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight) {
+        final ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
         messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
@@ -350,12 +351,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             @Override
             public void onMessageWasDismissed() {
                 OSInAppMessageController.getController(OneSignal.getLogger()).messageWasDismissed(message);
-                ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
+                if (activityLifecycleHandler != null)
+                    activityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
             }
         });
 
         // Fires event if available, which will call messageView.showInAppMessageView() for us.
-        ActivityLifecycleHandler.setActivityAvailableListener(TAG + message.messageId, this);
+        if (activityLifecycleHandler != null)
+            activityLifecycleHandler.addActivityAvailableListener(TAG + message.messageId, this);
     }
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher

@@ -322,6 +322,12 @@ public class OneSignal {
    static String appId;
    static String googleProjectNumber;
 
+   @Nullable
+   static Activity getCurrentActivity() {
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      return activityLifecycleHandler != null ? activityLifecycleHandler.getCurActivity() : null;
+   }
+
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
@@ -811,14 +817,16 @@ public class OneSignal {
    }
 
    private static void handleActivityLifecycleHandler(Context context) {
-      inForeground = isContextActivity(context);
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      inForeground = OneSignal.getCurrentActivity() != null;
+      logger.debug("OneSignal handleActivityLifecycleHandler inForeground: " + inForeground);
+
       if (inForeground) {
-         ActivityLifecycleHandler.curActivity = (Activity) context;
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
          FocusTimeController.getInstance().appForegrounded();
+      } else if (activityLifecycleHandler != null) {
+         activityLifecycleHandler.setNextResumeIsFirstActivity(true);
       }
-      else
-         ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
    }
 
    private static void handleAmazonPurchase() {
@@ -1125,7 +1133,7 @@ public class OneSignal {
             Log.e(TAG, message, throwable);
       }
 
-      if (level.compareTo(visualLogLevel) < 1 && ActivityLifecycleHandler.curActivity != null) {
+      if (level.compareTo(visualLogLevel) < 1 && OneSignal.getCurrentActivity() != null) {
          try {
             String fullMessage = message + "\n";
             if (throwable != null) {
@@ -1140,8 +1148,8 @@ public class OneSignal {
             OSUtils.runOnMainUIThread(new Runnable() {
                @Override
                public void run() {
-                  if (ActivityLifecycleHandler.curActivity != null)
-                     new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+                  if (OneSignal.getCurrentActivity() != null)
+                     new AlertDialog.Builder(OneSignal.getCurrentActivity())
                          .setTitle(level.toString())
                          .setMessage(finalFullMessage)
                          .show();

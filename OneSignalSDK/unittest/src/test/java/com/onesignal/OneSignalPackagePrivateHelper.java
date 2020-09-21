@@ -71,7 +71,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static boolean runFocusRunnables() throws Exception {
-      Looper looper = ActivityLifecycleHandler.focusHandlerThread.getHandlerLooper();
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      Looper looper = activityLifecycleHandler != null ? activityLifecycleHandler.getFocusHandlerThread().getHandlerLooper() : null;
       if (looper == null)
          return false;
 
@@ -271,6 +272,10 @@ public class OneSignalPackagePrivateHelper {
 
    public static String OneSignal_appId() {
       return OneSignal.appId;
+   }
+
+   public static boolean OneSignal_isInForeground() {
+      return OneSignal.isInForeground();
    }
 
    static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}

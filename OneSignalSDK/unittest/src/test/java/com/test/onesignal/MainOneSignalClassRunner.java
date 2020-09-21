@@ -134,6 +134,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
@@ -800,6 +801,46 @@ public class MainOneSignalClassRunner {
       assertRemoteParamsAtIndex(0);
       assertPlayerCreatePushAtIndex(1);
       assertRestCalls(2);
+   }
+
+   @Test
+   public void testInitWithContext_Activity() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+      ShadowOSUtils.subscribableStatus = 1;
+
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(OneSignal_isInForeground());
+   }
+
+   @Test
+   public void testInitWithContext_ActivityResumedBeforeInit() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+      ShadowOSUtils.subscribableStatus = 1;
+
+      OneSignal.initWithContext(blankActivity);
+      blankActivityController.resume();
+
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+
+      assertTrue(OneSignal_isInForeground());
+   }
+
+   @Test
+   public void testInitWithContext_Application() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      ShadowOSUtils.subscribableStatus = 1;
+
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      assertTrue(OneSignal_isInForeground());
    }
 
    @Test
@@ -4822,7 +4863,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void OneSignalInit() {
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.DEBUG, OneSignal.LOG_LEVEL.NONE);
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal_setTime(time);
       OneSignal_setTrackerFactory(trackerFactory);
