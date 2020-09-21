@@ -1020,19 +1020,6 @@ public class OneSignal {
     * This method will be replaced by remote params set
     */
    public static void setRequiresUserPrivacyConsent(final boolean required) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT)) {
-         logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
-            @Override
-            public void run() {
-               logger.debug("Running " + OSTaskController.SET_REQUIRES_USER_PRIVACY_CONSENT + " with " + required + " operation from pending task queue.");
-               setRequiresUserPrivacyConsent(required);
-            }
-         });
-         return;
-      }
-
       // Already set by remote params
       if (getRemoteParamController().hasPrivacyConsentKey()) {
          logger.warning("setRequiresUserPrivacyConsent already called by remote params!, ignoring user set");
