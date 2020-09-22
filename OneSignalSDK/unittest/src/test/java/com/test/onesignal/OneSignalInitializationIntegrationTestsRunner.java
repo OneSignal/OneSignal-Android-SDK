@@ -70,4 +70,16 @@ public class OneSignalInitializationIntegrationTestsRunner {
         RestClientAsserts.assertRemoteParamsWasTheOnlyNetworkCall();
     }
 
+    @Test
+    public void setRequiresUserPrivacyConsent_withFalseAndRemoteTrue_DoesNOTCreatePlayer() throws Exception {
+        ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
+        OneSignal.setRequiresUserPrivacyConsent(false);
+
+        OneSignal.setAppId(APP_ID);
+        helper_OneSignal_initWithAppContext();
+        threadAndTaskWait();
+
+        RestClientAsserts.assertRemoteParamsWasTheOnlyNetworkCall();
+    }
+
 }
