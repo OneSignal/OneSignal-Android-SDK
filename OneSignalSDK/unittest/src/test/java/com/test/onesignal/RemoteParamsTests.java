@@ -150,9 +150,7 @@ public class RemoteParamsTests {
 
     @Test
     public void testUserPrivacyConsentNotRequired_UserConfigurationOverrideByRemoteParams() throws Exception {
-        JSONObject remoteParams = new JSONObject();
-        remoteParams.put("requires_user_privacy_consent", false);
-        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+        ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(false);
 
         OneSignal.setRequiresUserPrivacyConsent(true);
         OneSignalInit();
@@ -162,9 +160,7 @@ public class RemoteParamsTests {
 
     @Test
     public void testUserPrivacyConsentRequired_UserConfigurationNotOverrideRemoteParams() throws Exception {
-        JSONObject remoteParams = new JSONObject();
-        remoteParams.put("requires_user_privacy_consent", true);
-        ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+        ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
 
         OneSignalInit();
         threadAndTaskWait();
