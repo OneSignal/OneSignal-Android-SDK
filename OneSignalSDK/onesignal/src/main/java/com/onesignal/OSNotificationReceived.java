@@ -157,4 +157,20 @@ public class OSNotificationReceived {
               ", isComplete=" + isComplete +
               '}';
    }
+
+   public JSONObject toJSONObject() {
+      JSONObject mainObj = new JSONObject();
+
+      try {
+         mainObj.put("restoring", isRestoring);
+         mainObj.put("appInFocus", isAppInFocus);
+         mainObj.put("completed", isComplete);
+         mainObj.put("payload", payload.toJSONObject());
+      }
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
+
+      return mainObj;
+   }
 }

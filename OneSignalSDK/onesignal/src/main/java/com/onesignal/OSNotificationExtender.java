@@ -31,6 +31,7 @@ import android.content.Context;
 
 import androidx.core.app.NotificationCompat;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import static com.onesignal.OSUtils.isStringEmpty;
@@ -83,16 +84,27 @@ public class OSNotificationExtender {
                  ", androidNotificationId=" + androidNotificationId +
                  '}';
       }
+
+      public JSONObject toJSONObject() {
+         JSONObject json = new JSONObject();
+
+         try {
+            json.put("androidNotificationId", androidNotificationId);
+         } catch (Throwable t) {
+            t.printStackTrace();
+         }
+
+         return json;
+      }
    }
 
-   private Context context;
-   private JSONObject jsonPayload;
-   private boolean isRestoring;
-   private Long timestamp;
-
    private OverrideSettings currentBaseOverrideSettings;
-   OSNotificationDisplayedResult notificationDisplayedResult;
+   private JSONObject jsonPayload;
+   private Context context;
+   private Long timestamp;
+   private boolean isRestoring;
 
+   OSNotificationDisplayedResult notificationDisplayedResult;
    boolean developerProcessed;
 
    OSNotificationExtender(Context context, int androidNotificationId, JSONObject jsonPayload, boolean isRestoring, Long timestamp) {
@@ -141,7 +153,7 @@ public class OSNotificationExtender {
       notificationDisplayedResult = new OSNotificationDisplayedResult();
 
       OSNotificationGenerationJob notificationJob = createNotificationJobFromCurrent(context);
-      notificationDisplayedResult.androidNotificationId = NotificationBundleProcessor.processJobForDisplay(notificationJob);
+      notificationDisplayedResult.setAndroidNotificationId(NotificationBundleProcessor.processJobForDisplay(notificationJob));
 
       return notificationDisplayedResult;
    }
@@ -262,5 +274,21 @@ public class OSNotificationExtender {
               ", notificationDisplayedResult=" + notificationDisplayedResult +
               ", developerProcessed=" + developerProcessed +
               '}';
+   }
+
+   public JSONObject toJSONObject() {
+      JSONObject json = new JSONObject();
+
+      try {
+         json.put("payload", jsonPayload);
+         json.put("restoring", isRestoring);
+         json.put("timestamp", timestamp);
+         if (notificationDisplayedResult != null)
+            json.put("notificationDisplayedResult", notificationDisplayedResult.toJSONObject());
+      } catch (Throwable t) {
+         t.printStackTrace();
+      }
+
+      return json;
    }
 }

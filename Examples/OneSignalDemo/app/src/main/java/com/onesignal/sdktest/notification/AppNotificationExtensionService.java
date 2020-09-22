@@ -32,7 +32,7 @@ public class AppNotificationExtensionService implements
       // If Developer doesn't call notification.display()
       // NotificationWillShowInForegroundHandler won't be call
       OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Android notification id: " + notificationDisplayedResult.androidNotificationId);
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Android notification id: " + notificationDisplayedResult.getAndroidNotificationId());
 
       // If complete isn't call and notification.display() was called, after 5 seconds
       // OneSignal will continue calling NotificationWillShowInForegroundHandler

@@ -229,6 +229,17 @@ public class OSNotificationGenerationJob {
                     ", notificationJob=" + notificationJob +
                     '}';
         }
+
+        public JSONObject toJSONObject() {
+            JSONObject mainObj = new JSONObject();
+            try {
+                mainObj.put("completed", isComplete);
+            } catch(JSONException e) {
+                e.printStackTrace();
+            }
+
+            return mainObj;
+        }
     }
 
    /**

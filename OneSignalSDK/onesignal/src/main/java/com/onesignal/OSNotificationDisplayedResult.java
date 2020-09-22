@@ -27,13 +27,36 @@
 
 package com.onesignal;
 
+import org.json.JSONObject;
+
 public class OSNotificationDisplayedResult {
-   public int androidNotificationId;
+   private int androidNotificationId;
+
+   public int getAndroidNotificationId() {
+      return androidNotificationId;
+   }
+
+   public void setAndroidNotificationId(int androidNotificationId) {
+      this.androidNotificationId = androidNotificationId;
+   }
 
    @Override
    public String toString() {
       return "OSNotificationDisplayedResult{" +
               "androidNotificationId=" + androidNotificationId +
               '}';
+   }
+
+   public JSONObject toJSONObject() {
+      JSONObject mainObj = new JSONObject();
+
+      try {
+         mainObj.put("androidNotificationId", androidNotificationId);
+      }
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
+
+      return mainObj;
    }
 }

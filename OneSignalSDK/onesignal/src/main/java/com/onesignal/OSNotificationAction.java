@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import org.json.JSONObject;
+
 /**
  * The action the user took on the notification.
  */
@@ -40,10 +42,10 @@ public class OSNotificationAction {
    }
 
    // The type of the notification action
-   private ActionType type;
+   private final ActionType type;
 
    // The ID associated with the button tapped. null when the actionType is NotificationTapped or InAppAlertClosed
-   private String actionID;
+   private final String actionID;
 
    public OSNotificationAction(ActionType type, String actionID) {
       this.type = type;
@@ -56,5 +58,19 @@ public class OSNotificationAction {
 
    public String getActionID() {
       return actionID;
+   }
+
+   public JSONObject toJSONObject() {
+      JSONObject mainObj = new JSONObject();
+
+      try {
+         mainObj.put("type", type.ordinal());
+         mainObj.put("actionId", actionID);
+      }
+      catch(Throwable t) {
+         t.printStackTrace();
+      }
+
+      return mainObj;
    }
 }
