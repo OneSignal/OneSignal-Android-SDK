@@ -122,12 +122,12 @@ class NotificationBundleProcessor {
     }
 
     @WorkerThread
-    static int processJobForDisplay(OSNotificationController notificationController, boolean callForegroundLogic) {
-        return processJobForDisplay(notificationController, false, callForegroundLogic);
+    static int processJobForDisplay(OSNotificationController notificationController, boolean fromBackgroundLogic) {
+        return processJobForDisplay(notificationController, false, fromBackgroundLogic);
     }
 
     @WorkerThread
-    static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean callForegroundLogic) {
+    static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean fromBackgroundLogic) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting processJobForDisplay");
         OSNotificationGenerationJob notificationJob = notificationController.getNotificationJob();
 
@@ -137,8 +137,8 @@ class NotificationBundleProcessor {
         boolean doDisplay = shouldDisplayNotif(notificationJob);
         if (doDisplay) {
             androidNotificationId = notificationJob.getAndroidId();
-            if (callForegroundLogic && OneSignal.shouldFireForegroundHandlers()) {
-                notificationController.setBackgroundLogic(false);
+            if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers()) {
+                notificationController.setFromBackgroundLogic(false);
                 OneSignal.fireForegroundHandlers(notificationController);
             } else {
                 notificationController.setForegroundLogicEnded(true);

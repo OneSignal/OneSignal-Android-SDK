@@ -1988,6 +1988,86 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationWillShowInForegroundHandler_silentNotificationSaved() throws Exception {
+      // 1. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         callbackCounter++;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+         notificationReceivedEvent.complete(null);
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 2. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 3. Make sure the AppNotificationJob is not null
+      assertNotNull(lastForegroundNotificationReceivedEvent);
+
+      // 4. Make sure the callback counter is only fired once for NotificationWillShowInForegroundHandler
+      assertEquals(1, callbackCounter);
+
+      // 5. Make sure silent notification exists in DB
+      assertNotificationDbRecords(1, true);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationWillShowInForegroundHandler_silentNotificationNotSavedUntilTimerCompleteIsDone() throws Exception {
+      // 1. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         callbackCounter++;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+
+         new Thread(() -> {
+            try {
+               // Simulate long work
+               Thread.sleep(5000);
+               // Check notification is still not saved
+               assertNotificationDbRecords(0);
+               notificationReceivedEvent.complete(null);
+            } catch (InterruptedException e) {
+               e.printStackTrace();
+            }
+         }).start();
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 2. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 3. Make sure the AppNotificationJob is not null
+      assertNotNull(lastForegroundNotificationReceivedEvent);
+
+      // 4. Make sure the callback counter is only fired once for App NotificationWillShowInForegroundHandler
+      assertEquals(1, callbackCounter);
+
+      // 5. Make sure 0 notification exists in DB because complete was not called yet
+      assertNotificationDbRecords(0);
+
+      // Complete being call from User thread
+      Awaitility.await()
+              .atMost(new Duration(10, TimeUnit.SECONDS))
+              .pollInterval(new Duration(500, TimeUnit.MILLISECONDS))
+              .untilAsserted(() -> {
+                 // Make sure 1 notification exists in DB
+                 assertNotificationDbRecords(1, false);
+              });
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void testNotificationWillShowInForegroundHandler_notificationJobPayload() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
@@ -2133,6 +2213,26 @@ public class GenerateNotificationRunner {
       SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(expected, cursor.getCount());
+      cursor.close();
+   }
+
+   private void assertNotificationDbRecords(int expected, boolean silentNotification) {
+      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
+      Cursor cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
+      assertEquals(expected, cursor.getCount());
+      cursor.moveToFirst();
+      do {
+         int androidNotificationId = cursor.getInt(cursor.getColumnIndex("android_notification_id"));
+         int opened = cursor.getInt(cursor.getColumnIndex("opened"));
+
+         if (silentNotification) {
+            assertEquals(1, opened);
+            assertEquals(0, androidNotificationId);
+         } else {
+            assertEquals(0, opened);
+            assertNotEquals(0, androidNotificationId);
+         }
+      } while (cursor.moveToNext());
       cursor.close();
    }
 

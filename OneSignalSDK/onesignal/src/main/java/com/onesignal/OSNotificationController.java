@@ -42,18 +42,18 @@ public class OSNotificationController {
 
    private final OSNotificationGenerationJob notificationJob;
    private boolean restoring;
-   private boolean backgroundLogic;
+   private boolean fromBackgroundLogic;
    private boolean foregroundLogicEnded;
 
-   OSNotificationController(OSNotificationGenerationJob notificationJob, boolean restoring, boolean backgroundLogic) {
+   OSNotificationController(OSNotificationGenerationJob notificationJob, boolean restoring, boolean fromBackgroundLogic) {
       this.restoring = restoring;
-      this.backgroundLogic = backgroundLogic;
+      this.fromBackgroundLogic = fromBackgroundLogic;
       this.notificationJob = notificationJob;
    }
 
-   OSNotificationController(Context context, JSONObject jsonPayload, boolean restoring, boolean backgroundLogic, Long timestamp) {
+   OSNotificationController(Context context, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
       this.restoring = restoring;
-      this.backgroundLogic = backgroundLogic;
+      this.fromBackgroundLogic = fromBackgroundLogic;
 
       notificationJob = createNotificationJobFromCurrent(context, jsonPayload, timestamp);
    }
@@ -90,7 +90,7 @@ public class OSNotificationController {
          } else {
             // Set modified notification
             notificationJob.setNotification(notification);
-            NotificationBundleProcessor.processJobForDisplay(this, backgroundLogic);
+            NotificationBundleProcessor.processJobForDisplay(this, fromBackgroundLogic);
          }
          // Delay to prevent CPU spikes
          // Normally more than one notification is restored at a time
@@ -133,12 +133,12 @@ public class OSNotificationController {
       this.restoring = restoring;
    }
 
-   public boolean isBackgroundLogic() {
-      return backgroundLogic;
+   public boolean isFromBackgroundLogic() {
+      return fromBackgroundLogic;
    }
 
-   public void setBackgroundLogic(boolean backgroundLogic) {
-      this.backgroundLogic = backgroundLogic;
+   public void setFromBackgroundLogic(boolean fromBackgroundLogic) {
+      this.fromBackgroundLogic = fromBackgroundLogic;
    }
 
    public boolean isForegroundLogicEnded() {
@@ -199,7 +199,7 @@ public class OSNotificationController {
       return "OSNotificationController{" +
               "notificationJob=" + notificationJob +
               ", isRestoring=" + restoring +
-              ", isBackgroundLogic=" + backgroundLogic +
+              ", isBackgroundLogic=" + fromBackgroundLogic +
               '}';
    }
 }
