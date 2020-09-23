@@ -40,7 +40,7 @@ import static com.onesignal.OSUtils.isStringEmpty;
 public class OSNotificationController {
 
    // The extension service app AndroidManifest.xml meta data tag key name
-   private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationExtensionServiceClass";
+   private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension";
 
    private final OSNotificationGenerationJob notificationJob;
    boolean isRestoring;

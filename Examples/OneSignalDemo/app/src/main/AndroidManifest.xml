@@ -18,7 +18,7 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
 
-        <meta-data android:name="com.onesignal.NotificationExtensionServiceClass"
+        <meta-data android:name="com.onesignal.NotificationServiceExtension"
             android:value="com.onesignal.sdktest.notification.AppRemoteNotificationExtensionService" />
 
         <service
