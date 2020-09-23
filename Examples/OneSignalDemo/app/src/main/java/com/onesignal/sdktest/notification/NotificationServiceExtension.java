@@ -9,7 +9,7 @@ import com.onesignal.OSNotificationReceivedEvent;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
-public class AppRemoteNotificationExtensionService implements
+public class NotificationServiceExtension implements
         OneSignal.OSRemoteNotificationReceivedHandler,
         OneSignal.OSNotificationOpenedHandler {
 
