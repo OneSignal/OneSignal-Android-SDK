@@ -138,7 +138,7 @@ public class OneSignal {
     * Naming can be whatever makes the most sense to the developer, but to actually activate any
     *    implemented interfaces, a metadata tag with a specific OneSignal key and then file path value
     *    must be added to the apps AndroidManifest.xml
-    *       ex. <meta-data android:name="com.onesignal.NotificationExtensionServiceClass" android:value="com.company.ExtensionService" />
+    *       ex. <meta-data android:name="com.onesignal.NotificationServiceExtension" android:value="com.company.ExtensionService" />
     * <br/><br/>
     * Allows for modification of a notifications payload by creating a {@link OSNotificationController.OverrideSettings}
     *    instance and passing it into {@link OSNotificationReceivedEvent#setModifiedContent(OSNotificationController.OverrideSettings)}
@@ -642,7 +642,7 @@ public class OneSignal {
     * Called after setAppId and initWithContext, depending on which one is called last (order does not matter)
     */
    synchronized private static void init(Context context) {
-      OSNotificationController.setupNotificationExtensionServiceClass(appContext);
+      OSNotificationController.setupNotificationServiceExtension(appContext);
 
       if (requiresUserPrivacyConsent() || !remoteParamController.isRemoteParamsCallDone()) {
          if (!remoteParamController.isRemoteParamsCallDone())

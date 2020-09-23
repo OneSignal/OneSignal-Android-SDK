@@ -117,7 +117,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setupNotificationExtensionServiceClass;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setupNotificationServiceExtension;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGroup;
@@ -160,8 +160,8 @@ public class GenerateNotificationRunner {
    private Activity blankActivity;
    private static ActivityController<BlankActivity> blankActivityController;
 
-   private OSNotificationReceivedEvent lastNotificationReceivedEvent;
-   private static OSNotificationReceivedEvent lastNotificationReceived;
+   private OSNotificationReceivedEvent lastForegroundNotificationReceivedEvent;
+   private static OSNotificationReceivedEvent lastServiceNotificationReceivedEvent;
    private MockOneSignalDBHelper dbHelper;
    private MockOSTimeImpl time;
 
@@ -181,8 +181,8 @@ public class GenerateNotificationRunner {
       time = new MockOSTimeImpl();
 
       callbackCounter = 0;
-      lastNotificationReceivedEvent = null;
-      lastNotificationReceived = null;
+      lastForegroundNotificationReceivedEvent = null;
+      lastServiceNotificationReceivedEvent = null;
 
       TestHelpers.beforeTestInitAndCleanup();
 
@@ -1298,7 +1298,7 @@ public class GenerateNotificationRunner {
 
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-      OneSignal_setupNotificationExtensionServiceClass();
+      OneSignal_setupNotificationServiceExtension();
 
       // 3. Post 2 notifications with the same grp key so a summary is generated
       Bundle bundle = getBaseNotifBundle("UUID1");
@@ -1373,7 +1373,7 @@ public class GenerateNotificationRunner {
 
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-      OneSignal_setupNotificationExtensionServiceClass();
+      OneSignal_setupNotificationServiceExtension();
 
       // 3. Test that WorkManager begins processing the notification
       boolean ret = FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
@@ -1470,21 +1470,21 @@ public class GenerateNotificationRunner {
 
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-      OneSignal_setupNotificationExtensionServiceClass();
+      OneSignal_setupNotificationServiceExtension();
 
       // 3. Generate two notifications with different API notification ids
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle("NewUUID1"));
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
-      lastNotificationReceived = null;
+      assertNotNull(lastServiceNotificationReceivedEvent);
+      lastServiceNotificationReceivedEvent = null;
 
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle("NewUUID2"));
       threadAndTaskWait();
 
       // 5. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // 6. Only 1 notification count should exist since the same Android Notification Id was used
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
@@ -1497,17 +1497,11 @@ public class GenerateNotificationRunner {
 
       @Override
       public void remoteNotificationReceived(final Context context, OSNotificationReceivedEvent receivedEvent) {
-         lastNotificationReceived = receivedEvent;
+         lastServiceNotificationReceivedEvent = receivedEvent;
 
          OSNotification notification = receivedEvent.getNotification();
          OSMutableNotification mutableNotification = notification.mutableCopy();
          mutableNotification.setAndroidNotificationId(1);
-//         OSNotificationController.OverrideSettings overrideSettings = new OSNotificationController.OverrideSettings();
-//         overrideSettings.setAndroidNotificationId(1);
-//         notification.setModifiedContent(overrideSettings);
-
-         // Display called to show notification
-//         OSNotificationDisplayedResult notificationDisplayedResult = notification.display();
 
          // Complete is called to end NotificationProcessingHandler
          receivedEvent.complete(mutableNotification);
@@ -1523,7 +1517,7 @@ public class GenerateNotificationRunner {
 
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-      OneSignal_setupNotificationExtensionServiceClass();
+      OneSignal_setupNotificationServiceExtension();
 
       // 3. Receive a notification
       Bundle bundle = getBaseNotifBundle();
@@ -1532,7 +1526,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1566,7 +1560,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1580,7 +1574,7 @@ public class GenerateNotificationRunner {
 
       @Override
       public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent receivedEvent) {
-         lastNotificationReceived = receivedEvent;
+         lastServiceNotificationReceivedEvent = receivedEvent;
 
          // Complete is called to end NotificationProcessingHandler
          receivedEvent.complete(receivedEvent.getNotification());
@@ -1596,7 +1590,7 @@ public class GenerateNotificationRunner {
 
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-      OneSignal_setupNotificationExtensionServiceClass();
+      OneSignal_setupNotificationServiceExtension();
 
       // 3. Receive a notification
       Bundle bundle = getBaseNotifBundle();
@@ -1604,7 +1598,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // 5. Make sure running on main thread check was not called, this is only called for showing the notification
       assertFalse(ShadowGenerateNotification.isRunningOnMainThreadCheckCalled());
@@ -1624,7 +1618,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-         lastNotificationReceivedEvent = notificationReceivedEvent;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
          // Call complete to end without waiting default 30 second timeout
          notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
@@ -1639,13 +1633,13 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // 5. Make sure running on main thread check was not called, this is only called for showing the notification
       assertFalse(ShadowGenerateNotification.isRunningOnMainThreadCheckCalled());
 
       // 6. Make sure the AppNotificationJob is null
-      assertNull(lastNotificationReceivedEvent);
+      assertNull(lastForegroundNotificationReceivedEvent);
 
       // 7. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1659,11 +1653,74 @@ public class GenerateNotificationRunner {
 
       @Override
       public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent notification) {
-         lastNotificationReceived = notification;
+         lastServiceNotificationReceivedEvent = notification;
 
          // Complete is called to end NotificationProcessingHandler
          // Sending a null notification will avoid notification display
          notification.complete(null);
+      }
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessingAndForegroundHandler_displayCalled_noMutateId() throws Exception {
+      // 1. Setup correct notification extension service class
+      startRemoteNotificationReceivedHandlerService("com.test.onesignal.GenerateNotificationRunner$" +
+              "RemoteNotificationReceivedHandler_notificationReceivedCompleteCalledNotMutateId");
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+
+         int androidId = notificationReceivedEvent.getNotification().getAndroidNotificationId();
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
+
+         int androidIdAfterComplete = notificationReceivedEvent.getNotification().getAndroidNotificationId();
+         assertEquals(androidId, androidIdAfterComplete);
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 3. Receive a notification in foreground
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastServiceNotificationReceivedEvent);
+
+      // 5. Make sure foreground handler was called
+      assertNotNull(lastForegroundNotificationReceivedEvent);
+
+      // 6. Make sure android Id was set after first process and foreground android Id was retrieved
+      assertEquals(0, lastServiceNotificationReceivedEvent.getNotification().getAndroidNotificationId());
+      assertNotEquals(0, lastForegroundNotificationReceivedEvent.getNotification().getAndroidNotificationId());
+      assertNotEquals(-1, lastForegroundNotificationReceivedEvent.getNotification().getAndroidNotificationId());
+
+      // 7. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   /**
+    * @see #testNotificationProcessing_silentNotification
+    * @see #testNotificationProcessingAndForegroundHandler_displayNotCalled_notCallsForegroundHandler
+    */
+   public static class RemoteNotificationReceivedHandler_notificationReceivedCompleteCalledNotMutateId implements OneSignal.OSRemoteNotificationReceivedHandler {
+
+      @Override
+      public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent receivedEvent) {
+         lastServiceNotificationReceivedEvent = receivedEvent;
+
+         // Complete is called to end NotificationProcessingHandler
+         int androidId = receivedEvent.getNotification().getAndroidNotificationId();
+         receivedEvent.complete(receivedEvent.getNotification());
+         // Call complete to end without waiting default 30 second timeout
+         int androidIdAfterComplete = receivedEvent.getNotification().getAndroidNotificationId();
+         assertEquals(androidId, androidIdAfterComplete);
       }
    }
 
@@ -1676,7 +1733,7 @@ public class GenerateNotificationRunner {
 
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
-      OneSignal_setupNotificationExtensionServiceClass();
+      OneSignal_setupNotificationServiceExtension();
 
       // Mock timeout to 1, given that we are not calling complete inside RemoteNotificationReceivedHandler we depend on the timeout complete
       ShadowTimeoutHandler.setMockDelayMillis(1);
@@ -1687,7 +1744,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // Notification save is done on the OSTimeoutHandler, we wait until the notification is saved
       Awaitility.await()
@@ -1710,7 +1767,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-         lastNotificationReceivedEvent = notificationReceivedEvent;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Calling OSNotificationReceivedEvent complete from setNotificationWillShowInForegroundHandler test handler");
          // Call complete to end without waiting default 30 second timeout
          notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
@@ -1728,10 +1785,10 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure service was called
-      assertNotNull(lastNotificationReceived);
+      assertNotNull(lastServiceNotificationReceivedEvent);
 
       // 5. Make sure the last OSNotificationReceivedEvent is not null
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
 
       // Notification save is done on the OSTimeoutHandler, we wait until the notification is saved
       Awaitility.await()
@@ -1751,7 +1808,7 @@ public class GenerateNotificationRunner {
 
       @Override
       public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent receivedEvent) {
-         lastNotificationReceived = receivedEvent;
+         lastServiceNotificationReceivedEvent = receivedEvent;
 
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "RemoteNotificationReceivedHandler_notificationReceivedCompleteNotCalled remoteNotificationReceived called");
          // Complete not called to end NotificationProcessingHandler, depend on timeout to finish
@@ -1765,7 +1822,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-         lastNotificationReceivedEvent = notificationReceivedEvent;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
          // Call complete to end without waiting default 30 second timeout
          notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
       });
@@ -1779,7 +1836,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Make sure last OSNotificationReceivedEvent is not null, this indicates was displayed
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
 
       // 4. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1792,7 +1849,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-         lastNotificationReceivedEvent = notificationReceivedEvent;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
          // Call complete to end without waiting default 30 second timeout
          notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
@@ -1807,7 +1864,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Make sure the AppNotificationJob is not null
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
 
       // 4. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1820,7 +1877,7 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
       OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-         lastNotificationReceivedEvent = notificationReceivedEvent;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
          // Call complete to end without waiting default 30 second timeout
          notificationReceivedEvent.complete(null);
@@ -1835,7 +1892,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Make sure the AppNotificationJob is not null
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
 
       // 4. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1857,7 +1914,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 4. Make sure the AppNotificationJob is null
-      assertNull(lastNotificationReceivedEvent);
+      assertNull(lastForegroundNotificationReceivedEvent);
 
       // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1872,7 +1929,7 @@ public class GenerateNotificationRunner {
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            lastNotificationReceivedEvent = notificationReceivedEvent;
+            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
             // Call complete to end without waiting default 30 second timeout
             notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
@@ -1889,7 +1946,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 5. Make sure the AppNotificationJob is null since the app is in background when receiving a notification
-      assertNull(lastNotificationReceivedEvent);
+      assertNull(lastForegroundNotificationReceivedEvent);
 
       // 6. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1905,7 +1962,7 @@ public class GenerateNotificationRunner {
          @Override
          public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
             callbackCounter++;
-            lastNotificationReceivedEvent = notificationReceivedEvent;
+            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
          }
       });
       threadAndTaskWait();
@@ -1920,7 +1977,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Make sure the AppNotificationJob is not null
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
 
       // 4. Make sure the callback counter is only fired once for App NotificationWillShowInForegroundHandler
       assertEquals(1, callbackCounter);
@@ -1938,7 +1995,7 @@ public class GenerateNotificationRunner {
       OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
          @Override
          public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            lastNotificationReceivedEvent = notificationReceivedEvent;
+            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
             OSNotification notification = notificationReceivedEvent.getNotification();
             try {
@@ -1974,9 +2031,9 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Make sure the AppNotificationJob is not null
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
       // Not restoring or duplicate notification, so the Android notif id should not be -1
-      assertNotEquals(-1, lastNotificationReceivedEvent.getNotification().getAndroidNotificationId());
+      assertNotEquals(-1, lastForegroundNotificationReceivedEvent.getNotification().getAndroidNotificationId());
 
       // 4. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
@@ -1988,19 +2045,16 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.NotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            callbackCounter++;
-            lastNotificationReceivedEvent = notificationReceivedEvent;
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         callbackCounter++;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
-            // Simulate doing work for 3 seconds
-            try {
-               Thread.sleep(3_000L);
-               notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
-            } catch (InterruptedException e) {
-               e.printStackTrace();
-            }
+         // Simulate doing work for 3 seconds
+         try {
+            Thread.sleep(3_000L);
+            notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
+         } catch (InterruptedException e) {
+            e.printStackTrace();
          }
       });
       threadAndTaskWait();
@@ -2016,7 +2070,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Make sure AppNotificationJob is not null
-      assertNotNull(lastNotificationReceivedEvent);
+      assertNotNull(lastForegroundNotificationReceivedEvent);
 
       // 4. Make sure the callback counter is only fired once for App NotificationWillShowInForegroundHandler
       assertEquals(1, callbackCounter);
@@ -2026,11 +2080,11 @@ public class GenerateNotificationRunner {
    }
 
    /**
-    * Add the correct manifest meta-data key and value regarding the NotificationExtensionServiceClass to the
+    * Add the correct manifest meta-data key and value regarding the NotificationServiceExtension to the
     *    mocked OneSignalShadowPackageManager metaData Bundle
     */
    private void startRemoteNotificationReceivedHandlerService(String servicePath) {
-      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationExtensionServiceClass", servicePath);
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationServiceExtension", servicePath);
    }
 
    /* Helpers */
