@@ -141,6 +141,7 @@ class NotificationBundleProcessor {
                 notificationController.setBackgroundLogic(false);
                 OneSignal.fireForegroundHandlers(notificationController);
             } else {
+                notificationController.setForegroundLogicEnded(true);
                 GenerateNotification.fromJsonPayload(notificationJob);
             }
         }

@@ -29,9 +29,7 @@ package com.onesignal;
 
 import android.content.Context;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
 
 import org.json.JSONObject;
 
@@ -43,18 +41,19 @@ public class OSNotificationController {
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension";
 
    private final OSNotificationGenerationJob notificationJob;
-   boolean isRestoring;
-   boolean isBackgroundLogic;
+   private boolean restoring;
+   private boolean backgroundLogic;
+   private boolean foregroundLogicEnded;
 
-   OSNotificationController(OSNotificationGenerationJob notificationJob, boolean isRestoring, boolean isBackgroundLogic) {
-      this.isRestoring = isRestoring;
-      this.isBackgroundLogic = isBackgroundLogic;
+   OSNotificationController(OSNotificationGenerationJob notificationJob, boolean restoring, boolean backgroundLogic) {
+      this.restoring = restoring;
+      this.backgroundLogic = backgroundLogic;
       this.notificationJob = notificationJob;
    }
 
-   OSNotificationController(Context context, JSONObject jsonPayload, boolean isRestoring, boolean isBackgroundLogic, Long timestamp) {
-      this.isRestoring = isRestoring;
-      this.isBackgroundLogic = isBackgroundLogic;
+   OSNotificationController(Context context, JSONObject jsonPayload, boolean restoring, boolean backgroundLogic, Long timestamp) {
+      this.restoring = restoring;
+      this.backgroundLogic = backgroundLogic;
 
       notificationJob = createNotificationJobFromCurrent(context, jsonPayload, timestamp);
    }
@@ -69,7 +68,7 @@ public class OSNotificationController {
       OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
       notificationJob.setJsonPayload(jsonPayload);
       notificationJob.setShownTimeStamp(timestamp);
-      notificationJob.setRestoring(isRestoring);
+      notificationJob.setRestoring(restoring);
       return notificationJob;
    }
 
@@ -91,11 +90,11 @@ public class OSNotificationController {
          } else {
             // Set modified notification
             notificationJob.setNotification(notification);
-            NotificationBundleProcessor.processJobForDisplay(this, isBackgroundLogic);
+            NotificationBundleProcessor.processJobForDisplay(this, backgroundLogic);
          }
          // Delay to prevent CPU spikes
          // Normally more than one notification is restored at a time
-         if (isRestoring)
+         if (restoring)
             OSUtils.sleep(100);
       } else {
          notDisplayNotificationLogic(originalNotification);
@@ -105,7 +104,7 @@ public class OSNotificationController {
    private void notDisplayNotificationLogic(OSNotification originalNotification) {
       notificationJob.setNotification(originalNotification);
       // Save as processed to prevent possible duplicate calls from canonical ids
-      if (isRestoring) {
+      if (restoring) {
          // If we are not displaying a restored notification make sure we mark it as dismissed
          // This will prevent it from being restored again
          NotificationBundleProcessor.markRestoredNotificationAsDismissed(notificationJob);
@@ -126,15 +125,35 @@ public class OSNotificationController {
       return new OSNotificationReceivedEvent(this, notificationJob.getNotification());
    }
 
+   public boolean isRestoring() {
+      return restoring;
+   }
+
+   public void setRestoring(boolean restoring) {
+      this.restoring = restoring;
+   }
+
+   public boolean isBackgroundLogic() {
+      return backgroundLogic;
+   }
+
    public void setBackgroundLogic(boolean backgroundLogic) {
-      isBackgroundLogic = backgroundLogic;
+      this.backgroundLogic = backgroundLogic;
+   }
+
+   public boolean isForegroundLogicEnded() {
+      return foregroundLogicEnded;
+   }
+
+   public void setForegroundLogicEnded(boolean foregroundLogicEnded) {
+      this.foregroundLogicEnded = foregroundLogicEnded;
    }
 
    /**
     * In addition to using the setters to set all of the handlers you can also create your own implementation
     *  within a separate class and give your AndroidManifest.xml a special meta data tag
     * The meta data tag looks like this:
-    *  <meta-data android:name="com.onesignal.NotificationExtensionServiceClass" android:value="com.company.ExtensionService" />
+    *  <meta-data android:name="com.onesignal.NotificationServiceExtension" android:value="com.company.ExtensionService" />
     * <br/><br/>
     * There is only one way to implement the {@link OneSignal.OSRemoteNotificationReceivedHandler}
     * <br/><br/>
@@ -148,7 +167,7 @@ public class OSNotificationController {
     * <br/><br/>
     * @see OneSignal.OSRemoteNotificationReceivedHandler
     */
-   static void setupNotificationExtensionServiceClass(Context context) {
+   static void setupNotificationServiceExtension(Context context) {
       String className = OSUtils.getManifestMeta(context, EXTENSION_SERVICE_META_DATA_TAG_NAME);
 
       // No meta data containing extension service class name
@@ -179,8 +198,8 @@ public class OSNotificationController {
    public String toString() {
       return "OSNotificationController{" +
               "notificationJob=" + notificationJob +
-              ", isRestoring=" + isRestoring +
-              ", isBackgroundLogic=" + isBackgroundLogic +
+              ", isRestoring=" + restoring +
+              ", isBackgroundLogic=" + backgroundLogic +
               '}';
    }
 }

@@ -38,18 +38,7 @@ public class MainApplication extends Application {
             OSNotification notification = notificationReceivedEvent.getNotification();
             JSONObject data = notification.getAdditionalData();
 
-            try {
-                if (data.has("show") && data.getBoolean("show")) {
-                    // Complete with a notification means it will show
-                    notificationReceivedEvent.complete(notification);
-                } else {
-                    // Complete with null means don't show a notification.
-                    notificationReceivedEvent.complete(null);
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
+            notificationReceivedEvent.complete(null);
         });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);

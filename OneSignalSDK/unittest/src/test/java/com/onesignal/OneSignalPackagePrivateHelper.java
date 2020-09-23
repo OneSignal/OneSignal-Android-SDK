@@ -113,8 +113,8 @@ public class OneSignalPackagePrivateHelper {
     * Only necessary when not fully init OneSignal SDK
     * initWithContext required to setup a notification extension service
     */
-   public static void OneSignal_setupNotificationExtensionServiceClass() {
-      OSNotificationController.setupNotificationExtensionServiceClass(OneSignal.appContext);
+   public static void OneSignal_setupNotificationServiceExtension() {
+      OSNotificationController.setupNotificationServiceExtension(OneSignal.appContext);
    }
 
    public static void OneSignal_savePrivacyConsentRequired(boolean required) {
