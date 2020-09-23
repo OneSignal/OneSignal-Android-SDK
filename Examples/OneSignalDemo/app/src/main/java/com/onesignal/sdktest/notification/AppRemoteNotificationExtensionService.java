@@ -15,7 +15,7 @@ public class AppRemoteNotificationExtensionService implements
 
    @Override
    public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent notificationReceivedEvent) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "NotificationProcessingHandler fired!" +
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSRemoteNotificationReceivedHandler fired!" +
               " with OSNotificationReceived: " + notificationReceivedEvent.toString());
 
       OSNotification notification = notificationReceivedEvent.getNotification();
@@ -35,6 +35,6 @@ public class AppRemoteNotificationExtensionService implements
 
    @Override
    public void notificationOpened(OSNotificationOpenedResult result) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenResult result: " + result.toString());
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedResult result: " + result.toString());
    }
 }
