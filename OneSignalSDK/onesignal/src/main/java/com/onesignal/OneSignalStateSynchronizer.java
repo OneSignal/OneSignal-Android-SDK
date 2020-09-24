@@ -111,18 +111,6 @@ class OneSignalStateSynchronizer {
       }
    }
 
-   static void syncHashedEmail(String email) {
-      try {
-         JSONObject emailFields = new JSONObject();
-         emailFields.put("em_m", OSUtils.hexDigest(email, "MD5"));
-         emailFields.put("em_s", OSUtils.hexDigest(email, "SHA-1"));
-
-         getPushStateSynchronizer().syncHashedEmail(emailFields);
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
-   }
-
    static void setEmail(String email, String emailAuthHash) {
       getPushStateSynchronizer().setEmail(email, emailAuthHash);
       getEmailStateSynchronizer().setEmail(email, emailAuthHash);
