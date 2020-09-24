@@ -2062,7 +2062,7 @@ public class GenerateNotificationRunner {
               .pollInterval(new Duration(500, TimeUnit.MILLISECONDS))
               .untilAsserted(() -> {
                  // Make sure 1 notification exists in DB
-                 assertNotificationDbRecords(1, false);
+                 assertNotificationDbRecords(1, true);
               });
    }
 
