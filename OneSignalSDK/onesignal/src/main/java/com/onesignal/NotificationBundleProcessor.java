@@ -116,9 +116,9 @@ class NotificationBundleProcessor {
      *  in the event where you want to mark a notification as opened or displayed different than the defaults
      */
     @WorkerThread
-    static int processJobForDisplay(OSNotificationGenerationJob notificationJob, boolean callForegroundLogic) {
+    static int processJobForDisplay(OSNotificationGenerationJob notificationJob, boolean fromBackgroundLogic) {
         OSNotificationController notificationController = new OSNotificationController(notificationJob, notificationJob.isRestoring(), true);
-        return processJobForDisplay(notificationController, false, callForegroundLogic);
+        return processJobForDisplay(notificationController, false, fromBackgroundLogic);
     }
 
     @WorkerThread

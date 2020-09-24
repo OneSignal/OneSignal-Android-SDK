@@ -464,39 +464,35 @@ public class OSNotification {
             mainObj.put("groupedNotifications", payloadJsonArray);
          }
 
-         JSONObject payload = new JSONObject();
-
-         payload.put("notificationID", notificationId);
-         payload.put("title", title);
-         payload.put("body", body);
-         payload.put("smallIcon", smallIcon);
-         payload.put("largeIcon", largeIcon);
-         payload.put("bigPicture", bigPicture);
-         payload.put("smallIconAccentColor", smallIconAccentColor);
-         payload.put("launchURL", launchURL);
-         payload.put("sound", sound);
-         payload.put("ledColor", ledColor);
-         payload.put("lockScreenVisibility", lockScreenVisibility);
-         payload.put("groupKey", groupKey);
-         payload.put("groupMessage", groupMessage);
-         payload.put("fromProjectNumber", fromProjectNumber);
-         payload.put("collapseId", collapseId);
-         payload.put("priority", priority);
+         mainObj.put("notificationId", notificationId);
+         mainObj.put("title", title);
+         mainObj.put("body", body);
+         mainObj.put("smallIcon", smallIcon);
+         mainObj.put("largeIcon", largeIcon);
+         mainObj.put("bigPicture", bigPicture);
+         mainObj.put("smallIconAccentColor", smallIconAccentColor);
+         mainObj.put("launchURL", launchURL);
+         mainObj.put("sound", sound);
+         mainObj.put("ledColor", ledColor);
+         mainObj.put("lockScreenVisibility", lockScreenVisibility);
+         mainObj.put("groupKey", groupKey);
+         mainObj.put("groupMessage", groupMessage);
+         mainObj.put("fromProjectNumber", fromProjectNumber);
+         mainObj.put("collapseId", collapseId);
+         mainObj.put("priority", priority);
 
          if (additionalData != null)
-            payload.put("additionalData", additionalData);
+            mainObj.put("additionalData", additionalData);
 
          if (actionButtons != null) {
             JSONArray actionButtonJsonArray = new JSONArray();
             for (ActionButton actionButton : actionButtons) {
                actionButtonJsonArray.put(actionButton.toJSONObject());
             }
-            payload.put("actionButtons", actionButtonJsonArray);
+            mainObj.put("actionButtons", actionButtonJsonArray);
          }
 
-         payload.put("rawPayload", rawPayload);
-
-         mainObj.put("payload", payload);
+         mainObj.put("rawPayload", rawPayload);
       }
       catch(JSONException e) {
          e.printStackTrace();

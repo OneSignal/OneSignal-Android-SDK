@@ -46,6 +46,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.data.OSTrackerFactory;
@@ -134,18 +135,15 @@ public class OneSignal {
    }
 
    /**
-    * Meant to be implemented within a custom made NotificationExtensionService
-    * Naming can be whatever makes the most sense to the developer, but to actually activate any
-    *    implemented interfaces, a metadata tag with a specific OneSignal key and then file path value
-    *    must be added to the apps AndroidManifest.xml
-    *       ex. <meta-data android:name="com.onesignal.NotificationServiceExtension" android:value="com.company.ExtensionService" />
+    * Implement this interface on a class with a default public constructor and provide class with namespace
+    * as a value to a new `meta-data` tag with the key name of "com.onesignal.NotificationServiceExtension" in
+    * your AndroidManifest.xml.
+    *    ex. <meta-data android:name="com.onesignal.NotificationServiceExtension" android:value="com.company.MyNotificationExtensionService" />
     * <br/><br/>
-    * Allows for modification of a notifications payload by creating a {@link OSNotificationController.OverrideSettings}
-    *    instance and passing it into {@link OSNotificationReceivedEvent#setModifiedContent(OSNotificationController.OverrideSettings)}
-    * To display the notification, call {@link OSNotificationReceivedEvent#display()}
-    * Finally, to notify the SDK that the processing work is done, call {@link OSNotificationReceivedEvent#complete()}
-    * <br/><br/>
-    * TODO: Update docs with new OSRemoteNotificationReceivedHandler, this would be replacing the old NotificationExtenderService
+    * Allows for modification of a notification by calling {@link OSNotification#mutableCopy}
+    *    instance and passing it into {@link OSMutableNotification#setExtender(NotificationCompat.Extender)}
+    * To display the notification, call {@link OSNotificationReceivedEvent#complete(OSNotification)} with a notification instance.
+    * To omit displaying a notification call {@link OSNotificationReceivedEvent#complete(OSNotification)} with null.
     */
    public interface OSRemoteNotificationReceivedHandler {
 
