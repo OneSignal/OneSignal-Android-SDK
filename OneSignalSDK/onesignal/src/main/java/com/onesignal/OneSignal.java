@@ -1273,37 +1273,6 @@ public class OneSignal {
       waitingToPostStateSync = false;
    }
 
-   /**
-    * @deprecated Please migrate to setEmail. This will be removed in next major release
-    */
-   @Deprecated
-   public static void syncHashedEmail(final String email) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SYNC_HASHED_EMAIL)) {
-         logger.error( "Waiting for remote params. " +
-                 "Moving " + OSTaskController.SYNC_HASHED_EMAIL + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
-            @Override
-            public void run() {
-               logger.debug( "Running " + OSTaskController.SYNC_HASHED_EMAIL + " operation from pending task queue.");
-               syncHashedEmail(email);
-            }
-         });
-         return;
-      }
-
-      // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SYNC_HASHED_EMAIL))
-         return;
-
-      if (!OSUtils.isValidEmail(email)) {
-         logger.error("syncHashedEmail called with an invalid email!, ignoring");
-         return;
-      }
-
-      String trimmedEmail = email.trim();
-      OneSignalStateSynchronizer.syncHashedEmail(trimmedEmail.toLowerCase());
-   }
-
    public static void setEmail(@NonNull final String email, EmailUpdateHandler callback) {
       setEmail(email, null, callback);
    }
