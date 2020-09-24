@@ -3865,11 +3865,11 @@ public class MainOneSignalClassRunner {
 
       JSONObject testJsonObj = osNotification.toJSONObject();
 
-      assertEquals("msg_body", testJsonObj.optJSONObject("payload").optString("body"));
-      JSONObject firstActionButton = (JSONObject)testJsonObj.optJSONObject("payload").optJSONArray("actionButtons").get(0);
+      assertEquals("msg_body", testJsonObj.optString("body"));
+      JSONObject firstActionButton = (JSONObject)testJsonObj.optJSONArray("actionButtons").get(0);
       assertEquals("text", firstActionButton.optString("text"));
 
-      JSONObject additionalData = testJsonObj.optJSONObject("payload").optJSONObject("additionalData");
+      JSONObject additionalData = testJsonObj.optJSONObject("additionalData");
       assertEquals("bar", additionalData.optString("foo"));
    }
 
@@ -3880,11 +3880,11 @@ public class MainOneSignalClassRunner {
 
       JSONObject testJsonObj = osNotificationOpenedResult.toJSONObject();
 
-      JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("payload").optJSONObject("additionalData");
+      JSONObject additionalData = testJsonObj.optJSONObject("notification").optJSONObject("additionalData");
       assertEquals("bar", additionalData.optString("foo"));
 
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
-      assertEquals("collapseId1", firstGroupedNotification.optJSONObject("payload").optString("collapseId"));
+      assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
    }
 
    @Test

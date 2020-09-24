@@ -19,16 +19,7 @@
         tools:ignore="GoogleAppIndexingWarning">
 
         <meta-data android:name="com.onesignal.NotificationServiceExtension"
-            android:value="com.onesignal.sdktest.notification.AppRemoteNotificationExtensionService" />
-
-        <service
-            android:name=".notification.NotificationServiceExtension"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.onesignal.NotificationExtender" />
-            </intent-filter>
-        </service>
+            android:value="com.onesignal.sdktest.notification.NotificationServiceExtension" />
 
         <activity android:name=".activity.SplashActivity">
             <intent-filter>
