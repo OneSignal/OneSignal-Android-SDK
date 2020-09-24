@@ -554,7 +554,7 @@ public class InAppMessagingUnitTests {
     private static @Nullable OSInAppMessageAction lastAction;
     @Test
     public void testOnMessageActionOccurredOnMessage() throws Exception {
-        OneSignal.setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+        OneSignal.setInAppMessageClickHandler(new OneSignal.OSInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(OSInAppMessageAction result) {
                 lastAction = result;

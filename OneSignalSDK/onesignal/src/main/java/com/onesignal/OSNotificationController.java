@@ -146,7 +146,7 @@ public class OSNotificationController {
     * <br/><br/>
     * There is only one way to implement the {@link OneSignal.OSRemoteNotificationReceivedHandler}
     * <br/><br/>
-    * In the case of the {@link OneSignal.NotificationWillShowInForegroundHandler}
+    * In the case of the {@link OneSignal.OSNotificationWillShowInForegroundHandler}
     *  there are also setters for these handlers. So why create this new class and implement
     *  the same handlers, won't they just overwrite each other?
     * No, the idea here is to keep track of two separate handlers and keep them both

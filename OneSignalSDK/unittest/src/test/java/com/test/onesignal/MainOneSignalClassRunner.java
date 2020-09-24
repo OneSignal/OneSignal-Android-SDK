@@ -56,7 +56,6 @@ import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenedResult;
-import com.onesignal.OSNotificationReceivedEvent;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSPermissionSubscriptionState;
@@ -1421,7 +1420,7 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.failNext = true;
       ShadowPushRegistratorFCM.fail = true;
 
-      OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+      OneSignal.idsAvailable(new OneSignal.OSIdsAvailableHandler() {
          @Override
          public void idsAvailable(String userId, String registrationId) {
             if (userId == null)
@@ -2209,7 +2208,7 @@ public class MainOneSignalClassRunner {
          OneSignal.sendTag("a" + a, String.valueOf(a));
       }
 
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
+      OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
             //assert that the first 10 tags sent were available
@@ -2226,7 +2225,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       final AtomicBoolean callbackFired = new AtomicBoolean(false);
-      OneSignal.IdsAvailableHandler idsAvailableHandler = new OneSignal.IdsAvailableHandler() {
+      OneSignal.OSIdsAvailableHandler idsAvailableHandler = new OneSignal.OSIdsAvailableHandler() {
          @Override
          public void idsAvailable(String userId, String registrationId) {
             //Assert the userId being returned
@@ -2255,7 +2254,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("a495","1");
       OneSignal.syncHashedEmail("test1@test.com");
 
-      OneSignal.getTags(new OneSignal.GetTagsHandler() {
+      OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
          @Override
          public void tagsAvailable(JSONObject tags) {
             try {
@@ -4731,7 +4730,7 @@ public class MainOneSignalClassRunner {
       final BlockingQueue<Boolean> queue = new ArrayBlockingQueue<>(2);
 
       // Allows us to validate that both handlers get executed independently
-      class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
+      class DebugGetTagsHandler implements OneSignal.OSGetTagsHandler {
          @Override
          public void tagsAvailable(JSONObject tags) {
             queue.offer(true);
@@ -4760,10 +4759,10 @@ public class MainOneSignalClassRunner {
       final BlockingQueue<Boolean> queue = new ArrayBlockingQueue<>(2);
 
       // Validates that nested getTags calls won't throw a ConcurrentModificationException
-      class DebugGetTagsHandler implements OneSignal.GetTagsHandler {
+      class DebugGetTagsHandler implements OneSignal.OSGetTagsHandler {
          @Override
          public void tagsAvailable(JSONObject tags) {
-            OneSignal.getTags(new OneSignal.GetTagsHandler() {
+            OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
                @Override
                public void tagsAvailable(JSONObject tags) {
                   queue.offer(true);
