@@ -57,7 +57,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -535,21 +534,6 @@ class OSUtils {
       } catch (JSONException e) {}
 
       return null;
-   }
-
-   static String hexDigest(String str, String digestInstance) throws Throwable {
-      MessageDigest digest = java.security.MessageDigest.getInstance(digestInstance);
-      digest.update(str.getBytes("UTF-8"));
-      byte messageDigest[] = digest.digest();
-
-      StringBuilder hexString = new StringBuilder();
-      for (byte aMessageDigest : messageDigest) {
-         String h = Integer.toHexString(0xFF & aMessageDigest);
-         while (h.length() < 2)
-            h = "0" + h;
-         hexString.append(h);
-      }
-      return hexString.toString();
    }
 
    static void sleep(int ms) {
