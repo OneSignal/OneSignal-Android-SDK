@@ -367,16 +367,6 @@ class NotificationBundleProcessor {
         }
     }
 
-    static OSNotificationPayload OSNotificationPayloadFrom(JSONObject currentJsonPayload) {
-        JSONObject customJson = null;
-        try {
-            customJson = NotificationBundleProcessor.getCustomJSONObject(currentJsonPayload);
-        } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationPayload values!", t);
-        }
-        return customJson == null ? new OSNotificationPayload() : OSNotificationPayload.OSNotificationPayloadFrom(currentJsonPayload, customJson);
-    }
-
     private static void processCollapseKey(OSNotificationGenerationJob notificationJob) {
         if (notificationJob.isRestoring())
             return;
