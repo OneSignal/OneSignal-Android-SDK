@@ -2152,7 +2152,6 @@ public class MainOneSignalClassRunner {
 
       //queue up a bunch of actions and check that the queue gains size before init
       // ----- START QUEUE ------
-      OneSignal.syncHashedEmail("test@test.com");
 
       for(int a = 0; a < 500; a++) {
          OneSignal.sendTag("a" + a, String.valueOf(a));
@@ -2176,8 +2175,8 @@ public class MainOneSignalClassRunner {
 
       // ----- END QUEUE ------
 
-      // There should be 502 pending operations in the queue
-      assertEquals(502, OneSignal_taskQueueWaitingForInit().size());
+      // There should be 501 pending operations in the queue
+      assertEquals(501, OneSignal_taskQueueWaitingForInit().size());
 
       OneSignalInit(); //starts the pending tasks executor
 
@@ -2188,7 +2187,6 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("a497","3");
       OneSignal.sendTag("a496","2");
       OneSignal.sendTag("a495","1");
-      OneSignal.syncHashedEmail("test1@test.com");
 
       OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
          @Override
@@ -2220,10 +2218,6 @@ public class MainOneSignalClassRunner {
       //Assert that the queued up operations ran in correct order
       // and that the correct user state was POSTed and synced
 
-      //assert the hashed email which should be test1@test.com, NOT test@test.com
-      assertEquals("94fba03762323f286d7c3ca9e001c541", ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      assertEquals("c31ddeb0a3d6cc32d82b494336d9f27444904fd7", ShadowOneSignalRestClient.lastPost.getString("em_s"));
-
       assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
 
       JSONObject tags = ShadowOneSignalRestClient.lastPost.getJSONObject("tags");
@@ -2252,8 +2246,6 @@ public class MainOneSignalClassRunner {
 
       OneSignalInit(); //starts the pending tasks executor
 
-      OneSignal.syncHashedEmail("test@test.com");
-
       for(int a = 0; a < 5; a++)
          OneSignal.sendTag("a" + a, String.valueOf(a));
 
@@ -2264,10 +2256,6 @@ public class MainOneSignalClassRunner {
 
       //Assert that the queued up operations ran in correct order
       // and that the correct user state was POSTed and synced
-
-      //assert the hashed email which should be test1@test.com, NOT test@test.com
-      assertEquals("b642b4217b34b1e8d3bd915fc65c4452", ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a", ShadowOneSignalRestClient.lastPost.getString("em_s"));
 
       assertNotNull(ShadowOneSignalRestClient.lastPost.getJSONObject("tags"));
 
@@ -2963,40 +2951,6 @@ public class MainOneSignalClassRunner {
       assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
       assertEquals("value1", lastGetTags.getString("test1"));
       assertTrue(ShadowOneSignalRestClient.lastUrl.contains(ShadowOneSignalRestClient.pushUserId));
-   }
-
-
-   @Test
-   public void syncHashedEmailTest() throws Exception {
-      OneSignalInit();
-      // Casing should be forced to lower.
-      OneSignal.syncHashedEmail("Test@tEst.CoM");
-      threadAndTaskWait();
-      assertEquals("b642b4217b34b1e8d3bd915fc65c4452" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      assertEquals("a6ad00ac113a19d953efb91820d8788e2263b28a" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
-
-      // Test email update
-      ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.syncHashedEmail("test@test2.com");
-      threadAndTaskWait();
-      assertEquals("3e1163777d25d2b935057c3ae393efee" ,ShadowOneSignalRestClient.lastPost.getString("em_m"));
-      assertEquals("69e9ca5af84bc88bc185136cd6f782ee889be5c8" ,ShadowOneSignalRestClient.lastPost.getString("em_s"));
-
-      // Test trim on email
-      ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.syncHashedEmail(" test@test2.com ");
-      threadAndTaskWait();
-      assertNull(ShadowOneSignalRestClient.lastPost);
-
-      // Test invalid email.
-      OneSignal.syncHashedEmail("aaaaaa");
-      threadAndTaskWait();
-      assertNull(ShadowOneSignalRestClient.lastPost);
-
-      // Test invalid email.
-      OneSignal.syncHashedEmail(null);
-      threadAndTaskWait();
-      assertNull(ShadowOneSignalRestClient.lastPost);
    }
 
    // ####### on_focus Tests ########
