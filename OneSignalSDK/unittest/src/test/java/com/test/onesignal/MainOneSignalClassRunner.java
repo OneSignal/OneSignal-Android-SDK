@@ -199,14 +199,6 @@ public class MainOneSignalClassRunner {
    private MockSessionManager sessionManager;
    private MockOneSignalDBHelper dbHelper;
 
-   private static String lastUserId, lastRegistrationId;
-   private static void getIdsAvailableHandler() {
-      OneSignal.idsAvailable((userId, registrationId) -> {
-         lastUserId = userId;
-         lastRegistrationId = registrationId;
-      });
-   }
-
    private static String lastNotificationOpenedBody;
    private static OneSignal.OSNotificationOpenedHandler getNotificationOpenedHandler() {
       return openedResult -> {
@@ -227,8 +219,6 @@ public class MainOneSignalClassRunner {
    }
 
    private static void cleanUp() throws Exception {
-      lastUserId = lastRegistrationId = null;
-
       lastNotificationOpenedBody = null;
       lastGetTags = null;
       lastExternalUserIdResponse = null;
@@ -908,8 +898,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
-      getIdsAvailableHandler();
-      assertEquals("players/" + lastUserId, ShadowOneSignalRestClient.lastUrl);
+      assertEquals("players/" + OneSignal.getDeviceState().getUserId(), ShadowOneSignalRestClient.lastUrl);
       assertEquals("{\"carrier\":\"test2\",\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
    }
 
@@ -947,8 +936,7 @@ public class MainOneSignalClassRunner {
 
       // 4. Ensure we made 4 network calls. (2 to android_params and 1 create player call)
       assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
-      getIdsAvailableHandler();
-      assertEquals("players/" + lastUserId + "/on_session", ShadowOneSignalRestClient.lastUrl);
+      assertEquals("players/" + OneSignal.getDeviceState().getUserId() + "/on_session", ShadowOneSignalRestClient.lastUrl);
       assertEquals(REST_METHOD.POST, ShadowOneSignalRestClient.requests.get(4).method);
    }
 
@@ -1244,7 +1232,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testInvalidGoogleProjectNumberWithSuccessfulRegisterResponse() throws Exception {
-      getIdsAvailableHandler();
       // A more real test would be "missing support library" but bad project number is an easier setup
       //   and is testing the same logic.
       ShadowPushRegistratorFCM.fail = true;
@@ -1255,14 +1242,14 @@ public class MainOneSignalClassRunner {
 
       assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
       // Test that idsAvailable still fires
-      assertEquals(ShadowOneSignalRestClient.pushUserId, lastUserId);
-      assertNull(lastRegistrationId); // Since FCM registration failed, this should be null
+      assertEquals(ShadowOneSignalRestClient.pushUserId, OneSignal.getDeviceState().getUserId());
+      assertNull(OneSignal.getDeviceState().getPushToken()); // Since FCM registration failed, this should be null
 
       // We now get a push token after the device registers with Onesignal,
       //    the idsAvailable callback should fire a 2nd time with a registrationId automatically
       ShadowPushRegistratorFCM.manualFireRegisterForPush();
       threadAndTaskWait();
-      assertEquals(ShadowPushRegistratorFCM.regId, lastRegistrationId);
+      assertEquals(ShadowPushRegistratorFCM.regId, OneSignal.getDeviceState().getPushToken());
    }
 
    @Test
@@ -1284,7 +1271,6 @@ public class MainOneSignalClassRunner {
    public void testInvalidGoogleProjectNumberWithFailedRegisterResponse() throws Exception {
       // Ensures lower number notification_types do not over right higher numbered ones.
       ShadowPushRegistratorFCM.fail = true;
-      getIdsAvailableHandler();
 //      OneSignalInitWithBadProjectNum();
       OneSignalInit();
       threadAndTaskWait();
@@ -1292,23 +1278,7 @@ public class MainOneSignalClassRunner {
       assertEquals(-7, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Test that idsAvailable still fires
-      assertEquals(ShadowOneSignalRestClient.pushUserId, lastUserId);
-   }
-
-   @Test
-   public void testUnsubcribedShouldMakeRegIdNullToIdsAvailable() throws Exception {
-      getIdsAvailableHandler();
-      OneSignalInit();
-      threadAndTaskWait();
-      assertEquals(ShadowPushRegistratorFCM.regId, ShadowOneSignalRestClient.lastPost.getString("identifier"));
-
-      Robolectric.getForegroundThreadScheduler().runOneTask();
-      assertEquals(ShadowPushRegistratorFCM.regId, lastRegistrationId);
-
-      OneSignal.disablePush(false);
-      getIdsAvailableHandler();
-      threadAndTaskWait();
-      assertNull(lastRegistrationId);
+      assertEquals(ShadowOneSignalRestClient.pushUserId, OneSignal.getDeviceState().getUserId());
    }
 
    @Test
@@ -1412,25 +1382,6 @@ public class MainOneSignalClassRunner {
       OneSignal.disablePush(true);
       threadAndTaskWait();
       assertNull(ShadowOneSignalRestClient.lastPost);
-   }
-
-   private static boolean userIdWasNull = false;
-   @Test
-   public void shouldNotFireIdsAvailableWithoutUserId() throws Exception {
-      ShadowOneSignalRestClient.failNext = true;
-      ShadowPushRegistratorFCM.fail = true;
-
-      OneSignal.idsAvailable(new OneSignal.OSIdsAvailableHandler() {
-         @Override
-         public void idsAvailable(String userId, String registrationId) {
-            if (userId == null)
-               userIdWasNull = true;
-         }
-      });
-
-      OneSignalInit();
-      assertFalse(userIdWasNull);
-      threadAndTaskWait();
    }
 
    @Test
@@ -1939,7 +1890,6 @@ public class MainOneSignalClassRunner {
    public void shouldNotAttemptToSendTagsBeforeGettingPlayerId() throws Exception {
       ShadowPushRegistratorFCM.skipComplete = true;
       OneSignalInit();
-      getIdsAvailableHandler();
       threadAndTaskWait();
 
       assertEquals(1, ShadowOneSignalRestClient.networkCallCount);
@@ -1954,7 +1904,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
-      assertNotNull(lastUserId);
+      assertNotNull(OneSignal.getDeviceState().getUserId());
    }
 
    private static class TestChangeTagsUpdateHandler implements ChangeTagsUpdateHandler {
@@ -2224,24 +2174,10 @@ public class MainOneSignalClassRunner {
       });
       threadAndTaskWait();
 
-      final AtomicBoolean callbackFired = new AtomicBoolean(false);
-      OneSignal.OSIdsAvailableHandler idsAvailableHandler = new OneSignal.OSIdsAvailableHandler() {
-         @Override
-         public void idsAvailable(String userId, String registrationId) {
-            //Assert the userId being returned
-            callbackFired.set(true);
-            assertEquals(ShadowOneSignalRestClient.pushUserId, userId);
-         }
-      };
-
-      OneSignal.idsAvailable(idsAvailableHandler);
-      System.gc(); //make sure the IdsAvailableHandler is retained...
-
-
       // ----- END QUEUE ------
 
-      //there should be 503 pending operations in the queue
-      assertEquals(503, OneSignal_taskQueueWaitingForInit().size());
+      // There should be 502 pending operations in the queue
+      assertEquals(502, OneSignal_taskQueueWaitingForInit().size());
 
       OneSignalInit(); //starts the pending tasks executor
 
@@ -2283,7 +2219,6 @@ public class MainOneSignalClassRunner {
 
       //Assert that the queued up operations ran in correct order
       // and that the correct user state was POSTed and synced
-      assertTrue(callbackFired.get()); //check if the callback got fired
 
       //assert the hashed email which should be test1@test.com, NOT test@test.com
       assertEquals("94fba03762323f286d7c3ca9e001c541", ShadowOneSignalRestClient.lastPost.getString("em_m"));
