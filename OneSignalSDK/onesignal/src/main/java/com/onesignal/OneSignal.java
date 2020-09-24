@@ -621,18 +621,18 @@ public class OneSignal {
          remoteNotificationReceivedHandler = callback;
    }
 
-   public static void setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler callback) {
+   public static void setNotificationWillShowInForegroundHandler(@Nullable NotificationWillShowInForegroundHandler callback) {
       notificationWillShowInForegroundHandler = callback;
    }
 
-   public static void setNotificationOpenedHandler(OSNotificationOpenedHandler callback) {
+   public static void setNotificationOpenedHandler(@Nullable OSNotificationOpenedHandler callback) {
       notificationOpenedHandler = callback;
 
       if (initDone && notificationOpenedHandler != null)
          fireCallbackForOpenedNotifications();
    }
 
-   public static void setInAppMessageClickHandler(InAppMessageClickHandler callback) {
+   public static void setInAppMessageClickHandler(@Nullable InAppMessageClickHandler callback) {
       inAppMessageClickHandler = callback;
    }
 
@@ -2738,14 +2738,6 @@ public class OneSignal {
          new Thread(runCancelGroupedNotifications, "OS_NOTIFICATIONS").start();
       else
          runCancelGroupedNotifications.run();
-   }
-
-   public static void removeNotificationWillShowInForegroundHandler() {
-      OneSignal.notificationWillShowInForegroundHandler = null;
-   }
-
-   public static void removeNotificationOpenedHandler() {
-      notificationOpenedHandler = null;
    }
 
    /**

@@ -1052,7 +1052,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       threadAndTaskWait();
 
-      OneSignal.removeNotificationOpenedHandler();
+      OneSignal.setNotificationOpenedHandler(null);
       OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
       assertNull(lastNotificationOpenedBody);
 
@@ -2739,8 +2739,8 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.setNotificationOpenedHandler(null);
+      OneSignal.setNotificationWillShowInForegroundHandler(null);
       threadAndTaskWait();
 
       // Permission subscription wont return until OneSignal init is done
@@ -2771,8 +2771,8 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.setNotificationOpenedHandler(null);
+      OneSignal.setNotificationWillShowInForegroundHandler(null);
       threadAndTaskWait();
 
       // TODO change to assertNull(OneSignal.getPermissionSubscriptionState()); when privacy consent public set is removed
@@ -2801,8 +2801,8 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.setNotificationOpenedHandler(null);
+      OneSignal.setNotificationWillShowInForegroundHandler(null);
       threadAndTaskWait();
 
       assertNull(OneSignal.getPermissionSubscriptionState());
@@ -2831,8 +2831,8 @@ public class MainOneSignalClassRunner {
          @Override
          public void onFailure(JSONObject response) {}
       });
-      OneSignal.removeNotificationOpenedHandler();
-      OneSignal.removeNotificationWillShowInForegroundHandler();
+      OneSignal.setNotificationOpenedHandler(null);
+      OneSignal.setNotificationWillShowInForegroundHandler(null);
       threadAndTaskWait();
 
       assertNull(OneSignal.getPermissionSubscriptionState());
