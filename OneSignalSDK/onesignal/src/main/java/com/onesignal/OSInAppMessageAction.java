@@ -23,11 +23,8 @@ public class OSInAppMessageAction {
     private static final String CLICK_URL = "click_url";
     private static final String FIRST_CLICK = "first_click";
     private static final String CLOSES_MESSAGE = "closes_message";
-    //TODO when backend is ready check if key match
     private static final String OUTCOMES = "outcomes";
-    //TODO when backend is ready check if key match
     private static final String TAGS = "tags";
-    //TODO when backend is ready check if key match
     private static final String PROMPTS = "prompts";
 
     /**

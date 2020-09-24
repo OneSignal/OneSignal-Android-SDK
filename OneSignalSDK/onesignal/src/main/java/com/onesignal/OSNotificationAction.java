@@ -45,19 +45,19 @@ public class OSNotificationAction {
    private final ActionType type;
 
    // The ID associated with the button tapped. null when the actionType is NotificationTapped or InAppAlertClosed
-   private final String actionID;
+   private final String actionId;
 
-   public OSNotificationAction(ActionType type, String actionID) {
+   public OSNotificationAction(ActionType type, String actionId) {
       this.type = type;
-      this.actionID = actionID;
+      this.actionId = actionId;
    }
 
    public ActionType getType() {
       return type;
    }
 
-   public String getActionID() {
-      return actionID;
+   public String getActionId() {
+      return actionId;
    }
 
    public JSONObject toJSONObject() {
@@ -65,7 +65,7 @@ public class OSNotificationAction {
 
       try {
          mainObj.put("type", type.ordinal());
-         mainObj.put("actionId", actionID);
+         mainObj.put("actionId", actionId);
       }
       catch(Throwable t) {
          t.printStackTrace();
