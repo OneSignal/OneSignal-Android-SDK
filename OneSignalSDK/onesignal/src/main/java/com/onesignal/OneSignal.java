@@ -195,10 +195,6 @@ public class OneSignal {
       void inAppMessageClicked(OSInAppMessageAction result);
    }
 
-   public interface OSIdsAvailableHandler {
-      void idsAvailable(String userId, String registrationId);
-   }
-
    /**
     * Interface which you can implement and pass to {@link OneSignal#getTags(OSGetTagsHandler)} to
     * get all the tags set on a user
@@ -325,8 +321,6 @@ public class OneSignal {
    static @NonNull AppEntryAction getAppEntryState() {
       return appEntryState;
    }
-
-   private static OSIdsAvailableHandler idsAvailableHandler;
 
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
@@ -1845,65 +1839,6 @@ public class OneSignal {
       }
    }
 
-   public static void idsAvailable(final OSIdsAvailableHandler inIdsAvailableHandler) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.IDS_AVAILABLE)) {
-         logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.IDS_AVAILABLE + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
-            @Override
-            public void run() {
-               logger.debug("Running " + OSTaskController.IDS_AVAILABLE + " operation from pending queue.");
-               idsAvailable(inIdsAvailableHandler);
-            }
-         });
-         return;
-      }
-
-      // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.IDS_AVAILABLE))
-         return;
-
-      idsAvailableHandler = inIdsAvailableHandler;
-
-      if (getUserId() != null) {
-         OSUtils.runOnMainUIThread(new Runnable() {
-            @Override
-            public void run() {
-               internalFireIdsAvailableCallback();
-            }
-         });
-      }
-   }
-
-   static void fireIdsAvailableCallback() {
-      if (idsAvailableHandler != null) {
-         OSUtils.runOnMainUIThread(new Runnable() {
-            @Override
-            public void run() {
-               internalFireIdsAvailableCallback();
-            }
-         });
-      }
-   }
-
-   private synchronized static void internalFireIdsAvailableCallback() {
-      if (idsAvailableHandler == null)
-         return;
-
-      String regId = OneSignalStateSynchronizer.getRegistrationId();
-      if (!OneSignalStateSynchronizer.getSubscribed())
-         regId = null;
-
-      String userId = getUserId();
-      if (userId == null)
-         return;
-
-      idsAvailableHandler.idsAvailable(userId, regId);
-
-      if (regId != null)
-         idsAvailableHandler = null;
-   }
-
    static void sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
 
       //if applicable, check if the user provided privacy consent
@@ -2269,7 +2204,6 @@ public class OneSignal {
    // Updates anything else that might have been waiting for this id.
    static void updateUserIdDependents(String userId) {
       saveUserId(userId);
-      fireIdsAvailableCallback();
       internalFireGetTagsCallbacks();
 
       getCurrentSubscriptionState(appContext).setUserId(userId);
