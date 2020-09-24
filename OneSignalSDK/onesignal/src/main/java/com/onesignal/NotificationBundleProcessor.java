@@ -140,14 +140,14 @@ class NotificationBundleProcessor {
             if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers()) {
                 notificationController.setFromBackgroundLogic(false);
                 OneSignal.fireForegroundHandlers(notificationController);
+                // Notification will be processed by foreground user complete or timer complete
+                return androidNotificationId;
             } else {
-                notificationController.setForegroundLogicEnded(true);
                 GenerateNotification.fromJsonPayload(notificationJob);
             }
         }
 
-        if (!notificationJob.isRestoring() && !notificationJob.isIamPreview() && !notificationJob.isProcessed()) {
-            notificationJob.setProcessed(true);
+        if (!notificationJob.isRestoring() && !notificationJob.isIamPreview()) {
             processNotification(notificationJob, opened);
             OneSignal.handleNotificationReceived(notificationJob);
         }
@@ -265,7 +265,6 @@ class NotificationBundleProcessor {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Finish saving notification");
     }
 
     static void markRestoredNotificationAsDismissed(OSNotificationGenerationJob notifiJob) {

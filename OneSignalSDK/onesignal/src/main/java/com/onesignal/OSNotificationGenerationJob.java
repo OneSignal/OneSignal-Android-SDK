@@ -44,7 +44,6 @@ public class OSNotificationGenerationJob {
     private JSONObject jsonPayload;
     private boolean restoring;
     private boolean iamPreview;
-    private boolean processed;
 
     private Long shownTimeStamp;
 
@@ -173,14 +172,6 @@ public class OSNotificationGenerationJob {
         this.iamPreview = iamPreview;
     }
 
-    public boolean isProcessed() {
-        return processed;
-    }
-
-    public void setProcessed(boolean processed) {
-        this.processed = processed;
-    }
-
     public Long getShownTimeStamp() {
         return shownTimeStamp;
     }
@@ -243,7 +234,6 @@ public class OSNotificationGenerationJob {
                 "jsonPayload=" + jsonPayload +
                 ", isRestoring=" + restoring +
                 ", isIamPreview=" + iamPreview +
-                ", isProcessed=" + processed +
                 ", shownTimeStamp=" + shownTimeStamp +
                 ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
                 ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +

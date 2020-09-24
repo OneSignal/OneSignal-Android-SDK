@@ -43,7 +43,6 @@ public class OSNotificationController {
    private final OSNotificationGenerationJob notificationJob;
    private boolean restoring;
    private boolean fromBackgroundLogic;
-   private boolean foregroundLogicEnded;
 
    OSNotificationController(OSNotificationGenerationJob notificationJob, boolean restoring, boolean fromBackgroundLogic) {
       this.restoring = restoring;
@@ -81,7 +80,6 @@ public class OSNotificationController {
     * @see OSNotificationReceivedEvent#complete(OSNotification)
     */
    void processNotification(OSNotification originalNotification, @Nullable OSNotification notification) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "processNotification called from Thread: " + Thread.currentThread().toString());
       if (notification != null) {
          // Save as processed to prevent possible duplicate calls from canonical ids
          boolean display = isStringEmpty(notification.getBody());
@@ -111,7 +109,6 @@ public class OSNotificationController {
       } else {
          // -1 is used to note never displayed
          notificationJob.getNotification().setAndroidNotificationId(-1);
-         notificationJob.setProcessed(true);
          NotificationBundleProcessor.processNotification(notificationJob, true);
          OneSignal.handleNotificationReceived(notificationJob);
       }
@@ -139,14 +136,6 @@ public class OSNotificationController {
 
    public void setFromBackgroundLogic(boolean fromBackgroundLogic) {
       this.fromBackgroundLogic = fromBackgroundLogic;
-   }
-
-   public boolean isForegroundLogicEnded() {
-      return foregroundLogicEnded;
-   }
-
-   public void setForegroundLogicEnded(boolean foregroundLogicEnded) {
-      this.foregroundLogicEnded = foregroundLogicEnded;
    }
 
    /**
