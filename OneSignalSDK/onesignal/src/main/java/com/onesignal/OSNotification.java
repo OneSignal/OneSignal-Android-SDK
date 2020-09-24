@@ -221,7 +221,7 @@ public class OSNotification {
               .setNotificationExtender(notificationExtender)
               .setGroupedNotifications(groupedNotifications)
               .setAndroidNotificationId(androidNotificationId)
-              .setNotificationID(notificationId)
+              .setNotificationId(notificationId)
               .setTemplateName(templateName)
               .setTemplateId(templateId)
               .setTitle(title)
@@ -533,7 +533,7 @@ public class OSNotification {
    }
 
    /**
-    * List of action buttons on the notification. Part of {@link OSNotificationPayload}.
+    * List of action buttons on the notification.
     */
    public static class ActionButton {
       private String id;
@@ -582,7 +582,7 @@ public class OSNotification {
    }
 
    /**
-    * If a background image was set, this object will be available. Part of {@link OSNotificationPayload}.
+    * If a background image was set, this object will be available.
     */
    public static class BackgroundImageLayout {
       private String image;
@@ -608,7 +608,7 @@ public class OSNotification {
       private List<OSNotification> groupedNotifications;
       private int androidNotificationId;
 
-      private String notificationID;
+      private String notificationId;
       private String templateName, templateId;
       private String title, body;
       private JSONObject additionalData;
@@ -647,8 +647,8 @@ public class OSNotification {
          return this;
       }
 
-      public OSNotificationBuilder setNotificationID(String notificationID) {
-         this.notificationID = notificationID;
+      public OSNotificationBuilder setNotificationId(String notificationId) {
+         this.notificationId = notificationId;
          return this;
       }
 
@@ -762,7 +762,7 @@ public class OSNotification {
          payload.setNotificationExtender(notificationExtender);
          payload.setGroupedNotifications(groupedNotifications);
          payload.setAndroidNotificationId(androidNotificationId);
-         payload.setNotificationId(notificationID);
+         payload.setNotificationId(notificationId);
          payload.setTemplateName(templateName);
          payload.setTemplateId(templateId);
          payload.setTitle(title);
