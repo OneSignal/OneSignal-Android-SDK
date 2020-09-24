@@ -151,7 +151,7 @@ public class OneSignal {
    }
 
    /**
-    * Meant to be implemented with {@link OneSignal#setNotificationWillShowInForegroundHandler(NotificationWillShowInForegroundHandler)}
+    * Meant to be implemented with {@link OneSignal#setNotificationWillShowInForegroundHandler(OSNotificationWillShowInForegroundHandler)}
     * <br/><br/>
     * Call {@link OSNotificationReceivedEvent#complete(OSNotification)} with null
     * for not displaying notification or {@link OSMutableNotification} to modify notification before displaying.
@@ -160,7 +160,7 @@ public class OneSignal {
     * TODO: Update docs with new NotificationReceivedHandler
     * @see <a href="https://documentation.onesignal.com/docs/android-native-sdk#notificationreceivedhandler">NotificationReceivedHandler | OneSignal Docs</a>
     */
-   public interface NotificationWillShowInForegroundHandler {
+   public interface OSNotificationWillShowInForegroundHandler {
 
       void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent);
    }
@@ -185,9 +185,9 @@ public class OneSignal {
     * An interface used to process a OneSignal In-App Message the user just tapped on.
     * <br/>
     * Set this during OneSignal init in
-    * {@link OneSignal#setInAppMessageClickHandler(InAppMessageClickHandler)}
+    * {@link OneSignal#setInAppMessageClickHandler(OSInAppMessageClickHandler)}
     */
-   public interface InAppMessageClickHandler {
+   public interface OSInAppMessageClickHandler {
       /**
        * Fires when a user taps on a clickable element in the notification such as a button or image
        * @param result a {@link OSInAppMessageAction}
@@ -195,18 +195,18 @@ public class OneSignal {
       void inAppMessageClicked(OSInAppMessageAction result);
    }
 
-   public interface IdsAvailableHandler {
+   public interface OSIdsAvailableHandler {
       void idsAvailable(String userId, String registrationId);
    }
 
    /**
-    * Interface which you can implement and pass to {@link OneSignal#getTags(GetTagsHandler)} to
+    * Interface which you can implement and pass to {@link OneSignal#getTags(OSGetTagsHandler)} to
     * get all the tags set on a user
     * <br/><br/>
     * <b>Note:</b> the {@link #tagsAvailable(JSONObject)} callback does not run on the Main(UI)
     * Thread, so be aware when modifying UI in this method.
     */
-   public interface GetTagsHandler {
+   public interface OSGetTagsHandler {
       /**
        * <b>Note:</b> this callback does not run on the Main(UI)
        * Thread, so be aware when modifying UI in this method.
@@ -297,13 +297,13 @@ public class OneSignal {
    private static int subscribableStatus = Integer.MAX_VALUE;
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
-   static NotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
+   static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
 
    // TODO: Start of old mInitBuilder params
    //    These should be cleaned up and managed else where maybe?
    //    These have been ripped out of mInitBuilder since it was deleted and placed here for now
    static OSNotificationOpenedHandler notificationOpenedHandler;
-   static InAppMessageClickHandler inAppMessageClickHandler;
+   static OSInAppMessageClickHandler inAppMessageClickHandler;
 
    static boolean mAutoPromptLocation;
    // TODO: End of old mInitBuilder params
@@ -326,7 +326,7 @@ public class OneSignal {
       return appEntryState;
    }
 
-   private static IdsAvailableHandler idsAvailableHandler;
+   private static OSIdsAvailableHandler idsAvailableHandler;
 
    private static TrackGooglePurchase trackGooglePurchase;
    private static TrackAmazonPurchase trackAmazonPurchase;
@@ -378,7 +378,7 @@ public class OneSignal {
 
    private static Collection<JSONArray> unprocessedOpenedNotifs = new ArrayList<>();
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
-   private static final ArrayList<GetTagsHandler> pendingGetTagsHandlers = new ArrayList<>();
+   private static final ArrayList<OSGetTagsHandler> pendingGetTagsHandlers = new ArrayList<>();
 
    static DelayedConsentInitializationParameters delayedInitParams;
 
@@ -621,7 +621,7 @@ public class OneSignal {
          remoteNotificationReceivedHandler = callback;
    }
 
-   public static void setNotificationWillShowInForegroundHandler(@Nullable NotificationWillShowInForegroundHandler callback) {
+   public static void setNotificationWillShowInForegroundHandler(@Nullable OSNotificationWillShowInForegroundHandler callback) {
       notificationWillShowInForegroundHandler = callback;
    }
 
@@ -632,7 +632,7 @@ public class OneSignal {
          fireCallbackForOpenedNotifications();
    }
 
-   public static void setInAppMessageClickHandler(@Nullable InAppMessageClickHandler callback) {
+   public static void setInAppMessageClickHandler(@Nullable OSInAppMessageClickHandler callback) {
       inAppMessageClickHandler = callback;
    }
 
@@ -1697,11 +1697,11 @@ public class OneSignal {
 
    /**
     * Retrieve a list of tags that have been set on the user frm the OneSignal server.
-    * @param getTagsHandler an instance of {@link GetTagsHandler}.
+    * @param getTagsHandler an instance of {@link OSGetTagsHandler}.
     *                       <br/>
-    *                       Calls {@link GetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
+    *                       Calls {@link OSGetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
     */
-   public static void getTags(final GetTagsHandler getTagsHandler) {
+   public static void getTags(final OSGetTagsHandler getTagsHandler) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.GET_TAGS)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.GET_TAGS + " operation to a pending queue.");
@@ -1760,7 +1760,7 @@ public class OneSignal {
             if (tags.serverSuccess) getTagsCall = true;
 
             synchronized (pendingGetTagsHandlers) {
-               for (GetTagsHandler handler : pendingGetTagsHandlers) {
+               for (OSGetTagsHandler handler : pendingGetTagsHandlers) {
                   handler.tagsAvailable(tags.result == null || tags.toString().equals("{}") ? null : tags.result);
                }
 
@@ -1845,7 +1845,7 @@ public class OneSignal {
       }
    }
 
-   public static void idsAvailable(final IdsAvailableHandler inIdsAvailableHandler) {
+   public static void idsAvailable(final OSIdsAvailableHandler inIdsAvailableHandler) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.IDS_AVAILABLE)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.IDS_AVAILABLE + " operation to a pending queue.");
@@ -2047,7 +2047,7 @@ public class OneSignal {
     * Checks if the app is in the background
     * Checks if notificationWillShowInForegroundHandler is setup
     * <br/><br/>
-    * @see NotificationWillShowInForegroundHandler
+    * @see OSNotificationWillShowInForegroundHandler
     */
    static boolean shouldFireForegroundHandlers() {
       if (!isInForeground()) {
@@ -2066,7 +2066,7 @@ public class OneSignal {
    /**
     * Responsible for firing the notificationWillShowInForegroundHandler
     * <br/><br/>
-    * @see NotificationWillShowInForegroundHandler
+    * @see OSNotificationWillShowInForegroundHandler
     */
    static void fireForegroundHandlers(OSNotificationController notificationController) {
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Fire notificationWillShowInForegroundHandler");

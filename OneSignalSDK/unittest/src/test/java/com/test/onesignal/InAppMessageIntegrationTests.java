@@ -708,7 +708,7 @@ public class InAppMessageIntegrationTests {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         final OSInAppMessageAction[] lastAction = new OSInAppMessageAction[1];
-        OneSignal.setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+        OneSignal.setInAppMessageClickHandler(new OneSignal.OSInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(OSInAppMessageAction result) {
                 lastAction[0] = result;
@@ -769,7 +769,7 @@ public class InAppMessageIntegrationTests {
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
 
         final OSInAppMessageAction[] lastAction = new OSInAppMessageAction[1];
-        OneSignal.setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+        OneSignal.setInAppMessageClickHandler(new OneSignal.OSInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(OSInAppMessageAction result) {
                 lastAction[0] = result;
@@ -1054,7 +1054,7 @@ public class InAppMessageIntegrationTests {
 
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, actionRemove);
         threadAndTaskWait();
-        OneSignal.getTags(new OneSignal.GetTagsHandler() {
+        OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
             @Override
             public void tagsAvailable(JSONObject tags) {
                 lastGetTags[0] = tags;
