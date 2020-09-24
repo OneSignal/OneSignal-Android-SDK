@@ -191,11 +191,8 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload) {
-      OSNotification notification = new OSNotification(jsonPayload);
-      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-      notificationJob.setJsonPayload(jsonPayload);
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context, jsonPayload);
       notificationJob.setRestoring(restoring);
-      notificationJob.setNotification(notification);
       return NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
    }
 
@@ -211,6 +208,10 @@ public class OneSignalPackagePrivateHelper {
    public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
       OSNotificationGenerationJob(Context context) {
          super(context);
+      }
+
+      OSNotificationGenerationJob(Context context, JSONObject jsonPayload) {
+         super(context, jsonPayload);
       }
    }
 
