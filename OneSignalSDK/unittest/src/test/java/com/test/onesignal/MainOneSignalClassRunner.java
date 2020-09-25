@@ -1637,6 +1637,11 @@ public class MainOneSignalClassRunner {
       public void onFailure(OneSignal.EmailUpdateError error) {
          emailFiredFailure = error;
       }
+
+      @Override
+      public void onTaskQueued() {
+         emailFiredSuccess = false;
+      }
    }
 
    @Test
