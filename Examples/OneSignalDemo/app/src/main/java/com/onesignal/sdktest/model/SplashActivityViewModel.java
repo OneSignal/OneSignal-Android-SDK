@@ -108,6 +108,12 @@ public class SplashActivityViewModel implements ActivityViewModel {
                 tasks[0] = true;
                 attemptEnterApplication();
             }
+
+            @Override
+            public void onTaskQueued() {
+                tasks[0] = true;
+                attemptEnterApplication();
+            }
         });
         if (!isEmailCached) {
             tasks[0] = true;

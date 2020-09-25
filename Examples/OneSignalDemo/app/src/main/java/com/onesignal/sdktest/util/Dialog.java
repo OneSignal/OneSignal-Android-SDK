@@ -173,6 +173,16 @@ public class Dialog {
                             }
                         });
                     }
+
+                    @Override
+                    public void onTaskQueued() {
+                        ((Activity) context).runOnUiThread(() -> {
+                            toggleUpdateAlertDialogAttributes(false);
+
+                            dialog.dismiss();
+                            callback.onFailure();
+                        });
+                    }
                 });
             }
 

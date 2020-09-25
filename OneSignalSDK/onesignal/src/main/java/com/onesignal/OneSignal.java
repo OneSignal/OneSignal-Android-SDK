@@ -262,6 +262,7 @@ public class OneSignal {
    public interface EmailUpdateHandler {
       void onSuccess();
       void onFailure(EmailUpdateError error);
+      void onTaskQueued();
    }
 
    private static EmailUpdateHandler emailUpdateHandler;
@@ -1299,6 +1300,8 @@ public class OneSignal {
       if (taskController.shouldQueueTaskForInit(OSTaskController.SET_EMAIL)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.SET_EMAIL + " operation to a pending task queue.");
+         if (callback != null)
+            callback.onTaskQueued();
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
@@ -1319,7 +1322,7 @@ public class OneSignal {
          return;
       }
 
-      if (getRemoteParams().useEmailAuth && emailAuthHash == null) {
+      if (getRemoteParams() != null && getRemoteParams().useEmailAuth && emailAuthHash == null) {
          String errorMessage = "Email authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (callback != null)
             callback.onFailure(new EmailUpdateError(EmailErrorType.REQUIRES_EMAIL_AUTH, errorMessage));

@@ -4,5 +4,6 @@ public interface EmailUpdateCallback {
 
     void onSuccess();
     void onFailure();
+    void onTaskQueued();
 
 }

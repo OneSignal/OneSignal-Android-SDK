@@ -44,6 +44,11 @@ public class CurrentUser {
 
                 callback.onFailure();
             }
+
+            @Override
+            public void onTaskQueued() {
+                callback.onTaskQueued();
+            }
         });
     }
 
