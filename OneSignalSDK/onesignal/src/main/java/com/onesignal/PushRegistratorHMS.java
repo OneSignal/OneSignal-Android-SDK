@@ -7,7 +7,9 @@ import android.text.TextUtils;
 
 import com.huawei.agconnect.config.AGConnectServicesConfig;
 import com.huawei.hms.aaid.HmsInstanceId;
+import com.huawei.hms.common.ApiException;
 import com.huawei.hms.push.HmsMessaging;
+import com.huawei.hms.support.api.entity.core.CommonCode;
 
 import static com.onesignal.OneSignal.LOG_LEVEL;
 
