@@ -443,6 +443,10 @@ public class OneSignal {
          }
       };
 
+   private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
+   static OSInAppMessageController getInAppMessageController() {
+      return inAppMessageControllerFactory.getController(getDBHelperInstance());
+   }
    private static OSLogger logger = new OSLogWrapper();
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
@@ -846,9 +850,10 @@ public class OneSignal {
          if (foreground) {
             outcomeEventsController.cleanOutcomes();
             sessionManager.restartSessionIfNeeded(getAppEntryState());
+            getInAppMessageController().resetSessionLaunchTime();
          }
       } else if (foreground) {
-         OSInAppMessageController.getController().initWithCachedInAppMessages();
+         getInAppMessageController().initWithCachedInAppMessages();
          sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
 
@@ -1244,6 +1249,7 @@ public class OneSignal {
    // Returns true if there is active time that is unsynced.
    @WorkerThread
    static void onAppLostFocus() {
+      Log(LOG_LEVEL.DEBUG, "Application lost focus");
       foreground = false;
       appEntryState = AppEntryAction.APP_CLOSE;
 
@@ -1277,6 +1283,7 @@ public class OneSignal {
    }
 
    static void onAppFocus() {
+      Log(LOG_LEVEL.DEBUG, "Application on focus");
       foreground = true;
 
       // If the app gains focus and has not been set to NOTIFICATION_CLICK yet we can assume this is a normal app open
@@ -2923,7 +2930,7 @@ public class OneSignal {
     * Triggers are used for targeting in-app messages.
     */
    public static void addTriggers(Map<String, Object> triggers) {
-      OSInAppMessageController.getController().addTriggers(triggers);
+      getInAppMessageController().addTriggers(triggers);
    }
 
    /**
@@ -2946,13 +2953,13 @@ public class OneSignal {
       HashMap<String, Object> triggerMap = new HashMap<>();
       triggerMap.put(key, object);
 
-      OSInAppMessageController.getController().addTriggers(triggerMap);
+      getInAppMessageController().addTriggers(triggerMap);
    }
 
 
    /** Removes a list/collection of triggers from their keys with a Collection of Strings */
    public static void removeTriggersForKeys(Collection<String> keys) {
-      OSInAppMessageController.getController().removeTriggersForKeys(keys);
+      getInAppMessageController().removeTriggersForKeys(keys);
    }
 
    /** Removes a list/collection of triggers from their keys with a JSONArray String.
@@ -2966,7 +2973,7 @@ public class OneSignal {
          // Some keys were filtered, log as warning
          if (jsonArray.length() != keysCollection.size())
             OneSignal.Log(LOG_LEVEL.WARN, "removeTriggersForKeysFromJsonArrayString: Skipped removing non-String type keys ");
-         OSInAppMessageController.getController().removeTriggersForKeys(keysCollection);
+         getInAppMessageController().removeTriggersForKeys(keysCollection);
       } catch (JSONException e) {
          OneSignal.Log(LOG_LEVEL.ERROR, "removeTriggersForKeysFromJsonArrayString, invalid json", e);
       }
@@ -2977,13 +2984,13 @@ public class OneSignal {
       ArrayList<String> triggerKeys = new ArrayList<>();
       triggerKeys.add(key);
 
-      OSInAppMessageController.getController().removeTriggersForKeys(triggerKeys);
+      getInAppMessageController().removeTriggersForKeys(triggerKeys);
    }
 
    /** Returns a single trigger value for the given key (if it exists, otherwise returns null) */
    @Nullable
    public static Object getTriggerValueForKey(String key) {
-      return OSInAppMessageController.getController().getTriggerValue(key);
+      return getInAppMessageController().getTriggerValue(key);
    }
 
    /***
@@ -2993,7 +3000,7 @@ public class OneSignal {
     * @param pause The boolean that pauses/resumes in-app messages
     */
    public static void pauseInAppMessages(boolean pause) {
-      OSInAppMessageController.getController().setInAppMessagingEnabled(!pause);
+      getInAppMessageController().setInAppMessagingEnabled(!pause);
    }
 
    private static boolean isDuplicateNotification(String id, Context context) {

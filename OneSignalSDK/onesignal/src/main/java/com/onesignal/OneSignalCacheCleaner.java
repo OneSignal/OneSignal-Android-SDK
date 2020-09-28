@@ -57,8 +57,8 @@ class OneSignalCacheCleaner {
             public void run() {
                 Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
-                OSInAppMessageRepository inAppMessageRepository = OSInAppMessageController
-                        .getController()
+                OSInAppMessageRepository inAppMessageRepository = OneSignal
+                        .getInAppMessageController()
                         .getInAppMessageRepository(dbHelper);
                 inAppMessageRepository.cleanCachedInAppMessages();
             }

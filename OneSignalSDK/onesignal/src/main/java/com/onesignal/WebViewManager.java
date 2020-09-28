@@ -206,9 +206,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             JSONObject body = jsonObject.getJSONObject("body");
             String id = body.optString("id", null);
             if (message.isPreview) {
-                OSInAppMessageController.getController().onMessageActionOccurredOnPreview(message, body);
+                OneSignal.getInAppMessageController().onMessageActionOccurredOnPreview(message, body);
             } else if (id != null) {
-                OSInAppMessageController.getController().onMessageActionOccurredOnMessage(message, body);
+                OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, body);
             }
 
             boolean close = body.getBoolean("close");
@@ -347,12 +347,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             @Override
             public void onMessageWasShown() {
                 firstShow = false;
-                OSInAppMessageController.getController().onMessageWasShown(message);
+                OneSignal.getInAppMessageController().onMessageWasShown(message);
             }
 
             @Override
             public void onMessageWasDismissed() {
-                OSInAppMessageController.getController().messageWasDismissed(message);
+                OneSignal.getInAppMessageController().messageWasDismissed(message);
                 ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
             }
         });
