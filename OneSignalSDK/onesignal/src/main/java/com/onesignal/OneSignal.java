@@ -1309,6 +1309,7 @@ public class OneSignal {
                setEmail(email, emailAuthHash, callback);
             }
          });
+         return;
       }
       // If applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EMAIL))
