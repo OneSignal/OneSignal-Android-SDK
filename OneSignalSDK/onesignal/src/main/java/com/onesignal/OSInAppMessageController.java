@@ -69,23 +69,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
 
-    @Nullable
-    private static OSInAppMessageController sharedInstance;
-
-    public static synchronized OSInAppMessageController getController() {
-        OneSignalDbHelper dbHelper = OneSignal.getDBHelperInstance();
-
-        // Make sure only Android 4.4 devices and higher can use IAMs
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            sharedInstance = new OSInAppMessageDummyController(null);
-        }
-
-        if (sharedInstance == null)
-            sharedInstance = new OSInAppMessageController(dbHelper);
-
-        return sharedInstance;
-    }
-
     protected OSInAppMessageController(OneSignalDbHelper dbHelper) {
         messages = new ArrayList<>();
         dismissedMessages = OSUtils.newConcurrentSet();
@@ -134,6 +117,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
+    }
+
+    void resetSessionLaunchTime() {
+        OSDynamicTriggerController.resetSessionLaunchTime();
     }
 
     // Normally we wait until on_session call to download the latest IAMs

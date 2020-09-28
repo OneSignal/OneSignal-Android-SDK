@@ -20,10 +20,9 @@ class OSDynamicTriggerController {
     private static final double REQUIRED_ACCURACY = 0.3;
     // Assume last time an In-App Message was displayed a very very long time ago.
     private static final long DEFAULT_LAST_IN_APP_TIME_AGO = 999_999;
+    private static Date sessionLaunchTime = new Date();
 
     private final ArrayList<String> scheduledMessages;
-
-    static Date sessionLaunchTime = new Date();
 
     OSDynamicTriggerController(OSDynamicTriggerControllerObserver triggerObserver) {
         scheduledMessages = new ArrayList<>();
@@ -45,9 +44,9 @@ class OSDynamicTriggerController {
                     currentTimeInterval = new Date().getTime() - sessionLaunchTime.getTime();
                     break;
                 case TIME_SINCE_LAST_IN_APP:
-                    if (OSInAppMessageController.getController().isInAppMessageShowing())
+                    if (OneSignal.getInAppMessageController().isInAppMessageShowing())
                         return false;
-                    Date lastTimeAppDismissed = OSInAppMessageController.getController().lastTimeInAppDismissed;
+                    Date lastTimeAppDismissed = OneSignal.getInAppMessageController().lastTimeInAppDismissed;
                     if (lastTimeAppDismissed == null)
                         currentTimeInterval = DEFAULT_LAST_IN_APP_TIME_AGO;
                     else
@@ -82,6 +81,11 @@ class OSDynamicTriggerController {
         }
 
         return false;
+    }
+
+
+    static void resetSessionLaunchTime() {
+        sessionLaunchTime = new Date();
     }
 
     private static boolean evaluateTimeIntervalWithOperator(double timeInterval, double currentTimeInterval, OSTriggerOperator operator) {

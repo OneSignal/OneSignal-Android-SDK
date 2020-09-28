@@ -23,6 +23,9 @@ public class StaticResetHelper {
             if (field.getName().equals("unprocessedOpenedNotifis")) {
                field.set(null, new ArrayList<JSONArray>());
                return true;
+            } else if (field.getName().equals("inAppMessageControllerFactory")) {
+               field.set(null, new OSInAppMessageControllerFactory());
+               return true;
             }
             return false;
          }
