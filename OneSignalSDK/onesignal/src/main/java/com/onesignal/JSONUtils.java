@@ -17,6 +17,8 @@ import java.util.Set;
 
 class JSONUtils {
 
+    protected static final Object syncLock = new Object() {};
+
     /**
      * Returns a JSONObject of the differences between cur and changedTo.
      * If baseOutput is added changes will be applied to this JSONObject.
@@ -49,7 +51,10 @@ class JSONUtils {
                         JSONObject outValue = null;
                         if (baseOutput != null && baseOutput.has(key))
                             outValue = baseOutput.getJSONObject(key);
-                        JSONObject returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
+                        JSONObject returnedJson;
+                        synchronized (syncLock) {
+                            returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
+                        }
                         String returnedJsonStr = returnedJson.toString();
                         if (!returnedJsonStr.equals("{}"))
                             output.put(key, new JSONObject(returnedJsonStr));

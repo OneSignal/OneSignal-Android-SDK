@@ -49,7 +49,7 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
-import com.onesignal.OSDeviceState;
+import com.onesignal.MockUserState;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
@@ -218,6 +218,12 @@ public class MainOneSignalClassRunner {
       OneSignal.getTags(tags -> lastGetTags = tags);
    }
 
+   private static JSONObject cur, changedTo;
+   private static void populateJSONObjectsSuccess() throws JSONException {
+      cur = new JSONObject("{\"notification_types\":1,\"app_id\":\"b2f7f966-d8cc-11e4-bed1-df8f05be55ba\",\"ad_id\":\"8264d1b5-ce74-467d-9514-e08e5247e90a\",\"device_os\":\"9\",\"timezone\":-18000,\"language\":\"en\",\"sdk\":\"031501\",\"sdk_type\":\"native\",\"android_package\":\"com.onesignal.sdktest\",\"device_model\":\"AOSP on IA Emulator\",\"game_version\":1,\"net_type\":0,\"carrier\":\"Android\",\"rooted\":false,\"identifier\":\"cqZsmfZFT6Wwz0tDzT1fty:APA91bH-aob7somEAc92skiE4tO0jtDkjzx_Bs9pS232CEEk60iAnpQjC4yqMkrqVhV5w3mE0EOTWzJOFzcXOps2zzgTfiF9M3f5rdVR-3LeunjxZ8Ld40gi56ozvxWPqHSC-_xpBBBS\",\"device_type\":1,\"tags\":{\"counter\":\"1\",\"test_value\":\"test_key\"}}");
+      changedTo = new JSONObject("{\"notification_types\":0,\"app_id\":\"7cdb5dd1-eb5d-4c58-9cbf-c0448b18816b\",\"ad_id\":\"8264d1b5-ce74-467d-9514-e08e5247e90a\",\"device_os\":\"9\",\"timezone\":-18000,\"language\":\"en\",\"sdk\":\"031501\",\"sdk_type\":\"native\",\"android_package\":\"com.onesignal.sdktest\",\"device_model\":\"AOSP on IA Emulator\",\"game_version\":1,\"net_type\":0,\"carrier\":\"Android\",\"rooted\":false,\"identifier\":\"cqZsmfZFT6Wwz0tDzT1fty:APA91bH-aob7somEAc92skiE4tO0jtDkjzx_Bs9pS232CEEk60iAnpQjC4yqMkrqVhV5w3mE0EOTWzJOFzcXOps2zzgTfiF9M3f5rdVR-3LeunjxZ8Ld40gi56ozvxWPqHSC-_xpBBBS\",\"device_type\":1,\"tags\":{\"counter\":\"1\",\"test_key\":\"test_value\"}}");
+   }
+
    private static void cleanUp() throws Exception {
       lastNotificationOpenedBody = null;
       lastGetTags = null;
@@ -337,6 +343,60 @@ public class MainOneSignalClassRunner {
 
       // 5. Assert we did NOT try to get a Google Ad id
       assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
+   }
+
+   @Test
+   public void testGenerateJsonDiffMutate() throws Exception {
+      JSONObject res = OneSignalPackagePrivateHelper.JSONUtils.jsonDiff(cur, changedTo, null, null);
+
+      populateJSONObjectsSuccess();
+      assertEquals(changedTo.toString(), res.toString());
+   }
+
+   @Test
+   public void testGenerateJsonDiffDoesNotMutate() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+      OneSignal.sendTags(cur);
+
+      getGetTagsHandler();
+      threadAndTaskWait();
+
+      OSNotification osNotification = createTestOSNotification();
+
+      populateJSONObjectsSuccess();
+
+      JSONObject result = OneSignalPackagePrivateHelper.JSONUtils.jsonDiff(osNotification.toJSONObject(), changedTo, null, null);
+      assertEquals(result.toString(), changedTo.toString());
+   }
+
+   @Test
+   public void testGenerateJsonDiffDoesNotMutateIncludingFields() throws Exception {
+      populateJSONObjectsSuccess();
+
+      OneSignalInit();
+      getGetTagsHandler();
+      threadAndTaskWait();
+
+      getGetTagsHandler();
+      threadAndTaskWait();
+
+      String email = "josh@onesignal.com";
+      OneSignal.setEmail(email);
+      threadAndTaskWait();
+
+      MockUserState userState = new MockUserState("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", true);
+      userState.dependValues.put("email_auth_hash", "");
+      JSONObject syncValues = userState.syncValues;
+      userState.generateJsonDiff(syncValues, new JSONObject().put("email", email), syncValues, null);
+
+      JSONObject resultUserValues = OneSignalPackagePrivateHelper.JSONUtils.jsonDiff(userState.dependValues, userState.syncValues, null, null);
+      assertEquals(userState.syncValues.toString(), resultUserValues.toString());
+
+      JSONObject resultMockedData = OneSignalPackagePrivateHelper.JSONUtils.jsonDiff(userState.syncValues, changedTo, null, null);
+      assertEquals(changedTo.toString(), resultMockedData.toString());
    }
 
    @Test
