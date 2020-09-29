@@ -49,6 +49,7 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
+import com.onesignal.OSDeviceState;
 import com.onesignal.MockUserState;
 import com.onesignal.OSEmailSubscriptionObserver;
 import com.onesignal.OSEmailSubscriptionState;
