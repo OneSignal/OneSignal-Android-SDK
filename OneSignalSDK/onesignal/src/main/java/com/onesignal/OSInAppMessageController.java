@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,25 +67,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private boolean inAppMessageShowing = false;
 
     @Nullable
-    Date lastTimeInAppDismissed;
+    Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
-
-    @Nullable
-    private static OSInAppMessageController sharedInstance;
-
-    public static synchronized OSInAppMessageController getController(OSLogger logger) {
-        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(OneSignal.appContext);
-
-        // Make sure only Android 4.4 devices and higher can use IAMs
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            sharedInstance = new OSInAppMessageDummyController(null, logger);
-        }
-
-        if (sharedInstance == null)
-            sharedInstance = new OSInAppMessageController(dbHelper, logger);
-
-        return sharedInstance;
-    }
 
     protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSLogger logger) {
         messages = new ArrayList<>();
@@ -137,6 +121,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
     }
 
+    void resetSessionLaunchTime() {
+        OSDynamicTriggerController.resetSessionLaunchTime();
+    }
+
     // Normally we wait until on_session call to download the latest IAMs
     //    however an on session won't happen
     void initWithCachedInAppMessages() {
@@ -187,6 +175,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         for (int i = 0; i < json.length(); i++) {
             JSONObject messageJson = json.getJSONObject(i);
             OSInAppMessage message = new OSInAppMessage(messageJson);
+
+            populateRedisplayMessageTriggers(message);
             newMessages.add(message);
         }
         messages = newMessages;
@@ -194,11 +184,26 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         evaluateInAppMessages();
     }
 
+    private void populateRedisplayMessageTriggers(OSInAppMessage message) {
+        int index = redisplayedInAppMessages.indexOf(message);
+        if (index > -1) {
+            OSInAppMessage redisplayMessage = redisplayedInAppMessages.get(index);
+            redisplayMessage.triggers = message.triggers;
+        }
+    }
+
     private void evaluateInAppMessages() {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting evaluateInAppMessages");
+
         for (OSInAppMessage message : messages) {
-            setDataForRedisplay(message);
-            if (!dismissedMessages.contains(message.messageId) && triggerController.evaluateMessageTriggers(message))
-                queueMessageForDisplay(message);
+            // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
+            if (triggerController.evaluateMessageTriggers(message)) {
+                setDataForRedisplay(message);
+
+                if (!dismissedMessages.contains(message.messageId)) {
+                    queueMessageForDisplay(message);
+                }
+            }
         }
     }
 
@@ -471,17 +476,20 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         int index = redisplayedInAppMessages.indexOf(message);
 
         if (messageDismissed && index != -1) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.messageId);
-
             OSInAppMessage savedIAM = redisplayedInAppMessages.get(index);
             message.getRedisplayStats().setDisplayStats(savedIAM.getRedisplayStats());
 
             // Message that don't have triggers should display only once per session
-            boolean triggerHasChanged = message.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
+            boolean triggerHasChanged = savedIAM.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
+
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.toString() + " triggerHasChanged: " + triggerHasChanged);
+
             // Check if conditions are correct for redisplay
             if (triggerHasChanged &&
                     message.getRedisplayStats().isDelayTimeSatisfied() &&
                     message.getRedisplayStats().shouldDisplayAgain()) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay message available for redisplay: " + message.messageId);
+
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
                 message.clearClickIds();
@@ -721,8 +729,34 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }, null);
     }
 
+    /**
+     * Part of redisplay logic
+     * <p>
+     * Will update redisplay messages depending on dynamic triggers before setDataForRedisplay is called.
+     * @see OSInAppMessageController#setDataForRedisplay(OSInAppMessage)
+     *
+     * We can't depend only on messageTriggerConditionChanged, due to trigger evaluation to true before scheduling
+     * @see OSInAppMessageController#messageTriggerConditionChanged()
+     */
+    @Override
+    public void messageDynamicTriggerCompleted(String triggerId) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "messageDynamicTriggerCompleted called with triggerId: " + triggerId);
+        Set<String> triggerIds = new HashSet<>();
+        triggerIds.add(triggerId);
+        makeRedisplayMessagesAvailableWithTriggers(triggerIds);
+    }
+
+    /**
+     * Dynamic trigger logic
+     * <p>
+     * This will re evaluate messages due to dynamic triggers evaluating to true potentially
+     *
+     * @see OSInAppMessageController#setDataForRedisplay(OSInAppMessage)
+     */
     @Override
     public void messageTriggerConditionChanged() {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "messageTriggerConditionChanged called");
+
         // This method is called when a time-based trigger timer fires, meaning the message can
         //  probably be shown now. So the current message conditions should be re-evaluated
         evaluateInAppMessages();
@@ -747,9 +781,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * - At least one Trigger has changed
      */
     private void makeRedisplayMessagesAvailableWithTriggers(Collection<String> newTriggersKeys) {
-        for (OSInAppMessage message : messages) {
-            if (redisplayedInAppMessages.contains(message) &&
-                    triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
+        for (OSInAppMessage message : redisplayedInAppMessages) {
+            if (!message.isTriggerChanged() && triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
                 logger.debug("Trigger changed for message: " + message.toString());
                 message.setTriggerChanged(true);
             }

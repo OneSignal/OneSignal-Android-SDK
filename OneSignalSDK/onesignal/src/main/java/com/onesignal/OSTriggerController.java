@@ -184,7 +184,9 @@ class OSTriggerController {
         for (String triggerKey : newTriggersKeys) {
             for (ArrayList<OSTrigger> andConditions : message.triggers) {
                 for (OSTrigger trigger : andConditions) {
-                    if (triggerKey.equals(trigger.property)) {
+                    // Dynamic triggers depends on triggerId
+                    // Common triggers changed by user depends on property
+                    if (triggerKey.equals(trigger.property) || triggerKey.equals(trigger.triggerId)) {
                         // At least one trigger has changed
                         return true;
                     }

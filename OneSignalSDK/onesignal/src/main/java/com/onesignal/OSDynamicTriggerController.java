@@ -9,6 +9,8 @@ import java.util.TimerTask;
 class OSDynamicTriggerController {
 
     interface OSDynamicTriggerControllerObserver {
+        // Alerts the observer that a trigger evaluated to true
+        void messageDynamicTriggerCompleted(String triggerId);
         // Alerts the observer that a trigger timer has fired
         void messageTriggerConditionChanged();
     }
@@ -18,17 +20,16 @@ class OSDynamicTriggerController {
     private static final double REQUIRED_ACCURACY = 0.3;
     // Assume last time an In-App Message was displayed a very very long time ago.
     private static final long DEFAULT_LAST_IN_APP_TIME_AGO = 999_999;
+    private static Date sessionLaunchTime = new Date();
 
     private final ArrayList<String> scheduledMessages;
-
-    static Date sessionLaunchTime = new Date();
 
     OSDynamicTriggerController(OSDynamicTriggerControllerObserver triggerObserver) {
         scheduledMessages = new ArrayList<>();
         observer = triggerObserver;
     }
 
-    boolean dynamicTriggerShouldFire(final OSTrigger trigger) {
+    boolean dynamicTriggerShouldFire(OSTrigger trigger) {
         if (trigger.value == null)
             return false;
 
@@ -43,9 +44,9 @@ class OSDynamicTriggerController {
                     currentTimeInterval = new Date().getTime() - sessionLaunchTime.getTime();
                     break;
                 case TIME_SINCE_LAST_IN_APP:
-                    if (OSInAppMessageController.getController(OneSignal.getLogger()).isInAppMessageShowing())
+                    if (OneSignal.getInAppMessageController().isInAppMessageShowing())
                         return false;
-                    Date lastTimeAppDismissed = OSInAppMessageController.getController(OneSignal.getLogger()).lastTimeInAppDismissed;
+                    Date lastTimeAppDismissed = OneSignal.getInAppMessageController().lastTimeInAppDismissed;
                     if (lastTimeAppDismissed == null)
                         currentTimeInterval = DEFAULT_LAST_IN_APP_TIME_AGO;
                     else
@@ -53,30 +54,38 @@ class OSDynamicTriggerController {
                     break;
             }
 
+            final String triggerId = trigger.triggerId;
             long requiredTimeInterval = (long) (((Number) trigger.value).doubleValue() * 1_000);
-            if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimeInterval, trigger.operatorType))
+            if (evaluateTimeIntervalWithOperator(requiredTimeInterval, currentTimeInterval, trigger.operatorType)) {
+                observer.messageDynamicTriggerCompleted(triggerId);
                 return true;
+            }
 
             long offset = requiredTimeInterval - currentTimeInterval;
             if (offset <= 0L)
                 return false;
 
             // Prevents re-scheduling timers for messages that we're already waiting on
-            if (scheduledMessages.contains(trigger.triggerId))
+            if (scheduledMessages.contains(triggerId))
                 return false;
 
             OSDynamicTriggerTimer.scheduleTrigger(new TimerTask() {
                 @Override
                 public void run() {
-                    scheduledMessages.remove(trigger.triggerId);
+                    scheduledMessages.remove(triggerId);
                     observer.messageTriggerConditionChanged();
                 }
-            }, trigger.triggerId, offset);
+            }, triggerId, offset);
 
-            scheduledMessages.add(trigger.triggerId);
+            scheduledMessages.add(triggerId);
         }
 
         return false;
+    }
+
+
+    static void resetSessionLaunchTime() {
+        sessionLaunchTime = new Date();
     }
 
     private static boolean evaluateTimeIntervalWithOperator(double timeInterval, double currentTimeInterval, OSTriggerOperator operator) {

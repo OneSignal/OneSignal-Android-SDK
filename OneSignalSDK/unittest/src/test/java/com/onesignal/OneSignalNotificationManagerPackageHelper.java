@@ -26,7 +26,7 @@ public class OneSignalNotificationManagerPackageHelper {
       return getNotificationManager(context).getActiveNotifications();
    }
 
-   public static Integer getMostRecentNotifIdFromGroup(SQLiteDatabase db, String group, boolean isGroupless) {
+   public static Integer getMostRecentNotifIdFromGroup(OneSignalDbHelper db, String group, boolean isGroupless) {
       return OneSignalNotificationManager.getMostRecentNotifIdFromGroup(db, group, isGroupless);
    }
 

@@ -249,6 +249,26 @@ public class InAppMessageIntegrationTests {
         assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
+    // This test reproduces https://github.com/OneSignal/OneSignal-Android-SDK/issues/1000
+    @Test
+    public void testMessageDismissingWhileNewActivityIsBeingStarted() throws Exception {
+        initializeSdkWithMultiplePendingMessages();
+
+        // 1. Add trigger to show IAM
+        OneSignal.addTriggers(new HashMap<String, Object>() {{
+            put("test_2", 2);
+        }});
+
+        // 2. Activity IAM is displaying over is dismissed
+        blankActivityController.stop();
+
+        // 3. IAM is dismissed before a new Activity is shown
+        OneSignalPackagePrivateHelper.WebViewManager.callDismissAndAwaitNextMessage();
+
+        // 4. An Activity put in to focus, successful we don't throw.
+        blankActivityController.resume();
+    }
+
 
     private void nextResponseMultiplePendingMessages() throws JSONException {
         final OSTestInAppMessage testFirstMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3);
@@ -1211,6 +1231,65 @@ public class InAppMessageIntegrationTests {
         int requestSizeAfterRedisplay = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequestAfterRedisplay = ShadowOneSignalRestClient.requests.get(requestSizeAfterRedisplay - 1);
         assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequestAfterRedisplay.url);
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        // Check IAMs was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Check if data after dismiss is set correctly
+        assertEquals(1,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(2,  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        assertTrue( OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime() - lastDisplayTime >= DELAY);
+    }
+
+    @Test
+    public void testInAppMessageDisplayMultipleTimes_sessionDurationTrigger() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(OSTriggerKind.SESSION_TIME, "",
+                OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05, LIMIT, DELAY);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // Init OneSignal IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // No schedule should happen, IAM should evaluate to true
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+
+        // Dismiss IAM will make display quantity increase and last display time to change
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+        // Check IAMs was removed from queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Check if data after dismiss is set correctly
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().size());
+        assertEquals(1, OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getDisplayQuantity());
+        long lastDisplayTime =  OneSignalPackagePrivateHelper.getRedisplayInAppMessages().get(0).getRedisplayStats().getLastDisplayTime();
+        assertTrue(lastDisplayTime > 0);
+
+        // Change time for delay to be covered
+        advanceSystemTimeBy(DELAY);
+        fastColdRestartApp();
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // Init OneSignal IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // No schedule should happen since session time period is very small, should evaluate to true on first run
+        // Wait for redisplay logic
+        Awaitility.await()
+                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                    }
+                });
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
         // Check IAMs was removed from queue

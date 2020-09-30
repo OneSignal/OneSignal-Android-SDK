@@ -31,7 +31,6 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
@@ -73,14 +72,14 @@ class BadgeCountUpdater {
       return areBadgeSettingsEnabled(context) && OSUtils.areNotificationsEnabled(context);
    }
 
-   static void update(SQLiteDatabase readableDb, Context context) {
+   static void update(OneSignalDb db, Context context) {
       if (!areBadgesEnabled(context))
          return;
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
          updateStandard(context);
       else
-         updateFallback(readableDb, context);
+         updateFallback(db, context);
    }
 
    @RequiresApi(api = Build.VERSION_CODES.M)
@@ -97,8 +96,8 @@ class BadgeCountUpdater {
       updateCount(runningCount, context);
    }
 
-   private static void updateFallback(SQLiteDatabase readableDb, Context context) {
-      Cursor cursor = readableDb.query(
+   private static void updateFallback(OneSignalDb db, Context context) {
+      Cursor cursor = db.query(
          NotificationTable.TABLE_NAME,
          null,
          OneSignalDbHelper.recentUninteractedWithNotificationsWhere().toString(),

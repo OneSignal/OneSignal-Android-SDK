@@ -630,7 +630,7 @@ public class DatabaseRunner {
         outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT, outcomeEventDB.getWeight());
         outcomeValues.put(MockOSOutcomeEventsTable.COLUMN_NAME_TIMESTAMP, outcomeEventDB.getTimestamp());
 
-        writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
+        dbHelper.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
 
         List<OSOutcomeEventDB> outcomesSaved = getAllOutcomesRecords(dbHelper);
         assertEquals(1, outcomesSaved.size());

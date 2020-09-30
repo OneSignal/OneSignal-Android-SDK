@@ -949,8 +949,7 @@ public class GenerateNotificationRunner {
       time.advanceSystemTimeBy(604_801);
 
       // Should not count as a badge
-      SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      OneSignalPackagePrivateHelper.BadgeCountUpdater.update(readableDb, blankActivity);
+      OneSignalPackagePrivateHelper.BadgeCountUpdater.update(dbHelper, blankActivity);
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
 
@@ -1062,8 +1061,7 @@ public class GenerateNotificationRunner {
    
    @Test
    public void shouldHandleOpeningInAppAlertWithGroupKeySet() {
-      SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, writableDb, "some_group", false);
+      NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(blankActivity, dbHelper, "some_group", false);
    }
 
    @Test

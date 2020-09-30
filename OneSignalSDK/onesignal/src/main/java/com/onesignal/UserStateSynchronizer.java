@@ -396,7 +396,7 @@ abstract class UserStateSynchronizer {
 
                         // List of in app messages to evaluate for the session
                         if (jsonResponse.has(IN_APP_MESSAGES_JSON_KEY))
-                            OSInAppMessageController.getController(OneSignal.getLogger()).receivedInAppMessageJson(jsonResponse.getJSONArray(IN_APP_MESSAGES_JSON_KEY));
+                            OneSignal.getInAppMessageController().receivedInAppMessageJson(jsonResponse.getJSONArray(IN_APP_MESSAGES_JSON_KEY));
 
                         onSuccessfulSync(jsonBody);
                     } catch (JSONException e) {

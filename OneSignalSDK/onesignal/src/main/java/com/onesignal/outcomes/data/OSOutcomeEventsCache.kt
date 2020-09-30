@@ -48,23 +48,7 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
     @WorkerThread
     @Synchronized
     fun deleteOldOutcomeEvent(event: OSOutcomeEventParams) {
-        dbHelper.sqLiteDatabaseWithRetries?.run {
-            try {
-                beginTransaction()
-                delete(OutcomeEventsTable.TABLE_NAME,
-                        OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?",
-                        arrayOf(event.timestamp.toString()))
-                setTransactionSuccessful()
-            } catch (e: SQLiteException) {
-                logger.error("Error deleting old outcome event records! ", e)
-            } finally {
-                try {
-                    endTransaction() // May throw if transaction was never opened or DB is full.
-                } catch (e: SQLiteException) {
-                    logger.error("Error closing transaction! ", e)
-                }
-            }
-        }
+        dbHelper.delete(OutcomeEventsTable.TABLE_NAME, OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?", arrayOf(event.timestamp.toString()))
     }
 
     /**
@@ -74,7 +58,6 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
     @WorkerThread
     @Synchronized
     fun saveOutcomeEvent(eventParams: OSOutcomeEventParams) {
-        val writableDb = dbHelper.sqLiteDatabaseWithRetries
         var notificationIds = JSONArray()
         var iamIds = JSONArray()
         var notificationInfluenceType = OSInfluenceType.UNATTRIBUTED
@@ -121,7 +104,7 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
             put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.weight)
             put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.timestamp)
         }.also { values ->
-            writableDb.insert(OutcomeEventsTable.TABLE_NAME, null, values)
+            dbHelper.insert(OutcomeEventsTable.TABLE_NAME, null, values)
         }
     }
 
@@ -135,8 +118,7 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
         val events: MutableList<OSOutcomeEventParams> = ArrayList()
         var cursor: Cursor? = null
         try {
-            val readableDb = dbHelper.sqLiteDatabaseWithRetries
-            cursor = readableDb.query(
+            cursor = dbHelper.query(
                     OutcomeEventsTable.TABLE_NAME,
                     null,
                     null,
@@ -266,14 +248,13 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
         addIdsToListFromSource(cachedUniqueOutcomes, directBody)
         addIdsToListFromSource(cachedUniqueOutcomes, indirectBody)
 
-        val writableDb = dbHelper.sqLiteDatabaseWithRetries
         for (uniqueOutcome in cachedUniqueOutcomes) {
             ContentValues().apply {
                 put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcome.getInfluenceId())
                 put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, uniqueOutcome.getChannel().toString())
                 put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName)
             }.also { values ->
-                writableDb.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values)
+                dbHelper.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values)
             }
         }
     }
@@ -285,7 +266,6 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
     @Synchronized
     fun getNotCachedUniqueInfluencesForOutcome(name: String, influences: List<OSInfluence>): List<OSInfluence> {
         val uniqueInfluences: MutableList<OSInfluence> = ArrayList()
-        val readableDb = dbHelper.sqLiteDatabaseWithRetries
         var cursor: Cursor? = null
         try {
             for (influence in influences) {
@@ -300,7 +280,7 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
                             CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
                             CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
                     val args = arrayOf(channelInfluenceId, channel.toString(), name)
-                    cursor = readableDb.query(
+                    cursor = dbHelper.query(
                             CachedUniqueOutcomeTable.TABLE_NAME,
                             columns,
                             where,

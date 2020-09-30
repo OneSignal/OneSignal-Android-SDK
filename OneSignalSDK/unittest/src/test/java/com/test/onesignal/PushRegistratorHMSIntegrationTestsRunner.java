@@ -7,8 +7,6 @@ import com.huawei.hms.common.ApiException;
 import com.huawei.hms.support.api.client.Status;
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.OneSignal;
-import static com.onesignal.OneSignalPackagePrivateHelper.UserState.PUSH_STATUS_HMS_TOKEN_TIMEOUT;
-import static com.onesignal.OneSignalPackagePrivateHelper.UserState.PUSH_STATUS_HMS_API_EXCEPTION_OTHER;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowHmsInstanceId;
@@ -29,6 +27,8 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.UserState.PUSH_STATUS_HMS_API_EXCEPTION_OTHER;
+import static com.onesignal.OneSignalPackagePrivateHelper.UserState.PUSH_STATUS_HMS_TOKEN_TIMEOUT;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertHuaweiPlayerCreateAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreateNotSubscribedAtIndex;

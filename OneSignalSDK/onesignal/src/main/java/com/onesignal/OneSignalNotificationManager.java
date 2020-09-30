@@ -4,7 +4,6 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import androidx.annotation.RequiresApi;
@@ -118,10 +117,7 @@ public class OneSignalNotificationManager {
     /**
      * Query SQLiteDatabase by group to find the most recent created notification id
      */
-    static Integer getMostRecentNotifIdFromGroup(SQLiteDatabase db, String group, boolean isGroupless) {
-        Integer recentId = null;
-        Cursor cursor = null;
-
+    static Integer getMostRecentNotifIdFromGroup(OneSignalDbHelper db, String group, boolean isGroupless) {
         /* Beginning of the query string changes based on being groupless or not
          * since the groupless notifications will have a null group key in the db */
         String whereStr = isGroupless ?
@@ -135,34 +131,29 @@ public class OneSignalNotificationManager {
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0";
         String[] whereArgs = isGroupless ?
                 null :
-                new String[]{ group };
+                new String[]{group};
 
-        try {
-            // Order by timestamp in descending and limit to 1
-            cursor = db.query(OneSignalDbContract.NotificationTable.TABLE_NAME,
-                    null,
-                    whereStr,
-                    whereArgs,
-                    null,
-                    null,
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + " DESC",
-                    "1");
-            boolean hasRecord = cursor.moveToFirst();
+        // Order by timestamp in descending and limit to 1
+        Cursor cursor = db.query(OneSignalDbContract.NotificationTable.TABLE_NAME,
+                null,
+                whereStr,
+                whereArgs,
+                null,
+                null,
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + " DESC",
+                "1");
 
-            if (!hasRecord) {
-                cursor.close();
-                return null;
-            }
+        boolean hasRecord = cursor.moveToFirst();
 
-            // Get more recent notification id from Cursor
-            recentId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+        if (!hasRecord) {
             cursor.close();
-        } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error getting android notification id for summary notification group: " + group, t);
-        } finally {
-            if (cursor != null && !cursor.isClosed())
-                cursor.close();
+            return null;
         }
+
+        // Get more recent notification id from Cursor
+        Integer recentId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+
+        cursor.close();
 
         return recentId;
     }

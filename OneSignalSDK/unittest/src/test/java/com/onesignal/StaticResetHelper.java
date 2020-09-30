@@ -30,6 +30,9 @@ public class StaticResetHelper {
          } else if (field.getName().equals("taskController")) {
             field.set(null, new OSTaskController(OneSignal.getRemoteParamController(), new OSLogWrapper()));
             return true;
+         } else if (field.getName().equals("inAppMessageControllerFactory")) {
+            field.set(null, new OSInAppMessageControllerFactory());
+            return true;
          }
          return false;
       }));

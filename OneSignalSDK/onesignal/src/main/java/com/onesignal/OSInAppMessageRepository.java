@@ -2,8 +2,6 @@ package com.onesignal;
 
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.database.SQLException;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.annotation.WorkerThread;
 
@@ -26,39 +24,26 @@ class OSInAppMessageRepository {
 
     @WorkerThread
     synchronized void saveInAppMessage(OSInAppMessage inAppMessage) {
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-        writableDb.beginTransaction();
-        try {
-            ContentValues values = new ContentValues();
-            values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
-            values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
-            values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getRedisplayStats().getLastDisplayTime());
-            values.put(OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
-            values.put(OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
+        ContentValues values = new ContentValues();
+        values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
+        values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
+        values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getRedisplayStats().getLastDisplayTime());
+        values.put(OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
+        values.put(OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION, inAppMessage.isDisplayedInSession());
 
-            int rowsUpdated = writableDb.update(OneSignalDbContract.InAppMessageTable.TABLE_NAME, values,
-                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID + " = ?", new String[]{inAppMessage.messageId});
-            if (rowsUpdated == 0)
-                writableDb.insert(OneSignalDbContract.InAppMessageTable.TABLE_NAME, null, values);
-
-            writableDb.setTransactionSuccessful();
-        } finally {
-            try {
-                writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (SQLException e) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", e);
-            }
-        }
+        int rowsUpdated = dbHelper.update(OneSignalDbContract.InAppMessageTable.TABLE_NAME, values,
+                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID + " = ?", new String[]{inAppMessage.messageId});
+        if (rowsUpdated == 0)
+            dbHelper.insert(OneSignalDbContract.InAppMessageTable.TABLE_NAME, null, values);
     }
 
     @WorkerThread
     synchronized List<OSInAppMessage> getCachedInAppMessages() {
-        List<OSInAppMessage> iams = new ArrayList<>();
+        List<OSInAppMessage> inAppMessages = new ArrayList<>();
         Cursor cursor = null;
 
         try {
-            SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-            cursor = readableDb.query(
+            cursor = dbHelper.query(
                     OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                     null,
                     null,
@@ -79,7 +64,7 @@ class OSInAppMessageRepository {
                     Set<String> clickIdsSet = OSUtils.newStringSetFromJSONArray(new JSONArray(clickIds));
 
                     OSInAppMessage inAppMessage = new OSInAppMessage(messageId, clickIdsSet, displayed, new OSInAppMessageRedisplayStats(displayQuantity, lastDisplay));
-                    iams.add(inAppMessage);
+                    inAppMessages.add(inAppMessage);
                 } while (cursor.moveToNext());
             }
         } catch (JSONException e) {
@@ -89,13 +74,11 @@ class OSInAppMessageRepository {
                 cursor.close();
         }
 
-        return iams;
+        return inAppMessages;
     }
 
     @WorkerThread
     synchronized void cleanCachedInAppMessages() {
-        SQLiteDatabase writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-
         // 1. Query for all old message ids and old clicked click ids
         String[] retColumns = new String[]{
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID,
@@ -112,7 +95,7 @@ class OSInAppMessageRepository {
 
         Cursor cursor = null;
         try {
-            cursor = writableDb.query(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
+            cursor = dbHelper.query(OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                     retColumns,
                     whereStr,
                     whereArgs,
@@ -145,22 +128,11 @@ class OSInAppMessageRepository {
             if (cursor != null && !cursor.isClosed())
                 cursor.close();
         }
-
-        writableDb.beginTransaction();
-        try {
-            // 2. Delete old IAMs from SQL
-            writableDb.delete(
-                    OneSignalDbContract.InAppMessageTable.TABLE_NAME,
-                    whereStr,
-                    whereArgs);
-            writableDb.setTransactionSuccessful();
-        } finally {
-            try {
-                writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (SQLException e) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", e);
-            }
-        }
+        // 2. Delete old IAMs from SQL
+        dbHelper.delete(
+                OneSignalDbContract.InAppMessageTable.TABLE_NAME,
+                whereStr,
+                whereArgs);
 
         // 3. Use queried data to clean SharedPreferences
         cleanInAppMessageIds(oldMessageIds);
@@ -169,11 +141,12 @@ class OSInAppMessageRepository {
 
     /**
      * Clean up 6 month old IAM ids in {@link android.content.SharedPreferences}:
-     *  1. Dismissed message ids
-     *  2. Impressioned message ids
+     * 1. Dismissed message ids
+     * 2. Impressioned message ids
      * <br/><br/>
      * Note: This should only ever be called by {@link OSInAppMessageRepository#cleanCachedInAppMessages()}
      * <br/><br/>
+     *
      * @see OneSignalCacheCleaner#cleanCachedInAppMessages(OneSignalDbHelper)
      * @see OSInAppMessageRepository#cleanCachedInAppMessages()
      */
@@ -209,10 +182,11 @@ class OSInAppMessageRepository {
 
     /**
      * Clean up 6 month old IAM clicked click ids in {@link android.content.SharedPreferences}:
-     *  1. Clicked click ids from elements within IAM
+     * 1. Clicked click ids from elements within IAM
      * <br/><br/>
      * Note: This should only ever be called by {@link OSInAppMessageRepository#cleanCachedInAppMessages()}
      * <br/><br/>
+     *
      * @see OneSignalCacheCleaner#cleanCachedInAppMessages(OneSignalDbHelper)
      * @see OSInAppMessageRepository#cleanCachedInAppMessages()
      */
@@ -232,7 +206,5 @@ class OSInAppMessageRepository {
             }
         }
     }
-
-
 
 }

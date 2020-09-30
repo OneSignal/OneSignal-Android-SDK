@@ -206,9 +206,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             JSONObject body = jsonObject.getJSONObject("body");
             String id = body.optString("id", null);
             if (message.isPreview) {
-                OSInAppMessageController.getController(OneSignal.getLogger()).onMessageActionOccurredOnPreview(message, body);
+                OneSignal.getInAppMessageController().onMessageActionOccurredOnPreview(message, body);
             } else if (id != null) {
-                OSInAppMessageController.getController(OneSignal.getLogger()).onMessageActionOccurredOnMessage(message, body);
+                OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, body);
             }
 
             boolean close = body.getBoolean("close");
@@ -239,6 +239,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     // Every time an Activity is shown we update the height of the WebView since the available
     //   screen size may have changed. (Expect for Fullscreen)
     private void calculateHeightAndShowWebViewAfterNewActivity() {
+        if (messageView == null)
+            return;
+
         // Don't need a CSS / HTML height update for fullscreen
         if (messageView.getDisplayPosition() == Position.FULL_SCREEN) {
             showMessageView(null);
@@ -345,12 +348,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             @Override
             public void onMessageWasShown() {
                 firstShow = false;
-                OSInAppMessageController.getController(OneSignal.getLogger()).onMessageWasShown(message);
+                OneSignal.getInAppMessageController().onMessageWasShown(message);
             }
 
             @Override
             public void onMessageWasDismissed() {
-                OSInAppMessageController.getController(OneSignal.getLogger()).messageWasDismissed(message);
+                OneSignal.getInAppMessageController().messageWasDismissed(message);
                 if (activityLifecycleHandler != null)
                     activityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
             }

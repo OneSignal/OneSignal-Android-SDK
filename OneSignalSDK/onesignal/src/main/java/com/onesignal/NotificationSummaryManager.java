@@ -4,7 +4,6 @@ import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -14,8 +13,8 @@ import org.json.JSONObject;
 class NotificationSummaryManager {
    
    // A notification was just dismissed, check if it was a child to a summary notification and update it.
-   static void updatePossibleDependentSummaryOnDismiss(Context context, SQLiteDatabase writableDb, int androidNotificationId) {
-      Cursor cursor = writableDb.query(
+   static void updatePossibleDependentSummaryOnDismiss(Context context, OneSignalDb db, int androidNotificationId) {
+      Cursor cursor = db.query(
           NotificationTable.TABLE_NAME,
           new String[] { NotificationTable.COLUMN_NAME_GROUP_ID }, // retColumn
           NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidNotificationId,
@@ -26,17 +25,17 @@ class NotificationSummaryManager {
          cursor.close();
          
          if (group != null)
-            updateSummaryNotificationAfterChildRemoved(context, writableDb, group, true);
+            updateSummaryNotificationAfterChildRemoved(context, db, group, true);
       }
       else
          cursor.close();
    }
    
    // Called from an opened / dismissed / cancel event of a single notification to update it's parent the summary notification.
-   static void updateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
+   static void updateSummaryNotificationAfterChildRemoved(Context context, OneSignalDb db, String group, boolean dismissed) {
       Cursor cursor = null;
       try {
-         cursor = internalUpdateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
+         cursor = internalUpdateSummaryNotificationAfterChildRemoved(context, db, group, dismissed);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error running updateSummaryNotificationAfterChildRemoved!", t);
       } finally {
@@ -45,8 +44,8 @@ class NotificationSummaryManager {
       }
    }
    
-   private static Cursor internalUpdateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
-      Cursor cursor = writableDb.query(
+   private static Cursor internalUpdateSummaryNotificationAfterChildRemoved(Context context, OneSignalDb db, String group, boolean dismissed) {
+      Cursor cursor = db.query(
           NotificationTable.TABLE_NAME,
           new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, // return columns
               NotificationTable.COLUMN_NAME_CREATED_TIME },
@@ -66,7 +65,7 @@ class NotificationSummaryManager {
       if (notifsInGroup == 0) {
          cursor.close();
    
-         Integer androidNotifId = getSummaryNotificationId(writableDb, group);
+         Integer androidNotifId = getSummaryNotificationId(db, group);
          if (androidNotifId == null)
             return cursor;
       
@@ -77,7 +76,7 @@ class NotificationSummaryManager {
          // Mark the summary notification as opened or dismissed.
          ContentValues values = new ContentValues();
          values.put(dismissed ? NotificationTable.COLUMN_NAME_DISMISSED : NotificationTable.COLUMN_NAME_OPENED, 1);
-         writableDb.update(NotificationTable.TABLE_NAME,
+         db.update(NotificationTable.TABLE_NAME,
              values,
              NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidNotifId,
              null);
@@ -89,7 +88,7 @@ class NotificationSummaryManager {
       //        only have one notification now.
       if (notifsInGroup == 1) {
          cursor.close();
-         Integer androidNotifId = getSummaryNotificationId(writableDb, group);
+         Integer androidNotifId = getSummaryNotificationId(db, group);
          if (androidNotifId == null)
             return cursor;
          restoreSummary(context, group);
@@ -105,7 +104,7 @@ class NotificationSummaryManager {
          Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
          cursor.close();
    
-         Integer androidNotifId = getSummaryNotificationId(writableDb, group);
+         Integer androidNotifId = getSummaryNotificationId(db, group);
          if (androidNotifId == null)
             return cursor;
          
@@ -131,8 +130,7 @@ class NotificationSummaryManager {
       String[] whereArgs = { group };
       
       try {
-         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-         cursor = readableDb.query(
+         cursor = dbHelper.query(
              NotificationTable.TABLE_NAME,
              OSNotificationRestoreWorkManager.COLUMNS_FOR_RESTORE,
             NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
@@ -154,7 +152,7 @@ class NotificationSummaryManager {
       }
    }
    
-   static Integer getSummaryNotificationId(SQLiteDatabase writableDb, String group) {
+   static Integer getSummaryNotificationId(OneSignalDb db, String group) {
       Integer androidNotifId = null;
       Cursor cursor = null;
 
@@ -166,7 +164,7 @@ class NotificationSummaryManager {
 
       try {
          // Get the Android Notification ID of the summary notification
-         cursor = writableDb.query(
+         cursor = db.query(
              NotificationTable.TABLE_NAME,
                  new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID }, // retColumn
                  whereStr,
@@ -195,14 +193,14 @@ class NotificationSummaryManager {
    /**
     * Clears notifications from the status bar based on a few parameters
     */
-   static void clearNotificationOnSummaryClick(Context context, SQLiteDatabase db, String group) {
+   static void clearNotificationOnSummaryClick(Context context, OneSignalDbHelper dbHelper, String group) {
       // Obtain the group to clear notifications from
-      Integer groupId = NotificationSummaryManager.getSummaryNotificationId(db, group);
+      Integer groupId = NotificationSummaryManager.getSummaryNotificationId(dbHelper, group);
       boolean isGroupless = group.equals(OneSignalNotificationManager.getGrouplessSummaryKey());
 
       NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
       // Obtain the most recent notification id
-      Integer mostRecentId = OneSignalNotificationManager.getMostRecentNotifIdFromGroup(db, group, isGroupless);
+      Integer mostRecentId = OneSignalNotificationManager.getMostRecentNotifIdFromGroup(dbHelper, group, isGroupless);
       if (mostRecentId != null) {
          boolean shouldDismissAll = OneSignal.getClearGroupSummaryClick();
          if (shouldDismissAll) {

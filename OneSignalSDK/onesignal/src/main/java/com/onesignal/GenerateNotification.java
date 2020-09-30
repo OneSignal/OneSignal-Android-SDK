@@ -36,7 +36,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -470,8 +469,6 @@ class GenerateNotification {
       Cursor cursor = null;
       
       try {
-         SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-   
          String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
              NotificationTable.COLUMN_NAME_FULL_DATA,
              NotificationTable.COLUMN_NAME_IS_SUMMARY,
@@ -487,7 +484,7 @@ class GenerateNotification {
          if (!updateSummary && notificationJob.getAndroidId() != -1)
             whereStr += " AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " <> " + notificationJob.getAndroidId();
          
-         cursor = readableDb.query(
+         cursor = dbHelper.query(
              NotificationTable.TABLE_NAME,
              retColumn,
              whereStr,
@@ -709,28 +706,11 @@ class GenerateNotification {
    private static void createSummaryIdDatabaseEntry(OneSignalDbHelper dbHelper, String group, int id) {
       // There currently isn't a visible notification from for this group_id.
       // Save the group summary notification id so it can be updated later.
-      SQLiteDatabase writableDb = null;
-      try {
-         writableDb = dbHelper.getSQLiteDatabaseWithRetries();
-         writableDb.beginTransaction();
-      
-         ContentValues values = new ContentValues();
-         values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, id);
-         values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
-         values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
-         writableDb.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
-         writableDb.setTransactionSuccessful();
-      } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error adding summary notification record! ", t);
-      } finally {
-         if (writableDb != null) {
-            try {
-               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (Throwable t) {
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
-            }
-         }
-      }
+      ContentValues values = new ContentValues();
+      values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, id);
+      values.put(NotificationTable.COLUMN_NAME_GROUP_ID, group);
+      values.put(NotificationTable.COLUMN_NAME_IS_SUMMARY, 1);
+      dbHelper.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
    }
 
    // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available

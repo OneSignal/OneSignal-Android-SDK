@@ -248,8 +248,8 @@ public class OneSignalPackagePrivateHelper {
       NotificationOpenedProcessor.processFromContext(context, intent);
    }
 
-   public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, SQLiteDatabase writableDb, String group, boolean dismissed) {
-      NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, writableDb, group, dismissed);
+   public static void NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved(Context context, OneSignalDb db, String group, boolean dismissed) {
+      NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, db, group, dismissed);
    }
 
    public class TestOneSignalPrefs extends com.onesignal.OneSignalPrefs {}
@@ -305,18 +305,9 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   public static SQLiteDatabase OneSignal_getSQLiteDatabase(Context context) {
-      return OneSignalDbHelper.getInstance(context).getSQLiteDatabase();
-   }
-
-   public static void OneSignal_cleanOutcomeDatabaseTable(Context context) {
-      OneSignalDbHelper.cleanOutcomeDatabaseTable(
-              OneSignal_getSQLiteDatabase(context));
-   }
-
    public static class BadgeCountUpdater extends com.onesignal.BadgeCountUpdater {
-      public static void update(SQLiteDatabase readableDb, Context context) {
-         com.onesignal.BadgeCountUpdater.update(readableDb, context);
+      public static void update(OneSignalDb db, Context context) {
+         com.onesignal.BadgeCountUpdater.update(db, context);
       }
    }
 
@@ -511,33 +502,33 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void dismissCurrentMessage() {
-      com.onesignal.OSInAppMessage message = com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getCurrentDisplayedInAppMessage();
+      com.onesignal.OSInAppMessage message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
       if (message != null)
-         com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).messageWasDismissed(message);
+         OneSignal.getInAppMessageController().messageWasDismissed(message);
    }
 
    public static boolean isInAppMessageShowing() {
-      return com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).isInAppMessageShowing();
+      return OneSignal.getInAppMessageController().isInAppMessageShowing();
    }
 
    public static String getShowingInAppMessageId() {
-      return com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getCurrentDisplayedInAppMessage().messageId;
+      return OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage().messageId;
    }
 
    public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
-      return com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getInAppMessageDisplayQueue();
+      return OneSignal.getInAppMessageController().getInAppMessageDisplayQueue();
    }
 
    public static void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
-      com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).onMessageActionOccurredOnMessage(message, actionJson);
+      OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, actionJson);
    }
 
    public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
-      com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).onMessageWasShown(message);
+      OneSignal.getInAppMessageController().onMessageWasShown(message);
    }
 
    public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
-      List<OSInAppMessage> messages = com.onesignal.OSInAppMessageController.getController(OneSignal.getLogger()).getRedisplayedInAppMessages();
+      List<OSInAppMessage> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
       List<OSTestInAppMessage> testMessages = new ArrayList<>();
 
       for (OSInAppMessage message : messages) {
