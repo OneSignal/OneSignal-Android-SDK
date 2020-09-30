@@ -268,7 +268,7 @@ public class GenerateNotificationRunner {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
       threadAndTaskWait();
 
-      // Restore notifs
+      // Restore notifications
       OSNotificationRestoreWorkManager.beginEnqueueingWork(blankActivity, false);
       threadAndTaskWait();
 
@@ -415,7 +415,7 @@ public class GenerateNotificationRunner {
 
         postNotificationsAndSimulateSummaryClick(true, "test1");
 
-        // Validate SQL DB has removed all grouped notifs
+        // Validate SQL DB has removed all grouped notifications
         int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, "test1", true);
         assertEquals(0, activeGroupNotifCount);
     }
@@ -447,7 +447,7 @@ public class GenerateNotificationRunner {
 
       postNotificationsAndSimulateSummaryClick(true, "test1");
 
-      // Validate SQL DB has removed all grouped notifs
+      // Validate SQL DB has removed all grouped notifications
       int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, "test1", true);
       assertEquals(0, activeGroupNotifCount);
    }
@@ -481,7 +481,7 @@ public class GenerateNotificationRunner {
 
       postNotificationsAndSimulateSummaryClick(true, null);
 
-      // Validate SQL DB has removed all groupless notifs
+      // Validate SQL DB has removed all groupless notifications
       int activeGroupNotifCount = queryNotificationCountFromGroup(readableDb, null, true);
       assertEquals(0, activeGroupNotifCount);
    }
@@ -552,12 +552,12 @@ public class GenerateNotificationRunner {
       assertEquals(5, count);
 
       SQLiteDatabase readableDb = dbHelper.getSQLiteDatabaseWithRetries();
-      // Validate no DB changes occurred and this is only a runtime change to the groupless notifs
-      // Check for 4 null group id notifs
+      // Validate no DB changes occurred and this is only a runtime change to the groupless notifications
+      // Check for 4 null group id notifications
       int nullGroupCount = queryNotificationCountFromGroup(readableDb, null, true);
       assertEquals(4, nullGroupCount);
 
-      // Check for 0 os_group_undefined group id notifs
+      // Check for 0 os_group_undefined group id notifications
       int groupCount = queryNotificationCountFromGroup(readableDb, OneSignalNotificationManagerPackageHelper.getGrouplessSummaryKey(), true);
       assertEquals(0, groupCount);
    }

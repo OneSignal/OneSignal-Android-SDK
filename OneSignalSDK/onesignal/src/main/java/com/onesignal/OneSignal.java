@@ -718,7 +718,7 @@ public class OneSignal {
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
          if (outcomeEventsFactory == null)
-            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, OneSignalDbHelper.getInstance(appContext), preferences);
+            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
 
          sessionManager.initSessionFromCache();
          outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
@@ -763,11 +763,6 @@ public class OneSignal {
 
    public static boolean userProvidedPrivacyConsent() {
       return remoteParamController.getSavedUserConsentStatus();
-   }
-
-   private static boolean isGoogleProjectNumberRemote() {
-      return getRemoteParams() != null &&
-              getRemoteParams().googleProjectNumber != null;
    }
 
    private static boolean isSubscriptionStatusUninitializable() {
@@ -817,10 +812,6 @@ public class OneSignal {
 
       setLastSessionTime(time.getCurrentTimeMillis());
       startRegistrationOrOnSession();
-   }
-
-   private static boolean isContextActivity(Context context) {
-      return context instanceof Activity;
    }
 
    private static void startRegistrationOrOnSession() {
@@ -2433,7 +2424,7 @@ public class OneSignal {
          public void run() {
             NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
 
-            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            OneSignalDbHelper dbHelper = getDBHelperInstance();
             String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
 
             Cursor cursor = dbHelper.query(
@@ -2483,7 +2474,7 @@ public class OneSignal {
       Runnable runCancelNotification = new Runnable() {
          @Override
          public void run() {
-            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            OneSignalDbHelper dbHelper = getDBHelperInstance();
             String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
                     NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                     NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
@@ -2533,7 +2524,7 @@ public class OneSignal {
          public void run() {
             NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
 
-            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            OneSignalDbHelper dbHelper = getDBHelperInstance();
 
             String[] retColumn = {NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
 
@@ -2807,7 +2798,7 @@ public class OneSignal {
       if (id == null || "".equals(id))
          return false;
 
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
+      OneSignalDbHelper dbHelper = getDBHelperInstance();
 
       String[] retColumn = {NotificationTable.COLUMN_NAME_NOTIFICATION_ID};
       String[] whereArgs = {id};
@@ -2955,6 +2946,10 @@ public class OneSignal {
 
    static OSRemoteParamController getRemoteParamController() {
       return remoteParamController;
+   }
+
+   static OneSignalDbHelper getDBHelperInstance() {
+      return OneSignalDbHelper.getInstance(appContext);
    }
 
    static OSTaskController getTaskController() {

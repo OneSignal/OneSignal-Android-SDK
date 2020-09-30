@@ -161,18 +161,18 @@ class GenerateNotification {
       JSONObject fcmJson = notificationJob.getJsonPayload();
       OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
       
-      NotificationCompat.Builder notifBuilder;
+      NotificationCompat.Builder notificationBuilder;
       try {
          String channelId = NotificationChannelManager.createNotificationChannel(notificationJob);
          // Will throw if app is using 26.0.0-beta1 or older of the support library.
-         notifBuilder = new NotificationCompat.Builder(currentContext, channelId);
+         notificationBuilder = new NotificationCompat.Builder(currentContext, channelId);
       } catch(Throwable t) {
-         notifBuilder = new NotificationCompat.Builder(currentContext);
+         notificationBuilder = new NotificationCompat.Builder(currentContext);
       }
       
       String message = fcmJson.optString("alert", null);
 
-      notifBuilder
+      notificationBuilder
          .setAutoCancel(true)
          .setSmallIcon(getSmallIconId(fcmJson))
          .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
@@ -183,40 +183,40 @@ class GenerateNotification {
       //    Android 7.0 always displays the app title now in it's own section
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
           !fcmJson.optString("title").equals(""))
-         notifBuilder.setContentTitle(getTitle(fcmJson));
+         notificationBuilder.setContentTitle(getTitle(fcmJson));
    
       try {
          BigInteger accentColor = getAccentColor(fcmJson);
          if (accentColor != null)
-            notifBuilder.setColor(accentColor.intValue());
+            notificationBuilder.setColor(accentColor.intValue());
       } catch (Throwable t) {} // Can throw if an old android support lib is used.
 
       try {
          int lockScreenVisibility = NotificationCompat.VISIBILITY_PUBLIC;
          if (fcmJson.has("vis"))
             lockScreenVisibility = Integer.parseInt(fcmJson.optString("vis"));
-         notifBuilder.setVisibility(lockScreenVisibility);
+         notificationBuilder.setVisibility(lockScreenVisibility);
       } catch (Throwable t) {} // Can throw if an old android support lib is used or parse error
 
       Bitmap largeIcon = getLargeIcon(fcmJson);
       if (largeIcon != null) {
          oneSignalNotificationBuilder.hasLargeIcon = true;
-         notifBuilder.setLargeIcon(largeIcon);
+         notificationBuilder.setLargeIcon(largeIcon);
       }
 
       Bitmap bigPictureIcon = getBitmap(fcmJson.optString("bicon", null));
       if (bigPictureIcon != null)
-         notifBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
+         notificationBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message));
 
       if (notificationJob.getShownTimeStamp() != null) {
          try {
-            notifBuilder.setWhen(notificationJob.getShownTimeStamp() * 1_000L);
+            notificationBuilder.setWhen(notificationJob.getShownTimeStamp() * 1_000L);
          } catch (Throwable t) {} // Can throw if an old android support lib is used.
       }
 
-      setAlertnessOptions(fcmJson, notifBuilder);
+      setAlertnessOptions(fcmJson, notificationBuilder);
       
-      oneSignalNotificationBuilder.compatBuilder = notifBuilder;
+      oneSignalNotificationBuilder.compatBuilder = notificationBuilder;
       return oneSignalNotificationBuilder;
    }
 

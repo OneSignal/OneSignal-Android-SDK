@@ -57,12 +57,12 @@ class NotificationSummaryManager {
           null, null,
           NotificationTable._ID + " DESC");   // sort order, new to old);
    
-      int notifsInGroup = cursor.getCount();
+      int notificationsInGroup = cursor.getCount();
    
       // If all individual notifications consumed
       //   - Remove summary notification from the shade.
       //   - Mark summary notification as consumed.
-      if (notifsInGroup == 0) {
+      if (notificationsInGroup == 0) {
          cursor.close();
    
          Integer androidNotifId = getSummaryNotificationId(db, group);
@@ -86,7 +86,7 @@ class NotificationSummaryManager {
       // Only a single notification now in the group
       //   - Need to recreate a summary notification so it looks like a normal notifications since we
       //        only have one notification now.
-      if (notifsInGroup == 1) {
+      if (notificationsInGroup == 1) {
          cursor.close();
          Integer androidNotifId = getSummaryNotificationId(db, group);
          if (androidNotifId == null)

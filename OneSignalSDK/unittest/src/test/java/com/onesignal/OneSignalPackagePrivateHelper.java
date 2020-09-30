@@ -312,16 +312,16 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static class NotificationLimitManager extends com.onesignal.NotificationLimitManager {
-      public static void clearOldestOverLimitFallback(Context context, int notifsToMakeRoomFor) {
-         com.onesignal.NotificationLimitManager.clearOldestOverLimitFallback(context, notifsToMakeRoomFor);
+      public static void clearOldestOverLimitFallback(Context context, int notificationsToMakeRoomFor) {
+         com.onesignal.NotificationLimitManager.clearOldestOverLimitFallback(context, notificationsToMakeRoomFor);
       }
 
-      public static void clearOldestOverLimitStandard(Context context, int notifsToMakeRoomFor) throws Throwable {
-         com.onesignal.NotificationLimitManager.clearOldestOverLimitStandard(context, notifsToMakeRoomFor);
+      public static void clearOldestOverLimitStandard(Context context, int notificationsToMakeRoomFor) throws Throwable {
+         com.onesignal.NotificationLimitManager.clearOldestOverLimitStandard(context, notificationsToMakeRoomFor);
       }
    }
 
-   public class OneSignalDbContract extends com.onesignal.OneSignalDbContract {}
+   public static class OneSignalDbContract extends com.onesignal.OneSignalDbContract {}
 
    /** In-App Messaging Helpers */
 

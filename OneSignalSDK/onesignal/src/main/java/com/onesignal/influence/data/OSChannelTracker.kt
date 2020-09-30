@@ -2,7 +2,6 @@ package com.onesignal.influence.data
 
 import com.onesignal.OSLogger
 import com.onesignal.OSTime
-import com.onesignal.OneSignal
 import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.influence.domain.OSInfluenceChannel
@@ -11,7 +10,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-abstract class OSChannelTracker internal constructor(protected var dataRepository: OSInfluenceDataRepository, var logger: OSLogger, var timeProvider: OSTime) {
+abstract class OSChannelTracker internal constructor(protected var dataRepository: OSInfluenceDataRepository, var logger: OSLogger, private var timeProvider: OSTime) {
     var influenceType: OSInfluenceType? = null
     var indirectIds: JSONArray? = null
     var directId: String? = null

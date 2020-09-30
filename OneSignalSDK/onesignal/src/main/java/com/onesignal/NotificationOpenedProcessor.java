@@ -176,7 +176,7 @@ class NotificationOpenedProcessor {
             boolean shouldDismissAll = OneSignal.getClearGroupSummaryClick();
             if (!shouldDismissAll) {
                /* If the open event shouldn't clear all summary notifications then the SQL query
-                * will look for the most recent notification instead of all grouped notifs */
+                * will look for the most recent notification instead of all grouped notifications */
                String mostRecentId = String.valueOf(OneSignalNotificationManager.getMostRecentNotifIdFromGroup(writableDb, summaryGroup, isGroupless));
                whereStr += " AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = ?";
                whereArgs = isGroupless ?

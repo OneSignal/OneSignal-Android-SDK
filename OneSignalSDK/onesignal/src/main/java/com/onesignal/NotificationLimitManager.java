@@ -36,27 +36,27 @@ class NotificationLimitManager {
 
    // Used to cancel the oldest notifications to make room for new notifications we are about to display
    // If we don't make this room users will NOT be alerted of new notifications for the app.
-   static void clearOldestOverLimit(Context context, int notifsToMakeRoomFor) {
+   static void clearOldestOverLimit(Context context, int notificationsToMakeRoomFor) {
       try {
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            clearOldestOverLimitStandard(context, notifsToMakeRoomFor);
+            clearOldestOverLimitStandard(context, notificationsToMakeRoomFor);
          else
-            clearOldestOverLimitFallback(context, notifsToMakeRoomFor);
+            clearOldestOverLimitFallback(context, notificationsToMakeRoomFor);
       } catch(Throwable t) {
          // try-catch for Android 6.0.X and possibly 8.0.0 bug work around, getActiveNotifications bug
-         clearOldestOverLimitFallback(context, notifsToMakeRoomFor);
+         clearOldestOverLimitFallback(context, notificationsToMakeRoomFor);
       }
    }
 
    // Cancel the oldest notifications based on what the Android system reports is in the shade.
    // This could be any notification, not just a OneSignal notification
    @RequiresApi(api = Build.VERSION_CODES.M)
-   static void clearOldestOverLimitStandard(Context context, int notifsToMakeRoomFor) throws Throwable {
+   static void clearOldestOverLimitStandard(Context context, int notificationsToMakeRoomFor) throws Throwable {
       StatusBarNotification[] activeNotifs = OneSignalNotificationManager.getActiveNotifications(context);
 
-      int notifsToClear = (activeNotifs.length - getMaxNumberOfNotificationsInt()) + notifsToMakeRoomFor;
+      int notificationsToClear = (activeNotifs.length - getMaxNumberOfNotificationsInt()) + notificationsToMakeRoomFor;
       // We have enough room in the notification shade, no need to clear any notifications
-      if (notifsToClear < 1)
+      if (notificationsToClear < 1)
          return;
 
       // Create SortedMap so we can sort notifications based on display time
@@ -67,16 +67,16 @@ class NotificationLimitManager {
          activeNotifIds.put(activeNotif.getNotification().when, activeNotif.getId());
       }
 
-      // Clear the oldest based on the count in notifsToClear
+      // Clear the oldest based on the count in notificationsToClear
       for (Map.Entry<Long, Integer> mapData : activeNotifIds.entrySet()) {
          OneSignal.cancelNotification(mapData.getValue());
-         if (--notifsToClear <= 0)
+         if (--notificationsToClear <= 0)
             break;
       }
    }
 
    // This cancels any notifications based on the oldest in the local SQL database
-   static void clearOldestOverLimitFallback(Context context, int notifsToMakeRoomFor) {
+   static void clearOldestOverLimitFallback(Context context, int notificationsToMakeRoomFor) {
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
 
       Cursor cursor = null;
@@ -89,19 +89,19 @@ class NotificationLimitManager {
             null,
             null,
             OneSignalDbContract.NotificationTable._ID, // sort order, old to new
-            getMaxNumberOfNotificationsString() + notifsToMakeRoomFor // limit
+            getMaxNumberOfNotificationsString() + notificationsToMakeRoomFor // limit
          );
 
-         int notifsToClear = (cursor.getCount() - getMaxNumberOfNotificationsInt()) + notifsToMakeRoomFor;
+         int notificationsToClear = (cursor.getCount() - getMaxNumberOfNotificationsInt()) + notificationsToMakeRoomFor;
          // We have enough room in the notification shade, no need to clear any notifications
-         if (notifsToClear < 1)
+         if (notificationsToClear < 1)
             return;
 
          while (cursor.moveToNext()) {
             int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
             OneSignal.cancelNotification(existingId);
 
-            if (--notifsToClear <= 0)
+            if (--notificationsToClear <= 0)
                break;
          }
       } catch (Throwable t) {

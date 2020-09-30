@@ -90,7 +90,7 @@ class OSNotificationRestoreWorkManager {
             StringBuilder dbQuerySelection) {
 
         OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
-                "Querying DB for notifs to restore: " + dbQuerySelection.toString());
+                "Querying DB for notifications to restore: " + dbQuerySelection.toString());
 
         Cursor cursor = null;
         try {

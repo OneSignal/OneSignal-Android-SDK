@@ -2,7 +2,6 @@ package com.onesignal.outcomes.data
 
 import com.onesignal.OneSignalAPIClient
 import com.onesignal.OneSignalApiResponseHandler
-import com.onesignal.outcomes.data.OSOutcomeEventsClient
 import org.json.JSONObject
 
 internal class OSOutcomeEventsV1Service(client: OneSignalAPIClient) : OSOutcomeEventsClient(client) {

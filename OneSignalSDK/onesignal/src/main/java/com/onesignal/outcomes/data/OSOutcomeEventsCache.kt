@@ -2,7 +2,6 @@ package com.onesignal.outcomes.data
 
 import android.content.ContentValues
 import android.database.Cursor
-import android.database.sqlite.SQLiteException
 import androidx.annotation.WorkerThread
 import com.onesignal.OSLogger
 import com.onesignal.OSSharedPreferences

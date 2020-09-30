@@ -48,7 +48,6 @@ import com.onesignal.outcomes.data.OSOutcomeTableProvider;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.onesignal.outcomes.data.OutcomesDbContract.OUTCOME_EVENT_TABLE;
 import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1;
 import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3;
 import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
@@ -438,10 +437,4 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       return where;
    }
 
-   static void cleanOutcomeDatabaseTable(SQLiteDatabase writeableDb) {
-      writeableDb.delete(
-              OUTCOME_EVENT_TABLE,
-              null,
-              null);
-   }
 }

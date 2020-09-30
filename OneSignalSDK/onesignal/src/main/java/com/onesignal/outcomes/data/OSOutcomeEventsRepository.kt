@@ -3,8 +3,8 @@ package com.onesignal.outcomes.data
 import com.onesignal.OSLogger
 import com.onesignal.OneSignalApiResponseHandler
 import com.onesignal.influence.domain.OSInfluence
-import com.onesignal.outcomes.domain.OSOutcomeEventsRepository
 import com.onesignal.outcomes.domain.OSOutcomeEventParams
+import com.onesignal.outcomes.domain.OSOutcomeEventsRepository
 
 internal abstract class OSOutcomeEventsRepository(protected val logger: OSLogger,
                                                   private val outcomeEventsCache: OSOutcomeEventsCache,

@@ -1268,7 +1268,7 @@ public class InAppMessageIntegrationTests {
         assertTrue(lastDisplayTime > 0);
 
         // Change time for delay to be covered
-        advanceSystemTimeBy(DELAY);
+        time.advanceSystemTimeBy(DELAY);
         fastColdRestartApp();
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
