@@ -127,8 +127,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     //    however an on session won't happen
     void initWithCachedInAppMessages() {
         // Do not reload from cache if already loaded.
-        if (!messages.isEmpty())
+        if (!messages.isEmpty()) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages with already in memory messages: " + messages);
             return;
+        }
 
         String cachedInAppMessageString = OneSignalPrefs.getString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
@@ -550,9 +552,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     void messageWasDismissed(@NonNull OSInAppMessage message, boolean failed) {
-        // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
-        OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
-
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             // If failed we will retry on next session
@@ -573,12 +572,21 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         dismissCurrentMessage(message);
     }
 
+    void messageWasDismissedByBackPress(@NonNull OSInAppMessage message) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed by back press: " + message.toString());
+        // IAM was not dismissed by user, will be redisplay again until user dismiss it
+        dismissCurrentMessage(message);
+    }
+
     /**
      * Removes first item from the queue and attempts to show the next IAM in the queue
      *
      * @param message The message dismissed, preview messages are null
      */
     private void dismissCurrentMessage(@Nullable OSInAppMessage message) {
+        // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
+        OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
+
         if (currentPrompt != null) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Stop evaluateMessageDisplayQueue because prompt is currently displayed");
             return;
