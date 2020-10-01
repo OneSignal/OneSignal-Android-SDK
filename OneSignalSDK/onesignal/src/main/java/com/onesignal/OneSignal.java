@@ -554,26 +554,23 @@ public class OneSignal {
     * @param newAppId - String app id associated with the OneSignal dashboard app
     */
    public static void setAppId(@NonNull String newAppId) {
-      logger.verbose("setAppId(id) called with app_id: " + newAppId + "!");
-
       if (newAppId == null || newAppId.isEmpty()) {
-         logger.warning("newAppId is null or empty, ignoring!");
+         logger.warning("setAppId called with id: " +  newAppId + ", ignoring!");
          return;
       } else if (!newAppId.equals(appId)) {
          // Pre-check on app id to make sure init of SDK is performed properly
          //     Usually when the app id is changed during runtime so that SDK is reinitialized properly
          initDone = false;
+         logger.verbose("setAppId called with id: " + newAppId + " changing id from: " + appId);
       }
 
       appId = newAppId;
 
-      logger.verbose("setAppId(id) finished, checking if appContext has been set before proceeding...");
       if (appContext == null) {
          logger.warning("appId set, but please call initWithContext(appContext) with Application context to complete OneSignal init!");
          return;
       }
 
-      logger.verbose("setAppId(id) successful and appContext is set, continuing OneSignal init...");
       init(appContext);
    }
 
@@ -585,10 +582,8 @@ public class OneSignal {
     * @param context - Context used by the Application of the app
     */
    public static void initWithContext(@NonNull Context context) {
-      logger.verbose("initWithContext(context) called!");
-
       if (context == null) {
-         Log(LOG_LEVEL.WARN, "context is null, ignoring!");
+         logger.warning("initWithContext called with null context, ignoring!");
          return;
       }
 
@@ -597,19 +592,19 @@ public class OneSignal {
       setupActivityLifecycleListener(wasAppContextNull);
       setupPrivacyConsent(appContext);
 
-      logger.verbose("initWithContext(context) finished, checking if appId has been set before proceeding...");
       if (appId == null) {
          // Get the cached app id, if it exists
          String oldAppId = getSavedAppId();
          if (oldAppId == null) {
             logger.warning("appContext set, but please call setAppId(appId) with a valid appId to complete OneSignal init!");
          } else {
-            logger.verbose("appContext set and an old appId was found, attempting to call setAppId(oldAppId)");
+            logger.verbose("appContext set and cached app id found, calling setAppId with: " + oldAppId);
             setAppId(oldAppId);
          }
          return;
+      } else {
+         logger.verbose("initWithContext called with: " + context);
       }
-      logger.verbose("initWithContext(context) successful and appId is set, continuing OneSignal init...");
       init(context);
    }
 
@@ -637,6 +632,7 @@ public class OneSignal {
     * Called after setAppId and initWithContext, depending on which one is called last (order does not matter)
     */
    synchronized private static void init(Context context) {
+      logger.verbose("Starting OneSignal initialization!");
       OSNotificationController.setupNotificationServiceExtension(appContext);
 
       if (requiresUserPrivacyConsent() || !remoteParamController.isRemoteParamsCallDone()) {
