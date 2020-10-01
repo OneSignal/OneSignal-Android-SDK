@@ -2,7 +2,6 @@ package com.onesignal;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.os.Process;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -33,6 +32,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
+    private static final Object LOCK = new Object();
 
     OSTriggerController triggerController;
     private OSSystemConditionController systemConditionController;
@@ -130,20 +130,26 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (!messages.isEmpty())
             return;
 
-        String cachedIamsStr = OneSignalPrefs.getString(
+        String cachedInAppMessageString = OneSignalPrefs.getString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CACHED_IAMS,
                 null
         );
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages: " + cachedIamsStr);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages: " + cachedInAppMessageString);
 
-        if (cachedIamsStr == null)
+        if (cachedInAppMessageString == null || cachedInAppMessageString.isEmpty())
             return;
 
-        try {
-            processInAppMessageJson(new JSONArray(cachedIamsStr));
-        } catch (JSONException e) {
-            e.printStackTrace();
+        synchronized (LOCK) {
+            try {
+                // Second check to avoid getting the lock while message list is being set
+                if (!messages.isEmpty())
+                    return;
+
+                processInAppMessageJson(new JSONArray(cachedInAppMessageString));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -159,6 +165,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 json.toString());
 
         resetRedisplayMessagesBySession();
+
         processInAppMessageJson(json);
     }
 
@@ -169,14 +176,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void processInAppMessageJson(@NonNull JSONArray json) throws JSONException {
-        ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
-        for (int i = 0; i < json.length(); i++) {
-            JSONObject messageJson = json.getJSONObject(i);
-            OSInAppMessage message = new OSInAppMessage(messageJson);
+        synchronized (LOCK) {
+            ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
+            for (int i = 0; i < json.length(); i++) {
+                JSONObject messageJson = json.getJSONObject(i);
+                OSInAppMessage message = new OSInAppMessage(messageJson);
 
-            newMessages.add(message);
+                newMessages.add(message);
+            }
+
+            messages = newMessages;
         }
-        messages = newMessages;
 
         evaluateInAppMessages();
     }
@@ -774,6 +784,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         for (OSInAppMessage message : messages) {
             if (!message.isTriggerChanged() && redisplayedInAppMessages.contains(message) &&
                     triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Trigger changed for message: " + message.toString());
                 message.setTriggerChanged(true);
             }
         }
@@ -787,12 +798,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * conditions have changed.
      */
     void addTriggers(Map<String, Object> newTriggers) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Add trigger called with: " + newTriggers.toString());
         triggerController.addTriggers(newTriggers);
         makeRedisplayMessagesAvailableWithTriggers(newTriggers.keySet());
         evaluateInAppMessages();
     }
 
     void removeTriggersForKeys(Collection<String> keys) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Remove trigger called with keys: " + keys);
         triggerController.removeTriggersForKeys(keys);
         makeRedisplayMessagesAvailableWithTriggers(keys);
         evaluateInAppMessages();
