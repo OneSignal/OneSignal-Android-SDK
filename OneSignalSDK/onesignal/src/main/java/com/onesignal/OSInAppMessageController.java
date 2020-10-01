@@ -174,20 +174,11 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             JSONObject messageJson = json.getJSONObject(i);
             OSInAppMessage message = new OSInAppMessage(messageJson);
 
-            populateRedisplayMessageTriggers(message);
             newMessages.add(message);
         }
         messages = newMessages;
 
         evaluateInAppMessages();
-    }
-
-    private void populateRedisplayMessageTriggers(OSInAppMessage message) {
-        int index = redisplayedInAppMessages.indexOf(message);
-        if (index > -1) {
-            OSInAppMessage redisplayMessage = redisplayedInAppMessages.get(index);
-            redisplayMessage.triggers = message.triggers;
-        }
     }
 
     private void evaluateInAppMessages() {
@@ -478,7 +469,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             message.getRedisplayStats().setDisplayStats(savedIAM.getRedisplayStats());
 
             // Message that don't have triggers should display only once per session
-            boolean triggerHasChanged = savedIAM.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
+            boolean triggerHasChanged = message.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
 
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.toString() + " triggerHasChanged: " + triggerHasChanged);
 
@@ -780,8 +771,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * - At least one Trigger has changed
      */
     private void makeRedisplayMessagesAvailableWithTriggers(Collection<String> newTriggersKeys) {
-        for (OSInAppMessage message : redisplayedInAppMessages) {
-            if (!message.isTriggerChanged() && triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
+        for (OSInAppMessage message : messages) {
+            if (!message.isTriggerChanged() && redisplayedInAppMessages.contains(message) &&
+                    triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
                 message.setTriggerChanged(true);
             }
         }
