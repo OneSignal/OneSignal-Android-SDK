@@ -466,6 +466,25 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
+    public void doNotReshowInAppUntilTriggerIfAppBackPressed() throws Exception {
+        // 1. Start app
+        initializeSdkWithMultiplePendingMessages();
+        // 2. Trigger showing In App and dismiss it
+        OneSignal.addTrigger("test_2", 2);
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+        // 3. Emulate back pressing
+        blankActivityController.destroy();
+        threadAndTaskWait();
+        // 4. Put activity back to foreground
+        blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
+        OneSignalInit();
+        threadAndTaskWait();
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        assertFalse(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+    }
+
+    @Test
     public void reshowInAppIfDisplayedButNeverDismissedAfterColdRestart() throws Exception {
         // 1. Start app
         initializeSdkWithMultiplePendingMessages();

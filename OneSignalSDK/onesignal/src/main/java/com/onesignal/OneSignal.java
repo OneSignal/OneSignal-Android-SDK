@@ -844,9 +844,9 @@ public class OneSignal {
    // If the app is not in the foreground yet do not make an on_session call yet.
    // If we don't have a OneSignal player_id yet make the call to create it regardless of focus
    private static void doSessionInit() {
-      getInAppMessageController().initWithCachedInAppMessages();
       // Check session time to determine whether to start a new session or not
       if (isPastOnSessionTime()) {
+         OneSignal.onesignalLog(LOG_LEVEL.DEBUG, "Starting new session");
          OneSignalStateSynchronizer.setNewSession();
          if (foreground) {
             outcomeEventsController.cleanOutcomes();
@@ -854,8 +854,10 @@ public class OneSignal {
             getInAppMessageController().resetSessionLaunchTime();
          }
       } else if (foreground) {
+         OneSignal.onesignalLog(LOG_LEVEL.DEBUG, "Continue on same session");
          sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
+      getInAppMessageController().initWithCachedInAppMessages();
 
       // We still want register the user to OneSignal if the SDK was initialized
       //   in the background for the first time.
