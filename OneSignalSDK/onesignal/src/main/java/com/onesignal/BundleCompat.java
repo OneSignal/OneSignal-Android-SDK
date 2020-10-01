@@ -41,7 +41,7 @@ public interface BundleCompat<T> {
    void putLong(String key, Long value);
    void putBoolean(String key, Boolean value);
    
-   String getString(String key);
+   String getString(String key) throws OSBundleCompatException;
    Integer getInt(String key);
    Long getLong(String key);
    boolean getBoolean(String key);
@@ -87,8 +87,11 @@ class BundleCompatPersistableBundle implements BundleCompat<PersistableBundle> {
    }
    
    @Override
-   public String getString(String key) {
-      return mBundle.getString(key);
+   public String getString(String key) throws OSBundleCompatException {
+      if (mBundle != null)
+         return mBundle.getString(key);
+      else
+         throw new OSBundleCompatException("unable to get mBundle " + this.toString());
    }
    
    @Override
@@ -200,6 +203,12 @@ class BundleCompatBundle implements BundleCompat<Bundle> {
    @Override
    public boolean getBoolean(String key, boolean value) {
      return mBundle.getBoolean(key, value);
+   }
+}
+
+class OSBundleCompatException extends Exception {
+   public OSBundleCompatException(String message) {
+      super(message);
    }
 }
 

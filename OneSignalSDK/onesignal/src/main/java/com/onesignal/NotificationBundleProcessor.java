@@ -105,6 +105,8 @@ class NotificationBundleProcessor {
             // Normally more than one notification is restored at a time.
             if (isRestoring)
                 OSUtils.sleep(100);
+        } catch (OSBundleCompatException e) {
+            e.printStackTrace();
         } catch (JSONException e) {
             e.printStackTrace();
         }
