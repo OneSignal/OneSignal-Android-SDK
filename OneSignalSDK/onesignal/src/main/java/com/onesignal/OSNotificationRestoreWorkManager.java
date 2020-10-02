@@ -61,7 +61,8 @@ class OSNotificationRestoreWorkManager {
         public Result doWork() {
             Context context = getApplicationContext();
 
-            OneSignal.initWithContext(context);
+            if (OneSignal.appContext == null)
+                OneSignal.initWithContext(context);
 
             if (!OSUtils.areNotificationsEnabled(context))
                 return Result.failure();
