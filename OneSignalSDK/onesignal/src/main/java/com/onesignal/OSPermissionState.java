@@ -52,7 +52,7 @@ public class OSPermissionState implements Cloneable {
       setEnabled(OSUtils.areNotificationsEnabled(OneSignal.appContext));
    }
    
-   public boolean getEnabled() {
+   public boolean areNotificationsEnabled() {
       return enabled;
    }
    
@@ -83,7 +83,7 @@ public class OSPermissionState implements Cloneable {
       JSONObject mainObj = new JSONObject();
       
       try {
-         mainObj.put("enabled", enabled);
+         mainObj.put("areNotificationsEnabled", enabled);
       }
       catch(Throwable t) {
          t.printStackTrace();

@@ -10,15 +10,13 @@ import com.onesignal.sdktest.type.Notification;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Random;
-
 public class OneSignalNotificationSender {
 
     public static void sendDeviceNotification(final Notification notification) {
         new Thread(() -> {
             OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
             String userId = status.getSubscriptionStatus().getUserId();
-            boolean isSubscribed = status.getSubscriptionStatus().getSubscribed();
+            boolean isSubscribed = status.getSubscriptionStatus().isSubscribed();
 
             if (!isSubscribed)
                 return;

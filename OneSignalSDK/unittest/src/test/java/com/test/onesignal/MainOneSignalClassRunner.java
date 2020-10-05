@@ -1289,7 +1289,7 @@ public class MainOneSignalClassRunner {
 
       // Should not try to update server
       ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       assertNull(ShadowOneSignalRestClient.lastPost);
 
       // Restart app - Should omit notification_types
@@ -1305,7 +1305,7 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldNotResetSubscriptionOnSession() throws Exception {
       OneSignalInit();
-      OneSignal.disablePush(false);
+      OneSignal.disablePush(true);
       threadAndTaskWait();
       assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
@@ -1321,7 +1321,7 @@ public class MainOneSignalClassRunner {
       // Failed to register with OneSignal but SetSubscription was called with false
       ShadowOneSignalRestClient.failAll = true;
       OneSignalInit();
-      OneSignal.disablePush(false);
+      OneSignal.disablePush(true);
       threadAndTaskWait();
       ShadowOneSignalRestClient.failAll = false;
 
@@ -1344,7 +1344,7 @@ public class MainOneSignalClassRunner {
       ShadowPushRegistratorFCM.fail = true;
       OneSignalInit();
       threadAndTaskWait();
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
 
       // Restart app - Should send subscribe with on_session call.
       fastColdRestartApp();
@@ -1360,25 +1360,25 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      OneSignal.disablePush(false);
+      OneSignal.disablePush(true);
       threadAndTaskWait();
 
       assertEquals(-2, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value
       ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.disablePush(false);
+      OneSignal.disablePush(true);
       assertNull(ShadowOneSignalRestClient.lastPost);
 
 
 
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       threadAndTaskWait();
       assertEquals(1, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
       // Should not resend same value
       ShadowOneSignalRestClient.lastPost = null;
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       threadAndTaskWait();
       assertNull(ShadowOneSignalRestClient.lastPost);
    }
@@ -1486,7 +1486,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("key", "value");
       threadAndTaskWait();
 
-      OneSignal.disablePush(false);
+      OneSignal.disablePush(true);
       threadAndTaskWait();
    }
 
@@ -2650,7 +2650,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2670,7 +2670,7 @@ public class MainOneSignalClassRunner {
       OneSignal.initWithContext(blankActivity);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
    }
 
    @Test
@@ -2682,7 +2682,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2697,12 +2697,12 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // TODO change to assertNull(OneSignal.getPermissionSubscriptionState()); when privacy consent public set is removed
-      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
    }
 
    @Test
@@ -2712,7 +2712,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2732,7 +2732,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
    }
 
    @Test
@@ -2742,7 +2742,7 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTags("{\"key\": \"value\"}");
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
-      OneSignal.disablePush(true);
+      OneSignal.disablePush(false);
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
@@ -2762,7 +2762,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().getSubscribed());
+      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
    }
 
    // ####### DeleteTags Tests ######
@@ -3135,12 +3135,9 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      OSSubscriptionObserver subscriptionObserver = new OSSubscriptionObserver() {
-         @Override
-         public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
-            lastSubscriptionStateChanges = stateChanges;
-            currentSubscription = stateChanges.getTo().getSubscribed();
-         }
+      OSSubscriptionObserver subscriptionObserver = stateChanges -> {
+         lastSubscriptionStateChanges = stateChanges;
+         currentSubscription = stateChanges.getTo().isSubscribed();
       };
       OneSignal.addSubscriptionObserver(subscriptionObserver);
       lastSubscriptionStateChanges = null;
@@ -3151,8 +3148,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // make sure the subscription observer was fired
-      assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
-      assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getTo().isSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getFrom().isSubscribed());
    }
 
    @Test
@@ -3165,7 +3162,7 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
             lastPermissionStateChanges = stateChanges;
-            currentPermission = stateChanges.getTo().getEnabled();
+            currentPermission = stateChanges.getTo().areNotificationsEnabled();
          }
       };
       OneSignal.addPermissionObserver(permissionObserver);
@@ -3174,8 +3171,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // make sure the permission observer was fired
-      assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
-      assertTrue(lastPermissionStateChanges.getTo().getEnabled());
+      assertFalse(lastPermissionStateChanges.getFrom().areNotificationsEnabled());
+      assertTrue(lastPermissionStateChanges.getTo().areNotificationsEnabled());
    }
 
    @Test
@@ -3806,13 +3803,13 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
             lastPermissionStateChanges = stateChanges;
-            currentPermission = stateChanges.getTo().getEnabled();
+            currentPermission = stateChanges.getTo().areNotificationsEnabled();
          }
       };
       OneSignal.addPermissionObserver(permissionObserver);
 
-      assertFalse(lastPermissionStateChanges.getFrom().getEnabled());
-      assertTrue(lastPermissionStateChanges.getTo().getEnabled());
+      assertFalse(lastPermissionStateChanges.getFrom().areNotificationsEnabled());
+      assertTrue(lastPermissionStateChanges.getTo().areNotificationsEnabled());
       // Test to make sure object was correct at the time of firing.
       assertTrue(currentPermission);
    }
@@ -3829,7 +3826,7 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
             lastPermissionStateChanges = stateChanges;
-            currentPermission = stateChanges.getTo().getEnabled();
+            currentPermission = stateChanges.getTo().areNotificationsEnabled();
          }
       };
       OneSignal.addPermissionObserver(permissionObserver);
@@ -3843,8 +3840,8 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      assertTrue(lastPermissionStateChanges.getFrom().getEnabled());
-      assertFalse(lastPermissionStateChanges.getTo().getEnabled());
+      assertTrue(lastPermissionStateChanges.getFrom().areNotificationsEnabled());
+      assertFalse(lastPermissionStateChanges.getTo().areNotificationsEnabled());
       // Test to make sure object was correct at the time of firing.
       assertFalse(currentPermission);
       // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
@@ -3899,13 +3896,13 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
             lastSubscriptionStateChanges = stateChanges;
-            currentSubscription = stateChanges.getTo().getSubscribed();
+            currentSubscription = stateChanges.getTo().isSubscribed();
          }
       };
       OneSignal.addSubscriptionObserver(permissionObserver);
 
-      assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
-      assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getFrom().isSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getTo().isSubscribed());
       // Test to make sure object was correct at the time of firing.
       assertTrue(currentSubscription);
    }
@@ -3922,7 +3919,7 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
             lastSubscriptionStateChanges = stateChanges;
-            currentSubscription = stateChanges.getTo().getSubscribed();
+            currentSubscription = stateChanges.getTo().isSubscribed();
          }
       };
       OneSignal.addSubscriptionObserver(subscriptionObserver);
@@ -3936,8 +3933,8 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      assertTrue(lastSubscriptionStateChanges.getFrom().getSubscribed());
-      assertFalse(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getFrom().isSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getTo().isSubscribed());
       // Test to make sure object was correct at the time of firing.
       assertFalse(currentSubscription);
       // unsubscribeWhenNotificationsAreDisabled is not set so don't send notification_types.
@@ -3951,17 +3948,17 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
             lastSubscriptionStateChanges = stateChanges;
-            currentSubscription = stateChanges.getTo().getSubscribed();
+            currentSubscription = stateChanges.getTo().isSubscribed();
          }
       };
       OneSignal.addSubscriptionObserver(permissionObserver);
       threadAndTaskWait();
 
-      assertFalse(lastSubscriptionStateChanges.getFrom().getSubscribed());
-      assertTrue(lastSubscriptionStateChanges.getTo().getSubscribed());
+      assertFalse(lastSubscriptionStateChanges.getFrom().isSubscribed());
+      assertTrue(lastSubscriptionStateChanges.getTo().isSubscribed());
       // Test to make sure object was correct at the time of firing.
       assertTrue(currentSubscription);
-      assertTrue(lastSubscriptionStateChanges.getTo().getUserSubscriptionSetting());
+      assertFalse(lastSubscriptionStateChanges.getTo().isPushDisabled());
       assertEquals(ShadowPushRegistratorFCM.regId, lastSubscriptionStateChanges.getTo().getPushToken());
       assertEquals(ShadowOneSignalRestClient.pushUserId, lastSubscriptionStateChanges.getTo().getUserId());
    }
@@ -3973,7 +3970,7 @@ public class MainOneSignalClassRunner {
          @Override
          public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
             lastSubscriptionStateChanges = stateChanges;
-            currentSubscription = stateChanges.getTo().getSubscribed();
+            currentSubscription = stateChanges.getTo().isSubscribed();
          }
       };
       OneSignal.addSubscriptionObserver(permissionObserver);
@@ -4094,8 +4091,8 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
       OSPermissionSubscriptionState permissionSubscriptionState = OneSignal.getPermissionSubscriptionState();
-      assertTrue(permissionSubscriptionState.getPermissionStatus().getEnabled());
-      assertTrue(permissionSubscriptionState.getSubscriptionStatus().getSubscribed());
+      assertTrue(permissionSubscriptionState.getPermissionStatus().areNotificationsEnabled());
+      assertTrue(permissionSubscriptionState.getSubscriptionStatus().isSubscribed());
    }
 
    @Test

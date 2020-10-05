@@ -44,9 +44,9 @@ public class OSDeviceState {
         OSPermissionState permissionStatus = permissionSubscriptionState.permissionStatus;
         OSEmailSubscriptionState emailSubscriptionStatus = permissionSubscriptionState.emailSubscriptionStatus;
 
-        areNotificationsEnabled = permissionStatus.getEnabled();
-        pushDisabled = !subscriptionStatus.getUserSubscriptionSetting();
-        subscribed = subscriptionStatus.getSubscribed();
+        areNotificationsEnabled = permissionStatus.areNotificationsEnabled();
+        pushDisabled = subscriptionStatus.isPushDisabled();
+        subscribed = subscriptionStatus.isSubscribed();
         userId = subscriptionStatus.getUserId();
         pushToken = subscriptionStatus.getPushToken();
         emailUserId = emailSubscriptionStatus.getEmailUserId();
