@@ -128,7 +128,12 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
          BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
-         NotificationBundleProcessor.processFromFCMIntentService(context, taskExtras);
+         try {
+            NotificationBundleProcessor.processFromFCMIntentService(context, taskExtras);
+         } catch (OSBundleCompatException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "there was an error getting data from mBundle: " + bundle);
+            e.printStackTrace();
+         }
          return;
       }
 

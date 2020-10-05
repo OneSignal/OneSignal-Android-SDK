@@ -159,11 +159,11 @@ public class OneSignalPackagePrivateHelper {
       return retBundle;
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle) {
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService(Context context, Bundle bundle) throws OSBundleCompatException {
       NotificationBundleProcessor.processFromFCMIntentService(context, createInternalPayloadBundle(bundle));
    }
 
-   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle) {
+   public static void NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap(Context context, BundleCompat bundle) throws OSBundleCompatException {
       NotificationBundleProcessor.processFromFCMIntentService(context, bundle);
    }
 

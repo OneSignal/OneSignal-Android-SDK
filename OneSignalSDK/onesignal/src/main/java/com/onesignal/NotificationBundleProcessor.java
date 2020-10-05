@@ -68,7 +68,7 @@ class NotificationBundleProcessor {
 
     static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
 
-    static void processFromFCMIntentService(Context context, BundleCompat bundle) {
+    static void processFromFCMIntentService(Context context, BundleCompat bundle) throws OSBundleCompatException {
         OneSignal.initWithContext(context);
         try {
             String jsonStrPayload = bundle.getString("json_payload");
@@ -105,8 +105,6 @@ class NotificationBundleProcessor {
             // Normally more than one notification is restored at a time.
             if (isRestoring)
                 OSUtils.sleep(100);
-        } catch (OSBundleCompatException e) {
-            e.printStackTrace();
         } catch (JSONException e) {
             e.printStackTrace();
         }

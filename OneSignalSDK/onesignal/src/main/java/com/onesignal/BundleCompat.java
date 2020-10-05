@@ -91,7 +91,7 @@ class BundleCompatPersistableBundle implements BundleCompat<PersistableBundle> {
       if (mBundle != null)
          return mBundle.getString(key);
       else
-         throw new OSBundleCompatException("unable to get mBundle " + this.toString());
+         throw new OSBundleCompatException("unable to get mBundle");
    }
    
    @Override

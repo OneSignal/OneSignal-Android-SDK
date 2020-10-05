@@ -568,7 +568,11 @@ public class GenerateNotificationRunner {
           bundle = getBaseNotifBundle("UUID" + i);
           bundle.putString("grp", group);
 
-          NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+          try {
+             NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+          } catch (Exception e) {
+             e.printStackTrace();
+          }
        }
        return bundle;
     }
@@ -699,7 +703,7 @@ public class GenerateNotificationRunner {
    
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldUpdateBadgesWhenDismissingNotification() {
+   public void shouldUpdateBadgesWhenDismissingNotification() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
@@ -749,7 +753,7 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() {
+   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       bundle.remove("alert");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
@@ -942,7 +946,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   public void badgeCountShouldNotIncludeOldNotifications() {
+   public void badgeCountShouldNotIncludeOldNotifications() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
 
       // Go forward 1 week
@@ -1094,7 +1098,7 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldSetAlertnessFieldsOnNormalPriority() {
+   public void shouldSetAlertnessFieldsOnNormalPriority() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "5"); // Notifications from dashboard have priority 5 by default
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
@@ -1118,7 +1122,7 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() {
+   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() throws Exception {
       long sentTime = 1_553_035_338_000L;
       long ttl = 60L;
 
@@ -1134,7 +1138,7 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() {
+   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
 
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
