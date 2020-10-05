@@ -421,7 +421,7 @@ public class OneSignal {
          return null;
 
       if (currentSubscriptionState == null) {
-         currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).getEnabled());
+         currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).areNotificationsEnabled());
          getCurrentPermissionState(context).observable.addObserver(currentSubscriptionState);
          currentSubscriptionState.observable.addObserverStrong(new OSSubscriptionChangedInternalObserver());
       }
@@ -2296,8 +2296,8 @@ public class OneSignal {
    }
 
    /**
-    * You can call this method with {@code false} to opt users out of receiving all notifications through
-    * OneSignal. You can pass {@code true} later to opt users back into notifications.
+    * You can call this method with {@code true} to opt users out of receiving all notifications through
+    * OneSignal. You can pass {@code false} later to opt users back into notifications.
     * @param disable whether to subscribe the user to notifications or not
     */
    public static void disablePush(final boolean disable) {
@@ -2318,8 +2318,8 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_SUBSCRIPTION))
          return;
 
-      getCurrentSubscriptionState(appContext).setUserSubscriptionSetting(disable);
-      OneSignalStateSynchronizer.setSubscription(disable);
+      getCurrentSubscriptionState(appContext).setPushDisabled(disable);
+      OneSignalStateSynchronizer.setSubscription(!disable);
    }
 
    /**

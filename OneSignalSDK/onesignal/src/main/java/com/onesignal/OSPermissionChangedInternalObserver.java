@@ -34,7 +34,7 @@ class OSPermissionChangedInternalObserver {
    }
    
    static void handleInternalChanges(OSPermissionState state) {
-      if (!state.getEnabled())
+      if (!state.areNotificationsEnabled())
          BadgeCountUpdater.updateCount(0, OneSignal.appContext);
       OneSignalStateSynchronizer.setPermission(OneSignal.areNotificationsEnabledForSubscribedState());
    }
