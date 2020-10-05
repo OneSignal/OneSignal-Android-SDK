@@ -16,7 +16,7 @@ import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 class NotificationPayloadProcessorHMS {
 
     static void handleHMSNotificationOpenIntent(@NonNull Activity activity, @Nullable Intent intent) {
-        OneSignal.initWithContext(activity);
+        OneSignal.initWithContext(activity.getApplicationContext());
         if (intent == null)
             return;
 

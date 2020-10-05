@@ -574,7 +574,7 @@ public class OneSignal {
       }
 
       if (appActivity != null && appActivity.get() != null)
-         initWithContext(appActivity.get());
+         init(appActivity.get());
       else
          init(appContext);
    }
@@ -780,8 +780,10 @@ public class OneSignal {
       logger.debug("OneSignal handleActivityLifecycleHandler inForeground: " + inForeground);
 
       if (inForeground) {
-         if (OneSignal.getCurrentActivity() == null && activityLifecycleHandler != null)
+         if (OneSignal.getCurrentActivity() == null && activityLifecycleHandler != null) {
+            activityLifecycleHandler.setCurActivity((Activity) context);
             activityLifecycleHandler.setNextResumeIsFirstActivity(true);
+         }
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
          FocusTimeController.getInstance().appForegrounded();
       } else if (activityLifecycleHandler != null) {
