@@ -181,6 +181,9 @@ class OSTriggerController {
      * If trigger key is part of message triggers, then return true, otherwise false
      * */
     boolean isTriggerOnMessage(OSInAppMessage message, Collection<String> newTriggersKeys) {
+        if (message.triggers == null)
+            return false;
+
         for (String triggerKey : newTriggersKeys) {
             for (ArrayList<OSTrigger> andConditions : message.triggers) {
                 for (OSTrigger trigger : andConditions) {

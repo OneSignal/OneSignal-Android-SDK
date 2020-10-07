@@ -51,7 +51,10 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         void available(@NonNull Activity activity) {
         }
 
-        void stopped(WeakReference<Activity> reference) {
+        void stopped() {
+        }
+
+        void lostFocus() {
         }
     }
 
@@ -108,7 +111,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         }
 
         for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-            entry.getValue().stopped(new WeakReference<>(activity));
+            entry.getValue().stopped();
         }
 
         logCurActivity();
@@ -148,7 +151,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         // Remove view
         handleLostFocus();
         for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-            entry.getValue().stopped(new WeakReference<>(curActivity));
+            entry.getValue().stopped();
         }
 
         // Show view
@@ -295,6 +298,9 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
                 return;
 
             backgrounded = true;
+            for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+                entry.getValue().lostFocus();
+            }
             OneSignal.onAppLostFocus();
             completed = true;
         }

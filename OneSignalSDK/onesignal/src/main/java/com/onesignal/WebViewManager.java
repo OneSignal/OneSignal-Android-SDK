@@ -84,6 +84,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      */
     static void showHTMLString(@NonNull final OSInAppMessage message, @NonNull final String htmlStr) {
         final Activity currentActivity = OneSignal.getCurrentActivity();
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showHTMLString on currentActivity: " + currentActivity);
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
         if (currentActivity != null) {
@@ -98,9 +99,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                         initInAppMessage(currentActivity, message, htmlStr);
                     }
                 });
-            }
-            else
+            } else {
                 initInAppMessage(currentActivity, message, htmlStr);
+            }
             return;
         }
 
@@ -248,6 +249,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             return;
         }
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message new activity, calculate height and show ");
+
        // Using post to ensure that the status bar inset is already added to the view
        OSViewUtils.decorViewReady(activity, new Runnable() {
           @Override
@@ -280,9 +283,16 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     @Override
-    void stopped(WeakReference<Activity> reference) {
+    void stopped() {
         if (messageView != null)
             messageView.removeAllViews();
+    }
+
+    @Override
+    void lostFocus() {
+        OneSignal.getInAppMessageController().messageWasDismissedByBackPress(message);
+        removeActivityListener();
+        messageView = null;
     }
 
     private void showMessageView(@Nullable Integer newHeight) {
@@ -291,6 +301,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             return;
         }
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message, showing fist one with height: " + newHeight);
         messageView.setWebView(webView);
         if (newHeight != null)
             messageView.updateHeight(newHeight);
@@ -342,7 +353,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight) {
-        final ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
         messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
@@ -354,11 +364,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             @Override
             public void onMessageWasDismissed() {
                 OneSignal.getInAppMessageController().messageWasDismissed(message);
-                if (activityLifecycleHandler != null)
-                    activityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
+                removeActivityListener();
             }
         });
 
+        final ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
         // Fires event if available, which will call messageView.showInAppMessageView() for us.
         if (activityLifecycleHandler != null)
             activityLifecycleHandler.addActivityAvailableListener(TAG + message.messageId, this);
@@ -380,6 +390,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
        return OSViewUtils.getWindowHeight(activity) - (MARGIN_PX_SIZE * 2);
     }
 
+    private void removeActivityListener() {
+        ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+        if (activityLifecycleHandler != null)
+            activityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
+    }
     /**
      * Trigger the {@link #messageView} dismiss animation flow
      */

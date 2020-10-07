@@ -22,7 +22,7 @@ class OSInfluence {
         val ids = jsonObject.getString(OSInfluenceConstants.INFLUENCE_IDS)
         influenceChannel = OSInfluenceChannel.fromString(channel)
         influenceType = OSInfluenceType.fromString(type)
-        this.ids = ids?.let { JSONArray(it) }
+        this.ids = if (ids.isEmpty()) null else JSONArray(ids)
     }
 
     constructor(influenceChannel: OSInfluenceChannel,
@@ -47,7 +47,7 @@ class OSInfluence {
     fun toJSONString() = JSONObject()
             .put(OSInfluenceConstants.INFLUENCE_CHANNEL, influenceChannel.toString())
             .put(OSInfluenceConstants.INFLUENCE_TYPE, influenceType.toString())
-            .put(OSInfluenceConstants.INFLUENCE_IDS, if (ids != null) ids.toString() else null)
+            .put(OSInfluenceConstants.INFLUENCE_IDS, if (ids != null) ids.toString() else "")
             .toString()
 
     override fun toString(): String {

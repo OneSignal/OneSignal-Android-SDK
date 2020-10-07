@@ -451,7 +451,6 @@ class InAppMessageView {
      * IAM has been fully dismissed, remove all views and call the onMessageWasDismissed callback
      */
     private void cleanupViewsAfterDismiss() {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "InAppMessageView cleanupViewsAfterDismiss");
         removeAllViews();
         if (messageController != null)
             messageController.onMessageWasDismissed();
@@ -461,6 +460,7 @@ class InAppMessageView {
      * Remove all views and dismiss PopupWindow
      */
     void removeAllViews() {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "InAppMessageView removing views");
         if (scheduleDismissRunnable != null) {
             // Dismissed before the dismiss delay
             handler.removeCallbacks(scheduleDismissRunnable);

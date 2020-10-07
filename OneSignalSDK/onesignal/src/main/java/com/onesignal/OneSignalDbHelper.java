@@ -207,11 +207,19 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
             writableDb.beginTransaction();
             writableDb.insert(table, nullColumnHack, values);
             writableDb.setTransactionSuccessful();
+         } catch (SQLiteException e) {
+            logger.error("Error inserting on table: " + table + " with nullColumnHack: " + nullColumnHack + " and values: " + values, e);
+         } catch (IllegalStateException e) {
+            logger.error("Error under inserting transaction under table: " + table + " with nullColumnHack: " + nullColumnHack + " and values: " + values, e);
          } finally {
-            try {
-               writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-            } catch (SQLException e) {
-               logger.error("Error closing transaction! ", e);
+            if (writableDb != null) {
+               try {
+                  writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (IllegalStateException e) {
+                  logger.error("Error closing transaction! ", e);
+               } catch (SQLiteException e) {
+                  logger.error("Error closing transaction! ", e);
+               }
             }
          }
       }
@@ -226,14 +234,18 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
             writableDb.beginTransaction();
             writableDb.insertOrThrow(table, nullColumnHack, values);
             writableDb.setTransactionSuccessful();
-         } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error inserting under table: " + table, t);
+         } catch (SQLiteException e) {
+            logger.error("Error inserting or throw on table: " + table + " with nullColumnHack: " + nullColumnHack + " and values: " + values, e);
+         } catch (IllegalStateException e) {
+            logger.error("Error under inserting or throw transaction under table: " + table + " with nullColumnHack: " + nullColumnHack + " and values: " + values, e);
          } finally {
             if (writableDb != null) {
                try {
                   writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-               } catch (Throwable t) {
-                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               } catch (IllegalStateException e) {
+                  logger.error("Error closing transaction! ", e);
+               } catch (SQLiteException e) {
+                  logger.error("Error closing transaction! ", e);
                }
             }
          }
@@ -243,20 +255,27 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    @Override
    public int update(@NonNull String table, @NonNull ContentValues values, @Nullable String whereClause, @Nullable String[] whereArgs) {
       int result = 0;
+      if (values == null || values.toString().isEmpty())
+         return result;
+
       synchronized (LOCK) {
          SQLiteDatabase writableDb = getSQLiteDatabaseWithRetries();
          try {
             writableDb.beginTransaction();
             result = writableDb.update(table, values, whereClause, whereArgs);
             writableDb.setTransactionSuccessful();
-         } catch (Throwable t) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error updating table: " + table, t);
+         } catch (SQLiteException e) {
+            logger.error("Error updating on table: " + table + " with whereClause: " + whereClause + " and whereArgs: " + whereArgs, e);
+         } catch (IllegalStateException e) {
+            logger.error("Error under update transaction under table: " + table + " with whereClause: " + whereClause + " and whereArgs: " + whereArgs, e);
          } finally {
             if (writableDb != null) {
                try {
                   writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
-               } catch (Throwable t) {
-                  OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error closing transaction! ", t);
+               } catch (IllegalStateException e) {
+                  logger.error("Error closing transaction! ", e);
+               } catch (SQLiteException e) {
+                  logger.error("Error closing transaction! ", e);
                }
             }
          }
@@ -273,11 +292,15 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
             writableDb.delete(table, whereClause, whereArgs);
             writableDb.setTransactionSuccessful();
          } catch (SQLiteException e) {
-            logger.error("Error deleting on table: " + table, e);
+            logger.error("Error deleting on table: " + table + " with whereClause: " + whereClause + " and whereArgs: " + whereArgs, e);
+         } catch (IllegalStateException e) {
+            logger.error("Error under delete transaction under table: " + table + " with whereClause: " + whereClause + " and whereArgs: " + whereArgs, e);
          } finally {
             if (writableDb != null) {
                try {
                   writableDb.endTransaction(); // May throw if transaction was never opened or DB is full.
+               } catch (IllegalStateException e) {
+                  logger.error("Error closing transaction! ", e);
                } catch (SQLiteException e) {
                   logger.error("Error closing transaction! ", e);
                }

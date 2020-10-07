@@ -2,7 +2,6 @@ package com.onesignal;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.os.Process;
 
 import androidx.annotation.NonNull;
@@ -26,6 +25,7 @@ import java.util.Set;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
+    private static final Object LOCK = new Object();
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
@@ -129,23 +129,31 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     //    however an on session won't happen
     void initWithCachedInAppMessages() {
         // Do not reload from cache if already loaded.
-        if (!messages.isEmpty())
+        if (!messages.isEmpty()) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages with already in memory messages: " + messages);
             return;
+        }
 
-        String cachedIamsStr = OneSignalPrefs.getString(
+        String cachedInAppMessageString = OneSignalPrefs.getString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CACHED_IAMS,
                 null
         );
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages: " + cachedIamsStr);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages: " + cachedInAppMessageString);
 
-        if (cachedIamsStr == null)
+        if (cachedInAppMessageString == null || cachedInAppMessageString.isEmpty())
             return;
 
-        try {
-            processInAppMessageJson(new JSONArray(cachedIamsStr));
-        } catch (JSONException e) {
-            e.printStackTrace();
+        synchronized (LOCK) {
+            try {
+                // Second check to avoid getting the lock while message list is being set
+                if (!messages.isEmpty())
+                    return;
+
+                processInAppMessageJson(new JSONArray(cachedInAppMessageString));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -171,25 +179,19 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void processInAppMessageJson(@NonNull JSONArray json) throws JSONException {
-        ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
-        for (int i = 0; i < json.length(); i++) {
-            JSONObject messageJson = json.getJSONObject(i);
-            OSInAppMessage message = new OSInAppMessage(messageJson);
+        synchronized (LOCK) {
+            ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
+            for (int i = 0; i < json.length(); i++) {
+                JSONObject messageJson = json.getJSONObject(i);
+                OSInAppMessage message = new OSInAppMessage(messageJson);
 
-            populateRedisplayMessageTriggers(message);
-            newMessages.add(message);
+                newMessages.add(message);
+            }
+
+            messages = newMessages;
         }
-        messages = newMessages;
 
         evaluateInAppMessages();
-    }
-
-    private void populateRedisplayMessageTriggers(OSInAppMessage message) {
-        int index = redisplayedInAppMessages.indexOf(message);
-        if (index > -1) {
-            OSInAppMessage redisplayMessage = redisplayedInAppMessages.get(index);
-            redisplayMessage.triggers = message.triggers;
-        }
     }
 
     private void evaluateInAppMessages() {
@@ -480,7 +482,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             message.getRedisplayStats().setDisplayStats(savedIAM.getRedisplayStats());
 
             // Message that don't have triggers should display only once per session
-            boolean triggerHasChanged = savedIAM.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
+            boolean triggerHasChanged = message.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
 
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.toString() + " triggerHasChanged: " + triggerHasChanged);
 
@@ -551,9 +553,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     void messageWasDismissed(@NonNull OSInAppMessage message, boolean failed) {
-        // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
-        OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
-
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             // If failed we will retry on next session
@@ -574,12 +573,21 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         dismissCurrentMessage(message);
     }
 
+    void messageWasDismissedByBackPress(@NonNull OSInAppMessage message) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed by back press: " + message.toString());
+        // IAM was not dismissed by user, will be redisplay again until user dismiss it
+        dismissCurrentMessage(message);
+    }
+
     /**
      * Removes first item from the queue and attempts to show the next IAM in the queue
      *
      * @param message The message dismissed, preview messages are null
      */
     private void dismissCurrentMessage(@Nullable OSInAppMessage message) {
+        // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
+        OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
+
         if (currentPrompt != null) {
             logger.debug("Stop evaluateMessageDisplayQueue because prompt is currently displayed");
             return;
@@ -781,8 +789,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * - At least one Trigger has changed
      */
     private void makeRedisplayMessagesAvailableWithTriggers(Collection<String> newTriggersKeys) {
-        for (OSInAppMessage message : redisplayedInAppMessages) {
-            if (!message.isTriggerChanged() && triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
+        for (OSInAppMessage message : messages) {
+            if (!message.isTriggerChanged() && redisplayedInAppMessages.contains(message) &&
+                    triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
                 logger.debug("Trigger changed for message: " + message.toString());
                 message.setTriggerChanged(true);
             }

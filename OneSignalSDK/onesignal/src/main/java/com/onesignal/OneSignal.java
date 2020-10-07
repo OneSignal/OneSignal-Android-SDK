@@ -803,16 +803,18 @@ public class OneSignal {
    private static void doSessionInit() {
       // Check session time to determine whether to start a new session or not
       if (isPastOnSessionTime()) {
-          OneSignalStateSynchronizer.setNewSession();
+         OneSignal.onesignalLog(LOG_LEVEL.DEBUG, "Starting new session");
+         OneSignalStateSynchronizer.setNewSession();
          if (inForeground) {
             outcomeEventsController.cleanOutcomes();
             sessionManager.restartSessionIfNeeded(getAppEntryState());
             getInAppMessageController().resetSessionLaunchTime();
          }
       } else if (inForeground) {
-         getInAppMessageController().initWithCachedInAppMessages();
+         OneSignal.onesignalLog(LOG_LEVEL.DEBUG, "Continue on same session");
          sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
+      getInAppMessageController().initWithCachedInAppMessages();
 
       // We still want register the user to OneSignal if the SDK was initialized
       //   in the background for the first time.
