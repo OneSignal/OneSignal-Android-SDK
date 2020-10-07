@@ -49,6 +49,12 @@ class OSInAppMessage {
     private Set<String> clickedClickIds;
 
     /**
+     * IAM carousel pages viewed
+     */
+    @NonNull
+    private Set<String> viewedPageIds = new HashSet<>();
+
+    /**
      * Reference to redisplay properties
      */
     private OSInAppMessageRedisplayStats redisplayStats = new OSInAppMessageRedisplayStats();
@@ -209,6 +215,10 @@ class OSInAppMessage {
     void addClickId(String clickId) {
         clickedClickIds.add(clickId);
     }
+
+    void clearPageIds() { viewedPageIds.clear(); }
+
+    void addPageIds(String pageId) { viewedPageIds.add(pageId); }
 
     OSInAppMessageRedisplayStats getRedisplayStats() {
         return redisplayStats;
