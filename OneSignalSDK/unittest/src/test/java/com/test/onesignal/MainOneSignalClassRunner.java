@@ -130,8 +130,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_p
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_handleNotificationOpen;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
@@ -792,10 +792,23 @@ public class MainOneSignalClassRunner {
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
 
-      OneSignal.initWithContext(blankActivity);
       blankActivityController.resume();
-
+      OneSignal.initWithContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
+      threadAndTaskWait();
+
+      assertTrue(OneSignal_isInForeground());
+   }
+
+   @Test
+   public void testInitWithContextAppIdSet_ActivityResumedBeforeInit() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+      ShadowOSUtils.subscribableStatus = 1;
+
+      blankActivityController.resume();
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+
       threadAndTaskWait();
 
       assertTrue(OneSignal_isInForeground());
@@ -1084,7 +1097,7 @@ public class MainOneSignalClassRunner {
       // From app launching normally
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
       // Will get appId saved
-      OneSignal.initWithContext(blankActivity);
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
       OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
 
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
@@ -2321,24 +2334,21 @@ public class MainOneSignalClassRunner {
    }
 
    private static Thread newSendTagTestThread(final Thread mainThread, final int id) {
-      return new Thread(new Runnable() {
-         @Override
-         public void run() {
-            try {
-               for (int i = 0; i < 100; i++) {
-                  if (failedCurModTest)
-                     break;
-                  OneSignal.sendTags("{\"key" + id + "\": " + i + "}");
-               }
-            } catch (Throwable t) {
-               // Ignore the flaky Robolectric null error.
-               if (t.getStackTrace()[0].getClassName().equals("org.robolectric.shadows.ShadowMessageQueue"))
-                  return;
-               t.printStackTrace();
-               failedCurModTest = true;
-               mainThread.interrupt();
-               throw t;
+      return new Thread(() -> {
+         try {
+            for (int i = 0; i < 100; i++) {
+               if (failedCurModTest)
+                  break;
+               OneSignal.sendTags("{\"key" + id + "\": " + i + "}");
             }
+         } catch (Throwable t) {
+            // Ignore the flaky Robolectric null error.
+            if (t.getStackTrace()[0].getClassName().equals("org.robolectric.shadows.ShadowMessageQueue"))
+               return;
+            t.printStackTrace();
+            failedCurModTest = true;
+            mainThread.interrupt();
+            throw t;
          }
       });
    }
@@ -3886,7 +3896,6 @@ public class MainOneSignalClassRunner {
 
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
    }
-
 
    private OSSubscriptionStateChanges lastSubscriptionStateChanges;
    private boolean currentSubscription;

@@ -58,6 +58,7 @@ import org.json.JSONObject;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -275,6 +276,7 @@ public class OneSignal {
    }
 
    static Context appContext;
+   static WeakReference<Activity> appActivity;
    static String appId;
    static String googleProjectNumber;
 
@@ -571,7 +573,10 @@ public class OneSignal {
          return;
       }
 
-      init(appContext);
+      if (appActivity != null && appActivity.get() != null)
+         init(appActivity.get());
+      else
+         init(appContext);
    }
 
    /**
@@ -589,6 +594,8 @@ public class OneSignal {
 
       boolean wasAppContextNull = (appContext == null);
       appContext = context.getApplicationContext();
+      if (context instanceof Activity)
+         appActivity = new WeakReference<>((Activity) context);
       setupActivityLifecycleListener(wasAppContextNull);
       setupPrivacyConsent(appContext);
 
@@ -667,6 +674,8 @@ public class OneSignal {
       }
 
       handleActivityLifecycleHandler(context);
+      // Clean saved init activity
+      appActivity = null;
 
       OneSignalStateSynchronizer.initUserState();
 
@@ -767,10 +776,14 @@ public class OneSignal {
 
    private static void handleActivityLifecycleHandler(Context context) {
       ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
-      inForeground = OneSignal.getCurrentActivity() != null;
+      inForeground = OneSignal.getCurrentActivity() != null || context instanceof Activity;
       logger.debug("OneSignal handleActivityLifecycleHandler inForeground: " + inForeground);
 
       if (inForeground) {
+         if (OneSignal.getCurrentActivity() == null && activityLifecycleHandler != null) {
+            activityLifecycleHandler.setCurActivity((Activity) context);
+            activityLifecycleHandler.setNextResumeIsFirstActivity(true);
+         }
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
          FocusTimeController.getInstance().appForegrounded();
       } else if (activityLifecycleHandler != null) {

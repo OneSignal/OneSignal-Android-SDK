@@ -1920,19 +1920,50 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationWillShowInForegroundHandlerWithActivityAlreadyResumed_doesNotFireWhenAppBackgrounded() throws Exception {
+      blankActivityController.resume();
+
+      // 1. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
+      });
+      threadAndTaskWait();
+
+      // 3. Background the app
+      blankActivityController.pause();
+      threadAndTaskWait();
+
+      // 4. Receive a notification
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 5. Make sure the AppNotificationJob is null since the app is in background when receiving a notification
+      assertNull(lastForegroundNotificationReceivedEvent);
+
+      // 6. Make sure 1 notification exists in DB
+      assertNotificationDbRecords(1);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void testNotificationWillShowInForegroundHandler_doesNotFireWhenAppBackgrounded() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.OSNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
-            // Call complete to end without waiting default 30 second timeout
-            notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
-         }
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
       });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
       threadAndTaskWait();
 
       // 3. Background the app
