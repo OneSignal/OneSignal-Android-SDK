@@ -17,6 +17,7 @@ public class OSInAppMessageAction {
     private static final String ID = "id";
     private static final String NAME = "name";
     private static final String URL = "url";
+    private static final String PAGE_ID = "page_id";
     private static final String URL_TARGET = "url_target";
     private static final String CLOSE = "close";
     private static final String CLICK_NAME = "click_name";
@@ -53,6 +54,12 @@ public class OSInAppMessageAction {
     private String clickUrl;
 
     /**
+     * UUID for the page in an IAM Carousel
+     */
+    @Nullable
+    private String pageId;
+
+    /**
      * Outcome for action
      */
     @NonNull
@@ -83,6 +90,7 @@ public class OSInAppMessageAction {
         clickId = json.optString(ID, null);
         clickName = json.optString(NAME, null);
         clickUrl = json.optString(URL, null);
+        pageId = json.optString(PAGE_ID, null);
         urlTarget = OSInAppMessageActionUrlType.fromString(json.optString(URL_TARGET, null));
         if (urlTarget == null)
             urlTarget = OSInAppMessageActionUrlType.IN_APP_WEBVIEW;
@@ -123,6 +131,11 @@ public class OSInAppMessageAction {
     @Nullable
     public String getClickName() {
         return clickName;
+    }
+
+    @NonNull
+    String getPageId() {
+        return pageId;
     }
 
     @Nullable
