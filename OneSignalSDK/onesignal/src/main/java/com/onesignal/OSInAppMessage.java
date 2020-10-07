@@ -216,9 +216,12 @@ class OSInAppMessage {
         clickedClickIds.add(clickId);
     }
 
+    @NonNull
+    Set<String> getViewedPageIds() { return viewedPageIds; }
+
     void clearPageIds() { viewedPageIds.clear(); }
 
-    void addPageIds(String pageId) { viewedPageIds.add(pageId); }
+    void addPageId(String pageId) { viewedPageIds.add(pageId); }
 
     OSInAppMessageRedisplayStats getRedisplayStats() {
         return redisplayStats;

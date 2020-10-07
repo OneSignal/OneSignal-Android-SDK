@@ -281,6 +281,16 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
+    void onPageChanged(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessagePage newPage) {
+        if (message.isPreview) {
+            return;
+        }
+        if (message.getViewedPageIds().contains(newPage.getPageId())) {
+            return;
+        }
+        fireRESTCallForPageChange(message, newPage);
+    }
+
     void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.setFirstClick(message.takeActionAsUnique());
@@ -288,7 +298,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         firePublicClickHandler(message.messageId, action);
         beginProcessingPrompts(message, action.getPrompts());
         fireClickAction(action);
-        fireRESTCallForClick(message, action);
+        fireRESTCallForClick(message, action, action.getPageId());
         fireTagCallForClick(action);
         fireOutcomesForClick(message.messageId, action.getOutcomes());
     }
@@ -409,7 +419,54 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
+    private void fireRESTCallForPageChange(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessagePage page) {
+        final String variantId = variantIdForMessage(message);
+        if (variantId == null)
+            return;
+
+        final String pageId = page.getPageId();
+
+
+        // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
+        if (message.getViewedPageIds().contains(pageId))
+            return;
+
+        message.addPageId(page.getPageId());
+
+        try {
+            JSONObject json = new JSONObject() {{
+                put("app_id", OneSignal.appId);
+                put("player_id", OneSignal.getUserId());
+                put("variant_id", variantId);
+                put("device_type", new OSUtils().getDeviceType());
+                put("page_id", pageId);
+            }};
+
+            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/pageImpression", json, new ResponseHandler() {
+                @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("page impression", response);
+                    /*OneSignalPrefs.saveStringSet(
+                            OneSignalPrefs.PREFS_ONESIGNAL,
+                            OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
+                            // Post success, store impressioned page to disk
+                            impressionedMessages);*/
+                }
+
+                @Override
+                void onFailure(int statusCode, String response, Throwable throwable) {
+                    printHttpErrorForInAppMessageRequest("page impression", statusCode, response);
+                    // Post failed, impressionedMessage should be removed and this way another post can be attempted
+                    message.getViewedPageIds().remove(page.getPageId());
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
+        }
+    }
+
+    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action, @Nullable final String pageId) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
@@ -433,6 +490,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 put("player_id", OneSignal.getUserId());
                 put("click_id", clickId);
                 put("variant_id", variantId);
+                if (pageId != null) { put("page_id", pageId); }
                 if (action.isFirstClick())
                     put("first_click", true);
             }};
@@ -495,6 +553,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
                 message.clearClickIds();
+                message.clearPageIds();
             }
         }
     }
