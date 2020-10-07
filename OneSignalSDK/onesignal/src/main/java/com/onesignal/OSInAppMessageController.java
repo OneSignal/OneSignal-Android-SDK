@@ -281,7 +281,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    void onPageChanged(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessagePage newPage) {
+    void onPageChanged(@NonNull final OSInAppMessage message, @NonNull final JSONObject messageJson) {
+        final OSInAppMessagePage newPage = new OSInAppMessagePage(messageJson);
         if (message.isPreview) {
             return;
         }
