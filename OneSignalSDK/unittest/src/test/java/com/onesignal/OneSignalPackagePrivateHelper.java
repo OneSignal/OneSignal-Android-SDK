@@ -495,6 +495,10 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.getInAppMessageController().onMessageWasShown(message);
    }
 
+   public static void onPageChanged(@NonNull com.onesignal.OSInAppMessage message, @NonNull final JSONObject eventJson) {
+      OneSignal.getInAppMessageController().onPageChanged(message, eventJson);
+   }
+
    public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
       List<OSInAppMessage> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
       List<OSTestInAppMessage> testMessages = new ArrayList<>();
