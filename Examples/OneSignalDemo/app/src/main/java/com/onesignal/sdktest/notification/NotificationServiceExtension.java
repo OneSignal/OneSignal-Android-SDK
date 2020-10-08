@@ -10,8 +10,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 
 public class NotificationServiceExtension implements
-        OneSignal.OSRemoteNotificationReceivedHandler,
-        OneSignal.OSNotificationOpenedHandler {
+        OneSignal.OSRemoteNotificationReceivedHandler {
 
    @Override
    public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent notificationReceivedEvent) {
@@ -33,8 +32,4 @@ public class NotificationServiceExtension implements
       notificationReceivedEvent.complete(mutableNotification);
    }
 
-   @Override
-   public void notificationOpened(OSNotificationOpenedResult result) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedResult result: " + result.toString());
-   }
 }

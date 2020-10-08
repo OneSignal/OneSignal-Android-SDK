@@ -4,6 +4,7 @@ import android.app.Application;
 import android.util.Log;
 
 import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -30,6 +31,9 @@ public class MainApplication extends Application {
         }
         OneSignal.setAppId(appId);
         OneSignal.initWithContext(this);
+
+        OneSignal.setNotificationOpenedHandler(result ->
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedResult result: " + result.toString()));
 
         OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "NotificationWillShowInForegroundHandler fired!" +
