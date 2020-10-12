@@ -3,6 +3,14 @@ apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('/Users/elliotmawby/.android/debug.keystore')
+            keyAlias = 'androiddebugkey'
+            keyPassword 'android'
+            storePassword 'android'
+        }
+    }
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.onesignal.sdktest"
