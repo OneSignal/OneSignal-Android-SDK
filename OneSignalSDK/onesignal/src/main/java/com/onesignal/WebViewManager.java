@@ -238,11 +238,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handlePageChange(JSONObject jsonObject) throws JSONException {
-            JSONObject body = jsonObject.getJSONObject("body");
-            String id = body.optString("id", null);
-            if (id != null) {
-                OneSignal.getInAppMessageController().onPageChanged(message, body);
-            }
+            OneSignal.getInAppMessageController().onPageChanged(message, jsonObject);
         }
     }
 

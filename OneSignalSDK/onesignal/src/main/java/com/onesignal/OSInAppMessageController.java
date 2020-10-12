@@ -299,7 +299,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         firePublicClickHandler(message.messageId, action);
         beginProcessingPrompts(message, action.getPrompts());
         fireClickAction(action);
-        fireRESTCallForClick(message, action, action.getPageId());
+        fireRESTCallForClick(message, action);
         fireTagCallForClick(action);
         fireOutcomesForClick(message.messageId, action.getOutcomes());
     }
@@ -467,7 +467,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action, @Nullable final String pageId) {
+    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
@@ -491,7 +491,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 put("player_id", OneSignal.getUserId());
                 put("click_id", clickId);
                 put("variant_id", variantId);
-                if (pageId != null) { put("page_id", pageId); }
                 if (action.isFirstClick())
                     put("first_click", true);
             }};

@@ -17,7 +17,7 @@ public class OSInAppMessageAction {
     private static final String ID = "id";
     private static final String NAME = "name";
     private static final String URL = "url";
-    private static final String PAGE_ID = "page_id";
+    private static final String PAGE_ID = "pageId";
     private static final String URL_TARGET = "url_target";
     private static final String CLOSE = "close";
     private static final String CLICK_NAME = "click_name";

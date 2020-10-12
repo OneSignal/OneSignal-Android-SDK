@@ -4,8 +4,8 @@ package com.onesignal
 import org.json.JSONException
 import org.json.JSONObject
 
-const val PAGE_ID = "page_id"
-const val PAGE_INDEX = "page_index"
+const val PAGE_ID = "pageId"
+const val PAGE_INDEX = "pageIndex"
 
 class OSInAppMessagePage constructor(jsonObject: JSONObject) {
     var pageId: String? = null

@@ -161,7 +161,7 @@ public class InAppMessagingHelpers {
             put("url", "https://www.onesignal.com");
             put("url_target", "webview");
             put("close", true);
-            put("page_id", IAM_PAGE_ID);
+            put("pageId", IAM_PAGE_ID);
             put("data", new JSONObject() {{
                 put("test", "value");
             }});
@@ -170,8 +170,8 @@ public class InAppMessagingHelpers {
 
     public static JSONObject buildTestPageJson() throws JSONException {
         return new JSONObject() {{
-            put("page_index", 1);
-            put("page_id", IAM_PAGE_ID);
+            put("pageIndex", 1);
+            put("pageId", IAM_PAGE_ID);
         }};
     }
 }
