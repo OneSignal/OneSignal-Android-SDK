@@ -44,6 +44,18 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
    public static class Receiver extends ADMMessageReceiver {
       public Receiver() {
          super(ADMMessageHandler.class);
+         boolean ADMLatestAvailable = false;
+         try{
+            Class.forName( "com.amazon.device.messaging.ADMMessageHandlerJobBase" );
+            ADMLatestAvailable = true ;
+         }
+         catch (ClassNotFoundException e)
+         {
+            // Handle the exception.
+         }
+         if (ADMLatestAvailable) {
+            registerJobServiceClass(ADMMessageHandlerJob.class, 1);
+         }
       }
    }
 
