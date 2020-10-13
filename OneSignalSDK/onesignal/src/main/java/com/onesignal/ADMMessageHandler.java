@@ -54,7 +54,7 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
             // Handle the exception.
          }
          if (ADMLatestAvailable) {
-            registerJobServiceClass(ADMMessageHandlerJob.class, 1);
+            registerJobServiceClass(ADMMessageHandlerJob.class, 123891);
          }
       }
    }
