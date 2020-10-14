@@ -55,6 +55,8 @@
 # Proguard ends up removing this class even if it is used in AndroidManifest.xml so force keeping it.
 -keep public class com.onesignal.ADMMessageHandler {*;}
 
+-keep public class com.onesignal.ADMMessageHandlerJob {*;}
+
 -keep class com.onesignal.JobIntentService$* {*;}
 
 -keep class com.onesignal.OneSignalUnityProxy {*;}
