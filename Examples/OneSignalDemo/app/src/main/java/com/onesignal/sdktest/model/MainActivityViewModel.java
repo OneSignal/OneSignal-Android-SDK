@@ -438,6 +438,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         locationSharedSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferenceUtil.cacheLocationSharedStatus(context, isChecked);
                 OneSignal.setLocationShared(isChecked);
             }
         });

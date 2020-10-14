@@ -113,7 +113,7 @@ public class PermissionsActivity extends Activity {
                if (granted) {
                    LocationController.startGetLocation();
                } else {
-                  attemptToShowLocationPermissionSettings();
+                   attemptToShowLocationPermissionSettings();
                    LocationController.fireFailedComplete();
                }
             }
