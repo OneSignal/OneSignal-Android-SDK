@@ -2241,60 +2241,6 @@ public class OneSignal {
    }
    // End Remote params getters
 
-   // If true(default) - Device will always vibrate unless the device is in silent mode.
-   // If false - Device will only vibrate when the device is set on it's vibrate only mode.
-   /**
-    * By default OneSignal always vibrates the device when a notification is displayed unless the
-    * device is in a total silent mode.
-    * <br/><br/>
-    * <i>You can link this action to a UI button to give your user a vibration option for your notifications.</i>
-    * @param enable Passing {@code false} means that the device will only vibrate lightly when the device is in it's vibrate only mode.
-    */
-   public static void enableVibrate(boolean enable) {
-      if (appContext == null) {
-         logger.error("enableVibrate called before initWithContext!");
-         return;
-      }
-
-      OneSignalPrefs.saveBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_VIBRATE_ENABLED,
-              enable);
-   }
-
-   static boolean getVibrate() {
-      return OneSignalPrefs.getBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_VIBRATE_ENABLED,
-              true);
-   }
-
-   // If true(default) - Sound plays when receiving notification. Vibrates when device is on vibrate only mode.
-   // If false - Only vibrates unless EnableVibrate(false) was set.
-   /**
-    * By default OneSignal plays the system's default notification sound when the
-    * device's notification system volume is turned on.
-    * <br/><br/>
-    * <i>You can link this action to a UI button to give your user a different sound option for your notifications.</i>
-    * @param enable Passing {@code false} means that the device will only vibrate unless the device is set to a total silent mode.
-    */
-   public static void enableSound(boolean enable) {
-      if (appContext == null) {
-         logger.error("enableSound called before initWithContext!");
-         return;
-      }
-
-      OneSignalPrefs.saveBool(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_SOUND_ENABLED,enable);
-   }
-
-   static boolean getSoundEnabled() {
-      return OneSignalPrefs.getBool(
-              OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_GT_SOUND_ENABLED,
-              true);
-   }
-
    static void setLastSessionTime(long time) {
       OneSignalPrefs.saveLong(
               OneSignalPrefs.PREFS_ONESIGNAL,

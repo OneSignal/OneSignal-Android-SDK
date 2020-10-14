@@ -2659,8 +2659,6 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
       OneSignal.disablePush(false);
-      OneSignal.enableVibrate(false);
-      OneSignal.enableSound(false);
       OneSignal.promptLocation();
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
@@ -2691,8 +2689,6 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
       OneSignal.disablePush(false);
-      OneSignal.enableVibrate(false);
-      OneSignal.enableSound(false);
       OneSignal.promptLocation();
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
@@ -2721,8 +2717,6 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
       OneSignal.disablePush(false);
-      OneSignal.enableVibrate(false);
-      OneSignal.enableSound(false);
       OneSignal.promptLocation();
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
@@ -2751,8 +2745,6 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTag("key");
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
       OneSignal.disablePush(false);
-      OneSignal.enableVibrate(false);
-      OneSignal.enableSound(false);
       OneSignal.promptLocation();
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
