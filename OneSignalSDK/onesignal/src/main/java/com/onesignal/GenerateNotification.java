@@ -240,11 +240,11 @@ class GenerateNotification {
          } catch (Throwable t) {
             notificationDefaults |= Notification.DEFAULT_LIGHTS;
          } // Can throw if an old android support lib is used or parse error.
-      }
-      else
+      } else {
          notificationDefaults |= Notification.DEFAULT_LIGHTS;
+      }
 
-      if (OneSignal.getVibrate() && fcmJson.optInt("vib", 1) == 1) {
+      if (fcmJson.optInt("vib", 1) == 1) {
          if (fcmJson.has("vib_pt")) {
             long[] vibrationPattern = OSUtils.parseVibrationPattern(fcmJson);
             if (vibrationPattern != null)
@@ -931,9 +931,7 @@ class GenerateNotification {
 
    private static boolean isSoundEnabled(JSONObject fcmJson) {
       String sound = fcmJson.optString("sound", null);
-      if ("null".equals(sound) || "nil".equals(sound))
-         return false;
-      return OneSignal.getSoundEnabled();
+      return !"null".equals(sound) && !"nil".equals(sound);
    }
 
    // Android 5.0 accent color to use, only works when AndroidManifest.xml is targetSdkVersion >= 21
