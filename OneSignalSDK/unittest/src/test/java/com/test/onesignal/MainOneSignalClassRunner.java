@@ -50,14 +50,12 @@ import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OSDeviceState;
 import com.onesignal.OSEmailSubscriptionObserver;
-import com.onesignal.OSEmailSubscriptionState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
-import com.onesignal.OSPermissionSubscriptionState;
 import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
@@ -2675,12 +2673,12 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Permission subscription wont return until OneSignal init is done
-      assertNull(OneSignal.getPermissionSubscriptionState());
+      assertNull(OneSignal.getDeviceState());
 
       OneSignal.initWithContext(blankActivity);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
+      assertTrue(OneSignal.getDeviceState().isSubscribed());
    }
 
    @Test
@@ -2707,12 +2705,12 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // TODO change to assertNull(OneSignal.getPermissionSubscriptionState()); when privacy consent public set is removed
-      assertFalse(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
+      assertFalse(OneSignal.getDeviceState().isSubscribed());
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
+      assertTrue(OneSignal.getDeviceState().isSubscribed());
    }
 
    @Test
@@ -2736,13 +2734,13 @@ public class MainOneSignalClassRunner {
       OneSignal.setNotificationWillShowInForegroundHandler(null);
       threadAndTaskWait();
 
-      assertNull(OneSignal.getPermissionSubscriptionState());
+      assertNull(OneSignal.getDeviceState());
 
       OneSignal.initWithContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
+      assertTrue(OneSignal.getDeviceState().isSubscribed());
    }
 
    @Test
@@ -2766,13 +2764,13 @@ public class MainOneSignalClassRunner {
       OneSignal.setNotificationWillShowInForegroundHandler(null);
       threadAndTaskWait();
 
-      assertNull(OneSignal.getPermissionSubscriptionState());
+      assertNull(OneSignal.getDeviceState());
 
       OneSignal.initWithContext(blankActivity);
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       threadAndTaskWait();
 
-      assertTrue(OneSignal.getPermissionSubscriptionState().getSubscriptionStatus().isSubscribed());
+      assertTrue(OneSignal.getDeviceState().isSubscribed());
    }
 
    // ####### DeleteTags Tests ######
@@ -4066,19 +4064,20 @@ public class MainOneSignalClassRunner {
    @Test
    public void shouldGetCorrectCurrentEmailSubscriptionState() throws Exception {
       OneSignalInit();
-      OSEmailSubscriptionState emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
+      OSDeviceState deviceState = OneSignal.getDeviceState();
 
-      assertNull(emailSubscriptionState.getEmailUserId());
-      assertNull(emailSubscriptionState.getEmailAddress());
-      assertFalse(emailSubscriptionState.getSubscribed());
+      assertNotNull(deviceState);
+      assertNull(deviceState.getEmailUserId());
+      assertNull(deviceState.getEmailAddress());
+      assertFalse(deviceState.isEmailSubscribed());
 
       OneSignal.setEmail("josh@onesignal.com");
       threadAndTaskWait();
-      emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
+      deviceState = OneSignal.getDeviceState();
 
-      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", emailSubscriptionState.getEmailUserId());
-      assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
-      assertTrue(emailSubscriptionState.getSubscribed());
+      assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", deviceState.getEmailUserId());
+      assertEquals("josh@onesignal.com", deviceState.getEmailAddress());
+      assertTrue(deviceState.isEmailSubscribed());
    }
 
    @Test
@@ -4090,18 +4089,18 @@ public class MainOneSignalClassRunner {
       restartAppAndElapseTimeToNextSession(time);
 
       OneSignalInit();
-      OSEmailSubscriptionState emailSubscriptionState = OneSignal.getPermissionSubscriptionState().getEmailSubscriptionStatus();
-      assertEquals("josh@onesignal.com", emailSubscriptionState.getEmailAddress());
-      assertNotNull(emailSubscriptionState.getEmailUserId());
+      OSDeviceState deviceState = OneSignal.getDeviceState();
+      assertEquals("josh@onesignal.com", deviceState.getEmailAddress());
+      assertNotNull(deviceState.getEmailUserId());
    }
 
    @Test
    public void shouldReturnCorrectGetPermissionSubscriptionState() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-      OSPermissionSubscriptionState permissionSubscriptionState = OneSignal.getPermissionSubscriptionState();
-      assertTrue(permissionSubscriptionState.getPermissionStatus().areNotificationsEnabled());
-      assertTrue(permissionSubscriptionState.getSubscriptionStatus().isSubscribed());
+      OSDeviceState deviceState = OneSignal.getDeviceState();
+      assertTrue(deviceState.areNotificationsEnabled());
+      assertTrue(deviceState.isSubscribed());
    }
 
    @Test

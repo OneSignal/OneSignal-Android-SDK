@@ -3,6 +3,7 @@ package com.onesignal.sdktest.user;
 import android.content.Context;
 import android.util.Log;
 
+import com.onesignal.OSDeviceState;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.callback.EmailUpdateCallback;
 import com.onesignal.sdktest.constant.Tag;
@@ -13,11 +14,9 @@ public class CurrentUser {
     private static CurrentUser currentUser;
 
     public String getEmail() {
-        if (OneSignal.getPermissionSubscriptionState() != null)
-            return OneSignal
-                .getPermissionSubscriptionState()
-                .getEmailSubscriptionStatus()
-                .getEmailAddress();
+        OSDeviceState deviceState = OneSignal.getDeviceState();
+        if (deviceState != null)
+            return deviceState.getEmailAddress();
         return null;
     }
 
@@ -53,10 +52,8 @@ public class CurrentUser {
     }
 
     public boolean isEmailSet() {
-        return OneSignal
-                .getPermissionSubscriptionState() != null && OneSignal
-                .getPermissionSubscriptionState().getEmailSubscriptionStatus()
-                .getEmailAddress() != null;
+        OSDeviceState deviceState = OneSignal.getDeviceState();
+        return deviceState != null && deviceState.getEmailAddress() != null;
     }
 
     public boolean isExternalUserIdSet(Context context) {

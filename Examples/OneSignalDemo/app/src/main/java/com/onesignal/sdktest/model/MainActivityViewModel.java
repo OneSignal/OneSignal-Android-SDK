@@ -19,6 +19,7 @@ import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import com.onesignal.OSDeviceState;
 import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSSubscriptionStateChanges;
@@ -299,11 +300,8 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     @Override
     public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
-        final boolean isSubscribed = OneSignal.getPermissionSubscriptionState() != null &&
-                OneSignal
-                        .getPermissionSubscriptionState()
-                        .getSubscriptionStatus()
-                        .isSubscribed();
+        OSDeviceState deviceState = OneSignal.getDeviceState();
+        final boolean isSubscribed = deviceState != null && deviceState.isSubscribed();
 
         boolean isPermissionEnabled = stateChanges.getTo().areNotificationsEnabled();
         subscriptionSwitch.setEnabled(isPermissionEnabled);
@@ -459,19 +457,9 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     private void setupSubscriptionSwitch() {
-        boolean isPermissionEnabled = OneSignal
-                .getPermissionSubscriptionState() != null &&
-                OneSignal
-                        .getPermissionSubscriptionState()
-                        .getPermissionStatus()
-                        .areNotificationsEnabled();
-
-        final boolean isSubscribed = OneSignal
-                .getPermissionSubscriptionState() != null &&
-                OneSignal
-                        .getPermissionSubscriptionState()
-                        .getSubscriptionStatus()
-                        .isSubscribed();
+        OSDeviceState deviceState = OneSignal.getDeviceState();
+        boolean isPermissionEnabled = deviceState != null && deviceState.areNotificationsEnabled();
+        final boolean isSubscribed = deviceState != null && deviceState.isSubscribed();
 
         subscriptionSwitch.setEnabled(isPermissionEnabled);
         subscriptionSwitch.setChecked(isSubscribed);

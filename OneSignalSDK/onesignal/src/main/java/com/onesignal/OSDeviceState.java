@@ -34,16 +34,13 @@ public class OSDeviceState {
     private final boolean areNotificationsEnabled;
     private final boolean pushDisabled;
     private final boolean subscribed;
+    private final boolean emailSubscribed;
     private final String userId;
     private final String pushToken;
     private final String emailUserId;
     private final String emailAddress;
 
-    public OSDeviceState(OSPermissionSubscriptionState permissionSubscriptionState) {
-        OSSubscriptionState subscriptionStatus = permissionSubscriptionState.subscriptionStatus;
-        OSPermissionState permissionStatus = permissionSubscriptionState.permissionStatus;
-        OSEmailSubscriptionState emailSubscriptionStatus = permissionSubscriptionState.emailSubscriptionStatus;
-
+    public OSDeviceState(OSSubscriptionState subscriptionStatus, OSPermissionState permissionStatus, OSEmailSubscriptionState emailSubscriptionStatus) {
         areNotificationsEnabled = permissionStatus.areNotificationsEnabled();
         pushDisabled = subscriptionStatus.isPushDisabled();
         subscribed = subscriptionStatus.isSubscribed();
@@ -51,6 +48,7 @@ public class OSDeviceState {
         pushToken = subscriptionStatus.getPushToken();
         emailUserId = emailSubscriptionStatus.getEmailUserId();
         emailAddress = emailSubscriptionStatus.getEmailAddress();
+        emailSubscribed = emailSubscriptionStatus.getSubscribed();
     }
 
     /**
@@ -99,6 +97,15 @@ public class OSDeviceState {
     }
 
     /**
+     * Get whether the user email is subscribed
+     *
+     * @return true if {@link #getEmailUserId} and {@link #getEmailAddress} are not null, otherwise false
+     */
+    public boolean isEmailSubscribed() {
+        return emailSubscribed;
+    }
+
+    /**
      * Get the user email id
      *
      * @return email id if user address was registered, otherwise null
@@ -125,6 +132,7 @@ public class OSDeviceState {
             mainObj.put("isSubscribed", subscribed);
             mainObj.put("userId", userId);
             mainObj.put("pushToken", pushToken);
+            mainObj.put("isEmailSubscribed", emailSubscribed);
             mainObj.put("emailUserId", emailUserId);
             mainObj.put("emailAddress", emailAddress);
         } catch (Throwable t) {
