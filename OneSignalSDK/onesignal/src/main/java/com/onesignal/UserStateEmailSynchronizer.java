@@ -142,7 +142,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         toSyncUserState.syncValues.remove("external_user_id");
         toSyncUserState.persistState();
 
-        OneSignal.getPermissionSubscriptionState().emailSubscriptionStatus.clearEmailAndId();
+        OneSignal.getEmailSubscriptionState().clearEmailAndId();
     }
 
     @Override

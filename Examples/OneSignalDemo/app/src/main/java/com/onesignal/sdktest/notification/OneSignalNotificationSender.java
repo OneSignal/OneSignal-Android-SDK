@@ -2,7 +2,7 @@ package com.onesignal.sdktest.notification;
 
 import android.util.Log;
 
-import com.onesignal.OSPermissionSubscriptionState;
+import com.onesignal.OSDeviceState;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.type.Notification;
@@ -14,9 +14,9 @@ public class OneSignalNotificationSender {
 
     public static void sendDeviceNotification(final Notification notification) {
         new Thread(() -> {
-            OSPermissionSubscriptionState status = OneSignal.getPermissionSubscriptionState();
-            String userId = status.getSubscriptionStatus().getUserId();
-            boolean isSubscribed = status.getSubscriptionStatus().isSubscribed();
+            OSDeviceState deviceState = OneSignal.getDeviceState();
+            String userId = deviceState != null ? deviceState.getUserId() : null;
+            boolean isSubscribed = deviceState != null && deviceState.isSubscribed();
 
             if (!isSubscribed)
                 return;

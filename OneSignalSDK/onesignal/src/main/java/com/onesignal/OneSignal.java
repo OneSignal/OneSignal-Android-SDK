@@ -462,6 +462,9 @@ public class OneSignal {
 
       return currentEmailSubscriptionState;
    }
+   static OSEmailSubscriptionState getEmailSubscriptionState() {
+      return getCurrentEmailSubscriptionState(appContext);
+   }
 
    static OSEmailSubscriptionState lastEmailSubscriptionState;
    private static OSEmailSubscriptionState getLastEmailSubscriptionState(Context context) {
@@ -482,11 +485,20 @@ public class OneSignal {
    }
    // End EmailSubscriptionState
 
+   /**
+    * Get the current user data, notification and permissions state.
+    */
    @Nullable
    public static OSDeviceState getDeviceState() {
-      if (getPermissionSubscriptionState() == null)
+      if (appContext == null) {
+         logger.error("OneSignal.initWithContext has not been called. Could not get OSDeviceState");
          return null;
-      return new OSDeviceState(getPermissionSubscriptionState());
+      }
+
+      OSSubscriptionState subscriptionStatus = getCurrentSubscriptionState(appContext);
+      OSPermissionState permissionStatus = getCurrentPermissionState(appContext);
+      OSEmailSubscriptionState emailSubscriptionStatus = getCurrentEmailSubscriptionState(appContext);
+      return new OSDeviceState(subscriptionStatus, permissionStatus, emailSubscriptionStatus);
    }
 
    private static class IAPUpdateJob {
@@ -2683,35 +2695,6 @@ public class OneSignal {
       }
 
       getEmailSubscriptionStateChangesObserver().removeObserver(observer);
-   }
-
-   /**
-    * Get the current notification and permission state.
-    *<br/><br/>
-    * {@code permissionStatus} - {@link OSPermissionState} - Android Notification Permissions State
-    * <br/>
-    * {@code subscriptionStatus} - {@link OSSubscriptionState} - Google and OneSignal subscription state
-    * <br/>
-    * {@code emailSubscriptionStatus} - {@link OSEmailSubscriptionState} - Email subscription state
-    * @return a {@link OSPermissionSubscriptionState} as described above
-    */
-   public static OSPermissionSubscriptionState getPermissionSubscriptionState() {
-
-      // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("getPermissionSubscriptionState()"))
-         return null;
-
-      if (appContext == null) {
-         logger.error("OneSignal.initWithContext has not been called. Could not get OSPermissionSubscriptionState");
-         return null;
-      }
-
-      OSPermissionSubscriptionState status = new OSPermissionSubscriptionState();
-      status.subscriptionStatus = getCurrentSubscriptionState(appContext);
-      status.permissionStatus = getCurrentPermissionState(appContext);
-      status.emailSubscriptionStatus = getCurrentEmailSubscriptionState(appContext);
-
-      return status;
    }
 
    /** In-App Message Triggers */
