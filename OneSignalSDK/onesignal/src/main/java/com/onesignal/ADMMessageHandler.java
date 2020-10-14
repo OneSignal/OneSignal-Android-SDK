@@ -41,11 +41,13 @@ import org.json.JSONObject;
 //             when "proguard-android-optimize.txt" is used.
 public class ADMMessageHandler extends ADMMessageHandlerBase {
 
+   private static final int JOB_ID = 123891;
+
    public static class Receiver extends ADMMessageReceiver {
       public Receiver() {
          super(ADMMessageHandler.class);
          boolean ADMLatestAvailable = false;
-         try{
+         try {
             Class.forName( "com.amazon.device.messaging.ADMMessageHandlerJobBase" );
             ADMLatestAvailable = true ;
          }
@@ -54,8 +56,9 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
             // Handle the exception.
          }
          if (ADMLatestAvailable) {
-            registerJobServiceClass(ADMMessageHandlerJob.class, 123891);
+            registerJobServiceClass(ADMMessageHandlerJob.class, JOB_ID);
          }
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "ADM latest available: " + ADMLatestAvailable);
       }
    }
 
