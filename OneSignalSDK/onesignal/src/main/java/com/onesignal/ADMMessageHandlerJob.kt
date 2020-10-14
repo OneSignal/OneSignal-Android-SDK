@@ -1,6 +1,5 @@
 package com.onesignal
 
-
 import android.content.Context
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerJobBase
@@ -8,23 +7,23 @@ import com.amazon.device.messaging.ADMMessageHandlerJobBase
 class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
 
     override fun onMessage(context: Context?, intent: Intent?) {
-        val bundle = intent!!.extras
+        val bundle = intent?.extras
 
         val processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle)
         // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
 //      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
-        // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
-//      FCMBroadcastReceiver.completeWakefulIntent(intent);
         if (processedResult.processed()) return
 
         val payload = NotificationBundleProcessor.bundleAsJSONObject(bundle)
         val notification = OSNotification(payload)
 
-        val notificationJob = OSNotificationGenerationJob(context)
-        notificationJob.jsonPayload = payload
-        notificationJob.context = context
-        notificationJob.notification = notification
+        val notificationJob = OSNotificationGenerationJob(context).apply {
+            this.jsonPayload = payload
+            this.context = context
+            this.notification = notification
+        }
+
         NotificationBundleProcessor.processJobForDisplay(notificationJob, true)
     }
 
