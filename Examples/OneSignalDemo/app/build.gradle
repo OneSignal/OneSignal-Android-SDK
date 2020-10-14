@@ -45,6 +45,7 @@ dependencies {
     //  manifest merger conflicts
 //    implementation 'com.onesignal:OneSignal:3.12.6'
 
+    implementation 'com.google.android.gms:play-services-location:[17.0.0, 17.99.99]'
     // glide:4.9.0 is the last version before going to AndroidX
     // glide:4.10.0 is the first version using AndroidX
     implementation 'com.github.bumptech.glide:glide:[4.10.0, 4.99.99]'
