@@ -31,6 +31,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import com.amazon.device.messaging.ADMMessageHandlerJobBase;
 import com.amazon.device.messaging.ADMMessageHandlerBase;
 import com.amazon.device.messaging.ADMMessageReceiver;
 
@@ -40,9 +41,24 @@ import org.json.JSONObject;
 //             when "proguard-android-optimize.txt" is used.
 public class ADMMessageHandler extends ADMMessageHandlerBase {
 
+   private static final int JOB_ID = 123891;
+
    public static class Receiver extends ADMMessageReceiver {
       public Receiver() {
          super(ADMMessageHandler.class);
+         boolean ADMLatestAvailable = false;
+         try {
+            Class.forName( "com.amazon.device.messaging.ADMMessageHandlerJobBase" );
+            ADMLatestAvailable = true ;
+         }
+         catch (ClassNotFoundException e)
+         {
+            // Handle the exception.
+         }
+         if (ADMLatestAvailable) {
+            registerJobServiceClass(ADMMessageHandlerJob.class, JOB_ID);
+         }
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "ADM latest available: " + ADMLatestAvailable);
       }
    }
 
