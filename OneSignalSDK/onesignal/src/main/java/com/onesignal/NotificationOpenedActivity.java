@@ -47,5 +47,4 @@ public class NotificationOpenedActivity extends Activity {
       finish();
    }
 
-
 }

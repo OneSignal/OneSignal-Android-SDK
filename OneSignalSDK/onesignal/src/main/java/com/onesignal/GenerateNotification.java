@@ -78,11 +78,10 @@ class GenerateNotification {
    //   notification Intent.
    public static final String BUNDLE_KEY_ONESIGNAL_DATA = "onesignalData";
 
+   private static Class<?> notificationOpenedClass = NotificationOpenedActivity.class;
+   private static Resources contextResources = null;
    private static Context currentContext = null;
    private static String packageName = null;
-   private static Resources contextResources = null;
-   private static Class<?> notificationOpenedClass;
-   private static boolean openerIsBroadcast;
 
    private static class OneSignalNotificationBuilder {
       NotificationCompat.Builder compatBuilder;
@@ -93,16 +92,6 @@ class GenerateNotification {
       currentContext = inContext;
       packageName = currentContext.getPackageName();
       contextResources = currentContext.getResources();
-
-      PackageManager packageManager = currentContext.getPackageManager();
-      Intent intent = new Intent(currentContext, NotificationOpenedReceiver.class);
-      intent.setPackage(currentContext.getPackageName());
-      if (packageManager.queryBroadcastReceivers(intent, 0).size() > 0) {
-         openerIsBroadcast = true;
-         notificationOpenedClass = NotificationOpenedReceiver.class;
-      }
-      else
-         notificationOpenedClass = NotificationOpenedActivity.class;
    }
 
    @WorkerThread
@@ -133,28 +122,20 @@ class GenerateNotification {
    }
 
    private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
-      if (openerIsBroadcast)
-         return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
       return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
    }
 
    private static Intent getNewBaseIntent(int notificationId) {
-      Intent intent = new Intent(currentContext, notificationOpenedClass)
-                        .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId);
-
-      if (openerIsBroadcast)
-         return intent;
-      return intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+     return new Intent(currentContext, notificationOpenedClass)
+             .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
+             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
    }
 
    private static Intent getNewBaseDeleteIntent(int notificationId) {
-      Intent intent = new Intent(currentContext, notificationOpenedClass)
-          .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
-          .putExtra("dismissed", true);
-
-      if (openerIsBroadcast)
-         return intent;
-      return intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+      return new Intent(currentContext, notificationOpenedClass)
+              .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
+              .putExtra("dismissed", true)
+              .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
    }
    
    private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(OSNotificationGenerationJob notificationJob) {
@@ -324,10 +305,9 @@ class GenerateNotification {
             createGrouplessSummaryNotification(notificationJob, grouplessNotifs.size() + 1);
          else
             createSummaryNotification(notificationJob, oneSignalNotificationBuilder);
-      }
-      else
+      } else {
          notification = createGenericPendingIntentsForNotif(notifBuilder, fcmJson, notificationId);
-
+      }
       // NotificationManagerCompat does not auto omit the individual notification on the device when using
       //   stacked notifications on Android 4.2 and older
       // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
@@ -359,8 +339,7 @@ class GenerateNotification {
 
       try {
          notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
-      }
-      catch (Throwable t) {
+      } catch (Throwable t) {
          //do nothing in this case...Android support lib 26 isn't in the project
       }
    }

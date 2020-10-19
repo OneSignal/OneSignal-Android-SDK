@@ -27,14 +27,15 @@
 
 package com.onesignal;
 
+import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import androidx.annotation.NonNull;
 import android.os.Build;
+
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
@@ -51,7 +52,7 @@ class NotificationOpenedProcessor {
 
    private static final String TAG = NotificationOpenedProcessor.class.getCanonicalName();
 
-   static void processFromContext(Context context, Intent intent) {
+   static void processFromContext(Activity context, Intent intent) {
       if (!isOneSignalIntent(intent))
          return;
 
@@ -77,7 +78,7 @@ class NotificationOpenedProcessor {
       }
    }
 
-   static void processIntent(Context context, Intent intent) {
+   static void processIntent(Activity context, Intent intent) {
       String summaryGroup = intent.getStringExtra("summary");
 
       boolean dismissed = intent.getBooleanExtra("dismissed", false);
@@ -114,12 +115,16 @@ class NotificationOpenedProcessor {
             NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, dbHelper, group, dismissed);
       }
 
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "processIntent from activity: " + context + " and intent: " + intent);
+      if (intent.getExtras() != null)
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "processIntent intent extras: " + intent.getExtras().toString());
+
       if (!dismissed)
          OneSignal.handleNotificationOpen(context, dataArray,
                  intent.getBooleanExtra("from_alert", false), OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData));
    }
 
-   static boolean handleIAMPreviewOpen(@NonNull Context context, @NonNull JSONObject jsonData) {
+   static boolean handleIAMPreviewOpen(@NonNull Activity context, @NonNull JSONObject jsonData) {
       String previewUUID = NotificationBundleProcessor.inAppPreviewPushUUID(jsonData);
       if (previewUUID == null)
          return false;

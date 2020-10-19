@@ -1987,12 +1987,9 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.OSNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            callbackCounter++;
-            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
-         }
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         callbackCounter++;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
       });
       threadAndTaskWait();
 

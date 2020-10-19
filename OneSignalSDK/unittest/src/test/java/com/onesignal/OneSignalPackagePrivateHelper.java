@@ -149,7 +149,7 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
-   public static void OneSignal_handleNotificationOpen(Context context, final JSONArray data, final boolean fromAlert, final String notificationId) {
+   public static void OneSignal_handleNotificationOpen(Activity context, final JSONArray data, final boolean fromAlert, final String notificationId) {
       OneSignal.handleNotificationOpen(context, data, fromAlert, notificationId);
    }
 
@@ -244,7 +244,7 @@ public class OneSignalPackagePrivateHelper {
       NotificationChannelManager.processChannelList(context, jsonArray);
    }
 
-   public static void NotificationOpenedProcessor_processFromContext(Context context, Intent intent) {
+   public static void NotificationOpenedProcessor_processFromContext(Activity context, Intent intent) {
       NotificationOpenedProcessor.processFromContext(context, intent);
    }
 
