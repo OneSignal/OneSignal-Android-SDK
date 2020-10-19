@@ -23,12 +23,20 @@
     void changed(com.onesignal.OSSubscriptionState);
 }
 
+-keep class com.onesignal.OSEmailSubscriptionChangedInternalObserver {
+    void changed(com.onesignal.OSEmailSubscriptionState);
+}
+
 -keep class ** implements com.onesignal.OSPermissionObserver {
     void onOSPermissionChanged(com.onesignal.OSPermissionStateChanges);
 }
 
 -keep class ** implements com.onesignal.OSSubscriptionObserver {
     void onOSSubscriptionChanged(com.onesignal.OSSubscriptionStateChanges);
+}
+
+-keep class ** implements com.onesignal.OSEmailSubscriptionObserver {
+    void onOSEmailSubscriptionChanged(com.onesignal.OSEmailSubscriptionStateChanges);
 }
 
 -keep class com.onesignal.shortcutbadger.impl.AdwHomeBadger { <init>(...); }
