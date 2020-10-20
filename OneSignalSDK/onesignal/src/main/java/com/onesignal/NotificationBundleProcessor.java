@@ -43,7 +43,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.Set;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
@@ -64,6 +63,7 @@ class NotificationBundleProcessor {
     public static final String PUSH_MINIFIED_BUTTON_ICON = "p";
 
     private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
+    private static final String ANDROID_NOTIFICATION_ID = "android_notif_id";
     static final String DEFAULT_ACTION = "__DEFAULT__";
 
     static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
@@ -83,8 +83,8 @@ class NotificationBundleProcessor {
             boolean isIamPreview = inAppPreviewPushUUID(jsonPayload) != null;
 
             int androidNotificationId = 0;
-            if (bundle.containsKey("android_notif_id"))
-                androidNotificationId = bundle.getInt("android_notif_id");
+            if (bundle.containsKey(ANDROID_NOTIFICATION_ID))
+                androidNotificationId = bundle.getInt(ANDROID_NOTIFICATION_ID);
 
             if (!isRestoring
                     && !isIamPreview
@@ -128,7 +128,7 @@ class NotificationBundleProcessor {
 
     @WorkerThread
     static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean fromBackgroundLogic) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting processJobForDisplay");
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting processJobForDisplay opened: " + opened + " fromBackgroundLogic: " + fromBackgroundLogic);
         OSNotificationGenerationJob notificationJob = notificationController.getNotificationJob();
 
         processCollapseKey(notificationJob);
@@ -149,6 +149,11 @@ class NotificationBundleProcessor {
 
         if (!notificationJob.isRestoring() && !notificationJob.isIamPreview()) {
             processNotification(notificationJob, opened);
+
+            // No need to keep notification duplicate check on memory, we have database check at this point
+            // Without removing duplicate, summary restoration might not happen
+            String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(notificationController.getNotificationJob().getJsonPayload());
+            OSNotificationWorkManager.removeNotificationIdProcessed(osNotificationId);
             OneSignal.handleNotificationReceived(notificationJob);
         }
 
@@ -357,7 +362,7 @@ class NotificationBundleProcessor {
 
     //  Process bundle passed from fcm / adm broadcast receiver.
     static @NonNull
-    ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
+    ProcessedBundleResult processBundleFromReceiver(@NonNull Context context, final Bundle bundle) {
         ProcessedBundleResult result = new ProcessedBundleResult();
 
         // Not a OneSignal GCM message
@@ -369,44 +374,25 @@ class NotificationBundleProcessor {
 
         JSONObject pushPayloadJson = bundleAsJSONObject(bundle);
 
-      // Show In-App message preview it is in the payload & the app is in focus
-      String previewUUID = inAppPreviewPushUUID(pushPayloadJson);
-      if (previewUUID != null) {
-         // If app is in focus display the IAMs preview now
-         if (OneSignal.isAppActive()) {
-            result.inAppPreviewShown = true;
-            OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
-         }
-         // Return early, we don't want the extender service or etc. to fire for IAM previews
-         return result;
-      }
+        // Show In-App message preview it is in the payload & the app is in focus
+        String previewUUID = inAppPreviewPushUUID(pushPayloadJson);
+        if (previewUUID != null) {
+            // If app is in focus display the IAMs preview now
+            if (OneSignal.isAppActive()) {
+                result.inAppPreviewShown = true;
+                OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
+            }
+            // Return early, we don't want the extender service or etc. to fire for IAM previews
+            return result;
+        }
 
+        // Bundle already non null, checked under isOneSignalBundle
         if (startNotificationProcessing(context, bundle, result))
             return result;
 
-        // We already ran a getNotificationIdFromFCMBundle == null check above so this will only be true for dups
-        result.isDup = OneSignal.notValidOrDuplicated(context, pushPayloadJson);
-        if (result.isDup)
-            return result;
-
-        JSONObject payload = bundleAsJSONObject(bundle);
-        // Create new notificationJob to be processed for display
-        final OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context, payload);
-
-        // Save as a opened notification to prevent duplicates
-        String alert = bundle.getString("alert");
-        boolean display = isStringEmpty(alert);
-        if (!display) {
-            saveAndProcessDupNotification(context, bundle);
-            // Current thread is meant to be short lived
-            // Make a new thread to do our OneSignal work on
-            new Thread(new Runnable() {
-                public void run() {
-                    OneSignal.handleNotificationReceived(notificationJob);
-                }
-            }, OS_NOTIFICATION_PROCESSING_THREAD).start();
-        }
-
+        // We already check for bundle == null under isOneSignalBundle
+        // At this point we know notification is duplicate
+        result.isDup = true;
         return result;
     }
 
@@ -428,29 +414,23 @@ class NotificationBundleProcessor {
         return null;
     }
 
-    // NotificationExtenderService still makes additional checks such as notValidOrDuplicated
-    private static boolean startNotificationProcessing(Context context, Bundle bundle, ProcessedBundleResult result) {
-        // Service maybe triggered without extras on some Android devices on boot.
-        // https://github.com/OneSignal/OneSignal-Android-SDK/issues/99
-        if (bundle == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Notification bundle is null, not passing the notification to the work manager");
+    private static boolean startNotificationProcessing(@NonNull Context context, @NonNull Bundle bundle, @NonNull ProcessedBundleResult result) {
+        long timestamp = OneSignal.getTime().getCurrentTimeMillis() / 1000L;
+        JSONObject jsonPayload = bundleAsJSONObject(bundle);
+        boolean isRestoring = bundle.getBoolean("is_restoring", false);
+        boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
+
+        if (!isRestoring
+                && OneSignal.notValidOrDuplicated(context, jsonPayload)) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startNotificationProcessing returning, with context: " + context + " and bundle: " + bundle);
             return false;
         }
 
-        JSONObject jsonPayload = bundleAsJSONObject(bundle);
-        boolean isRestoring = bundle.getBoolean("is_restoring", false);
-        long timestamp = OneSignal.getTime().getCurrentTimeMillis() / 1000L;
-        boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
-
-        int androidNotificationId = 0;
-        if (bundle.containsKey("android_notif_id"))
-            androidNotificationId = bundle.getInt("android_notif_id");
-
-        if (!isRestoring
-                && OneSignal.notValidOrDuplicated(context, jsonPayload))
-            return false;
-
         String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
+        int androidNotificationId = 0;
+        if (bundle.containsKey(ANDROID_NOTIFICATION_ID))
+            androidNotificationId = bundle.getInt(ANDROID_NOTIFICATION_ID);
+
         OSNotificationWorkManager.beginEnqueueingWork(
                 context,
                 osNotificationId,

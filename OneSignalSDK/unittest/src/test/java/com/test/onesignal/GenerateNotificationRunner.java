@@ -164,6 +164,15 @@ public class GenerateNotificationRunner {
    private static OSNotificationReceivedEvent lastServiceNotificationReceivedEvent;
    private MockOneSignalDBHelper dbHelper;
    private MockOSTimeImpl time;
+   private String notificationReceivedBody;
+   private int androidNotificationId;
+
+   private static String lastNotificationOpenedBody;
+   private static OneSignal.OSNotificationOpenedHandler getNotificationOpenedHandler() {
+      return openedResult -> {
+         lastNotificationOpenedBody = openedResult.getNotification().getBody();
+      };
+   }
 
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
@@ -1987,12 +1996,9 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.OSNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            callbackCounter++;
-            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
-         }
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         callbackCounter++;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
       });
       threadAndTaskWait();
 
@@ -2096,30 +2102,73 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config (shadows = { ShadowGenerateNotification.class })
+   public void testNotificationReceived_duplicatesInShortTime() throws Exception {
+      // 1. Init OneSignal
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         androidNotificationId = notificationReceivedEvent.getNotification().getAndroidNotificationId();
+         notificationReceivedBody = notificationReceivedEvent.getNotification().getBody();
+         // Not call complete to test duplicate arriving before notification processing is completed
+      });
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
+
+      // 2. Foreground the app
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      Bundle bundle = getBaseNotifBundle();
+      boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+
+      assertTrue(processResult);
+      assertNull(lastNotificationOpenedBody);
+
+      assertEquals("Robo test message", notificationReceivedBody);
+      assertNotEquals(0, androidNotificationId);
+
+      // Don't fire for duplicates
+      lastNotificationOpenedBody = null;
+      notificationReceivedBody = null;
+
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+
+      assertNull(lastNotificationOpenedBody);
+      assertNull(notificationReceivedBody);
+
+      lastNotificationOpenedBody = null;
+      notificationReceivedBody = null;
+
+      // Test that only NotificationReceivedHandler fires
+      bundle = getBaseNotifBundle("UUID2");
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+
+      assertNull(lastNotificationOpenedBody);
+      assertEquals("Robo test message", notificationReceivedBody);
+   }
+
+   @Test
    @Config(shadows = { ShadowGenerateNotification.class })
    public void testNotificationWillShowInForegroundHandler_notificationJobPayload() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.OSNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
-            OSNotification notification = notificationReceivedEvent.getNotification();
-            try {
-               // Make sure all of the accessible getters have the expected values
+         OSNotification notification = notificationReceivedEvent.getNotification();
+         try {
+            // Make sure all of the accessible getters have the expected values
 //               assertEquals("UUID1", notification.getApiNotificationId());
-               assertEquals("title1", notification.getTitle());
-               assertEquals("Notif message 1", notification.getBody());
-               JsonAsserts.equals(new JSONObject("{\"myKey1\": \"myValue1\", \"myKey2\": \"myValue2\"}"), notification.getAdditionalData());
-            } catch (JSONException e) {
-               e.printStackTrace();
-            }
-
-            // Call complete to end without waiting default 30 second timeout
-            notificationReceivedEvent.complete(notification);
+            assertEquals("title1", notification.getTitle());
+            assertEquals("Notif message 1", notification.getBody());
+            JsonAsserts.equals(new JSONObject("{\"myKey1\": \"myValue1\", \"myKey2\": \"myValue2\"}"), notification.getAdditionalData());
+         } catch (JSONException e) {
+            e.printStackTrace();
          }
+
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notification);
       });
 
       blankActivityController.resume();

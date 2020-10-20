@@ -61,6 +61,13 @@ public class StaticResetHelper {
       classes.add(new ClassState(FocusTimeController.class, null));
       classes.add(new ClassState(OSSessionManager.class, null));
       classes.add(new ClassState(MockSessionManager.class, null));
+      classes.add(new ClassState(OSNotificationWorkManager.class,  field -> {
+         if (field.getName().equals("notificationIds")) {
+            field.set(null, OSUtils.newConcurrentSet());
+            return true;
+         }
+         return false;
+      }));
    }
 
    private interface OtherFieldHandler {

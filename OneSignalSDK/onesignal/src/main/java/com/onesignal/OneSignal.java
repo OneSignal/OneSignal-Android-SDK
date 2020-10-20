@@ -2819,7 +2819,15 @@ public class OneSignal {
 
    static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
       String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
-      return id == null || OneSignal.isDuplicateNotification(context, id);
+      if (id == null) {
+         logger.debug("Notification notValidOrDuplicated with id null");
+         return true;
+      }
+      if (OneSignal.isDuplicateNotification(context, id)) {
+         logger.debug("Notification notValidOrDuplicated with id duplicated");
+         return true;
+      }
+      return false;
    }
 
    static String getNotificationIdFromFCMJson(@Nullable JSONObject fcmJson) {

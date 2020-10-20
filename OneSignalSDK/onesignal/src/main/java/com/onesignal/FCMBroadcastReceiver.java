@@ -125,8 +125,10 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
    }
 
    static void startFCMService(Context context, Bundle bundle) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startFCMService from: " + context + " and bundle: " + bundle);
       // If no remote resources have to be downloaded don't create a job which could add some delay.
       if (!NotificationBundleProcessor.hasRemoteResource(bundle)) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startFCMService with no remote resources, no need for services");
          BundleCompat taskExtras = setCompatBundleForServer(bundle, BundleCompatFactory.getInstance());
          NotificationBundleProcessor.processFromFCMIntentService(context, taskExtras);
          return;
