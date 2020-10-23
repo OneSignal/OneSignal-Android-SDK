@@ -187,7 +187,7 @@ class FocusTimeController {
          if (focusType.equals(FocusEventType.END_SESSION))
             syncOnFocusTime();
          else
-            OneSignalSyncServiceUtils.scheduleSyncTask(OneSignal.appContext);
+            OSSyncService.getInstance().scheduleSyncTask(OneSignal.appContext);
       }
    }
 
@@ -251,7 +251,7 @@ class FocusTimeController {
          if (!hasMinSyncTime())
             return;
          // Schedule this sync in case app is killed before completing
-         OneSignalSyncServiceUtils.scheduleSyncTask(OneSignal.appContext);
+         OSSyncService.getInstance().scheduleSyncTask(OneSignal.appContext);
          syncOnFocusTime();
       }
 

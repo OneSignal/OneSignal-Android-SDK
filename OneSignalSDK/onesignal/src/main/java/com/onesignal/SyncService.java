@@ -36,9 +36,9 @@ public class SyncService extends Service {
 
    @Override
    public int onStartCommand(Intent intent, int flags, int startId) {
-      OneSignalSyncServiceUtils.doBackgroundSync(
+      OSSyncService.getInstance().doBackgroundSync(
          this,
-         new OneSignalSyncServiceUtils.LegacySyncRunnable(this)
+         new OSSyncService.LegacySyncRunnable(this)
       );
 
       return START_STICKY;

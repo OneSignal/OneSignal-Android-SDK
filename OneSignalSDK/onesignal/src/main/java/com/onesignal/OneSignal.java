@@ -1145,7 +1145,7 @@ public class OneSignal {
    // Returns true if there is active time that is unsynced.
    @WorkerThread
    static void onAppLostFocus() {
-      Log(LOG_LEVEL.DEBUG, "Application lost focus");
+      Log(LOG_LEVEL.DEBUG, "Application lost focus initDone: " + initDone);
       inForeground = false;
       appEntryState = AppEntryAction.APP_CLOSE;
 
@@ -1167,7 +1167,7 @@ public class OneSignal {
    private static boolean scheduleSyncService() {
       boolean unsyncedChanges = OneSignalStateSynchronizer.persist();
       if (unsyncedChanges)
-         OneSignalSyncServiceUtils.scheduleSyncTask(appContext);
+         OSSyncService.getInstance().scheduleSyncTask(appContext);
 
       boolean locationScheduled = LocationController.scheduleUpdate(appContext);
       return locationScheduled || unsyncedChanges;
@@ -1214,7 +1214,7 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
 
-      OneSignalSyncServiceUtils.cancelSyncTask(appContext);
+      OSSyncService.getInstance().cancelSyncTask(appContext);
    }
 
    static void addNetType(JSONObject jsonObj) {

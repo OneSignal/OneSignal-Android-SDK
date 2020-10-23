@@ -29,8 +29,6 @@ package com.onesignal;
 
 import android.app.job.JobParameters;
 import android.app.job.JobService;
-import android.content.Context;
-import android.net.ConnectivityManager;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
 
@@ -39,16 +37,16 @@ public class SyncJobService extends JobService {
 
    @Override
    public boolean onStartJob(JobParameters jobParameters) {
-      OneSignalSyncServiceUtils.doBackgroundSync(
+      OSSyncService.getInstance().doBackgroundSync(
          this,
-         new OneSignalSyncServiceUtils.LollipopSyncRunnable(this, jobParameters)
+         new OSSyncService.LollipopSyncRunnable(this, jobParameters)
       );
       return true;
    }
 
    @Override
    public boolean onStopJob(JobParameters jobParameters) {
-      boolean reschedule = OneSignalSyncServiceUtils.stopSyncBgThread();
+      boolean reschedule = OSSyncService.getInstance().stopSyncBgThread();
       OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "SyncJobService onStopJob called, system conditions not available reschedule: " + reschedule);
       return reschedule;
    }

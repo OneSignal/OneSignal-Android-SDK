@@ -34,7 +34,6 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
-import androidx.annotation.NonNull;
 
 import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 
@@ -125,7 +124,7 @@ class LocationController {
       OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationController scheduleUpdate lastTime: " + lastTime + " minTime: " + minTime);
       long scheduleTime = minTime - lastTime;
 
-      OneSignalSyncServiceUtils.scheduleLocationUpdateTask(context, scheduleTime);
+      OSSyncService.getInstance().scheduleLocationUpdateTask(context, scheduleTime);
       return true;
    }
 
