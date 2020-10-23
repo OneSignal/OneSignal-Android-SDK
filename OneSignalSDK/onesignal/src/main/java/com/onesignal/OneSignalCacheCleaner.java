@@ -7,7 +7,6 @@ import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.domain.OSInfluenceChannel;
-import com.onesignal.outcomes.data.OSOutcomeTableProvider;
 import com.onesignal.outcomes.data.OutcomesDbContract;
 
 class OneSignalCacheCleaner {

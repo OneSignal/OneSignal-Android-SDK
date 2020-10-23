@@ -3,7 +3,6 @@ package com.onesignal;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Looper;
 import androidx.annotation.NonNull;
@@ -215,7 +214,7 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   public static class OneSignalSyncServiceUtils_SyncRunnable extends com.onesignal.OneSignalSyncServiceUtils.SyncRunnable {
+   public static class OneSignalSyncServiceUtils_SyncRunnable extends OSSyncService.SyncRunnable {
       @Override
       protected void stopSync() {
       }

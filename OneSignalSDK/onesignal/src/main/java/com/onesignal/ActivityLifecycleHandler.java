@@ -47,6 +47,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemConditionHandler {
 
+    public FocusHandlerThread getFocusHandlerThread() {
+        return FocusHandlerThread.getFocusHandlerThread();
+    }
+
     abstract static class ActivityAvailableListener {
         void available(@NonNull Activity activity) {
         }
@@ -58,18 +62,15 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         }
     }
 
+    private static final Object SYNC_LOCK = new Object();
+    private static final String FOCUS_LOST_WORKER_TAG = "FOCUS_LOST_WORKER_TAG";
     private static final Map<String, ActivityAvailableListener> sActivityAvailableListeners = new ConcurrentHashMap<>();
     private static final Map<String, OSSystemConditionController.OSSystemConditionObserver> sSystemConditionObservers = new ConcurrentHashMap<>();
     private static final Map<String, KeyboardListener> sKeyboardListeners = new ConcurrentHashMap<>();
-    private final FocusHandlerThread focusHandlerThread;
 
     @SuppressLint("StaticFieldLeak")
     private Activity curActivity = null;
     private boolean nextResumeIsFirstActivity = false;
-
-    ActivityLifecycleHandler() {
-        this.focusHandlerThread = new FocusHandlerThread();
-    }
 
     void onConfigurationChanged(Configuration newConfig) {
         // If Activity contains the configChanges orientation flag, re-create the view this way
@@ -169,16 +170,19 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
     }
 
     private void handleLostFocus() {
-        focusHandlerThread.runRunnable(new AppFocusRunnable(new WeakReference<>(curActivity)));
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Handling lost focus");
+        FocusHandlerThread.getFocusHandlerThread().runRunnable(new AppFocusRunnable());
     }
 
     private void handleFocus() {
-        if (focusHandlerThread.hasBackgrounded() || nextResumeIsFirstActivity) {
+        if (FocusHandlerThread.getFocusHandlerThread().hasBackgrounded() || nextResumeIsFirstActivity) {
             nextResumeIsFirstActivity = false;
-            focusHandlerThread.resetBackgroundState();
+            FocusHandlerThread.getFocusHandlerThread().resetBackgroundState();
             OneSignal.onAppFocus();
-        } else
-            focusHandlerThread.stopScheduledRunnable();
+        } else {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Cancel focus lost worker");
+            FocusHandlerThread.getFocusHandlerThread().stopScheduledRunnable();
+        }
     }
 
     void addSystemConditionObserver(String key, OSSystemConditionController.OSSystemConditionObserver systemConditionObserver) {
@@ -215,15 +219,12 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         sActivityAvailableListeners.remove(key);
     }
 
-    public FocusHandlerThread getFocusHandlerThread() {
-        return focusHandlerThread;
-    }
-
     public Activity getCurActivity() {
         return curActivity;
     }
 
     public void setCurActivity(Activity activity) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setCurActivity activity: " + activity);
         curActivity = activity;
         for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
             entry.getValue().available(curActivity);
@@ -249,10 +250,21 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
     }
 
     static class FocusHandlerThread extends HandlerThread {
+        private static FocusHandlerThread timeoutHandler;
         private Handler mHandler;
         private AppFocusRunnable appFocusRunnable;
 
-        FocusHandlerThread() {
+        static FocusHandlerThread getFocusHandlerThread() {
+            if (timeoutHandler == null) {
+                synchronized (SYNC_LOCK) {
+                    if (timeoutHandler == null)
+                        timeoutHandler = new FocusHandlerThread();
+                }
+            }
+            return timeoutHandler;
+        }
+
+        private FocusHandlerThread() {
             super("FocusHandlerThread");
             start();
             mHandler = new Handler(getLooper());
@@ -263,11 +275,13 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         }
 
         void resetBackgroundState() {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "FocusHandlerThread resetBackgroundState");
             if (appFocusRunnable != null)
                 appFocusRunnable.backgrounded = false;
         }
 
         void stopScheduledRunnable() {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "FocusHandlerThread stopScheduledRunnable");
             mHandler.removeCallbacksAndMessages(null);
         }
 
@@ -276,6 +290,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
                 return;
 
             appFocusRunnable = runnable;
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Post delay on app lost focus method");
             mHandler.removeCallbacksAndMessages(null);
             mHandler.postDelayed(runnable, 2000);
         }
@@ -287,16 +302,8 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
 
     private static class AppFocusRunnable implements Runnable {
         private boolean backgrounded, completed;
-        private WeakReference<Activity> activityWeakReference;
-
-        public AppFocusRunnable(WeakReference<Activity> activityWeakReference) {
-            this.activityWeakReference = activityWeakReference;
-        }
 
         public void run() {
-            if (activityWeakReference.get() != null)
-                return;
-
             backgrounded = true;
             for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
                 entry.getValue().lostFocus();
