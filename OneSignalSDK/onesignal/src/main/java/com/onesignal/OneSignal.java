@@ -371,7 +371,7 @@ public class OneSignal {
 
    @NonNull private static OSUtils osUtils = new OSUtils();
 
-   private static boolean registerForPushFired, locationFired, promptedLocation, getTagsCall, waitingToPostStateSync;
+   private static boolean registerForPushFired, locationFired, promptedLocation, getTagsCall, waitingToPostStateSync, androidParamsRequestStarted;
 
    private static LocationController.LocationPoint lastLocationPoint;
 
@@ -669,7 +669,7 @@ public class OneSignal {
          // Wrapper SDK's call init twice and pass null as the appId on the first call
          //  the app ID is required to download parameters, so do not download params until the appID is provided
          if (lastAppId != null && context != null)
-            makeAndroidParamsRequest(lastAppId, getUserId());
+            makeAndroidParamsRequest(lastAppId, getUserId(), false);
          return;
       }
 
@@ -682,6 +682,7 @@ public class OneSignal {
          if (notificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
          logger.debug("OneSignal SDK initialization already completed.");
+         doSessionInit();
          return;
       }
 
@@ -815,15 +816,18 @@ public class OneSignal {
    private static void doSessionInit() {
       // Check session time to determine whether to start a new session or not
       if (isPastOnSessionTime()) {
-         OneSignal.onesignalLog(LOG_LEVEL.DEBUG, "Starting new session");
-         OneSignalStateSynchronizer.setNewSession();
          if (inForeground) {
+            logger.debug("Starting new session");
+
+            OneSignalStateSynchronizer.setNewSession();
             outcomeEventsController.cleanOutcomes();
             sessionManager.restartSessionIfNeeded(getAppEntryState());
             getInAppMessageController().resetSessionLaunchTime();
+            setLastSessionTime(time.getCurrentTimeMillis());
          }
-      } else if (inForeground) {
-         OneSignal.onesignalLog(LOG_LEVEL.DEBUG, "Continue on same session");
+      } else {
+         logger.debug("Continue on same session");
+
          sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
       getInAppMessageController().initWithCachedInAppMessages();
@@ -831,9 +835,8 @@ public class OneSignal {
       // We still want register the user to OneSignal if the SDK was initialized
       //   in the background for the first time.
       if (!inForeground && hasUserId())
-         return;
+         logger.debug("doSessionInit on background with already registered user");
 
-      setLastSessionTime(time.getCurrentTimeMillis());
       startRegistrationOrOnSession();
    }
 
@@ -842,17 +845,18 @@ public class OneSignal {
          return;
       waitingToPostStateSync = true;
 
-      if (OneSignalStateSynchronizer.getSyncAsNewSession())
+      if (inForeground && OneSignalStateSynchronizer.getSyncAsNewSession())
          locationFired = false;
 
       startLocationUpdate();
 
       registerForPushFired = false;
 
+      // This will also enable background player updates
       if (getRemoteParams() != null)
          registerForPushToken();
       else
-         makeAndroidParamsRequest(appId, getUserId());
+         makeAndroidParamsRequest(appId, getUserId(), true);
    }
 
    private static void startLocationUpdate() {
@@ -895,6 +899,7 @@ public class OneSignal {
       getPushRegistrator().registerForPush(appContext, googleProjectNumber, new PushRegistrator.RegisteredHandler() {
          @Override
          public void complete(String id, int status) {
+            logger.debug("registerForPushToken completed with id: " + id + " status: " + status);
             if (status < UserState.PUSH_STATUS_SUBSCRIBED) {
                // Only allow errored subscribableStatuses if we have never gotten a token.
                //   This ensures the device will not later be marked unsubscribed due to a
@@ -920,13 +925,15 @@ public class OneSignal {
       return subscriptionStatus < -6;
    }
 
-   private static void makeAndroidParamsRequest(String appId, String userId) {
-      if (getRemoteParams() != null)
+   private static void makeAndroidParamsRequest(String appId, String userId, final boolean queuePushRegistration) {
+      if (getRemoteParams() != null || androidParamsRequestStarted)
          return;
 
+      androidParamsRequestStarted = true;
       OneSignalRemoteParams.makeAndroidParamsRequest(appId, userId, new OneSignalRemoteParams.Callback() {
          @Override
          public void complete(OneSignalRemoteParams.Params params) {
+            androidParamsRequestStarted = false;
             if (params.googleProjectNumber != null)
                googleProjectNumber = params.googleProjectNumber;
 
@@ -937,6 +944,9 @@ public class OneSignal {
                OneSignal.appContext,
                params.notificationChannels
             );
+
+            if (queuePushRegistration)
+               registerForPushToken();
          }
       });
    }
@@ -969,11 +979,11 @@ public class OneSignal {
    }
 
    private static void reassignDelayedInitParams() {
+      logger.debug("reassignDelayedInitParams with appContext: " + appContext);
       Context delayedContext = delayedInitParams.context;
       String delayedAppId = delayedInitParams.appId;
 
       delayedInitParams = null;
-
       setAppId(delayedAppId);
       initWithContext(delayedContext);
    }
@@ -1178,7 +1188,7 @@ public class OneSignal {
       // Make sure remote param call has finish in order to know if privacyConsent is required
       if (!remoteParamController.isRemoteParamsCallDone()) {
          Log(LOG_LEVEL.DEBUG, "Delay onAppFocus logic due to missing remote params");
-         makeAndroidParamsRequest(appId, getUserId());
+         makeAndroidParamsRequest(appId, getUserId(), false);
          return;
       }
 
@@ -1224,7 +1234,7 @@ public class OneSignal {
    }
 
    private static void registerUser() {
-      Log(LOG_LEVEL.DEBUG,
+      logger.debug(
          "registerUser:" +
          "registerForPushFired:" + registerForPushFired +
          ", locationFired: " + locationFired +
@@ -1232,8 +1242,10 @@ public class OneSignal {
          ", appId: " + appId
       );
 
-      if (!registerForPushFired || !locationFired || getRemoteParams() == null || appId == null)
+      if (!registerForPushFired || !locationFired || getRemoteParams() == null || appId == null) {
+         logger.debug("registerUser not possible");
          return;
+      }
 
       new Thread(new Runnable() {
          public void run() {
@@ -1726,6 +1738,7 @@ public class OneSignal {
 
    private static void runGetTags() {
       if (getUserId() == null) {
+         logger.warning("getTags called under a null user!");
          return;
       }
 
@@ -2307,11 +2320,11 @@ public class OneSignal {
    }
 
    static void startLocationShared(boolean enable) {
-      logger.debug("OneSignal is shareLocation enabled: " + enable);
+      logger.debug("OneSignal startLocationShared: " + enable);
       getRemoteParamController().saveLocationShared(enable);
 
       if (!enable) {
-         logger.debug("OneSignal is shareLocation set false, clearing last location!");
+         logger.debug("OneSignal startLocationShared false, clearing last location!");
          OneSignalStateSynchronizer.clearLocation();
       }
    }

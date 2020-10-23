@@ -518,4 +518,12 @@ public class TestHelpers {
          e.printStackTrace();
       }
    }
+
+   /**
+    * Add the correct manifest meta-data key and value regarding the NotificationServiceExtension to the
+    *    mocked OneSignalShadowPackageManager metaData Bundle
+    */
+   public static void startRemoteNotificationReceivedHandlerService(String servicePath) {
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationServiceExtension", servicePath);
+   }
 }

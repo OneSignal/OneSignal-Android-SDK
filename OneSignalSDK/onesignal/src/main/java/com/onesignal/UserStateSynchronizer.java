@@ -77,7 +77,7 @@ abstract class UserStateSynchronizer {
 
         int mType;
 
-        Handler mHandler = null;
+        Handler mHandler;
 
         static final int MAX_RETRIES = 3, NETWORK_CALL_DELAY_TO_BUFFER_MS = 5_000;
         int currentRetry;
@@ -106,7 +106,8 @@ abstract class UserStateSynchronizer {
                     return new Runnable() {
                         @Override
                         public void run() {
-                            if (!runningSyncUserState.get())
+                            boolean syncUserState = !runningSyncUserState.get();
+                            if (syncUserState)
                                 syncUserState(false);
                         }
                     };
@@ -231,7 +232,7 @@ abstract class UserStateSynchronizer {
         synchronized (syncLock) {
             jsonBody = currentUserState.generateJsonDiff(getToSyncUserState(), isSessionCall);
             dependDiff = generateJsonDiff(currentUserState.dependValues, getToSyncUserState().dependValues, null, null);
-
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "UserStateSynchronizer internalSyncUserState from session call: "+ isSessionCall + " jsonBody: " + jsonBody);
             // Updates did not result in a server side change, skipping network call
             if (jsonBody == null) {
                 currentUserState.persistStateAfterSync(dependDiff, null);
