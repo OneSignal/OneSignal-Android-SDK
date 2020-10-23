@@ -351,12 +351,9 @@ public class InAppMessageIntegrationTests {
         Awaitility.await()
                 .atMost(new Duration(150, TimeUnit.MILLISECONDS))
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
-                .untilAsserted(new ThrowingRunnable() {
-                    @Override
-                    public void run() {
-                        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                        assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
-                    }
+                .untilAsserted(() -> {
+                    assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                    assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
                 });
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
@@ -365,12 +362,9 @@ public class InAppMessageIntegrationTests {
         Awaitility.await()
                 .atMost(new Duration(1, TimeUnit.SECONDS))
                 .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
-                .untilAsserted(new ThrowingRunnable() {
-                    @Override
-                    public void run() {
-                        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                        assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
-                    }
+                .untilAsserted(() -> {
+                    assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                    assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
                 });
     }
 

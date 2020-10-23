@@ -115,8 +115,10 @@ class OneSignalSyncServiceUtils {
     */
    private static synchronized void scheduleSyncTask(Context context, long delayMs) {
       if (nextScheduledSyncTimeMs != 0 &&
-            OneSignal.getTime().getCurrentTimeMillis() + delayMs > nextScheduledSyncTimeMs)
+            OneSignal.getTime().getCurrentTimeMillis() + delayMs > nextScheduledSyncTimeMs) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncTask already update scheduled nextScheduledSyncTimeMs: " + nextScheduledSyncTimeMs);
          return;
+      }
 
       if (delayMs < 5_000)
          delayMs = 5_000;

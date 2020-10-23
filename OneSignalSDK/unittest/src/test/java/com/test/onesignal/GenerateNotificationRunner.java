@@ -124,6 +124,7 @@ import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGrou
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
+import static com.test.onesignal.TestHelpers.startRemoteNotificationReceivedHandlerService;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -1987,12 +1988,9 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.OSNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            callbackCounter++;
-            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
-         }
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         callbackCounter++;
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
       });
       threadAndTaskWait();
 
@@ -2101,25 +2099,22 @@ public class GenerateNotificationRunner {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
-      OneSignal.setNotificationWillShowInForegroundHandler(new OneSignal.OSNotificationWillShowInForegroundHandler() {
-         @Override
-         public void notificationWillShowInForeground(OSNotificationReceivedEvent notificationReceivedEvent) {
-            lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
 
-            OSNotification notification = notificationReceivedEvent.getNotification();
-            try {
-               // Make sure all of the accessible getters have the expected values
+         OSNotification notification = notificationReceivedEvent.getNotification();
+         try {
+            // Make sure all of the accessible getters have the expected values
 //               assertEquals("UUID1", notification.getApiNotificationId());
-               assertEquals("title1", notification.getTitle());
-               assertEquals("Notif message 1", notification.getBody());
-               JsonAsserts.equals(new JSONObject("{\"myKey1\": \"myValue1\", \"myKey2\": \"myValue2\"}"), notification.getAdditionalData());
-            } catch (JSONException e) {
-               e.printStackTrace();
-            }
-
-            // Call complete to end without waiting default 30 second timeout
-            notificationReceivedEvent.complete(notification);
+            assertEquals("title1", notification.getTitle());
+            assertEquals("Notif message 1", notification.getBody());
+            JsonAsserts.equals(new JSONObject("{\"myKey1\": \"myValue1\", \"myKey2\": \"myValue2\"}"), notification.getAdditionalData());
+         } catch (JSONException e) {
+            e.printStackTrace();
          }
+
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notification);
       });
 
       blankActivityController.resume();
@@ -2186,14 +2181,6 @@ public class GenerateNotificationRunner {
 
       // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
-   }
-
-   /**
-    * Add the correct manifest meta-data key and value regarding the NotificationServiceExtension to the
-    *    mocked OneSignalShadowPackageManager metaData Bundle
-    */
-   private void startRemoteNotificationReceivedHandlerService(String servicePath) {
-      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationServiceExtension", servicePath);
    }
 
    /* Helpers */

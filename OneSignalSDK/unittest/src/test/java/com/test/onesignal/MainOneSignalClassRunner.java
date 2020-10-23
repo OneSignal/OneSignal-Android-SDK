@@ -54,6 +54,7 @@ import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationAction;
 import com.onesignal.OSNotificationOpenedResult;
+import com.onesignal.OSNotificationReceivedEvent;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSSubscriptionObserver;
@@ -147,6 +148,7 @@ import static com.test.onesignal.RestClientAsserts.assertOnSessionAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
+import static com.test.onesignal.TestHelpers.startRemoteNotificationReceivedHandlerService;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
@@ -197,6 +199,8 @@ public class MainOneSignalClassRunner {
    private MockOneSignalDBHelper dbHelper;
 
    private static String lastNotificationOpenedBody;
+   private static OSNotificationReceivedEvent lastServiceNotificationReceivedEvent;
+
    private static OneSignal.OSNotificationOpenedHandler getNotificationOpenedHandler() {
       return openedResult -> {
 
@@ -269,8 +273,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testInitFromApplicationContext() throws Exception {
-      // Application.onCreate
-//      OneSignal_setGoogleProjectNumber("123456789");
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
       threadAndTaskWait();
@@ -1532,6 +1534,51 @@ public class MainOneSignalClassRunner {
       // Test empty JSONObject
       OneSignal.sendTags(new JSONObject());
       OneSignal.sendTags(new JSONObject(), null);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void shouldSendTagsFromBackgroundOnAppKilled() throws Exception {
+      // 1. Setup correct notification extension service class
+      startRemoteNotificationReceivedHandlerService("com.test.onesignal.MainOneSignalClassRunner$" +
+              "RemoteNotificationReceivedHandler_callSendTags");
+
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+      fastColdRestartApp();
+
+      // 2. initWithContext is called when startProcessing notification
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      // 3. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastServiceNotificationReceivedEvent);
+
+      // 5. Check that tags where sent
+      assertEquals(4, ShadowOneSignalRestClient.requests.size());
+      ShadowOneSignalRestClient.Request playersRequest = ShadowOneSignalRestClient.requests.get(3);
+      JSONObject sentTags = playersRequest.payload.getJSONObject("tags");
+      assertEquals("test_value", sentTags.getString("test_key"));
+   }
+
+   /**
+    * @see #shouldSendTagsFromBackgroundOnAppKilled
+    */
+   public static class RemoteNotificationReceivedHandler_callSendTags implements OneSignal.OSRemoteNotificationReceivedHandler {
+
+      @Override
+      public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent receivedEvent) {
+         lastServiceNotificationReceivedEvent = receivedEvent;
+
+         OneSignal.sendTag("test_key", "test_value");
+         receivedEvent.complete(receivedEvent.getNotification());
+      }
    }
 
    @Test
