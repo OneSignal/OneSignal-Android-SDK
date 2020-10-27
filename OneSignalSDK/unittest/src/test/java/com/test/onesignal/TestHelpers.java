@@ -17,8 +17,8 @@ import androidx.work.Configuration;
 import androidx.work.testing.SynchronousExecutor;
 import androidx.work.testing.WorkManagerTestInitHelper;
 
+import com.onesignal.FocusDelaySyncJobService;
 import com.onesignal.MockOSTimeImpl;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
@@ -46,6 +46,7 @@ import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
+import com.onesignal.SyncJobService;
 import com.onesignal.influence.domain.OSInfluenceType;
 import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
 import com.onesignal.outcomes.data.MockOSOutcomeEventsTable;
@@ -57,6 +58,7 @@ import junit.framework.Assert;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.robolectric.Robolectric;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.util.Scheduler;
@@ -67,6 +69,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
 public class TestHelpers {
@@ -132,6 +135,8 @@ public class TestHelpers {
       } catch (Exception e) {
          e.printStackTrace();
       }
+
+      stopJobs();
 
       if (lastException != null)
          throw lastException;
@@ -207,7 +212,6 @@ public class TestHelpers {
          createdNewThread = runOSThreads() || runOSThreads();
 
          boolean advancedRunnables = OneSignalPackagePrivateHelper.runAllNetworkRunnables();
-         advancedRunnables = OneSignalPackagePrivateHelper.runFocusRunnables() || advancedRunnables;
 
          if (advancedRunnables)
             createdNewThread = true;
@@ -499,24 +503,95 @@ public class TestHelpers {
          Assert.fail("assertMainThread - Not running on main thread when expected to!");
    }
 
-
-   public static @Nullable JobInfo getNextJob() {
+   static void stopJobs() throws Exception {
       JobScheduler jobScheduler =
-         (JobScheduler)ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+              (JobScheduler) ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      if (jobScheduler != null) {
+         List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
+         for (JobInfo jobInfo : jobs) {
+            stopJob(jobInfo);
+            threadAndTaskWait();
+         }
+      }
+   }
+   public static @Nullable JobInfo getNextJob() {
+      return getJob(0);
+   }
+
+   private static @Nullable JobInfo getJob(int index) {
+      JobScheduler jobScheduler =
+              (JobScheduler)ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
       List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
-      if (jobs.size() == 0)
+      if (jobs.size() == 0 || jobs.size() <= index)
          return null;
-      return jobs.get(0);
+      else
+         return jobs.get(index);
    }
 
    public static void runNextJob() {
       try {
          Class jobClass = Class.forName(getNextJob().getService().getClassName());
-         JobService jobService = (JobService)Robolectric.buildService(jobClass).create().get();
-         jobService.onStartJob(null);
+         runJob(jobClass);
       } catch (ClassNotFoundException e) {
          e.printStackTrace();
       }
+   }
+
+   public static void runJob(Class jobClass) {
+      JobService jobService = (JobService) Robolectric.buildService(jobClass).create().get();
+      jobService.onStartJob(null);
+   }
+
+   public static void stopJob(JobInfo jobInfo) {
+      try {
+         Class jobClass = Class.forName(jobInfo.getService().getClassName());
+         JobService jobService = (JobService) Robolectric.buildService(jobClass).create().get();
+         jobService.jobFinished(null, false);
+      } catch (ClassNotFoundException e) {
+         e.printStackTrace();
+      }
+   }
+
+   public static void assertNumberOfServicesAvailable(int quantity) {
+      JobScheduler jobScheduler =
+              (JobScheduler)ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
+      assertEquals(quantity, jobs.size());
+   }
+
+   public static void assertAndRunNextJob(Class jobClass) {
+      assertNumberOfServicesAvailable(1);
+      assertNextJob(jobClass);
+      runNextJob();
+   }
+
+   public static void assertAndRunJobAtIndex(Class jobClass, int index) {
+      assertNextJob(jobClass, index);
+      runJob(jobClass);
+   }
+
+   public static void assertNextJob(Class jobClass) {
+      assertNextJob(jobClass, 0);
+   }
+
+   public static void assertNextJob(Class jobClass, int index) {
+      assertEquals(jobClass.getName(), getJob(index).getService().getClassName());
+   }
+
+   public static void pauseActivity(ActivityController activityController) throws Exception {
+      activityController.pause();
+      threadAndTaskWait();
+
+      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
+      threadAndTaskWait(); // Kicks off the Job service's background thread.
+   }
+
+   public static void assertAndRunSyncService() throws Exception {
+      // There should be FocusDelaySyncJobService + SyncJobService services schedules
+      assertNumberOfServicesAvailable(2);
+      // A sync job should have been schedule, lets run it to ensure on_focus is called.
+      TestHelpers.assertAndRunJobAtIndex(SyncJobService.class, 1);
+      threadAndTaskWait();
    }
 
    /**

@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2019 OneSignal
+ * Copyright 2020 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ package com.onesignal;
 import android.app.Service;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
+import android.content.Context;
 import android.os.Build;
 
 import androidx.annotation.RequiresApi;
@@ -52,8 +53,9 @@ class OSSyncService extends OSBackgroundSync {
    private static final int SYNC_TASK_ID = 2071862118;
    // We want to perform a on_focus sync as soon as the session is done to report the time
    private static final long SYNC_AFTER_BG_DELAY_MS = OneSignal.MIN_ON_SESSION_TIME_MILLIS;
-
    private static OSSyncService sInstance;
+
+   private Long nextScheduledSyncTimeMs = 0L;
 
    static OSSyncService getInstance() {
       if (sInstance == null) {
@@ -66,28 +68,63 @@ class OSSyncService extends OSBackgroundSync {
    }
 
    @Override
-   String getSyncTaskThreadId() {
+   protected String getSyncTaskThreadId() {
       return SYNC_TASK_THREAD_ID;
    }
 
    @Override
-   int getSyncTaskId() {
+   protected int getSyncTaskId() {
       return SYNC_TASK_ID;
    }
 
    @Override
-   long getSyncTaskDelay() {
-      return SYNC_AFTER_BG_DELAY_MS;
-   }
-
-   @Override
-   Class getSyncServiceJobClass() {
+   protected Class getSyncServiceJobClass() {
       return SyncJobService.class;
    }
 
    @Override
-   Class getSyncServicePendingIntentClass() {
+   protected Class getSyncServicePendingIntentClass() {
       return SyncService.class;
+   }
+
+   @Override
+   protected void scheduleSyncTask(Context context) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSSyncService scheduleSyncTask:SYNC_AFTER_BG_DELAY_MS: " + SYNC_AFTER_BG_DELAY_MS);
+      scheduleSyncTask(context, SYNC_AFTER_BG_DELAY_MS);
+   }
+
+   protected void scheduleSyncTask(Context context, long delayMs) {
+      synchronized (LOCK) {
+         if (nextScheduledSyncTimeMs != 0 &&
+                 OneSignal.getTime().getCurrentTimeMillis() + delayMs > nextScheduledSyncTimeMs) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSSyncService scheduleSyncTask already update scheduled nextScheduledSyncTimeMs: " + nextScheduledSyncTimeMs);
+            return;
+         }
+
+         if (delayMs < 5_000)
+            delayMs = 5_000;
+
+         scheduleBackgroundSyncTask(context, delayMs);
+
+         nextScheduledSyncTimeMs = OneSignal.getTime().getCurrentTimeMillis() + delayMs;
+      }
+   }
+
+   void scheduleLocationUpdateTask(Context context, long delayMs) {
+      OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSSyncService scheduleLocationUpdateTask:delayMs: " + delayMs);
+      scheduleSyncTask(context, delayMs);
+   }
+
+   void cancelSyncTask(Context context) {
+      synchronized (LOCK) {
+         nextScheduledSyncTimeMs = 0L;
+
+         boolean didSchedule = LocationController.scheduleUpdate(context);
+         if (didSchedule)
+            return;
+
+         cancelBackgroundSyncTask(context);
+      }
    }
 
    /**
@@ -100,7 +137,7 @@ class OSSyncService extends OSBackgroundSync {
    static abstract class SyncRunnable implements Runnable {
       @Override
       public final void run() {
-         synchronized (OSBackgroundSync.LOCK) {
+         synchronized (LOCK) {
             OSSyncService.getInstance().nextScheduledSyncTimeMs = 0L;
          }
          if (OneSignal.getUserId() == null) {
@@ -143,7 +180,7 @@ class OSSyncService extends OSBackgroundSync {
          // Both these calls are synchronous
          // Once the queue calls take the code will continue and move on to the syncUserState
          OneSignalStateSynchronizer.syncUserState(true);
-         FocusTimeController.getInstance().doBlockingBackgroundSyncOfUnsentTime();
+         OneSignal.getFocusTimeController().doBlockingBackgroundSyncOfUnsentTime();
          stopSync();
       }
 

@@ -69,41 +69,6 @@ public class OneSignalPackagePrivateHelper {
       return (Boolean)isExecutingRunnableField.get(scheduler);
    }
 
-   public static boolean runFocusRunnables() throws Exception {
-      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
-      Looper looper = activityLifecycleHandler != null ? activityLifecycleHandler.getFocusHandlerThread().getHandlerLooper() : null;
-      if (looper == null)
-         return false;
-
-      final Scheduler scheduler = shadowOf(looper).getScheduler();
-      if (scheduler == null)
-         return false;
-
-      // Need to check this before .size() as it will block
-      if (isExecutingRunnable(scheduler))
-         return false;
-
-      if (scheduler.size() == 0)
-         return false;
-
-      Thread handlerThread = new Thread(new Runnable() {
-         @Override
-         public void run() {
-            while (scheduler.runOneTask());
-         }
-      });
-      handlerThread.start();
-
-      while (true) {
-         if (!ShadowOneSignalRestClient.isAFrozenThread(handlerThread))
-            handlerThread.join(1);
-         if (handlerThread.getState() == Thread.State.WAITING ||
-             handlerThread.getState() == Thread.State.TERMINATED)
-            break;
-      }
-      return true;
-   }
-
    public static void OneSignal_sendPurchases(JSONArray purchases, boolean newAsExisting, OneSignalRestClient.ResponseHandler responseHandler) {
       OneSignal.sendPurchases(purchases, newAsExisting, responseHandler);
    }
