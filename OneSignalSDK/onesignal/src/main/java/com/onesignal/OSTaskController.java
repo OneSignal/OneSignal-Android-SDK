@@ -32,6 +32,7 @@ class OSTaskController {
     static final String HANDLE_NOTIFICATION_OPEN = "handleNotificationOpen()";
     static final String CANCEL_GROUPED_NOTIFICATIONS = "cancelGroupedNotifications()";
     static final String PAUSE_IN_APP_MESSAGES = "pauseInAppMessages()";
+    static final String APP_LOST_FOCUS = "onAppLostFocus()";
     static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
             GET_TAGS,
             SYNC_HASHED_EMAIL,
@@ -45,7 +46,8 @@ class OSTaskController {
             SET_REQUIRES_USER_PRIVACY_CONSENT,
             UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED,
             HANDLE_NOTIFICATION_OPEN,
-            SET_EMAIL));
+            SET_EMAIL,
+            APP_LOST_FOCUS));
 
     // The concurrent queue in which we pin pending tasks upon finishing initialization
     private final ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();

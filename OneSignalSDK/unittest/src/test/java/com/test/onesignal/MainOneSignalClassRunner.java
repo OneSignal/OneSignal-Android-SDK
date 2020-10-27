@@ -43,6 +43,8 @@ import android.os.Bundle;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.huawei.hms.location.HWLocation;
+import com.onesignal.FocusDelaySyncJobService;
+import com.onesignal.FocusDelaySyncService;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
@@ -148,13 +150,16 @@ import static com.test.onesignal.RestClientAsserts.assertOnSessionAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertPlayerCreatePushAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRemoteParamsAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
-import static com.test.onesignal.TestHelpers.startRemoteNotificationReceivedHandlerService;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
+import static com.test.onesignal.TestHelpers.assertAndRunSyncService;
+import static com.test.onesignal.TestHelpers.assertNextJob;
+import static com.test.onesignal.TestHelpers.assertNumberOfServicesAvailable;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.flushBufferedSharedPrefs;
 import static com.test.onesignal.TestHelpers.getNextJob;
+import static com.test.onesignal.TestHelpers.pauseActivity;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
-import static com.test.onesignal.TestHelpers.runNextJob;
+import static com.test.onesignal.TestHelpers.startRemoteNotificationReceivedHandlerService;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -378,8 +383,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 2. Background app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // 3. Restart OneSignal and clear the ShadowPushRegistratorADM statics
       restartAppAndElapseTimeToNextSession(time);
@@ -409,8 +413,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 3. Background the app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // 4. Restart the entire OneSignal and clear the ShadowPushRegistratorADM statics
       restartAppAndElapseTimeToNextSession(time);
@@ -470,8 +473,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // Make sure onAppFocus does not move past privacy consent check and on_session is not called
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+
       time.advanceSystemTimeBy(31);
 
       blankActivityController.resume();
@@ -486,8 +489,8 @@ public class MainOneSignalClassRunner {
       OneSignal.provideUserConsent(true);
 
       // Pause app and wait enough time to trigger on_session
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+
       time.advanceSystemTimeBy(31);
 
       // Call onAppFocus and check that the last url is a on_session request
@@ -502,8 +505,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(60);
 
       time.advanceSystemAndElapsedTimeBy(0);
@@ -514,8 +516,9 @@ public class MainOneSignalClassRunner {
 
       time.advanceSystemAndElapsedTimeBy(61);
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+
+      assertAndRunSyncService();
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_focus"));
       assertEquals(61, ShadowOneSignalRestClient.lastPost.getInt("active_time"));
    }
@@ -525,8 +528,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(60);
 
       blankActivityController.resume();
@@ -537,18 +539,17 @@ public class MainOneSignalClassRunner {
 
       time.advanceSystemTimeBy(59);
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       assertNull(ShadowOneSignalRestClient.lastUrl);
    }
 
    @Test
    public void testAppOnFocusNeededAfterOnSessionCall() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       OneSignalInit();
       threadAndTaskWait();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(31);
 
       sessionManager.onNotificationReceived("notification_id");
@@ -563,13 +564,10 @@ public class MainOneSignalClassRunner {
       OneSignalPackagePrivateHelper.RemoteOutcomeParams params = new OneSignalPackagePrivateHelper.RemoteOutcomeParams();
       trackerFactory.saveInfluenceParams(params);
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
-      // A sync job should have been schedule, lets run it to ensure on_focus is called.
-      TestHelpers.runNextJob();
-      threadAndTaskWait();
-
+      assertAndRunSyncService();
+      assertEquals(4,  ShadowOneSignalRestClient.requests.size());
       assertOnFocusAtIndex(3, new JSONObject() {{
          put("active_time", 61);
          put("direct", false);
@@ -587,8 +585,7 @@ public class MainOneSignalClassRunner {
       trackerFactory.saveInfluenceParams(params);
 
       // Background app for 31 seconds
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(31);
 
       // Click notification
@@ -606,13 +603,11 @@ public class MainOneSignalClassRunner {
       time.advanceSystemAndElapsedTimeBy(61);
 
       // Background app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // A sync job should have been schedule, lets run it to ensure on_focus is called.
       assertRestCalls(4);
-      TestHelpers.runNextJob();
-      threadAndTaskWait();
+      assertAndRunSyncService();
 
       assertOnFocusAtIndex(4, new JSONObject() {{
          put("active_time", 61);
@@ -631,8 +626,9 @@ public class MainOneSignalClassRunner {
       trackerFactory.saveInfluenceParams(params);
 
       // Background app for 31 seconds
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+      // Non on_focus call scheduled
+      assertNumberOfServicesAvailable(1);
       time.advanceSystemTimeBy(31);
 
       // Click notification
@@ -650,17 +646,14 @@ public class MainOneSignalClassRunner {
       time.advanceSystemAndElapsedTimeBy(60);
 
       // Background app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+      assertAndRunSyncService();
+      // FocusDelaySyncJobService + SyncJobService
+      assertNumberOfServicesAvailable(2);
 
       // Make sure no direct flag or notifications are added into the on_focus
-      assertOnFocusAtIndex(4, new JSONObject().put("active_time", 60));
       assertOnFocusAtIndexDoesNotHaveKeys(4, Arrays.asList("notification_ids", "direct"));
-
-      // If we have a job make sure it doesn't make another on_focus call
-      runNextJob();
-      threadAndTaskWait();
-      assertRestCalls(5);
+      assertOnFocusAtIndex(4, new JSONObject().put("active_time", 60));
    }
 
    @Test
@@ -680,8 +673,7 @@ public class MainOneSignalClassRunner {
       time.advanceSystemTimeBy(10);
 
       ShadowOneSignalRestClient.lastUrl = null;
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       assertNull(ShadowOneSignalRestClient.lastUrl);
    }
@@ -691,8 +683,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(31);
 
       final String notificationId = "notification_id";
@@ -709,15 +700,12 @@ public class MainOneSignalClassRunner {
 
       time.advanceSystemAndElapsedTimeBy(61);
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // on_focus should not run yet as we need to wait until the job kicks off due to needing
       //   to wait until the session is ended for outcome session counts to be correct
       assertRestCalls(3);
-
-      runNextJob();
-      threadAndTaskWait();
+      assertAndRunSyncService();
       assertRestCalls(4);
       assertOnFocusAtIndex(3, new JSONObject() {{
          put("active_time", 61);
@@ -729,8 +717,7 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
       threadAndTaskWait();
       time.advanceSystemTimeBy(1);
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       assertRestCalls(4);
    }
@@ -744,8 +731,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       // 3. User backgrounds app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // 4. User goes back to app again
       blankActivityController.resume();
@@ -837,8 +823,7 @@ public class MainOneSignalClassRunner {
       assertEquals("players", ShadowOneSignalRestClient.lastUrl);
 
       // Shouldn't call on_session if just resuming app with a short delay
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
       threadAndTaskWait();
@@ -853,8 +838,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches(".*android_params.js.*"));
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(2 * 60);
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
@@ -872,8 +856,7 @@ public class MainOneSignalClassRunner {
       // A 2nd init call
       OneSignalInit();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       time.advanceSystemTimeBy(31);
       blankActivityController.resume();
       threadAndTaskWait();
@@ -891,8 +874,7 @@ public class MainOneSignalClassRunner {
       assertEquals("players", ShadowOneSignalRestClient.lastUrl);
 
       // Shouldn't call on_session if just resuming app with a short delay
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       ShadowOneSignalRestClient.lastUrl = null;
       blankActivityController.resume();
       threadAndTaskWait();
@@ -2404,7 +2386,8 @@ public class MainOneSignalClassRunner {
       OneSignal.sendTag("key", "value");
       // Pause Activity and trigger delayed runnable that will trigger out of focus logic
       blankActivityController.pause();
-      OneSignalPackagePrivateHelper.runFocusRunnables();
+      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
+      // Do not run threadAndWaitThread to avoid running NetworkThread
 
       // Network call for android params and player create should have been made.
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
@@ -2428,7 +2411,8 @@ public class MainOneSignalClassRunner {
 
       // App is swiped away
       blankActivityController.pause();
-      OneSignalPackagePrivateHelper.runFocusRunnables();
+      Robolectric.buildService(FocusDelaySyncService.class, new Intent()).startCommand(0, 0);
+
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       fastColdRestartApp();
       threadAndTaskWait();
@@ -2436,8 +2420,8 @@ public class MainOneSignalClassRunner {
       // Tags did not get synced so SyncService should be scheduled
       AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
-      assertEquals(1, shadowAlarmManager.getScheduledAlarms().size());
-      assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
+      assertEquals(2, shadowAlarmManager.getScheduledAlarms().size());
+      assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getScheduledAlarms().get(1).operation).getSavedIntent()).getIntentClass());
       shadowAlarmManager.getScheduledAlarms().clear();
 
       // Test running the service
@@ -2454,8 +2438,12 @@ public class MainOneSignalClassRunner {
       // No new changes, don't schedule another restart.
       // App is swiped away
       blankActivityController.pause();
-      OneSignalPackagePrivateHelper.runFocusRunnables();
-      assertEquals(0, shadowOf(alarmManager).getScheduledAlarms().size());
+      threadAndTaskWait();
+      Robolectric.buildService(FocusDelaySyncService.class, new Intent()).startCommand(0, 0);
+      threadAndTaskWait();
+
+      // Only FocusDelaySyncService should be scheduled
+      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
    }
 
@@ -2491,7 +2479,6 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
    }
 
-
    private void sendTagsAndImmediatelyBackgroundApp() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
@@ -2499,15 +2486,20 @@ public class MainOneSignalClassRunner {
       // Set tags and background app before a network call can be made
       OneSignal.sendTag("test", "value");
       blankActivityController.pause();
-      OneSignalPackagePrivateHelper.runFocusRunnables();
    }
 
    @Test
    public void ensureSchedulingOfSyncJobServiceOnActivityPause() throws Exception {
       sendTagsAndImmediatelyBackgroundApp();
+      // Not call threadAndTaskWait to avoid running NetworkThread
+      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
 
       // A future job should be scheduled to finish the sync.
-      assertEquals("com.onesignal.SyncJobService", getNextJob().getService().getClassName());
+      assertNumberOfServicesAvailable(1);
+      threadAndTaskWait();
+      // There should be FocusDelaySyncJobService + SyncJobService services schedules
+      assertNumberOfServicesAvailable(2);
+      assertAndRunSyncService();
    }
 
    @Test
@@ -2573,9 +2565,10 @@ public class MainOneSignalClassRunner {
       time.advanceSystemAndElapsedTimeBy(2 * 60);
 
       // 3. Put app in background
-      blankActivityController.pause();
-      OneSignalPackagePrivateHelper.runFocusRunnables();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+
+      // 4. A SyncService should have been scheduled
+      assertAndRunSyncService();
    }
 
    @Test
@@ -2583,9 +2576,11 @@ public class MainOneSignalClassRunner {
    public void ensureSchedulingOfSyncJobServiceOnActivityPause_forPendingActiveTime() throws Exception {
       useAppFor2minThenBackground();
 
+      // There should be FocusDelaySyncJobService + SyncJobService services schedules
+      assertNumberOfServicesAvailable(2);
       // A future job should be scheduled to finish the sync in case the process is killed
       //   for the on_focus call can be made.
-      assertEquals("com.onesignal.SyncJobService", getNextJob().getService().getClassName());
+      assertNextJob(SyncJobService.class, 1);
 
       // FIXME: Cleanup for upcoming unit test
       //  This is a one off scenario where a unit test fails after this one is run
@@ -2607,6 +2602,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(sdk = 26)
    public void ensureFailureOnPauseIsSentFromSyncService_forPendingActiveTime() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       // 1. Start app
       time.advanceSystemAndElapsedTimeBy(0);
       OneSignalInit();
@@ -2617,8 +2613,9 @@ public class MainOneSignalClassRunner {
 
       // 3. Put app in background, simulating network issue.
       ShadowOneSignalRestClient.failAll = true;
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+
+      assertAndRunSyncService();
       assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
       // Simulate a hung network connection when SyncJobService starts.
@@ -2630,10 +2627,10 @@ public class MainOneSignalClassRunner {
       assertRestCalls(4);
       assertOnFocusAtIndex(3, 120);
 
-      // FIXME: Cleanup for upcoming unit test
-      //  This is a one off scenario where a unit test fails after this one is run
-      blankActivityController.resume();
-      threadAndTaskWait();
+//      // FIXME: Cleanup for upcoming unit test
+//      //  This is a one off scenario where a unit test fails after this one is run
+//      blankActivityController.resume();
+//      threadAndTaskWait();
    }
 
    @Test
@@ -2675,8 +2672,7 @@ public class MainOneSignalClassRunner {
 
       // 3. Put app in background
       ShadowOneSignalRestClient.freezeResponses = true;
-      blankActivityController.pause();
-      OneSignalPackagePrivateHelper.runFocusRunnables();
+      pauseActivity(blankActivityController);
 
       // 4. Simulate a hung network connection when SyncJobService starts.
       SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
@@ -3006,8 +3002,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       time.advanceSystemAndElapsedTimeBy(60);
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+      assertAndRunSyncService();
 
       assertOnFocusAtIndex(2, 60);
       assertRestCalls(3);
@@ -3021,9 +3017,10 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       blankActivityController.resume();
-      time.advanceSystemAndElapsedTimeBy(60);
-      blankActivityController.pause();
       threadAndTaskWait();
+      time.advanceSystemAndElapsedTimeBy(60);
+      pauseActivity(blankActivityController);
+      assertAndRunSyncService();
 
       assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
 
@@ -3054,8 +3051,8 @@ public class MainOneSignalClassRunner {
       blankActivityController.resume();
 
       time.advanceSystemAndElapsedTimeBy(2 * 60);
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
+      assertAndRunSyncService();
 
       // Check that time is tracked successfully by validating the "on_focus" endpoint
       assertRestCalls(3);
@@ -3386,6 +3383,8 @@ public class MainOneSignalClassRunner {
       // Testing loc_bg
       blankActivityController.pause();
       threadAndTaskWait();
+      Robolectric.buildService(FocusDelaySyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
       fakeLocation.setTime(12347L);
       ShadowGMSLocationUpdateListener.provideFakeLocation(fakeLocation);
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
@@ -3426,6 +3425,9 @@ public class MainOneSignalClassRunner {
       ShadowFusedLocationApiWrapper.time = 12345L;
 
       blankActivityController.pause();
+      threadAndTaskWait();
+      Robolectric.buildService(FocusDelaySyncService.class, new Intent()).startCommand(0, 0);
+      threadAndTaskWait();
       Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
       threadAndTaskWait();
 
@@ -3581,6 +3583,9 @@ public class MainOneSignalClassRunner {
       // Testing loc_bg
       blankActivityController.pause();
       threadAndTaskWait();
+      Robolectric.buildService(FocusDelaySyncService.class, intent).startCommand(0, 0);
+      threadAndTaskWait();
+
       fakeLocation.setTime(12347L);
       ShadowHMSLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
       Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
@@ -3624,7 +3629,6 @@ public class MainOneSignalClassRunner {
       ShadowHMSFusedLocationProviderClient.shadowTask = true;
       ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
 
-      blankActivityController.pause();
       Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
       threadAndTaskWait();
 
@@ -3879,8 +3883,7 @@ public class MainOneSignalClassRunner {
       // Make sure garbage collection doesn't nuke any observers.
       Runtime.getRuntime().gc();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
       threadAndTaskWait();
@@ -3905,8 +3908,7 @@ public class MainOneSignalClassRunner {
 
       assertEquals(0, ShadowOneSignalRestClient.lastPost.getInt("notification_types"));
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       ShadowNotificationManagerCompat.enabled = true;
       blankActivityController.resume();
       threadAndTaskWait();
@@ -3920,8 +3922,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       ShadowBadgeCountUpdater.lastCount = 1;
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
       threadAndTaskWait();
@@ -3971,8 +3972,7 @@ public class MainOneSignalClassRunner {
       // Make sure garbage collection doesn't nuke any observers.
       Runtime.getRuntime().gc();
 
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
       threadAndTaskWait();

@@ -71,6 +71,7 @@ import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResp
 import static com.test.onesignal.RestClientAsserts.assertMeasureOnV2AtIndex;
 import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
+import static com.test.onesignal.TestHelpers.pauseActivity;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -526,6 +527,7 @@ public class InAppMessageIntegrationTests {
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
         // 3. Emulate back pressing
+        pauseActivity(blankActivityController);
         blankActivityController.destroy();
         threadAndTaskWait();
         // 4. Put activity back to foreground

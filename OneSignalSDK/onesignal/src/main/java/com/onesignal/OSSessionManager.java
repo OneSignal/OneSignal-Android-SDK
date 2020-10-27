@@ -43,7 +43,6 @@ public class OSSessionManager {
     }
 
     void initSessionFromCache() {
-        logger.debug("OneSignal SessionManager initSessionFromCache");
         trackerFactory.initFromCache();
     }
 

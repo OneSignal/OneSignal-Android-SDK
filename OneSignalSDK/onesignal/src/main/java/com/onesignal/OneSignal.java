@@ -316,6 +316,9 @@ public class OneSignal {
    static boolean isInForeground() {
       return inForeground;
    }
+   static void setInForeground(boolean inForeground) {
+      OneSignal.inForeground = inForeground;
+   }
 
    // Tells the action taken to enter the app
    @NonNull private static AppEntryAction appEntryState = AppEntryAction.APP_CLOSE;
@@ -329,6 +332,8 @@ public class OneSignal {
 
    public static final String VERSION = "031503";
 
+   private static OSLogger logger = new OSLogWrapper();
+   private static FocusTimeController focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
    private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
          public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
@@ -336,7 +341,7 @@ public class OneSignal {
                OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before init!");
             if (outcomeEventsController != null)
                outcomeEventsController.cleanOutcomes();
-            FocusTimeController.getInstance().onSessionEnded(lastInfluences);
+            focusTimeController.onSessionEnded(lastInfluences);
          }
       };
 
@@ -345,7 +350,6 @@ public class OneSignal {
       return inAppMessageControllerFactory.getController(getDBHelperInstance(), getLogger());
    }
    private static OSTime time = new OSTimeImpl();
-   private static OSLogger logger = new OSLogWrapper();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
    private static OSTaskController taskController = new OSTaskController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
@@ -608,7 +612,7 @@ public class OneSignal {
       appContext = context.getApplicationContext();
       if (context instanceof Activity)
          appActivity = new WeakReference<>((Activity) context);
-      setupActivityLifecycleListener(wasAppContextNull);
+      setupContextListeners(wasAppContextNull);
       setupPrivacyConsent(appContext);
 
       if (appId == null) {
@@ -729,7 +733,7 @@ public class OneSignal {
          onAppFocusLogic();
    }
 
-   private static void setupActivityLifecycleListener(boolean wasAppContextNull) {
+   private static void setupContextListeners(boolean wasAppContextNull) {
       // Register the lifecycle listener of the app for state changes in activities with proper context
       ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application) appContext);
 
@@ -789,7 +793,7 @@ public class OneSignal {
 
    private static void handleActivityLifecycleHandler(Context context) {
       ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
-      inForeground = OneSignal.getCurrentActivity() != null || context instanceof Activity;
+      setInForeground(OneSignal.getCurrentActivity() != null || context instanceof Activity);
       logger.debug("OneSignal handleActivityLifecycleHandler inForeground: " + inForeground);
 
       if (inForeground) {
@@ -798,7 +802,7 @@ public class OneSignal {
             activityLifecycleHandler.setNextResumeIsFirstActivity(true);
          }
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
-         FocusTimeController.getInstance().appForegrounded();
+         focusTimeController.appForegrounded();
       } else if (activityLifecycleHandler != null) {
          activityLifecycleHandler.setNextResumeIsFirstActivity(true);
       }
@@ -985,7 +989,10 @@ public class OneSignal {
 
       delayedInitParams = null;
       setAppId(delayedAppId);
-      initWithContext(delayedContext);
+
+      // Check to avoid extra initWithContext logging and logic
+      if (!initDone)
+         initWithContext(delayedContext);
    }
 
    static OneSignalRemoteParams.Params getRemoteParams() {
@@ -1146,19 +1153,39 @@ public class OneSignal {
    @WorkerThread
    static void onAppLostFocus() {
       Log(LOG_LEVEL.DEBUG, "Application lost focus initDone: " + initDone);
-      inForeground = false;
+      setInForeground(false);
       appEntryState = AppEntryAction.APP_CLOSE;
 
       setLastSessionTime(OneSignal.getTime().getCurrentTimeMillis());
       LocationController.onFocusChange();
 
-      if (!initDone)
+      if (!initDone) {
+         // Make sure remote param call has finish in order to know if privacyConsent is required
+         if (taskController.shouldQueueTaskForInit(OSTaskController.APP_LOST_FOCUS)) {
+            logger.error("Waiting for remote params. " +
+                    "Moving " + OSTaskController.APP_LOST_FOCUS + " operation to a pending task queue.");
+            taskController.addTaskToQueue(new Runnable() {
+               @Override
+               public void run() {
+                  logger.debug("Running " + OSTaskController.APP_LOST_FOCUS + " operation from a pending task queue.");
+                  backgroundSyncLogic();
+               }
+            });
+         }
+         return;
+      }
+
+      backgroundSyncLogic();
+   }
+
+   static void backgroundSyncLogic() {
+      if (inForeground)
          return;
 
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
 
-      FocusTimeController.getInstance().appBackgrounded();
+      focusTimeController.appBackgrounded();
 
       scheduleSyncService();
    }
@@ -1166,16 +1193,18 @@ public class OneSignal {
    // Schedules location update or a player update if there are any unsynced changes
    private static boolean scheduleSyncService() {
       boolean unsyncedChanges = OneSignalStateSynchronizer.persist();
+      logger.debug("OneSignal scheduleSyncService unsyncedChanges: " + unsyncedChanges);
       if (unsyncedChanges)
          OSSyncService.getInstance().scheduleSyncTask(appContext);
 
       boolean locationScheduled = LocationController.scheduleUpdate(appContext);
+      logger.debug("OneSignal scheduleSyncService locationScheduled: " + locationScheduled);
       return locationScheduled || unsyncedChanges;
    }
 
    static void onAppFocus() {
       Log(LOG_LEVEL.DEBUG, "Application on focus");
-      inForeground = true;
+      setInForeground(true);
 
       // If the app gains focus and has not been set to NOTIFICATION_CLICK yet we can assume this is a normal app open
       if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
@@ -1200,7 +1229,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
          return;
 
-      FocusTimeController.getInstance().appForegrounded();
+      focusTimeController.appForegrounded();
 
       doSessionInit();
 
@@ -1300,6 +1329,7 @@ public class OneSignal {
       if (isLocationShared() && lastLocationPoint != null)
          OneSignalStateSynchronizer.updateLocation(lastLocationPoint);
 
+      logger.debug("registerUserTask calling readyToUpdate");
       OneSignalStateSynchronizer.readyToUpdate(true);
 
       waitingToPostStateSync = false;
@@ -2255,6 +2285,7 @@ public class OneSignal {
    // End Remote params getters
 
    static void setLastSessionTime(long time) {
+      logger.debug("Last session time set to: " + time);
       OneSignalPrefs.saveLong(
               OneSignalPrefs.PREFS_ONESIGNAL,
               OneSignalPrefs.PREFS_OS_LAST_SESSION_TIME,
@@ -2324,7 +2355,7 @@ public class OneSignal {
       getRemoteParamController().saveLocationShared(enable);
 
       if (!enable) {
-         logger.debug("OneSignal startLocationShared false, clearing last location!");
+         logger.debug("OneSignal is shareLocation set false, clearing last location!");
          OneSignalStateSynchronizer.clearLocation();
       }
    }
@@ -2844,7 +2875,11 @@ public class OneSignal {
    }
 
    private static boolean isPastOnSessionTime() {
-      return (OneSignal.getTime().getCurrentTimeMillis() - getLastSessionTime()) >= MIN_ON_SESSION_TIME_MILLIS;
+      long currentTimeMillis = OneSignal.getTime().getCurrentTimeMillis();
+      long lastSessionTime = getLastSessionTime();
+      long difference = currentTimeMillis - lastSessionTime;
+      logger.debug("isPastOnSessionTime currentTimeMillis: " + currentTimeMillis + " lastSessionTime: " + lastSessionTime + " difference: " + difference);
+      return difference >= MIN_ON_SESSION_TIME_MILLIS;
    }
 
    // Extra check to make sure we don't unsubscribe devices that rely on silent background notifications.
@@ -2919,6 +2954,10 @@ public class OneSignal {
 
    static OSTaskController getTaskController() {
       return taskController;
+   }
+
+   static FocusTimeController getFocusTimeController() {
+      return focusTimeController;
    }
    /*
     * End Mock Injection module

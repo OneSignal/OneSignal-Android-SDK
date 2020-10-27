@@ -124,6 +124,7 @@ import static com.onesignal.ShadowRoboNotificationManager.getNotificationsInGrou
 import static com.test.onesignal.RestClientAsserts.assertReportReceivedAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
+import static com.test.onesignal.TestHelpers.pauseActivity;
 import static com.test.onesignal.TestHelpers.startRemoteNotificationReceivedHandlerService;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
@@ -973,6 +974,8 @@ public class GenerateNotificationRunner {
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.initWithContext(blankActivity);
       threadAndTaskWait();
+
+      pauseActivity(blankActivityController);
       fastColdRestartApp();
       // We only care about request post first init
       ShadowOneSignalRestClient.resetStatics();
@@ -1047,10 +1050,10 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       assertEquals(0, ShadowBadgeCountUpdater.lastCount);
-      // 2 open calls should fire + remote params + 2 players call
-      assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
-      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(3).url);
-      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(4).url);
+      // 2 open calls should fire + remote params + 1 players call
+      int networkCallCount =  ShadowOneSignalRestClient.networkCallCount;
+      assertEquals("notifications/UUID2", ShadowOneSignalRestClient.requests.get(networkCallCount - 2).url);
+      assertEquals("notifications/UUID", ShadowOneSignalRestClient.requests.get(networkCallCount - 1).url);
       ShadowRoboNotificationManager.notifications.clear();
 
       // Send 3rd notification
@@ -1945,8 +1948,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Background the app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // 4. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
@@ -1977,8 +1979,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       // 3. Background the app
-      blankActivityController.pause();
-      threadAndTaskWait();
+      pauseActivity(blankActivityController);
 
       // 4. Receive a notification
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());

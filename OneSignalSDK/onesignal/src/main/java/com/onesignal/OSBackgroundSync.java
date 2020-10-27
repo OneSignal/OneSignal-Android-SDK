@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  * <p>
- * Copyright 2019 OneSignal
+ * Copyright 2020 OneSignal
  * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,34 +44,23 @@ import com.onesignal.AndroidSupportV4Compat.ContextCompat;
 abstract class OSBackgroundSync {
 
     protected static final Object LOCK = new Object();
-
-    protected Long nextScheduledSyncTimeMs = 0L;
     protected boolean needsJobReschedule = false;
 
     private Thread syncBgThread;
 
-    abstract String getSyncTaskThreadId();
+    protected abstract String getSyncTaskThreadId();
 
-    abstract int getSyncTaskId();
+    protected abstract int getSyncTaskId();
 
-    abstract long getSyncTaskDelay();
+    protected abstract Class getSyncServiceJobClass();
 
-    abstract Class getSyncServiceJobClass();
+    protected abstract Class getSyncServicePendingIntentClass();
 
-    abstract Class getSyncServicePendingIntentClass();
-
-    void scheduleLocationUpdateTask(Context context, long delayMs) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleLocationUpdateTask:delayMs: " + delayMs);
-        scheduleSyncTask(context, delayMs);
-    }
-
-    void scheduleSyncTask(Context context) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncTask:SYNC_AFTER_BG_DELAY_MS: " + getSyncTaskDelay());
-        scheduleSyncTask(context, getSyncTaskDelay());
-    }
+    protected abstract void scheduleSyncTask(Context context);
 
     // Entry point from SyncJobService and SyncService when the job is kicked off
     void doBackgroundSync(Context context, Runnable runnable) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSBackground sync, calling initWithContext");
         OneSignal.initWithContext(context);
         syncBgThread = new Thread(runnable, getSyncTaskThreadId());
         syncBgThread.start();
@@ -95,21 +84,12 @@ abstract class OSBackgroundSync {
      * @param context - Any context type
      * @param delayMs - How long to wait before doing work
      */
-    private void scheduleSyncTask(Context context, long delayMs) {
+    protected void scheduleBackgroundSyncTask(Context context, long delayMs) {
         synchronized (LOCK) {
-            if (nextScheduledSyncTimeMs != 0 &&
-                    OneSignal.getTime().getCurrentTimeMillis() + delayMs > nextScheduledSyncTimeMs)
-                return;
-
-            if (delayMs < 5_000)
-                delayMs = 5_000;
-
             if (useJob())
                 scheduleSyncServiceAsJob(context, delayMs);
             else
                 scheduleSyncServiceAsAlarm(context, delayMs);
-
-            nextScheduledSyncTimeMs = OneSignal.getTime().getCurrentTimeMillis() + delayMs;
         }
     }
 
@@ -133,10 +113,10 @@ abstract class OSBackgroundSync {
 
     @RequiresApi(21)
     private void scheduleSyncServiceAsJob(Context context, long delayMs) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob:atTime: " + delayMs);
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSBackgroundSync scheduleSyncServiceAsJob:atTime: " + delayMs);
 
         if (isJobIdRunning(context)) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleSyncServiceAsJob Scheduler already running!");
+            OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSBackgroundSync scheduleSyncServiceAsJob Scheduler already running!");
             // If a JobScheduler is schedule again while running it will stop current job. We will schedule again when finished.
             // This will avoid InterruptionException due to thread.join() or queue.take() running.
             needsJobReschedule = true;
@@ -158,7 +138,7 @@ abstract class OSBackgroundSync {
         JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         try {
             int result = jobScheduler.schedule(jobBuilder.build());
-            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "scheduleSyncServiceAsJob:result: " + result);
+            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "OSBackgroundSync scheduleSyncServiceAsJob:result: " + result);
         } catch (NullPointerException e) {
             // Catch for buggy Oppo devices
             // https://github.com/OneSignal/OneSignal-Android-SDK/issues/487
@@ -169,7 +149,7 @@ abstract class OSBackgroundSync {
     }
 
     private void scheduleSyncServiceAsAlarm(Context context, long delayMs) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "scheduleServiceSyncTask:atTime: " + delayMs);
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, this.getClass().getSimpleName() + " scheduleServiceSyncTask:atTime: " + delayMs);
 
         PendingIntent pendingIntent = syncServicePendingIntent(context);
         AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -177,13 +157,9 @@ abstract class OSBackgroundSync {
         alarm.set(AlarmManager.RTC_WAKEUP, triggerAtMs + delayMs, pendingIntent);
     }
 
-    void cancelSyncTask(Context context) {
+    protected void cancelBackgroundSyncTask(Context context) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, this.getClass().getSimpleName() + " cancel background sync");
         synchronized (LOCK) {
-            nextScheduledSyncTimeMs = 0L;
-            boolean didSchedule = LocationController.scheduleUpdate(context);
-            if (didSchedule)
-                return;
-
             if (useJob()) {
                 JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
                 jobScheduler.cancel(getSyncTaskId());

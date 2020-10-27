@@ -68,9 +68,11 @@ import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexDoesNotHa
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndexForPlayerId;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
+import static com.test.onesignal.TestHelpers.assertAndRunSyncService;
 import static com.test.onesignal.TestHelpers.fastColdRestartApp;
 import static com.test.onesignal.TestHelpers.getAllNotificationRecords;
 import static com.test.onesignal.TestHelpers.getAllUniqueOutcomeNotificationRecordsDB;
+import static com.test.onesignal.TestHelpers.pauseActivity;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -172,8 +174,7 @@ public class OutcomeEventIntegrationTests {
         assertNotificationChannelIndirectInfluence(1);
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Click notification
         OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
@@ -203,8 +204,7 @@ public class OutcomeEventIntegrationTests {
         assertNotificationChannelIndirectInfluence(1);
 
         // Background app for 30 seconds
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
         time.advanceSystemTimeBy(31);
 
         // Click notification
@@ -237,8 +237,7 @@ public class OutcomeEventIntegrationTests {
         assertNotificationChannelIndirectInfluence(1);
 
         // Background app for attribution window time
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
         time.advanceSystemTimeBy(24L * 60 * 60L);
 
         // Foreground app
@@ -328,8 +327,7 @@ public class OutcomeEventIntegrationTests {
         assertRestCalls(3);
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
@@ -390,8 +388,7 @@ public class OutcomeEventIntegrationTests {
         assertRestCalls(3);
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
@@ -443,8 +440,7 @@ public class OutcomeEventIntegrationTests {
         assertRestCalls(3);
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Wait 31 seconds to start new session
         time.advanceSystemTimeBy(31);
@@ -496,8 +492,7 @@ public class OutcomeEventIntegrationTests {
         assertRestCalls(3);
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Wait 31 seconds to start new session
         time.advanceSystemTimeBy(31);
@@ -529,8 +524,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive and open a notification
         OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
@@ -563,8 +557,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive and open a notification
         OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
@@ -647,8 +640,7 @@ public class OutcomeEventIntegrationTests {
         assertNotificationChannelIndirectInfluence(1);
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Click notification before new session
         OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
@@ -676,8 +668,7 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Click notification before new session
         OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
@@ -700,8 +691,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterClickingNotification();
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
@@ -737,8 +727,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterClickingNotification();
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
@@ -764,8 +753,7 @@ public class OutcomeEventIntegrationTests {
         foregroundAppAfterReceivingNotification();
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive another notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
@@ -796,12 +784,9 @@ public class OutcomeEventIntegrationTests {
 
         // Background app
         // Sync job will be scheduled here but not run yet
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
-        TestHelpers.runNextJob();
-        threadAndTaskWait();
-
+        assertAndRunSyncService();
         assertOnFocusAtIndex(2, new JSONObject() {{
             put("active_time", 10);
             put("direct", false);
@@ -820,13 +805,11 @@ public class OutcomeEventIntegrationTests {
 
         // Background app
         // Sync job will be scheduled here but not run yet
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         fastColdRestartApp();
 
-        TestHelpers.runNextJob();
-        threadAndTaskWait();
+        assertAndRunSyncService();
 
         assertOnFocusAtIndex(3, new JSONObject() {{
             put("active_time", 10);
@@ -847,12 +830,9 @@ public class OutcomeEventIntegrationTests {
 
         // Background app
         // Sync job will be scheduled here but not run yet
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
-        TestHelpers.runNextJob();
-        threadAndTaskWait();
-
+        assertAndRunSyncService();
         // Ensure we send notification attribution for push player
         assertOnFocusAtIndexForPlayerId(4, ShadowOneSignalRestClient.pushUserId);
         assertOnFocusAtIndex(4, new JSONObject() {{
@@ -877,8 +857,7 @@ public class OutcomeEventIntegrationTests {
         assertEquals(indirectNotificationIds, trackerFactory.getNotificationChannelTracker().getIndirectIds());
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
@@ -923,8 +902,7 @@ public class OutcomeEventIntegrationTests {
         assertEquals(1, getAllUniqueOutcomeNotificationRecordsDB(dbHelper).size());
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         // Wait for 30 seconds to trigger new session
         time.advanceSystemTimeBy(31);
@@ -977,8 +955,7 @@ public class OutcomeEventIntegrationTests {
         }
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         sessionManager.onNotificationReceived(notificationID);
@@ -1018,8 +995,7 @@ public class OutcomeEventIntegrationTests {
         }
 
         // Background app
-        blankActivityController.pause();
-        threadAndTaskWait();
+        pauseActivity(blankActivityController);
 
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         // Receive notification
