@@ -72,6 +72,7 @@ class InAppMessageView {
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
     private boolean isDragging = false;
+    private boolean disableDragDismiss = false;
     @NonNull private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
@@ -79,13 +80,14 @@ class InAppMessageView {
     private InAppMessageViewListener messageController;
     private Runnable scheduleDismissRunnable;
 
-    InAppMessageView(@NonNull WebView webView, @NonNull WebViewManager.Position displayLocation, int pageHeight, double dismissDuration) {
+    InAppMessageView(@NonNull WebView webView, @NonNull WebViewManager.Position displayLocation, int pageHeight, double dismissDuration, boolean disableDragDismiss) {
         this.webView = webView;
         this.displayLocation = displayLocation;
         this.pageHeight = pageHeight;
         this.pageWidth = ViewGroup.LayoutParams.MATCH_PARENT;
         this.dismissDuration = Double.isNaN(dismissDuration) ? 0 : dismissDuration;
         this.hasBackground = !displayLocation.isBanner();
+        this.disableDragDismiss = disableDragDismiss;
     }
 
     void setWebView(WebView webView) {
@@ -140,7 +142,7 @@ class InAppMessageView {
                 // When preparing the IAM, the correct height will be set and handle this job, so
                 //  all bases are covered and the draggableRelativeLayout will never have the wrong height
                 if (draggableRelativeLayout != null)
-                    draggableRelativeLayout.setParams(createDraggableLayoutParams(pageHeight, displayLocation));
+                    draggableRelativeLayout.setParams(createDraggableLayoutParams(pageHeight, displayLocation, disableDragDismiss));
             }
         });
     }
@@ -162,7 +164,7 @@ class InAppMessageView {
                 displayLocation,
                 webViewLayoutParams,
                 linearLayoutParams,
-                createDraggableLayoutParams(pageHeight, displayLocation)
+                createDraggableLayoutParams(pageHeight, displayLocation, disableDragDismiss)
         );
     }
 
@@ -188,11 +190,11 @@ class InAppMessageView {
         return linearLayoutParams;
     }
 
-    private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation) {
+    private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation, boolean disableDragging) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
         draggableParams.maxXPos = MARGIN_PX_SIZE;
         draggableParams.maxYPos = MARGIN_PX_SIZE;
-
+        draggableParams.draggingDisabled = disableDragging;
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
