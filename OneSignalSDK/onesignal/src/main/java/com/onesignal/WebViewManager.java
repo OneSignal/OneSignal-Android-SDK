@@ -158,6 +158,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         static final String IAM_DISPLAY_LOCATION_KEY = "displayLocation";
         static final String IAM_PAGE_META_DATA_KEY = "pageMetaData";
+        static final String IAM_DRAG_TO_DISMISS_DISABLED_KEY = "dragToDismissDisabled";
 
         @JavascriptInterface
         public void postMessage(String message) {
@@ -181,7 +182,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private void handleRenderComplete(JSONObject jsonObject) {
             Position displayType = getDisplayLocation(jsonObject);
             int pageHeight = displayType == Position.FULL_SCREEN ? -1 : getPageHeightData(jsonObject);
-            createNewInAppMessageView(displayType, pageHeight);
+            boolean dragToDismissDisabled = getDragToDismissDisabled(jsonObject);
+            createNewInAppMessageView(displayType, pageHeight, dragToDismissDisabled);
         }
 
         private int getPageHeightData(JSONObject jsonObject) {
@@ -201,6 +203,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 e.printStackTrace();
             }
             return displayLocation;
+        }
+
+        private boolean getDragToDismissDisabled(JSONObject jsonObject) {
+            try {
+                return jsonObject.getBoolean(IAM_DRAG_TO_DISMISS_DISABLED_KEY);
+            } catch (JSONException e) {
+                return false;
+            }
         }
 
         private void handleActionTaken(JSONObject jsonObject) throws JSONException {
@@ -352,8 +362,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         webView.layout(0,0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity));
     }
 
-    private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight) {
-        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
+    private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight, boolean dragToDismissDisabled) {
+        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration(), dragToDismissDisabled);
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
             public void onMessageWasShown() {
