@@ -48,7 +48,7 @@ public class OSDeviceState {
         pushToken = subscriptionStatus.getPushToken();
         emailUserId = emailSubscriptionStatus.getEmailUserId();
         emailAddress = emailSubscriptionStatus.getEmailAddress();
-        emailSubscribed = emailSubscriptionStatus.getSubscribed();
+        emailSubscribed = emailSubscriptionStatus.isSubscribed();
     }
 
     /**

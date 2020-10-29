@@ -3244,7 +3244,7 @@ public class MainOneSignalClassRunner {
       assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
       assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
-      assertTrue(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+      assertTrue(lastEmailSubscriptionStateChanges.getTo().isSubscribed());
    }
 
    /*
@@ -4046,7 +4046,7 @@ public class MainOneSignalClassRunner {
       assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
       assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
-      assertTrue(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+      assertTrue(lastEmailSubscriptionStateChanges.getTo().isSubscribed());
    }
 
    @Test
@@ -4068,7 +4068,7 @@ public class MainOneSignalClassRunner {
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
       assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getFrom().getEmailAddress());
 
-      assertFalse(lastEmailSubscriptionStateChanges.getTo().getSubscribed());
+      assertFalse(lastEmailSubscriptionStateChanges.getTo().isSubscribed());
       assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
       assertNull(lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
    }

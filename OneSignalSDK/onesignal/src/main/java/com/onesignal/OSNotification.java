@@ -457,14 +457,16 @@ public class OSNotification {
       try {
          mainObj.put("androidNotificationId", androidNotificationId);
 
+         JSONArray payloadJsonArray = new JSONArray();
          if (groupedNotifications != null) {
-            JSONArray payloadJsonArray = new JSONArray();
             for (OSNotification notification : groupedNotifications)
                payloadJsonArray.put(notification.toJSONObject());
-            mainObj.put("groupedNotifications", payloadJsonArray);
          }
 
+         mainObj.put("groupedNotifications", payloadJsonArray);
          mainObj.put("notificationId", notificationId);
+         mainObj.put("templateName", templateName);
+         mainObj.put("templateId", templateId);
          mainObj.put("title", title);
          mainObj.put("body", body);
          mainObj.put("smallIcon", smallIcon);
