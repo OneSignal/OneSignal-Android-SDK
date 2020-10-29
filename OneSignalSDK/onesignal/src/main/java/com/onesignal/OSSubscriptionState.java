@@ -34,11 +34,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class OSSubscriptionState implements Cloneable {
-   
-   OSObservable<Object, OSSubscriptionState> observable;
-   
+
+   private static final String CHANGED_KEY = "changed";
+
+   private OSObservable<Object, OSSubscriptionState> observable;
+
+   private String userId;
+   private String pushToken;
+   private boolean accepted;
+   private boolean pushDisabled;
+
    OSSubscriptionState(boolean asFrom, boolean permissionAccepted) {
-      observable = new OSObservable<>("changed", false);
+      observable = new OSObservable<>(CHANGED_KEY, false);
       
       if (asFrom) {
          pushDisabled = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
@@ -49,19 +56,13 @@ public class OSSubscriptionState implements Cloneable {
                  OneSignalPrefs.PREFS_ONESIGNAL_PUSH_TOKEN_LAST, null);
          accepted = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL,
                  OneSignalPrefs.PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST, false);
-      }
-      else {
+      } else {
          pushDisabled = !OneSignalStateSynchronizer.getUserSubscribePreference();
          userId = OneSignal.getUserId();
          pushToken = OneSignalStateSynchronizer.getRegistrationId();
          accepted = permissionAccepted;
       }
    }
-   
-   private boolean accepted;
-   private boolean pushDisabled;
-   private String userId;
-   private String pushToken;
    
    void changed(OSPermissionState state) {
       setAccepted(state.areNotificationsEnabled());
@@ -135,7 +136,11 @@ public class OSSubscriptionState implements Cloneable {
           || !(pushToken != null ? pushToken : "").equals(from.pushToken != null ? from.pushToken : "")
           || accepted != from.accepted;
    }
-   
+
+   public OSObservable<Object, OSSubscriptionState> getObservable() {
+      return observable;
+   }
+
    protected Object clone() {
       try {
          return super.clone();

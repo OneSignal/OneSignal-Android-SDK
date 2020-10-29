@@ -389,7 +389,7 @@ public class OneSignal {
 
       if (currentPermissionState == null) {
          currentPermissionState = new OSPermissionState(false);
-         currentPermissionState.observable.addObserverStrong(new OSPermissionChangedInternalObserver());
+         currentPermissionState.getObservable().addObserverStrong(new OSPermissionChangedInternalObserver());
       }
 
       return currentPermissionState;
@@ -422,8 +422,8 @@ public class OneSignal {
 
       if (currentSubscriptionState == null) {
          currentSubscriptionState = new OSSubscriptionState(false, getCurrentPermissionState(context).areNotificationsEnabled());
-         getCurrentPermissionState(context).observable.addObserver(currentSubscriptionState);
-         currentSubscriptionState.observable.addObserverStrong(new OSSubscriptionChangedInternalObserver());
+         getCurrentPermissionState(context).getObservable().addObserver(currentSubscriptionState);
+         currentSubscriptionState.getObservable().addObserverStrong(new OSSubscriptionChangedInternalObserver());
       }
 
       return currentSubscriptionState;
@@ -457,7 +457,7 @@ public class OneSignal {
 
       if (currentEmailSubscriptionState == null) {
          currentEmailSubscriptionState = new OSEmailSubscriptionState(false);
-         currentEmailSubscriptionState.observable.addObserverStrong(new OSEmailSubscriptionChangedInternalObserver());
+         currentEmailSubscriptionState.getObservable().addObserverStrong(new OSEmailSubscriptionChangedInternalObserver());
       }
 
       return currentEmailSubscriptionState;
