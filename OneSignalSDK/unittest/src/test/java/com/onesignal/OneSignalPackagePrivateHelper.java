@@ -585,14 +585,11 @@ public class OneSignalPackagePrivateHelper {
 
    public static class JSONUtils extends com.onesignal.JSONUtils {
 
-      protected static final Object syncLock = new Object() {};
-
       public static JSONObject jsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
          synchronized (syncLock) {
             return generateJsonDiff(cur, changedTo, baseOutput, includeFields);
          }
       }
-
    }
 
    public static class GenerateNotification extends com.onesignal.GenerateNotification {}

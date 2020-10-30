@@ -52,9 +52,9 @@ class JSONUtils {
                         if (baseOutput != null && baseOutput.has(key))
                             outValue = baseOutput.getJSONObject(key);
                         JSONObject returnedJson;
-                        synchronized (syncLock) {
+//                        synchronized (syncLock) {
                             returnedJson = generateJsonDiff(curValue, (JSONObject) value, outValue, includeFields);
-                        }
+//                        }
                         String returnedJsonStr = returnedJson.toString();
                         if (!returnedJsonStr.equals("{}"))
                             output.put(key, new JSONObject(returnedJsonStr));
