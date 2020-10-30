@@ -7,6 +7,9 @@ import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 class UserStateEmailSynchronizer extends UserStateSynchronizer {
 
     UserStateEmailSynchronizer() {
@@ -73,7 +76,8 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     }
 
     void setEmail(String email, String emailAuthHash) {
-        JSONObject syncValues = getUserStateForModification().syncValues;
+        UserState userState = getUserStateForModification();
+        ImmutableJSONObject syncValues = userState.getSyncValues();
 
         boolean noChange = email.equals(syncValues.optString("identifier")) &&
                 syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash);
@@ -102,7 +106,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
                 }
             }
 
-            generateJsonDiff(syncValues, emailJSON, syncValues, null);
+            userState.generateJsonDiffFromIntoSyncValued(emailJSON, null);
             scheduleSyncToServer();
         }
         catch (JSONException e) {
@@ -135,10 +139,12 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         OneSignal.saveEmailId("");
 
         resetCurrentState();
-        getToSyncUserState().syncValues.remove("identifier");
-        toSyncUserState.syncValues.remove("email_auth_hash");
-        toSyncUserState.syncValues.remove("device_player_id");
-        toSyncUserState.syncValues.remove("external_user_id");
+        getToSyncUserState().removeFromSyncValues("identifier");
+        List<String> keysToRemove = new ArrayList<>();
+        keysToRemove.add("email_auth_hash");
+        keysToRemove.add("device_player_id");
+        keysToRemove.add("external_user_id");
+        toSyncUserState.removeFromSyncValues(keysToRemove);
         toSyncUserState.persistState();
 
         OneSignal.getPermissionSubscriptionState().emailSubscriptionStatus.clearEmailAndId();
