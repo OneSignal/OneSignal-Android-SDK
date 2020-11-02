@@ -46,7 +46,7 @@ import org.json.JSONObject;
 import java.util.Set;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
-import static com.onesignal.OSUtils.isStringEmpty;
+import static com.onesignal.OSUtils.isStringNotEmpty;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
@@ -65,8 +65,6 @@ class NotificationBundleProcessor {
     private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     private static final String ANDROID_NOTIFICATION_ID = "android_notif_id";
     static final String DEFAULT_ACTION = "__DEFAULT__";
-
-    static final String OS_NOTIFICATION_PROCESSING_THREAD = "OS_NOTIFICATION_PROCESSING_THREAD";
 
     static void processFromFCMIntentService(Context context, BundleCompat bundle) {
         OneSignal.initWithContext(context);
@@ -88,7 +86,7 @@ class NotificationBundleProcessor {
 
             if (!isRestoring
                     && !isIamPreview
-                    && OneSignal.notValidOrDuplicated(context, jsonPayload))
+                    && OneSignal.notValidOrDuplicated(jsonPayload))
                 return;
 
             String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
@@ -167,15 +165,7 @@ class NotificationBundleProcessor {
             return false;
 
         // Otherwise, this is a normal notification and should be shown
-        return notificationJob.hasExtender() || isStringEmpty(notificationJob.getJsonPayload().optString("alert"));
-    }
-
-    private static void saveAndProcessDupNotification(Context context, Bundle bundle) {
-        JSONObject jsonPayload = bundleAsJSONObject(bundle);
-        OSNotification notification = new OSNotification(jsonPayload, -1);
-        OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context, notification, jsonPayload);
-
-        processNotification(notificationJob, true);
+        return notificationJob.hasExtender() || isStringNotEmpty(notificationJob.getJsonPayload().optString("alert"));
     }
 
     /**
@@ -421,7 +411,7 @@ class NotificationBundleProcessor {
         boolean isHighPriority = Integer.parseInt(bundle.getString("pri", "0")) > 9;
 
         if (!isRestoring
-                && OneSignal.notValidOrDuplicated(context, jsonPayload)) {
+                && OneSignal.notValidOrDuplicated(jsonPayload)) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startNotificationProcessing returning, with context: " + context + " and bundle: " + bundle);
             return false;
         }

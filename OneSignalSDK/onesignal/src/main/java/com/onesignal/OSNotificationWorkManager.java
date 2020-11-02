@@ -10,12 +10,12 @@ import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import com.google.android.gms.common.util.Strings;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Set;
+
+import static com.onesignal.OSUtils.isStringNotEmpty;
 
 class OSNotificationWorkManager {
 
@@ -26,8 +26,24 @@ class OSNotificationWorkManager {
 
     private static Set<String> notificationIds = OSUtils.newConcurrentSet();
 
+    static boolean addNotificationIdProcessed(String osNotificationId) {
+        // Duplicate control
+        // Keep in memory on going processed notifications, to avoid fast duplicates that already finished work process but are not completed yet
+        // enqueueUniqueWork might not be enough, if the work already finished then the duplicate notification work might be queued again
+        if (isStringNotEmpty(osNotificationId)) {
+            if (notificationIds.contains(osNotificationId)) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationWorkManager notification with notificationId: " + osNotificationId + " already queued");
+                return false;
+            } else {
+                notificationIds.add(osNotificationId);
+            }
+        }
+
+        return true;
+    }
+
     static void removeNotificationIdProcessed(String osNotificationId) {
-        if (!Strings.isEmptyOrWhitespace(osNotificationId)) {
+        if (isStringNotEmpty(osNotificationId)) {
             notificationIds.remove(osNotificationId);
         }
     }
@@ -44,18 +60,6 @@ class OSNotificationWorkManager {
         OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(NotificationWorker.class)
                 .setInputData(inputData)
                 .build();
-
-        // Duplicate control
-        // Keep in memory in going processed notifications, to avoid fast duplicates that already finished work process but are not completed yet
-        // enqueueUniqueWork might not be enough, if the work already finished then the duplicate notification work might be queued again
-        if (!Strings.isEmptyOrWhitespace(osNotificationId)) {
-            if (notificationIds.contains(osNotificationId)) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationWorkManager notification with notificationId: " + osNotificationId + " already queued");
-                return;
-            } else {
-                notificationIds.add(osNotificationId);
-            }
-        }
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationWorkManager enqueueing notification work with notificationId: " + osNotificationId + " and jsonPayload: " + jsonPayload);
         WorkManager.getInstance(context)
