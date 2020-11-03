@@ -352,7 +352,7 @@ class NotificationBundleProcessor {
 
     //  Process bundle passed from fcm / adm broadcast receiver.
     static @NonNull
-    ProcessedBundleResult processBundleFromReceiver(@NonNull Context context, final Bundle bundle) {
+    ProcessedBundleResult processBundleFromReceiver(Context context, final Bundle bundle) {
         ProcessedBundleResult result = new ProcessedBundleResult();
 
         // Not a OneSignal GCM message
@@ -404,7 +404,7 @@ class NotificationBundleProcessor {
         return null;
     }
 
-    private static boolean startNotificationProcessing(@NonNull Context context, @NonNull Bundle bundle, @NonNull ProcessedBundleResult result) {
+    private static boolean startNotificationProcessing(Context context, Bundle bundle, ProcessedBundleResult result) {
         long timestamp = OneSignal.getTime().getCurrentTimeMillis() / 1000L;
         JSONObject jsonPayload = bundleAsJSONObject(bundle);
         boolean isRestoring = bundle.getBoolean("is_restoring", false);
