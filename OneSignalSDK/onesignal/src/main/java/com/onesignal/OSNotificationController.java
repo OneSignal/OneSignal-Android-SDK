@@ -33,7 +33,7 @@ import androidx.annotation.Nullable;
 
 import org.json.JSONObject;
 
-import static com.onesignal.OSUtils.isStringEmpty;
+import static com.onesignal.OSUtils.isStringNotEmpty;
 
 public class OSNotificationController {
 
@@ -81,9 +81,9 @@ public class OSNotificationController {
     */
    void processNotification(OSNotification originalNotification, @Nullable OSNotification notification) {
       if (notification != null) {
-         // Save as processed to prevent possible duplicate calls from canonical ids
-         boolean display = isStringEmpty(notification.getBody());
+         boolean display = isStringNotEmpty(notification.getBody());
          if (!display) {
+            // Save as processed to prevent possible duplicate calls from canonical ids
             notDisplayNotificationLogic(originalNotification);
          } else {
             // Set modified notification

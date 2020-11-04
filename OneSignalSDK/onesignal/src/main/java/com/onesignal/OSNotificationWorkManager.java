@@ -13,12 +13,40 @@ import androidx.work.WorkerParameters;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Set;
+
+import static com.onesignal.OSUtils.isStringNotEmpty;
+
 class OSNotificationWorkManager {
 
     private static final String ANDROID_NOTIF_ID_WORKER_DATA_PARAM = "android_notif_id";
     private static final String JSON_PAYLOAD_WORKER_DATA_PARAM = "json_payload";
     private static final String TIMESTAMP_WORKER_DATA_PARAM = "timestamp";
     private static final String IS_RESTORING_WORKER_DATA_PARAM = "is_restoring";
+
+    private static Set<String> notificationIds = OSUtils.newConcurrentSet();
+
+    static boolean addNotificationIdProcessed(String osNotificationId) {
+        // Duplicate control
+        // Keep in memory on going processed notifications, to avoid fast duplicates that already finished work process but are not completed yet
+        // enqueueUniqueWork might not be enough, if the work already finished then the duplicate notification work might be queued again
+        if (isStringNotEmpty(osNotificationId)) {
+            if (notificationIds.contains(osNotificationId)) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationWorkManager notification with notificationId: " + osNotificationId + " already queued");
+                return false;
+            } else {
+                notificationIds.add(osNotificationId);
+            }
+        }
+
+        return true;
+    }
+
+    static void removeNotificationIdProcessed(String osNotificationId) {
+        if (isStringNotEmpty(osNotificationId)) {
+            notificationIds.remove(osNotificationId);
+        }
+    }
 
     static void beginEnqueueingWork(Context context, String osNotificationId, int androidNotificationId, String jsonPayload, boolean isRestoring, long timestamp, boolean isHighPriority) {
         // TODO: Need to figure out how to implement the isHighPriority param
@@ -33,6 +61,7 @@ class OSNotificationWorkManager {
                 .setInputData(inputData)
                 .build();
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationWorkManager enqueueing notification work with notificationId: " + osNotificationId + " and jsonPayload: " + jsonPayload);
         WorkManager.getInstance(context)
                 .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest);
     }
@@ -48,6 +77,8 @@ class OSNotificationWorkManager {
         public Result doWork() {
             Data inputData = getInputData();
             try {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "NotificationWorker running doWork with data: " + inputData);
+
                 int androidNotificationId = inputData.getInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, 0);
                 JSONObject jsonPayload = new JSONObject(inputData.getString(JSON_PAYLOAD_WORKER_DATA_PARAM));
                 long timestamp = inputData.getLong(TIMESTAMP_WORKER_DATA_PARAM, System.currentTimeMillis() / 1000L);

@@ -2748,9 +2748,12 @@ public class OneSignal {
       getInAppMessageController().setInAppMessagingEnabled(!pause);
    }
 
-   private static boolean isDuplicateNotification(Context context, String id) {
+   private static boolean isDuplicateNotification(String id) {
       if (id == null || "".equals(id))
          return false;
+
+      if (!OSNotificationWorkManager.addNotificationIdProcessed(id))
+         return true;
 
       OneSignalDbHelper dbHelper = getDBHelperInstance();
 
@@ -2776,9 +2779,17 @@ public class OneSignal {
       return false;
    }
 
-   static boolean notValidOrDuplicated(Context context, JSONObject jsonPayload) {
+   static boolean notValidOrDuplicated(JSONObject jsonPayload) {
       String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
-      return id == null || OneSignal.isDuplicateNotification(context, id);
+      if (id == null) {
+         logger.debug("Notification notValidOrDuplicated with id null");
+         return true;
+      }
+      if (OneSignal.isDuplicateNotification(id)) {
+         logger.debug("Notification notValidOrDuplicated with id duplicated");
+         return true;
+      }
+      return false;
    }
 
    static String getNotificationIdFromFCMJson(@Nullable JSONObject fcmJson) {

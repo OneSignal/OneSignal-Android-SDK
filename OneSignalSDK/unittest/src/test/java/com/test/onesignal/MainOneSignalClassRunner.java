@@ -1168,7 +1168,7 @@ public class MainOneSignalClassRunner {
       OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
          androidNotificationId = notificationReceivedEvent.getNotification().getAndroidNotificationId();
          notificationReceivedBody = notificationReceivedEvent.getNotification().getBody();
-         // TODO remove this line will make test fail, we want to cover this case on the future, but it's ok for beta 1
+
          notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
       });
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
@@ -1182,8 +1182,6 @@ public class MainOneSignalClassRunner {
 
       assertTrue(processResult);
       assertNull(lastNotificationOpenedBody);
-
-      NotificationBundleProcessor_Process(blankActivity, false, bundleAsJSONObject(bundle));
 
       assertEquals("Robo test message", notificationReceivedBody);
       assertNotEquals(0, androidNotificationId);

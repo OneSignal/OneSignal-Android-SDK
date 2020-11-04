@@ -449,7 +449,7 @@ class OSUtils {
       return pattern.matcher(email).matches();
    }
 
-   static boolean isStringEmpty(String body) {
+   static boolean isStringNotEmpty(String body) {
       return !TextUtils.isEmpty(body);
    }
 
