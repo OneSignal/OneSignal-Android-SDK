@@ -52,7 +52,7 @@ class NotificationOpenedProcessor {
 
    private static final String TAG = NotificationOpenedProcessor.class.getCanonicalName();
 
-   static void processFromContext(Activity context, Intent intent) {
+   static void processFromContext(Context context, Intent intent) {
       if (!isOneSignalIntent(intent))
          return;
 
@@ -78,33 +78,19 @@ class NotificationOpenedProcessor {
       }
    }
 
-   static void processIntent(Activity context, Intent intent) {
+   static void processIntent(Context context, Intent intent) {
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
       String summaryGroup = intent.getStringExtra("summary");
 
       boolean dismissed = intent.getBooleanExtra("dismissed", false);
 
-      JSONArray dataArray = null;
-      JSONObject jsonData = null;
+      OSNotificationIntentExtras intentExtras = null;
       if (!dismissed) {
-         try {
-            jsonData = new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA));
+         intentExtras = processToOpenIntent(context, intent, dbHelper, summaryGroup);
 
-            if (handleIAMPreviewOpen(context, jsonData))
-               return;
-
-            jsonData.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
-            intent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString());
-            dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA)));
-         } catch (JSONException e) {
-            e.printStackTrace();
-         }
+         if (intentExtras == null)
+            return;
       }
-
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(context);
-
-      // We just opened a summary notification.
-      if (!dismissed && summaryGroup != null)
-         addChildNotifications(dataArray, summaryGroup, dbHelper);
 
       markNotificationsConsumed(context, intent, dbHelper, dismissed);
 
@@ -115,13 +101,41 @@ class NotificationOpenedProcessor {
             NotificationSummaryManager.updateSummaryNotificationAfterChildRemoved(context, dbHelper, group, dismissed);
       }
 
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "processIntent from activity: " + context + " and intent: " + intent);
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "processIntent from context: " + context + " and intent: " + intent);
       if (intent.getExtras() != null)
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "processIntent intent extras: " + intent.getExtras().toString());
 
-      if (!dismissed)
-         OneSignal.handleNotificationOpen(context, dataArray,
-                 intent.getBooleanExtra("from_alert", false), OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData));
+      if (!dismissed) {
+         if (!(context instanceof Activity))
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "NotificationOpenedProcessor processIntent from an non Activity context: " + context);
+         else OneSignal.handleNotificationOpen((Activity) context, intentExtras.getDataArray(),
+                 intent.getBooleanExtra("from_alert", false), OSNotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.getJsonData()));
+      }
+   }
+
+   static OSNotificationIntentExtras processToOpenIntent(Context context, Intent intent, OneSignalDbHelper dbHelper, String summaryGroup) {
+      JSONArray dataArray = null;
+      JSONObject jsonData = null;
+      try {
+         jsonData = new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA));
+
+         if (!(context instanceof Activity))
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "NotificationOpenedProcessor processIntent from an non Activity context: " + context);
+         else if (handleIAMPreviewOpen((Activity) context, jsonData))
+            return null;
+
+         jsonData.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
+         intent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString());
+         dataArray = NotificationBundleProcessor.newJsonArray(new JSONObject(intent.getStringExtra(BUNDLE_KEY_ONESIGNAL_DATA)));
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+
+      // We just opened a summary notification.
+      if (summaryGroup != null)
+         addChildNotifications(dataArray, summaryGroup, dbHelper);
+
+      return new OSNotificationIntentExtras(dataArray, jsonData);
    }
 
    static boolean handleIAMPreviewOpen(@NonNull Activity context, @NonNull JSONObject jsonData) {

@@ -79,6 +79,7 @@ class GenerateNotification {
    public static final String BUNDLE_KEY_ONESIGNAL_DATA = "onesignalData";
 
    private static Class<?> notificationOpenedClass = NotificationOpenedActivity.class;
+   private static Class<?> notificationCloseClass = NotificationOpenedActivity.class;
    private static Resources contextResources = null;
    private static Context currentContext = null;
    private static String packageName = null;
@@ -92,6 +93,13 @@ class GenerateNotification {
       currentContext = inContext;
       packageName = currentContext.getPackageName();
       contextResources = currentContext.getResources();
+
+      PackageManager packageManager = currentContext.getPackageManager();
+      Intent intent = new Intent(currentContext, NotificationOpenedReceiver.class);
+      intent.setPackage(currentContext.getPackageName());
+      if (packageManager.queryBroadcastReceivers(intent, 0).size() > 0)
+         notificationCloseClass = NotificationOpenedReceiver.class;
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "GenerateNotification notificationCloseClass: " + notificationCloseClass);
    }
 
    @WorkerThread
@@ -122,6 +130,16 @@ class GenerateNotification {
    }
 
    private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
+     return  getNewActionPendingIntent(false, requestCode, intent);
+   }
+
+   /**
+    * Notification delete is processed by Broadcast Receiver to avoid creation of activities that can end
+    * on weird UI interaction
+    */
+   private static PendingIntent getNewActionPendingIntent(boolean openerIsBroadcast, int requestCode, Intent intent) {
+      if (openerIsBroadcast)
+         return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
       return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
    }
 
@@ -132,10 +150,9 @@ class GenerateNotification {
    }
 
    private static Intent getNewBaseDeleteIntent(int notificationId) {
-      return new Intent(currentContext, notificationOpenedClass)
+      return new Intent(currentContext, notificationCloseClass)
               .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
-              .putExtra("dismissed", true)
-              .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+              .putExtra("dismissed", true);
    }
    
    private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(OSNotificationGenerationJob notificationJob) {
@@ -324,7 +341,7 @@ class GenerateNotification {
       Random random = new SecureRandom();
       PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()));
       notifBuilder.setContentIntent(contentIntent);
-      PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId));
+      PendingIntent deleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(notificationId));
       notifBuilder.setDeleteIntent(deleteIntent);
       return notifBuilder.build();
    }
@@ -333,7 +350,7 @@ class GenerateNotification {
       Random random = new SecureRandom();
       PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group));
       notifBuilder.setContentIntent(contentIntent);
-      PendingIntent deleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
+      PendingIntent deleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
       notifBuilder.setDeleteIntent(deleteIntent);
       notifBuilder.setGroup(group);
 
@@ -436,7 +453,7 @@ class GenerateNotification {
       String group = fcmJson.optString("grp", null);
 
       SecureRandom random = new SecureRandom();
-      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
+      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
       
       Notification summaryNotification;
       Integer summaryNotificationId = null;
@@ -639,7 +656,7 @@ class GenerateNotification {
       int summaryNotificationId = OneSignalNotificationManager.getGrouplessSummaryId();
 
       PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, fcmJson, group));
-      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
+      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
 
       NotificationCompat.Builder summaryBuilder = getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder;
       if (notificationJob.getOverriddenSound() != null)
