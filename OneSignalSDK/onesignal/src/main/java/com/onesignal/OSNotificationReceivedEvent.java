@@ -67,7 +67,7 @@ public class OSNotificationReceivedEvent {
     * @param notification can be null to omit displaying the notification,
     *                     or OSMutableNotification to modify the notification to display
     */
-   public synchronized void complete(@Nullable OSNotification notification) {
+   public synchronized void complete(@Nullable final OSNotification notification) {
       timeoutHandler.destroyTimeout(timeoutRunnable);
 
       if (isComplete) {
@@ -77,6 +77,20 @@ public class OSNotificationReceivedEvent {
 
       isComplete = true;
 
+      if (OSUtils.isRunningOnMainThread()) {
+         new Thread(new Runnable() {
+            @Override
+            public void run() {
+               processNotification(notification);
+            }
+         }, "OS_COMPLETE_NOTIFICATION").start();
+         return;
+      }
+
+      processNotification(notification);
+   }
+
+   private void processNotification(@Nullable OSNotification notification) {
       // Pass copies to controller, to avoid modifying objects accessed by the user
       controller.processNotification(this.notification.copy(), notification != null ? notification.copy() : null);
    }

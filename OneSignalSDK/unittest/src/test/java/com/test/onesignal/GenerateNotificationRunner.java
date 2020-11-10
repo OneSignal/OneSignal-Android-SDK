@@ -1129,7 +1129,7 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() {
+   public void shouldSetExpireTimeCorrectlyFromGoogleTTL() throws Exception {
       long sentTime = 1_553_035_338_000L;
       long ttl = 60L;
 
@@ -1137,6 +1137,7 @@ public class GenerateNotificationRunner {
       bundle.putLong("google.sent_time", sentTime);
       bundle.putLong("google.ttl", ttl);
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
 
       HashMap<String, Object> notification = TestHelpers.getAllNotificationRecords(dbHelper).get(0);
       long expireTime = (Long)notification.get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
@@ -1145,8 +1146,9 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() {
+   public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() throws Exception {
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
 
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
       assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);

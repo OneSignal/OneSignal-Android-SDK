@@ -694,7 +694,6 @@ public class OutcomeEventIntegrationTests {
         // Receive notification
         Bundle bundle = getBaseNotifBundle(ONESIGNAL_NOTIFICATION_ID + "2");
         FCMBroadcastReceiver_onReceived_withBundle(blankActivity, bundle);
-        threadAndTaskWait();
 
         // Wait 31 seconds
         time.advanceSystemTimeBy(31);
