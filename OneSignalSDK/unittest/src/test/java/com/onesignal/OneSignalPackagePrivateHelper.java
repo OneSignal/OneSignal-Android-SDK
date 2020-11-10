@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
@@ -142,12 +143,13 @@ public class OneSignalPackagePrivateHelper {
       receiver.onReceive(context, intent);
    }
 
-   public static void FCMBroadcastReceiver_onReceived_withBundle(Context context, Bundle bundle) {
+   public static void FCMBroadcastReceiver_onReceived_withBundle(Context context, Bundle bundle) throws Exception {
       FCMBroadcastReceiver receiver = new FCMBroadcastReceiver();
       Intent intent = new Intent();
       intent.setAction("com.google.android.c2dm.intent.RECEIVE");
       intent.putExtras(bundle);
       receiver.onReceive(context,intent);
+      threadAndTaskWait();
    }
 
    public static void HMSProcessor_processDataMessageReceived(final Context context, final String jsonStrPayload) {
