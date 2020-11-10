@@ -33,7 +33,6 @@ import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -78,8 +77,8 @@ class GenerateNotification {
    //   notification Intent.
    public static final String BUNDLE_KEY_ONESIGNAL_DATA = "onesignalData";
 
-   private static Class<?> notificationOpenedClass = NotificationOpenedActivity.class;
-   private static Class<?> notificationCloseClass = NotificationOpenedActivity.class;
+   private static Class<?> notificationOpenedClass = NotificationOpenedReceiver.class;
+   private static Class<?> notificationDismissedClass = NotificationDismissReceiver.class;
    private static Resources contextResources = null;
    private static Context currentContext = null;
    private static String packageName = null;
@@ -93,13 +92,6 @@ class GenerateNotification {
       currentContext = inContext;
       packageName = currentContext.getPackageName();
       contextResources = currentContext.getResources();
-
-      PackageManager packageManager = currentContext.getPackageManager();
-      Intent intent = new Intent(currentContext, NotificationOpenedReceiver.class);
-      intent.setPackage(currentContext.getPackageName());
-      if (packageManager.queryBroadcastReceivers(intent, 0).size() > 0)
-         notificationCloseClass = NotificationOpenedReceiver.class;
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "GenerateNotification notificationCloseClass: " + notificationCloseClass);
    }
 
    @WorkerThread
@@ -129,18 +121,17 @@ class GenerateNotification {
       return currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo());
    }
 
-   private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
-     return  getNewActionPendingIntent(false, requestCode, intent);
-   }
 
    /**
     * Notification delete is processed by Broadcast Receiver to avoid creation of activities that can end
     * on weird UI interaction
     */
-   private static PendingIntent getNewActionPendingIntent(boolean openerIsBroadcast, int requestCode, Intent intent) {
-      if (openerIsBroadcast)
-         return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+   private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
       return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+   }
+
+   private static PendingIntent getNewDismissActionPendingIntent(int requestCode, Intent intent) {
+      return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
    }
 
    private static Intent getNewBaseIntent(int notificationId) {
@@ -149,8 +140,8 @@ class GenerateNotification {
              .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
    }
 
-   private static Intent getNewBaseDeleteIntent(int notificationId) {
-      return new Intent(currentContext, notificationCloseClass)
+   private static Intent getNewBaseDismissIntent(int notificationId) {
+      return new Intent(currentContext, notificationDismissedClass)
               .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
               .putExtra("dismissed", true);
    }
@@ -341,7 +332,7 @@ class GenerateNotification {
       Random random = new SecureRandom();
       PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()));
       notifBuilder.setContentIntent(contentIntent);
-      PendingIntent deleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(notificationId));
+      PendingIntent deleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(notificationId));
       notifBuilder.setDeleteIntent(deleteIntent);
       return notifBuilder.build();
    }
@@ -350,7 +341,7 @@ class GenerateNotification {
       Random random = new SecureRandom();
       PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group));
       notifBuilder.setContentIntent(contentIntent);
-      PendingIntent deleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(notificationId).putExtra("grp", group));
+      PendingIntent deleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(notificationId).putExtra("grp", group));
       notifBuilder.setDeleteIntent(deleteIntent);
       notifBuilder.setGroup(group);
 
@@ -453,7 +444,7 @@ class GenerateNotification {
       String group = fcmJson.optString("grp", null);
 
       SecureRandom random = new SecureRandom();
-      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
+      PendingIntent summaryDeleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(0).putExtra("summary", group));
       
       Notification summaryNotification;
       Integer summaryNotificationId = null;
@@ -656,7 +647,7 @@ class GenerateNotification {
       int summaryNotificationId = OneSignalNotificationManager.getGrouplessSummaryId();
 
       PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, fcmJson, group));
-      PendingIntent summaryDeleteIntent = getNewActionPendingIntent(true, random.nextInt(), getNewBaseDeleteIntent(0).putExtra("summary", group));
+      PendingIntent summaryDeleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(0).putExtra("summary", group));
 
       NotificationCompat.Builder summaryBuilder = getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder;
       if (notificationJob.getOverriddenSound() != null)
