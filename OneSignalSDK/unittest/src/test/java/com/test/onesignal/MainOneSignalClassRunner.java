@@ -443,7 +443,7 @@ public class MainOneSignalClassRunner {
    @Config(sdk = 26)
    public void testLocationPermissionPromptWithPrivacyConsent() throws Exception {
       ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
-      OneSignal.autoPromptLocation(true);
+      OneSignal.promptLocation();
       OneSignalInit();
       threadAndTaskWait();
 
@@ -545,7 +545,6 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testAppOnFocusNeededAfterOnSessionCall() throws Exception {
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       OneSignalInit();
       threadAndTaskWait();
 
