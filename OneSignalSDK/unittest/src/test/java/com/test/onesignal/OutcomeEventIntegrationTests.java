@@ -49,6 +49,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowPausedSystemClock;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -112,12 +113,9 @@ public class OutcomeEventIntegrationTests {
     private OSTrackerFactory trackerFactory;
     private static List<OSInfluence> lastInfluencesEnding;
 
-    OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
-        @Override
-        public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
-            OneSignal_getSessionListener().onSessionEnding(lastInfluences);
-            OutcomeEventIntegrationTests.lastInfluencesEnding = lastInfluences;
-        }
+    OSSessionManager.SessionListener sessionListener = lastInfluences -> {
+        OneSignal_getSessionListener().onSessionEnding(lastInfluences);
+        OutcomeEventIntegrationTests.lastInfluencesEnding = lastInfluences;
     };
 
     private static OneSignal.OSNotificationOpenedHandler getNotificationOpenedHandler() {
@@ -938,6 +936,20 @@ public class OutcomeEventIntegrationTests {
         // Make sure when notification cache is cleaned so is the unique outcome events cache
         assertEquals(0, getAllNotificationRecords(dbHelper).size());
         assertEquals(0, getAllUniqueOutcomeNotificationRecordsDB(dbHelper).size());
+    }
+
+    @Test
+    public void testDelayOutcomes() throws Exception {
+        OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Foreground app through icon
+        blankActivityController.resume();
+        threadAndTaskWait();
+
+        assertMeasureAtIndex(1, ONESIGNAL_OUTCOME_NAME);
+
     }
 
     private void foregroundAppAfterClickingNotification() throws Exception {
