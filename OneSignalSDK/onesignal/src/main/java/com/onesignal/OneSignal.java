@@ -2951,7 +2951,8 @@ public class OneSignal {
    }
 
    static void sendClickActionOutcomes(@NonNull List<OSInAppMessageOutcome> outcomes) {
-      if (outcomeEventsController == null) {
+      // This is called from IAM shouldn't need this check
+      if (outcomeEventsController == null || appId == null) {
          OneSignal.Log(LOG_LEVEL.ERROR, "Make sure OneSignal.init is called first");
          return;
       }
@@ -2963,14 +2964,23 @@ public class OneSignal {
       sendOutcome(name, null);
    }
 
-   public static void sendOutcome(@NonNull String name, OutcomeCallback callback) {
+   public static void sendOutcome(@NonNull final String name, final OutcomeCallback callback) {
       if (!isValidOutcomeEntry(name)) {
          logger.error("Make sure OneSignal initWithContext and setAppId is called first");
          return;
       }
 
-      if (outcomeEventsController == null) {
-         logger.error("Make sure OneSignal initWithContext and setAppId is called first");
+      // Outcomes needs app id, delay until init is not done
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_OUTCOME) || outcomeEventsController == null) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.SEND_OUTCOME + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+               sendOutcome(name, callback);
+            }
+         });
          return;
       }
 
@@ -2981,12 +2991,21 @@ public class OneSignal {
       sendUniqueOutcome(name, null);
    }
 
-   public static void sendUniqueOutcome(@NonNull String name, OutcomeCallback callback) {
+   public static void sendUniqueOutcome(@NonNull final String name, final OutcomeCallback callback) {
       if (!isValidOutcomeEntry(name))
          return;
 
-      if (outcomeEventsController == null) {
-         logger.error("Make sure OneSignal initWithContext and setAppId is called first");
+      // Outcomes needs app id, delay until init is not done
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_UNIQUE_OUTCOME) || outcomeEventsController == null) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.SEND_UNIQUE_OUTCOME + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+               sendUniqueOutcome(name, callback);
+            }
+         });
          return;
       }
 
@@ -2997,12 +3016,21 @@ public class OneSignal {
       sendOutcomeWithValue(name, value, null);
    }
 
-   public static void sendOutcomeWithValue(@NonNull String name, float value, OutcomeCallback callback) {
+   public static void sendOutcomeWithValue(@NonNull final String name, final float value, final OutcomeCallback callback) {
       if (!isValidOutcomeEntry(name) || !isValidOutcomeValue(value))
          return;
 
-      if (outcomeEventsController == null) {
-         logger.error("Make sure OneSignal.init is called first");
+      // Outcomes needs app id, delay until init is not done
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_OUTCOME_WITH_VALUE) || outcomeEventsController == null) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.SEND_OUTCOME_WITH_VALUE + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+               sendOutcomeWithValue(name, value, callback);
+            }
+         });
          return;
       }
 

@@ -33,6 +33,9 @@ class OSTaskController {
     static final String CANCEL_GROUPED_NOTIFICATIONS = "cancelGroupedNotifications()";
     static final String PAUSE_IN_APP_MESSAGES = "pauseInAppMessages()";
     static final String APP_LOST_FOCUS = "onAppLostFocus()";
+    static final String SEND_OUTCOME = "sendOutcome()";
+    static final String SEND_UNIQUE_OUTCOME = "sendUniqueOutcome()";
+    static final String SEND_OUTCOME_WITH_VALUE = "sendOutcomeWithValue()";
     static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
             GET_TAGS,
             SYNC_HASHED_EMAIL,
