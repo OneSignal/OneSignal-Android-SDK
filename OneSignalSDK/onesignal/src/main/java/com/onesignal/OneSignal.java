@@ -295,15 +295,8 @@ public class OneSignal {
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
-
-   // TODO: Start of old mInitBuilder params
-   //    These should be cleaned up and managed else where maybe?
-   //    These have been ripped out of mInitBuilder since it was deleted and placed here for now
    static OSNotificationOpenedHandler notificationOpenedHandler;
    static OSInAppMessageClickHandler inAppMessageClickHandler;
-
-   static boolean mAutoPromptLocation;
-   // TODO: End of old mInitBuilder params
 
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
@@ -375,7 +368,7 @@ public class OneSignal {
 
    @NonNull private static OSUtils osUtils = new OSUtils();
 
-   private static boolean registerForPushFired, locationFired, promptedLocation, getTagsCall, waitingToPostStateSync, androidParamsRequestStarted;
+   private static boolean registerForPushFired, locationFired, getTagsCall, waitingToPostStateSync, androidParamsRequestStarted;
 
    private static LocationController.LocationPoint lastLocationPoint;
 
@@ -515,23 +508,6 @@ public class OneSignal {
       }
    }
    private static IAPUpdateJob iapUpdateJob;
-
-   /**
-    * Prompts the user for location permissions.
-    * This allows for geotagging so you can send notifications to users based on location.
-    * This does not accommodate any rationale-gating that is encouraged before requesting
-    * permissions from the user.
-    * <br/><br/>
-    * See {@link #promptLocation()} for more details on how to manually prompt location permissions.
-    *
-    * @param enable If set to {@code false}, OneSignal will not prompt for location.
-    *               If set to {@code true}, OneSignal will prompt users for location permissions
-    *               when your app starts
-    * @return the builder object you called this method on
-    */
-   public static void autoPromptLocation(boolean enable) {
-      mAutoPromptLocation = enable;
-   }
 
    /**
     * If notifications are disabled for your app, unsubscribe the user from OneSignal.
@@ -876,12 +852,10 @@ public class OneSignal {
             registerUser();
          }
       };
-      boolean doPrompt = mAutoPromptLocation && !promptedLocation;
-      // Prompted so we don't ask for permissions more than once
-      promptedLocation = promptedLocation || mAutoPromptLocation;
 
-      LocationController.getLocation(appContext, doPrompt, false, locationHandler);
+      LocationController.getLocation(appContext, false, false, locationHandler);
    }
+
    private static PushRegistrator mPushRegistrator;
 
    private static PushRegistrator getPushRegistrator() {
@@ -2424,7 +2398,6 @@ public class OneSignal {
       };
 
       LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
-      promptedLocation = true;
    }
 
    /**
