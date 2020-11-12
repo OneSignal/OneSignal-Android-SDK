@@ -31,6 +31,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -2026,7 +2027,7 @@ public class OneSignal {
    /**
     * Method called when opening a notification
     */
-   static void handleNotificationOpen(Context context, final JSONArray data, final boolean fromAlert, @Nullable final String notificationId) {
+   static void handleNotificationOpen(final Activity context, final JSONArray data, final boolean fromAlert, @Nullable final String notificationId) {
       // Delay call until remote params are set
       if (taskController.shouldQueueTaskForInit(OSTaskController.HANDLE_NOTIFICATION_OPEN)) {
          logger.error("Waiting for remote params. " +
@@ -2036,7 +2037,7 @@ public class OneSignal {
             public void run() {
                if (appContext != null) {
                   logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
-                  handleNotificationOpen(appContext, data, fromAlert, notificationId);
+                  handleNotificationOpen(context, data, fromAlert, notificationId);
                }
             }
          });
@@ -2058,6 +2059,7 @@ public class OneSignal {
       if (!defaultOpenActionDisabled)
          urlOpened = openURLFromNotification(context, data);
 
+      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " and defaultOpenActionDisabled: " + defaultOpenActionDisabled);
       // Check if the notification click should lead to a DIRECT session
       if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
@@ -2068,12 +2070,17 @@ public class OneSignal {
       runNotificationOpenedCallback(data);
    }
 
-   static boolean startOrResumeApp(Context inContext) {
+   static boolean startOrResumeApp(Activity inContext) {
       Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
+      logger.debug("startOrResumeApp from context: " + inContext + " isRoot: " + inContext.isTaskRoot() + " with launchIntent: " + launchIntent);
       // Make sure we have a launcher intent.
       if (launchIntent != null) {
-         launchIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
-         inContext.startActivity(launchIntent);
+         if (inContext.isTaskRoot()) {
+            inContext.startActivity(launchIntent);
+         } else {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            PendingIntent.getActivity(inContext, 0, launchIntent, 0);
+         }
          return true;
       }
       return false;
@@ -2086,7 +2093,7 @@ public class OneSignal {
     * 4. App is coming from the background
     * 5. App open/resume intent exists
     */
-   private static boolean shouldInitDirectSessionFromNotificationOpen(Context context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
       return !fromAlert
               && !urlOpened
               && !defaultOpenActionDisabled
