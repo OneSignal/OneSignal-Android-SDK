@@ -198,7 +198,7 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().logoutEmail();
    }
 
-   static void setExternalUserId(String externalId, final OneSignal.OSExternalUserIdUpdateCompletionHandler completionHandler) throws JSONException {
+   static void setExternalUserId(String externalId, String externalIdAuthHash, final OneSignal.OSExternalUserIdUpdateCompletionHandler completionHandler) throws JSONException {
       final JSONObject responses = new JSONObject();
       // Create a handler for internal usage, this is where the developers completion handler will be called,
       //  which happens once all handlers for each channel have been processed
@@ -233,11 +233,11 @@ class OneSignalStateSynchronizer {
          }
       };
 
-      getPushStateSynchronizer().setExternalUserId(externalId, handler);
+      getPushStateSynchronizer().setExternalUserId(externalId, externalIdAuthHash, handler);
 
       // Make sure we are only setting external user id for email when an email is actually set
       if (OneSignal.hasEmailId())
-         getEmailStateSynchronizer().setExternalUserId(externalId, handler);
+         getEmailStateSynchronizer().setExternalUserId(externalId, externalIdAuthHash, handler);
    }
 
    // This is to indicate that StateSynchronizer can start making REST API calls
