@@ -181,6 +181,10 @@ public class OneSignal {
        */
       void tagsAvailable(JSONObject tags);
    }
+   
+   public interface GetNotificationsCountHandler {
+      void notificationsAvailable(int count);
+   }
 
    public interface ChangeTagsUpdateHandler {
       void onSuccess(JSONObject tags);
@@ -2619,6 +2623,44 @@ public class OneSignal {
       }
 
       runPromptLocation.run();
+   }
+   
+   public static void getOneSignalNotificationsCount(final GetNotificationsCountHandler getNotificationsCountHandler) {
+      Runnable runGetOneSignalNotificationsCount = new Runnable() {
+         @Override
+         public void run() {
+            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
+
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
+
+            Cursor cursor = dbHelper.query(
+                    OneSignalDbContract.NotificationTable.TABLE_NAME,
+                    retColumn,
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
+                    null,
+                    null,                                                    // group by
+                    null,                                                    // filter by row groups
+                    null                                                     // sort order
+            );
+            
+            //BadgeCountUpdater.updateCount(0, appContext);			
+			getNotificationsCountHandler.notificationsAvailable(cursor.getCount());
+
+            cursor.close();
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Could not get notifications count at this time - moving this operation to" +
+                 "a waiting task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runGetOneSignalNotificationsCount));
+         return;
+      }
+
+      runGetOneSignalNotificationsCount.run();
    }
 
    /**
