@@ -40,7 +40,7 @@ public class OSDeviceState {
     private final String emailUserId;
     private final String emailAddress;
 
-    public OSDeviceState(OSSubscriptionState subscriptionStatus, OSPermissionState permissionStatus, OSEmailSubscriptionState emailSubscriptionStatus) {
+    OSDeviceState(OSSubscriptionState subscriptionStatus, OSPermissionState permissionStatus, OSEmailSubscriptionState emailSubscriptionStatus) {
         areNotificationsEnabled = permissionStatus.areNotificationsEnabled();
         pushDisabled = subscriptionStatus.isPushDisabled();
         subscribed = subscriptionStatus.isSubscribed();

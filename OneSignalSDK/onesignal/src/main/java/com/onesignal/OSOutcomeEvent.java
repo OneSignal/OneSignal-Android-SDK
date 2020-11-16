@@ -11,7 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class OutcomeEvent {
+public class OSOutcomeEvent {
 
     private static final String SESSION = "session";
     private static final String NOTIFICATION_IDS = "notification_ids";
@@ -25,7 +25,7 @@ public class OutcomeEvent {
     private long timestamp;
     private Float weight;
 
-    public OutcomeEvent(@NonNull OSInfluenceType session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, float weight) {
+    public OSOutcomeEvent(@NonNull OSInfluenceType session, @Nullable JSONArray notificationIds, @NonNull String name, long timestamp, float weight) {
         this.session = session;
         this.notificationIds = notificationIds;
         this.name = name;
@@ -36,7 +36,7 @@ public class OutcomeEvent {
     /**
      * Creates an OutcomeEvent from an OSOutcomeEventParams in order to work on V1 from V2
      * */
-    public static OutcomeEvent fromOutcomeEventParamsV2toOutcomeEventV1(OSOutcomeEventParams outcomeEventParams) {
+    public static OSOutcomeEvent fromOutcomeEventParamsV2toOutcomeEventV1(OSOutcomeEventParams outcomeEventParams) {
         OSInfluenceType influenceType = OSInfluenceType.UNATTRIBUTED;
         JSONArray notificationId = null;
         if (outcomeEventParams.getOutcomeSource() != null) {
@@ -50,7 +50,7 @@ public class OutcomeEvent {
             }
         }
 
-        return new OutcomeEvent(influenceType, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
+        return new OSOutcomeEvent(influenceType, notificationId, outcomeEventParams.getOutcomeId(), outcomeEventParams.getTimestamp(), outcomeEventParams.getWeight());
     }
 
     public OSInfluenceType getSession() {
@@ -103,7 +103,7 @@ public class OutcomeEvent {
         if (o == null || this.getClass() != o.getClass())
             return false;
 
-        OutcomeEvent event = (OutcomeEvent) o;
+        OSOutcomeEvent event = (OSOutcomeEvent) o;
         return this.session.equals(event.session) &&
                 this.notificationIds.equals(event.notificationIds) &&
                 this.name.equals(event.name) &&

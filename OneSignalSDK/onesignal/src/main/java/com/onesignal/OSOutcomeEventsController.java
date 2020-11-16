@@ -225,7 +225,7 @@ class OSOutcomeEventsController {
 
                 // The only case where an actual success has occurred and the OutcomeEvent should be sent back
                 if (callback != null)
-                    callback.onSuccess(OutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams));
+                    callback.onSuccess(OSOutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams));
             }
 
             @Override

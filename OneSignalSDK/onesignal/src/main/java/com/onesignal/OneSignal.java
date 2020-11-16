@@ -347,7 +347,10 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031504";
+   private static final String VERSION = "031504";
+   public static String getSdkVersionRaw() {
+      return VERSION;
+   }
 
    private static OSLogger logger = new OSLogWrapper();
    private static FocusTimeController focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
@@ -3105,7 +3108,7 @@ public class OneSignal {
     *    3. Unique OutcomeEventParams already sent for UNATTRIBUTED session during session
     */
    public interface OutcomeCallback {
-      void onSuccess(@Nullable OutcomeEvent outcomeEvent);
+      void onSuccess(@Nullable OSOutcomeEvent outcomeEvent);
    }
    /*
     * End OneSignalOutcome module

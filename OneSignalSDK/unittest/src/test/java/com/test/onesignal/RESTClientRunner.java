@@ -90,7 +90,7 @@ public class RESTClientRunner {
       assertTrue(ShadowOneSignalRestClientWithMockConnection.lastConnection.getDidInterruptMockHang());
    }
 
-   private static final String SDK_VERSION_HTTP_HEADER = "onesignal/android/" + OneSignal.VERSION;
+   private static final String SDK_VERSION_HTTP_HEADER = "onesignal/android/" + OneSignal.getSdkVersionRaw();
 
    @Test
    public void SDKHeaderIsIncludedInGetCalls() throws Exception {

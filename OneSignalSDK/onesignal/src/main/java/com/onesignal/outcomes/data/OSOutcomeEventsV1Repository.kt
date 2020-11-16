@@ -2,7 +2,7 @@ package com.onesignal.outcomes.data
 
 import com.onesignal.OSLogger
 import com.onesignal.OneSignalApiResponseHandler
-import com.onesignal.OutcomeEvent
+import com.onesignal.OSOutcomeEvent
 import com.onesignal.influence.domain.OSInfluenceType
 import com.onesignal.outcomes.OSOutcomeConstants
 import com.onesignal.outcomes.domain.OSOutcomeEventParams
@@ -12,7 +12,7 @@ internal class OSOutcomeEventsV1Repository(logger: OSLogger,
                                            outcomeEventsCache: OSOutcomeEventsCache,
                                            outcomeEventsService: OutcomeEventsService) : OSOutcomeEventsRepository(logger, outcomeEventsCache, outcomeEventsService) {
     override fun requestMeasureOutcomeEvent(appId: String, deviceType: Int, eventParams: OSOutcomeEventParams, responseHandler: OneSignalApiResponseHandler) {
-        val event = OutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams)
+        val event = OSOutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams)
         when (event.session) {
             OSInfluenceType.DIRECT -> requestMeasureDirectOutcomeEvent(appId, deviceType, event, responseHandler)
             OSInfluenceType.INDIRECT -> requestMeasureIndirectOutcomeEvent(appId, deviceType, event, responseHandler)
@@ -22,7 +22,7 @@ internal class OSOutcomeEventsV1Repository(logger: OSLogger,
         }
     }
 
-    private fun requestMeasureDirectOutcomeEvent(appId: String, deviceType: Int, event: OutcomeEvent, responseHandler: OneSignalApiResponseHandler) {
+    private fun requestMeasureDirectOutcomeEvent(appId: String, deviceType: Int, event: OSOutcomeEvent, responseHandler: OneSignalApiResponseHandler) {
         try {
             event.toJSONObjectForMeasure()
                     .put(OSOutcomeConstants.APP_ID, appId)
@@ -36,7 +36,7 @@ internal class OSOutcomeEventsV1Repository(logger: OSLogger,
         }
     }
 
-    private fun requestMeasureIndirectOutcomeEvent(appId: String, deviceType: Int, event: OutcomeEvent, responseHandler: OneSignalApiResponseHandler) {
+    private fun requestMeasureIndirectOutcomeEvent(appId: String, deviceType: Int, event: OSOutcomeEvent, responseHandler: OneSignalApiResponseHandler) {
         try {
             event.toJSONObjectForMeasure()
                     .put(OSOutcomeConstants.APP_ID, appId)
@@ -50,7 +50,7 @@ internal class OSOutcomeEventsV1Repository(logger: OSLogger,
         }
     }
 
-    private fun requestMeasureUnattributedOutcomeEvent(appId: String, deviceType: Int, event: OutcomeEvent, responseHandler: OneSignalApiResponseHandler) {
+    private fun requestMeasureUnattributedOutcomeEvent(appId: String, deviceType: Int, event: OSOutcomeEvent, responseHandler: OneSignalApiResponseHandler) {
         try {
             event.toJSONObjectForMeasure()
                     .put(OSOutcomeConstants.APP_ID, appId)
