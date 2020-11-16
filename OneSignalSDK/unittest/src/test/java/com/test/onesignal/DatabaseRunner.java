@@ -12,7 +12,7 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.InAppMessageTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
-import com.onesignal.OutcomeEvent;
+import com.onesignal.OSOutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.influence.domain.OSInfluenceChannel;
@@ -136,7 +136,7 @@ public class DatabaseRunner {
         writableDatabase.setVersion(3);
         writableDatabase.close();
 
-        OutcomeEvent event = new OutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
+        OSOutcomeEvent event = new OSOutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
         ContentValues values = new ContentValues();
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, event.getSession().toString().toLowerCase());
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
@@ -149,7 +149,7 @@ public class DatabaseRunner {
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
         // 4. Opening the DB will auto trigger the update.
-        List<OutcomeEvent> events = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OSOutcomeEvent> events = getAllOutcomesRecordsDBv5(dbHelper);
 
         assertEquals(events.size(), 0);
 
@@ -432,7 +432,7 @@ public class DatabaseRunner {
 
         writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
 
-        List<OutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OSOutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
         assertEquals(1, outcomesSavedBeforeUpdate.size());
 
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();

@@ -20,6 +20,7 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.onesignal.OSOutcomeEvent;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.adapter.EnumSelectionRecyclerViewAdapter;
@@ -488,7 +489,7 @@ public class Dialog {
                     case OUTCOME:
                         OneSignal.sendOutcome(name, new OneSignal.OutcomeCallback() {
                             @Override
-                            public void onSuccess(@Nullable com.onesignal.OutcomeEvent outcomeEvent) {
+                            public void onSuccess(@Nullable OSOutcomeEvent outcomeEvent) {
                                 ((Activity) context).runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -502,7 +503,7 @@ public class Dialog {
                     case UNIQUE_OUTCOME:
                         OneSignal.sendUniqueOutcome(name, new OneSignal.OutcomeCallback() {
                             @Override
-                            public void onSuccess(@Nullable com.onesignal.OutcomeEvent outcomeEvent) {
+                            public void onSuccess(@Nullable OSOutcomeEvent outcomeEvent) {
                                 ((Activity) context).runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -522,7 +523,7 @@ public class Dialog {
 
                         OneSignal.sendOutcomeWithValue(name, Float.parseFloat(value), new OneSignal.OutcomeCallback() {
                             @Override
-                            public void onSuccess(@Nullable com.onesignal.OutcomeEvent outcomeEvent) {
+                            public void onSuccess(@Nullable OSOutcomeEvent outcomeEvent) {
                                 ((Activity) context).runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {

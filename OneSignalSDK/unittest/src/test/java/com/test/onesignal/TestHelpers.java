@@ -24,7 +24,7 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
-import com.onesignal.OutcomeEvent;
+import com.onesignal.OSOutcomeEvent;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
@@ -293,7 +293,7 @@ public class TestHelpers {
       return mapList;
    }
 
-   static List<OutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) { ;
+   static List<OSOutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) { ;
       Cursor cursor = db.query(
               MockOSOutcomeEventsTable.TABLE_NAME,
               null,
@@ -305,7 +305,7 @@ public class TestHelpers {
               null // limit
       );
 
-      List<OutcomeEvent> events = new ArrayList<>();
+      List<OSOutcomeEvent> events = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
             String notificationIds = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
@@ -316,7 +316,7 @@ public class TestHelpers {
             float weight = cursor.getFloat(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT));
 
             try {
-               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
+               OSOutcomeEvent event = new OSOutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
                events.add(event);
 
             } catch (JSONException e) {

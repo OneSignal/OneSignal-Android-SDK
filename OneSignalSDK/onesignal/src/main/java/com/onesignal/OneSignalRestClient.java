@@ -144,7 +144,7 @@ class OneSignalRestClient {
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
-         con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.VERSION);
+         con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.getSdkVersionRaw());
          con.setRequestProperty("Accept", OS_ACCEPT_HEADER);
 
          if (jsonBody != null)
