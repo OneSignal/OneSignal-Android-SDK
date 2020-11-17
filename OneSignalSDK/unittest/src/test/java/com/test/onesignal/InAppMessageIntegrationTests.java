@@ -179,6 +179,17 @@ public class InAppMessageIntegrationTests {
         assertFalse(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
+    @Test
+    public void testPauseInAppMessageGetterAndSetter() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        assertFalse(OneSignal.isInAppMessagingPaused());
+
+        OneSignal.pauseInAppMessages(true);
+        assertTrue(OneSignal.isInAppMessagingPaused());
+    }
+
     /**
      * Since it is possible for multiple in-app messages to be valid at the same time, we've implemented
      * a queue so that the SDK does not try to display both messages at the same time.

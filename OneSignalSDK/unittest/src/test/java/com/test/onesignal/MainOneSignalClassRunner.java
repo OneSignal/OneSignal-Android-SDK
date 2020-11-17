@@ -138,7 +138,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionMa
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
-import static com.onesignal.OneSignalPackagePrivateHelper.bundleAsJSONObject;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
@@ -3785,7 +3784,7 @@ public class MainOneSignalClassRunner {
       Iterator<Map.Entry<Integer, ShadowRoboNotificationManager.PostedNotification>> postedNotifsIterator = postedNotifs.entrySet().iterator();
       ShadowRoboNotificationManager.PostedNotification postedNotification = postedNotifsIterator.next().getValue();
 
-      OneSignal.cancelNotification(postedNotification.id);
+      OneSignal.removeNotification(postedNotification.id);
       threadAndTaskWait();
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
       assertEquals(1, ShadowRoboNotificationManager.notifications.size());

@@ -19,6 +19,7 @@ import androidx.work.testing.WorkManagerTestInitHelper;
 
 import com.onesignal.FocusDelaySyncJobService;
 import com.onesignal.MockOSTimeImpl;
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
@@ -57,6 +58,7 @@ import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.robolectric.Robolectric;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.shadows.ShadowAlarmManager;
@@ -69,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.JSONUtils;
 import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -551,6 +554,7 @@ public class TestHelpers {
          e.printStackTrace();
       }
    }
+
 
    public static void assertNumberOfServicesAvailable(int quantity) {
       JobScheduler jobScheduler =

@@ -228,4 +228,8 @@ class OSTriggerController {
                 return null;
         }
     }
+
+    public ConcurrentHashMap<String, Object> getTriggers() {
+        return triggers;
+    }
 }

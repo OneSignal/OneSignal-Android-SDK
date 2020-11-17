@@ -69,7 +69,7 @@ class NotificationLimitManager {
 
       // Clear the oldest based on the count in notificationsToClear
       for (Map.Entry<Long, Integer> mapData : activeNotifIds.entrySet()) {
-         OneSignal.cancelNotification(mapData.getValue());
+         OneSignal.removeNotification(mapData.getValue());
          if (--notificationsToClear <= 0)
             break;
       }
@@ -99,7 +99,7 @@ class NotificationLimitManager {
 
          while (cursor.moveToNext()) {
             int existingId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            OneSignal.cancelNotification(existingId);
+            OneSignal.removeNotification(existingId);
 
             if (--notificationsToClear <= 0)
                break;
