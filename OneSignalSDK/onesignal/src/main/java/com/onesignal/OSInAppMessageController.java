@@ -819,6 +819,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         evaluateInAppMessages();
     }
 
+    Map<String, Object> getTriggers() {
+        return new HashMap<>(triggerController.getTriggers());
+    }
+
+    boolean inAppMessagingEnabled() {
+        return inAppMessagingEnabled;
+    }
+
     void setInAppMessagingEnabled(boolean enabled) {
         inAppMessagingEnabled = enabled;
         if (enabled)

@@ -539,7 +539,12 @@ public class OneSignalPackagePrivateHelper {
       }
    }
 
-   public static class JSONUtils extends com.onesignal.JSONUtils {}
+   public static class JSONUtils extends com.onesignal.JSONUtils {
+
+      public @Nullable static Map<String, Object> jsonObjectToMap(@Nullable JSONObject json) throws JSONException {
+         return com.onesignal.JSONUtils.jsonObjectToMap(json);
+      }
+   }
 
    public static class GenerateNotification extends com.onesignal.GenerateNotification {}
 

@@ -2510,7 +2510,7 @@ public class OneSignal {
     * when your app is restarted.
     * @param id
     */
-   public static void cancelNotification(final int id) {
+   public static void removeNotification(final int id) {
       Runnable runCancelNotification = new Runnable() {
          @Override
          public void run() {
@@ -2539,9 +2539,8 @@ public class OneSignal {
       else
          runCancelNotification.run();
    }
-
-
-   public static void cancelGroupedNotifications(final String group) {
+   
+   public static void removeGroupedNotifications(final String group) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.CANCEL_GROUPED_NOTIFICATIONS)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.CANCEL_GROUPED_NOTIFICATIONS + " operation to a pending queue.");
@@ -2549,7 +2548,7 @@ public class OneSignal {
             @Override
             public void run() {
                logger.debug("Running " + OSTaskController.CANCEL_GROUPED_NOTIFICATIONS + " operation from pending queue.");
-               cancelGroupedNotifications(group);
+               removeGroupedNotifications(group);
             }
          });
          return;
@@ -2724,19 +2723,6 @@ public class OneSignal {
    }
 
    /**
-    * Allows you to set multiple trigger key/value pairs simultaneously with a JSON String
-    * Triggers are used for targeting in-app messages.
-    */
-   public static void addTriggersFromJsonString(String triggersJsonString) {
-      try {
-         JSONObject jsonObject = new JSONObject(triggersJsonString);
-         addTriggers(JSONUtils.jsonObjectToMap(jsonObject));
-      } catch (JSONException e) {
-         logger.error("addTriggersFromJsonString, invalid json", e);
-      }
-   }
-
-   /**
     * Allows you to set an individual trigger key/value pair for in-app message targeting
     */
    public static void addTrigger(String key, Object object) {
@@ -2751,23 +2737,6 @@ public class OneSignal {
       getInAppMessageController().removeTriggersForKeys(keys);
    }
 
-   /** Removes a list/collection of triggers from their keys with a JSONArray String.
-    *  Only String types are used, other types in the array will be ignored. */
-   public static void removeTriggersForKeysFromJsonArrayString(@NonNull String keys) {
-      try {
-         JSONArray jsonArray = new JSONArray(keys);
-         Collection<String> keysCollection = OSUtils.extractStringsFromCollection(
-            JSONUtils.jsonArrayToList(jsonArray)
-         );
-         // Some keys were filtered, log as warning
-         if (jsonArray.length() != keysCollection.size())
-            OneSignal.Log(LOG_LEVEL.WARN, "removeTriggersForKeysFromJsonArrayString: Skipped removing non-String type keys ");
-         getInAppMessageController().removeTriggersForKeys(keysCollection);
-      } catch (JSONException e) {
-         logger.error("removeTriggersForKeysFromJsonArrayString, invalid json", e);
-      }
-   }
-
    /** Removes a single trigger for the given key */
    public static void removeTriggerForKey(String key) {
       ArrayList<String> triggerKeys = new ArrayList<>();
@@ -2779,7 +2748,22 @@ public class OneSignal {
    /** Returns a single trigger value for the given key (if it exists, otherwise returns null) */
    @Nullable
    public static Object getTriggerValueForKey(String key) {
+      if (appContext == null) {
+         logger.error("Before calling getTriggerValueForKey, Make sure OneSignal initWithContext and setAppId is called first");
+         return null;
+      }
+
       return getInAppMessageController().getTriggerValue(key);
+   }
+
+   /** Returns all trigger key-value for the current user */
+   public static Map<String, Object> getTriggers() {
+      if (appContext == null) {
+         logger.error("Before calling getTriggers, Make sure OneSignal initWithContext and setAppId is called first");
+         return new HashMap<>();
+      }
+
+      return getInAppMessageController().getTriggers();
    }
 
    /***
@@ -2803,6 +2787,15 @@ public class OneSignal {
       }
 
       getInAppMessageController().setInAppMessagingEnabled(!pause);
+   }
+
+   public static boolean isInAppMessagingPaused() {
+      if (appContext == null) {
+         logger.error("Before calling isInAppMessagingPaused, Make sure OneSignal initWithContext and setAppId is called first");
+         return false;
+      }
+
+      return !getInAppMessageController().inAppMessagingEnabled();
    }
 
    private static boolean isDuplicateNotification(String id) {
