@@ -200,8 +200,31 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
+   public enum ExternalIdErrorType {
+      REQUIRES_EXTERNAL_ID_AUTH, INVALID_OPERATION, NETWORK
+   }
+
+   public static class ExternalIdError {
+      private ExternalIdErrorType type;
+      private String message;
+
+      ExternalIdError(ExternalIdErrorType type, String message) {
+         this.type = type;
+         this.message = message;
+      }
+
+      public ExternalIdErrorType getType() {
+         return type;
+      }
+
+      public String getMessage() {
+         return message;
+      }
+   }
+
    public interface OSExternalUserIdUpdateCompletionHandler {
       void onComplete(JSONObject results);
+      void onFailure(ExternalIdError error);
    }
 
    interface OSInternalExternalUserIdUpdateCompletionHandler {
@@ -1549,11 +1572,18 @@ public class OneSignal {
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
-      setExternalUserId(externalId, null);
+      setExternalUserId(externalId, null, null);
    }
 
    public static void setExternalUserId(@NonNull final String externalId, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
+      setExternalUserId(externalId, null, completionCallback);
+   }
 
+   public static void setExternalUserId(@NonNull final String externalId,  @Nullable final String externalIdAuthHash) {
+      setExternalUserId(externalId, externalIdAuthHash, null);
+   }
+
+   public static void setExternalUserId(@NonNull final String externalId, @Nullable final String externalIdAuthHash, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalUserId()"))
          return;
 
@@ -1565,8 +1595,20 @@ public class OneSignal {
                return;
             }
 
+            if (remoteParams != null && remoteParams.useUserIdAuth && externalIdAuthHash == null) {
+               String errorMessage = "External Id authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
+               if (completionCallback != null)
+                  completionCallback.onFailure(new ExternalIdError(ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH, errorMessage));
+               Log(LOG_LEVEL.ERROR, errorMessage);
+               return;
+            }
+
+            String lowerCaseIdAuthHash = externalIdAuthHash;
+            if (lowerCaseIdAuthHash != null)
+               lowerCaseIdAuthHash = externalIdAuthHash.toLowerCase();
+
             try {
-               OneSignalStateSynchronizer.setExternalUserId(externalId, completionCallback);
+               OneSignalStateSynchronizer.setExternalUserId(externalId, lowerCaseIdAuthHash, completionCallback);
             } catch (JSONException exception) {
                String operation = externalId.equals("") ? "remove" : "set";
                onesignalLog(LOG_LEVEL.ERROR, "Attempted to " + operation + " external ID but encountered a JSON exception");

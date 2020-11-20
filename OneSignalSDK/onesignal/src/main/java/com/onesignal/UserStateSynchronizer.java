@@ -502,10 +502,14 @@ abstract class UserStateSynchronizer {
         getUserStateForModification().generateJsonDiffFromIntoSyncValued(emailFields, null);
     }
 
-    void setExternalUserId(final String externalId, OneSignal.OSInternalExternalUserIdUpdateCompletionHandler handler) throws JSONException {
+    void setExternalUserId(final String externalId, final String externalIdAuthHash, OneSignal.OSInternalExternalUserIdUpdateCompletionHandler handler) throws JSONException {
         if (handler != null)
             this.externalUserIdUpdateHandlers.add(handler);
-        getUserStateForModification().putOnSyncValues("external_user_id", externalId);
+
+        UserState userState = getUserStateForModification();
+        userState.putOnSyncValues("external_user_id", externalId);
+        if (externalIdAuthHash != null)
+            userState.putOnSyncValues("external_user_id_auth_hash", externalIdAuthHash);
     }
 
     abstract void setSubscription(boolean enable);

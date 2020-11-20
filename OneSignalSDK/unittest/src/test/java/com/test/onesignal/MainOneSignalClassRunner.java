@@ -122,6 +122,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
+import static com.onesignal.OneSignal.ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
@@ -214,11 +215,17 @@ public class MainOneSignalClassRunner {
    }
 
    private static JSONObject lastExternalUserIdResponse;
+   private static OneSignal.ExternalIdError lastExternalUserIdError;
    private static OneSignal.OSExternalUserIdUpdateCompletionHandler getExternalUserIdUpdateCompletionHandler() {
       return new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
          @Override
          public void onComplete(JSONObject results) {
             lastExternalUserIdResponse = results;
+         }
+
+         @Override
+         public void onFailure(OneSignal.ExternalIdError error) {
+            lastExternalUserIdError = error;
          }
       };
    }
@@ -238,6 +245,7 @@ public class MainOneSignalClassRunner {
       notificationOpenedMessage = null;
       lastGetTags = null;
       lastExternalUserIdResponse = null;
+      lastExternalUserIdError = null;
 
       ShadowGMSLocationController.reset();
       TestHelpers.beforeTestInitAndCleanup();
@@ -4122,6 +4130,59 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.Request registrationRequest = ShadowOneSignalRestClient.requests.get(1);
       assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, registrationRequest.method);
       assertEquals(testExternalId, registrationRequest.payload.getString("external_user_id"));
+   }
+
+   @Test
+   public void shouldSetExternalIdWithAuthHash() throws Exception {
+      ShadowOneSignalRestClient.paramExtras = new JSONObject().put("require_user_id_auth", true);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      String testExternalId = "test_ext_id";
+
+      OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      assertNotNull(lastExternalUserIdError);
+      assertEquals(REQUIRES_EXTERNAL_ID_AUTH, lastExternalUserIdError.getType());
+   }
+
+   @Test
+   public void shouldSetExternalIdWithAuthHashAfterRegistration() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      String testExternalId = "test_ext_id";
+      String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+      threadAndTaskWait();
+
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request externalIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, externalIdRequest.method);
+      assertEquals(testExternalId, externalIdRequest.payload.getString("external_user_id"));
+      assertEquals(mockExternalIdHash, externalIdRequest.payload.getString("external_user_id_auth_hash"));
+   }
+
+   @Test
+   public void shouldSetExternalIdWithAuthHashBeforeRegistration() throws Exception {
+      String testExternalId = "test_ext_id";
+      String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request registrationRequest = ShadowOneSignalRestClient.requests.get(1);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, registrationRequest.method);
+      assertEquals(testExternalId, registrationRequest.payload.getString("external_user_id"));
+      assertEquals(mockExternalIdHash, registrationRequest.payload.getString("external_user_id_auth_hash"));
    }
 
    @Test
