@@ -76,6 +76,7 @@ public class OneSignalRemoteParams {
       String googleProjectNumber;
       boolean enterprise;
       boolean useEmailAuth;
+      boolean useUserIdAuth;
       JSONArray notificationChannels;
       boolean firebaseAnalytics;
       boolean restoreTTLFilter;
@@ -172,6 +173,7 @@ public class OneSignalRemoteParams {
       Params params = new Params() {{
          enterprise = responseJson.optBoolean("enterp", false);
          useEmailAuth = responseJson.optBoolean("use_email_auth", false);
+         useUserIdAuth = responseJson.optBoolean("require_user_id_auth", false);
          notificationChannels = responseJson.optJSONArray("chnl_lst");
          firebaseAnalytics = responseJson.optBoolean("fba", false);
          restoreTTLFilter = responseJson.optBoolean("restore_ttl_filter", true);

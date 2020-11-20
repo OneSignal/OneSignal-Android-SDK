@@ -230,8 +230,31 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
+   public enum ExternalIdErrorType {
+      REQUIRES_EXTERNAL_ID_AUTH, INVALID_OPERATION, NETWORK
+   }
+
+   public static class ExternalIdError {
+      private ExternalIdErrorType type;
+      private String message;
+
+      ExternalIdError(ExternalIdErrorType type, String message) {
+         this.type = type;
+         this.message = message;
+      }
+
+      public ExternalIdErrorType getType() {
+         return type;
+      }
+
+      public String getMessage() {
+         return message;
+      }
+   }
+
    public interface OSExternalUserIdUpdateCompletionHandler {
       void onComplete(JSONObject results);
+      void onFailure(ExternalIdError error);
    }
 
    interface OSInternalExternalUserIdUpdateCompletionHandler {
@@ -324,7 +347,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   public static final String VERSION = "031503";
+   public static final String VERSION = "031504";
 
    private static OSLogger logger = new OSLogWrapper();
    private static FocusTimeController focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
@@ -1417,10 +1440,18 @@ public class OneSignal {
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
-      setExternalUserId(externalId, null);
+      setExternalUserId(externalId, null, null);
    }
 
    public static void setExternalUserId(@NonNull final String externalId, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
+      setExternalUserId(externalId, null, completionCallback);
+   }
+
+   public static void setExternalUserId(@NonNull final String externalId,  @Nullable final String externalIdAuthHash) {
+      setExternalUserId(externalId, externalIdAuthHash, null);
+   }
+
+   public static void setExternalUserId(@NonNull final String externalId, @Nullable final String externalIdAuthHash, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.SET_EXTERNAL_USER_ID)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.SET_EXTERNAL_USER_ID + " operation to a pending task queue.");
@@ -1428,13 +1459,13 @@ public class OneSignal {
             @Override
             public void run() {
                logger.debug("Running " + OSTaskController.SET_EXTERNAL_USER_ID + " operation from pending task queue.");
-               setExternalUserId(externalId, completionCallback);
+               setExternalUserId(externalId, externalIdAuthHash, completionCallback);
             }
          });
          return;
       }
 
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EXTERNAL_USER_ID))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setExternalUserId()"))
          return;
 
       if (externalId == null) {
@@ -1442,8 +1473,20 @@ public class OneSignal {
          return;
       }
 
+      if (getRemoteParams() != null && getRemoteParams().useUserIdAuth && externalIdAuthHash == null) {
+         String errorMessage = "External Id authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
+         if (completionCallback != null)
+            completionCallback.onFailure(new ExternalIdError(ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH, errorMessage));
+         logger.error(errorMessage);
+         return;
+      }
+
+      String lowerCaseIdAuthHash = externalIdAuthHash;
+      if (lowerCaseIdAuthHash != null)
+         lowerCaseIdAuthHash = externalIdAuthHash.toLowerCase();
+
       try {
-         OneSignalStateSynchronizer.setExternalUserId(externalId, completionCallback);
+         OneSignalStateSynchronizer.setExternalUserId(externalId, lowerCaseIdAuthHash, completionCallback);
       } catch (JSONException exception) {
          String operation = externalId.equals("") ? "remove" : "set";
          logger.error("Attempted to " + operation + " external ID but encountered a JSON exception");

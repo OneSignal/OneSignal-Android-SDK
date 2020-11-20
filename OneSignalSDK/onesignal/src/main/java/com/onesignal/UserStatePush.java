@@ -16,20 +16,20 @@ class UserStatePush extends UserState {
     @Override
     protected void addDependFields() {
         try {
-            syncValues.put("notification_types", getNotificationTypes());
+            putOnSyncValues("notification_types", getNotificationTypes());
         } catch (JSONException e) {}
     }
 
     private int getNotificationTypes() {
-        int subscribableStatus = dependValues.optInt("subscribableStatus", 1);
+        int subscribableStatus = getDependValues().optInt("subscribableStatus", 1);
         if (subscribableStatus < PUSH_STATUS_UNSUBSCRIBE)
             return subscribableStatus;
 
-        boolean androidPermission = dependValues.optBoolean("androidPermission", true);
+        boolean androidPermission = getDependValues().optBoolean("androidPermission", true);
         if (!androidPermission)
             return PUSH_STATUS_NO_PERMISSION;
 
-        boolean userSubscribePref = dependValues.optBoolean("userSubscribePref", true);
+        boolean userSubscribePref = getDependValues().optBoolean("userSubscribePref", true);
         if (!userSubscribePref)
             return PUSH_STATUS_UNSUBSCRIBE;
 

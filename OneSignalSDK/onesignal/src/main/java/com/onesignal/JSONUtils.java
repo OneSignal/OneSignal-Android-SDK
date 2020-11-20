@@ -130,7 +130,7 @@ class JSONUtils {
         return strArray + "]";
     }
 
-    static JSONObject getJSONObjectWithoutBlankValues(JSONObject jsonObject, String getKey) {
+    static JSONObject getJSONObjectWithoutBlankValues(ImmutableJSONObject jsonObject, String getKey) {
         if (!jsonObject.has(getKey))
             return null;
 
