@@ -225,7 +225,7 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static DelayedConsentInitializationParameters OneSignal_delayedInitParams() {
-      return OneSignal.delayedInitParams;
+      return OneSignal.getDelayedInitParams();
    }
 
    public static ConcurrentLinkedQueue<Runnable> OneSignal_taskQueueWaitingForInit() {
