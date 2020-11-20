@@ -403,7 +403,10 @@ public class OneSignal {
    private static HashSet<String> postedOpenedNotifIds = new HashSet<>();
    private static final ArrayList<OSGetTagsHandler> pendingGetTagsHandlers = new ArrayList<>();
 
-   static DelayedConsentInitializationParameters delayedInitParams;
+   private static DelayedConsentInitializationParameters delayedInitParams;
+   static DelayedConsentInitializationParameters getDelayedInitParams() {
+      return delayedInitParams;
+   }
 
    // Start PermissionState
    private static OSPermissionState currentPermissionState;
@@ -730,9 +733,8 @@ public class OneSignal {
    }
 
    static void onRemoteParamSet() {
-      if (delayedInitParams != null) // Remote Params called from init
-         reassignDelayedInitParams();
-      else if (inForeground) // Remote Params called from onAppFocus
+      boolean initDelayed = reassignDelayedInitParams();
+      if (!initDelayed && inForeground) // Remote Params called from onAppFocus
          onAppFocusLogic();
    }
 
@@ -983,17 +985,33 @@ public class OneSignal {
       }
    }
 
-   private static void reassignDelayedInitParams() {
+   private static boolean reassignDelayedInitParams() {
+      String delayedAppId;
+      Context delayedContext;
+      if (delayedInitParams == null) {
+         // Get the cached app id, if it exists
+         delayedAppId = getSavedAppId();
+         delayedContext = appContext;
+         logger.error("Trying to continue OneSignal with null delayed params");
+      } else {
+         delayedAppId = delayedInitParams.appId;
+         delayedContext = delayedInitParams.context;
+      }
+
       logger.debug("reassignDelayedInitParams with appContext: " + appContext);
-      Context delayedContext = delayedInitParams.context;
-      String delayedAppId = delayedInitParams.appId;
 
       delayedInitParams = null;
       setAppId(delayedAppId);
 
       // Check to avoid extra initWithContext logging and logic
-      if (!initDone)
+      if (!initDone) {
+         if (delayedContext == null) {
+            logger.error("Trying to continue OneSignal with null delayed params context");
+            return false;
+         }
          initWithContext(delayedContext);
+      }
+      return true;
    }
 
    static OneSignalRemoteParams.Params getRemoteParams() {
