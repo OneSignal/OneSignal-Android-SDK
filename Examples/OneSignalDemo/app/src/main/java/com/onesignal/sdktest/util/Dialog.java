@@ -183,7 +183,7 @@ public class Dialog {
             private void updateExternalUserId(final DialogInterface dialog, final String externalUserId) {
                 OneSignal.setExternalUserId(externalUserId, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
                     @Override
-                    public void onComplete(JSONObject results) {
+                    public void onSuccess(JSONObject results) {
                         // Default success to false until we know push came back successful
                         boolean successful = false;
 
@@ -207,6 +207,13 @@ public class Dialog {
                             callback.onFailure();
 
                         toggleUpdateAlertDialogAttributes(false);
+                        dialog.dismiss();
+                    }
+
+                    @Override
+                    public void onFailure(OneSignal.ExternalIdError error) {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "External user id set failed with error: " + error);
+                        callback.onFailure();
                         dialog.dismiss();
                     }
 

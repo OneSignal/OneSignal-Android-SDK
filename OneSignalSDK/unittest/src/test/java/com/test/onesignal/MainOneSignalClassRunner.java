@@ -219,7 +219,7 @@ public class MainOneSignalClassRunner {
    private static OneSignal.OSExternalUserIdUpdateCompletionHandler getExternalUserIdUpdateCompletionHandler() {
       return new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
          @Override
-         public void onComplete(JSONObject results) {
+         public void onSuccess(JSONObject results) {
             lastExternalUserIdResponse = results;
          }
 
