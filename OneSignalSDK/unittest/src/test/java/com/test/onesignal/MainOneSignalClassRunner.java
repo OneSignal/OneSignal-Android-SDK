@@ -122,7 +122,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import static com.onesignal.OneSignal.ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH;
 import static com.onesignal.OneSignalPackagePrivateHelper.GcmBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
@@ -215,17 +214,11 @@ public class MainOneSignalClassRunner {
    }
 
    private static JSONObject lastExternalUserIdResponse;
-   private static OneSignal.ExternalIdError lastExternalUserIdError;
    private static OneSignal.OSExternalUserIdUpdateCompletionHandler getExternalUserIdUpdateCompletionHandler() {
       return new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
          @Override
          public void onComplete(JSONObject results) {
             lastExternalUserIdResponse = results;
-         }
-
-         @Override
-         public void onFailure(OneSignal.ExternalIdError error) {
-            lastExternalUserIdError = error;
          }
       };
    }
@@ -244,8 +237,7 @@ public class MainOneSignalClassRunner {
 
       notificationOpenedMessage = null;
       lastGetTags = null;
-      lastExternalUserIdResponse = null;
-      lastExternalUserIdError = null;
+      lastExternalUserIdResponse = null;;
 
       ShadowGMSLocationController.reset();
       TestHelpers.beforeTestInitAndCleanup();
@@ -4143,9 +4135,6 @@ public class MainOneSignalClassRunner {
 
       OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
       threadAndTaskWait();
-
-      assertNotNull(lastExternalUserIdError);
-      assertEquals(REQUIRES_EXTERNAL_ID_AUTH, lastExternalUserIdError.getType());
    }
 
    @Test

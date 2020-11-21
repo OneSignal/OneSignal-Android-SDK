@@ -200,31 +200,8 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
-   public enum ExternalIdErrorType {
-      REQUIRES_EXTERNAL_ID_AUTH, INVALID_OPERATION, NETWORK
-   }
-
-   public static class ExternalIdError {
-      private ExternalIdErrorType type;
-      private String message;
-
-      ExternalIdError(ExternalIdErrorType type, String message) {
-         this.type = type;
-         this.message = message;
-      }
-
-      public ExternalIdErrorType getType() {
-         return type;
-      }
-
-      public String getMessage() {
-         return message;
-      }
-   }
-
    public interface OSExternalUserIdUpdateCompletionHandler {
       void onComplete(JSONObject results);
-      void onFailure(ExternalIdError error);
    }
 
    interface OSInternalExternalUserIdUpdateCompletionHandler {
@@ -1597,8 +1574,6 @@ public class OneSignal {
 
             if (remoteParams != null && remoteParams.useUserIdAuth && externalIdAuthHash == null) {
                String errorMessage = "External Id authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
-               if (completionCallback != null)
-                  completionCallback.onFailure(new ExternalIdError(ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH, errorMessage));
                Log(LOG_LEVEL.ERROR, errorMessage);
                return;
             }
