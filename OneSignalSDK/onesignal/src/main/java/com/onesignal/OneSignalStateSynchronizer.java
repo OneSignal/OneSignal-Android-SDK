@@ -216,7 +216,7 @@ class OneSignalStateSynchronizer {
                @Override
                public void run() {
                   if (completionHandler != null)
-                     completionHandler.onComplete(responses);
+                     completionHandler.onSuccess(responses);
                }
             });
          }

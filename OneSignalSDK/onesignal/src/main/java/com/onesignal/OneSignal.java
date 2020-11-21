@@ -253,7 +253,7 @@ public class OneSignal {
    }
 
    public interface OSExternalUserIdUpdateCompletionHandler {
-      void onComplete(JSONObject results);
+      void onSuccess(JSONObject results);
       void onFailure(ExternalIdError error);
    }
 
