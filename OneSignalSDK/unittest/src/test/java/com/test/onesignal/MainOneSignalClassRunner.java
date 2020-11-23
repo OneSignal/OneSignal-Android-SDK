@@ -4175,6 +4175,75 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldAlwaysSetExternalIdWithAuthHashAAfterRegistration() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      String testExternalId = "test_ext_id";
+      String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request registrationRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, registrationRequest.method);
+      assertEquals(testExternalId, registrationRequest.payload.getString("external_user_id"));
+      assertEquals(mockExternalIdHash, registrationRequest.payload.getString("external_user_id_auth_hash"));
+
+      fastColdRestartApp();
+
+      advanceSystemTimeBy(60);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request registrationRequestAfterColdStart = ShadowOneSignalRestClient.requests.get(4);
+      assertEquals(REST_METHOD.POST, registrationRequestAfterColdStart.method);
+      assertEquals(mockExternalIdHash, registrationRequestAfterColdStart.payload.getString("external_user_id_auth_hash"));
+   }
+
+   @Test
+   public void shouldAlwaysSetExternalIdAndEmailWithAuthHashAAfterRegistration() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      String testExternalId = "test_ext_id";
+      String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+      String email = "josh@onesignal.com";
+      String mockEmailHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
+      OneSignal.setEmail(email, mockEmailHash);
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request registrationRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, registrationRequest.method);
+      assertEquals(testExternalId, registrationRequest.payload.getString("external_user_id"));
+      assertEquals(mockExternalIdHash, registrationRequest.payload.getString("external_user_id_auth_hash"));
+
+      ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(3);
+      assertEquals(REST_METHOD.POST, emailPost.method);
+      assertEquals(email, emailPost.payload.getString("identifier"));
+      assertEquals(11, emailPost.payload.getInt("device_type"));
+      assertEquals(mockEmailHash, emailPost.payload.getString("email_auth_hash"));
+
+      fastColdRestartApp();
+
+      advanceSystemTimeBy(60);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request registrationRequestAfterColdStart = ShadowOneSignalRestClient.requests.get(6);
+      assertEquals(REST_METHOD.POST, registrationRequestAfterColdStart.method);
+      assertEquals(mockExternalIdHash, registrationRequestAfterColdStart.payload.getString("external_user_id_auth_hash"));
+
+      ShadowOneSignalRestClient.Request emailPostAfterColdStart = ShadowOneSignalRestClient.requests.get(7);
+      assertEquals(REST_METHOD.POST, emailPostAfterColdStart.method);
+      assertEquals(11, emailPostAfterColdStart.payload.getInt("device_type"));
+      assertEquals(mockEmailHash, emailPostAfterColdStart.payload.getString("email_auth_hash"));
+   }
+
+   @Test
    public void shouldRemoveExternalUserId() throws Exception {
       OneSignal.setExternalUserId("test_ext_id");
 
