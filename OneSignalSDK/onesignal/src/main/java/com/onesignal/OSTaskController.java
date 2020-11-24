@@ -38,6 +38,8 @@ class OSTaskController {
     static final String SEND_OUTCOME_WITH_VALUE = "sendOutcomeWithValue()";
     static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
             GET_TAGS,
+            SET_EMAIL,
+            LOGOUT_EMAIL,
             SYNC_HASHED_EMAIL,
             SET_EXTERNAL_USER_ID,
             SET_SUBSCRIPTION,
@@ -49,8 +51,11 @@ class OSTaskController {
             SET_REQUIRES_USER_PRIVACY_CONSENT,
             UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED,
             HANDLE_NOTIFICATION_OPEN,
-            SET_EMAIL,
-            APP_LOST_FOCUS));
+            APP_LOST_FOCUS,
+            SEND_OUTCOME,
+            SEND_UNIQUE_OUTCOME,
+            SEND_OUTCOME_WITH_VALUE
+    ));
 
     // The concurrent queue in which we pin pending tasks upon finishing initialization
     private final ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
