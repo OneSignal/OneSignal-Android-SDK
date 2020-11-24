@@ -241,6 +241,8 @@ abstract class UserState {
                 sendJson.put("app_id", syncValues.optString("app_id"));
             if (syncValues.has("email_auth_hash"))
                 sendJson.put("email_auth_hash", syncValues.optString("email_auth_hash"));
+            if (syncValues.has("external_user_id_auth_hash"))
+                sendJson.put("external_user_id_auth_hash", syncValues.optString("external_user_id_auth_hash"));
         } catch (JSONException e) {
             e.printStackTrace();
         }

@@ -347,7 +347,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   private static final String VERSION = "031504";
+   private static final String VERSION = "031505";
    public static String getSdkVersionRaw() {
       return VERSION;
    }
@@ -2539,7 +2539,7 @@ public class OneSignal {
       else
          runCancelNotification.run();
    }
-   
+
    public static void removeGroupedNotifications(final String group) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.CANCEL_GROUPED_NOTIFICATIONS)) {
          logger.error("Waiting for remote params. " +

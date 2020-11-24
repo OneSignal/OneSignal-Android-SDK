@@ -311,7 +311,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             return;
         }
 
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message, showing fist one with height: " + newHeight);
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message, showing first one with height: " + newHeight);
         messageView.setWebView(webView);
         if (newHeight != null)
             messageView.updateHeight(newHeight);
