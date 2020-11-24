@@ -144,7 +144,7 @@ abstract class UserStateSynchronizer {
     // currentUserState - Current known state of the user on OneSignal's server.
     // toSyncUserState  - Pending state that will be synced to the OneSignal server.
     //                    diff will be generated between currentUserState when a sync call is made to the server.
-    protected UserState currentUserState, toSyncUserState;
+    private UserState currentUserState, toSyncUserState;
 
     protected JSONObject generateJsonDiff(JSONObject cur, JSONObject changedTo, JSONObject baseOutput, Set<String> includeFields) {
         synchronized (LOCK) {
@@ -153,29 +153,34 @@ abstract class UserStateSynchronizer {
     }
 
     protected UserState getCurrentUserState() {
-        synchronized (LOCK) {
-            if (currentUserState == null)
-                currentUserState = newUserState("CURRENT_STATE", true);
+        if (currentUserState == null) {
+            synchronized (LOCK) {
+                if (currentUserState == null)
+                    currentUserState = newUserState("CURRENT_STATE", true);
+            }
         }
 
         return currentUserState;
     }
 
     protected UserState getToSyncUserState() {
-        synchronized (LOCK) {
-            if (toSyncUserState == null)
-                toSyncUserState = newUserState("TOSYNC_STATE", true);
+        if (toSyncUserState == null) {
+            synchronized (LOCK) {
+                if (toSyncUserState == null)
+                    toSyncUserState = newUserState("TOSYNC_STATE", true);
+            }
         }
 
         return toSyncUserState;
     }
 
     void initUserState() {
-        synchronized (LOCK) {
-            if (currentUserState == null)
-                currentUserState = newUserState("CURRENT_STATE", true);
+        if (currentUserState == null) {
+            synchronized (LOCK) {
+                if (currentUserState == null)
+                    currentUserState = newUserState("CURRENT_STATE", true);
+            }
         }
-
         getToSyncUserState();
     }
 

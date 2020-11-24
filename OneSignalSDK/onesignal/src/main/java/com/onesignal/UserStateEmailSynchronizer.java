@@ -145,8 +145,8 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         keysToRemove.add("email_auth_hash");
         keysToRemove.add("device_player_id");
         keysToRemove.add("external_user_id");
-        toSyncUserState.removeFromSyncValues(keysToRemove);
-        toSyncUserState.persistState();
+        getToSyncUserState().removeFromSyncValues(keysToRemove);
+        getToSyncUserState().persistState();
 
         OneSignal.getEmailSubscriptionState().clearEmailAndId();
     }
