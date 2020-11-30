@@ -12,11 +12,15 @@ ext {
     jUnitVersion = '4.12'
     reflectionsVersion = '0.9.12'
     roboelectricVersion = '4.3.1'
+    spek_version = '2.0.14'
 }
 
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+
+// Required as JUnit 5 doesn't support android modules out of the box.
+apply plugin: "de.mannodermaus.android-junit5"
 
 android {
     compileSdkVersion rootProject.buildVersions.compileSdkVersion
@@ -34,7 +38,24 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // Add Kotlin source directory to all source sets
+    sourceSets.each {
+        it.java.srcDirs += "src/$it.name/kotlin"
+    }
     testOptions {
+        junitPlatform {
+            filters {
+                engines {
+                    include 'spek2'
+                }
+            }
+            jacocoOptions {
+                // here goes all jacoco config, for example
+                html.enabled = true
+                xml.enabled = false
+                csv.enabled = false
+            }
+        }
         unitTests.all {
             maxParallelForks 1
             maxHeapSize '2048m'
@@ -72,6 +93,13 @@ dependencies {
 
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     testImplementation "junit:junit:$jUnitVersion"
+
+    // spek
+    testImplementation "org.spekframework.spek2:spek-dsl-jvm:$spek_version"
+    testImplementation "org.spekframework.spek2:spek-runner-junit5:$spek_version"
+
+    // spek requires kotlin-reflect, omit when already in classpath
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
 
     testImplementation "androidx.test:core:$androidTestCoreVersion"
     testImplementation "androidx.work:work-testing:$androidWorkTestVersion"

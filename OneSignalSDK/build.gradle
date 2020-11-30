@@ -34,6 +34,7 @@ buildscript {
         classpath "com.google.gms:google-services:$googleServicesGradlePluginVersion"
         classpath "com.huawei.agconnect:agcp:$huaweiAgconnectVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath 'de.mannodermaus.gradle.plugins:android-junit5:1.6.2.0'
 
         // OneSignal-Gradle-Plugin - Local testing
         // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
