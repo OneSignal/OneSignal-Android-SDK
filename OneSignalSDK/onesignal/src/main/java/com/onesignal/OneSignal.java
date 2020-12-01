@@ -986,6 +986,9 @@ public class OneSignal {
    }
 
    private static boolean reassignDelayedInitParams() {
+      if (initDone)
+         return false;
+
       String delayedAppId;
       Context delayedContext;
       if (delayedInitParams == null) {

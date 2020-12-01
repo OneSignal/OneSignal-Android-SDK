@@ -77,7 +77,7 @@ public class OSNotificationReceivedEvent {
 
       isComplete = true;
 
-      if (OSUtils.isRunningOnMainThread()) {
+      if (isRunningOnMainThread()) {
          new Thread(new Runnable() {
             @Override
             public void run() {
@@ -118,5 +118,9 @@ public class OSNotificationReceivedEvent {
               "isComplete=" + isComplete +
               ", notification=" + notification +
               '}';
+   }
+
+   static boolean isRunningOnMainThread() {
+      return OSUtils.isRunningOnMainThread();
    }
 }
