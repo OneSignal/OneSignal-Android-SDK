@@ -68,6 +68,7 @@ import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationReceivedEvent;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
@@ -823,7 +824,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowNotificationReceivedEvent.class })
    public void shouldHandleBasicNotifications() throws Exception {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();

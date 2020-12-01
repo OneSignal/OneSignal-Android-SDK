@@ -37,6 +37,7 @@ import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationReceivedEvent;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
@@ -128,6 +129,7 @@ public class TestHelpers {
       ShadowOSUtils.resetStatics();
       ShadowTimeoutHandler.resetStatics();
       ShadowGenerateNotification.resetStatics();
+      ShadowNotificationReceivedEvent.resetStatics();
 
       lastException = null;
    }
