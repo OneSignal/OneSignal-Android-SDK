@@ -1996,8 +1996,9 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class, ShadowTimeoutHandler.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowTimeoutHandler.class, ShadowNotificationReceivedEvent.class })
    public void testNotificationWillShowInForegroundHandler_notCallCompleteShowsNotificationAfterTimeout() throws Exception {
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
       OneSignal.initWithContext(blankActivity);
@@ -2022,8 +2023,16 @@ public class GenerateNotificationRunner {
       // 4. Make sure the callback counter is only fired once for App NotificationWillShowInForegroundHandler
       assertEquals(1, callbackCounter);
 
-      // 5. Make sure 1 notification exists in DB
-      assertNotificationDbRecords(1);
+      // Complete being call from Notification Receiver Handler thread
+      Awaitility.await()
+              .atMost(new Duration(5, TimeUnit.SECONDS))
+              .pollInterval(new Duration(500, TimeUnit.MILLISECONDS))
+              .untilAsserted(() -> {
+                 // 5. Make sure 1 notification exists in DB
+                 assertNotificationDbRecords(1);
+                 // 6. Notification not opened then badges should be 1
+                 assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+              });
    }
 
    @Test
