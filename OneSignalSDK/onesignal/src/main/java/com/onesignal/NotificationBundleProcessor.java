@@ -236,7 +236,7 @@ class NotificationBundleProcessor {
          values.put(NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload.toString());
 
          dbHelper.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
-
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Notification saved values: " + values.toString());
          if (!opened)
             BadgeCountUpdater.update(dbHelper, context);
       } catch (JSONException e) {
