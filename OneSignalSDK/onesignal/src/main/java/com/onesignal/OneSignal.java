@@ -1472,7 +1472,7 @@ public class OneSignal {
          return;
       }
 
-      if (remoteParams != null && remoteParams.useEmailAuth && emailAuthHash == null) {
+      if (remoteParams != null && remoteParams.useEmailAuth && (emailAuthHash == null || emailAuthHash.length() == 0)) {
          String errorMessage = "Email authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (callback != null)
             callback.onFailure(new EmailUpdateError(EmailErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
@@ -1572,7 +1572,7 @@ public class OneSignal {
                return;
             }
 
-            if (remoteParams != null && remoteParams.useUserIdAuth && externalIdAuthHash == null) {
+            if (externalId.length() > 0 && remoteParams != null && remoteParams.useUserIdAuth && (externalIdAuthHash == null || externalIdAuthHash.length() == 0)) {
                String errorMessage = "External Id authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
                Log(LOG_LEVEL.ERROR, errorMessage);
                return;
