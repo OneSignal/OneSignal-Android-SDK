@@ -692,7 +692,6 @@ public class OneSignal {
          if (notificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
          logger.debug("OneSignal SDK initialization already completed.");
-         doSessionInit();
          return;
       }
 
