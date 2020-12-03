@@ -308,6 +308,27 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
       });
    }
 
+   public void setExternalUserId(final String delegateId, String externalId, String externalIdAuthHash) {
+      OneSignal.setExternalUserId(externalId, externalIdAuthHash, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
+         @Override
+         public void onComplete(JSONObject results) {
+            try {
+               JSONObject params = new JSONObject();
+               params.put("delegate_id", new JSONObject().put("completion", delegateId).toString());
+               if (results == null) {
+                  params.put("response", "");
+                  OneSignalUnityProxy.unitySafeInvoke("onExternalUserIdUpdateCompletion", params.toString());
+                  return;
+               }
+               params.put("response", results.toString());
+               OneSignalUnityProxy.unitySafeInvoke("onExternalUserIdUpdateCompletion", params.toString());
+            } catch (JSONException e) {
+               e.printStackTrace();
+            }
+         }
+      });
+   }
+
    public void removeExternalUserId() {
       OneSignal.removeExternalUserId();
    }
