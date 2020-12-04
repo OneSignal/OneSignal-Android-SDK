@@ -692,7 +692,6 @@ public class OneSignal {
          if (notificationOpenedHandler != null)
             fireCallbackForOpenedNotifications();
          logger.debug("OneSignal SDK initialization already completed.");
-         doSessionInit();
          return;
       }
 
@@ -824,21 +823,19 @@ public class OneSignal {
    // If we don't have a OneSignal player_id yet make the call to create it regardless of focus
    private static void doSessionInit() {
       // Check session time to determine whether to start a new session or not
-      if (isPastOnSessionTime()) {
-         if (inForeground) {
-            logger.debug("Starting new session");
+      if (shouldStartNewSession()) {
+         logger.debug("Starting new session with appEntryState: " + getAppEntryState());
 
-            OneSignalStateSynchronizer.setNewSession();
-            outcomeEventsController.cleanOutcomes();
-            sessionManager.restartSessionIfNeeded(getAppEntryState());
-            getInAppMessageController().resetSessionLaunchTime();
-            setLastSessionTime(time.getCurrentTimeMillis());
-         }
-      } else {
-         logger.debug("Continue on same session");
-
+         OneSignalStateSynchronizer.setNewSession();
+         outcomeEventsController.cleanOutcomes();
+         sessionManager.restartSessionIfNeeded(getAppEntryState());
+         getInAppMessageController().resetSessionLaunchTime();
+         setLastSessionTime(time.getCurrentTimeMillis());
+      } else if (isInForeground()) {
+         logger.debug("Continue on same session with appEntryState: " + getAppEntryState());
          sessionManager.attemptSessionUpgrade(getAppEntryState());
       }
+
       getInAppMessageController().initWithCachedInAppMessages();
 
       // We still want register the user to OneSignal if the SDK was initialized
@@ -2912,6 +2909,16 @@ public class OneSignal {
 
    static boolean isAppActive() {
       return initDone && isInForeground();
+   }
+
+   private static boolean shouldStartNewSession() {
+      if (!isInForeground())
+         return false;
+
+      if (!isPastOnSessionTime())
+         return false;
+
+      return true;
    }
 
    private static boolean isPastOnSessionTime() {

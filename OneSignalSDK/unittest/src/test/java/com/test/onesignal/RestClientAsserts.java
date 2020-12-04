@@ -113,6 +113,18 @@ class RestClientAsserts {
       assertOnSessionUrl(request.url);
    }
 
+   static void assertNumberOfOnSessions(int number) {
+      int successfulAsserts = 0;
+      for (Request request : ShadowOneSignalRestClient.requests) {
+         try {
+            assertOnSessionUrl(request.url);
+            successfulAsserts++;
+         } catch (AssertionError ignored) { }
+      }
+
+      assertEquals(number, successfulAsserts);
+   }
+
    static void assertOnFocusAtIndex(int index, int focusTimeSec) throws JSONException {
       assertOnFocusAtIndex(index, new JSONObject().put("active_time", focusTimeSec));
    }
@@ -256,6 +268,8 @@ class RestClientAsserts {
    static void assertOnSessionUrl(String url) {
       String[] parts = url.split("/");
       assertEquals("players", parts[0]);
+      if (parts.length == 1)
+         fail("Not an on_session as player_id and on_session is missing from the URL");
       assertIsUUID(parts[1]);
       assertEquals("on_session", parts[2]);
    }

@@ -28,6 +28,8 @@ import static org.robolectric.Shadows.shadowOf;
 public class OneSignalPackagePrivateHelper {
    public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
 
+   public static final long MIN_ON_SESSION_TIME_MILLIS = com.onesignal.OneSignal.MIN_ON_SESSION_TIME_MILLIS;
+
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
    }
