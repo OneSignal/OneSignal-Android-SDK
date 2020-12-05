@@ -347,7 +347,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   private static final String VERSION = "031505";
+   private static final String VERSION = "031506";
    public static String getSdkVersionRaw() {
       return VERSION;
    }
@@ -1401,7 +1401,7 @@ public class OneSignal {
          return;
       }
 
-      if (getRemoteParams().useEmailAuth && emailAuthHash == null) {
+      if (getRemoteParams().useEmailAuth && (emailAuthHash == null || emailAuthHash.length() == 0)) {
          String errorMessage = "Email authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (callback != null)
             callback.onFailure(new EmailUpdateError(EmailErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
@@ -1494,7 +1494,7 @@ public class OneSignal {
          return;
       }
 
-      if (getRemoteParams() != null && getRemoteParams().useUserIdAuth && externalIdAuthHash == null) {
+      if (getRemoteParams() != null && getRemoteParams().useUserIdAuth && (externalIdAuthHash == null || externalIdAuthHash.length() == 0)) {
          String errorMessage = "External Id authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (completionCallback != null)
             completionCallback.onFailure(new ExternalIdError(ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH, errorMessage));

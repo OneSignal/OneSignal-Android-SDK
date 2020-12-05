@@ -230,6 +230,22 @@ public class MainOneSignalClassRunner {
       };
    }
 
+   private static boolean didEmailUpdateSucceed;
+   private static OneSignal.EmailUpdateError lastEmailUpdateFailure;
+   private static OneSignal.EmailUpdateHandler getEmailUpdateHandler() {
+      return new OneSignal.EmailUpdateHandler() {
+         @Override
+         public void onSuccess() {
+            didEmailUpdateSucceed = true;
+         }
+
+         @Override
+         public void onFailure(OneSignal.EmailUpdateError error) {
+            lastEmailUpdateFailure = error;
+         }
+      };
+   }
+
    private static JSONObject lastGetTags;
    private static void getGetTagsHandler() {
       OneSignal.getTags(tags -> lastGetTags = tags);
@@ -240,6 +256,8 @@ public class MainOneSignalClassRunner {
       lastGetTags = null;
       lastExternalUserIdResponse = null;
       lastExternalUserIdError = null;
+      lastEmailUpdateFailure = null;
+      didEmailUpdateSucceed = false;
 
       ShadowGMSLocationController.reset();
 
@@ -4412,6 +4430,102 @@ public class MainOneSignalClassRunner {
       ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(2);
       assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
       assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+   }
+
+   @Test
+   public void shouldRemoveExternalUserIdFromPushWithAuthHash() throws Exception {
+      String testExternalId = "test_ext_id";
+      String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+                      "   \"push\" : {" +
+                      "      \"success\" : true" +
+                      "   }" +
+                      "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
+      assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+      assertEquals(mockExternalIdHash, removeIdRequest.payload.getString("external_user_id_auth_hash"));
+   }
+
+   @Test
+   public void shouldRemoveExternalUserIdFromEmailWithAuthHash() throws Exception {
+      String testEmail = "test@test.com";
+      String mockEmailHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setEmail(testEmail, mockEmailHash, getEmailUpdateHandler());
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
+      threadAndTaskWait();
+
+      JSONObject expectedExternalUserIdResponse = new JSONObject(
+              "{" +
+                      "   \"push\" : {" +
+                      "      \"success\" : true" +
+                      "   }" + ", " +
+                      "   \"email\" : {" +
+                      "      \"success\" : true" +
+                      "   }" +
+                      "}"
+      );
+      assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+      assertTrue(didEmailUpdateSucceed);
+      assertNull(lastEmailUpdateFailure);
+
+      assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(4);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
+      assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+      assertFalse(removeIdRequest.payload.has("external_user_id_auth_hash"));
+
+      ShadowOneSignalRestClient.Request removeIdEmailRequest = ShadowOneSignalRestClient.requests.get(5);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdEmailRequest.method);
+      assertEquals(removeIdEmailRequest.payload.getString("external_user_id"), "");
+      assertEquals(mockEmailHash, removeIdEmailRequest.payload.getString("email_auth_hash"));
+   }
+
+   @Test
+   public void shouldRemoveExternalUserIdFromPushAndEmailWithAuthHash() throws Exception {
+      String testExternalId = "test_ext_id";
+      String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+      String testEmail = "test@test.com";
+      String mockEmailHash = new String(new char[64]).replace('\0', '0');
+
+      OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+      OneSignal.setEmail(testEmail, mockEmailHash, null);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OneSignal.removeExternalUserId();
+      threadAndTaskWait();
+
+      assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(4);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
+      assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+      assertEquals(mockExternalIdHash, removeIdRequest.payload.getString("external_user_id_auth_hash"));
+
+      ShadowOneSignalRestClient.Request removeIdEmailRequest = ShadowOneSignalRestClient.requests.get(5);
+      assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdEmailRequest.method);
+      assertEquals(removeIdEmailRequest.payload.getString("external_user_id"), "");
+      assertEquals(mockEmailHash, removeIdEmailRequest.payload.getString("email_auth_hash"));
    }
 
    @Test
