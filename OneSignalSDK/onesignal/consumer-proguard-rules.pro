@@ -65,6 +65,13 @@
 
 -keep public class com.onesignal.ADMMessageHandlerJob {*;}
 
+# OSRemoteNotificationReceivedHandler is an interface designed to be extend then referenced in the
+#    app's AndroidManifest.xml as a meta-data tag.
+# This doesn't count as a hard reference so this entry is required.
+-keep class ** implements com.onesignal.OneSignal$OSRemoteNotificationReceivedHandler {
+   void remoteNotificationReceived(android.content.Context, com.onesignal.OSNotificationReceivedEvent);
+}
+
 -keep class com.onesignal.JobIntentService$* {*;}
 
 -keep class com.onesignal.OneSignalUnityProxy {*;}
