@@ -476,8 +476,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         }
 
         subscriptionSwitch.setOnClickListener(v -> {
-            boolean isSubscribed12 = subscriptionSwitch.isChecked();
-            OneSignal.disablePush(isSubscribed12);
+            OneSignal.disablePush(!subscriptionSwitch.isChecked());
         });
     }
 
