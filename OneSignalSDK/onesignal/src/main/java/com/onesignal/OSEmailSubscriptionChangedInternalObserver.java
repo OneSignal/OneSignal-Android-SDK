@@ -38,9 +38,8 @@ class OSEmailSubscriptionChangedInternalObserver {
     //      - Prevents duplicated events
     //      - Notifies if changes were made outside of the app
     static void fireChangesToPublicObserver(OSEmailSubscriptionState state) {
-        OSEmailSubscriptionStateChanges stateChanges = new OSEmailSubscriptionStateChanges();
-        stateChanges.from = OneSignal.lastEmailSubscriptionState;
-        stateChanges.to = (OSEmailSubscriptionState)state.clone();
+        OSEmailSubscriptionStateChanges stateChanges =
+                new OSEmailSubscriptionStateChanges(OneSignal.lastEmailSubscriptionState, (OSEmailSubscriptionState) state.clone());
 
         boolean hasReceiver = OneSignal.getEmailSubscriptionStateChangesObserver().notifyChange(stateChanges);
         if (hasReceiver) {

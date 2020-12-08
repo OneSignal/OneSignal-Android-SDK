@@ -11,14 +11,14 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
 
+import com.onesignal.shortcutbadger.Badger;
+import com.onesignal.shortcutbadger.ShortcutBadgeException;
+import com.onesignal.shortcutbadger.util.BroadcastHelper;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-
-import com.onesignal.shortcutbadger.Badger;
-import com.onesignal.shortcutbadger.ShortcutBadgeException;
-import com.onesignal.shortcutbadger.util.BroadcastHelper;
 
 
 /**

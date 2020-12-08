@@ -29,8 +29,10 @@ package com.onesignal;
 
 import android.net.TrafficStats;
 import android.os.Build;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,8 +40,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
-
-import org.json.JSONObject;
 
 class OneSignalRestClient {
    static abstract class ResponseHandler {
@@ -63,7 +63,6 @@ class OneSignalRestClient {
    }
 
    public static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
-
       new Thread(new Runnable() {
          public void run() {
             makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT, null);
@@ -101,7 +100,7 @@ class OneSignalRestClient {
    
    private static void makeRequest(final String url, final String method, final JSONObject jsonBody, final ResponseHandler responseHandler, final int timeout, final String cacheKey) {
       if (OSUtils.isRunningOnMainThread())
-         throw new OneSignalNetworkCallException("Method: " + method + " was called from the Main Thread!");
+         throw new OSThrowable.OSMainThreadException("Method: " + method + " was called from the Main Thread!");
 
       // If not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
       if (method != null && OneSignal.shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
@@ -145,7 +144,7 @@ class OneSignalRestClient {
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
          con.setReadTimeout(timeout);
-         con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.VERSION);
+         con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignal.getSdkVersionRaw());
          con.setRequestProperty("Accept", OS_ACCEPT_HEADER);
 
          if (jsonBody != null)
@@ -291,11 +290,5 @@ class OneSignalRestClient {
 
    private static HttpURLConnection newHttpURLConnection(String url) throws IOException {
       return (HttpURLConnection)new URL(BASE_URL + url).openConnection();
-   }
-
-   private static class OneSignalNetworkCallException extends RuntimeException {
-      public OneSignalNetworkCallException(String message) {
-         super(message);
-      }
    }
 }

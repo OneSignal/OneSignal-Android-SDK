@@ -1,6 +1,6 @@
 package com.test.onesignal;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -111,6 +111,18 @@ class RestClientAsserts {
       Request request = ShadowOneSignalRestClient.requests.get(index);
 
       assertOnSessionUrl(request.url);
+   }
+
+   static void assertNumberOfOnSessions(int number) {
+      int successfulAsserts = 0;
+      for (Request request : ShadowOneSignalRestClient.requests) {
+         try {
+            assertOnSessionUrl(request.url);
+            successfulAsserts++;
+         } catch (AssertionError ignored) { }
+      }
+
+      assertEquals(number, successfulAsserts);
    }
 
    static void assertOnFocusAtIndex(int index, int focusTimeSec) throws JSONException {
@@ -256,6 +268,8 @@ class RestClientAsserts {
    static void assertOnSessionUrl(String url) {
       String[] parts = url.split("/");
       assertEquals("players", parts[0]);
+      if (parts.length == 1)
+         fail("Not an on_session as player_id and on_session is missing from the URL");
       assertIsUUID(parts[1]);
       assertEquals("on_session", parts[2]);
    }
@@ -330,5 +344,10 @@ class RestClientAsserts {
       }
       else
          fail("Invalid format");
+   }
+
+   public static void assertRemoteParamsWasTheOnlyNetworkCall() {
+      assertRemoteParamsAtIndex(0);
+      assertRestCalls(1);
    }
 }

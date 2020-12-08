@@ -29,12 +29,12 @@ package com.test.onesignal;
 
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -55,10 +55,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
-        shadows = {
-                ShadowOSUtils.class,
-        },
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class TrackerUnitTests {
@@ -67,31 +63,20 @@ public class TrackerUnitTests {
     private static final String IAM_ID = "iam_id";
 
     private OSTrackerFactory trackerFactory;
-    private MockOSSharedPreferences preferences;
 
     @BeforeClass // Runs only once, before any tests
     public static void setUpClass() throws Exception {
         ShadowLog.stream = System.out;
 
-        TestHelpers.beforeTestSuite();
-
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-        StaticResetHelper.saveStaticValues();
     }
 
     @Before // Before each test
     public void beforeEachTest() throws Exception {
         MockOSLog logger = new MockOSLog();
-        preferences = new MockOSSharedPreferences();
-        trackerFactory = new OSTrackerFactory(preferences, logger);
-
-        TestHelpers.beforeTestInitAndCleanup();
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        StaticResetHelper.restSetStaticFields();
-        threadAndTaskWait();
+        MockOSTimeImpl time = new MockOSTimeImpl();
+        MockOSSharedPreferences preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger, time);
     }
 
     @Test

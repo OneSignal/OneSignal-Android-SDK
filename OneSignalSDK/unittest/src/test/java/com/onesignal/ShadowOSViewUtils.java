@@ -1,7 +1,7 @@
 package com.onesignal;
 
 import android.app.Activity;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import org.robolectric.annotation.Implements;
 

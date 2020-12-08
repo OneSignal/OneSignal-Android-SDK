@@ -30,15 +30,15 @@ package com.onesignal;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 public class SyncService extends Service {
 
    @Override
    public int onStartCommand(Intent intent, int flags, int startId) {
-      OneSignalSyncServiceUtils.doBackgroundSync(
+      OSSyncService.getInstance().doBackgroundSync(
          this,
-         new OneSignalSyncServiceUtils.LegacySyncRunnable(this)
+         new OSSyncService.LegacySyncRunnable(this)
       );
 
       return START_STICKY;

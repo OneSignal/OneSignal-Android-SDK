@@ -36,7 +36,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.onesignal.AndroidSupportV4Compat.ActivityCompat;
 
@@ -56,7 +56,7 @@ public class PermissionsActivity extends Activity {
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
 
-      OneSignal.setAppContext(this);
+      OneSignal.initWithContext(this);
 
       // Android sets android:hasCurrentPermissionsRequest if the Activity was recreated while
       //  the permission prompt is showing to the user.
@@ -113,13 +113,15 @@ public class PermissionsActivity extends Activity {
                if (granted) {
                    LocationController.startGetLocation();
                } else {
-                  attemptToShowLocationPermissionSettings();
+                   attemptToShowLocationPermissionSettings();
                    LocationController.fireFailedComplete();
                }
             }
          }, DELAY_TIME_CALLBACK_CALL);
       }
-      ActivityLifecycleHandler.removeActivityAvailableListener(TAG);
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.removeActivityAvailableListener(TAG);
       finish();
       overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
    }
@@ -132,7 +134,7 @@ public class PermissionsActivity extends Activity {
    }
 
    private void showLocationPermissionSettings() {
-      new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+      new AlertDialog.Builder(OneSignal.getCurrentActivity())
               .setTitle(R.string.location_not_available_title)
               .setMessage(R.string.location_not_available_open_settings_message)
               .setPositiveButton(R.string.location_not_available_open_settings_option, new DialogInterface.OnClickListener() {
@@ -169,6 +171,8 @@ public class PermissionsActivity extends Activity {
          }
       };
 
-      ActivityLifecycleHandler.setActivityAvailableListener(TAG, activityAvailableListener);
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.addActivityAvailableListener(TAG, activityAvailableListener);
    }
 }

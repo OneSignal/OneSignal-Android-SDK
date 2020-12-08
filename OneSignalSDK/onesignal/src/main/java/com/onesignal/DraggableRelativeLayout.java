@@ -2,9 +2,9 @@ package com.onesignal;
 
 import android.content.Context;
 import android.content.res.Resources;
-import android.support.annotation.NonNull;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.widget.ViewDragHelper;
+import androidx.annotation.NonNull;
+import androidx.core.view.ViewCompat;
+import androidx.customview.widget.ViewDragHelper;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -28,6 +28,7 @@ class DraggableRelativeLayout extends RelativeLayout {
    private DraggableListener mListener;
    private ViewDragHelper mDragHelper;
    private boolean dismissing;
+   private boolean draggingDisabled;
 
    static class Params {
       static final int DRAGGABLE_DIRECTION_UP = 0;
@@ -40,6 +41,8 @@ class DraggableRelativeLayout extends RelativeLayout {
       int height;
       int messageHeight;
       int dragDirection;
+
+      boolean draggingDisabled;
 
       private int dismissingYVelocity;
       private int offScreenYPos;
@@ -85,6 +88,9 @@ class DraggableRelativeLayout extends RelativeLayout {
 
          @Override
          public int clampViewPositionVertical(@NonNull View child, int top, int dy) {
+            if (params.draggingDisabled) {
+               return params.maxYPos;
+            }
             lastYPos = top;
             if (params.dragDirection == Params.DRAGGABLE_DIRECTION_DOWN) {
                // Dragging down

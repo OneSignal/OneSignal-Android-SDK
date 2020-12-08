@@ -1,7 +1,7 @@
 package com.onesignal;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,11 +23,8 @@ public class OSInAppMessageAction {
     private static final String CLICK_URL = "click_url";
     private static final String FIRST_CLICK = "first_click";
     private static final String CLOSES_MESSAGE = "closes_message";
-    //TODO when backend is ready check if key match
     private static final String OUTCOMES = "outcomes";
-    //TODO when backend is ready check if key match
     private static final String TAGS = "tags";
-    //TODO when backend is ready check if key match
     private static final String PROMPTS = "prompts";
 
     /**
@@ -35,50 +32,52 @@ public class OSInAppMessageAction {
      * Package-private to track which element was tapped to report to the OneSignal dashboard.
      */
     @NonNull
-    String clickId;
+    private String clickId;
 
     /**
      * An optional click name entered defined by the app developer when creating the IAM
      */
     @Nullable
-    public String clickName;
+    private  String clickName;
 
     /**
      * Determines where the URL is opened, ie. Default browser.
      */
     @Nullable
-    public OSInAppMessageActionUrlType urlTarget;
+    private OSInAppMessageActionUrlType urlTarget;
 
     /**
      * An optional URL that opens when the action takes place
      */
     @Nullable
-    public String clickUrl;
+    private String clickUrl;
 
     /**
      * Outcome for action
      */
     @NonNull
-    public List<OSInAppMessageOutcome> outcomes = new ArrayList<>();
+    private List<OSInAppMessageOutcome> outcomes = new ArrayList<>();
 
     /**
      * Prompts for action
      */
     @NonNull
-    public List<OSInAppMessagePrompt> prompts = new ArrayList<>();
+    private List<OSInAppMessagePrompt> prompts = new ArrayList<>();
 
-    /** Tags for action */
-    public OSInAppMessageTag tags;
+    /**
+     * Tags for action
+     */
+    private OSInAppMessageTag tags;
 
     /**
      * Determines if this was the first action taken on the in app message
      */
-    public boolean firstClick;
+    private boolean firstClick;
 
     /**
      * Determines if tapping on the element should close the In-App Message.
      */
-    public boolean closesMessage;
+    private boolean closesMessage;
 
     OSInAppMessageAction(@NonNull JSONObject json) throws JSONException {
         clickId = json.optString(ID, null);
@@ -114,6 +113,52 @@ public class OSInAppMessageAction {
                 prompts.add(new OSInAppMessageLocationPrompt());
             }
         }
+    }
+
+    @NonNull
+    String getClickId() {
+        return clickId;
+    }
+
+    @Nullable
+    public String getClickName() {
+        return clickName;
+    }
+
+    @Nullable
+    public OSInAppMessageActionUrlType getUrlTarget() {
+        return urlTarget;
+    }
+
+    @Nullable
+    public String getClickUrl() {
+        return clickUrl;
+    }
+
+    @NonNull
+    public List<OSInAppMessageOutcome> getOutcomes() {
+        return outcomes;
+    }
+
+    @NonNull
+    public List<OSInAppMessagePrompt> getPrompts() {
+        return prompts;
+    }
+
+    public OSInAppMessageTag getTags() {
+        return tags;
+    }
+
+    public boolean isFirstClick() {
+        return firstClick;
+    }
+
+    void setFirstClick(boolean firstClick) {
+        this.firstClick = firstClick;
+    }
+
+    public boolean doesCloseMessage() {
+        return closesMessage;
     }
 
     public JSONObject toJSONObject() {

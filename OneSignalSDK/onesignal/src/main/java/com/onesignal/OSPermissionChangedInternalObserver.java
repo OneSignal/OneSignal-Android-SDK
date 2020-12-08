@@ -34,7 +34,7 @@ class OSPermissionChangedInternalObserver {
    }
    
    static void handleInternalChanges(OSPermissionState state) {
-      if (!state.getEnabled())
+      if (!state.areNotificationsEnabled())
          BadgeCountUpdater.updateCount(0, OneSignal.appContext);
       OneSignalStateSynchronizer.setPermission(OneSignal.areNotificationsEnabledForSubscribedState());
    }
@@ -45,9 +45,7 @@ class OSPermissionChangedInternalObserver {
    //      - Prevents duplicated events
    //      - Notifies if changes were made outside of the app
    static void fireChangesToPublicObserver(OSPermissionState state) {
-      OSPermissionStateChanges stateChanges = new OSPermissionStateChanges();
-      stateChanges.from = OneSignal.lastPermissionState;
-      stateChanges.to = (OSPermissionState)state.clone();
+      OSPermissionStateChanges stateChanges = new OSPermissionStateChanges(OneSignal.lastPermissionState, (OSPermissionState)state.clone());
       
       boolean hasReceiver = OneSignal.getPermissionStateChangesObserver().notifyChange(stateChanges);
       if (hasReceiver) {

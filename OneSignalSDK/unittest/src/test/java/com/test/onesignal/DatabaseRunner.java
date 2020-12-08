@@ -4,22 +4,24 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.InAppMessageTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
-import com.onesignal.OutcomeEvent;
+import com.onesignal.OSOutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.model.OSInfluenceChannel;
-import com.onesignal.influence.model.OSInfluenceType;
-import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
-import com.onesignal.outcomes.MockOSOutcomeEventsTable;
+import com.onesignal.influence.domain.OSInfluenceChannel;
+import com.onesignal.influence.domain.OSInfluenceType;
+import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
+import com.onesignal.outcomes.data.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.OSOutcomeTableProvider;
-import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
+import com.onesignal.outcomes.domain.OSCachedUniqueOutcomeName;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,7 +32,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -48,7 +49,6 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOneSignalDbHelper.class
         },
@@ -79,7 +79,7 @@ public class DatabaseRunner {
         TestHelpers.beforeTestInitAndCleanup();
 
         outcomeTableProvider = new OSOutcomeTableProvider();
-        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
     }
 
     @After
@@ -136,7 +136,7 @@ public class DatabaseRunner {
         writableDatabase.setVersion(3);
         writableDatabase.close();
 
-        OutcomeEvent event = new OutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
+        OSOutcomeEvent event = new OSOutcomeEvent(OSInfluenceType.UNATTRIBUTED, new JSONArray().put("notificationId"), "name", 0, 0);
         ContentValues values = new ContentValues();
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, event.getSession().toString().toLowerCase());
         values.put(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, event.getNotificationIds().toString());
@@ -149,7 +149,7 @@ public class DatabaseRunner {
         ShadowOneSignalDbHelper.ignoreDuplicatedFieldsOnUpgrade = true;
 
         // 4. Opening the DB will auto trigger the update.
-        List<OutcomeEvent> events = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OSOutcomeEvent> events = getAllOutcomesRecordsDBv5(dbHelper);
 
         assertEquals(events.size(), 0);
 
@@ -175,7 +175,7 @@ public class DatabaseRunner {
 
     private static final String SQL_CREATE_UNIQUE_OUTCOME_REVISION1_ENTRIES =
             "CREATE TABLE " + MockOSCachedUniqueOutcomeTable.TABLE_NAME_V1 + " (" +
-                    MockOSCachedUniqueOutcomeTable._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                    MockOSCachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
                     MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
                     MockOSCachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
                     ");";
@@ -432,7 +432,7 @@ public class DatabaseRunner {
 
         writableDatabase.insert(MockOSOutcomeEventsTable.TABLE_NAME, null, outcomeValues);
 
-        List<OutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
+        List<OSOutcomeEvent> outcomesSavedBeforeUpdate = getAllOutcomesRecordsDBv5(dbHelper);
         assertEquals(1, outcomesSavedBeforeUpdate.size());
 
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();

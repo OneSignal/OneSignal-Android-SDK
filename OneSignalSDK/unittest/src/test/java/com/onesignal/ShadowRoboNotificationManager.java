@@ -27,12 +27,12 @@
 
 package com.onesignal;
 
-import android.app.NotificationChannel;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
-import android.support.annotation.NonNull;
-import android.support.v4.app.NotificationCompat;
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 
 import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowNotification;
@@ -75,7 +75,7 @@ public class ShadowRoboNotificationManager extends ShadowNotificationManager {
    public static LinkedHashMap<Integer, PostedNotification> notifications = new LinkedHashMap<>();
 
    private static ShadowRoboNotificationManager mInstance;
-   ShadowRoboNotificationManager() {
+   public ShadowRoboNotificationManager() {
       mInstance = this;
    }
    

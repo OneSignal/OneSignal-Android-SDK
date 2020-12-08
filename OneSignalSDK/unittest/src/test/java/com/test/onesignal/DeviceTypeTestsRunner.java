@@ -1,5 +1,7 @@
 package com.test.onesignal;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.OneSignal;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
@@ -9,7 +11,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -39,7 +40,7 @@ public class DeviceTypeTestsRunner {
     @Before
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
-        OneSignal.setAppContext(RuntimeEnvironment.application);
+        OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
     }
 
     @Test
@@ -63,19 +64,6 @@ public class DeviceTypeTestsRunner {
     public void FCMAndGMSEnabled_isAndroid() {
         ShadowOSUtils.isGMSInstalledAndEnabled = true;
         ShadowOSUtils.hasFCMLibrary = true;
-        assertEquals(DEVICE_TYPE_ANDROID, getDeviceType());
-    }
-
-    @Test
-    public void onlyGCM_isAndroid() {
-        ShadowOSUtils.hasGCMLibrary = true;
-        assertEquals(DEVICE_TYPE_ANDROID, getDeviceType());
-    }
-
-    @Test
-    public void GCMAndGMSEnabled_isAndroid() {
-        ShadowOSUtils.isGMSInstalledAndEnabled = true;
-        ShadowOSUtils.hasGCMLibrary = true;
         assertEquals(DEVICE_TYPE_ANDROID, getDeviceType());
     }
 

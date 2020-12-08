@@ -75,25 +75,43 @@ public class ShadowOneSignalRestClient {
       }
    }
 
-   public static JSONObject lastPost;
+   public static List<String> successfulGETResponses = new ArrayList<>();
    public static ArrayList<Request> requests;
-   public static String lastUrl;
+   public static String lastUrl, failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse, pushUserId, emailUserId, failMethod;
+   public static Pattern nextSuccessfulGETResponsePattern;
+   public static JSONObject lastPost;
    public static boolean failNext, failNextPut, failAll, failPosts, failGetParams;
    public static int failHttpCode;
-   public static String failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse;
-   public static Pattern nextSuccessfulGETResponsePattern;
-   public static List<String> successfulGETResponses = new ArrayList<>();
    public static int networkCallCount;
 
-   public static String pushUserId, emailUserId;
-
-   public static JSONObject paramExtras;
    
    // Pauses any network callbacks from firing.
    // Also blocks any sync network calls.
    public static boolean freezeResponses;
    private static ConcurrentHashMap<Object, PendingResponse> pendingResponses = new ConcurrentHashMap<>();
 
+   private static String remoteParamsGetHtmlResponse = null;
+   private static final String REMOTE_PARAMS = " {" +
+           "\"awl_list\":{}," +
+           "\"android_sender_id\":\"87654321\"," +
+           "\"chnl_lst\":[]," +
+           "\"enterp\":false," +
+           "\"outcomes\":{" +
+           "\"direct\":{\"enabled\":true}," +
+           "\"indirect\":{" +
+           "\"notification_attribution\":{" +
+           "\"minutes_since_displayed\":60," +
+           "\"limit\":10},\"enabled\":true" +
+           "}," +
+           "\"unattributed\":{" +
+           "\"enabled\":true" +
+           "}" +
+           "}," +
+           "\"receive_receipts_enable\":false," +
+           "\"unsubscribe_on_notifications_disabled\":true," +
+           "\"disable_gms_missing_prompt\":true," +
+           "\"location_shared\":true" +
+           "}";
    private static final String IAM_GET_HTML_RESPONSE;
    static {
       String value = null;
@@ -117,6 +135,7 @@ public class ShadowOneSignalRestClient {
       nextSuccessfulGETResponse = null;
       nextSuccessfulGETResponsePattern = null;
 
+      failMethod = null;
       failResponse = "{}";
       nextSuccessfulRegistrationResponse = null;
       nextSuccessResponse = null;
@@ -127,10 +146,9 @@ public class ShadowOneSignalRestClient {
       failGetParams = false;
       failHttpCode = 400;
 
-      paramExtras = null;
-
       freezeResponses = false;
       pendingResponses = new ConcurrentHashMap<>();
+      remoteParamsGetHtmlResponse = null;
    }
 
    public static void unFreezeResponses() {
@@ -168,6 +186,38 @@ public class ShadowOneSignalRestClient {
       for (JSONObject response : responses) {
          successfulGETResponses.add(response.toString(1));
       }
+   }
+
+   public static void setRemoteParamsRequirePrivacyConsent(boolean requirePrivacyConsent) throws JSONException {
+      JSONObject remoteParams = new JSONObject().put("requires_user_privacy_consent", requirePrivacyConsent);
+      ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+   }
+
+   public static void setRemoteParamsGetHtmlResponse(JSONObject params) throws JSONException {
+      JSONObject remoteParams = new JSONObject(REMOTE_PARAMS);
+      Iterator<String> keys = params.keys();
+
+      while (keys.hasNext()) {
+         String key = keys.next();
+         remoteParams.put(key, params.get(key));
+      }
+      remoteParamsGetHtmlResponse = remoteParams.toString();
+   }
+
+   public static void setAndRemoveKeyFromRemoteParams(String key) throws JSONException {
+      JSONObject remoteParams = new JSONObject(REMOTE_PARAMS);
+      if (remoteParams.has(key)) {
+         remoteParams.remove(key);
+      }
+      remoteParamsGetHtmlResponse = remoteParams.toString();
+   }
+
+   public static void setRemoteParamsGetHtmlResponse(String response) {
+      remoteParamsGetHtmlResponse = response;
+   }
+
+   public static void setRemoteParamsGetHtmlResponse() {
+      remoteParamsGetHtmlResponse = REMOTE_PARAMS;
    }
 
    private static void freezeSyncCall() {
@@ -218,7 +268,7 @@ public class ShadowOneSignalRestClient {
    }
 
    private static boolean doFail(OneSignalRestClient.ResponseHandler responseHandler, boolean doFail) {
-      if (failNext || failAll || doFail) {
+      if (failNext || failAll || doFail || handleFailMethod(lastUrl, responseHandler)) {
          if (!suspendResponse(false, failResponse, responseHandler))
             responseHandler.onFailure(failHttpCode, failResponse, new Exception());
          failNext = failNextPut = false;
@@ -294,36 +344,22 @@ public class ShadowOneSignalRestClient {
    }
 
    public static void get(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) throws JSONException {
-      trackRequest(REST_METHOD.GET, null, url);
-      if (failGetParams && doFail(responseHandler, true)) return;
+       trackRequest(REST_METHOD.GET, null, url);
+       if (failGetParams && doFail(responseHandler, true)) return;
 
-      if (doNextSuccessfulGETResponse(url, responseHandler))
-         return;
+       if (handleRemoteParamsIfAvailable(url, responseHandler))
+           return;
 
-     if (nextSuccessResponse != null) {
-         responseHandler.onSuccess(nextSuccessResponse);
-         nextSuccessResponse = null;
-      }
-      else {
-         if (handleGetIAM(url, responseHandler))
-            return;
+       if (handleGetIAM(url, responseHandler))
+           return;
 
-         try {
-            JSONObject getResponseJson = new JSONObject(
-               "{\"awl_list\": {}, \"android_sender_id\": \"87654321\"}"
-            );
-            if (paramExtras != null) {
-               Iterator<String> keys = paramExtras.keys();
-               while(keys.hasNext()) {
-                  String key = keys.next();
-                  getResponseJson.put(key, paramExtras.get(key));
-               }
-            }
-            responseHandler.onSuccess(getResponseJson.toString());
-         } catch (JSONException e) {
-            e.printStackTrace();
-         }
-      }
+       if (doNextSuccessfulGETResponse(url, responseHandler))
+           return;
+
+       if (nextSuccessResponse != null) {
+           responseHandler.onSuccess(nextSuccessResponse);
+           nextSuccessResponse = null;
+       }
    }
 
    public static void getSync(final String url, final OneSignalRestClient.ResponseHandler responseHandler, String cacheKey) throws JSONException {
@@ -359,5 +395,17 @@ public class ShadowOneSignalRestClient {
 
       responseHandler.onSuccess(IAM_GET_HTML_RESPONSE);
       return true;
+   }
+
+   private static boolean handleRemoteParamsIfAvailable(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      if (remoteParamsGetHtmlResponse == null || !url.contains("android_params"))
+         return false;
+
+      responseHandler.onSuccess(remoteParamsGetHtmlResponse);
+      return true;
+   }
+
+   private static boolean handleFailMethod(final String url, final OneSignalRestClient.ResponseHandler responseHandler) {
+      return failMethod != null && url.contains(failMethod);
    }
 }

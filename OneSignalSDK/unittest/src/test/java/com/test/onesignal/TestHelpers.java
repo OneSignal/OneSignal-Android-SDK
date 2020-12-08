@@ -1,5 +1,6 @@
 package com.test.onesignal;
 
+import android.app.AlarmManager;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.app.job.JobService;
@@ -8,47 +9,61 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.support.annotation.Nullable;
+import android.util.Log;
 
+import androidx.annotation.Nullable;
+import androidx.test.core.app.ApplicationProvider;
+import androidx.work.Configuration;
+import androidx.work.testing.SynchronousExecutor;
+import androidx.work.testing.WorkManagerTestInitHelper;
+
+import com.onesignal.FocusDelaySyncJobService;
+import com.onesignal.MockOSTimeImpl;
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
-import com.onesignal.OutcomeEvent;
+import com.onesignal.OSOutcomeEvent;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
+import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowFirebaseAnalytics;
 import com.onesignal.ShadowFusedLocationApiWrapper;
-import com.onesignal.ShadowGcmBroadcastReceiver;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
 import com.onesignal.ShadowHMSFusedLocationProviderClient;
 import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowNotificationManagerCompat;
+import com.onesignal.ShadowNotificationReceivedEvent;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowPushRegistratorHMS;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.model.OSInfluenceType;
-import com.onesignal.outcomes.MockOSCachedUniqueOutcomeTable;
-import com.onesignal.outcomes.MockOSOutcomeEventsTable;
+import com.onesignal.SyncJobService;
+import com.onesignal.influence.domain.OSInfluenceType;
+import com.onesignal.outcomes.data.MockOSCachedUniqueOutcomeTable;
+import com.onesignal.outcomes.data.MockOSOutcomeEventsTable;
 import com.onesignal.outcomes.OSOutcomeEventDB;
-import com.onesignal.outcomes.model.OSCachedUniqueOutcomeName;
+import com.onesignal.outcomes.domain.OSCachedUniqueOutcomeName;
 
 import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.robolectric.Robolectric;
-import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ActivityController;
+import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowApplication;
-import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.util.Scheduler;
 
 import java.util.ArrayList;
@@ -57,10 +72,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.JSONUtils;
+import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
 public class TestHelpers {
 
+   private static final String TAG = TestHelpers.class.getCanonicalName();
    private static final long SIX_MONTHS_TIME_SECONDS = 6 * 30 * 24 * 60 * 60;
 
    static Exception lastException;
@@ -70,6 +88,10 @@ public class TestHelpers {
       if (!ranBeforeTestSuite)
          return;
 
+      setupTestWorkManager(ApplicationProvider.getApplicationContext());
+
+      resetAlarmManager();
+
       resetSystemClock();
 
       stopAllOSThreads();
@@ -78,7 +100,7 @@ public class TestHelpers {
 
       ShadowOneSignalRestClient.resetStatics();
 
-      ShadowPushRegistratorGCM.resetStatics();
+      ShadowPushRegistratorFCM.resetStatics();
       ShadowPushRegistratorADM.resetStatics();
       ShadowHmsInstanceId.resetStatics();
       ShadowPushRegistratorHMS.resetStatics();
@@ -87,7 +109,7 @@ public class TestHelpers {
       ShadowNotificationManagerCompat.enabled = true;
 
       ShadowCustomTabsClient.resetStatics();
-      ShadowGcmBroadcastReceiver.resetStatics();
+      ShadowFCMBroadcastReceiver.resetStatics();
 
       ShadowFusedLocationApiWrapper.resetStatics();
       ShadowHMSFusedLocationProviderClient.resetStatics();
@@ -102,11 +124,12 @@ public class TestHelpers {
 
       ShadowDynamicTimer.resetStatics();
 
-      ShadowOSWebView.resetStatics();
-
       OneSignalShadowPackageManager.resetStatics();
 
       ShadowOSUtils.resetStatics();
+      ShadowTimeoutHandler.resetStatics();
+      ShadowGenerateNotification.resetStatics();
+      ShadowNotificationReceivedEvent.resetStatics();
 
       lastException = null;
    }
@@ -117,6 +140,8 @@ public class TestHelpers {
       } catch (Exception e) {
          e.printStackTrace();
       }
+
+      stopJobs();
 
       if (lastException != null)
          throw lastException;
@@ -181,7 +206,7 @@ public class TestHelpers {
    }
 
    // Run any OneSignal background threads including any pending runnables
-   static void threadAndTaskWait() throws Exception {
+   public static void threadAndTaskWait() throws Exception {
       ShadowApplication.getInstance().getForegroundThreadScheduler().runOneTask();
       // Runs Runnables posted by calling View.post() which are run on the main thread.
       Robolectric.getForegroundThreadScheduler().runOneTask();
@@ -192,7 +217,6 @@ public class TestHelpers {
          createdNewThread = runOSThreads() || runOSThreads();
 
          boolean advancedRunnables = OneSignalPackagePrivateHelper.runAllNetworkRunnables();
-         advancedRunnables = OneSignalPackagePrivateHelper.runFocusRunnables() || advancedRunnables;
 
          if (advancedRunnables)
             createdNewThread = true;
@@ -229,13 +253,15 @@ public class TestHelpers {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
+      Log.d(TAG, "************ FAST COLD RESTART FINISHED! ************");
    }
 
-   static void restartAppAndElapseTimeToNextSession() throws Exception {
+   static void restartAppAndElapseTimeToNextSession(MockOSTimeImpl time) throws Exception {
       stopAllOSThreads();
       flushBufferedSharedPrefs();
       StaticResetHelper.restSetStaticFields();
-      advanceSystemTimeBy(31);
+      time.advanceSystemAndElapsedTimeBy(31);
+      Log.d(TAG, "************ restartAppAndElapseTimeToNextSession finished ************");
    }
 
    static ArrayList<HashMap<String, Object>> getAllNotificationRecords(OneSignalDb db) {
@@ -272,7 +298,7 @@ public class TestHelpers {
       return mapList;
    }
 
-   static List<OutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) { ;
+   static List<OSOutcomeEvent>  getAllOutcomesRecordsDBv5(OneSignalDb db) { ;
       Cursor cursor = db.query(
               MockOSOutcomeEventsTable.TABLE_NAME,
               null,
@@ -284,7 +310,7 @@ public class TestHelpers {
               null // limit
       );
 
-      List<OutcomeEvent> events = new ArrayList<>();
+      List<OSOutcomeEvent> events = new ArrayList<>();
       if (cursor.moveToFirst()) {
          do {
             String notificationIds = cursor.getString(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS));
@@ -295,7 +321,7 @@ public class TestHelpers {
             float weight = cursor.getFloat(cursor.getColumnIndex(MockOSOutcomeEventsTable.COLUMN_NAME_WEIGHT));
 
             try {
-               OutcomeEvent event = new OutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
+               OSOutcomeEvent event = new OSOutcomeEvent(session, new JSONArray(notificationIds), name, timestamp, weight);
                events.add(event);
 
             } catch (JSONException e) {
@@ -458,22 +484,23 @@ public class TestHelpers {
       return iams;
    }
 
-   /**
-    * Calling setNanoTime ends up locking time to zero.
-    * NOTE: This setNanoTime is going away in future robolectric versions
-    */
-   static void lockTimeTo(long sec) {
-      long nano = sec * 1_000L * 1_000L;
-      ShadowSystemClock.setNanoTime(nano);
+   static void setupTestWorkManager(Context context) {
+      final Configuration config = new Configuration.Builder()
+              .setMinimumLoggingLevel(Log.DEBUG)
+              .setExecutor(new SynchronousExecutor())
+              .build();
+      WorkManagerTestInitHelper.initializeTestWorkManager(context, config);
+   }
+
+   private static void resetAlarmManager() {
+      AlarmManager alarmManager = (AlarmManager) ApplicationProvider.getApplicationContext()
+              .getSystemService(Context.ALARM_SERVICE);
+      ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
+      shadowAlarmManager.getScheduledAlarms().clear();
    }
 
    static void resetSystemClock() {
       SystemClock.setCurrentTimeMillis(System.currentTimeMillis());
-   }
-
-   static void advanceSystemTimeBy(long sec) {
-      long ms = sec * 1_000L;
-      SystemClock.setCurrentTimeMillis(ShadowSystemClock.currentTimeMillis() + ms);
    }
 
    public static void assertMainThread() {
@@ -481,23 +508,103 @@ public class TestHelpers {
          Assert.fail("assertMainThread - Not running on main thread when expected to!");
    }
 
-
-   public static @Nullable JobInfo getNextJob() {
+   static void stopJobs() throws Exception {
       JobScheduler jobScheduler =
-         (JobScheduler)RuntimeEnvironment.application.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+              (JobScheduler) ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      if (jobScheduler != null) {
+         List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
+         for (JobInfo jobInfo : jobs) {
+            stopJob(jobInfo);
+            threadAndTaskWait();
+         }
+      }
+   }
+   public static @Nullable JobInfo getNextJob() {
+      return getJob(0);
+   }
+
+   private static @Nullable JobInfo getJob(int index) {
+      JobScheduler jobScheduler =
+              (JobScheduler)ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
       List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
-      if (jobs.size() == 0)
+      if (jobs.size() == 0 || jobs.size() <= index)
          return null;
-      return jobs.get(0);
+      else
+         return jobs.get(index);
    }
 
    public static void runNextJob() {
       try {
          Class jobClass = Class.forName(getNextJob().getService().getClassName());
-         JobService jobService = (JobService)Robolectric.buildService(jobClass).create().get();
-         jobService.onStartJob(null);
+         runJob(jobClass);
       } catch (ClassNotFoundException e) {
          e.printStackTrace();
       }
+   }
+
+   public static void runJob(Class jobClass) {
+      JobService jobService = (JobService) Robolectric.buildService(jobClass).create().get();
+      jobService.onStartJob(null);
+   }
+
+   public static void stopJob(JobInfo jobInfo) {
+      try {
+         Class jobClass = Class.forName(jobInfo.getService().getClassName());
+         JobService jobService = (JobService) Robolectric.buildService(jobClass).create().get();
+         jobService.jobFinished(null, false);
+      } catch (ClassNotFoundException e) {
+         e.printStackTrace();
+      }
+   }
+
+
+   public static void assertNumberOfServicesAvailable(int quantity) {
+      JobScheduler jobScheduler =
+              (JobScheduler)ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+      List<JobInfo> jobs = jobScheduler.getAllPendingJobs();
+      assertEquals(quantity, jobs.size());
+   }
+
+   public static void assertAndRunNextJob(Class jobClass) {
+      assertNumberOfServicesAvailable(1);
+      assertNextJob(jobClass);
+      runNextJob();
+   }
+
+   public static void assertAndRunJobAtIndex(Class jobClass, int index) {
+      assertNextJob(jobClass, index);
+      runJob(jobClass);
+   }
+
+   public static void assertNextJob(Class jobClass) {
+      assertNextJob(jobClass, 0);
+   }
+
+   public static void assertNextJob(Class jobClass, int index) {
+      assertEquals(jobClass.getName(), getJob(index).getService().getClassName());
+   }
+
+   public static void pauseActivity(ActivityController activityController) throws Exception {
+      activityController.pause();
+      threadAndTaskWait();
+
+      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
+      threadAndTaskWait(); // Kicks off the Job service's background thread.
+   }
+
+   public static void assertAndRunSyncService() throws Exception {
+      // There should be FocusDelaySyncJobService + SyncJobService services schedules
+      assertNumberOfServicesAvailable(2);
+      // A sync job should have been schedule, lets run it to ensure on_focus is called.
+      TestHelpers.assertAndRunJobAtIndex(SyncJobService.class, 1);
+      threadAndTaskWait();
+   }
+
+   /**
+    * Add the correct manifest meta-data key and value regarding the NotificationServiceExtension to the
+    *    mocked OneSignalShadowPackageManager metaData Bundle
+    */
+   public static void startRemoteNotificationReceivedHandlerService(String servicePath) {
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationServiceExtension", servicePath);
    }
 }

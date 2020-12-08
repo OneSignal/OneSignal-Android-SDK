@@ -6,8 +6,8 @@ import android.app.Activity;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
@@ -83,7 +83,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param htmlStr the html to display on the WebView
      */
     static void showHTMLString(@NonNull final OSInAppMessage message, @NonNull final String htmlStr) {
-        final Activity currentActivity = ActivityLifecycleHandler.curActivity;
+        final Activity currentActivity = OneSignal.getCurrentActivity();
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showHTMLString on currentActivity: " + currentActivity);
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
@@ -158,6 +158,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         static final String IAM_DISPLAY_LOCATION_KEY = "displayLocation";
         static final String IAM_PAGE_META_DATA_KEY = "pageMetaData";
+        static final String IAM_DRAG_TO_DISMISS_DISABLED_KEY = "dragToDismissDisabled";
 
         @JavascriptInterface
         public void postMessage(String message) {
@@ -181,7 +182,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private void handleRenderComplete(JSONObject jsonObject) {
             Position displayType = getDisplayLocation(jsonObject);
             int pageHeight = displayType == Position.FULL_SCREEN ? -1 : getPageHeightData(jsonObject);
-            createNewInAppMessageView(displayType, pageHeight);
+            boolean dragToDismissDisabled = getDragToDismissDisabled(jsonObject);
+            createNewInAppMessageView(displayType, pageHeight, dragToDismissDisabled);
         }
 
         private int getPageHeightData(JSONObject jsonObject) {
@@ -201,6 +203,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 e.printStackTrace();
             }
             return displayLocation;
+        }
+
+        private boolean getDragToDismissDisabled(JSONObject jsonObject) {
+            try {
+                return jsonObject.getBoolean(IAM_DRAG_TO_DISMISS_DISABLED_KEY);
+            } catch (JSONException e) {
+                return false;
+            }
         }
 
         private void handleActionTaken(JSONObject jsonObject) throws JSONException {
@@ -352,8 +362,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         webView.layout(0,0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity));
     }
 
-    private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight) {
-        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration());
+    private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight, boolean dragToDismissDisabled) {
+        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration(), dragToDismissDisabled);
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
             public void onMessageWasShown() {
@@ -368,8 +378,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             }
         });
 
+        final ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
         // Fires event if available, which will call messageView.showInAppMessageView() for us.
-        ActivityLifecycleHandler.setActivityAvailableListener(TAG + message.messageId, this);
+        if (activityLifecycleHandler != null)
+            activityLifecycleHandler.addActivityAvailableListener(TAG + message.messageId, this);
     }
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
@@ -389,7 +401,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void removeActivityListener() {
-        ActivityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
+        ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+        if (activityLifecycleHandler != null)
+            activityLifecycleHandler.removeActivityAvailableListener(TAG + message.messageId);
     }
     /**
      * Trigger the {@link #messageView} dismiss animation flow

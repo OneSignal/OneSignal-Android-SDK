@@ -1,6 +1,6 @@
 package com.onesignal;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
@@ -51,12 +51,12 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
                         JSONObject lastGetTagsResponse = new JSONObject(responseStr);
                         if (lastGetTagsResponse.has("tags")) {
                             synchronized(LOCK) {
-                                JSONObject dependDiff = generateJsonDiff(currentUserState.getSyncValues().optJSONObject("tags"),
+                                JSONObject dependDiff = generateJsonDiff(getCurrentUserState().getSyncValues().optJSONObject("tags"),
                                         getToSyncUserState().getSyncValues().optJSONObject("tags"),
                                         null, null);
 
-                                currentUserState.putOnSyncValues("tags", lastGetTagsResponse.optJSONObject("tags"));
-                                currentUserState.persistState();
+                                getCurrentUserState().putOnSyncValues("tags", lastGetTagsResponse.optJSONObject("tags"));
+                                getCurrentUserState().persistState();
 
                                 // Allow server side tags to overwrite local tags expect for any pending changes
                                 //  that haven't been successfully posted.
@@ -72,14 +72,14 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         }
 
         synchronized(LOCK) {
-            return new GetTagsResult(serverSuccess, JSONUtils.getJSONObjectWithoutBlankValues(toSyncUserState.getSyncValues(), "tags"));
+            return new GetTagsResult(serverSuccess, JSONUtils.getJSONObjectWithoutBlankValues(getToSyncUserState().getSyncValues(), "tags"));
         }
     }
 
     @Override
     @Nullable String getExternalId(boolean fromServer) {
         synchronized(LOCK) {
-            return toSyncUserState.getSyncValues().optString("external_user_id", null);
+            return getToSyncUserState().getSyncValues().optString("external_user_id", null);
         }
     }
 
@@ -183,7 +183,5 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     protected void onSuccessfulSync(JSONObject jsonFields) {
         if (jsonFields.has("email"))
             OneSignal.fireEmailUpdateSuccess();
-        if (jsonFields.has("identifier"))
-            OneSignal.fireIdsAvailableCallback();
     }
 }

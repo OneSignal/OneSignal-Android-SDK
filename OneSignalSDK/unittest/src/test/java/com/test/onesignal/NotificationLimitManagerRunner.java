@@ -2,18 +2,19 @@ package com.test.onesignal;
 
 import android.app.NotificationManager;
 import android.content.Context;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowNotificationLimitManager;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -28,17 +29,17 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromGCMIntentService;
+import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.TestHelpers.afterTestCleanup;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowNotificationLimitManager.class,
-            ShadowPushRegistratorGCM.class,
+            ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
             ShadowOneSignalRestClient.class,
@@ -47,12 +48,11 @@ import static junit.framework.Assert.assertEquals;
         },
         sdk = 26
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class NotificationLimitManagerRunner {
 
-   private NotificationManager notificationManager;
    private BlankActivity blankActivity;
+   private NotificationManager notificationManager;
 
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
@@ -68,8 +68,10 @@ public class NotificationLimitManagerRunner {
       notificationManager = (NotificationManager)blankActivity.getSystemService(Context.NOTIFICATION_SERVICE);
       TestHelpers.beforeTestInitAndCleanup();
 
-      OneSignal.init(blankActivity, "123456789", "b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-      OneSignal.setInFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+      // Set remote_params GET response
+      setRemoteParamsGetHtmlResponse();
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
       threadAndTaskWait();
    }
 
@@ -84,6 +86,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 2);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
       assertEquals(2, notificationManager.getActiveNotifications()[0].getId());
@@ -94,6 +97,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 1);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }
@@ -109,6 +113,7 @@ public class NotificationLimitManagerRunner {
       createNotification(blankActivity, 2);
 
       NotificationLimitManager.clearOldestOverLimitStandard(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1 , notificationManager.getActiveNotifications()[0].getId());
    }
@@ -121,20 +126,27 @@ public class NotificationLimitManagerRunner {
    }
 
    @Test
-   public void clearFallbackMakingRoomForOneWhenAtLimit() {
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity,  getBaseNotifBundle("UUID2"), null);
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void clearFallbackMakingRoomForOneWhenAtLimit() throws Exception {
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"));
+      threadAndTaskWait();
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID2"));
+      threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }
 
    @Test
-   public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() {
-      NotificationBundleProcessor_ProcessFromGCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"), null);
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void clearFallbackShouldNotCancelAnyNotificationsWhenUnderLimit() throws Exception {
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity,  getBaseNotifBundle("UUID1"));
+      threadAndTaskWait();
 
       NotificationLimitManager.clearOldestOverLimitFallback(blankActivity, 1);
+      threadAndTaskWait();
 
       assertEquals(1, notificationManager.getActiveNotifications().length);
    }

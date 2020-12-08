@@ -31,18 +31,18 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.support.annotation.NonNull;
-import android.support.customtabs.CustomTabsClient;
-import android.support.customtabs.CustomTabsIntent;
-import android.support.customtabs.CustomTabsServiceConnection;
-import android.support.customtabs.CustomTabsSession;
+import androidx.annotation.NonNull;
+import androidx.browser.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.browser.customtabs.CustomTabsServiceConnection;
+import androidx.browser.customtabs.CustomTabsSession;
 
 class OneSignalChromeTab {
 
    private static boolean hasChromeTabLibrary() {
       try {
          // noinspection ConstantConditions
-         return android.support.customtabs.CustomTabsServiceConnection.class != null;
+         return androidx.browser.customtabs.CustomTabsServiceConnection.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -66,10 +66,7 @@ class OneSignalChromeTab {
       }
       
       @Override
-      public void onCustomTabsServiceConnected(ComponentName componentName, CustomTabsClient customTabsClient) {
-         if (customTabsClient == null)
-            return;
-
+      public void onCustomTabsServiceConnected(@NonNull ComponentName componentName, @NonNull CustomTabsClient customTabsClient) {
          customTabsClient.warmup(0);
 
          CustomTabsSession session = customTabsClient.newSession(null);

@@ -35,15 +35,15 @@ class OSInAppMessageControllerFactory {
 
     private OSInAppMessageController controller;
 
-    public OSInAppMessageController getController(OneSignalDbHelper dbHelper) {
+    public OSInAppMessageController getController(OneSignalDbHelper dbHelper, OSLogger logger) {
         if (controller == null) {
             synchronized (LOCK) {
                 if (controller == null) {
                     // Make sure only Android 4.4 devices and higher can use IAMs
                     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
-                        controller = new OSInAppMessageDummyController(null);
+                        controller = new OSInAppMessageDummyController(null, logger);
                     else
-                        controller = new OSInAppMessageController(dbHelper);
+                        controller = new OSInAppMessageController(dbHelper, logger);
                 }
             }
         }

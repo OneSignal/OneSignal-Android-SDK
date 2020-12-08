@@ -1,10 +1,10 @@
 package com.onesignal;
 
+import com.onesignal.OSTrigger.OSTriggerOperator;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimerTask;
-
-import com.onesignal.OSTrigger.OSTriggerOperator;
 
 class OSDynamicTriggerController {
 

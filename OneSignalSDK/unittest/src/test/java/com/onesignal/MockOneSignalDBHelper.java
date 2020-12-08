@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.os.SystemClock;
 
-import com.onesignal.outcomes.OSOutcomeTableProvider;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
 
 public class MockOneSignalDBHelper implements OneSignalDb {
     private static final int DB_OPEN_RETRY_MAX = 5;

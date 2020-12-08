@@ -5,11 +5,11 @@ import java.security.SecureRandom;
 class OneSignalChromeTabAndroidFrame extends OneSignalChromeTab {
    private static boolean opened;
 
-   static void setup(String appId, String userId, String adId) {
+   static void setup(String appId, String userId, String adId, OneSignalRemoteParams.Params remoteParams) {
       if (opened)
          return;
 
-      if (OneSignal.remoteParams == null || OneSignal.remoteParams.enterprise)
+      if (remoteParams == null || remoteParams.enterprise)
          return;
 
       if (appId == null || userId == null)

@@ -29,22 +29,21 @@ package com.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.os.Build;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
-import android.support.annotation.NonNull;
 import android.view.ViewTreeObserver;
+
+import androidx.annotation.NonNull;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-class ActivityLifecycleHandler {
-
-    static boolean nextResumeIsFirstActivity;
+class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemConditionHandler {
 
     abstract static class ActivityAvailableListener {
         void available(@NonNull Activity activity) {
@@ -57,60 +56,18 @@ class ActivityLifecycleHandler {
         }
     }
 
-    private static Map<String, ActivityAvailableListener> sActivityAvailableListeners = new ConcurrentHashMap<>();
-    private static Map<String, OSSystemConditionController.OSSystemConditionObserver> sSystemConditionObservers = new ConcurrentHashMap<>();
-    private static Map<String, KeyboardListener> sKeyboardListeners = new ConcurrentHashMap<>();
-    static FocusHandlerThread focusHandlerThread = new FocusHandlerThread();
+    private static final Object SYNC_LOCK = new Object();
+    private static final String FOCUS_LOST_WORKER_TAG = "FOCUS_LOST_WORKER_TAG";
+    private static final Map<String, ActivityAvailableListener> sActivityAvailableListeners = new ConcurrentHashMap<>();
+    private static final Map<String, OSSystemConditionController.OSSystemConditionObserver> sSystemConditionObservers = new ConcurrentHashMap<>();
+    private static final Map<String, KeyboardListener> sKeyboardListeners = new ConcurrentHashMap<>();
+
+    private static AppFocusRunnable appFocusRunnable;
     @SuppressLint("StaticFieldLeak")
-    static Activity curActivity;
+    private Activity curActivity = null;
+    private boolean nextResumeIsFirstActivity = false;
 
-    static void setSystemConditionObserver(String key, OSSystemConditionController.OSSystemConditionObserver systemConditionObserver) {
-        if (curActivity != null) {
-            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
-            KeyboardListener keyboardListener = new KeyboardListener(systemConditionObserver, key);
-            treeObserver.addOnGlobalLayoutListener(keyboardListener);
-            sKeyboardListeners.put(key, keyboardListener);
-        }
-        sSystemConditionObservers.put(key, systemConditionObserver);
-    }
-
-    static void setActivityAvailableListener(String key, ActivityAvailableListener activityAvailableListener) {
-        sActivityAvailableListeners.put(key, activityAvailableListener);
-        if (curActivity != null)
-            activityAvailableListener.available(curActivity);
-    }
-
-    static void removeSystemConditionObserver(String key) {
-        sKeyboardListeners.remove(key);
-        sSystemConditionObservers.remove(key);
-    }
-
-    static void removeActivityAvailableListener(String key) {
-        sActivityAvailableListeners.remove(key);
-    }
-
-    private static void setCurActivity(Activity activity) {
-        curActivity = activity;
-        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-            entry.getValue().available(curActivity);
-        }
-
-        try {
-            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
-            for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
-                KeyboardListener keyboardListener = new KeyboardListener(entry.getValue(), entry.getKey());
-                treeObserver.addOnGlobalLayoutListener(keyboardListener);
-                sKeyboardListeners.put(entry.getKey(), keyboardListener);
-            }
-        } catch (RuntimeException e) {
-            // Related to Unity Issue #239 on Github
-            // https://github.com/OneSignal/OneSignal-Unity-SDK/issues/239
-            // RuntimeException at ActivityLifecycleHandler.setCurActivity on Android (Unity 2.9.0)
-            e.printStackTrace();
-        }
-    }
-
-    static void onConfigurationChanged(Configuration newConfig) {
+    void onConfigurationChanged(Configuration newConfig) {
         // If Activity contains the configChanges orientation flag, re-create the view this way
         if (curActivity != null && OSUtils.hasConfigChangeFlag(curActivity, ActivityInfo.CONFIG_ORIENTATION)) {
             logOrientationChange(newConfig.orientation);
@@ -118,19 +75,21 @@ class ActivityLifecycleHandler {
         }
     }
 
-    static void onActivityCreated(Activity activity) {
+    void onActivityCreated(Activity activity) {
     }
 
-    static void onActivityStarted(Activity activity) {
+    void onActivityStarted(Activity activity) {
     }
 
-    static void onActivityResumed(Activity activity) {
+    void onActivityResumed(Activity activity) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityResumed: " + activity);
         setCurActivity(activity);
         logCurActivity();
         handleFocus();
     }
 
-    static void onActivityPaused(Activity activity) {
+    void onActivityPaused(Activity activity) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityPaused: " + activity);
         if (activity == curActivity) {
             curActivity = null;
             handleLostFocus();
@@ -139,7 +98,7 @@ class ActivityLifecycleHandler {
         logCurActivity();
     }
 
-    static void onActivityStopped(Activity activity) {
+    void onActivityStopped(Activity activity) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity);
 
         if (activity == curActivity) {
@@ -154,7 +113,7 @@ class ActivityLifecycleHandler {
         logCurActivity();
     }
 
-    static void onActivityDestroyed(Activity activity) {
+    void onActivityDestroyed(Activity activity) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityDestroyed: " + activity);
         sKeyboardListeners.clear();
 
@@ -166,11 +125,11 @@ class ActivityLifecycleHandler {
         logCurActivity();
     }
 
-    static private void logCurActivity() {
+    private void logCurActivity() {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? "" + curActivity.getClass().getName() + ":" + curActivity : "null"));
     }
 
-    private static void logOrientationChange(int orientation) {
+    private void logOrientationChange(int orientation) {
         // Log device orientation change
         if (orientation == Configuration.ORIENTATION_LANDSCAPE)
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: LANDSCAPE (" + orientation + ")");
@@ -184,7 +143,7 @@ class ActivityLifecycleHandler {
      * This fix was originally implemented for In App Messages not being re-shown when orientation
      * was changed on wrapper SDK apps
      */
-    private static void onOrientationChanged() {
+    private void onOrientationChanged() {
         // Remove view
         handleLostFocus();
         for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
@@ -198,70 +157,124 @@ class ActivityLifecycleHandler {
 
         ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
         for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
-            KeyboardListener keyboardListener = new KeyboardListener(entry.getValue(), entry.getKey());
+            KeyboardListener keyboardListener = new KeyboardListener(this, entry.getValue(), entry.getKey());
             treeObserver.addOnGlobalLayoutListener(keyboardListener);
             sKeyboardListeners.put(entry.getKey(), keyboardListener);
         }
         handleFocus();
     }
 
-    static private void handleLostFocus() {
-        focusHandlerThread.runRunnable(new AppFocusRunnable());
+    private void handleLostFocus() {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler Handling lost focus");
+        if (appFocusRunnable != null && appFocusRunnable.backgrounded && !appFocusRunnable.completed)
+            return;
+
+        OneSignal.getFocusTimeController().appStopped();
+        OSFocusDelaySync.getInstance().scheduleSyncTask(OneSignal.appContext);
     }
 
-    static private void handleFocus() {
-        if (focusHandlerThread.hasBackgrounded() || nextResumeIsFirstActivity) {
+    private void handleFocus() {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler handleFocus, with runnable: " + appFocusRunnable + " nextResumeIsFirstActivity: " + nextResumeIsFirstActivity);
+        if (hasBackgrounded() || nextResumeIsFirstActivity) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler reset background state, call app focus");
             nextResumeIsFirstActivity = false;
-            focusHandlerThread.resetBackgroundState();
+            resetBackgroundState();
             OneSignal.onAppFocus();
-        } else
-            focusHandlerThread.stopScheduledRunnable();
-    }
-
-    static class FocusHandlerThread extends HandlerThread {
-        private Handler mHandler;
-        private AppFocusRunnable appFocusRunnable;
-
-        FocusHandlerThread() {
-            super("FocusHandlerThread");
-            start();
-            mHandler = new Handler(getLooper());
-        }
-
-        Looper getHandlerLooper() {
-            return mHandler.getLooper();
-        }
-
-        void resetBackgroundState() {
-            if (appFocusRunnable != null)
-                appFocusRunnable.backgrounded = false;
-        }
-
-        void stopScheduledRunnable() {
-            mHandler.removeCallbacksAndMessages(null);
-        }
-
-        void runRunnable(AppFocusRunnable runnable) {
-            if (appFocusRunnable != null && appFocusRunnable.backgrounded && !appFocusRunnable.completed)
-                return;
-
-            appFocusRunnable = runnable;
-            mHandler.removeCallbacksAndMessages(null);
-            mHandler.postDelayed(runnable, 2000);
-        }
-
-        boolean hasBackgrounded() {
-            return appFocusRunnable != null && appFocusRunnable.backgrounded;
+        } else {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler cancel background lost focus sync task");
+            OSFocusDelaySync.getInstance().cancelBackgroundSyncTask(OneSignal.appContext);
         }
     }
 
-    private static class AppFocusRunnable implements Runnable {
+    void addSystemConditionObserver(String key, OSSystemConditionController.OSSystemConditionObserver systemConditionObserver) {
+        if (curActivity != null) {
+            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+            KeyboardListener keyboardListener = new KeyboardListener(this, systemConditionObserver, key);
+            treeObserver.addOnGlobalLayoutListener(keyboardListener);
+            sKeyboardListeners.put(key, keyboardListener);
+        }
+        sSystemConditionObservers.put(key, systemConditionObserver);
+    }
+
+    public void removeSystemConditionObserver(@NotNull String key, @NotNull KeyboardListener keyboardListener) {
+        if (curActivity != null) {
+            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+                treeObserver.removeGlobalOnLayoutListener(keyboardListener);
+            } else {
+                treeObserver.removeOnGlobalLayoutListener(keyboardListener);
+            }
+        }
+
+        sKeyboardListeners.remove(key);
+        sSystemConditionObservers.remove(key);
+    }
+
+    void addActivityAvailableListener(String key, ActivityAvailableListener activityAvailableListener) {
+        sActivityAvailableListeners.put(key, activityAvailableListener);
+        if (curActivity != null)
+            activityAvailableListener.available(curActivity);
+    }
+
+    void removeActivityAvailableListener(String key) {
+        sActivityAvailableListeners.remove(key);
+    }
+
+    public Activity getCurActivity() {
+        return curActivity;
+    }
+
+    public void setCurActivity(Activity activity) {
+        curActivity = activity;
+        for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
+            entry.getValue().available(curActivity);
+        }
+
+        try {
+            ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
+            for (Map.Entry<String, OSSystemConditionController.OSSystemConditionObserver> entry : sSystemConditionObservers.entrySet()) {
+                KeyboardListener keyboardListener = new KeyboardListener(this, entry.getValue(), entry.getKey());
+                treeObserver.addOnGlobalLayoutListener(keyboardListener);
+                sKeyboardListeners.put(entry.getKey(), keyboardListener);
+            }
+        } catch (RuntimeException e) {
+            // Related to Unity Issue #239 on Github
+            // https://github.com/OneSignal/OneSignal-Unity-SDK/issues/239
+            // RuntimeException at ActivityLifecycleHandler.setCurActivity on Android (Unity 2.9.0)
+            e.printStackTrace();
+        }
+    }
+
+    void setNextResumeIsFirstActivity(boolean nextResumeIsFirstActivity) {
+        this.nextResumeIsFirstActivity = nextResumeIsFirstActivity;
+    }
+
+    void resetBackgroundState() {
+        if (appFocusRunnable != null)
+            appFocusRunnable.backgrounded = false;
+    }
+
+    boolean hasBackgrounded() {
+        return appFocusRunnable != null && appFocusRunnable.backgrounded;
+    }
+
+    static void runLostFocusLogic(Context context) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler runLostFocusLogic");
+        ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+        if (activityLifecycleHandler == null || activityLifecycleHandler.curActivity == null)
+            OneSignal.setInForeground(false);
+        appFocusRunnable = new AppFocusRunnable();
+        OSFocusDelaySync.getInstance().doBackgroundSync(
+                context,
+                appFocusRunnable
+        );
+    }
+
+    static class AppFocusRunnable implements Runnable {
         private boolean backgrounded, completed;
 
         public void run() {
-            if (curActivity != null)
-                return;
-
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler running AppFocusRunnable");
             backgrounded = true;
             for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
                 entry.getValue().lostFocus();
@@ -269,31 +282,33 @@ class ActivityLifecycleHandler {
             OneSignal.onAppLostFocus();
             completed = true;
         }
+
+        @Override
+        public String toString() {
+            return "AppFocusRunnable{" +
+                    "backgrounded=" + backgrounded +
+                    ", completed=" + completed +
+                    '}';
+        }
     }
 
-    private static class KeyboardListener implements ViewTreeObserver.OnGlobalLayoutListener {
+    static class KeyboardListener implements ViewTreeObserver.OnGlobalLayoutListener {
 
         private final OSSystemConditionController.OSSystemConditionObserver observer;
+        private final OSSystemConditionController.OSSystemConditionHandler systemConditionListener;
         private final String key;
 
-        private KeyboardListener(OSSystemConditionController.OSSystemConditionObserver observer, String key) {
+        private KeyboardListener(OSSystemConditionController.OSSystemConditionHandler systemConditionListener, OSSystemConditionController.OSSystemConditionObserver observer, String key) {
+            this.systemConditionListener = systemConditionListener;
             this.observer = observer;
             this.key = key;
         }
 
         @Override
         public void onGlobalLayout() {
-            boolean keyboardUp = OSViewUtils.isKeyboardUp(new WeakReference<>(ActivityLifecycleHandler.curActivity));
+            boolean keyboardUp = OSViewUtils.isKeyboardUp(new WeakReference<>(OneSignal.getCurrentActivity()));
             if (!keyboardUp) {
-                if (curActivity != null) {
-                    ViewTreeObserver treeObserver = curActivity.getWindow().getDecorView().getViewTreeObserver();
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                        treeObserver.removeGlobalOnLayoutListener(KeyboardListener.this);
-                    } else {
-                        treeObserver.removeOnGlobalLayoutListener(KeyboardListener.this);
-                    }
-                }
-                ActivityLifecycleHandler.removeSystemConditionObserver(key);
+                systemConditionListener.removeSystemConditionObserver(key, this);
                 observer.systemConditionChanged();
             }
         }

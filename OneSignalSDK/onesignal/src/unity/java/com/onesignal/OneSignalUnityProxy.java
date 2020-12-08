@@ -28,11 +28,13 @@
 package com.onesignal;
 
 import android.app.Activity;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 import com.onesignal.OneSignal;
-import java.lang.reflect.Method;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.lang.reflect.Method;
 
 public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler, OneSignal.NotificationReceivedHandler, OSPermissionObserver, OSSubscriptionObserver, OSEmailSubscriptionObserver, OneSignal.InAppMessageClickHandler {
    private static String unityListenerName;
@@ -41,6 +43,7 @@ public class OneSignalUnityProxy implements OneSignal.NotificationOpenedHandler,
    public OneSignalUnityProxy(String listenerName, String googleProjectNumber, String oneSignalAppId, int logLevel, int visualLogLevel, boolean requiresUserPrivacyConsent) {
       unityListenerName = listenerName;
       try {
+         // TODO: Refactor this so that Unity SDK is init properly in major release 4.0.0
          OneSignal.setRequiresUserPrivacyConsent(requiresUserPrivacyConsent);
          Class unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
          unitySendMessage = unityPlayerClass.getMethod("UnitySendMessage", new Class[]{String.class, String.class, String.class});

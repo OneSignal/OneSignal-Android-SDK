@@ -10,11 +10,6 @@ import android.content.pm.ResolveInfo;
 import android.os.Build;
 import android.util.Log;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.LinkedList;
-import java.util.List;
-
 import com.onesignal.shortcutbadger.impl.AdwHomeBadger;
 import com.onesignal.shortcutbadger.impl.ApexHomeBadger;
 import com.onesignal.shortcutbadger.impl.AsusHomeBadger;
@@ -28,6 +23,11 @@ import com.onesignal.shortcutbadger.impl.SamsungHomeBadger;
 import com.onesignal.shortcutbadger.impl.SonyHomeBadger;
 import com.onesignal.shortcutbadger.impl.VivoHomeBadger;
 import com.onesignal.shortcutbadger.impl.ZukHomeBadger;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.LinkedList;
+import java.util.List;
 
 
 /**

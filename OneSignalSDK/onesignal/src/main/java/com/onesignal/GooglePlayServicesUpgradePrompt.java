@@ -43,8 +43,8 @@ class GooglePlayServicesUpgradePrompt {
       OSUtils.runOnMainUIThread(new Runnable() {
          @Override
          public void run() {
-            final Activity activity = ActivityLifecycleHandler.curActivity;
-            if (activity == null || OneSignal.mInitBuilder.mDisableGmsMissingPrompt)
+            final Activity activity = OneSignal.getCurrentActivity();
+            if (activity == null)
                return;
 
             // Load resource strings so a developer can customize this dialog

@@ -1,0 +1,54 @@
+
+apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 28
+    defaultConfig {
+        applicationId "com.onesignal.sdktest"
+        minSdkVersion 16
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // Forced downgrade to Java 1.8 for compiling the application due to Android N error when building
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation 'com.google.android.material:material:[1.0.0, 1.99.99]'
+
+    implementation 'androidx.cardview:cardview:[1.0.0, 1.99.99]'
+    implementation 'androidx.appcompat:appcompat:[1.0.0, 1.99.99]'
+    implementation 'androidx.legacy:legacy-support-v4:[1.0.0, 1.99.99]'
+    implementation 'androidx.vectordrawable:vectordrawable:[1.0.0, 1.99.99]'
+
+    // Test local OneSignal SDK
+    implementation(project(':onesignal'))
+
+    // Test public release OneSignal SDK
+    // This will not work until 4.0.0 is publicly released because of manifest placeholders causing
+    //  manifest merger conflicts
+//    implementation 'com.onesignal:OneSignal:3.12.6'
+
+    implementation 'com.google.android.gms:play-services-location:[17.0.0, 17.99.99]'
+    // glide:4.9.0 is the last version before going to AndroidX
+    // glide:4.10.0 is the first version using AndroidX
+    implementation 'com.github.bumptech.glide:glide:[4.10.0, 4.99.99]'
+}
+
+apply plugin: 'com.google.gms.google-services'

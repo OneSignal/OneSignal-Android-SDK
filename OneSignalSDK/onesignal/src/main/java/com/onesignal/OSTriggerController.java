@@ -1,10 +1,11 @@
 package com.onesignal;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -116,8 +117,16 @@ class OSTriggerController {
             return false;
 
         // If operator is equal or not equals ignore type by comparing on toString values
-        if (operator.checksEquality())
-            return triggerMatchesStringValue(triggerValue.toString(), deviceValue.toString(), operator);
+        if (operator.checksEquality()) {
+            String triggerValueString = triggerValue.toString();
+            String deviceValueString = deviceValue.toString();
+            if (deviceValue instanceof Number) {
+                // User may have an input text that converts 5 to 5.0, we only care about the raw value on equals
+                DecimalFormat format = new DecimalFormat("0.#");
+                deviceValueString = format.format(deviceValue);
+            }
+            return triggerMatchesStringValue(triggerValueString, deviceValueString, operator);
+        }
 
         if (deviceValue instanceof String &&
             triggerValue instanceof Number)
@@ -218,5 +227,9 @@ class OSTriggerController {
             else
                 return null;
         }
+    }
+
+    public ConcurrentHashMap<String, Object> getTriggers() {
+        return triggers;
     }
 }

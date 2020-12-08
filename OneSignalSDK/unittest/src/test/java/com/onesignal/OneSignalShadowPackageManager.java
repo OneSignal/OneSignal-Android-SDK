@@ -38,7 +38,7 @@ public class OneSignalShadowPackageManager extends ShadowApplicationPackageManag
     }
 
     /**
-     * Add a meat data key and String value to the metaData Bundle for placement in the
+     * Add a meta data key and String value to the metaData Bundle for placement in the
      * shadowed getApplicationInfo
      */
     public static void addManifestMetaData(String key, Object value) {

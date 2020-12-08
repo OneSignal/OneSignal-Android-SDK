@@ -2,9 +2,11 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -19,7 +21,7 @@ import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorGCM;
+import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -39,11 +41,14 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator;
-import static com.test.onesignal.TestHelpers.advanceSystemTimeBy;
+import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.test.onesignal.TestHelpers.assertMainThread;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
@@ -53,10 +58,9 @@ import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = { "com.onesignal" },
         shadows = {
             ShadowOneSignalRestClient.class,
-            ShadowPushRegistratorGCM.class,
+            ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
             ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,
@@ -67,7 +71,6 @@ import static junit.framework.Assert.assertTrue;
         },
         sdk = 26
 )
-
 @RunWith(RobolectricTestRunner.class)
 public class InAppMessagingUnitTests {
 
@@ -198,6 +201,8 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayDelay() throws JSONException {
+        MockOSTimeImpl time = new MockOSTimeImpl();
+        OneSignal_setTime(time);
         OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
@@ -205,12 +210,12 @@ public class InAppMessagingUnitTests {
 
         assertTrue(message.getRedisplayStats().isDelayTimeSatisfied());
 
-        message.getRedisplayStats().setLastDisplayTimeToCurrent();
-        advanceSystemTimeBy(DELAY);
+        message.getRedisplayStats().setLastDisplayTimeToCurrent(time);
+        time.advanceSystemTimeBy(DELAY);
         assertTrue(message.getRedisplayStats().isDelayTimeSatisfied());
 
-        message.getRedisplayStats().setLastDisplayTimeToCurrent();
-        advanceSystemTimeBy(DELAY - 1);
+        message.getRedisplayStats().setLastDisplayTimeToCurrent(time);
+        time.advanceSystemTimeBy(DELAY - 1);
         assertFalse(message.getRedisplayStats().isDelayTimeSatisfied());
     }
 
@@ -261,10 +266,26 @@ public class InAppMessagingUnitTests {
         OSTestInAppMessageAction action = new OSTestInAppMessageAction(InAppMessagingHelpers.buildTestActionJson());
 
         assertEquals(action.getClickId(), InAppMessagingHelpers.IAM_CLICK_ID);
-        assertEquals(action.clickName, "click_name");
-        assertEquals(action.clickUrl, "https://www.onesignal.com");
+        assertEquals(action.getClickName(), "click_name");
+        assertEquals(action.getClickUrl(), "https://www.onesignal.com");
         assertTrue(action.closes());
-        assertEquals(action.urlTarget, OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
+        assertEquals(action.getUrlTarget(), OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW);
+    }
+
+    @Test
+    public void testSaveMultipleTriggerValuesGetTrigger() throws Exception {
+        HashMap<String, Object> testTriggers = new HashMap<>();
+        testTriggers.put("test1", "value1");
+        testTriggers.put("test2", "value2");
+
+        OneSignal.addTriggers(testTriggers);
+
+        Map<String, Object> triggers = OneSignal.getTriggers();
+        assertEquals(2, triggers.entrySet().size());
+
+        for (Map.Entry<String, Object> entry : triggers.entrySet()) {
+            assertEquals(testTriggers.get(entry.getKey()), entry.getValue());
+        }
     }
 
     @Test
@@ -286,7 +307,7 @@ public class InAppMessagingUnitTests {
             put("key2", "value2");
         }};
 
-        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+        addTriggersFromJsonString(jsonObject.toString());
 
         assertEquals(OneSignal.getTriggerValueForKey("key1"), "value1");
         assertEquals(OneSignal.getTriggerValueForKey("key2"), "value2");
@@ -298,7 +319,7 @@ public class InAppMessagingUnitTests {
             put("key", null);
         }};
 
-        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+        addTriggersFromJsonString(jsonObject.toString());
 
         assertNull(OneSignal.getTriggerValueForKey("key"));
     }
@@ -309,7 +330,7 @@ public class InAppMessagingUnitTests {
             put("key", 1);
         }};
 
-        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+        addTriggersFromJsonString(jsonObject.toString());
 
         assertEquals(1, OneSignal.getTriggerValueForKey("key"));
     }
@@ -322,7 +343,7 @@ public class InAppMessagingUnitTests {
             }});
         }};
 
-        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+        addTriggersFromJsonString(jsonObject.toString());
 
         assertEquals(
            new ArrayList<String>() {{
@@ -340,7 +361,7 @@ public class InAppMessagingUnitTests {
             }});
         }};
 
-        OneSignal.addTriggersFromJsonString(jsonObject.toString());
+        addTriggersFromJsonString(jsonObject.toString());
 
         assertEquals(
            new HashMap<String, Object>() {{
@@ -348,6 +369,20 @@ public class InAppMessagingUnitTests {
            }},
            OneSignal.getTriggerValueForKey("key")
        );
+    }
+
+    public static void addTriggersFromJsonString(String triggersJsonString) throws JSONException {
+        JSONObject jsonObject = new JSONObject(triggersJsonString);
+        OneSignal.addTriggers(OneSignalPackagePrivateHelper.JSONUtils.jsonObjectToMap(jsonObject));
+    }
+
+    @Test
+    public void testDeleteSavedTriggerValueGetTriggers() {
+        OneSignal.addTrigger("test1", "value1");
+        assertEquals(OneSignal.getTriggerValueForKey("test1"), "value1");
+
+        OneSignal.removeTriggerForKey("test1");
+        assertNull(OneSignal.getTriggers().get("test1"));
     }
 
     @Test
@@ -360,28 +395,12 @@ public class InAppMessagingUnitTests {
     }
 
     @Test
-    public void testRemoveTriggersForKeysFromJsonArray_SingleKey() {
+    public void testRemoveTriggersForKeysFromArray_SingleKey() {
         OneSignal.addTrigger("key", "value");
 
-        OneSignal.removeTriggersForKeysFromJsonArrayString(new JSONArray() {{
-            put("key");
-        }}.toString());
-
-        assertNull(OneSignal.getTriggerValueForKey("key"));
-    }
-
-    @Test
-    public void testRemoveTriggersForKeysFromJsonArray_KeysWithNonStringTypes() {
-        OneSignal.addTrigger("key", "value");
-
-        // Ensure NonString types are ignored and does not throw
-        OneSignal.removeTriggersForKeysFromJsonArrayString(new JSONArray() {{
-            put(1);
-            put(false);
-            put(new JSONObject());
-            put(new JSONArray());
-            put("key");
-        }}.toString());
+        List<String> triggersToRemove = new ArrayList<>();
+        triggersToRemove.add("key");
+        OneSignal.removeTriggersForKeys(triggersToRemove);
 
         assertNull(OneSignal.getTriggerValueForKey("key"));
     }
@@ -541,16 +560,17 @@ public class InAppMessagingUnitTests {
     }
 
     private void OneSignalInit() {
+        setRemoteParamsGetHtmlResponse();
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-        OneSignal.init(blankActivity, "123456789", InAppMessagingHelpers.ONESIGNAL_APP_ID);
+        OneSignal.setAppId(InAppMessagingHelpers.ONESIGNAL_APP_ID);
+        OneSignal.initWithContext(blankActivity);
         blankActivityController.resume();
     }
-
 
     private static @Nullable OSInAppMessageAction lastAction;
     @Test
     public void testOnMessageActionOccurredOnMessage() throws Exception {
-        OneSignal.getCurrentOrNewInitBuilder().setInAppMessageClickHandler(new OneSignal.InAppMessageClickHandler() {
+        OneSignal.setInAppMessageClickHandler(new OneSignal.OSInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(OSInAppMessageAction result) {
                 lastAction = result;
@@ -579,7 +599,7 @@ public class InAppMessagingUnitTests {
         assertEquals("button_id_123", iamClickRequest.payload.get("click_id"));
 
         // Ensure we fire public callback that In-App was clicked.
-        assertEquals(lastAction.clickName, "my_click_name");
+        assertEquals(lastAction.getClickName(), "my_click_name");
     }
 
     @Test

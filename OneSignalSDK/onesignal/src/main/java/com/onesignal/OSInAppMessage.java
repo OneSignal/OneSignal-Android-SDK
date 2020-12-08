@@ -1,6 +1,6 @@
 package com.onesignal;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,7 +18,7 @@ class OSInAppMessage {
     private static final String IAM_VARIANTS = "variants";
     private static final String IAM_TRIGGERS = "triggers";
     private static final String IAM_REDISPLAY_STATS = "redisplay";
-    private static final String DISPLAY_DURATION = "display_duration";
+    private static final String DISPLAY_DURATION = "displayDuration";
 
     /**
      * The unique identifier for this in-app message

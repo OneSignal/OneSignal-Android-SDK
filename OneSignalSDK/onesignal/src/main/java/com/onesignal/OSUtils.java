@@ -42,10 +42,13 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationManagerCompat;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
+
+import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.huawei.hms.api.HuaweiApiAvailability;
@@ -54,7 +57,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -138,19 +140,9 @@ class OSUtils {
    // 1. Using Class instead of Strings as class renames would result incorrectly not finding the class
    // 2. class.getName() is called as if no method is called then the try-catch would be removed.
    //    - Only an issue when using Proguard (NOT R8) and using getDefaultProguardFile('proguard-android-optimize.txt')
-
    static boolean hasFCMLibrary() {
       try {
          com.google.firebase.messaging.FirebaseMessaging.class.getName();
-         return true;
-      } catch (NoClassDefFoundError e) {
-         return false;
-      }
-   }
-
-   private static boolean hasGCMLibrary() {
-      try {
-         com.google.android.gms.gcm.GoogleCloudMessaging.class.getName();
          return true;
       } catch (NoClassDefFoundError e) {
          return false;
@@ -210,18 +202,11 @@ class OSUtils {
 
    Integer checkForGooglePushLibrary() {
       boolean hasFCMLibrary = hasFCMLibrary();
-      boolean hasGCMLibrary = hasGCMLibrary();
 
-      if (!hasFCMLibrary && !hasGCMLibrary) {
+      if (!hasFCMLibrary) {
          Log(OneSignal.LOG_LEVEL.FATAL, "The Firebase FCM library is missing! Please make sure to include it in your project.");
          return UserState.PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY;
       }
-
-      if (hasGCMLibrary && !hasFCMLibrary)
-         Log(OneSignal.LOG_LEVEL.WARN, "GCM Library detected, please upgrade to Firebase FCM library as GCM is deprecated!");
-
-      if (hasGCMLibrary && hasFCMLibrary)
-         Log(OneSignal.LOG_LEVEL.WARN, "Both GCM & FCM Libraries detected! Please remove the deprecated GCM library.");
 
       return null;
    }
@@ -229,7 +214,7 @@ class OSUtils {
    private static boolean hasWakefulBroadcastReceiver() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.content.WakefulBroadcastReceiver.class != null;
+         return WakefulBroadcastReceiver.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -238,7 +223,7 @@ class OSUtils {
    private static boolean hasNotificationManagerCompat() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.app.NotificationManagerCompat.class != null;
+         return androidx.core.app.NotificationManagerCompat.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -247,7 +232,7 @@ class OSUtils {
    private static boolean hasJobIntentService() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.app.JobIntentService.class != null;
+         return androidx.core.app.JobIntentService.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -333,8 +318,8 @@ class OSUtils {
    }
 
    private boolean supportsGooglePush() {
-      // 1. If app does not have the FCM or GCM library it won't support Google push
-      if (!hasFCMLibrary() && !hasGCMLibrary())
+      // 1. If app does not have the FCM library it won't support Google push
+      if (!hasFCMLibrary())
          return false;
 
       // 2. "Google Play services" must be installed and enabled
@@ -464,6 +449,10 @@ class OSUtils {
       return pattern.matcher(email).matches();
    }
 
+   static boolean isStringNotEmpty(String body) {
+      return !TextUtils.isEmpty(body);
+   }
+
    // Get the app's permission which will be false if the user disabled notifications for the app
    //   from Settings > Apps or by long pressing the notifications and selecting block.
    //   - Detection works on Android 4.4+, requires Android Support v4 Library 24.0.0+
@@ -528,9 +517,9 @@ class OSUtils {
       return null;
    }
 
-   static long[] parseVibrationPattern(JSONObject gcmBundle) {
+   static long[] parseVibrationPattern(JSONObject fcmBundle) {
       try {
-         Object patternObj = gcmBundle.opt("vib_pt");
+         Object patternObj = fcmBundle.opt("vib_pt");
          JSONArray jsonVibArray;
          if (patternObj instanceof String)
             jsonVibArray = new JSONArray((String)patternObj);
@@ -545,21 +534,6 @@ class OSUtils {
       } catch (JSONException e) {}
 
       return null;
-   }
-
-   static String hexDigest(String str, String digestInstance) throws Throwable {
-      MessageDigest digest = java.security.MessageDigest.getInstance(digestInstance);
-      digest.update(str.getBytes("UTF-8"));
-      byte messageDigest[] = digest.digest();
-
-      StringBuilder hexString = new StringBuilder();
-      for (byte aMessageDigest : messageDigest) {
-         String h = Integer.toHexString(0xFF & aMessageDigest);
-         while (h.length() < 2)
-            h = "0" + h;
-         hexString.append(h);
-      }
-      return hexString.toString();
    }
 
    static void sleep(int ms) {

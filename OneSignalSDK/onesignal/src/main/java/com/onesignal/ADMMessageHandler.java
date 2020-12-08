@@ -31,16 +31,34 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import com.amazon.device.messaging.ADMMessageHandlerJobBase;
 import com.amazon.device.messaging.ADMMessageHandlerBase;
 import com.amazon.device.messaging.ADMMessageReceiver;
+
+import org.json.JSONObject;
 
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors
 //             when "proguard-android-optimize.txt" is used.
 public class ADMMessageHandler extends ADMMessageHandlerBase {
 
+   private static final int JOB_ID = 123891;
+
    public static class Receiver extends ADMMessageReceiver {
       public Receiver() {
          super(ADMMessageHandler.class);
+         boolean ADMLatestAvailable = false;
+         try {
+            Class.forName( "com.amazon.device.messaging.ADMMessageHandlerJobBase" );
+            ADMLatestAvailable = true ;
+         }
+         catch (ClassNotFoundException e)
+         {
+            // Handle the exception.
+         }
+         if (ADMLatestAvailable) {
+            registerJobServiceClass(ADMMessageHandlerJob.class, JOB_ID);
+         }
+         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "ADM latest available: " + ADMLatestAvailable);
       }
    }
 
@@ -54,14 +72,20 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
       Bundle bundle = intent.getExtras();
       
       NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+      // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+//      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
       if (processedResult.processed())
          return;
-      
-      NotificationGenerationJob notifJob = new NotificationGenerationJob(context);
-      notifJob.jsonPayload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
 
-      NotificationBundleProcessor.ProcessJobForDisplay(notifJob);
+      JSONObject payload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
+      OSNotification notification = new OSNotification(payload);
+
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      notificationJob.setJsonPayload(payload);
+      notificationJob.setContext(context);
+      notificationJob.setNotification(notification);
+      NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
    }
 
    @Override

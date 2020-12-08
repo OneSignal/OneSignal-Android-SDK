@@ -37,20 +37,21 @@ import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignalDbContract.InAppMessageTable;
 import com.onesignal.OneSignalDbContract.NotificationTable;
-import com.onesignal.outcomes.OSOutcomeTableProvider;
+import com.onesignal.outcomes.data.OSOutcomeTableProvider;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V1;
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_OUTCOME_ENTRIES_V3;
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
-import static com.onesignal.outcomes.OSOutcomeTableProvider.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1;
+import static com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2;
 
 class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
 
@@ -375,7 +376,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       safeExecSQL(db,
          "UPDATE " + NotificationTable.TABLE_NAME + " " +
             "SET " + NotificationTable.COLUMN_NAME_EXPIRE_TIME +  " = "
-                     + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + NotificationRestorer.DEFAULT_TTL_IF_NOT_IN_PAYLOAD + ";"
+                 + NotificationTable.COLUMN_NAME_CREATED_TIME + " + " + OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD + ";"
       );
 
       safeExecSQL(db, NotificationTable.INDEX_CREATE_EXPIRE_TIME);
@@ -440,7 +441,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    }
 
    static StringBuilder recentUninteractedWithNotificationsWhere() {
-      long currentTimeSec = System.currentTimeMillis() / 1_000L;
+      long currentTimeSec = OneSignal.getTime().getCurrentTimeMillis() / 1_000L;
       long createdAtCutoff = currentTimeSec - 604_800L; // 1 Week back
 
       StringBuilder where = new StringBuilder(
@@ -459,10 +460,4 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       return where;
    }
 
-   static void cleanOutcomeDatabaseTable(SQLiteDatabase writeableDb) {
-      writeableDb.delete(
-              OSOutcomeTableProvider.OUTCOME_EVENT_TABLE,
-              null,
-              null);
-   }
 }

@@ -3,8 +3,9 @@ package com.onesignal;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Process;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 import com.onesignal.OneSignalRestClient.ResponseHandler;
@@ -24,19 +25,19 @@ import java.util.Set;
 
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
+    private static final Object LOCK = new Object();
+    private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
+    public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android");
         add("app");
         add("all");
     }};
 
-    public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
-    private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
-    private static final Object LOCK = new Object();
-
     OSTriggerController triggerController;
     private OSSystemConditionController systemConditionController;
     private OSInAppMessageRepository inAppMessageRepository;
+    private OSLogger logger;
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
@@ -69,7 +70,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
 
-    protected OSInAppMessageController(OneSignalDbHelper dbHelper) {
+    protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSLogger logger) {
         messages = new ArrayList<>();
         dismissedMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
@@ -77,6 +78,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         clickedClickIds = OSUtils.newConcurrentSet();
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
+        this.logger = logger;
 
         Set<String> tempDismissedSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
@@ -167,7 +169,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 json.toString());
 
         resetRedisplayMessagesBySession();
-
         processInAppMessageJson(json);
     }
 
@@ -208,7 +209,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private static @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
+    private @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
         String languageIdentifier = OSUtils.getCorrectedLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
@@ -224,12 +225,12 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return null;
     }
 
-    private static void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Successful post for in-app message " + requestType + " request: " + response);
+    private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
+        logger.debug("Successful post for in-app message " + requestType + " request: " + response);
     }
 
-    private static void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
+    private void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
+        logger.error("Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
     void onMessageWasShown(@NonNull final OSInAppMessage message) {
@@ -282,32 +283,32 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-        action.firstClick = message.takeActionAsUnique();
+        action.setFirstClick(message.takeActionAsUnique());
 
         firePublicClickHandler(message.messageId, action);
-        beginProcessingPrompts(message, action.prompts);
+        beginProcessingPrompts(message, action.getPrompts());
         fireClickAction(action);
         fireRESTCallForClick(message, action);
         fireTagCallForClick(action);
-        fireOutcomesForClick(message.messageId, action.outcomes);
+        fireOutcomesForClick(message.messageId, action.getOutcomes());
     }
 
     void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
-        action.firstClick = message.takeActionAsUnique();
+        action.setFirstClick(message.takeActionAsUnique());
 
         firePublicClickHandler(message.messageId, action);
-        beginProcessingPrompts(message, action.prompts);
+        beginProcessingPrompts(message, action.getPrompts());
         fireClickAction(action);
         logInAppMessagePreviewActions(action);
     }
 
     private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
-        if (action.tags != null)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString());
+        if (action.getTags() != null)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.getTags().toString());
 
-        if (action.outcomes.size() > 0)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString());
+        if (action.getOutcomes().size() > 0)
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.getOutcomes().toString());
 
         // TODO: Add more action payload preview logs here in future
     }
@@ -355,7 +356,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void showAlertDialogMessage(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
         final String messageTitle = OneSignal.appContext.getString(R.string.location_not_available_title);
         final String message = OneSignal.appContext.getString(R.string.location_not_available_message);
-        new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+        new AlertDialog.Builder(OneSignal.getCurrentActivity())
                 .setTitle(messageTitle)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
@@ -372,8 +373,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void fireTagCallForClick(@NonNull final OSInAppMessageAction action) {
-        if (action.tags != null) {
-            OSInAppMessageTag tags = action.tags;
+        if (action.getTags() != null) {
+            OSInAppMessageTag tags = action.getTags();
 
             if (tags.getTagsToAdd() != null)
                 OneSignal.sendTags(tags.getTagsToAdd());
@@ -383,7 +384,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     }
 
     private void firePublicClickHandler(@NonNull final String messageId, @NonNull final OSInAppMessageAction action) {
-        if (OneSignal.mInitBuilder.mInAppMessageClickHandler == null)
+        if (OneSignal.inAppMessageClickHandler == null)
             return;
 
         OSUtils.runOnMainUIThread(new Runnable() {
@@ -394,17 +395,17 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 // Check that only on the handler
                 // Any outcome sent on this callback should count as DIRECT from this IAM
                 OneSignal.getSessionManager().onDirectInfluenceFromIAMClick(messageId);
-                OneSignal.mInitBuilder.mInAppMessageClickHandler.inAppMessageClicked(action);
+                OneSignal.inAppMessageClickHandler.inAppMessageClicked(action);
             }
         });
     }
 
     private void fireClickAction(@NonNull final OSInAppMessageAction action) {
-        if (action.clickUrl != null && !action.clickUrl.isEmpty()) {
-            if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
-                OSUtils.openURLInBrowser(action.clickUrl);
-            else if (action.urlTarget == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
-                OneSignalChromeTab.open(action.clickUrl, true);
+        if (action.getClickUrl() != null && !action.getClickUrl().isEmpty()) {
+            if (action.getUrlTarget() == OSInAppMessageAction.OSInAppMessageActionUrlType.BROWSER)
+                OSUtils.openURLInBrowser(action.getClickUrl());
+            else if (action.getUrlTarget() == OSInAppMessageAction.OSInAppMessageActionUrlType.IN_APP_WEBVIEW)
+                OneSignalChromeTab.open(action.getClickUrl(), true);
         }
     }
 
@@ -413,7 +414,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (variantId == null)
             return;
 
-        final String clickId = action.clickId;
+        final String clickId = action.getClickId();
         // If IAM has redisplay the clickId may be available
         boolean clickAvailableByRedisplay = message.getRedisplayStats().isRedisplayEnabled() && message.isClickAvailable(clickId);
 
@@ -432,7 +433,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 put("player_id", OneSignal.getUserId());
                 put("click_id", clickId);
                 put("variant_id", variantId);
-                if (action.firstClick)
+                if (action.isFirstClick())
                     put("first_click", true);
             }};
 
@@ -451,7 +452,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 @Override
                 void onFailure(int statusCode, String response, Throwable throwable) {
                     printHttpErrorForInAppMessageRequest("engagement", statusCode, response);
-                    clickedClickIds.remove(action.clickId);
+                    clickedClickIds.remove(action.getClickId());
                 }
             });
         } catch (JSONException e) {
@@ -507,7 +508,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             // Make sure no message is ever added to the queue more than once
             if (!messageDisplayQueue.contains(message)) {
                 messageDisplayQueue.add(message);
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + message.messageId + ", added to the queue");
+                logger.debug("In app message with id, " + message.messageId + ", added to the queue");
             }
 
             attemptToShowInAppMessage();
@@ -518,19 +519,19 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         synchronized (messageDisplayQueue) {
             // We need to wait for system conditions to be the correct ones
             if (!systemConditionController.systemConditionsAvailable()) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "In app message not showing due to system condition not correct");
+                logger.warning("In app message not showing due to system condition not correct");
                 return;
             }
 
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "displayFirstIAMOnQueue: " + messageDisplayQueue);
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (messageDisplayQueue.size() > 0 && !isInAppMessageShowing()) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM showing currently, showing first item in the queue!");
+                logger.debug("No IAM showing currently, showing first item in the queue!");
                 displayMessage(messageDisplayQueue.get(0));
                 return;
             }
 
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message is currently showing or there are no IAMs left in the queue!");
+            logger.debug("In app message is currently showing or there are no IAMs left in the queue!");
         }
     }
 
@@ -566,7 +567,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 // Only increase IAM display quantity if IAM was truly displayed
                 persistInAppMessage(message);
             }
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed dismissedMessages: " + dismissedMessages.toString());
+            logger.debug("OSInAppMessageController messageWasDismissed dismissedMessages: " + dismissedMessages.toString());
         }
 
         dismissCurrentMessage(message);
@@ -588,7 +589,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
 
         if (currentPrompt != null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Stop evaluateMessageDisplayQueue because prompt is currently displayed");
+            logger.debug("Stop evaluateMessageDisplayQueue because prompt is currently displayed");
             return;
         }
 
@@ -596,27 +597,27 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         synchronized (messageDisplayQueue) {
             if (messageDisplayQueue.size() > 0) {
                 if (message != null && !messageDisplayQueue.contains(message)) {
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Message already removed from the queue!");
+                    logger.debug("Message already removed from the queue!");
                     return;
                 } else {
                     String removedMessageId = messageDisplayQueue.remove(0).messageId;
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
+                    logger.debug("In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
                 }
             }
 
             // Display the next message in the queue, or attempt to add more IAMs to the queue
             if (messageDisplayQueue.size() > 0) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message on queue available: " + messageDisplayQueue.get(0).messageId);
+                logger.debug("In app message on queue available: " + messageDisplayQueue.get(0).messageId);
                 displayMessage(messageDisplayQueue.get(0));
             } else {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message dismissed evaluating messages");
+                logger.debug("In app message dismissed evaluating messages");
                 evaluateInAppMessages();
             }
         }
     }
 
     private void persistInAppMessage(final OSInAppMessage message) {
-        long displayTimeSeconds = System.currentTimeMillis() / 1000;
+        long displayTimeSeconds = OneSignal.getTime().getCurrentTimeMillis() / 1000;
         message.getRedisplayStats().setLastDisplayTime(displayTimeSeconds);
         message.getRedisplayStats().incrementDisplayQuantity();
         message.setTriggerChanged(false);
@@ -639,15 +640,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             redisplayedInAppMessages.add(message);
         }
 
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "persistInAppMessageForRedisplay: " + message.toString() + " with msg array data: " + redisplayedInAppMessages.toString());
+        logger.debug("persistInAppMessageForRedisplay: " + message.toString() + " with msg array data: " + redisplayedInAppMessages.toString());
     }
 
-    private static @Nullable
-    String htmlPathForMessage(OSInAppMessage message) {
+    private @Nullable String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 
         if (variantId == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to find a variant for in-app message " + message.messageId);
+            logger.error("Unable to find a variant for in-app message " + message.messageId);
             return null;
         }
 
@@ -656,7 +656,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     private void displayMessage(@NonNull final OSInAppMessage message) {
         if (!inAppMessagingEnabled) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "In app messaging is currently paused, iam will not be shown!");
+            logger.verbose("In app messaging is currently paused, in app messages will not be shown!");
             return;
         }
 
@@ -792,7 +792,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         for (OSInAppMessage message : messages) {
             if (!message.isTriggerChanged() && redisplayedInAppMessages.contains(message) &&
                     triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Trigger changed for message: " + message.toString());
+                logger.debug("Trigger changed for message: " + message.toString());
                 message.setTriggerChanged(true);
             }
         }
@@ -805,18 +805,26 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * re-evaluate messages to see if we should display/redisplay a message now that the trigger
      * conditions have changed.
      */
-    void addTriggers(Map<String, Object> newTriggers) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Add trigger called with: " + newTriggers.toString());
+    void addTriggers(@NonNull Map<String, Object> newTriggers) {
+        logger.debug("Triggers added: " + newTriggers.toString());
         triggerController.addTriggers(newTriggers);
         makeRedisplayMessagesAvailableWithTriggers(newTriggers.keySet());
         evaluateInAppMessages();
     }
 
     void removeTriggersForKeys(Collection<String> keys) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Remove trigger called with keys: " + keys);
+        logger.debug("Triggers key to remove: " + keys.toString());
         triggerController.removeTriggersForKeys(keys);
         makeRedisplayMessagesAvailableWithTriggers(keys);
         evaluateInAppMessages();
+    }
+
+    Map<String, Object> getTriggers() {
+        return new HashMap<>(triggerController.getTriggers());
+    }
+
+    boolean inAppMessagingEnabled() {
+        return inAppMessagingEnabled;
     }
 
     void setInAppMessagingEnabled(boolean enabled) {

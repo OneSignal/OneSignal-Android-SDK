@@ -29,7 +29,8 @@ package com.onesignal;
 
 import android.location.Location;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -63,13 +64,14 @@ class GMSLocationController extends LocationController {
                         .addApi(LocationServices.API)
                         .addConnectionCallbacks(googleApiClientListener)
                         .addOnConnectionFailedListener(googleApiClientListener)
-                        .setHandler(locationHandlerThread.mHandler)
+                        .setHandler(getLocationHandlerThread().mHandler)
                         .build();
 
                 GMSLocationController.googleApiClient = new GoogleApiClientCompatProxy(googleApiClient);
                 GMSLocationController.googleApiClient.connect();
-            } else if (lastLocation != null)
+            } else {
                 fireCompleteForLocation(lastLocation);
+            }
         }
     }
 
@@ -123,13 +125,15 @@ class GMSLocationController extends LocationController {
             synchronized (syncLock) {
                 PermissionsActivity.answered = false;
 
-                if (googleApiClient == null || googleApiClient.realInstance() == null)
+                if (googleApiClient == null || googleApiClient.realInstance() == null) {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "GMSLocationController GoogleApiClientListener onConnected googleApiClient not available, returning");
                     return;
+                }
 
-                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LocationController GoogleApiClientListener onConnected lastLocation: " + lastLocation);
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "GMSLocationController GoogleApiClientListener onConnected lastLocation: " + lastLocation);
                 if (lastLocation == null) {
                     lastLocation = FusedLocationApiWrapper.getLastLocation(googleApiClient.realInstance());
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LocationController GoogleApiClientListener lastLocation: " + lastLocation);
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "GMSLocationController GoogleApiClientListener lastLocation: " + lastLocation);
                     if (lastLocation != null)
                         fireCompleteForLocation(lastLocation);
                 }
@@ -140,11 +144,13 @@ class GMSLocationController extends LocationController {
 
         @Override
         public void onConnectionSuspended(int i) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "GMSLocationController GoogleApiClientListener onConnectionSuspended i: " + i);
             fireFailedComplete();
         }
 
         @Override
         public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "GMSLocationController GoogleApiClientListener onConnectionSuspended connectionResult: " + connectionResult);
             fireFailedComplete();
         }
     }
@@ -161,7 +167,7 @@ class GMSLocationController extends LocationController {
 
         private void init() {
             long updateInterval = BACKGROUND_UPDATE_TIME_MS;
-            if (OneSignal.isForeground())
+            if (OneSignal.isInForeground())
                 updateInterval = FOREGROUND_UPDATE_TIME_MS;
 
             if (googleApiClient != null) {

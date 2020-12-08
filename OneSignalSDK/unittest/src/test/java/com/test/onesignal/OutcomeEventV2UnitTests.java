@@ -29,8 +29,11 @@ package com.test.onesignal;
 
 import android.support.annotation.NonNull;
 
+import androidx.test.core.app.ApplicationProvider;
+
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalAPIClient;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockOutcomeEventsController;
@@ -41,12 +44,12 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalRemoteParams;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
-import com.onesignal.influence.model.OSInfluenceType;
-import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.influence.domain.OSInfluenceType;
+import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.domain.OSOutcomeEventParams;
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
 
 import org.junit.After;
 import org.junit.Before;
@@ -54,13 +57,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.List;
 
-import static com.test.onesignal.TestHelpers.lockTimeTo;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -68,7 +69,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 @Config(packageName = "com.onesignal.example",
-        instrumentedPackages = {"com.onesignal"},
         shadows = {
                 ShadowOSUtils.class,
         },
@@ -79,6 +79,7 @@ public class OutcomeEventV2UnitTests {
     private static final String OUTCOME_NAME = "testing";
     private static final String IAM_ID = "iam_id";
     private static final String NOTIFICATION_ID = "notification_id";
+    private static final String APP_ID = "123456789";
 
     private MockOutcomeEventsController controller;
     private MockOneSignalAPIClient service;
@@ -125,14 +126,15 @@ public class OutcomeEventV2UnitTests {
     public void beforeEachTest() throws Exception {
         outcomeEvents = null;
 
-        dbHelper = new MockOneSignalDBHelper(RuntimeEnvironment.application);
+        dbHelper = new MockOneSignalDBHelper(ApplicationProvider.getApplicationContext());
         // Mock on a custom HashMap in order to not use custom context
         preferences = new MockOSSharedPreferences();
         // Save v2 flag
         String v2Name = preferences.getOutcomesV2KeyName();
         preferences.saveBool(preferences.getPreferencesName(), v2Name, true);
 
-        trackerFactory = new OSTrackerFactory(preferences, logWrapper);
+        MockOSTimeImpl time = new MockOSTimeImpl();
+        trackerFactory = new OSTrackerFactory(preferences, logWrapper, time);
         sessionManager = new MockSessionManager(sessionListener, trackerFactory, logWrapper);
         service = new MockOneSignalAPIClient();
         OSOutcomeEventsFactory factory = new OSOutcomeEventsFactory(logWrapper, service, dbHelper, preferences);
@@ -141,6 +143,8 @@ public class OutcomeEventV2UnitTests {
         TestHelpers.beforeTestInitAndCleanup();
         repository = factory.getRepository();
         trackerFactory.saveInfluenceParams(new OneSignalPackagePrivateHelper.RemoteOutcomeParams());
+
+        OneSignal.setAppId(APP_ID);
     }
 
     @After
@@ -163,7 +167,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[]}},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[]}},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -180,7 +184,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[],\"in_app_message_ids\":[\"iam_id\"]}},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[],\"in_app_message_ids\":[\"iam_id\"]}},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -199,7 +203,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -219,7 +223,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[]}},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[]}},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -235,7 +239,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[],\"in_app_message_ids\":[\"iam_id\"]}},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[],\"in_app_message_ids\":[\"iam_id\"]}},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -255,7 +259,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -271,7 +275,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -305,7 +309,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{},\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -340,7 +344,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -360,7 +364,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"direct\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
 
         sessionManager.initSessionFromCache();
         assertEquals(OSInfluenceType.INDIRECT, trackerFactory.getIAMChannelTracker().getInfluenceType());
@@ -384,7 +388,7 @@ public class OutcomeEventV2UnitTests {
 
         threadAndTaskWait();
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{\"indirect\":{\"notification_ids\":[\"notification_id\"],\"in_app_message_ids\":[\"iam_id\"]}},\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
     @Test
@@ -403,7 +407,7 @@ public class OutcomeEventV2UnitTests {
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
         assertEquals(OUTCOME_NAME, outcomeEvents.get(0).getOutcomeId());
-        assertEquals("{\"id\":\"testing\",\"sources\":{},\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{},\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
 
         controller.cleanOutcomes();
 
@@ -456,7 +460,7 @@ public class OutcomeEventV2UnitTests {
         assertTrue(outcomeEvents.size() > 0);
         OSOutcomeEventParams params = outcomeEvents.get(0);
         assertEquals(OUTCOME_NAME, params.getOutcomeId());
-        assertEquals(new Float(0), params.getWeight());
+        assertEquals(new Float(0), (Float) params.getWeight());
         assertTrue(params.getTimestamp() > 0);
         assertNotNull(params.getOutcomeSource());
         // Direct body
@@ -485,7 +489,7 @@ public class OutcomeEventV2UnitTests {
         assertTrue(outcomeEvents.size() > 0);
         OSOutcomeEventParams params = outcomeEvents.get(0);
         assertEquals(OUTCOME_NAME, params.getOutcomeId());
-        assertEquals(new Float(0), params.getWeight());
+        assertEquals(new Float(0), (Float) params.getWeight());
         assertTrue(params.getTimestamp() > 0);
         assertNotNull(params.getOutcomeSource());
         // Indirect body
@@ -515,7 +519,6 @@ public class OutcomeEventV2UnitTests {
 
     @Test
     public void testOutcomeMultipleFailsSavedOnDB() throws Exception {
-        lockTimeTo(0);
         service.setSuccess(false);
 
         // Init session should set UNATTRIBUTED influence
@@ -555,13 +558,13 @@ public class OutcomeEventV2UnitTests {
         for (OSOutcomeEventParams outcomeEvent : outcomeEvents) {
             // UNATTRIBUTED Case
             if (outcomeEvent.getOutcomeId().equals(OUTCOME_NAME)) {
-                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=null, weight=0.0, timestamp=0}", outcomeEvent.toString());
+                assertEquals("OSOutcomeEventParams{outcomeId='testing', outcomeSource=OSOutcomeSource{directBody=null, indirectBody=null}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } else if (outcomeEvent.getOutcomeId().equals(OUTCOME_NAME + "1")) { // DIRECT By Notification INDIRECT by iam
                 assertEquals("OSOutcomeEventParams{outcomeId='testing1', outcomeSource=OSOutcomeSource{directBody=OSOutcomeSourceBody{notificationIds=[\"notification_id\"], inAppMessagesIds=[]}, " +
-                        "indirectBody=OSOutcomeSourceBody{notificationIds=[], inAppMessagesIds=[\"iam_id\"]}}, weight=0.0, timestamp=0}", outcomeEvent.toString());
+                        "indirectBody=OSOutcomeSourceBody{notificationIds=[], inAppMessagesIds=[\"iam_id\"]}}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } else if (outcomeEvent.getOutcomeId().equals(OUTCOME_NAME + "2")) { // INDIRECT By Notification DIRECT by iam
                 assertEquals("OSOutcomeEventParams{outcomeId='testing2', outcomeSource=OSOutcomeSource{directBody=OSOutcomeSourceBody{notificationIds=[], inAppMessagesIds=[\"iam_id\"]}, " +
-                        "indirectBody=OSOutcomeSourceBody{notificationIds=[\"notification_id\"], inAppMessagesIds=[]}}, weight=0.0, timestamp=0}", outcomeEvent.toString());
+                        "indirectBody=OSOutcomeSourceBody{notificationIds=[\"notification_id\"], inAppMessagesIds=[]}}, weight=0.0, timestamp=" + outcomeEvent.getTimestamp() + "}", outcomeEvent.toString());
             } // DISABLED Case should not be save
         }
     }
@@ -598,7 +601,6 @@ public class OutcomeEventV2UnitTests {
 
     @Test
     public void testSendFailedOutcomeWithValueOnDB() throws Exception {
-        lockTimeTo(0);
         service.setSuccess(false);
         // Restart session by app open should set UNATTRIBUTED influence
         sessionManager.restartSessionIfNeeded(OneSignal.AppEntryAction.APP_OPEN);
@@ -610,8 +612,9 @@ public class OutcomeEventV2UnitTests {
         threadAndTaskWait();
         assertEquals(1, outcomeEvents.size());
         assertEquals(1.1f, outcomeEvents.get(0).getWeight(), 0);
-        assertEquals("{\"id\":\"testing\",\"sources\":{},\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{},\"weight\":1.1,\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
 
+        long timestamp = outcomeEvents.get(0).getTimestamp();
         service.setSuccess(true);
         service.resetLastJsonObjectSent();
         controller.sendSavedOutcomes();
@@ -622,7 +625,7 @@ public class OutcomeEventV2UnitTests {
         threadAndTaskWait();
 
         assertEquals(0, outcomeEvents.size());
-        assertEquals("{\"id\":\"testing\",\"weight\":1.1,\"device_type\":1}", service.getLastJsonObjectSent());
+        assertEquals("{\"id\":\"testing\",\"sources\":{},\"weight\":1.1,\"timestamp\":" + timestamp + ",\"app_id\":\"" + APP_ID + "\",\"device_type\":1}", service.getLastJsonObjectSent());
     }
 
 }

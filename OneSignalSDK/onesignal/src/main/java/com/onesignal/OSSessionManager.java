@@ -1,13 +1,13 @@
 package com.onesignal;
 
 import android.os.Process;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import com.onesignal.influence.OSChannelTracker;
-import com.onesignal.influence.OSTrackerFactory;
-import com.onesignal.influence.model.OSInfluence;
-import com.onesignal.influence.model.OSInfluenceType;
+import com.onesignal.influence.data.OSChannelTracker;
+import com.onesignal.influence.data.OSTrackerFactory;
+import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.influence.domain.OSInfluenceType;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,7 +43,6 @@ public class OSSessionManager {
     }
 
     void initSessionFromCache() {
-        logger.debug("OneSignal SessionManager initSessionFromCache");
         trackerFactory.initFromCache();
     }
 

@@ -57,7 +57,18 @@ class LocationController {
    private static boolean locationCoarse;
 
    static final Object syncLock = new Object() {};
-   static LocationHandlerThread locationHandlerThread;
+
+   private static LocationHandlerThread locationHandlerThread;
+   static LocationHandlerThread getLocationHandlerThread() {
+      if (locationHandlerThread == null) {
+         synchronized (syncLock) {
+            if (locationHandlerThread == null)
+               locationHandlerThread = new LocationHandlerThread();
+         }
+      }
+      return locationHandlerThread;
+   }
+
    static Thread fallbackFailThread;
    static Context classContext;
    static Location lastLocation;
@@ -99,20 +110,27 @@ class LocationController {
    }
 
    static boolean scheduleUpdate(Context context) {
-      if (!hasLocationPermission(context) || !OneSignal.shareLocation)
+      if (!hasLocationPermission(context)) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationController scheduleUpdate not possible, location permission not enabled");
          return false;
+      }
+      if (!OneSignal.isLocationShared()) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationController scheduleUpdate not possible, location shared not enabled");
+         return false;
+      }
+      long lastTime = OneSignal.getTime().getCurrentTimeMillis() - getLastLocationTime();
+      long minTime = 1_000 * (OneSignal.isInForeground() ? TIME_FOREGROUND_SEC : TIME_BACKGROUND_SEC);
 
-      long lastTime = System.currentTimeMillis() - getLastLocationTime();
-      long minTime = 1_000 * (OneSignal.isForeground() ? TIME_FOREGROUND_SEC : TIME_BACKGROUND_SEC);
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "LocationController scheduleUpdate lastTime: " + lastTime + " minTime: " + minTime);
       long scheduleTime = minTime - lastTime;
 
-      OneSignalSyncServiceUtils.scheduleLocationUpdateTask(context, scheduleTime);
+      OSSyncService.getInstance().scheduleLocationUpdateTask(context, scheduleTime);
       return true;
    }
 
    private static void setLastLocationTime(long time) {
       OneSignalPrefs.saveLong(OneSignalPrefs.PREFS_ONESIGNAL,
-              OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME,time);
+              OneSignalPrefs.PREFS_OS_LAST_LOCATION_TIME, time);
    }
 
    private static long getLastLocationTime() {
@@ -174,12 +192,13 @@ class LocationController {
       classContext = context;
       locationHandlers.put(handler.getType(), handler);
 
-      if (!OneSignal.shareLocation) {
+      if (!OneSignal.isLocationShared()) {
          sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
          fireFailedComplete();
          return;
       }
 
+      int locationBackgroundPermission = PackageManager.PERMISSION_DENIED;
       int locationCoarsePermission = PackageManager.PERMISSION_DENIED;
 
       int locationFinePermission = ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION");
@@ -187,6 +206,8 @@ class LocationController {
          locationCoarsePermission = ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION");
          locationCoarse = true;
       }
+      if (Build.VERSION.SDK_INT >= 29)
+         locationBackgroundPermission = ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_BACKGROUND_LOCATION");
 
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
@@ -198,22 +219,25 @@ class LocationController {
          }
          sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
          startGetLocation();
-      }
-      else { // Android 6.0+
+      } else { // Android 6.0+
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED) {
             try {
                PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
                List<String> permissionList = Arrays.asList(packageInfo.requestedPermissions);
                OneSignal.PromptActionResult result = OneSignal.PromptActionResult.PERMISSION_DENIED;
-               if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION"))
+
+               if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION")) {
                   // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
                   // If permission already given prompt will return positive, otherwise will prompt again or show settings
                   requestPermission = "android.permission.ACCESS_FINE_LOCATION";
-               else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
+               } else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
                   if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
                      // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
                      // If permission already given prompt will return positive, otherwise will prompt again or show settings
                      requestPermission = "android.permission.ACCESS_COARSE_LOCATION";
+                  } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
+                     // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
+                     requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION";
                   }
                } else {
                   OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Location permissions not added on AndroidManifest file");
@@ -240,11 +264,40 @@ class LocationController {
                sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
                e.printStackTrace();
             }
-         }
-         else {
+         } else if (Build.VERSION.SDK_INT >= 29 && locationBackgroundPermission != PackageManager.PERMISSION_GRANTED) {
+            backgroundLocationPermissionLogic(context, promptLocation, fallbackToSettings);
+         } else {
             sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
             startGetLocation();
          }
+      }
+   }
+
+   /**
+    * On Android 10 background location permission is needed
+    * On Android 11 and greater, background location should be asked after fine and coarse permission
+    * If background permission is asked at the same time as fine and coarse then both permission request are ignored
+    * */
+   private static void backgroundLocationPermissionLogic(Context context, boolean promptLocation, boolean fallbackToSettings) {
+      try {
+         PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
+         List<String> permissionList = Arrays.asList(packageInfo.requestedPermissions);
+
+         if (permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
+            // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
+            requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION";
+         }
+
+         if (requestPermission != null && promptLocation) {
+            PermissionsActivity.startPrompt(fallbackToSettings);
+         } else {
+            // Fine permission already granted
+            sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
+            startGetLocation();
+         }
+      } catch (PackageManager.NameNotFoundException e) {
+         sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
+         e.printStackTrace();
       }
    }
 
@@ -252,15 +305,13 @@ class LocationController {
    static void startGetLocation() {
       OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LocationController startGetLocation with lastLocation: " + lastLocation);
 
-      if (locationHandlerThread == null)
-         locationHandlerThread = new LocationHandlerThread();
-
       try {
          if (isGooglePlayServicesAvailable()) {
             GMSLocationController.startGetLocation();
          } else if (isHMSAvailable()) {
             HMSLocationController.startGetLocation();
          } else {
+            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "LocationController startGetLocation not possible, no location dependency found");
             fireFailedComplete();
          }
       } catch (Throwable t) {
@@ -327,7 +378,7 @@ class LocationController {
          }
       }
       // Save last time so even if a failure we trigger the same schedule update
-      setLastLocationTime(System.currentTimeMillis());
+      setLastLocationTime(OneSignal.getTime().getCurrentTimeMillis());
    }
 
    protected static void fireCompleteForLocation(Location location) {
@@ -335,7 +386,7 @@ class LocationController {
       LocationPoint point = new LocationPoint();
 
       point.accuracy = location.getAccuracy();
-      point.bg = !OneSignal.isForeground();
+      point.bg = !OneSignal.isInForeground();
       point.type = locationCoarse ? 0 : 1;
       point.timeStamp = location.getTime();
 

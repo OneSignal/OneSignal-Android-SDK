@@ -4,8 +4,10 @@
     <!-- OneSignal SDK has runtime checks Android version. -->
     <!--<uses-sdk tools:overrideLibrary="android.support.customtabs"/>-->
 
-    <!-- INTERNET and c2dm RECEIVE are basic requirements for push messages through Google's GCM. -->
+    <!-- Required so the device can access the internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- c2dm RECEIVE are basic requirements for push messages through Google's FCM -->
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
 
     <!-- Required, makes sure notifications are delivered on time. -->
@@ -61,8 +63,6 @@
 
     <application>
 
-        <receiver android:name="com.onesignal.NotificationOpenedReceiver" />
-
         <service
             android:name="com.onesignal.HmsMessageServiceOneSignal"
             android:exported="false">
@@ -70,33 +70,39 @@
                 <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-        
-        <activity android:name="com.onesignal.NotificationOpenedActivityHMS"
-                  android:theme="@android:style/Theme.Translucent.NoTitleBar">
+
+        <activity
+          android:name="com.onesignal.NotificationOpenedActivityHMS"
+          android:noHistory="true"
+          android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
             </intent-filter>
         </activity>
 
-        <service android:name="com.onesignal.GcmIntentService" />
+        <service android:name="com.onesignal.FCMIntentService" />
 
-        <service android:name="com.onesignal.GcmIntentJobService"
+        <service android:name="com.onesignal.FCMIntentJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
-        <service android:name="com.onesignal.RestoreJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+          android:name="com.onesignal.FocusDelaySyncService"
+          android:stopWithTask="true" />
+        <service
+          android:name="com.onesignal.FocusDelaySyncJobService"
+          android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <service android:name="com.onesignal.RestoreKickoffJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-
-        <service android:name="com.onesignal.SyncService" android:stopWithTask="true" />
-        <service android:name="com.onesignal.SyncJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+          android:name="com.onesignal.SyncService"
+          android:stopWithTask="true" />
+        <service
+          android:name="com.onesignal.SyncJobService"
+          android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <activity android:name="com.onesignal.PermissionsActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
-        <service android:name="com.onesignal.NotificationRestoreService" />
+        <receiver android:name="com.onesignal.NotificationDismissReceiver" />
 
         <receiver android:name="com.onesignal.BootUpReceiver">
             <intent-filter>
@@ -109,6 +115,12 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <activity
+          android:name="com.onesignal.NotificationOpenedReceiver"
+          android:noHistory="true"
+          android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
     </application>
 
     <!-- NOTE: See release version for tags with placeholders -->

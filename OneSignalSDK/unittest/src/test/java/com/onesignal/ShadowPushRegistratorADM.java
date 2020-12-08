@@ -31,7 +31,7 @@ import android.content.Context;
 
 import org.robolectric.annotation.Implements;
 
-import static com.onesignal.ShadowPushRegistratorGCM.regId;
+import static com.onesignal.ShadowPushRegistratorFCM.regId;
 
 @Implements(PushRegistratorADM.class)
 public class ShadowPushRegistratorADM {

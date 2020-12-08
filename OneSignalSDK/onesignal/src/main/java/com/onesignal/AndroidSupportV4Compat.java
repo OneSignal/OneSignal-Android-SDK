@@ -34,9 +34,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 // Designed as a compat for use of Android Support v4 revision 23.+ methods when an older revision of the library is included with the app developer's project.
 class AndroidSupportV4Compat {
@@ -84,7 +84,7 @@ class AndroidSupportV4Compat {
       }
 
       static boolean shouldShowRequestPermissionRationale(Activity activity, String permission) {
-         return android.support.v4.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, permission);
+         return androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, permission);
       }
    }
 }

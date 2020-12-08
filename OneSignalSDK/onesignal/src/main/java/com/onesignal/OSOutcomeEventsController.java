@@ -1,15 +1,15 @@
 package com.onesignal;
 
 import android.os.Process;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import com.onesignal.influence.model.OSInfluence;
-import com.onesignal.influence.model.OSInfluenceType;
-import com.onesignal.outcomes.OSOutcomeEventsFactory;
-import com.onesignal.outcomes.model.OSOutcomeEventParams;
-import com.onesignal.outcomes.model.OSOutcomeSource;
-import com.onesignal.outcomes.model.OSOutcomeSourceBody;
+import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.influence.domain.OSInfluenceType;
+import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
+import com.onesignal.outcomes.domain.OSOutcomeEventParams;
+import com.onesignal.outcomes.domain.OSOutcomeSource;
+import com.onesignal.outcomes.domain.OSOutcomeSourceBody;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -183,7 +183,7 @@ class OSOutcomeEventsController {
                                            @NonNull final float weight,
                                            @NonNull List<OSInfluence> influences,
                                            @Nullable final OneSignal.OutcomeCallback callback) {
-        final long timestampSeconds = System.currentTimeMillis() / 1000;
+        final long timestampSeconds = OneSignal.getTime().getCurrentTimeMillis() / 1000;
         final int deviceType = new OSUtils().getDeviceType();
         final String appId = OneSignal.appId;
 
@@ -216,7 +216,7 @@ class OSOutcomeEventsController {
 
         OSOutcomeSource source = new OSOutcomeSource(directSourceBody, indirectSourceBody);
 
-        final OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight);
+        final OSOutcomeEventParams eventParams = new OSOutcomeEventParams(name, source, weight, 0);
 
         OneSignalApiResponseHandler responseHandler = new OneSignalApiResponseHandler() {
             @Override
@@ -225,7 +225,7 @@ class OSOutcomeEventsController {
 
                 // The only case where an actual success has occurred and the OutcomeEvent should be sent back
                 if (callback != null)
-                    callback.onSuccess(OutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams));
+                    callback.onSuccess(OSOutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams));
             }
 
             @Override

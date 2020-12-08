@@ -49,7 +49,7 @@ class OneSignalDbContract {
       public static final String COLUMN_NAME_CREATED_TIME = "created_time";
       public static final String COLUMN_NAME_EXPIRE_TIME = "expire_time"; // created_time + TTL
 
-      // JSON formatted string of the full GCM bundle
+      // JSON formatted string of the full FCM bundle
       public static final String COLUMN_NAME_FULL_DATA = "full_data";
 
       public static final String INDEX_CREATE_NOTIFICATION_ID = "CREATE INDEX notification_notification_id_idx ON notification(notification_id); ";

@@ -27,14 +27,16 @@
 
 package com.onesignal;
 
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
-import android.support.customtabs.CustomTabsCallback;
-import android.support.customtabs.CustomTabsClient;
-import android.support.customtabs.CustomTabsServiceConnection;
-import android.support.customtabs.CustomTabsSession;
 import android.support.customtabs.ICustomTabsCallback;
 import android.support.customtabs.ICustomTabsService;
+
+import androidx.browser.customtabs.CustomTabsCallback;
+import androidx.browser.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsServiceConnection;
+import androidx.browser.customtabs.CustomTabsSession;
 
 import org.robolectric.annotation.Implements;
 
@@ -56,14 +58,18 @@ public class ShadowCustomTabsClient {
       return true;
    }
    
-   public static boolean bindCustomTabsService(Context context, String packageName, final CustomTabsServiceConnection connection) {
+   public static boolean bindCustomTabsService(final Context context, final String packageName, final CustomTabsServiceConnection connection) {
       new Thread(new Runnable() {
          @Override
          public void run() {
             try {
-               Constructor<CustomTabsClient> constructor = CustomTabsClient.class.getDeclaredConstructor(ICustomTabsService.class, ComponentName.class);
+               Constructor<CustomTabsClient> constructor = CustomTabsClient.class.getDeclaredConstructor(
+                       android.support.customtabs.ICustomTabsService.class,
+                       android.content.ComponentName.class,
+                       android.content.Context.class
+               );
                constructor.setAccessible(true);
-               CustomTabsClient inst = constructor.newInstance(null, null);
+               CustomTabsClient inst = constructor.newInstance(null, null, null);
 
                bindCustomTabsServiceCalled = true;
                connection.onCustomTabsServiceConnected(null, inst);
@@ -87,12 +93,14 @@ public class ShadowCustomTabsClient {
          return null;
       
       try {
-         Constructor<CustomTabsSession> constructor = CustomTabsSession.class.getDeclaredConstructor(ICustomTabsService.class,
-             ICustomTabsCallback.class,
-             ComponentName.class);
+         Constructor<CustomTabsSession> constructor = CustomTabsSession.class.getDeclaredConstructor(
+                 ICustomTabsService.class,
+                 ICustomTabsCallback.class,
+                 ComponentName.class,
+                 PendingIntent.class
+         );
          constructor.setAccessible(true);
-   
-         return constructor.newInstance(null, null, null);
+         return constructor.newInstance(null, null, null, null);
       }catch (Throwable t) {
          t.printStackTrace();
       }

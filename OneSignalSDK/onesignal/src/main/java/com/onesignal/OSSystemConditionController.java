@@ -1,11 +1,12 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AppCompatActivity;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -17,6 +18,10 @@ class OSSystemConditionController {
         void systemConditionChanged();
     }
 
+    interface OSSystemConditionHandler {
+        void removeSystemConditionObserver(@NonNull String key, @NonNull ActivityLifecycleHandler.KeyboardListener listener);
+    }
+
     private static final String TAG = OSSystemConditionController.class.getCanonicalName();
     private final OSSystemConditionObserver systemConditionObserver;
 
@@ -25,13 +30,13 @@ class OSSystemConditionController {
     }
 
     boolean systemConditionsAvailable() {
-        if (ActivityLifecycleHandler.curActivity == null) {
+        if (OneSignal.getCurrentActivity() == null) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "OSSystemConditionObserver curActivity null");
             return false;
         }
 
         try {
-            if (isDialogFragmentShowing(ActivityLifecycleHandler.curActivity)) {
+            if (isDialogFragmentShowing(OneSignal.getCurrentActivity())) {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "OSSystemConditionObserver dialog fragment detected");
                 return false;
             }
@@ -39,9 +44,11 @@ class OSSystemConditionController {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: " + exception);
         }
 
-        boolean keyboardUp = OSViewUtils.isKeyboardUp(new WeakReference<>(ActivityLifecycleHandler.curActivity));
-        if (keyboardUp) {
-            ActivityLifecycleHandler.setSystemConditionObserver(TAG, systemConditionObserver);
+        ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+        boolean keyboardUp = OSViewUtils.isKeyboardUp(new WeakReference<>(OneSignal.getCurrentActivity()));
+
+        if (keyboardUp && activityLifecycleHandler != null) {
+            activityLifecycleHandler.addSystemConditionObserver(TAG, systemConditionObserver);
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.WARN, "OSSystemConditionObserver keyboard up detected");
         }
         return !keyboardUp;

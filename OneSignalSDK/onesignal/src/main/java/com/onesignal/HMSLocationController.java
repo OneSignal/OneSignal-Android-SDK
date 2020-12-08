@@ -115,7 +115,7 @@ class HMSLocationController extends LocationController {
 
         private void init() {
             long updateInterval = BACKGROUND_UPDATE_TIME_MS;
-            if (OneSignal.isForeground())
+            if (OneSignal.isInForeground())
                 updateInterval = FOREGROUND_UPDATE_TIME_MS;
 
             LocationRequest locationRequest = LocationRequest.create()
@@ -125,7 +125,7 @@ class HMSLocationController extends LocationController {
                     .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "HMSLocationController Huawei LocationServices requestLocationUpdates!");
-            huaweiFusedLocationProviderClient.requestLocationUpdates(locationRequest, this, locationHandlerThread.getLooper());
+            huaweiFusedLocationProviderClient.requestLocationUpdates(locationRequest, this, getLocationHandlerThread().getLooper());
         }
 
         @Override
