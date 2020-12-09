@@ -222,9 +222,13 @@ class OSInAppMessage {
     public String toString() {
         return "OSInAppMessage{" +
                 "messageId='" + messageId + '\'' +
+                ", variants=" + variants +
                 ", triggers=" + triggers +
                 ", clickedClickIds=" + clickedClickIds +
-                ", displayStats=" + redisplayStats +
+                ", redisplayStats=" + redisplayStats +
+                ", displayDuration=" + displayDuration +
+                ", displayedInSession=" + displayedInSession +
+                ", triggerChanged=" + triggerChanged +
                 ", actionTaken=" + actionTaken +
                 ", isPreview=" + isPreview +
                 '}';

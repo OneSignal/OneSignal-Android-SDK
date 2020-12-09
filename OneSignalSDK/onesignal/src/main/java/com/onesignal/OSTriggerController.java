@@ -201,6 +201,26 @@ class OSTriggerController {
     }
 
     /**
+     * Part of redisplay logic
+     *
+     * If message has only dynamic trigger return true, otherwise false
+     * */
+    boolean messageHasOnlyDynamicTriggers(OSInAppMessage message) {
+        if (message.triggers == null || message.triggers.isEmpty())
+            return false;
+
+        for (ArrayList<OSTrigger> andConditions : message.triggers) {
+            for (OSTrigger trigger : andConditions) {
+                if (trigger.kind == OSTrigger.OSTriggerKind.CUSTOM || trigger.kind == OSTrigger.OSTriggerKind.UNKNOWN)
+                    // At least one trigger is not dynamic
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Trigger Set/Delete/Persist Logic
      */
     void addTriggers(Map<String, Object> newTriggers) {
