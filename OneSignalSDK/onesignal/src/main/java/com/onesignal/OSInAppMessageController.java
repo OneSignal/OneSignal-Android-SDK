@@ -480,10 +480,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (messageDismissed && index != -1) {
             OSInAppMessage savedIAM = redisplayedInAppMessages.get(index);
             message.getRedisplayStats().setDisplayStats(savedIAM.getRedisplayStats());
+            message.setDisplayedInSession(savedIAM.isDisplayedInSession());
 
-            // Message that don't have triggers should display only once per session
-            boolean triggerHasChanged = message.isTriggerChanged() || (!savedIAM.isDisplayedInSession() && message.triggers.isEmpty());
-
+            boolean triggerHasChanged = hasMessageTriggerChanged(message);
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.toString() + " triggerHasChanged: " + triggerHasChanged);
 
             // Check if conditions are correct for redisplay
@@ -497,6 +496,18 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 message.clearClickIds();
             }
         }
+    }
+
+    private boolean hasMessageTriggerChanged(OSInAppMessage message) {
+        // Message that only have dynamic trigger should display only once per session
+        boolean messageHasOnlyDynamicTrigger = triggerController.messageHasOnlyDynamicTriggers(message);
+        if (messageHasOnlyDynamicTrigger)
+            return !message.isDisplayedInSession();
+
+        // Message that don't have triggers should display only once per session
+        boolean shouldMessageDisplayInSession = !message.isDisplayedInSession() && message.triggers.isEmpty();
+
+        return message.isTriggerChanged() || shouldMessageDisplayInSession;
     }
 
     /**
