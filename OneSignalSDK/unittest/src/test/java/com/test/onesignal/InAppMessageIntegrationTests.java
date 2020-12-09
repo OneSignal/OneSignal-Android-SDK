@@ -282,8 +282,14 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
-    public void testTimedMessageIsDisplayed() throws Exception {
-        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.SESSION_TIME, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05);
+    public void testTimedMessageIsDisplayedOncePerSession() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
+                OSTriggerKind.SESSION_TIME,
+                null,
+                OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(),
+                0.05,
+                10,
+                0);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message);
@@ -301,23 +307,23 @@ public class InAppMessageIntegrationTests {
         Awaitility.await()
                 .atMost(new Duration(150, TimeUnit.MILLISECONDS))
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
-                .until(new Callable<Boolean>() {
-                    @Override
-                    public Boolean call() throws Exception {
-                        return OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1;
-                    }
-                });
+                .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1);
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+
+        // Check that the IAM is not displayed again
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
-
     @Test
-    public void testAfterLastInAppTimeIsDisplayed() throws Exception {
-        final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+    public void testAfterLastInAppTimeIsDisplayedOncePerSession() throws Exception {
+        final OSTestInAppMessage message1 = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
                 OSTriggerKind.SESSION_TIME,
                 null,
                 OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(),
-                0.05
-        );
+                0.05,
+                10,
+                0);
 
         ArrayList<ArrayList<OSTestTrigger>> triggers2 = new ArrayList<ArrayList<OSTestTrigger>>() {{
             add(new ArrayList<OSTestTrigger>() {{
@@ -325,7 +331,7 @@ public class InAppMessageIntegrationTests {
                 add(InAppMessagingHelpers.buildTrigger(OSTriggerKind.TIME_SINCE_LAST_IN_APP, null, OSTestTrigger.OSTriggerOperator.GREATER_THAN.toString(), 0.05));
             }});
         }};
-        final OSTestInAppMessage message2 = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers2);
+        final OSTestInAppMessage message2 = InAppMessagingHelpers.buildTestMessageWithMultipleTriggersAndRedisplay(triggers2, 10, 0);
 
         setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
             add(message1);
@@ -365,6 +371,12 @@ public class InAppMessageIntegrationTests {
                         assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
                     }
                 });
+
+
+        OneSignalPackagePrivateHelper.dismissCurrentMessage();
+
+        // Check that the IAM is not displayed again
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
     }
 
     /**
