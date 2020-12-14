@@ -16,7 +16,7 @@ class OSInAppMessagePage constructor(jsonObject: JSONObject) {
         pageIndex = jsonObject.optString(PAGE_INDEX, null)
     }
 
-    fun toJSONObject(): JSONObject? {
+    fun toJSONObject(): JSONObject {
         val mainObj = JSONObject()
         try {
             mainObj.put(PAGE_ID, pageId)

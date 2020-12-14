@@ -286,9 +286,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         if (message.isPreview) {
             return;
         }
-        if (message.getViewedPageIds().contains(newPage.getPageId())) {
-            return;
-        }
         fireRESTCallForPageChange(message, newPage);
     }
 
@@ -426,7 +423,6 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             return;
 
         final String pageId = page.getPageId();
-
 
         // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
         if (message.getViewedPageIds().contains(pageId))

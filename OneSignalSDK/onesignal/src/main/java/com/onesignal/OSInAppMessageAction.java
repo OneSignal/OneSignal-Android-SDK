@@ -133,7 +133,6 @@ public class OSInAppMessageAction {
         return clickName;
     }
 
-    @NonNull
     String getPageId() {
         return pageId;
     }
