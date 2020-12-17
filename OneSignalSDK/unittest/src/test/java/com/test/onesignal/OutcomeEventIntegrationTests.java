@@ -3,7 +3,6 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 
 import androidx.test.core.app.ApplicationProvider;
 
@@ -16,6 +15,7 @@ import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
+import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
@@ -24,8 +24,10 @@ import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
+import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
@@ -49,7 +51,6 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowPausedSystemClock;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -77,6 +78,7 @@ import static com.test.onesignal.TestHelpers.pauseActivity;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 
@@ -112,6 +114,7 @@ public class OutcomeEventIntegrationTests {
     private OneSignalPackagePrivateHelper.OSSharedPreferencesWrapper preferences;
     private OSTrackerFactory trackerFactory;
     private static List<OSInfluence> lastInfluencesEnding;
+    private static OSNotificationOpenedResult notificationOpenedResult;
 
     OSSessionManager.SessionListener sessionListener = lastInfluences -> {
         OneSignal_getSessionListener().onSessionEnding(lastInfluences);
@@ -155,6 +158,7 @@ public class OutcomeEventIntegrationTests {
     @After
     public void afterEachTest() throws Exception {
         lastInfluencesEnding = null;
+        notificationOpenedResult = null;
         afterTestCleanup();
     }
 
@@ -605,6 +609,193 @@ public class OutcomeEventIntegrationTests {
     }
 
     @Test
+    @Config(shadows = { OneSignalShadowPackageManager.class })
+    public void testDirectSession_fromNotificationClick_OpenHandleByUser_whenAppIsInBackground() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+        OneSignal.setNotificationOpenedHandler(result -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedHandler called with result: " + result);
+            notificationOpenedResult = result;
+
+            // App opened after clicking notification, but Robolectric needs this to simulate onAppFocus() code after a click
+            blankActivityController.resume();
+        });
+
+        // Background app
+        pauseActivity(blankActivityController);
+
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
+        sessionManager.onNotificationReceived(notificationID);
+
+        // Click notification before new session
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        threadAndTaskWait();
+
+        assertNotNull(notificationOpenedResult);
+        // Check message String matches data sent in open handler
+        assertEquals("Test Msg", notificationOpenedResult.getNotification().getBody());
+
+        // Make sure notification influence is DIRECT
+        assertNotificationChannelDirectInfluence(notificationID);
+        // Make sure iam influence is UNATTRIBUTED
+        assertIAMChannelUnattributedInfluence();
+
+        for (OSInfluence influence : lastInfluencesEnding) {
+            assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+        }
+    }
+
+    @Test
+    @Config(shadows = { OneSignalShadowPackageManager.class })
+    public void testDirectSession_fromNotificationClick_OpenHandleByUser_NewSession_whenAppIsInBackground() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+        OneSignal.setNotificationOpenedHandler(result -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedHandler called with result: " + result);
+            notificationOpenedResult = result;
+
+            // App opened after clicking notification, but Robolectric needs this to simulate onAppFocus() code after a click
+            blankActivityController.resume();
+        });
+
+        // Background app
+        pauseActivity(blankActivityController);
+
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
+        sessionManager.onNotificationReceived(notificationID);
+
+        time.advanceSystemAndElapsedTimeBy(61);
+
+        // Click notification before new session
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        threadAndTaskWait();
+
+        assertNotNull(notificationOpenedResult);
+        // Check message String matches data sent in open handler
+        assertEquals("Test Msg", notificationOpenedResult.getNotification().getBody());
+
+        // Make sure notification influence is DIRECT
+        assertNotificationChannelDirectInfluence(notificationID);
+        // Make sure iam influence is UNATTRIBUTED
+        assertIAMChannelUnattributedInfluence();
+
+        for (OSInfluence influence : lastInfluencesEnding) {
+            assertEquals(OSInfluenceType.UNATTRIBUTED, influence.getInfluenceType());
+        }
+    }
+
+    @Test
+    @Config(shadows = { OneSignalShadowPackageManager.class, ShadowTimeoutHandler.class })
+    public void testDirectSession_fromNotificationClick_NoOpened_whenAppIsInBackground() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+        OneSignal.setNotificationOpenedHandler(result -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedHandler called with result: " + result);
+            notificationOpenedResult = result;
+        });
+
+        // Background app
+        pauseActivity(blankActivityController);
+
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
+        sessionManager.onNotificationReceived(notificationID);
+
+        // Mock timeout to 1, given that we are delaying the complete inside OSNotificationOpenedResult
+        // We depend on the timeout complete
+        ShadowTimeoutHandler.setMockDelayMillis(1);
+
+        // Click notification before new session
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        threadAndTaskWait();
+
+        assertNotNull(notificationOpenedResult);
+        // Check message String matches data sent in open handler
+        assertEquals("Test Msg", notificationOpenedResult.getNotification().getBody());
+
+        // Make sure notification influence is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+        // Make sure iam influence is UNATTRIBUTED
+        assertIAMChannelUnattributedInfluence();
+
+        assertNull(lastInfluencesEnding);
+    }
+
+    @Test
+    @Config(shadows = { OneSignalShadowPackageManager.class, ShadowTimeoutHandler.class })
+    public void testDirectSession_fromNotificationClick_NoOpened_NewSession_whenAppIsInBackground() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+        OneSignal.setNotificationOpenedHandler(result -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedHandler called with result: " + result);
+            notificationOpenedResult = result;
+        });
+
+        // Background app
+        pauseActivity(blankActivityController);
+
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
+        sessionManager.onNotificationReceived(notificationID);
+
+        // Mock timeout to 1, given that we are delaying the complete inside OSNotificationOpenedResult
+        // We depend on the timeout complete
+        ShadowTimeoutHandler.setMockDelayMillis(1);
+        time.advanceSystemAndElapsedTimeBy(61);
+
+        // Click notification before new session
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        threadAndTaskWait();
+
+        assertNotNull(notificationOpenedResult);
+        // Check message String matches data sent in open handler
+        assertEquals("Test Msg", notificationOpenedResult.getNotification().getBody());
+
+        // Make sure notification influence is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+        // Make sure iam influence is UNATTRIBUTED
+        assertIAMChannelUnattributedInfluence();
+
+        assertNull(lastInfluencesEnding);
+    }
+
+    @Test
+    @Config(shadows = { OneSignalShadowPackageManager.class })
+    public void testDirectSession_fromNotificationClick_OpenHandleByUser_whenAppIsInForeground() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+        OneSignal.setNotificationOpenedHandler(result -> {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedHandler called with result: " + result);
+            notificationOpenedResult = result;
+        });
+
+        String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
+        sessionManager.onNotificationReceived(notificationID);
+        // Click notification before new session
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        threadAndTaskWait();
+
+        assertNotNull(notificationOpenedResult);
+        // Check message String matches data sent in open handler
+        assertEquals("Test Msg", notificationOpenedResult.getNotification().getBody());
+
+        // Make sure notification influence is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+        // Make sure iam influence is UNATTRIBUTED
+        assertIAMChannelUnattributedInfluence();
+
+        assertNull(lastInfluencesEnding);
+    }
+
+    @Test
     public void testIndirectSession_wontOverrideUnattributedSession_fromNotificationReceived_whenAppIsInForeground() throws Exception {
         OneSignalInit();
         threadAndTaskWait();
@@ -948,7 +1139,6 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         assertMeasureAtIndex(1, ONESIGNAL_OUTCOME_NAME);
-
     }
 
     private void foregroundAppAfterClickingNotification() throws Exception {
@@ -971,7 +1161,7 @@ public class OutcomeEventIntegrationTests {
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         sessionManager.onNotificationReceived(notificationID);
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
         threadAndTaskWait();
 
         // App opened after clicking notification, but Robolectric needs this to simulate onAppFocus() code after a click

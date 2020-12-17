@@ -37,14 +37,64 @@ import org.json.JSONObject;
  * <br/>
  * {@link #action} - The action the user took on the notification
  */
-public class OSNotificationOpenedResult {
+public class OSNotificationOpenedResult implements OneSignal.EntryStateListener {
+
+   // Timeout time in seconds before ignoring opened track
+   private static final long PROCESS_NOTIFICATION_TIMEOUT = 5 * 1_000L;
+
+   private final OSTimeoutHandler timeoutHandler;
+   private final Runnable timeoutRunnable;
 
    private OSNotification notification;
    private OSNotificationAction action;
 
+   // Used to toggle when complete is called so it can not be called more than once
+   private boolean isComplete = false;
+
    public OSNotificationOpenedResult(OSNotification notification, OSNotificationAction action) {
       this.notification = notification;
       this.action = action;
+
+      timeoutHandler = OSTimeoutHandler.getTimeoutHandler();
+      timeoutRunnable = new Runnable() {
+         @Override
+         public void run() {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Running complete from OSNotificationOpenedResult timeout runnable!");
+            complete(false);
+         }
+      };
+      timeoutHandler.startTimeout(PROCESS_NOTIFICATION_TIMEOUT, timeoutRunnable);
+   }
+
+   /**
+    * Method indicating OneSignal that application was opened by user.
+    * This method must be call before startActivity or equivalents are called
+    * User must call complete within 5 seconds or opened track will be handle by OneSignal.
+    *
+    * @param opened true if application was opened under the OSNotificationOpenedHandler handler, false otherwise
+    */
+   private void complete(boolean opened) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationOpenedResult complete called with opened: " + opened);
+      timeoutHandler.destroyTimeout(timeoutRunnable);
+
+      if (isComplete) {
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationOpenedResult already completed");
+         return;
+      }
+
+      isComplete = true;
+
+      if (opened)
+         OneSignal.applicationOpenedByNotification(notification.getNotificationId());
+
+      OneSignal.removeEntryStateListener(this);
+   }
+
+   @Override
+   public void onEntryStateChange(OneSignal.AppEntryAction appEntryState) {
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationOpenedResult onEntryStateChange called with appEntryState: " + appEntryState);
+      // If application changed state from closed then application was started from an open notification click
+      complete(OneSignal.AppEntryAction.APP_CLOSE.equals(appEntryState));
    }
 
    /**
@@ -81,5 +131,14 @@ public class OSNotificationOpenedResult {
 
    public OSNotificationAction getAction() {
       return action;
+   }
+
+   @Override
+   public String toString() {
+      return "OSNotificationOpenedResult{" +
+              "notification=" + notification +
+              ", action=" + action +
+              ", isComplete=" + isComplete +
+              '}';
    }
 }
