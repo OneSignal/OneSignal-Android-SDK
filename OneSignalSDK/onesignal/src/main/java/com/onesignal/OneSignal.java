@@ -303,6 +303,7 @@ public class OneSignal {
       // Fire with the last appEntryState that just ended.
       void onEntryStateChange(AppEntryAction appEntryState);
    }
+
    private static List<EntryStateListener> entryStateListeners = new ArrayList<>();
    static void callEntryStateListeners(AppEntryAction appEntryState) {
       List<EntryStateListener> entryStateListeners = new ArrayList<>(OneSignal.entryStateListeners);

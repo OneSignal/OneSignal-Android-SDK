@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2020 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,10 @@ public class OSNotificationOpenedResult implements OneSignal.EntryStateListener 
       this.notification = notification;
       this.action = action;
 
+      // Configure 5 second timeout - max time we expect the application to call onResume
+      // User can disable OneSignal application open by setting on the manifest:
+      // <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
+      // If the user does this, we need to identify if the notification click was the way the user come back to the application (Session tracking)
       timeoutHandler = OSTimeoutHandler.getTimeoutHandler();
       timeoutRunnable = new Runnable() {
          @Override
@@ -63,13 +67,12 @@ public class OSNotificationOpenedResult implements OneSignal.EntryStateListener 
             complete(false);
          }
       };
+      // This timer is needed for tracking application coming from background or swiped away when user click on notification
       timeoutHandler.startTimeout(PROCESS_NOTIFICATION_TIMEOUT, timeoutRunnable);
    }
 
    /**
     * Method indicating OneSignal that application was opened by user.
-    * This method must be call before startActivity or equivalents are called
-    * User must call complete within 5 seconds or opened track will be handle by OneSignal.
     *
     * @param opened true if application was opened under the OSNotificationOpenedHandler handler, false otherwise
     */
