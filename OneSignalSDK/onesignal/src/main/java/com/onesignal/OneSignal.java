@@ -3160,6 +3160,7 @@ public class OneSignal {
     *    1. OutcomeEventParams cached already for re-attempt in future
     *    2. Unique OutcomeEventParams already sent for ATTRIBUTED session and notification(s)
     *    3. Unique OutcomeEventParams already sent for UNATTRIBUTED session during session
+    *    4. Outcomes disabled
     */
    public interface OutcomeCallback {
       void onSuccess(@Nullable OSOutcomeEvent outcomeEvent);
