@@ -204,6 +204,8 @@ class OSOutcomeEventsController {
                     break;
                 case DISABLED:
                     OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes disabled for channel: " + influence.getInfluenceChannel());
+                    if (callback != null)
+                        callback.onSuccess(null);
                     return; // finish method
             }
         }
@@ -211,6 +213,8 @@ class OSOutcomeEventsController {
         if (directSourceBody == null && indirectSourceBody == null && !unattributed) {
             // Disabled for all channels
             OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "Outcomes disabled for all channels");
+            if (callback != null)
+                callback.onSuccess(null);
             return;
         }
 
