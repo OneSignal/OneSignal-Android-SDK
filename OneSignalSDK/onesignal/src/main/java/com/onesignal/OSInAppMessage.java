@@ -96,7 +96,7 @@ class OSInAppMessage {
             return null;
         }
 
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        SimpleDateFormat format = OneSignalSimpleDateFormat.iso8601Format();
         try {
             Date date = format.parse(endTimeString);
             return date;
@@ -179,7 +179,7 @@ class OSInAppMessage {
             json.put(IAM_TRIGGERS, orConditions);
 
             if (this.endTime != null) {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                SimpleDateFormat format = OneSignalSimpleDateFormat.iso8601Format();
                 String endTimeString = format.format(this.endTime);
                 json.put(END_TIME, endTimeString);
             }
