@@ -996,6 +996,14 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testAndroidParamsProjectNumberOverridesLocal() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertThat(ShadowPushRegistratorFCM.lastProjectNumber, not("123456789"));
+   }
+
+   @Test
    @Config(shadows = {ShadowOneSignal.class})
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
       OneSignal.initWithContext(blankActivity);
@@ -1008,14 +1016,6 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals("Robo test message", lastNotificationOpenedBody);
-   }
-
-   @Test
-   public void testAndroidParamsProjectNumberOverridesLocal() throws Exception {
-      OneSignalInit();
-      threadAndTaskWait();
-
-      assertThat(ShadowPushRegistratorFCM.lastProjectNumber, not("123456789"));
    }
 
    @Test

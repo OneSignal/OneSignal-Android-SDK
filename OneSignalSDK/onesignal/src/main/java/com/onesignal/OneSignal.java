@@ -299,6 +299,29 @@ public class OneSignal {
       void onFailure(JSONObject response);
    }
 
+   interface EntryStateListener {
+      // Fire with the last appEntryState that just ended.
+      void onEntryStateChange(AppEntryAction appEntryState);
+   }
+
+   private static List<EntryStateListener> entryStateListeners = new ArrayList<>();
+   static void callEntryStateListeners(AppEntryAction appEntryState) {
+      List<EntryStateListener> entryStateListeners = new ArrayList<>(OneSignal.entryStateListeners);
+      for (EntryStateListener sessionListener : entryStateListeners) {
+         sessionListener.onEntryStateChange(appEntryState);
+      }
+   }
+
+   static void addEntryStateListener(EntryStateListener sessionListener, AppEntryAction appEntryState) {
+      // We only care for open and close changes
+      if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
+         entryStateListeners.add(sessionListener);
+   }
+
+   static void removeEntryStateListener(EntryStateListener sessionListener) {
+      entryStateListeners.remove(sessionListener);
+   }
+
    static Context appContext;
    static WeakReference<Activity> appActivity;
    static String appId;
@@ -1226,8 +1249,12 @@ public class OneSignal {
       setInForeground(true);
 
       // If the app gains focus and has not been set to NOTIFICATION_CLICK yet we can assume this is a normal app open
-      if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
-         appEntryState = AppEntryAction.APP_OPEN;
+      if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK)) {
+         callEntryStateListeners(appEntryState);
+         // Check again because listeners might have changed the appEntryState
+         if (!appEntryState.equals(AppEntryAction.NOTIFICATION_CLICK))
+            appEntryState = AppEntryAction.APP_OPEN;
+      }
 
       LocationController.onFocusChange();
 
@@ -1979,7 +2006,9 @@ public class OneSignal {
          return;
       }
 
-      fireNotificationOpenedHandler(generateNotificationOpenedResult(dataArray));
+      OSNotificationOpenedResult openedResult = generateNotificationOpenedResult(dataArray);
+      addEntryStateListener(openedResult, appEntryState);
+      fireNotificationOpenedHandler(openedResult);
    }
 
    // Also called for received but OSNotification is extracted from it.
@@ -2126,12 +2155,16 @@ public class OneSignal {
       logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " and defaultOpenActionDisabled: " + defaultOpenActionDisabled);
       // Check if the notification click should lead to a DIRECT session
       if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
-         // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
-         appEntryState = AppEntryAction.NOTIFICATION_CLICK;
-         sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
+         applicationOpenedByNotification(notificationId);
       }
 
       runNotificationOpenedCallback(data);
+   }
+
+   static void applicationOpenedByNotification(@Nullable final String notificationId) {
+      // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
+      appEntryState = AppEntryAction.NOTIFICATION_CLICK;
+      sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
    }
 
    static boolean startOrResumeApp(Activity inContext) {
