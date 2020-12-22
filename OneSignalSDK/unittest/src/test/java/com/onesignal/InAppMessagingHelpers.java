@@ -108,6 +108,17 @@ public class InAppMessagingHelpers {
         return new OSTestInAppMessage(basicIAMJSONObject(triggerJson));
     }
 
+    public static OSTestInAppMessage buildTestMessageWithEndTime(final OSTriggerKind kind, final String key, final String operator, final Object value, final boolean pastEndTime) throws JSONException {
+        JSONArray triggerJson = basicTrigger(kind, key, operator, value);
+        JSONObject json = basicIAMJSONObject(triggerJson);
+        if (pastEndTime) {
+            json.put("end_time", "1960-01-01T00:00:00.000Z");
+        } else {
+            json.put("end_time", "2200-01-01T00:00:00.000Z");
+        }
+        return new OSTestInAppMessage(json);
+    }
+
     public static OSTestInAppMessage buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OSTestTrigger>> triggers) throws JSONException {
         JSONArray ors = buildTriggers(triggers);
         return buildTestMessage(ors);
