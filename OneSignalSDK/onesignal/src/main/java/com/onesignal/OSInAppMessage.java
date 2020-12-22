@@ -6,10 +6,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Set;
 
 class OSInAppMessage {
@@ -19,6 +23,7 @@ class OSInAppMessage {
     private static final String IAM_TRIGGERS = "triggers";
     private static final String IAM_REDISPLAY_STATS = "redisplay";
     private static final String DISPLAY_DURATION = "displayDuration";
+    private static final String END_TIME = "end_time";
 
     /**
      * The unique identifier for this in-app message
@@ -57,6 +62,7 @@ class OSInAppMessage {
     private boolean displayedInSession = false;
     private boolean triggerChanged = false;
     private boolean actionTaken;
+    private Date endTime;
     boolean isPreview;
 
     OSInAppMessage(boolean isPreview) {
@@ -76,9 +82,29 @@ class OSInAppMessage {
         this.variants = parseVariants(json.getJSONObject(IAM_VARIANTS));
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
         this.clickedClickIds = new HashSet<>();
+        this.endTime = parseEndTimeJson(json);
 
         if (json.has(IAM_REDISPLAY_STATS))
             this.redisplayStats = new OSInAppMessageRedisplayStats(json.getJSONObject(IAM_REDISPLAY_STATS));
+    }
+
+    private Date parseEndTimeJson(JSONObject json) {
+        String endTimeString;
+        try {
+            endTimeString = json.getString(END_TIME);
+        } catch (JSONException e) {
+            return null;
+        }
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        try {
+            Date date = format.parse(endTimeString);
+            return date;
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private HashMap<String, HashMap<String, String>> parseVariants(JSONObject json) throws JSONException {
@@ -151,6 +177,12 @@ class OSInAppMessage {
             }
 
             json.put(IAM_TRIGGERS, orConditions);
+
+            if (this.endTime != null) {
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                String endTimeString = format.format(this.endTime);
+                json.put(END_TIME, endTimeString);
+            }
 
         } catch (JSONException exception) {
             exception.printStackTrace();
@@ -231,6 +263,7 @@ class OSInAppMessage {
                 ", triggerChanged=" + triggerChanged +
                 ", actionTaken=" + actionTaken +
                 ", isPreview=" + isPreview +
+                ", endTime=" + endTime +
                 '}';
     }
 
@@ -248,4 +281,11 @@ class OSInAppMessage {
         return result;
     }
 
+    public boolean isFinished() {
+        if (this.endTime == null) {
+            return false;
+        }
+        Date now = new Date();
+        return this.endTime.before(now);
+    }
 }

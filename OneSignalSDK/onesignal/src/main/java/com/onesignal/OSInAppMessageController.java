@@ -202,7 +202,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
             if (triggerController.evaluateMessageTriggers(message)) {
                 setDataForRedisplay(message);
 
-                if (!dismissedMessages.contains(message.messageId)) {
+                if (!dismissedMessages.contains(message.messageId) && !message.isFinished()) {
                     queueMessageForDisplay(message);
                 }
             }
