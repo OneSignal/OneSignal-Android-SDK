@@ -190,6 +190,46 @@ public class InAppMessageIntegrationTests {
         assertTrue(OneSignal.isInAppMessagingPaused());
     }
 
+    @Test
+    public void testMessagesDoNotDisplayPastEndTime() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithEndTime(OSTriggerKind.CUSTOM, "test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3, true);
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // the SDK should read the message from registration JSON, set up a timer, and once
+        // the timer fires the message should get shown.
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // We will set the trigger. However, since the end time is in the past the message should not be shown
+        OneSignal.addTrigger("test_key", 3);
+        // Make no IAMs are in the display queue
+        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Make sure no IAM is showing
+        assertFalse(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+    }
+
+    @Test
+    public void testMessagesDoDisplayBeforeEndTime() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithEndTime(OSTriggerKind.CUSTOM, "test_key", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 3, false);
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // the SDK should read the message from registration JSON, set up a timer, and once
+        // the timer fires the message should get shown.
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // We will set the trigger. However, since the end time is in the past the message should not be shown
+        OneSignal.addTrigger("test_key", 3);
+        // Make no IAMs are in the display queue
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Make sure no IAM is showing
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+    }
+
     /**
      * Since it is possible for multiple in-app messages to be valid at the same time, we've implemented
      * a queue so that the SDK does not try to display both messages at the same time.
