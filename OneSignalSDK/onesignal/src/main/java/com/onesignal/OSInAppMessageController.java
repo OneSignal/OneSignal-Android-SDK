@@ -51,6 +51,9 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     //   This means their impression has been successfully posted to our backend and should not be counted again
     @NonNull
     final private Set<String> impressionedMessages;
+    //   This means their impression has been successfully posted to our backend and should not be counted again
+    @NonNull
+    final private Set<String> viewedPageIds;
     // IAM clicks that have been successfully posted to our backend and should not be counted again
     @NonNull
     final private Set<String> clickedClickIds;
@@ -75,6 +78,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         dismissedMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
         impressionedMessages = OSUtils.newConcurrentSet();
+        viewedPageIds = OSUtils.newConcurrentSet();
         clickedClickIds = OSUtils.newConcurrentSet();
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
@@ -95,6 +99,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         );
         if (tempImpressionsSet != null)
             impressionedMessages.addAll(tempImpressionsSet);
+
+        Set<String> tempPageImpressionsSet = OneSignalPrefs.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
+                null
+        );
+        if (tempPageImpressionsSet != null)
+            viewedPageIds.addAll(tempPageImpressionsSet);
 
         Set<String> tempClickedMessageIdsSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
@@ -281,6 +293,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
+    void onPageChanged(@NonNull final OSInAppMessage message, @NonNull final JSONObject eventJson) {
+        final OSInAppMessagePage newPage = new OSInAppMessagePage(eventJson);
+        if (message.isPreview) {
+            return;
+        }
+        fireRESTCallForPageChange(message, newPage);
+    }
+
     void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.setFirstClick(message.takeActionAsUnique());
@@ -409,6 +429,60 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
+    private void saveViewedPageIdsToPrefs() {
+        OneSignalPrefs.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
+                // Post success, store impressioned pages to disk
+                viewedPageIds);
+    }
+
+    private void fireRESTCallForPageChange(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessagePage page) {
+        final String variantId = variantIdForMessage(message);
+        if (variantId == null)
+            return;
+
+        final String pageId = page.getPageId();
+
+        final String messagePrefixedPageId = message.messageId + pageId;
+
+        // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
+        if (viewedPageIds.contains(messagePrefixedPageId)) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Already sent page impression for id: " + pageId);
+            return;
+        }
+
+        viewedPageIds.add(messagePrefixedPageId);
+
+        try {
+            JSONObject json = new JSONObject() {{
+                put("app_id", OneSignal.appId);
+                put("player_id", OneSignal.getUserId());
+                put("variant_id", variantId);
+                put("device_type", new OSUtils().getDeviceType());
+                put("page_id", pageId);
+            }};
+
+            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/pageImpression", json, new ResponseHandler() {
+                @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("page impression", response);
+                    saveViewedPageIdsToPrefs();
+                }
+
+                @Override
+                void onFailure(int statusCode, String response, Throwable throwable) {
+                    printHttpErrorForInAppMessageRequest("page impression", statusCode, response);
+                    // Post failed, viewed page should be removed and this way another post can be attempted
+                    viewedPageIds.remove(messagePrefixedPageId);
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
+        }
+    }
+
     private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
@@ -493,6 +567,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
+                // Pages from different IAMs should not impact each other so we can clear the entire
+                // list when an IAM is dismissed or we are re-displaying the same one
+                viewedPageIds.clear();
+                saveViewedPageIdsToPrefs();
                 message.clearClickIds();
             }
         }

@@ -155,6 +155,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         static final String EVENT_TYPE_KEY = "type";
         static final String EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete";
         static final String EVENT_TYPE_ACTION_TAKEN = "action_taken";
+        static final String EVENT_TYPE_PAGE_CHANGE = "page_change";
 
         static final String IAM_DISPLAY_LOCATION_KEY = "displayLocation";
         static final String IAM_PAGE_META_DATA_KEY = "pageMetaData";
@@ -168,11 +169,20 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 JSONObject jsonObject = new JSONObject(message);
                 String messageType = jsonObject.getString(EVENT_TYPE_KEY);
 
-                if (messageType.equals(EVENT_TYPE_RENDERING_COMPLETE))
-                    handleRenderComplete(jsonObject);
-                else if (messageType.equals(EVENT_TYPE_ACTION_TAKEN) && !messageView.isDragging()) {
-                    // Added handling so that click actions won't trigger while dragging the IAM
-                    handleActionTaken(jsonObject);
+                switch (messageType) {
+                    case EVENT_TYPE_RENDERING_COMPLETE:
+                        handleRenderComplete(jsonObject);
+                        break;
+                    case EVENT_TYPE_ACTION_TAKEN:
+                        // Added handling so that click actions won't trigger while dragging the IAM
+                        if (!messageView.isDragging())
+                            handleActionTaken(jsonObject);
+                        break;
+                    case EVENT_TYPE_PAGE_CHANGE:
+                        handlePageChange(jsonObject);
+                        break;
+                    default:
+                        break;
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -225,6 +235,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             boolean close = body.getBoolean("close");
             if (close)
                 dismissAndAwaitNextMessage(null);
+        }
+
+        private void handlePageChange(JSONObject jsonObject) throws JSONException {
+            OneSignal.getInAppMessageController().onPageChanged(message, jsonObject);
         }
     }
 

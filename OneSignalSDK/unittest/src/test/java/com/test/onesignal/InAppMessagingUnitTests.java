@@ -616,4 +616,19 @@ public class InAppMessagingUnitTests {
         assertEquals(1, iamImpressionRequest.payload.get("device_type"));
         assertEquals(true, iamImpressionRequest.payload.get("first_impression"));
     }
+
+    @Test
+    public void testOnPageChanged() throws Exception {
+        threadAndTaskWait();
+
+        OneSignalPackagePrivateHelper.onPageChanged(message, InAppMessagingHelpers.buildTestPageJson());
+
+        ShadowOneSignalRestClient.Request iamPageImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
+
+        assertEquals("in_app_messages/" + message.messageId + "/pageImpression", iamPageImpressionRequest.url);
+        assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamPageImpressionRequest.payload.get("app_id"));
+        assertEquals(ShadowOneSignalRestClient.pushUserId, iamPageImpressionRequest.payload.get("player_id"));
+        assertEquals(1, iamPageImpressionRequest.payload.get("device_type"));
+        assertEquals(InAppMessagingHelpers.IAM_PAGE_ID, iamPageImpressionRequest.payload.get("page_id"));
+    }
 }
