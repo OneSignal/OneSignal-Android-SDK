@@ -18,7 +18,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
-import java.lang.ref.WeakReference;
 
 import static com.onesignal.OSViewUtils.dpToPx;
 
@@ -64,7 +63,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @NonNull private Activity activity;
     @NonNull private OSInAppMessage message;
 
-    private boolean firstShow = true;
+    private String currentActivityName = null;
+    private Integer lastPageHeight = null;
 
     interface OneSignalGenericCallback {
         void onComplete();
@@ -275,40 +275,49 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message new activity, calculate height and show ");
 
-       // Using post to ensure that the status bar inset is already added to the view
-       OSViewUtils.decorViewReady(activity, new Runnable() {
-          @Override
-          public void run() {
-             // At time point the webView isn't attached to a view
-             // Set the WebView to the max screen size then run JS to evaluate the height.
-             setWebViewToMaxSize(activity);
-             webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
-                 @Override
-                 public void onReceiveValue(final String value) {
-                    try {
-                       int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
-                       showMessageView(pagePxHeight);
-                    } catch (JSONException e) {
-                       e.printStackTrace();
+        // Using post to ensure that the status bar inset is already added to the view
+        OSViewUtils.decorViewReady(activity, new Runnable() {
+            @Override
+            public void run() {
+                // At time point the webView isn't attached to a view
+                // Set the WebView to the max screen size then run JS to evaluate the height.
+                setWebViewToMaxSize(activity);
+                webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(final String value) {
+                        try {
+                            int pagePxHeight = pageRectToViewHeight(activity, new JSONObject(value));
+                            showMessageView(pagePxHeight);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
-                 }
-             });
-          }
+                });
+            }
        });
     }
 
     @Override
     void available(final @NonNull Activity activity) {
+        String lastActivityName = this.currentActivityName;
         this.activity = activity;
-        if (firstShow)
+        this.currentActivityName = activity.getLocalClassName();
+
+        if (lastActivityName == null)
             showMessageView(null);
-        else
+        else if (!lastActivityName.equals(currentActivityName)) {
+            // Navigate to new activity while displaying current IAM
+            if (messageView != null)
+                messageView.removeAllViews();
+            showMessageView(lastPageHeight);
+        } else
             calculateHeightAndShowWebViewAfterNewActivity();
     }
 
     @Override
-    void stopped() {
-        if (messageView != null)
+    void stopped(Activity activity) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message activity stopped, cleaning views");
+        if (messageView != null && currentActivityName.equals(activity.getLocalClassName()))
             messageView.removeAllViews();
     }
 
@@ -327,8 +336,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message, showing first one with height: " + newHeight);
         messageView.setWebView(webView);
-        if (newHeight != null)
+        if (newHeight != null) {
+            lastPageHeight = newHeight;
             messageView.updateHeight(newHeight);
+        }
         messageView.showView(activity);
         messageView.checkIfShouldDismiss();
     }
@@ -377,11 +388,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight, boolean dragToDismissDisabled) {
+        lastPageHeight = pageHeight;
         messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration(), dragToDismissDisabled);
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
             public void onMessageWasShown() {
-                firstShow = false;
                 OneSignal.getInAppMessageController().onMessageWasShown(message);
             }
 

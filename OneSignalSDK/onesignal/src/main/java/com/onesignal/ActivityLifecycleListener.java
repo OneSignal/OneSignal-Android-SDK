@@ -61,7 +61,7 @@ class ActivityLifecycleListener implements Application.ActivityLifecycleCallback
          configuration = new ComponentCallbacks() {
             @Override
             public void onConfigurationChanged(Configuration newConfig) {
-               activityLifecycleHandler.onConfigurationChanged(newConfig);
+               activityLifecycleHandler.onConfigurationChanged(newConfig, activityLifecycleHandler.getCurActivity());
             }
 
             @Override
