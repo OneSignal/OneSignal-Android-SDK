@@ -49,7 +49,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         void available(@NonNull Activity activity) {
         }
 
-        void stopped() {
+        void stopped(@NonNull Activity activity) {
         }
 
         void lostFocus() {
@@ -67,11 +67,11 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
     private Activity curActivity = null;
     private boolean nextResumeIsFirstActivity = false;
 
-    void onConfigurationChanged(Configuration newConfig) {
+    void onConfigurationChanged(Configuration newConfig, Activity activity) {
         // If Activity contains the configChanges orientation flag, re-create the view this way
         if (curActivity != null && OSUtils.hasConfigChangeFlag(curActivity, ActivityInfo.CONFIG_ORIENTATION)) {
-            logOrientationChange(newConfig.orientation);
-            onOrientationChanged();
+            logOrientationChange(newConfig.orientation, activity);
+            onOrientationChanged(activity);
         }
     }
 
@@ -107,7 +107,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         }
 
         for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-            entry.getValue().stopped();
+            entry.getValue().stopped(activity);
         }
 
         logCurActivity();
@@ -129,12 +129,12 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "curActivity is NOW: " + (curActivity != null ? "" + curActivity.getClass().getName() + ":" + curActivity : "null"));
     }
 
-    private void logOrientationChange(int orientation) {
+    private void logOrientationChange(int orientation, Activity activity) {
         // Log device orientation change
         if (orientation == Configuration.ORIENTATION_LANDSCAPE)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: LANDSCAPE (" + orientation + ")");
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: LANDSCAPE (" + orientation + ") on activity: " + activity);
         else if (orientation == Configuration.ORIENTATION_PORTRAIT)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: PORTRAIT (" + orientation + ")");
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Configuration Orientation Change: PORTRAIT (" + orientation + ") on activity: " + activity);
     }
 
     /**
@@ -143,11 +143,11 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
      * This fix was originally implemented for In App Messages not being re-shown when orientation
      * was changed on wrapper SDK apps
      */
-    private void onOrientationChanged() {
+    private void onOrientationChanged(Activity activity) {
         // Remove view
         handleLostFocus();
         for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-            entry.getValue().stopped();
+            entry.getValue().stopped(activity);
         }
 
         // Show view
