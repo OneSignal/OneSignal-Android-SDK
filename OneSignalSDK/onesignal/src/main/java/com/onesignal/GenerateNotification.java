@@ -107,8 +107,9 @@ class GenerateNotification {
    static void fromJsonPayload(NotificationGenerationJob notifJob) {
       setStatics(notifJob.context);
 
-      if (!notifJob.restoring && notifJob.showAsAlert && ActivityLifecycleHandler.curActivity != null) {
-         showNotificationAsAlert(notifJob.jsonPayload, ActivityLifecycleHandler.curActivity, notifJob.getAndroidId());
+      Activity currentActivity = OneSignal.getCurrentActivity();
+      if (!notifJob.restoring && notifJob.showAsAlert && currentActivity != null) {
+         showNotificationAsAlert(notifJob.jsonPayload, currentActivity, notifJob.getAndroidId());
          return;
       }
 

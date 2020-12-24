@@ -52,16 +52,19 @@ class OSViewUtils {
         activity.getWindow().getDecorView().post(new Runnable() {
             @Override
             public void run() {
-                ActivityLifecycleHandler.setActivityAvailableListener(listenerKey, new ActivityLifecycleHandler.ActivityAvailableListener() {
-                    @Override
-                    void available(@NonNull Activity currentActivity) {
-                        ActivityLifecycleHandler.removeActivityAvailableListener(listenerKey);
-                        if (isActivityFullyReady(currentActivity))
-                            runnable.run();
-                        else
-                            decorViewReady(currentActivity, runnable);
-                    }
-                });
+                final ActivityLifecycleHandler handler = ActivityLifecycleListener.getActivityLifecycleHandler();
+                if (handler != null) {
+                    handler.addActivityAvailableListener(listenerKey, new ActivityLifecycleHandler.ActivityAvailableListener() {
+                        @Override
+                        void available(@NonNull Activity currentActivity) {
+                            handler.removeActivityAvailableListener(listenerKey);
+                            if (isActivityFullyReady(currentActivity))
+                                runnable.run();
+                            else
+                                decorViewReady(currentActivity, runnable);
+                        }
+                    });
+                }
             }
         });
     }

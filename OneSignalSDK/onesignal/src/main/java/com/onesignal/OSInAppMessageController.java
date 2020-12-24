@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Process;
@@ -355,7 +356,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private void showAlertDialogMessage(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
         final String messageTitle = OneSignal.appContext.getString(R.string.location_not_available_title);
         final String message = OneSignal.appContext.getString(R.string.location_not_available_message);
-        new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+        Activity currentActivity = OneSignal.getCurrentActivity();
+        new AlertDialog.Builder(currentActivity)
                 .setTitle(messageTitle)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {

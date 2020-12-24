@@ -395,6 +395,21 @@ public class OneSignal {
    private static String mGoogleProjectNumber;
    static Context appContext;
 
+   // Is the app in the inForeground or not
+   private static boolean inForeground;
+   static boolean isInForeground() {
+      return inForeground;
+   }
+   static void setInForeground(boolean inForeground) {
+      OneSignal.inForeground = inForeground;
+   }
+
+   @Nullable
+   static Activity getCurrentActivity() {
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      return activityLifecycleHandler != null ? activityLifecycleHandler.getCurActivity() : null;
+   }
+
    private static LOG_LEVEL visualLogLevel = LOG_LEVEL.NONE;
    private static LOG_LEVEL logCatLevel = LOG_LEVEL.WARN;
 
@@ -824,14 +839,17 @@ public class OneSignal {
    }
 
    private static void handleActivityLifecycleHandler(Context context) {
+      ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
       foreground = isContextActivity(context);
+      setInForeground(foreground);
       if (foreground) {
-         ActivityLifecycleHandler.curActivity = (Activity) context;
+         if (activityLifecycleHandler != null)
+            activityLifecycleHandler.setCurActivity((Activity) context);
          NotificationRestorer.asyncRestore(appContext);
          FocusTimeController.getInstance().appForegrounded();
       }
-      else
-         ActivityLifecycleHandler.nextResumeIsFirstActivity = true;
+      else if (activityLifecycleHandler != null)
+         activityLifecycleHandler.setNextResumeIsFirstActivity(true);
    }
 
    private static void handleAmazonPurchase() {
@@ -1213,7 +1231,7 @@ public class OneSignal {
             Log.e(TAG, message, throwable);
       }
 
-      if (level.compareTo(visualLogLevel) < 1 && ActivityLifecycleHandler.curActivity != null) {
+      if (level.compareTo(visualLogLevel) < 1 && getCurrentActivity() != null) {
          try {
             String fullMessage = message + "\n";
             if (throwable != null) {
@@ -1228,8 +1246,9 @@ public class OneSignal {
             OSUtils.runOnMainUIThread(new Runnable() {
                @Override
                public void run() {
-                  if (ActivityLifecycleHandler.curActivity != null)
-                     new AlertDialog.Builder(ActivityLifecycleHandler.curActivity)
+                  Activity currentActivity = getCurrentActivity();
+                  if (currentActivity != null)
+                     new AlertDialog.Builder(currentActivity)
                          .setTitle(level.toString())
                          .setMessage(finalFullMessage)
                          .show();
@@ -1252,6 +1271,7 @@ public class OneSignal {
    @WorkerThread
    static void onAppLostFocus() {
       Log(LOG_LEVEL.DEBUG, "Application lost focus");
+      setInForeground(false);
       foreground = false;
       appEntryState = AppEntryAction.APP_CLOSE;
 
@@ -1286,6 +1306,7 @@ public class OneSignal {
 
    static void onAppFocus() {
       Log(LOG_LEVEL.DEBUG, "Application on focus");
+      setInForeground(true);
       foreground = true;
 
       // If the app gains focus and has not been set to NOTIFICATION_CLICK yet we can assume this is a normal app open

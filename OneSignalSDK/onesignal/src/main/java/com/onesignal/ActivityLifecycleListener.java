@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentCallbacks;
@@ -38,7 +39,11 @@ import android.support.annotation.Nullable;
 class ActivityLifecycleListener implements Application.ActivityLifecycleCallbacks {
 
    @Nullable private static ActivityLifecycleListener instance;
+   @SuppressLint("StaticFieldLeak")
+   @Nullable
+   private static ActivityLifecycleHandler activityLifecycleHandler;
    @Nullable private static ComponentCallbacks configuration;
+
    static void registerActivityLifecycleCallbacks(@NonNull final Application application) {
       // Activity lifecycle listener setup
       if (instance == null) {
@@ -46,12 +51,16 @@ class ActivityLifecycleListener implements Application.ActivityLifecycleCallback
          application.registerActivityLifecycleCallbacks(instance);
       }
 
+      if (activityLifecycleHandler == null) {
+         activityLifecycleHandler = new ActivityLifecycleHandler();
+      }
+
       // Configuration change listener setup
       if (configuration == null) {
          configuration = new ComponentCallbacks() {
             @Override
             public void onConfigurationChanged(Configuration newConfig) {
-               ActivityLifecycleHandler.onConfigurationChanged(newConfig);
+               activityLifecycleHandler.onConfigurationChanged(newConfig, activityLifecycleHandler.getCurActivity());
             }
 
             @Override
@@ -65,34 +74,46 @@ class ActivityLifecycleListener implements Application.ActivityLifecycleCallback
 
    @Override
    public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-      ActivityLifecycleHandler.onActivityCreated(activity);
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.onActivityCreated(activity);
    }
 
    @Override
    public void onActivityStarted(Activity activity) {
-      ActivityLifecycleHandler.onActivityStarted(activity);
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.onActivityStarted(activity);
    }
 
    @Override
    public void onActivityResumed(Activity activity) {
-      ActivityLifecycleHandler.onActivityResumed(activity);
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.onActivityResumed(activity);
    }
 
    @Override
    public void onActivityPaused(Activity activity) {
-      ActivityLifecycleHandler.onActivityPaused(activity);
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.onActivityPaused(activity);
    }
 
    @Override
    public void onActivityStopped(Activity activity) {
-      ActivityLifecycleHandler.onActivityStopped(activity);
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.onActivityStopped(activity);
    }
 
    @Override
-   public void onActivitySaveInstanceState(Activity activity, Bundle outState) {}
+   public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+   }
 
    @Override
    public void onActivityDestroyed(Activity activity) {
-      ActivityLifecycleHandler.onActivityDestroyed(activity);
+      if (activityLifecycleHandler != null)
+         activityLifecycleHandler.onActivityDestroyed(activity);
+   }
+
+   @Nullable
+   public static ActivityLifecycleHandler getActivityLifecycleHandler() {
+      return activityLifecycleHandler;
    }
 }
