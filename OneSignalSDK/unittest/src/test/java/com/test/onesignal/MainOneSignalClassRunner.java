@@ -4456,6 +4456,8 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void shouldRemoveExternalUserIdFromPushWithAuthHash() throws Exception {
+      ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(new JSONObject().put("require_user_id_auth", true));
+      
       String testExternalId = "test_ext_id";
       String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
 
