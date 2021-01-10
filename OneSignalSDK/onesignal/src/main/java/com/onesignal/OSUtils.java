@@ -47,6 +47,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.TypedValue;
 
 import androidx.legacy.content.WakefulBroadcastReceiver;
 
@@ -406,7 +407,28 @@ class OSUtils {
       try {
          ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          Bundle bundle = ai.metaData;
-         return bundle.getString(metaName);
+
+         Object meta = bundle.get(metaName);
+         // The meta in android:resource or android:value field is represented as string type (and string resource reference)
+         if (meta instanceof String) {
+            return metaName;
+         }
+         // The meta in android:resource field is represented as resource reference type
+         // Note: if put resource reference type in android:value will cause NotFoundException
+         if (meta instanceof Integer) {
+            TypedValue typedValue = new TypedValue();
+            context.getResources().getValue((Integer) meta, typedValue, true);
+            if (typedValue != null) {
+               // The meta value is reference to a color value
+               if (typedValue.type >= TypedValue.TYPE_FIRST_COLOR_INT &&
+                       typedValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+                  return Integer.toHexString(typedValue.data);
+               }
+
+               // Or the meta value is reference to a other types of value then convert it to string type if possible
+               return typedValue.coerceToString().toString();
+            }
+         }
       } catch (Throwable t) {
          Log(OneSignal.LOG_LEVEL.ERROR, "", t);
       }
