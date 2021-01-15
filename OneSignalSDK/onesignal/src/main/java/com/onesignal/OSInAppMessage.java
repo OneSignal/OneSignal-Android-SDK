@@ -96,10 +96,12 @@ class OSInAppMessage {
             return null;
         }
 
-        SimpleDateFormat format = OneSignalSimpleDateFormat.iso8601Format();
+        if (endTimeString.equals("null"))
+            return null;
+
         try {
-            Date date = format.parse(endTimeString);
-            return date;
+            SimpleDateFormat format = OneSignalSimpleDateFormat.iso8601Format();
+            return format.parse(endTimeString);
         } catch (ParseException e) {
             e.printStackTrace();
         }
