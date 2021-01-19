@@ -10,6 +10,7 @@
     <string name="app">App</string>
     <string name="id_colon">Id:</string>
     <string name="email_colon">Email:</string>
+    <string name="logout_email">Logout Email</string>
     <string name="external_user_id_colon">External User Id:</string>
 
     <string name="tags">Tags</string>

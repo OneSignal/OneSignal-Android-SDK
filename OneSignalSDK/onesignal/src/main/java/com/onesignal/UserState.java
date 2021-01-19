@@ -396,4 +396,13 @@ abstract class UserState {
             return JSONUtils.generateJsonDiff(cur, changedTo, baseOutput, includeFields);
         }
     }
+
+    @Override
+    public String toString() {
+        return "UserState{" +
+                "persistKey='" + persistKey + '\'' +
+                ", dependValues=" + dependValues +
+                ", syncValues=" + syncValues +
+                '}';
+    }
 }
