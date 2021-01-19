@@ -298,6 +298,7 @@ abstract class UserStateSynchronizer {
         getToSyncUserState().removeFromDependValues("logoutEmail");
         toSyncUserState.removeFromDependValues("email_auth_hash");
         toSyncUserState.removeFromSyncValues("parent_player_id");
+        toSyncUserState.removeFromSyncValues("email");
         toSyncUserState.persistState();
 
         currentUserState.removeFromDependValues("email_auth_hash");

@@ -81,6 +81,7 @@ public class MainActivityViewModel implements ActivityViewModel {
     private RelativeLayout emailRelativeLayout;
     private TextView emailTitleTextView;
     private TextView userEmailTextView;
+    private Button logoutEmailButton;
     // External User Id
     private RelativeLayout externalUserIdRelativeLayout;
     private TextView externalUserIdTitleTextView;
@@ -121,7 +122,6 @@ public class MainActivityViewModel implements ActivityViewModel {
     private TextView locationSharedDescriptionTextView;
     private Switch locationSharedSwitch;
     private Button promptLocationButton;
-
 
     // Settings
     private TextView settingTitleTextView;
@@ -184,6 +184,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         emailRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_email_relative_layout);
         emailTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_email_text_view);
         userEmailTextView = getActivity().findViewById(R.id.main_activity_account_details_user_email_text_view);
+        logoutEmailButton = getActivity().findViewById(R.id.main_activity_email_logout_email_button);
 
         externalUserIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_relative_layout);
         externalUserIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_text_view);
@@ -392,6 +393,24 @@ public class MainActivityViewModel implements ActivityViewModel {
                     @Override
                     public void onFailure() {
 
+                    }
+                });
+            }
+        });
+
+        logoutEmailButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                OneSignal.logoutEmail(new OneSignal.EmailUpdateHandler() {
+                    @Override
+                    public void onSuccess() {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Logout email ended successfully");
+                        MainActivityViewModel.this.getActivity().runOnUiThread(() -> userEmailTextView.setText(""));
+                    }
+
+                    @Override
+                    public void onFailure(OneSignal.EmailUpdateError error) {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Logout email failed with error: " + error);
                     }
                 });
             }

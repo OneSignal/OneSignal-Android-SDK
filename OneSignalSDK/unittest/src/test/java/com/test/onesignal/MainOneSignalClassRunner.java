@@ -39,6 +39,7 @@ import android.database.Cursor;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.test.core.app.ApplicationProvider;
 
@@ -1836,6 +1837,27 @@ public class MainOneSignalClassRunner {
       assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", logoutEmailPost.url);
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", logoutEmailPost.payload.get("parent_player_id"));
       assertEquals("b4f7f966-d8cc-11e4-bed1-df8f05be55ba", logoutEmailPost.payload.get("app_id"));
+   }
+
+   @Test
+   public void logoutEmailShouldNotSendEmailPlayersRequest() throws Exception {
+      // 1. Init OneSignal and set email
+      OneSignalInit();
+
+      emailSetThenLogout();
+
+      time.advanceSystemAndElapsedTimeBy(60);
+      pauseActivity(blankActivityController);
+      assertAndRunSyncService();
+
+      List<ShadowOneSignalRestClient.Request> requests = ShadowOneSignalRestClient.requests;
+      assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+      ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
+      assertNotEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", postPush.url);
+
+      ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
+      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postEmail.url);
    }
 
    @Test
