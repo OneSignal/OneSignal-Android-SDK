@@ -56,6 +56,15 @@ public class ShadowOneSignalRestClient {
          this.payload = payload;
          this.url = url;
       }
+
+      @Override
+      public String toString() {
+         return "Request{" +
+                 "method=" + method +
+                 ", payload=" + payload +
+                 ", url='" + url + '\'' +
+                 '}';
+      }
    }
 
    private static class PendingResponse {

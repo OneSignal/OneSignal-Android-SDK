@@ -86,4 +86,10 @@ class ImmutableJSONObject {
         return jsonObject.optJSONObject(name);
     }
 
+    @Override
+    public String toString() {
+        return "ImmutableJSONObject{" +
+                "jsonObject=" + jsonObject +
+                '}';
+    }
 }
