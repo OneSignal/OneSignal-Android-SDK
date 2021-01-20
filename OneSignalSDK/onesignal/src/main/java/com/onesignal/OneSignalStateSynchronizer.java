@@ -40,7 +40,8 @@ class OneSignalStateSynchronizer {
 
    enum UserStateSynchronizerType {
       PUSH,
-      EMAIL;
+      EMAIL,
+      SMS;
 
       public boolean isPush() {
          return this.equals(PUSH);
@@ -48,6 +49,10 @@ class OneSignalStateSynchronizer {
 
       public boolean isEmail() {
          return this.equals(EMAIL);
+      }
+
+      public boolean isSMS() {
+         return this.equals(SMS);
       }
    }
 
