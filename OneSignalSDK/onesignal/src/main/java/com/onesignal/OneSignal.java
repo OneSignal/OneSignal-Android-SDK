@@ -56,6 +56,7 @@ import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -261,6 +262,36 @@ public class OneSignal {
    interface OSInternalExternalUserIdUpdateCompletionHandler {
       void onComplete(String channel, boolean success);
    }
+
+   public enum SMSErrorType {
+      VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
+   }
+
+   public static class OSSMSUpdateError {
+      private SMSErrorType type;
+      private String message;
+
+      OSSMSUpdateError(SMSErrorType type, String message) {
+         this.type = type;
+         this.message = message;
+      }
+
+      public SMSErrorType getType() {
+         return type;
+      }
+
+      public String getMessage() {
+         return message;
+      }
+   }
+
+   public interface OSSMSUpdateHandler {
+      void onSuccess(JSONObject result);
+      void onFailure(OSSMSUpdateError error);
+   }
+
+   private static OSSMSUpdateHandler smsUpdateHandler;
+   private static OSSMSUpdateHandler smsLogoutHandler;
 
    public enum EmailErrorType {
       VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
@@ -1391,7 +1422,29 @@ public class OneSignal {
       waitingToPostStateSync = false;
    }
 
+   public static void setSMSNumber(@NonNull final String smsNumber, OSSMSUpdateHandler callback) {
+      setSMSNumber(smsNumber, null, callback);
+   }
+
    public static void setSMSNumber(@NonNull final String smsNumber) {
+      setSMSNumber(smsNumber, null, null);
+   }
+
+   public static void setSMSNumber(@NonNull final String smsNumber, @Nullable final String smsAuthHash) {
+      setSMSNumber(smsNumber, smsAuthHash, null);
+   }
+
+   /**
+    * Set an sms number for the device to later send sms to this number
+    * @param smsNumber The sms number that you want subscribe and associate with the device
+    * @param smsAuthHash Generated auth hash from your server to authorize. (Recommended)
+    *                      Create and send this hash from your backend to your app after
+    *                          the user logs into your app.
+    *                      DO NOT generate this from your app!
+    *                      Omit this value if you do not have a backend to authenticate the user.
+    * @param callback Fire onSuccess or onFailure depending if the update successes or fails
+    */
+   public static void setSMSNumber(@NonNull final String smsNumber, final String smsAuthHash, final OSSMSUpdateHandler callback) {
       if (taskController.shouldQueueTaskForInit(OSTaskController.SET_SMS_NUMBER)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskController.SET_SMS_NUMBER + " operation to a pending task queue.");
@@ -1399,18 +1452,35 @@ public class OneSignal {
             @Override
             public void run() {
                logger.debug("Running " + OSTaskController.SET_SMS_NUMBER + " operation from a pending task queue.");
-               setSMSNumber(smsNumber);
+               setSMSNumber(smsNumber, smsAuthHash, callback);
             }
          });
          return;
       }
 
-      if (smsNumber == null || smsNumber.isEmpty()) {
-         OneSignal.Log(LOG_LEVEL.ERROR, "SMS number id can't be null nor empty");
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EMAIL))
+         return;
+
+      if (TextUtils.isEmpty(smsNumber)) {
+         String errorMessage = "SMS number is invalid";
+         if (callback != null)
+            callback.onFailure(new OSSMSUpdateError(SMSErrorType.VALIDATION, errorMessage));
+         logger.error(errorMessage);
          return;
       }
 
-      OneSignalStateSynchronizer.setSMSNumber(smsNumber, null);
+      if (getRemoteParams().useSMSAuth && (smsAuthHash == null || smsAuthHash.length() == 0)) {
+         String errorMessage = "SMS authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
+         if (callback != null)
+            callback.onFailure(new OSSMSUpdateError(SMSErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
+         logger.error(errorMessage);
+         return;
+      }
+
+      smsUpdateHandler = callback;
+
+      OneSignalStateSynchronizer.setSMSNumber(smsNumber, smsAuthHash);
    }
 
    public static void setEmail(@NonNull final String email, EmailUpdateHandler callback) {
