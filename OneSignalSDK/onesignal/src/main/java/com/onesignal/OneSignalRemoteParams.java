@@ -75,6 +75,7 @@ public class OneSignalRemoteParams {
    static class Params {
       String googleProjectNumber;
       boolean enterprise;
+      boolean useSMSAuth;
       boolean useEmailAuth;
       boolean useUserIdAuth;
       JSONArray notificationChannels;
