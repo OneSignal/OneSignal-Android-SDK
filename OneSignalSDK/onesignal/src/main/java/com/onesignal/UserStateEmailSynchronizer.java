@@ -1,7 +1,5 @@
 package com.onesignal;
 
-import androidx.annotation.Nullable;
-
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
 import org.json.JSONException;
@@ -10,7 +8,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-class UserStateEmailSynchronizer extends UserStateSynchronizer {
+class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
     UserStateEmailSynchronizer() {
         super(UserStateSynchronizerType.EMAIL);
@@ -22,58 +20,44 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    protected OneSignal.LOG_LEVEL getLogLevel() {
-        return OneSignal.LOG_LEVEL.INFO;
-    }
-
-    // Email subscription not readable from SDK
-    @Override
-    boolean getSubscribed() {
-        return false;
-    }
-
-    // Email tags not readable from SDK
-    @Override
-    GetTagsResult getTags(boolean fromServer) {
-        return null;
-    }
-
-    // Email external id not readable from SDK
-    @Override
-    @Nullable
-    String getExternalId(boolean fromServer) {
-        return null;
-    }
-
-    // Email subscription not settable from SDK
-    @Override
-    void setSubscription(boolean enable) {}
-
-    // Email does not have a user preference on the SDK
-    @Override
-    public boolean getUserSubscribePreference() {
-        return false;
-    }
-
-    // Email subscription not readable from SDK
-    @Override
-    public void setPermission(boolean enable) {}
-
-    @Override
-    void updateState(JSONObject state) {}
-
-    void refresh() {
-        scheduleSyncToServer();
+    protected String getId() {
+        return OneSignal.getEmailId();
     }
 
     @Override
-    protected void scheduleSyncToServer() {
-        // Don't make a POST / PUT network call if we never set an email.
-        boolean neverEmail = getId() == null && getRegistrationId() == null;
-        if (neverEmail || OneSignal.getUserId() == null)
-            return;
+    void logoutEmail() {
+        OneSignal.saveEmailId("");
 
-        getNetworkHandlerThread(NetworkHandlerThread.NETWORK_HANDLER_USERSTATE).runNewJobDelayed();
+        resetCurrentState();
+        getToSyncUserState().removeFromSyncValues("identifier");
+        List<String> keysToRemove = new ArrayList<>();
+        keysToRemove.add("email_auth_hash");
+        keysToRemove.add("device_player_id");
+        keysToRemove.add("external_user_id");
+        getToSyncUserState().removeFromSyncValues(keysToRemove);
+        getToSyncUserState().persistState();
+
+        OneSignal.getEmailSubscriptionState().clearEmailAndId();
+    }
+
+    @Override
+    protected int getDeviceType() {
+        return UserState.DEVICE_TYPE_EMAIL;
+    }
+
+    @Override
+    void fireUpdateSuccess() {
+        OneSignal.fireEmailUpdateSuccess();
+    }
+
+    @Override
+    void fireUpdateFailure() {
+        OneSignal.fireEmailUpdateFailure();
+    }
+
+    @Override
+    void updateIdDependents(String id) {
+        OneSignal.updateEmailIdDependents(id);
     }
 
     void setEmail(String email, String emailAuthHash) {
@@ -83,7 +67,7 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         boolean noChange = email.equals(syncValues.optString("identifier")) &&
                 syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash);
         if (noChange) {
-            OneSignal.fireEmailUpdateSuccess();
+            fireUpdateSuccess();
             return;
         }
 
@@ -115,51 +99,4 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
         }
     }
 
-    @Override
-    protected String getId() {
-        return OneSignal.getEmailId();
-    }
-
-    @Override
-    void updateIdDependents(String id) {
-        OneSignal.updateEmailIdDependents(id);
-    }
-
-    @Override
-    protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {
-        try {
-            jsonBody.put("device_type", UserState.DEVICE_TYPE_EMAIL);
-            jsonBody.putOpt("device_player_id", OneSignal.getUserId());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    void logoutEmail() {
-        OneSignal.saveEmailId("");
-
-        resetCurrentState();
-        getToSyncUserState().removeFromSyncValues("identifier");
-        List<String> keysToRemove = new ArrayList<>();
-        keysToRemove.add("email_auth_hash");
-        keysToRemove.add("device_player_id");
-        keysToRemove.add("external_user_id");
-        getToSyncUserState().removeFromSyncValues(keysToRemove);
-        getToSyncUserState().persistState();
-
-        OneSignal.getEmailSubscriptionState().clearEmailAndId();
-    }
-
-    @Override
-    protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
-        if (jsonFields.has("identifier"))
-            OneSignal.fireEmailUpdateFailure();
-    }
-
-    @Override
-    protected void onSuccessfulSync(JSONObject jsonFields) {
-        if (jsonFields.has("identifier"))
-            OneSignal.fireEmailUpdateSuccess();
-    }
 }

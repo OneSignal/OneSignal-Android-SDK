@@ -17,6 +17,7 @@ class OSTaskController {
 
     // Available task for delay
     static final String GET_TAGS = "getTags()";
+    static final String SET_SMS_NUMBER = "setSMSNumber()";
     static final String SET_EMAIL = "setEmail()";
     static final String LOGOUT_EMAIL = "logoutEmail()";
     static final String SYNC_HASHED_EMAIL = "syncHashedEmail()";
@@ -38,6 +39,7 @@ class OSTaskController {
     static final String SEND_OUTCOME_WITH_VALUE = "sendOutcomeWithValue()";
     static final HashSet<String> METHODS_AVAILABLE_FOR_DELAY = new HashSet<>(Arrays.asList(
             GET_TAGS,
+            SET_SMS_NUMBER,
             SET_EMAIL,
             LOGOUT_EMAIL,
             SYNC_HASHED_EMAIL,

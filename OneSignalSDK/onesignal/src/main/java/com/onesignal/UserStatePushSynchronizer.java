@@ -128,6 +128,9 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         }
     }
 
+    void setSMSNumber(String smsNumber, String smsAuthHash) {
+    }
+
     @Override
     void setSubscription(boolean enable) {
         try {
