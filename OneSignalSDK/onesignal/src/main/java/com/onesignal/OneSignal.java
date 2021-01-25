@@ -1391,6 +1391,28 @@ public class OneSignal {
       waitingToPostStateSync = false;
    }
 
+   public static void setSMSNumber(@NonNull final String smsNumber) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_SMS_NUMBER)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.SET_SMS_NUMBER + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.SET_SMS_NUMBER + " operation from a pending task queue.");
+               setSMSNumber(smsNumber);
+            }
+         });
+         return;
+      }
+
+      if (smsNumber == null || smsNumber.isEmpty()) {
+         OneSignal.Log(LOG_LEVEL.ERROR, "SMS number id can't be null nor empty");
+         return;
+      }
+
+      OneSignalStateSynchronizer.setSMSNumber(smsNumber, null);
+   }
+
    public static void setEmail(@NonNull final String email, EmailUpdateHandler callback) {
       setEmail(email, null, callback);
    }

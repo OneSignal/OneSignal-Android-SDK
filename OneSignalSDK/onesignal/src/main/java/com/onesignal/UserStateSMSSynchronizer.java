@@ -1,39 +1,14 @@
 package com.onesignal;
 
-import androidx.annotation.Nullable;
+public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
-import org.json.JSONObject;
-
-public class UserStateSMSSynchronizer extends UserStateSynchronizer {
-
-    UserStateSMSSynchronizer(OneSignalStateSynchronizer.UserStateSynchronizerType channel) {
+    UserStateSMSSynchronizer() {
         super(OneSignalStateSynchronizer.UserStateSynchronizerType.SMS);
     }
 
     @Override
-    boolean getSubscribed() {
-        return false;
-    }
-
-    @Override
-    GetTagsResult getTags(boolean fromServer) {
-        return null;
-    }
-
-    @Nullable
-    @Override
-    String getExternalId(boolean fromServer) {
-        return null;
-    }
-
-    @Override
     protected UserState newUserState(String inPersistKey, boolean load) {
-        return null;
-    }
-
-    @Override
-    protected OneSignal.LOG_LEVEL getLogLevel() {
-        return null;
+        return new UserStateSMS(inPersistKey, load);
     }
 
     @Override
@@ -42,42 +17,22 @@ public class UserStateSMSSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    protected void onSuccessfulSync(JSONObject jsonField) {
+    void logoutEmail() {
 
     }
 
     @Override
-    protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
+    protected int getDeviceType() {
+        return UserState.DEVICE_TYPE_SMS;
+    }
+
+    @Override
+    void fireUpdateSuccess() {
 
     }
 
     @Override
-    protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {
-
-    }
-
-    @Override
-    protected void scheduleSyncToServer() {
-
-    }
-
-    @Override
-    void updateState(JSONObject state) {
-
-    }
-
-    @Override
-    void setSubscription(boolean enable) {
-
-    }
-
-    @Override
-    public boolean getUserSubscribePreference() {
-        return false;
-    }
-
-    @Override
-    public void setPermission(boolean enable) {
+    void fireUpdateFailure() {
 
     }
 
@@ -86,8 +41,6 @@ public class UserStateSMSSynchronizer extends UserStateSynchronizer {
 
     }
 
-    @Override
-    void logoutEmail() {
-
+    void setSMSNumber(String smsNumber, String smsAuthHash) {
     }
 }

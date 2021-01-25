@@ -61,6 +61,7 @@ class OneSignalStateSynchronizer {
    // Currently we have 2 channels:
    //    1. Push
    //    2. Email
+   //    3. SMS
    //    Add more channels...
    private static HashMap<UserStateSynchronizerType, UserStateSynchronizer> userStateSynchronizers =  new HashMap<>();
 
@@ -79,29 +80,42 @@ class OneSignalStateSynchronizer {
 
       return (UserStateEmailSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.EMAIL);
    }
+
+   // #3 UserStateSynchronizer -> SMS Channel
+   static UserStateSMSSynchronizer getSMSStateSynchronizer() {
+      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.SMS) || userStateSynchronizers.get(UserStateSynchronizerType.SMS) == null)
+         userStateSynchronizers.put(UserStateSynchronizerType.SMS, new UserStateSMSSynchronizer());
+
+      return (UserStateSMSSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.SMS);
+   }
    
    static boolean persist() {
       boolean pushPersisted = getPushStateSynchronizer().persist();
       boolean emailPersisted = getEmailStateSynchronizer().persist();
+      boolean smsPersisted =  getSMSStateSynchronizer().persist();
+
       if (emailPersisted)
          emailPersisted = getEmailStateSynchronizer().getRegistrationId() != null;
 
-      return pushPersisted || emailPersisted;
+      return pushPersisted || emailPersisted || smsPersisted;
    }
    
    static void clearLocation() {
       getPushStateSynchronizer().clearLocation();
       getEmailStateSynchronizer().clearLocation();
+      getSMSStateSynchronizer().clearLocation();
    }
 
    static void initUserState() {
       getPushStateSynchronizer().initUserState();
       getEmailStateSynchronizer().initUserState();
+      getSMSStateSynchronizer().initUserState();
    }
 
    static void syncUserState(boolean fromSyncService) {
       getPushStateSynchronizer().syncUserState(fromSyncService);
       getEmailStateSynchronizer().syncUserState(fromSyncService);
+      getSMSStateSynchronizer().syncUserState(fromSyncService);
    }
 
    static void sendTags(JSONObject newTags, @Nullable ChangeTagsUpdateHandler handler) {
@@ -109,6 +123,7 @@ class OneSignalStateSynchronizer {
          JSONObject jsonField = new JSONObject().put("tags", newTags);
          getPushStateSynchronizer().sendTags(jsonField, handler);
          getEmailStateSynchronizer().sendTags(jsonField, handler);
+         getSMSStateSynchronizer().sendTags(jsonField, handler);
       } catch (JSONException e) {
          if (handler != null)
             handler.onFailure(new OneSignal.SendTagsError(-1, "Encountered an error attempting to serialize your tags into JSON: " + e.getMessage() + "\n" + e.getStackTrace()));
@@ -116,9 +131,16 @@ class OneSignalStateSynchronizer {
       }
    }
 
+   static void setSMSNumber(String smsNumber, String smsAuthHash) {
+      getPushStateSynchronizer().setSMSNumber(smsNumber, smsAuthHash);
+      getSMSStateSynchronizer().setSMSNumber(smsNumber, smsAuthHash);
+      // Should SMS be linked to email?
+   }
+
    static void setEmail(String email, String emailAuthHash) {
       getPushStateSynchronizer().setEmail(email, emailAuthHash);
       getEmailStateSynchronizer().setEmail(email, emailAuthHash);
+      // Should email be linked to SMS?
    }
 
    static void setSubscription(boolean enable) {
