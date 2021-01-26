@@ -34,6 +34,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static com.onesignal.OneSignal.ExternalIdErrorType.REQUIRES_EXTERNAL_ID_AUTH;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
@@ -54,6 +55,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -108,7 +110,6 @@ public class SynchronizerIntegrationTests {
             }
         };
     }
-
 
     private static void cleanUp() throws Exception {
         lastExternalUserIdResponse = null;
@@ -409,6 +410,27 @@ public class SynchronizerIntegrationTests {
         assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/email_logout", logoutEmailPost.url);
         assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", logoutEmailPost.payload.get("parent_player_id"));
         assertEquals("b4f7f966-d8cc-11e4-bed1-df8f05be55ba", logoutEmailPost.payload.get("app_id"));
+    }
+
+    @Test
+    public void logoutEmailShouldNotSendEmailPlayersRequest() throws Exception {
+        // 1. Init OneSignal and set email
+        OneSignalInit();
+
+        emailSetThenLogout();
+
+        time.advanceSystemAndElapsedTimeBy(60);
+        pauseActivity(blankActivityController);
+        assertAndRunSyncService();
+
+        List<ShadowOneSignalRestClient.Request> requests = ShadowOneSignalRestClient.requests;
+        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
+        assertNotEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511", postPush.url);
+
+        ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postEmail.url);
     }
 
     @Test

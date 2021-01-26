@@ -41,6 +41,11 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
     }
 
     @Override
+    void logoutSMS() {
+
+    }
+
+    @Override
     protected int getDeviceType() {
         return UserState.DEVICE_TYPE_EMAIL;
     }
