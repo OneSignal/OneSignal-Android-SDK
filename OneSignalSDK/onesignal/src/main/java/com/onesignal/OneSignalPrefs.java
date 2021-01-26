@@ -103,6 +103,10 @@ class OneSignalPrefs {
     public static final String PREFS_OS_EMAIL_ID = "OS_EMAIL_ID";
     public static final String PREFS_ONESIGNAL_EMAIL_ID_LAST = "PREFS_ONESIGNAL_EMAIL_ID_LAST";
     public static final String PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST = "PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST";
+    // SMS
+    public static final String PREFS_OS_SMS_ID = "PREFS_OS_SMS_ID";
+    public static final String PREFS_OS_SMS_ID_LAST = "PREFS_OS_SMS_ID_LAST";
+    public static final String PREFS_OS_SMS_NUMBER_LAST = "PREFS_OS_SMS_NUMBER_LAST";
     // In-App Messaging
     public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
     public static final String PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS";

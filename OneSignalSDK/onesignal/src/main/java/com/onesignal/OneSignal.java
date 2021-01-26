@@ -56,7 +56,6 @@ import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -264,7 +263,7 @@ public class OneSignal {
    }
 
    public enum SMSErrorType {
-      VALIDATION, REQUIRES_EMAIL_AUTH, INVALID_OPERATION, NETWORK
+      VALIDATION, REQUIRES_SMS_AUTH, INVALID_OPERATION, NETWORK
    }
 
    public static class OSSMSUpdateError {
@@ -370,6 +369,7 @@ public class OneSignal {
 
    private static String userId = null;
    private static String emailId = null;
+   private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
@@ -566,6 +566,42 @@ public class OneSignal {
       return emailSubscriptionStateChangesObserver;
    }
    // End EmailSubscriptionState
+
+    // Start SMSSubscriptionState
+   private static OSSMSSubscriptionState currentSMSSubscriptionState;
+   private static OSSMSSubscriptionState getCurrentSMSSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+
+      if (currentSMSSubscriptionState == null) {
+         currentSMSSubscriptionState = new OSSMSSubscriptionState(false);
+         currentSMSSubscriptionState.getObservable().addObserverStrong(new OSSMSSubscriptionChangedInternalObserver());
+      }
+
+      return currentSMSSubscriptionState;
+   }
+   static OSSMSSubscriptionState getSMSSubscriptionState() {
+      return getCurrentSMSSubscriptionState(appContext);
+   }
+
+   static OSSMSSubscriptionState lastSMSSubscriptionState;
+   private static OSSMSSubscriptionState getLastSMSSubscriptionState(Context context) {
+      if (context == null)
+         return null;
+
+      if (lastSMSSubscriptionState == null)
+         lastSMSSubscriptionState = new OSSMSSubscriptionState(true);
+
+      return lastSMSSubscriptionState;
+   }
+
+   private static OSObservable<OSSMSSubscriptionObserver, OSSMSSubscriptionStateChanges> smsSubscriptionStateChangesObserver;
+   static OSObservable<OSSMSSubscriptionObserver, OSSMSSubscriptionStateChanges> getSMSSubscriptionStateChangesObserver() {
+      if (smsSubscriptionStateChangesObserver == null)
+         smsSubscriptionStateChangesObserver = new OSObservable<>("onOSSMSSubscriptionChanged", true);
+      return smsSubscriptionStateChangesObserver;
+   }
+   // End SMSSubscriptionState
 
    /**
     * Get the current user data, notification and permissions state.
@@ -1459,7 +1495,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EMAIL))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_SMS_NUMBER))
          return;
 
       if (TextUtils.isEmpty(smsNumber)) {
@@ -1473,13 +1509,14 @@ public class OneSignal {
       if (getRemoteParams().useSMSAuth && (smsAuthHash == null || smsAuthHash.length() == 0)) {
          String errorMessage = "SMS authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
          if (callback != null)
-            callback.onFailure(new OSSMSUpdateError(SMSErrorType.REQUIRES_EMAIL_AUTH, errorMessage));
+            callback.onFailure(new OSSMSUpdateError(SMSErrorType.REQUIRES_SMS_AUTH, errorMessage));
          logger.error(errorMessage);
          return;
       }
 
       smsUpdateHandler = callback;
 
+      getCurrentSMSSubscriptionState(appContext).setSMSNumber(smsNumber);
       OneSignalStateSynchronizer.setSMSNumber(smsNumber, smsAuthHash);
    }
 
@@ -2429,6 +2466,35 @@ public class OneSignal {
               "".equals(emailId) ? null : emailId);
    }
 
+   static boolean hasSMSlId() {
+      return !TextUtils.isEmpty(smsId);
+   }
+
+   static String getSMSId() {
+      if (smsId == null && appContext != null) {
+         smsId = OneSignalPrefs.getString(
+                 OneSignalPrefs.PREFS_ONESIGNAL,
+                 OneSignalPrefs.PREFS_OS_SMS_ID,
+                 null);
+      }
+
+      if (TextUtils.isEmpty(smsId))
+         return null;
+
+      return smsId;
+   }
+
+   static void saveSMSId(String id) {
+      smsId = id;
+      if (appContext == null)
+         return;
+
+      OneSignalPrefs.saveString(
+              OneSignalPrefs.PREFS_ONESIGNAL,
+              OneSignalPrefs.PREFS_OS_SMS_ID,
+              "".equals(smsId) ? null : smsId);
+   }
+
    // Called when a player id is returned from OneSignal
    // Updates anything else that might have been waiting for this id.
    static void updateUserIdDependents(String userId) {
@@ -2452,6 +2518,17 @@ public class OneSignal {
       getCurrentEmailSubscriptionState(appContext).setEmailUserId(emailId);
       try {
          JSONObject updateJson = new JSONObject().put("parent_player_id", emailId);
+         OneSignalStateSynchronizer.updatePushState(updateJson);
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+   }
+
+   static void updateSMSIdDependents(String smsId) {
+      saveSMSId(smsId);
+      getCurrentSMSSubscriptionState(appContext).setSMSUserId(smsId);
+      try {
+         JSONObject updateJson = new JSONObject().put("parent_player_id", smsId);
          OneSignalStateSynchronizer.updatePushState(updateJson);
       } catch (JSONException e) {
          e.printStackTrace();
@@ -2879,6 +2956,39 @@ public class OneSignal {
       }
 
       getEmailSubscriptionStateChangesObserver().removeObserver(observer);
+   }
+
+   /**
+    * The {@link OSSMSSubscriptionObserver#onSMSSubscriptionChanged(OSSMSSubscriptionStateChanges)}
+    * method will be fired on the passed-in object when a sms subscription property changes.
+    *<br/><br/>
+    * This includes the following events:
+    * <br/>
+    * - SMS number set
+    * <br/>
+    * - Getting a player/user ID from OneSignal
+    * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
+    */
+   public static void addSMSSubscriptionObserver(@NonNull OSSMSSubscriptionObserver observer) {
+
+      if (appContext == null) {
+         logger.error("OneSignal.initWithContext has not been called. Could not add sms subscription observer");
+         return;
+      }
+
+      getSMSSubscriptionStateChangesObserver().addObserver(observer);
+
+      if (getCurrentSMSSubscriptionState(appContext).compare(getLastSMSSubscriptionState(appContext)))
+         OSSMSSubscriptionChangedInternalObserver.fireChangesToPublicObserver(getCurrentSMSSubscriptionState(appContext));
+   }
+
+   public static void removeSMSSubscriptionObserver(@NonNull OSSMSSubscriptionObserver observer) {
+      if (appContext == null) {
+         logger.error("OneSignal.initWithContext has not been called. Could not modify sms subscription observer");
+         return;
+      }
+
+      getSMSSubscriptionStateChangesObserver().removeObserver(observer);
    }
 
    /** In-App Message Triggers */

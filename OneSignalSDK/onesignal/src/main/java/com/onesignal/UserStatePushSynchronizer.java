@@ -177,6 +177,11 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
+    void logoutSMS() {
+
+    }
+
+    @Override
     protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
         if (jsonFields.has("email"))
             OneSignal.fireEmailUpdateFailure();

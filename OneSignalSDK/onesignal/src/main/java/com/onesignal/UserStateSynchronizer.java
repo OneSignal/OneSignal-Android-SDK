@@ -546,6 +546,8 @@ abstract class UserStateSynchronizer {
 
     abstract void logoutEmail();
 
+    abstract void logoutSMS();
+
     void readyToUpdate(boolean canMakeUpdates) {
         boolean changed = this.canMakeUpdates != canMakeUpdates;
         this.canMakeUpdates = canMakeUpdates;
