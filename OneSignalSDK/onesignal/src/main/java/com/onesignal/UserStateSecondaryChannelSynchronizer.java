@@ -25,6 +25,9 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
     @Override
     abstract void logoutEmail();
 
+    @Override
+    abstract void logoutSMS();
+
     abstract protected int getDeviceType();
 
     abstract void fireUpdateSuccess();

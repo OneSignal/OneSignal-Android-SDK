@@ -97,6 +97,9 @@ class OneSignalStateSynchronizer {
       if (emailPersisted)
          emailPersisted = getEmailStateSynchronizer().getRegistrationId() != null;
 
+      if (smsPersisted)
+         smsPersisted = false; // TODO: define
+
       return pushPersisted || emailPersisted || smsPersisted;
    }
    
@@ -175,9 +178,11 @@ class OneSignalStateSynchronizer {
    static void resetCurrentState() {
       getPushStateSynchronizer().resetCurrentState();
       getEmailStateSynchronizer().resetCurrentState();
+      getSMSStateSynchronizer().resetCurrentState();
 
       OneSignal.saveUserId(null);
       OneSignal.saveEmailId(null);
+      OneSignal.saveSMSId(null);
 
       OneSignal.setLastSessionTime(-60 * 61);
    }
