@@ -98,7 +98,7 @@ class OneSignalStateSynchronizer {
          emailPersisted = getEmailStateSynchronizer().getRegistrationId() != null;
 
       if (smsPersisted)
-         smsPersisted = false; // TODO: define
+         smsPersisted = getSMSStateSynchronizer().getRegistrationId() != null;
 
       return pushPersisted || emailPersisted || smsPersisted;
    }
@@ -161,6 +161,7 @@ class OneSignalStateSynchronizer {
    static void updateLocation(LocationController.LocationPoint point) {
       getPushStateSynchronizer().updateLocation(point);
       getEmailStateSynchronizer().updateLocation(point);
+      getSMSStateSynchronizer().updateLocation(point);
    }
 
    static boolean getSubscribed() {
@@ -190,24 +191,28 @@ class OneSignalStateSynchronizer {
    static void updateDeviceInfo(JSONObject deviceInfo) {
       getPushStateSynchronizer().updateDeviceInfo(deviceInfo);
       getEmailStateSynchronizer().updateDeviceInfo(deviceInfo);
+      getSMSStateSynchronizer().updateDeviceInfo(deviceInfo);
    }
 
    static void updatePushState(JSONObject pushState) {
       getPushStateSynchronizer().updateState(pushState);
    }
 
-   static void refreshEmailState() {
+   static void refreshSecondaryChannelState() {
       getEmailStateSynchronizer().refresh();
+      getSMSStateSynchronizer().refresh();
    }
 
    static void setNewSession() {
       getPushStateSynchronizer().setNewSession();
       getEmailStateSynchronizer().setNewSession();
+      getSMSStateSynchronizer().setNewSession();
    }
 
    static boolean getSyncAsNewSession() {
       return getPushStateSynchronizer().getSyncAsNewSession() ||
-             getEmailStateSynchronizer().getSyncAsNewSession();
+             getEmailStateSynchronizer().getSyncAsNewSession() ||
+              getSMSStateSynchronizer().getSyncAsNewSession();
    }
 
    static void setNewSessionForEmail() {
@@ -267,6 +272,7 @@ class OneSignalStateSynchronizer {
    static void readyToUpdate(boolean canMakeUpdates) {
       getPushStateSynchronizer().readyToUpdate(canMakeUpdates);
       getEmailStateSynchronizer().readyToUpdate(canMakeUpdates);
+      getSMSStateSynchronizer().readyToUpdate(canMakeUpdates);
    }
 
 }

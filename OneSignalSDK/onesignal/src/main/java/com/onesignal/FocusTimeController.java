@@ -326,6 +326,9 @@ class FocusTimeController {
             if (OneSignal.hasEmailId())
                sendOnFocusToPlayer(OneSignal.getEmailId(), generateOnFocusPayload(totalTimeActive));
 
+            if (OneSignal.hasSMSlId())
+               sendOnFocusToPlayer(OneSignal.getSMSId(), generateOnFocusPayload(totalTimeActive));
+
             saveInfluences(new ArrayList<OSInfluence>());
          }
          catch (JSONException t) {
