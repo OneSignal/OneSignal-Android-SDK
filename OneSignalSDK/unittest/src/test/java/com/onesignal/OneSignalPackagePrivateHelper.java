@@ -44,6 +44,10 @@ public class OneSignalPackagePrivateHelper {
       entrySet = OneSignalStateSynchronizer.getEmailStateSynchronizer().networkHandlerThreads.entrySet();
       for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
          runnable.run(handlerThread.getValue());
+
+      entrySet = OneSignalStateSynchronizer.getSMSStateSynchronizer().networkHandlerThreads.entrySet();
+      for (Map.Entry<Integer, UserStateSynchronizer.NetworkHandlerThread> handlerThread : entrySet)
+         runnable.run(handlerThread.getValue());
    }
 
    private static boolean startedRunnable;

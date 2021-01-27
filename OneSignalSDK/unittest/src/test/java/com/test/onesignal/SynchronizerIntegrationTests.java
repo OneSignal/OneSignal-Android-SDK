@@ -41,6 +41,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionLi
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
+import static com.onesignal.ShadowOneSignalRestClient.SMS_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
 import static com.test.onesignal.RestClientAsserts.assertRestCalls;
@@ -69,6 +70,7 @@ import static org.junit.Assert.assertNotEquals;
 @RunWith(RobolectricTestRunner.class)
 public class SynchronizerIntegrationTests {
     private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
+    private static final String ONESIGNAL_SMS_NUMBER = "123456789";
 
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
@@ -505,6 +507,21 @@ public class SynchronizerIntegrationTests {
         ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
         assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_session", emailPost.url);
+    }
+
+    @Test
+    public void shouldSendOnSessionToSMS() throws Exception {
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        restartAppAndElapseTimeToNextSession(time);
+        OneSignalInit();
+        threadAndTaskWait();
+
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.SMS_USER_ID + "/on_session", smsPost.url);
     }
 
     @Test
@@ -1062,6 +1079,9 @@ public class SynchronizerIntegrationTests {
 
         assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
 
+        ShadowOneSignalRestClient.Request post = ShadowOneSignalRestClient.requests.get(3);
+        assertFalse(post.url.contains("on_focus"));
+
         ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
         assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postPush.url);
         assertEquals(60, postPush.payload.getInt("active_time"));
@@ -1069,6 +1089,33 @@ public class SynchronizerIntegrationTests {
         ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
         assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_focus", postEmail.url);
         assertEquals(60, postEmail.payload.getInt("active_time"));
+    }
+
+    @Test
+    public void sendsOnFocusToSMS() throws Exception {
+        time.advanceSystemAndElapsedTimeBy(0);
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+        time.advanceSystemAndElapsedTimeBy(60);
+        pauseActivity(blankActivityController);
+        assertAndRunSyncService();
+
+        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request post = ShadowOneSignalRestClient.requests.get(3);
+        assertFalse(post.url.contains("on_focus"));
+
+        ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
+        assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postPush.url);
+        assertEquals(60, postPush.payload.getInt("active_time"));
+
+        ShadowOneSignalRestClient.Request postSMSl = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals("players/" + SMS_USER_ID + "/on_focus", postSMSl.url);
+        assertEquals(60, postSMSl.payload.getInt("active_time"));
     }
 
     private void OneSignalInit() {

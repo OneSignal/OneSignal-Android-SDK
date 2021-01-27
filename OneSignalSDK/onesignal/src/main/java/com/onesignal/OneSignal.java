@@ -2508,7 +2508,7 @@ public class OneSignal {
          iapUpdateJob = null;
       }
 
-      OneSignalStateSynchronizer.refreshEmailState();
+      OneSignalStateSynchronizer.refreshSecondaryChannelState();
 
       OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
    }
