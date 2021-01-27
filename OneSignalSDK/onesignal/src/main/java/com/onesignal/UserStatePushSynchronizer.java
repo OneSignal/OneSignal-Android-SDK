@@ -129,6 +129,14 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     void setSMSNumber(String smsNumber, String smsAuthHash) {
+        try {
+            UserState userState = getUserStateForModification();
+
+            userState.putOnDependValues("sms_auth_hash", smsAuthHash);
+            userState.generateJsonDiffFromIntoSyncValued(new JSONObject().put("sms_number", smsNumber), null);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

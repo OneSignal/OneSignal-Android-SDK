@@ -39,9 +39,15 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import static com.onesignal.UserState.DEVICE_TYPE_EMAIL;
+import static com.onesignal.UserState.DEVICE_TYPE_SMS;
+
 @Implements(OneSignalRestClient.class)
 public class ShadowOneSignalRestClient {
 
+   public static final String PUSH_USER_ID = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
+   public static final String EMAIL_USER_ID = "b007f967-98cc-11e4-bed1-118f05be4522";
+   public static final String SMS_USER_ID = "d007f967-98cc-11e4-bed1-118f05be4522";
    public enum REST_METHOD {
       GET, POST, PUT
    }
@@ -86,7 +92,7 @@ public class ShadowOneSignalRestClient {
 
    public static List<String> successfulGETResponses = new ArrayList<>();
    public static ArrayList<Request> requests;
-   public static String lastUrl, failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse, pushUserId, emailUserId, failMethod;
+   public static String lastUrl, failResponse, nextSuccessResponse, nextSuccessfulGETResponse, nextSuccessfulRegistrationResponse, pushUserId, emailUserId, smsUserId, failMethod;
    public static Pattern nextSuccessfulGETResponsePattern;
    public static JSONObject lastPost;
    public static boolean failNext, failNextPut, failAll, failPosts, failGetParams;
@@ -134,8 +140,9 @@ public class ShadowOneSignalRestClient {
    }
 
    public static void resetStatics() {
-      pushUserId = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
-      emailUserId = "b007f967-98cc-11e4-bed1-118f05be4522";
+      pushUserId = PUSH_USER_ID;
+      emailUserId = EMAIL_USER_ID;
+      smsUserId = SMS_USER_ID;
 
       requests = new ArrayList<>();
       lastPost = null;
@@ -304,7 +311,17 @@ public class ShadowOneSignalRestClient {
          retJson = "{}";
       else {
          int device_type = jsonBody.optInt("device_type", 0);
-         String id = device_type == 11 ? emailUserId : pushUserId;
+         String id;
+         switch (device_type) {
+            case DEVICE_TYPE_EMAIL:
+               id = emailUserId;
+               break;
+            case DEVICE_TYPE_SMS:
+               id = smsUserId;
+               break;
+            default:
+               id = pushUserId;
+         }
          retJson = "{\"id\": \"" + id + "\"}";
       }
 

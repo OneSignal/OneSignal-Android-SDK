@@ -82,7 +82,7 @@ abstract class UserStateSynchronizer {
         int currentRetry;
 
         NetworkHandlerThread(int type) {
-            super("OSH_NetworkHandlerThread");
+            super("OSH_NetworkHandlerThread_" + UserStateSynchronizer.this.channel);
             mType = type;
             start();
             mHandler = new Handler(getLooper());
