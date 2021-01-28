@@ -2149,13 +2149,15 @@ public class OneSignal {
 
       boolean urlOpened = false;
       boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(context, "com.onesignal.NotificationOpened.DEFAULT"));
+      boolean launchUrlSuppress = "true".equals(OSUtils.getManifestMeta(context, "com.onesignal.suppressLaunchURLs"));
 
-      if (!defaultOpenActionDisabled)
+      if (!defaultOpenActionDisabled && !launchUrlSuppress)
          urlOpened = openURLFromNotification(context, data);
 
-      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " and defaultOpenActionDisabled: " + defaultOpenActionDisabled);
+      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " defaultOpenActionDisabled: " + defaultOpenActionDisabled
+              + " launchUrlSuppress: " + defaultOpenActionDisabled );
       // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled, launchUrlSuppress)) {
          applicationOpenedByNotification(notificationId);
       }
 
@@ -2188,13 +2190,15 @@ public class OneSignal {
     * 1. App is not an alert
     * 2. Not a URL open
     * 3. Manifest setting for com.onesignal.NotificationOpened.DEFAULT is not disabled
-    * 4. App is coming from the background
-    * 5. App open/resume intent exists
+    * 4. Manifest setting for com.onesignal.suppressLaunchURLs is not true
+    * 5. App is coming from the background
+    * 6. App open/resume intent exists
     */
-   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled, boolean launchUrlSuppress) {
       return !fromAlert
               && !urlOpened
               && !defaultOpenActionDisabled
+              && !launchUrlSuppress
               && !inForeground
               && startOrResumeApp(context);
    }
