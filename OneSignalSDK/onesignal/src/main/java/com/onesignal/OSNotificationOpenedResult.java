@@ -58,6 +58,8 @@ public class OSNotificationOpenedResult implements OneSignal.EntryStateListener 
       // Configure 5 second timeout - max time we expect the application to call onResume
       // User can disable OneSignal application open by setting on the manifest:
       // <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
+      // User can also disable OneSignal from opening the url on default webview setting on the manifest:
+      // <meta-data android:name="com.onesignal.suppressLaunchURLs" android:value="true" />
       // If the user does this, we need to identify if the notification click was the way the user come back to the application (Session tracking)
       timeoutHandler = OSTimeoutHandler.getTimeoutHandler();
       timeoutRunnable = new Runnable() {
