@@ -1123,7 +1123,6 @@ public class MainOneSignalClassRunner {
       // If this doesn't' happen, notifications will not arrive
       OneSignalInit();
       fastColdRestartApp();
-
       OneSignal.initWithContext(blankActivity);
       // Removes app launch
       shadowOf(blankActivity).getNextStartedActivity();
@@ -1166,6 +1165,19 @@ public class MainOneSignalClassRunner {
 
       assertNull(shadowOf(blankActivity).getNextStartedActivity());
       assertEquals("Test Msg", lastNotificationOpenedBody);
+   }
+
+   @Test
+   public void testLaunchUrlSuppressTrue() throws Exception {
+      // Add the 'com.onesignal.suppressLaunchURLs' as 'true' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.suppressLaunchURLs", "true");
+
+      // Removes app launch
+      shadowOf(blankActivity).getNextStartedActivity();
+
+      // No OneSignal init here to test case where it is located in an Activity.
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    private static String notificationReceivedBody;
