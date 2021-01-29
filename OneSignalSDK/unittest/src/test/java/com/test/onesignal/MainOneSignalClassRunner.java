@@ -4309,6 +4309,9 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
+      fastColdRestartApp();
+      OneSignalInit();
+      threadAndTaskWait();
       OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
       threadAndTaskWait();
 
@@ -4321,9 +4324,9 @@ public class MainOneSignalClassRunner {
       );
       assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
 
-      assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+      assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
 
-      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(2);
+      ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(3);
       assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
       assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
       assertEquals(mockExternalIdHash, removeIdRequest.payload.getString("external_user_id_auth_hash"));

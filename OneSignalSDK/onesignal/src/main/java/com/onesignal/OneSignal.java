@@ -1593,7 +1593,7 @@ public class OneSignal {
                return;
             }
 
-            if (externalId.length() > 0 && remoteParams != null && remoteParams.useUserIdAuth && (externalIdAuthHash == null || externalIdAuthHash.length() == 0)) {
+            if (!externalId.isEmpty() && externalId.length() > 0 && remoteParams != null && remoteParams.useUserIdAuth && (externalIdAuthHash == null || externalIdAuthHash.length() == 0)) {
                String errorMessage = "External Id authentication (auth token) is set to REQUIRED for this application. Please provide an auth token from your backend server or change the setting in the OneSignal dashboard.";
                Log(LOG_LEVEL.ERROR, errorMessage);
                return;
