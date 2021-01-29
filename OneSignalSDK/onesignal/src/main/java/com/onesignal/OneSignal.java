@@ -41,10 +41,12 @@ import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.format.Time;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
@@ -1308,6 +1310,14 @@ public class OneSignal {
       return offset / 1000;
    }
 
+   private static String getTimeZoneId() {
+      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+         return TimeZone.getDefault().toZoneId().getId();
+      } else {
+         return Time.getCurrentTimezone();
+      }
+   }
+
    private static void registerUser() {
       logger.debug(
          "registerUser:" +
@@ -1349,6 +1359,7 @@ public class OneSignal {
       }
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
+      deviceInfo.put("timezone_id", getTimeZoneId());
       deviceInfo.put("language", OSUtils.getCorrectedLanguage());
       deviceInfo.put("sdk", VERSION);
       deviceInfo.put("sdk_type", sdkType);
