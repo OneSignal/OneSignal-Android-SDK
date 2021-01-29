@@ -1977,6 +1977,7 @@ public class OneSignal {
       int jsonArraySize = dataArray.length();
 
       boolean urlOpened = false;
+      boolean launchUrlSuppress = "true".equals(OSUtils.getManifestMeta(context, "com.onesignal.suppressLaunchURLs"));
 
       for (int i = 0; i < jsonArraySize; i++) {
          try {
@@ -1988,7 +1989,7 @@ public class OneSignal {
 
             if (customJSON.has("u")) {
                String url = customJSON.optString("u", null);
-               if (url != null) {
+               if (url != null && !launchUrlSuppress) {
                   OSUtils.openURLInBrowser(url);
                   urlOpened = true;
                }
@@ -2149,15 +2150,13 @@ public class OneSignal {
 
       boolean urlOpened = false;
       boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(context, "com.onesignal.NotificationOpened.DEFAULT"));
-      boolean launchUrlSuppress = "true".equals(OSUtils.getManifestMeta(context, "com.onesignal.suppressLaunchURLs"));
 
-      if (!defaultOpenActionDisabled && !launchUrlSuppress)
+      if (!defaultOpenActionDisabled)
          urlOpened = openURLFromNotification(context, data);
 
-      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " defaultOpenActionDisabled: " + defaultOpenActionDisabled
-              + " launchUrlSuppress: " + defaultOpenActionDisabled );
+      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " defaultOpenActionDisabled: " + defaultOpenActionDisabled);
       // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled, launchUrlSuppress)) {
+      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
          applicationOpenedByNotification(notificationId);
       }
 
@@ -2194,11 +2193,10 @@ public class OneSignal {
     * 5. App is coming from the background
     * 6. App open/resume intent exists
     */
-   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled, boolean launchUrlSuppress) {
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
       return !fromAlert
               && !urlOpened
               && !defaultOpenActionDisabled
-              && !launchUrlSuppress
               && !inForeground
               && startOrResumeApp(context);
    }
