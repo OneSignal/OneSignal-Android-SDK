@@ -155,7 +155,7 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
 
             if (idAuthHash == null) {
                 if (existingEmail != null && !existingEmail.equals(id)) {
-                    OneSignal.saveEmailId("");
+                    saveChannelId("");
                     resetCurrentState();
                     setNewSession();
                 }

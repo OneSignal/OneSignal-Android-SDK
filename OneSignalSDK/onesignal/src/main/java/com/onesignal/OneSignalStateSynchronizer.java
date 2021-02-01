@@ -137,13 +137,11 @@ class OneSignalStateSynchronizer {
    static void setSMSNumber(String smsNumber, String smsAuthHash) {
       getPushStateSynchronizer().setSMSNumber(smsNumber, smsAuthHash);
       getSMSStateSynchronizer().setChannelId(smsNumber, smsAuthHash);
-      // Should SMS be linked to email?
    }
 
    static void setEmail(String email, String emailAuthHash) {
       getPushStateSynchronizer().setEmail(email, emailAuthHash);
       getEmailStateSynchronizer().setChannelId(email, emailAuthHash);
-      // Should email be linked to SMS?
    }
 
    static void setSubscription(boolean enable) {
@@ -181,9 +179,9 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().resetCurrentState();
       getSMSStateSynchronizer().resetCurrentState();
 
-      OneSignal.saveUserId(null);
-      OneSignal.saveEmailId(null);
-      OneSignal.saveSMSId(null);
+      getPushStateSynchronizer().saveChannelId(null);
+      getEmailStateSynchronizer().saveChannelId(null);
+      getSMSStateSynchronizer().saveChannelId(null);
 
       OneSignal.setLastSessionTime(-60 * 61);
    }

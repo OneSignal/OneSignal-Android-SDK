@@ -24,6 +24,11 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
+    void saveChannelId(String id) {
+        OneSignal.saveUserId(id);
+    }
+
+    @Override
     boolean getSubscribed() {
         return getToSyncUserState().isSubscribed();
     }
