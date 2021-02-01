@@ -10,6 +10,9 @@ import java.util.List;
 
 class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
+    private static final String EMAIL_KEY = "email";
+    private static final String EMAIL_AUTH_HASH_KEY = "email_auth_hash";
+
     UserStateEmailSynchronizer() {
         super(UserStateSynchronizerType.EMAIL);
     }
@@ -29,9 +32,9 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
         OneSignal.saveEmailId("");
 
         resetCurrentState();
-        getToSyncUserState().removeFromSyncValues("identifier");
+        getToSyncUserState().removeFromSyncValues(IDENTIFIER);
         List<String> keysToRemove = new ArrayList<>();
-        keysToRemove.add("email_auth_hash");
+        keysToRemove.add(EMAIL_AUTH_HASH_KEY);
         keysToRemove.add("device_player_id");
         keysToRemove.add("external_user_id");
         getToSyncUserState().removeFromSyncValues(keysToRemove);
@@ -46,12 +49,22 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
     }
 
     @Override
+    protected String getChannelKey() {
+        return EMAIL_KEY;
+    }
+
+    @Override
+    protected String getAuthHashKey() {
+        return EMAIL_AUTH_HASH_KEY;
+    }
+
+    @Override
     protected int getDeviceType() {
         return UserState.DEVICE_TYPE_EMAIL;
     }
 
     @Override
-    void fireUpdateSuccess() {
+    void fireUpdateSuccess(JSONObject result) {
         OneSignal.fireEmailUpdateSuccess();
     }
 
@@ -69,24 +82,24 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
         UserState userState = getUserStateForModification();
         ImmutableJSONObject syncValues = userState.getSyncValues();
 
-        boolean noChange = email.equals(syncValues.optString("identifier")) &&
-                syncValues.optString("email_auth_hash").equals(emailAuthHash == null ? "" : emailAuthHash);
+        boolean noChange = email.equals(syncValues.optString(IDENTIFIER)) &&
+                syncValues.optString(getAuthHashKey()).equals(emailAuthHash == null ? "" : emailAuthHash);
         if (noChange) {
-            fireUpdateSuccess();
+            fireUpdateSuccess(null);
             return;
         }
 
-        String existingEmail = syncValues.optString("identifier", null);
+        String existingEmail = syncValues.optString(IDENTIFIER, null);
 
         if (existingEmail == null)
             setNewSession();
 
         try {
             JSONObject emailJSON = new JSONObject();
-            emailJSON.put("identifier", email);
+            emailJSON.put(IDENTIFIER, email);
 
             if (emailAuthHash != null)
-                emailJSON.put("email_auth_hash", emailAuthHash);
+                emailJSON.put(getAuthHashKey(), emailAuthHash);
 
             if (emailAuthHash == null) {
                 if (existingEmail != null && !existingEmail.equals(email)) {
