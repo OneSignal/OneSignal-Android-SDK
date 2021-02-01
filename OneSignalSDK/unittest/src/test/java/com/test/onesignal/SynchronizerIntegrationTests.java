@@ -694,6 +694,29 @@ public class SynchronizerIntegrationTests {
         assertEquals("different@email.com", emailPut.payload.get("identifier"));
     }
 
+    // Should update player with new sms instead of creating a new one when auth hash is provided
+    @Test
+    public void shouldUpdateSMSlWhenAuthHashIsUsed() throws Exception {
+        OneSignalInit();
+        String mockEmailHash = new String(new char[64]).replace('\0', '0');
+
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockEmailHash);
+        threadAndTaskWait();
+        String newSMS = "different_sms_number";
+        OneSignal.setSMSNumber(newSMS, mockEmailHash);
+        threadAndTaskWait();
+
+        ShadowOneSignalRestClient.Request pushPut = ShadowOneSignalRestClient.requests.get(4);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, pushPut.method);
+        assertEquals("players/" + PUSH_USER_ID, pushPut.url);
+        assertEquals(newSMS, pushPut.payload.get("sms_number"));
+
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
+        assertEquals("players/" + SMS_USER_ID, smsPut.url);
+        assertEquals(newSMS, smsPut.payload.get("identifier"));
+    }
+
     @Test
     public void shouldSendEmailAuthHashWithLogout() throws Exception {
         OneSignalInit();
