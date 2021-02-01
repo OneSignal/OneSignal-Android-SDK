@@ -8,9 +8,6 @@ import java.util.List;
 
 public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
-    private static final String SMS_NUMBER_KEY = "sms_number";
-    private static final String SMS_AUTH_HASH_KEY = "sms_auth_hash";
-
     UserStateSMSSynchronizer() {
         super(OneSignalStateSynchronizer.UserStateSynchronizerType.SMS);
     }
