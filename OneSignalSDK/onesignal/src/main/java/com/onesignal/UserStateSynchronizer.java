@@ -73,6 +73,7 @@ abstract class UserStateSynchronizer {
         }
     }
 
+    abstract void saveChannelId(String id);
     abstract boolean getSubscribed();
 
     String getRegistrationId() {
