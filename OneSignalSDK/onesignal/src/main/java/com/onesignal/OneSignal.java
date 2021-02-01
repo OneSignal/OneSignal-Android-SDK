@@ -61,6 +61,7 @@ import org.json.JSONObject;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -1311,9 +1312,9 @@ public class OneSignal {
 
    private static String getTimeZoneId() {
       if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-         return TimeZone.getDefault().toZoneId().getId();
+         return ZoneId.systemDefault().getId();
       } else {
-         return Time.getCurrentTimezone();
+         return TimeZone.getDefault().getID();
       }
    }
 
