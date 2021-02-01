@@ -41,7 +41,6 @@ import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.text.format.Time;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
