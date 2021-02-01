@@ -11,6 +11,7 @@ import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OneSignal;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGMSLocationController;
@@ -70,6 +71,7 @@ import static org.junit.Assert.assertNotEquals;
 @RunWith(RobolectricTestRunner.class)
 public class SynchronizerIntegrationTests {
     private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
+    private static final String ONESIGNAL_EMAIL_ADDRESS = "test@onesignal.com";
     private static final String ONESIGNAL_SMS_NUMBER = "123456789";
 
     @SuppressLint("StaticFieldLeak")
@@ -191,6 +193,61 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
+    public void shouldSetSMS() throws Exception {
+        OneSignalInit();
+
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+
+        JSONObject pushPost = ShadowOneSignalRestClient.requests.get(1).payload;
+        assertEquals(ONESIGNAL_SMS_NUMBER, pushPost.getString("sms_number"));
+        assertEquals(1, pushPost.getInt("device_type"));
+
+        JSONObject smsPost = ShadowOneSignalRestClient.requests.get(2).payload;
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.getString("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.getInt("device_type"));
+        assertEquals(ShadowOneSignalRestClient.pushUserId, smsPost.getString("device_player_id"));
+
+        JSONObject pushPut = ShadowOneSignalRestClient.requests.get(3).payload;
+        assertEquals(ShadowOneSignalRestClient.smsUserId, pushPut.getString("parent_player_id"));
+        assertFalse(pushPut.has("identifier"));
+    }
+
+    @Test
+    public void shouldSetSMSAndEmail() throws Exception {
+        OneSignalInit();
+
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS);
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
+
+        JSONObject pushPost = ShadowOneSignalRestClient.requests.get(1).payload;
+        assertEquals(ONESIGNAL_EMAIL_ADDRESS, pushPost.getString("email"));
+        assertEquals(ONESIGNAL_SMS_NUMBER, pushPost.getString("sms_number"));
+        assertEquals(1, pushPost.getInt("device_type"));
+
+        JSONObject emailPost = ShadowOneSignalRestClient.requests.get(2).payload;
+        assertEquals(ONESIGNAL_EMAIL_ADDRESS, emailPost.getString("identifier"));
+        assertEquals(11, emailPost.getInt("device_type"));
+        assertEquals(ShadowOneSignalRestClient.pushUserId, emailPost.getString("device_player_id"));
+
+        JSONObject smsPost = ShadowOneSignalRestClient.requests.get(3).payload;
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.getString("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.getInt("device_type"));
+        assertEquals(ShadowOneSignalRestClient.pushUserId, smsPost.getString("device_player_id"));
+
+        JSONObject pushPut = ShadowOneSignalRestClient.requests.get(4).payload;
+        assertEquals(ShadowOneSignalRestClient.smsUserId, pushPut.getString("parent_player_id"));
+        // add email parent id call
+        // TODO: check if this behaviour is not dropped
+        assertFalse(pushPut.has("identifier"));
+    }
+
+    @Test
     public void shouldSendTagsToEmailBeforeCreate() throws Exception {
         OneSignalInit();
         OneSignal.setEmail("josh@onesignal.com");
@@ -204,6 +261,22 @@ public class SynchronizerIntegrationTests {
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
         assertEquals("josh@onesignal.com", emailPost.payload.get("identifier"));
         assertEquals(tagsJson.toString(), emailPost.payload.getJSONObject("tags").toString());
+    }
+
+    @Test
+    public void shouldSendTagsToSMSBeforeCreate() throws Exception {
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+        OneSignal.sendTags(tagsJson);
+        threadAndTaskWait();
+
+        assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(2);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.payload.get("identifier"));
+        assertEquals(tagsJson.toString(), smsPost.payload.getJSONObject("tags").toString());
     }
 
     @Test
@@ -234,6 +307,72 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
+    public void shouldWaitBeforeCreateSMSIfPushCreateFails() throws Exception {
+        ShadowOneSignalRestClient.failPosts = true;
+
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        // Assert we are sending / retry for the push player first.
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
+        for(int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
+            ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(i);
+            assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+            assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.payload.getString("sms_number"));
+            assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_ANDROID, smsPost.payload.getInt("device_type"));
+        }
+
+        // Turn off fail mocking, call sendTags to trigger another retry
+        ShadowOneSignalRestClient.failPosts = false;
+        OneSignal.sendTag("test", "test");
+        threadAndTaskWait();
+
+        // Should now POST to create device_type 14 (sms)
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.payload.get("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.payload.get("device_type"));
+    }
+
+    @Test
+    public void shouldWaitBeforeCreateEmailAndSMSIfPushCreateFails() throws Exception {
+        ShadowOneSignalRestClient.failPosts = true;
+
+        OneSignalInit();
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS);
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        // Assert we are sending / retry for the push player first.
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
+        for(int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
+            ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(i);
+            assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+            assertEquals(ONESIGNAL_EMAIL_ADDRESS, smsPost.payload.getString("email"));
+            assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.payload.getString("sms_number"));
+            assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_ANDROID, smsPost.payload.getInt("device_type"));
+        }
+
+        // Turn off fail mocking, call sendTags to trigger another retry
+        ShadowOneSignalRestClient.failPosts = false;
+        OneSignal.sendTag("test", "test");
+        threadAndTaskWait();
+
+        // Should now POST to create device_type 11 (email)
+        ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
+        assertEquals(ONESIGNAL_EMAIL_ADDRESS, emailPost.payload.get("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_EMAIL, emailPost.payload.get("device_type"));
+
+        // Should now POST to create device_type 14 (email)
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(7);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.payload.get("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.payload.get("device_type"));
+    }
+
+    @Test
     public void shouldSendTagsToEmailAfterCreate() throws Exception {
         OneSignalInit();
         OneSignal.setEmail("josh@onesignal.com");
@@ -249,6 +388,48 @@ public class SynchronizerIntegrationTests {
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
         assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522", emailPut.url);
         assertEquals(tagsJson.toString(), emailPut.payload.getJSONObject("tags").toString());
+    }
+
+    @Test
+    public void shouldSendTagsToSMSAfterCreate() throws Exception {
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+        OneSignal.sendTags(tagsJson);
+        threadAndTaskWait();
+
+        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
+        assertEquals(tagsJson.toString(), smsPut.payload.getJSONObject("tags").toString());
+    }
+
+    @Test
+    public void shouldSendTagsToEmailAndSMSAfterCreate() throws Exception {
+        OneSignalInit();
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS);
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+        OneSignal.sendTags(tagsJson);
+        threadAndTaskWait();
+
+        assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request emailPut = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, emailPut.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.emailUserId, emailPut.url);
+        assertEquals(tagsJson.toString(), emailPut.payload.getJSONObject("tags").toString());
+
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(7);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
+        assertEquals(tagsJson.toString(), smsPut.payload.getJSONObject("tags").toString());
     }
 
     @Test
