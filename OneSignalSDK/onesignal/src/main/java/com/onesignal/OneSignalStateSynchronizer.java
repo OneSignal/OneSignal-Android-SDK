@@ -34,7 +34,9 @@ import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 class OneSignalStateSynchronizer {
 
@@ -87,6 +89,22 @@ class OneSignalStateSynchronizer {
          userStateSynchronizers.put(UserStateSynchronizerType.SMS, new UserStateSMSSynchronizer());
 
       return (UserStateSMSSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.SMS);
+   }
+
+   static List<UserStateSynchronizer> getUserStateSynchronizers() {
+      List<UserStateSynchronizer> userStateSynchronizers = new ArrayList<>();
+
+      userStateSynchronizers.add(getPushStateSynchronizer());
+
+      // Make sure we are only setting external user id for email when an email is actually set
+      if (OneSignal.hasEmailId())
+         userStateSynchronizers.add(getEmailStateSynchronizer());
+
+      // Make sure we are only setting external user id for sms when an sms is actually set
+      if (OneSignal.hasSMSlId())
+         userStateSynchronizers.add(getSMSStateSynchronizer());
+
+      return userStateSynchronizers;
    }
    
    static boolean persist() {
@@ -257,11 +275,10 @@ class OneSignalStateSynchronizer {
          }
       };
 
-      getPushStateSynchronizer().setExternalUserId(externalId, externalIdAuthHash, handler);
-
-      // Make sure we are only setting external user id for email when an email is actually set
-      if (OneSignal.hasEmailId())
-         getEmailStateSynchronizer().setExternalUserId(externalId, externalIdAuthHash, handler);
+      List<UserStateSynchronizer> userStateSynchronizers = getUserStateSynchronizers();
+      for (UserStateSynchronizer userStateSynchronizer : userStateSynchronizers) {
+         userStateSynchronizer.setExternalUserId(externalId, externalIdAuthHash, handler);
+      }
    }
 
    // This is to indicate that StateSynchronizer can start making REST API calls
