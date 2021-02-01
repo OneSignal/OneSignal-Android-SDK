@@ -42,6 +42,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionLi
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
+import static com.onesignal.ShadowOneSignalRestClient.EMAIL_USER_ID;
+import static com.onesignal.ShadowOneSignalRestClient.PUSH_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.SMS_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.RestClientAsserts.assertOnFocusAtIndex;
@@ -1406,6 +1408,38 @@ public class SynchronizerIntegrationTests {
         assertEquals(60, postPush.payload.getInt("active_time"));
 
         ShadowOneSignalRestClient.Request postSMSl = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals("players/" + SMS_USER_ID + "/on_focus", postSMSl.url);
+        assertEquals(60, postSMSl.payload.getInt("active_time"));
+    }
+
+    @Test
+    public void sendsOnFocusToEmailAndSMS() throws Exception {
+        time.advanceSystemAndElapsedTimeBy(0);
+        OneSignalInit();
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS);
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        blankActivityController.resume();
+        threadAndTaskWait();
+        time.advanceSystemAndElapsedTimeBy(60);
+        pauseActivity(blankActivityController);
+        assertAndRunSyncService();
+
+        assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request post = ShadowOneSignalRestClient.requests.get(4);
+        assertFalse(post.url.contains("on_focus"));
+
+        ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals("players/" + PUSH_USER_ID + "/on_focus", postPush.url);
+        assertEquals(60, postPush.payload.getInt("active_time"));
+
+        ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals("players/" + EMAIL_USER_ID + "/on_focus", postEmail.url);
+        assertEquals(60, postEmail.payload.getInt("active_time"));
+
+        ShadowOneSignalRestClient.Request postSMSl = ShadowOneSignalRestClient.requests.get(7);
         assertEquals("players/" + SMS_USER_ID + "/on_focus", postSMSl.url);
         assertEquals(60, postSMSl.payload.getInt("active_time"));
     }
