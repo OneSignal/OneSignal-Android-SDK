@@ -136,13 +136,13 @@ class OneSignalStateSynchronizer {
 
    static void setSMSNumber(String smsNumber, String smsAuthHash) {
       getPushStateSynchronizer().setSMSNumber(smsNumber, smsAuthHash);
-      getSMSStateSynchronizer().setSMSNumber(smsNumber, smsAuthHash);
+      getSMSStateSynchronizer().setChannelId(smsNumber, smsAuthHash);
       // Should SMS be linked to email?
    }
 
    static void setEmail(String email, String emailAuthHash) {
       getPushStateSynchronizer().setEmail(email, emailAuthHash);
-      getEmailStateSynchronizer().setEmail(email, emailAuthHash);
+      getEmailStateSynchronizer().setChannelId(email, emailAuthHash);
       // Should email be linked to SMS?
    }
 

@@ -122,4 +122,50 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
             fireUpdateSuccess(result);
         }
     }
+
+    void setChannelId(String id, String idAuthHash) {
+        UserState userState = getUserStateForModification();
+        ImmutableJSONObject syncValues = userState.getSyncValues();
+
+        boolean noChange = id.equals(syncValues.optString(IDENTIFIER)) &&
+                syncValues.optString(getAuthHashKey()).equals(idAuthHash == null ? "" : idAuthHash);
+        if (noChange) {
+            JSONObject result = new JSONObject();
+            try {
+                result.put(getChannelKey(), id);
+                result.put(getAuthHashKey(), idAuthHash);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            fireUpdateSuccess(result);
+            return;
+        }
+
+        String existingEmail = syncValues.optString(IDENTIFIER, null);
+
+        if (existingEmail == null)
+            setNewSession();
+
+        try {
+            JSONObject emailJSON = new JSONObject();
+            emailJSON.put(IDENTIFIER, id);
+
+            if (idAuthHash != null)
+                emailJSON.put(getAuthHashKey(), idAuthHash);
+
+            if (idAuthHash == null) {
+                if (existingEmail != null && !existingEmail.equals(id)) {
+                    OneSignal.saveEmailId("");
+                    resetCurrentState();
+                    setNewSession();
+                }
+            }
+
+            userState.generateJsonDiffFromIntoSyncValued(emailJSON, null);
+            scheduleSyncToServer();
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 }
