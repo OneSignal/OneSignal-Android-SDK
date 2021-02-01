@@ -9,8 +9,6 @@ import org.json.JSONObject;
 
 abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchronizer {
 
-    protected static final String IDENTIFIER = "identifier";
-
     UserStateSecondaryChannelSynchronizer(UserStateSynchronizerType channel) {
         super(channel);
     }
@@ -97,8 +95,8 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
     @Override
     protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {
         try {
-            jsonBody.put("device_type", getDeviceType());
-            jsonBody.putOpt("device_player_id", OneSignal.getUserId());
+            jsonBody.put(DEVICE_TYPE, getDeviceType());
+            jsonBody.putOpt(DEVICE_PLAYER_ID, OneSignal.getUserId());
         } catch (JSONException e) {
             e.printStackTrace();
         }

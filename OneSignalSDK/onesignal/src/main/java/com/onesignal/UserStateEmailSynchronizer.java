@@ -10,9 +10,6 @@ import java.util.List;
 
 class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
-    private static final String EMAIL_KEY = "email";
-    private static final String EMAIL_AUTH_HASH_KEY = "email_auth_hash";
-
     UserStateEmailSynchronizer() {
         super(UserStateSynchronizerType.EMAIL);
     }
@@ -35,8 +32,8 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
         getToSyncUserState().removeFromSyncValues(IDENTIFIER);
         List<String> keysToRemove = new ArrayList<>();
         keysToRemove.add(EMAIL_AUTH_HASH_KEY);
-        keysToRemove.add("device_player_id");
-        keysToRemove.add("external_user_id");
+        keysToRemove.add(DEVICE_PLAYER_ID);
+        keysToRemove.add(EXTERNAL_USER_ID);
         getToSyncUserState().removeFromSyncValues(keysToRemove);
         getToSyncUserState().persistState();
 
