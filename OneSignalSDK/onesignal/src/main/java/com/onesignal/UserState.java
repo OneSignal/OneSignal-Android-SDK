@@ -11,6 +11,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.onesignal.UserStateSynchronizer.APP_ID;
+import static com.onesignal.UserStateSynchronizer.EMAIL_AUTH_HASH_KEY;
+import static com.onesignal.UserStateSynchronizer.EXTERNAL_USER_ID_AUTH_HASH;
+import static com.onesignal.UserStateSynchronizer.SMS_AUTH_HASH_KEY;
+
 abstract class UserState {
 
     // Object to synchronize on to prevent concurrent modifications on syncValues and dependValues
@@ -238,12 +243,14 @@ abstract class UserState {
 
         try {
             // app_id required for all REST API calls
-            if (!sendJson.has("app_id"))
-                sendJson.put("app_id", syncValues.optString("app_id"));
-            if (syncValues.has("email_auth_hash"))
-                sendJson.put("email_auth_hash", syncValues.optString("email_auth_hash"));
-            if (syncValues.has("external_user_id_auth_hash"))
-                sendJson.put("external_user_id_auth_hash", syncValues.optString("external_user_id_auth_hash"));
+            if (!sendJson.has(APP_ID))
+                sendJson.put(APP_ID, syncValues.optString(APP_ID));
+            if (syncValues.has(EMAIL_AUTH_HASH_KEY))
+                sendJson.put(EMAIL_AUTH_HASH_KEY, syncValues.optString(EMAIL_AUTH_HASH_KEY));
+            if (syncValues.has(SMS_AUTH_HASH_KEY))
+                sendJson.put(SMS_AUTH_HASH_KEY, syncValues.optString(SMS_AUTH_HASH_KEY));
+            if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH))
+                sendJson.put(EXTERNAL_USER_ID_AUTH_HASH, syncValues.optString(EXTERNAL_USER_ID_AUTH_HASH));
         } catch (JSONException e) {
             e.printStackTrace();
         }
