@@ -2,7 +2,6 @@ package com.onesignal;
 
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -73,45 +72,6 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
     @Override
     void updateIdDependents(String id) {
         OneSignal.updateEmailIdDependents(id);
-    }
-
-    void setEmail(String email, String emailAuthHash) {
-        UserState userState = getUserStateForModification();
-        ImmutableJSONObject syncValues = userState.getSyncValues();
-
-        boolean noChange = email.equals(syncValues.optString(IDENTIFIER)) &&
-                syncValues.optString(getAuthHashKey()).equals(emailAuthHash == null ? "" : emailAuthHash);
-        if (noChange) {
-            fireUpdateSuccess(null);
-            return;
-        }
-
-        String existingEmail = syncValues.optString(IDENTIFIER, null);
-
-        if (existingEmail == null)
-            setNewSession();
-
-        try {
-            JSONObject emailJSON = new JSONObject();
-            emailJSON.put(IDENTIFIER, email);
-
-            if (emailAuthHash != null)
-                emailJSON.put(getAuthHashKey(), emailAuthHash);
-
-            if (emailAuthHash == null) {
-                if (existingEmail != null && !existingEmail.equals(email)) {
-                    OneSignal.saveEmailId("");
-                    resetCurrentState();
-                    setNewSession();
-                }
-            }
-
-            userState.generateJsonDiffFromIntoSyncValued(emailJSON, null);
-            scheduleSyncToServer();
-        }
-        catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
 
 }
