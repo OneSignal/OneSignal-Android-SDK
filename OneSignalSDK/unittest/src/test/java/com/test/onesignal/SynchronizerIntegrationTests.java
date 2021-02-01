@@ -649,6 +649,28 @@ public class SynchronizerIntegrationTests {
         assertEquals(newMockEmailPlayerId, playerPut.payload.get("parent_player_id"));
     }
 
+    // Should create a new sms instead of updating existing player record when no auth hash
+    @Test
+    public void shouldDoPostOnSMSChange() throws Exception {
+        OneSignalInit();
+
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        String newMockSMSPlayerId = "z007f967-98cc-11e4-bed1-118f05be4533";
+        ShadowOneSignalRestClient.smsUserId = newMockSMSPlayerId;
+        String newSMS = "different_sms_number";
+        OneSignal.setSMSNumber(newSMS);
+        threadAndTaskWait();
+
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+        assertEquals(newSMS, smsPost.payload.get("identifier"));
+
+        ShadowOneSignalRestClient.Request playerPut = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals(newMockSMSPlayerId, playerPut.payload.get("parent_player_id"));
+    }
+
     // Should update player with new email instead of creating a new one when auth hash is provided
     @Test
     public void shouldUpdateEmailWhenAuthHashIsUsed() throws Exception {

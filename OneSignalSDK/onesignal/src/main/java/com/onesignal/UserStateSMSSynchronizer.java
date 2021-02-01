@@ -22,19 +22,24 @@ public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchroni
     }
 
     @Override
+    void saveChannelId(String id) {
+        OneSignal.saveSMSId(id);
+    }
+
+    @Override
     void logoutEmail() {
     }
 
     @Override
     void logoutSMS() {
-        OneSignal.saveSMSId("");
+        saveChannelId("");
 
         resetCurrentState();
-        getToSyncUserState().removeFromSyncValues("identifier");
+        getToSyncUserState().removeFromSyncValues(IDENTIFIER);
         List<String> keysToRemove = new ArrayList<>();
-        keysToRemove.add("sms_auth_hash");
-        keysToRemove.add("device_player_id");
-        keysToRemove.add("external_user_id");
+        keysToRemove.add(SMS_AUTH_HASH_KEY);
+        keysToRemove.add(DEVICE_PLAYER_ID);
+        keysToRemove.add(EXTERNAL_USER_ID);
         getToSyncUserState().removeFromSyncValues(keysToRemove);
         getToSyncUserState().persistState();
 

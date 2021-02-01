@@ -24,6 +24,11 @@ class UserStateEmailSynchronizer extends UserStateSecondaryChannelSynchronizer {
     }
 
     @Override
+    void saveChannelId(String id) {
+        OneSignal.saveEmailId(id);
+    }
+
+    @Override
     void logoutEmail() {
         OneSignal.saveEmailId("");
 
