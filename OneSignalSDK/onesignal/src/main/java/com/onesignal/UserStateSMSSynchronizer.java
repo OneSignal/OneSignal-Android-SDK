@@ -8,6 +8,9 @@ import java.util.List;
 
 public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
+    private static final String SMS_NUMBER_KEY = "sms_number";
+    private static final String SMS_AUTH_HASH_KEY = "sms_auth_hash";
+
     UserStateSMSSynchronizer() {
         super(OneSignalStateSynchronizer.UserStateSynchronizerType.SMS);
     }
@@ -43,18 +46,28 @@ public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchroni
     }
 
     @Override
+    protected String getChannelKey() {
+        return SMS_NUMBER_KEY;
+    }
+
+    @Override
+    protected String getAuthHashKey() {
+        return SMS_AUTH_HASH_KEY;
+    }
+
+    @Override
     protected int getDeviceType() {
         return UserState.DEVICE_TYPE_SMS;
     }
 
     @Override
-    void fireUpdateSuccess() {
-
+    void fireUpdateSuccess(JSONObject result) {
+        OneSignal.fireSMSUpdateSuccess(result);
     }
 
     @Override
     void fireUpdateFailure() {
-
+        OneSignal.fireSMSUpdateFailure();
     }
 
     @Override
@@ -66,24 +79,31 @@ public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchroni
         UserState userState = getUserStateForModification();
         ImmutableJSONObject syncValues = userState.getSyncValues();
 
-        boolean noChange = smsNumber.equals(syncValues.optString("identifier")) &&
-                syncValues.optString("sms_auth_hash").equals(smsAuthHash == null ? "" : smsAuthHash);
+        boolean noChange = smsNumber.equals(syncValues.optString(IDENTIFIER)) &&
+                syncValues.optString(getAuthHashKey()).equals(smsAuthHash == null ? "" : smsAuthHash);
         if (noChange) {
-            fireUpdateSuccess();
+            JSONObject result = new JSONObject();
+            try {
+                result.put(IDENTIFIER, smsNumber);
+                result.put(getAuthHashKey(), smsAuthHash);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            fireUpdateSuccess(result);
             return;
         }
 
-        String existingsms = syncValues.optString("identifier", null);
+        String existingsms = syncValues.optString(IDENTIFIER, null);
 
         if (existingsms == null)
             setNewSession();
 
         try {
             JSONObject smsJSON = new JSONObject();
-            smsJSON.put("identifier", smsNumber);
+            smsJSON.put(IDENTIFIER, smsNumber);
 
             if (smsAuthHash != null)
-                smsJSON.put("sms_auth_hash", smsAuthHash);
+                smsJSON.put(getAuthHashKey(), smsAuthHash);
 
             if (smsAuthHash == null) {
                 if (existingsms != null && !existingsms.equals(smsNumber)) {

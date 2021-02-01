@@ -193,11 +193,26 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
         if (jsonFields.has("email"))
             OneSignal.fireEmailUpdateFailure();
+
+        if (jsonFields.has("sms_number"))
+            OneSignal.fireSMSUpdateFailure();
     }
 
     @Override
     protected void onSuccessfulSync(JSONObject jsonFields) {
         if (jsonFields.has("email"))
             OneSignal.fireEmailUpdateSuccess();
+
+        if (jsonFields.has("sms_number")) {
+            JSONObject result = new JSONObject();
+            try {
+                result.put("sms_number", jsonFields.get("sms_number"));
+                if (jsonFields.has("sms_auth_hash"))
+                    result.put("sms_auth_hash", jsonFields.get("sms_auth_hash"));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            OneSignal.fireSMSUpdateSuccess(result);
+        }
     }
 }

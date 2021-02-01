@@ -447,6 +447,41 @@ public class SynchronizerIntegrationTests {
         assertEquals(mockEmailHash, emailPost.getString("email_auth_hash"));
     }
 
+    @Test
+    public void shouldSetSMSWithAuthHash() throws Exception {
+        OneSignalInit();
+        String mockSMSHash = new String(new char[64]).replace('\0', '0');
+
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSHash);
+        threadAndTaskWait();
+
+        JSONObject smsPost = ShadowOneSignalRestClient.requests.get(2).payload;
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.getString("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.getInt("device_type"));
+        assertEquals(mockSMSHash, smsPost.getString("sms_auth_hash"));
+    }
+
+    @Test
+    public void shouldSetEmailAndSMSWithAuthHash() throws Exception {
+        OneSignalInit();
+        String mockEmailHash = new String(new char[64]).replace('\0', '1');
+        String mockSMSHash = new String(new char[64]).replace('\0', '0');
+
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS, mockEmailHash);
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSHash);
+        threadAndTaskWait();
+
+        JSONObject emailPost = ShadowOneSignalRestClient.requests.get(2).payload;
+        assertEquals(ONESIGNAL_EMAIL_ADDRESS, emailPost.getString("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_EMAIL, emailPost.getInt("device_type"));
+        assertEquals(mockEmailHash, emailPost.getString("email_auth_hash"));
+
+        JSONObject smsPost = ShadowOneSignalRestClient.requests.get(3).payload;
+        assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.getString("identifier"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.getInt("device_type"));
+        assertEquals(mockSMSHash, smsPost.getString("sms_auth_hash"));
+    }
+
     private class TestEmailUpdateHandler implements OneSignal.EmailUpdateHandler {
         boolean emailFiredSuccess = false;
         OneSignal.EmailUpdateError emailFiredFailure = null;
@@ -462,6 +497,21 @@ public class SynchronizerIntegrationTests {
         }
     }
 
+    private class TestSMSUpdateHandler implements OneSignal.OSSMSUpdateHandler {
+        JSONObject smsResult = null;
+        OneSignal.OSSMSUpdateError smsFiredFailure = null;
+
+        @Override
+        public void onSuccess(JSONObject result) {
+            smsResult = result;
+        }
+
+        @Override
+        public void onFailure(OneSignal.OSSMSUpdateError error) {
+            smsFiredFailure = error;
+        }
+    }
+
     @Test
     public void shouldFireOnSuccessOfEmailUpdate() throws Exception {
         OneSignalInit();
@@ -472,6 +522,20 @@ public class SynchronizerIntegrationTests {
 
         assertTrue(testEmailUpdateHandler.emailFiredSuccess);
         assertNull(testEmailUpdateHandler.emailFiredFailure);
+    }
+
+    @Test
+    public void shouldFireOnSuccessOfSMSUpdate() throws Exception {
+        OneSignalInit();
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler);
+        assertNull(testSMSUpdateHandler.smsResult);
+        threadAndTaskWait();
+
+        assertNotNull(testSMSUpdateHandler.smsResult);
+        assertEquals(1, testSMSUpdateHandler.smsResult.length());
+        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.get("sms_number"));
+        assertNull(testSMSUpdateHandler.smsFiredFailure);
     }
 
     @Test
@@ -490,6 +554,22 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
+    public void shouldFireOnSuccessOfSMSEvenWhenNoChanges() throws Exception {
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler);
+        threadAndTaskWait();
+
+        assertNotNull(testSMSUpdateHandler.smsResult);
+        assertEquals(1, testSMSUpdateHandler.smsResult.length());
+        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.get("identifier"));
+        assertNull(testSMSUpdateHandler.smsFiredFailure);
+    }
+
+    @Test
     public void shouldFireOnFailureOfEmailUpdateOnNetworkFailure() throws Exception {
         OneSignalInit();
         TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
@@ -499,6 +579,37 @@ public class SynchronizerIntegrationTests {
 
         assertFalse(testEmailUpdateHandler.emailFiredSuccess);
         assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+    }
+
+    @Test
+    public void shouldFireOnFailureOfSMSlUpdateOnNetworkFailure() throws Exception {
+        OneSignalInit();
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler);
+        ShadowOneSignalRestClient.failAll = true;
+        threadAndTaskWait();
+
+        assertNull(testSMSUpdateHandler.smsResult);
+        assertNotNull(testSMSUpdateHandler.smsFiredFailure);
+        assertEquals(OneSignal.SMSErrorType.NETWORK, testSMSUpdateHandler.smsFiredFailure.getType());
+    }
+
+    @Test
+    public void shouldFireOnFailureOfEmailAndSMSlUpdateOnNetworkFailure() throws Exception {
+        OneSignalInit();
+        TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS, testEmailUpdateHandler);
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler);
+        ShadowOneSignalRestClient.failAll = true;
+        threadAndTaskWait();
+
+        assertFalse(testEmailUpdateHandler.emailFiredSuccess);
+        assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+
+        assertNull(testSMSUpdateHandler.smsResult);
+        assertNotNull(testSMSUpdateHandler.smsFiredFailure);
+        assertEquals(OneSignal.SMSErrorType.NETWORK, testSMSUpdateHandler.smsFiredFailure.getType());
     }
 
     @Test

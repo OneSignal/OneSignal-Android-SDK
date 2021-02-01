@@ -2,8 +2,6 @@
 
 package com.onesignal;
 
-import android.util.Log;
-
 import org.json.JSONArray;
 
 import java.lang.reflect.Field;
@@ -13,7 +11,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class StaticResetHelper {
 
