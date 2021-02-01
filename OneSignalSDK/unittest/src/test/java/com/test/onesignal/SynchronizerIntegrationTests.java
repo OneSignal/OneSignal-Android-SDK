@@ -565,7 +565,7 @@ public class SynchronizerIntegrationTests {
 
         assertNotNull(testSMSUpdateHandler.smsResult);
         assertEquals(1, testSMSUpdateHandler.smsResult.length());
-        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.get("identifier"));
+        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.get("sms_number"));
         assertNull(testSMSUpdateHandler.smsFiredFailure);
     }
 

@@ -1,6 +1,5 @@
 package com.onesignal;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -72,48 +71,4 @@ public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchroni
         OneSignal.updateSMSIdDependents(id);
     }
 
-    void setSMSNumber(String smsNumber, String smsAuthHash) {
-        UserState userState = getUserStateForModification();
-        ImmutableJSONObject syncValues = userState.getSyncValues();
-
-        boolean noChange = smsNumber.equals(syncValues.optString(IDENTIFIER)) &&
-                syncValues.optString(getAuthHashKey()).equals(smsAuthHash == null ? "" : smsAuthHash);
-        if (noChange) {
-            JSONObject result = new JSONObject();
-            try {
-                result.put(IDENTIFIER, smsNumber);
-                result.put(getAuthHashKey(), smsAuthHash);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            fireUpdateSuccess(result);
-            return;
-        }
-
-        String existingsms = syncValues.optString(IDENTIFIER, null);
-
-        if (existingsms == null)
-            setNewSession();
-
-        try {
-            JSONObject smsJSON = new JSONObject();
-            smsJSON.put(IDENTIFIER, smsNumber);
-
-            if (smsAuthHash != null)
-                smsJSON.put(getAuthHashKey(), smsAuthHash);
-
-            if (smsAuthHash == null) {
-                if (existingsms != null && !existingsms.equals(smsNumber)) {
-                    OneSignal.saveSMSId("");
-                    resetCurrentState();
-                    setNewSession();
-                }
-            }
-
-            userState.generateJsonDiffFromIntoSyncValued(smsJSON, null);
-            scheduleSyncToServer();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
 }
