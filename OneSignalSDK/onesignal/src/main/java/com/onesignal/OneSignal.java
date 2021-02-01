@@ -3204,6 +3204,20 @@ public class OneSignal {
       }
    }
 
+   static void fireSMSUpdateSuccess(JSONObject result) {
+      if (smsUpdateHandler != null) {
+         smsUpdateHandler.onSuccess(result);
+         smsUpdateHandler = null;
+      }
+   }
+
+   static void fireSMSUpdateFailure() {
+      if (smsUpdateHandler != null) {
+         smsUpdateHandler.onFailure(new OSSMSUpdateError(SMSErrorType.NETWORK, "Failed due to network failure. Will retry on next sync."));
+         smsUpdateHandler = null;
+      }
+   }
+
    @NonNull
    static OSTime getTime() {
       return time;

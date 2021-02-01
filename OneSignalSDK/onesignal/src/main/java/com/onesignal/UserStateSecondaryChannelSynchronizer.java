@@ -7,10 +7,9 @@ import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-
 abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchronizer {
+
+    protected static final String IDENTIFIER = "identifier";
 
     UserStateSecondaryChannelSynchronizer(UserStateSynchronizerType channel) {
         super(channel);
@@ -28,9 +27,12 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
     @Override
     abstract void logoutSMS();
 
+    abstract protected String getChannelKey();
+    abstract protected String getAuthHashKey();
+
     abstract protected int getDeviceType();
 
-    abstract void fireUpdateSuccess();
+    abstract void fireUpdateSuccess(JSONObject result);
 
     abstract void fireUpdateFailure();
 
@@ -104,13 +106,22 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
 
     @Override
     protected void fireEventsForUpdateFailure(JSONObject jsonFields) {
-        if (jsonFields.has("identifier"))
+        if (jsonFields.has(IDENTIFIER))
             fireUpdateFailure();
     }
 
     @Override
     protected void onSuccessfulSync(JSONObject jsonFields) {
-        if (jsonFields.has("identifier"))
-            fireUpdateSuccess();
+        if (jsonFields.has(IDENTIFIER)) {
+            JSONObject result = new JSONObject();
+            try {
+                result.put(getChannelKey(), jsonFields.get(IDENTIFIER));
+                if (jsonFields.has(getAuthHashKey()))
+                    result.put(getAuthHashKey(), jsonFields.get(getAuthHashKey()));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            fireUpdateSuccess(result);
+        }
     }
 }
