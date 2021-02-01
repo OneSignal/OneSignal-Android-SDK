@@ -25,7 +25,6 @@ abstract class UserStateSynchronizer {
     private static final String CURRENT_STATE = "CURRENT_STATE";
     private static final String TOSYNC_STATE = "TOSYNC_STATE";
     private static final String SESSION = "session";
-    private static final String APP_ID = "app_id";
     private static final String ID = "id";
     private static final String ERRORS = "errors";
 
@@ -38,12 +37,14 @@ abstract class UserStateSynchronizer {
     protected static final String SUBSCRIBABLE_STATUS = "subscribableStatus";
     protected static final String TAGS = "tags";
     protected static final String EXTERNAL_USER_ID = "external_user_id";
-    protected static final String EXTERNAL_USER_ID_AUTH_HASH = "external_user_id_auth_hash";
     protected static final String EMAIL_KEY = "email";
-    protected static final String EMAIL_AUTH_HASH_KEY = "email_auth_hash";
     protected static final String LOGOUT_EMAIL = "logoutEmail";
     protected static final String SMS_NUMBER_KEY = "sms_number";
-    protected static final String SMS_AUTH_HASH_KEY = "sms_auth_hash";
+
+    static final String EXTERNAL_USER_ID_AUTH_HASH = "external_user_id_auth_hash";
+    static final String EMAIL_AUTH_HASH_KEY = "email_auth_hash";
+    static final String SMS_AUTH_HASH_KEY = "sms_auth_hash";
+    static final String APP_ID = "app_id";
 
     // Object to synchronize on to prevent concurrent modifications on syncValues and dependValues
     protected final Object LOCK = new Object();
