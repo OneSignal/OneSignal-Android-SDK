@@ -3138,6 +3138,23 @@ public class MainOneSignalClassRunner {
 
    @Test
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
+   public void shouldSendLocationToSMSRecord() throws Exception {
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      OneSignalInit();
+      OneSignal.setSMSNumber("123456789");
+      threadAndTaskWait();
+
+      JSONObject postSMSPayload = ShadowOneSignalRestClient.requests.get(2).payload;
+      assertEquals(UserState.DEVICE_TYPE_SMS, postSMSPayload.getInt("device_type"));
+      assertEquals(1.0, postSMSPayload.getDouble("lat"));
+      assertEquals(2.0, postSMSPayload.getDouble("long"));
+      assertEquals(3.0, postSMSPayload.getDouble("loc_acc"));
+      assertEquals(0.0, postSMSPayload.getDouble("loc_type"));
+   }
+
+   @Test
+   @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void shouldRegisterWhenPromptingAfterInit() throws Exception {
       ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
       ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
@@ -3332,6 +3349,24 @@ public class MainOneSignalClassRunner {
 
       JSONObject postEmailPayload = ShadowOneSignalRestClient.requests.get(2).payload;
       assertEquals(11, postEmailPayload.getInt("device_type"));
+      assertEquals(1.0, postEmailPayload.getDouble("lat"));
+      assertEquals(2.0, postEmailPayload.getDouble("long"));
+      assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
+      assertEquals(0.0, postEmailPayload.getDouble("loc_type"));
+   }
+
+   @Test
+   @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
+   public void shouldSendLocationToSMSRecord_Huawei() throws Exception {
+      ShadowOSUtils.supportsHMS(true);
+      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+
+      OneSignalInit();
+      OneSignal.setSMSNumber("123456789");
+      threadAndTaskWait();
+
+      JSONObject postEmailPayload = ShadowOneSignalRestClient.requests.get(2).payload;
+      assertEquals(UserState.DEVICE_TYPE_SMS, postEmailPayload.getInt("device_type"));
       assertEquals(1.0, postEmailPayload.getDouble("lat"));
       assertEquals(2.0, postEmailPayload.getDouble("long"));
       assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
