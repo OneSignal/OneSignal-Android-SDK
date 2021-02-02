@@ -132,6 +132,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionMa
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
+import static com.onesignal.ShadowOneSignalRestClient.EMAIL_USER_ID;
+import static com.onesignal.ShadowOneSignalRestClient.PUSH_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
 import static com.onesignal.ShadowOneSignalRestClient.SMS_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
@@ -3645,6 +3647,7 @@ public class MainOneSignalClassRunner {
    public void shouldSendPurchases() throws Exception {
       OneSignalInit();
       OneSignal.setEmail("josh@onesignal.com");
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
       threadAndTaskWait();
 
       JSONObject purchase = new JSONObject();
@@ -3656,13 +3659,17 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       String expectedPayload = "{\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\",\"purchases\":[{\"sku\":\"com.test.sku\"}]}";
-      ShadowOneSignalRestClient.Request pushPurchase = ShadowOneSignalRestClient.requests.get(4);
-      assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_purchase", pushPurchase.url);
+      ShadowOneSignalRestClient.Request pushPurchase = ShadowOneSignalRestClient.requests.get(5);
+      assertEquals("players/" + PUSH_USER_ID + "/on_purchase", pushPurchase.url);
       assertEquals(expectedPayload, pushPurchase.payload.toString());
 
-      ShadowOneSignalRestClient.Request emailPurchase = ShadowOneSignalRestClient.requests.get(5);
-      assertEquals("players/b007f967-98cc-11e4-bed1-118f05be4522/on_purchase", emailPurchase.url);
+      ShadowOneSignalRestClient.Request emailPurchase = ShadowOneSignalRestClient.requests.get(6);
+      assertEquals("players/" + EMAIL_USER_ID + "/on_purchase", emailPurchase.url);
       assertEquals(expectedPayload, emailPurchase.payload.toString());
+
+      ShadowOneSignalRestClient.Request smsPurchase = ShadowOneSignalRestClient.requests.get(7);
+      assertEquals("players/" + SMS_USER_ID + "/on_purchase", smsPurchase.url);
+      assertEquals(expectedPayload, smsPurchase.payload.toString());
    }
 
    @Test
@@ -3845,7 +3852,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void OneSignalInit() {
-//      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal_setTime(time);
       OneSignal_setTrackerFactory(trackerFactory);

@@ -2100,9 +2100,7 @@ public class OneSignal {
             jsonBody.put("existing", true);
          jsonBody.put("purchases", purchases);
 
-         OneSignalRestClient.post("players/" + getUserId() + "/on_purchase", jsonBody, responseHandler);
-         if (getEmailId() != null)
-            OneSignalRestClient.post("players/" + getEmailId() + "/on_purchase", jsonBody, null);
+         OneSignalStateSynchronizer.sendPurchases(jsonBody, responseHandler);
       } catch (Throwable t) {
          Log(LOG_LEVEL.ERROR, "Failed to generate JSON for sendPurchases.", t);
       }
