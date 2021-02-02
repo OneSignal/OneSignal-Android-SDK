@@ -8,6 +8,7 @@ import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -573,6 +574,10 @@ abstract class UserStateSynchronizer {
     abstract void logoutEmail();
 
     abstract void logoutSMS();
+
+    void sendPurchases(JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+        OneSignalRestClient.post("players/" + getId() + "/on_purchase", jsonBody, responseHandler);
+    }
 
     void readyToUpdate(boolean canMakeUpdates) {
         boolean changed = this.canMakeUpdates != canMakeUpdates;

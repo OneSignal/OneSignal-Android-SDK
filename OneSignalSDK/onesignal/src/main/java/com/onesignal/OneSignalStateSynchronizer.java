@@ -281,6 +281,13 @@ class OneSignalStateSynchronizer {
       }
    }
 
+   static void sendPurchases(JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
+      List<UserStateSynchronizer> userStateSynchronizers = getUserStateSynchronizers();
+      for (UserStateSynchronizer userStateSynchronizer : userStateSynchronizers) {
+         userStateSynchronizer.sendPurchases(jsonBody, responseHandler);
+      }
+   }
+
    // This is to indicate that StateSynchronizer can start making REST API calls
    // We do this to roll up as many field updates in a single create / on_session call to
    //   optimize the number of api calls that are made
