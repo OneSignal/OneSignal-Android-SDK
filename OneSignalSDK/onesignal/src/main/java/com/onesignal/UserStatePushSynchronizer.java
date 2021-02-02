@@ -191,7 +191,11 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
 
     @Override
     void logoutSMS() {
-
+        try {
+            getUserStateForModification().putOnDependValues(LOGOUT_SMS, true);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

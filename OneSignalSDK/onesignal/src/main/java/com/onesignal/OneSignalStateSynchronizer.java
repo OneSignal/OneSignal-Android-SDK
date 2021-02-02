@@ -235,9 +235,18 @@ class OneSignalStateSynchronizer {
       getEmailStateSynchronizer().setNewSession();
    }
 
+   static void setNewSessionForSMS() {
+      getSMSStateSynchronizer().setNewSession();
+   }
+
    static void logoutEmail() {
       getPushStateSynchronizer().logoutEmail();
       getEmailStateSynchronizer().logoutEmail();
+   }
+
+   static void logoutSMS() {
+      getPushStateSynchronizer().logoutSMS();
+      getSMSStateSynchronizer().logoutSMS();
    }
 
    static void setExternalUserId(String externalId, String externalIdAuthHash, final OneSignal.OSExternalUserIdUpdateCompletionHandler completionHandler) throws JSONException {

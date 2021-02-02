@@ -2,13 +2,13 @@ package com.onesignal;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+
 import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -40,6 +40,7 @@ abstract class UserStateSynchronizer {
     protected static final String EXTERNAL_USER_ID = "external_user_id";
     protected static final String EMAIL_KEY = "email";
     protected static final String LOGOUT_EMAIL = "logoutEmail";
+    protected static final String LOGOUT_SMS = "logoutSMS";
     protected static final String SMS_NUMBER_KEY = "sms_number";
 
     static final String EXTERNAL_USER_ID_AUTH_HASH = "external_user_id_auth_hash";
@@ -241,6 +242,10 @@ abstract class UserStateSynchronizer {
         return getToSyncUserState().getDependValues().optBoolean(LOGOUT_EMAIL, false);
     }
 
+    private boolean syncSMSLogout() {
+        return getToSyncUserState().getDependValues().optBoolean(LOGOUT_SMS, false);
+    }
+
     void syncUserState(boolean fromSyncService) {
         runningSyncUserState.set(true);
         internalSyncUserState(fromSyncService);
@@ -252,6 +257,11 @@ abstract class UserStateSynchronizer {
 
         if (syncEmailLogout() && userId != null) {
             doEmailLogout(userId);
+            return;
+        }
+
+        if (syncSMSLogout() && userId != null) {
+            doSMSLogout(userId);
             return;
         }
 
@@ -321,6 +331,49 @@ abstract class UserStateSynchronizer {
         });
     }
 
+    private void doSMSLogout(String userId) {
+        String urlStr = "players/" + userId + "/sms_logout";
+        JSONObject jsonBody = new JSONObject();
+        try {
+            ImmutableJSONObject dependValues = currentUserState.getDependValues();
+            if (dependValues.has(SMS_AUTH_HASH_KEY))
+                jsonBody.put(SMS_AUTH_HASH_KEY, dependValues.optString(SMS_AUTH_HASH_KEY));
+
+            ImmutableJSONObject syncValues = currentUserState.getSyncValues();
+            if (syncValues.has(EXTERNAL_USER_ID))
+                jsonBody.put(EXTERNAL_USER_ID, syncValues.optString(EXTERNAL_USER_ID));
+
+            if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH))
+                jsonBody.put(EXTERNAL_USER_ID_AUTH_HASH, syncValues.optString(EXTERNAL_USER_ID_AUTH_HASH));
+
+            jsonBody.put(APP_ID, syncValues.optString(APP_ID));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        OneSignalRestClient.postSync(urlStr, jsonBody, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "Failed last request. statusCode: " + statusCode + "\nresponse: " + response);
+
+                if (response400WithErrorsContaining(statusCode, response, "already logged out of SMS")) {
+                    logoutSMSSyncSuccess();
+                    return;
+                }
+
+                if (response400WithErrorsContaining(statusCode, response, "not a valid device_type"))
+                    handlePlayerDeletedFromServer();
+                else
+                    handleNetworkFailure(statusCode);
+            }
+
+            @Override
+            void onSuccess(String response) {
+                logoutSMSSyncSuccess();
+            }
+        });
+    }
+
     private void logoutEmailSyncSuccess() {
         getToSyncUserState().removeFromDependValues(LOGOUT_EMAIL);
         toSyncUserState.removeFromDependValues(EMAIL_AUTH_HASH_KEY);
@@ -337,6 +390,29 @@ abstract class UserStateSynchronizer {
 
         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device successfully logged out of email: " + emailLoggedOut);
         OneSignal.handleSuccessfulEmailLogout();
+    }
+
+    private void logoutSMSSyncSuccess() {
+        getToSyncUserState().removeFromDependValues(LOGOUT_SMS);
+        toSyncUserState.removeFromDependValues(SMS_AUTH_HASH_KEY);
+        toSyncUserState.removeFromSyncValues(SMS_NUMBER_KEY);
+        toSyncUserState.persistState();
+
+        currentUserState.removeFromDependValues(SMS_AUTH_HASH_KEY);
+        String smsNumberLoggedOut = currentUserState.getSyncValues().optString(SMS_NUMBER_KEY);
+        currentUserState.removeFromSyncValues(SMS_NUMBER_KEY);
+
+        OneSignalStateSynchronizer.setNewSessionForSMS();
+
+        JSONObject result = new JSONObject();
+        try {
+            result.put(SMS_NUMBER_KEY, smsNumberLoggedOut);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device successfully logged out of SMS number: " + result);
+        OneSignal.handleSuccessfulSMSlLogout(result);
     }
 
     private void doPutSync(String userId, final JSONObject jsonBody, final JSONObject dependDiff) {
@@ -463,6 +539,9 @@ abstract class UserStateSynchronizer {
 
         if (getToSyncUserState().getDependValues().optBoolean(LOGOUT_EMAIL, false))
             OneSignal.handleFailedEmailLogout();
+
+        if (getToSyncUserState().getDependValues().optBoolean(LOGOUT_SMS, false))
+            OneSignal.handleFailedSMSLogout();
     }
 
     protected abstract void fireEventsForUpdateFailure(JSONObject jsonFields);
