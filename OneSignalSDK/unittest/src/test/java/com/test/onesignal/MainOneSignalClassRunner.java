@@ -57,6 +57,8 @@ import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSNotificationReceivedEvent;
 import com.onesignal.OSPermissionObserver;
 import com.onesignal.OSPermissionStateChanges;
+import com.onesignal.OSSMSSubscriptionObserver;
+import com.onesignal.OSSMSSubscriptionStateChanges;
 import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
@@ -131,6 +133,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
+import static com.onesignal.ShadowOneSignalRestClient.SMS_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse;
 import static com.test.onesignal.GenerateNotificationRunner.getBaseNotifBundle;
 import static com.test.onesignal.RestClientAsserts.assertAmazonPlayerCreateAtIndex;
@@ -186,6 +189,7 @@ public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
+   private static final String ONESIGNAL_SMS_NUMBER = "123456789";
    private static final String TIMEZONE_ID = "Europe/London";
 
    @SuppressLint("StaticFieldLeak")
@@ -212,9 +216,14 @@ public class MainOneSignalClassRunner {
       OneSignal.getTags(tags -> lastGetTags = tags);
    }
 
+   private static OSEmailSubscriptionStateChanges lastEmailSubscriptionStateChanges;
+   private static OSSMSSubscriptionStateChanges lastSMSSubscriptionStateChanges;
+
    private static void cleanUp() throws Exception {
       lastNotificationOpenedBody = null;
       lastGetTags = null;
+      lastEmailSubscriptionStateChanges = null;
+      lastSMSSubscriptionStateChanges = null;
 
       ShadowGMSLocationController.reset();
 
@@ -2897,14 +2906,42 @@ public class MainOneSignalClassRunner {
       OneSignal.provideUserConsent(true);
       threadAndTaskWait();
 
-      OneSignal.setEmail("josh@onesignal.com");
+      String email = "josh@onesignal.com";
+      OneSignal.setEmail(email);
       threadAndTaskWait();
 
       // make sure the email subscription observer was fired
+      assertEquals(email, lastEmailSubscriptionStateChanges.getFrom().getEmailAddress());
       assertNull(lastEmailSubscriptionStateChanges.getFrom().getEmailUserId());
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
-      assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
+      assertEquals(email, lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
       assertTrue(lastEmailSubscriptionStateChanges.getTo().isSubscribed());
+   }
+
+   @Test
+   public void shouldAddSMSSubscriptionObserverIfConsentNotGranted() throws Exception {
+      ShadowOneSignalRestClient.setRemoteParamsRequirePrivacyConsent(true);
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSSMSSubscriptionObserver subscriptionObserver = stateChanges -> lastSMSSubscriptionStateChanges = stateChanges;
+      OneSignal.addSMSSubscriptionObserver(subscriptionObserver);
+
+      OneSignal.provideUserConsent(true);
+      threadAndTaskWait();
+
+      assertNull(lastSMSSubscriptionStateChanges);
+
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+
+      // make sure the sms subscription observer was fired
+      assertEquals(ONESIGNAL_SMS_NUMBER, lastSMSSubscriptionStateChanges.getFrom().getSMSNumber());
+      assertNull(lastSMSSubscriptionStateChanges.getFrom().getSmsUserId());
+      assertFalse(lastSMSSubscriptionStateChanges.getFrom().isSubscribed());
+      assertEquals(ShadowOneSignalRestClient.smsUserId, lastSMSSubscriptionStateChanges.getTo().getSmsUserId());
+      assertEquals(ONESIGNAL_SMS_NUMBER, lastSMSSubscriptionStateChanges.getTo().getSMSNumber());
+      assertTrue(lastSMSSubscriptionStateChanges.getTo().isSubscribed());
    }
 
    /*
@@ -3267,8 +3304,6 @@ public class MainOneSignalClassRunner {
       assertNull(lastSubscriptionStateChanges);
    }
 
-   private OSEmailSubscriptionStateChanges lastEmailSubscriptionStateChanges;
-
    @Test
    public void shouldFireEmailSubscriptionObserverOnSetEmail() throws Exception {
       OneSignalInit();
@@ -3286,6 +3321,20 @@ public class MainOneSignalClassRunner {
       assertEquals("b007f967-98cc-11e4-bed1-118f05be4522", lastEmailSubscriptionStateChanges.getTo().getEmailUserId());
       assertEquals("josh@onesignal.com", lastEmailSubscriptionStateChanges.getTo().getEmailAddress());
       assertTrue(lastEmailSubscriptionStateChanges.getTo().isSubscribed());
+   }
+
+   @Test
+   public void shouldFireSMSSubscriptionObserverOnSetSMS() throws Exception {
+      OneSignalInit();
+      OSSMSSubscriptionObserver subscriptionObserver = stateChanges -> lastSMSSubscriptionStateChanges = stateChanges;
+      OneSignal.addSMSSubscriptionObserver(subscriptionObserver);
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+
+      assertNull(lastSMSSubscriptionStateChanges.getFrom().getSmsUserId());
+      assertEquals(SMS_USER_ID, lastSMSSubscriptionStateChanges.getTo().getSmsUserId());
+      assertEquals(ONESIGNAL_SMS_NUMBER, lastSMSSubscriptionStateChanges.getTo().getSMSNumber());
+      assertTrue(lastSMSSubscriptionStateChanges.getTo().isSubscribed());
    }
 
    @Test
@@ -3340,6 +3389,28 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldNotFireSMSSubscriptionObserverOnAppRestart() throws Exception {
+      OneSignalInit();
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+
+      OSSMSSubscriptionObserver subscriptionObserver = stateChanges -> lastSMSSubscriptionStateChanges = stateChanges;
+      OneSignal.addSMSSubscriptionObserver(subscriptionObserver);
+      threadAndTaskWait();
+      assertNotNull(lastSMSSubscriptionStateChanges);
+
+      restartAppAndElapseTimeToNextSession(time);
+      lastSMSSubscriptionStateChanges = null;
+
+      OneSignalInit();
+      threadAndTaskWait();
+      OneSignal.addSMSSubscriptionObserver(subscriptionObserver);
+      threadAndTaskWait();
+
+      assertNull(lastSMSSubscriptionStateChanges);
+   }
+
+   @Test
    public void shouldGetCorrectCurrentEmailSubscriptionState() throws Exception {
       OneSignalInit();
       OSDeviceState deviceState = OneSignal.getDeviceState();
@@ -3359,6 +3430,25 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldGetCorrectCurrentSMSSubscriptionState() throws Exception {
+      OneSignalInit();
+      OSDeviceState deviceState = OneSignal.getDeviceState();
+
+      assertNotNull(deviceState);
+      assertNull(deviceState.getSMSUserId());
+      assertNull(deviceState.getSMSNumber());
+      assertFalse(deviceState.isSMSSubscribed());
+
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+      deviceState = OneSignal.getDeviceState();
+
+      assertEquals(SMS_USER_ID, deviceState.getSMSUserId());
+      assertEquals(ONESIGNAL_SMS_NUMBER, deviceState.getSMSNumber());
+      assertTrue(deviceState.isSMSSubscribed());
+   }
+
+   @Test
    public void shouldGetEmailUserIdAfterAppRestart() throws Exception {
       OneSignalInit();
       OneSignal.setEmail("josh@onesignal.com");
@@ -3373,12 +3463,182 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void shouldGetSMSUserIdAfterAppRestart() throws Exception {
+      OneSignalInit();
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession(time);
+
+      OneSignalInit();
+      OSDeviceState deviceState = OneSignal.getDeviceState();
+      assertEquals(ONESIGNAL_SMS_NUMBER, deviceState.getSMSNumber());
+      assertNotNull(deviceState.getSMSUserId());
+   }
+
+   @Test
    public void shouldReturnCorrectGetPermissionSubscriptionState() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
       OSDeviceState deviceState = OneSignal.getDeviceState();
       assertTrue(deviceState.areNotificationsEnabled());
       assertTrue(deviceState.isSubscribed());
+   }
+
+   @Test
+   public void testDeviceStateHasEmailAddress() throws Exception {
+      String testEmail = "test@onesignal.com";
+
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertNull(device.getEmailAddress());
+
+      OneSignal.setEmail(testEmail);
+      threadAndTaskWait();
+
+      // Device is a snapshot, last value should not change
+      assertNull(device.getEmailAddress());
+      // Retrieve new user device
+      assertEquals(testEmail, OneSignal.getDeviceState().getEmailAddress());
+   }
+
+   @Test
+   public void testDeviceStateHasSMSAddress() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertNull(device.getSMSNumber());
+
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+
+      // Device is a snapshot, last value should not change
+      assertNull(device.getSMSNumber());
+      // Retrieve new user device
+      assertEquals(ONESIGNAL_SMS_NUMBER, OneSignal.getDeviceState().getSMSNumber());
+   }
+
+   @Test
+   public void testDeviceStateHasEmailId() throws Exception {
+      String testEmail = "test@onesignal.com";
+
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertNull(device.getEmailUserId());
+
+      OneSignal.setEmail(testEmail);
+      threadAndTaskWait();
+
+      // Device is a snapshot, last value should not change
+      assertNull(device.getEmailUserId());
+      // Retrieve new user device
+      assertNotNull(OneSignal.getDeviceState().getEmailUserId());
+   }
+
+   @Test
+   public void testDeviceStateHasSMSId() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertNull(device.getSMSUserId());
+
+      OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+      threadAndTaskWait();
+
+      // Device is a snapshot, last value should not change
+      assertNull(device.getSMSUserId());
+      // Retrieve new user device
+      assertEquals(SMS_USER_ID, OneSignal.getDeviceState().getSMSUserId());
+   }
+
+   @Test
+   public void testDeviceStateHasUserId() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertNotNull(OneSignal.getDeviceState().getUserId());
+   }
+
+   @Test
+   public void testDeviceStateHasPushToken() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertNotNull(OneSignal.getDeviceState().getPushToken());
+   }
+
+   @Test
+   public void testDeviceStateAreNotificationsEnabled() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertTrue(device.areNotificationsEnabled());
+
+      fastColdRestartApp();
+
+      ShadowNotificationManagerCompat.enabled = false;
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Device is a snapshot, last value should not change
+      assertTrue(device.areNotificationsEnabled());
+      // Retrieve new user device
+      assertFalse(OneSignal.getDeviceState().areNotificationsEnabled());
+   }
+
+   @Test
+   public void testDeviceStateIsPushDisabled() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertFalse(OneSignal.getDeviceState().isPushDisabled());
+   }
+
+   @Test
+   public void testDeviceStateIsSubscribed() throws Exception {
+      assertNull(OneSignal.getDeviceState());
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      OSDeviceState device = OneSignal.getDeviceState();
+      assertTrue(device.isSubscribed());
+
+      fastColdRestartApp();
+
+      ShadowNotificationManagerCompat.enabled = false;
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // Device is a snapshot, last value should not change
+      assertTrue(device.isSubscribed());
+      // Retrieve new user device
+      assertFalse(OneSignal.getDeviceState().isSubscribed());
    }
 
    @Test
@@ -3469,124 +3729,6 @@ public class MainOneSignalClassRunner {
       OneSignal.initWithContext(blankActivity);
       OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
       assertNull(ShadowFirebaseAnalytics.lastEventString);
-   }
-
-   @Test
-   public void testDeviceStateHasEmailAddress() throws Exception {
-      String testEmail = "test@onesignal.com";
-
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      OSDeviceState device = OneSignal.getDeviceState();
-      assertNull(device.getEmailAddress());
-
-      OneSignal.setEmail(testEmail);
-      threadAndTaskWait();
-
-      // Device is a snapshot, last value should not change
-      assertNull(device.getEmailAddress());
-      // Retrieve new user device
-      assertEquals(testEmail, OneSignal.getDeviceState().getEmailAddress());
-   }
-
-   @Test
-   public void testDeviceStateHasEmailId() throws Exception {
-      String testEmail = "test@onesignal.com";
-
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      OSDeviceState device = OneSignal.getDeviceState();
-      assertNull(device.getEmailUserId());
-
-      OneSignal.setEmail(testEmail);
-      threadAndTaskWait();
-
-      // Device is a snapshot, last value should not change
-      assertNull(device.getEmailUserId());
-      // Retrieve new user device
-      assertNotNull(OneSignal.getDeviceState().getEmailUserId());
-   }
-
-   @Test
-   public void testDeviceStateHasUserId() throws Exception {
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      assertNotNull(OneSignal.getDeviceState().getUserId());
-   }
-
-   @Test
-   public void testDeviceStateHasPushToken() throws Exception {
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      assertNotNull(OneSignal.getDeviceState().getPushToken());
-   }
-
-   @Test
-   public void testDeviceStateAreNotificationsEnabled() throws Exception {
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      OSDeviceState device = OneSignal.getDeviceState();
-      assertTrue(device.areNotificationsEnabled());
-
-      fastColdRestartApp();
-
-      ShadowNotificationManagerCompat.enabled = false;
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      // Device is a snapshot, last value should not change
-      assertTrue(device.areNotificationsEnabled());
-      // Retrieve new user device
-      assertFalse(OneSignal.getDeviceState().areNotificationsEnabled());
-   }
-
-   @Test
-   public void testDeviceStateIsPushDisabled() throws Exception {
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      assertFalse(OneSignal.getDeviceState().isPushDisabled());
-   }
-
-   @Test
-   public void testDeviceStateIsSubscribed() throws Exception {
-      assertNull(OneSignal.getDeviceState());
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      OSDeviceState device = OneSignal.getDeviceState();
-      assertTrue(device.isSubscribed());
-
-      fastColdRestartApp();
-
-      ShadowNotificationManagerCompat.enabled = false;
-
-      OneSignalInit();
-      threadAndTaskWait();
-
-      // Device is a snapshot, last value should not change
-      assertTrue(device.isSubscribed());
-      // Retrieve new user device
-      assertFalse(OneSignal.getDeviceState().isSubscribed());
    }
 
    @Test
@@ -3703,7 +3845,7 @@ public class MainOneSignalClassRunner {
    }
 
    private void OneSignalInit() {
-      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+//      OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
       ShadowOSUtils.subscribableStatus = 1;
       OneSignal_setTime(time);
       OneSignal_setTrackerFactory(trackerFactory);
