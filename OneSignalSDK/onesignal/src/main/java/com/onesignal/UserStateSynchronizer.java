@@ -2,13 +2,13 @@ package com.onesignal;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+
 import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -571,9 +571,7 @@ abstract class UserStateSynchronizer {
 
     abstract void updateIdDependents(String id);
 
-    abstract void logoutEmail();
-
-    abstract void logoutSMS();
+    abstract void logoutChannel();
 
     void sendPurchases(JSONObject jsonBody, OneSignalRestClient.ResponseHandler responseHandler) {
         OneSignalRestClient.post("players/" + getId() + "/on_purchase", jsonBody, responseHandler);

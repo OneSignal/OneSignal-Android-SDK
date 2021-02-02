@@ -10,6 +10,7 @@ import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
+import com.onesignal.OSDeviceState;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowCustomTabsClient;
@@ -87,6 +88,7 @@ public class SynchronizerIntegrationTests {
 
     private static JSONObject lastExternalUserIdResponse;
     private static OneSignal.ExternalIdError lastExternalUserIdError;
+
     private static OneSignal.OSExternalUserIdUpdateCompletionHandler getExternalUserIdUpdateCompletionHandler() {
         return new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
             @Override
@@ -103,6 +105,7 @@ public class SynchronizerIntegrationTests {
 
     private static boolean didEmailUpdateSucceed;
     private static OneSignal.EmailUpdateError lastEmailUpdateFailure;
+
     private static OneSignal.EmailUpdateHandler getEmailUpdateHandler() {
         return new OneSignal.EmailUpdateHandler() {
             @Override
@@ -119,6 +122,7 @@ public class SynchronizerIntegrationTests {
 
     private static JSONObject didSMSlUpdateSucceed;
     private static OneSignal.OSSMSUpdateError lastSMSUpdateFailure;
+
     private static OneSignal.OSSMSUpdateHandler getSMSUpdateHandler() {
         return new OneSignal.OSSMSUpdateHandler() {
             @Override
@@ -217,7 +221,8 @@ public class SynchronizerIntegrationTests {
         OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
         threadAndTaskWait();
 
-        assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+        // NO parent player id call
+        assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
 
         JSONObject pushPost = ShadowOneSignalRestClient.requests.get(1).payload;
         assertEquals(ONESIGNAL_SMS_NUMBER, pushPost.getString("sms_number"));
@@ -227,10 +232,6 @@ public class SynchronizerIntegrationTests {
         assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.getString("identifier"));
         assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.getInt("device_type"));
         assertEquals(ShadowOneSignalRestClient.pushUserId, smsPost.getString("device_player_id"));
-
-        JSONObject pushPut = ShadowOneSignalRestClient.requests.get(3).payload;
-        assertEquals(ShadowOneSignalRestClient.smsUserId, pushPut.getString("parent_player_id"));
-        assertFalse(pushPut.has("identifier"));
     }
 
     @Test
@@ -259,7 +260,7 @@ public class SynchronizerIntegrationTests {
         assertEquals(ShadowOneSignalRestClient.pushUserId, smsPost.getString("device_player_id"));
 
         JSONObject pushPut = ShadowOneSignalRestClient.requests.get(4).payload;
-        assertEquals(ShadowOneSignalRestClient.smsUserId, pushPut.getString("parent_player_id"));
+        assertEquals(ShadowOneSignalRestClient.emailUserId, pushPut.getString("parent_player_id"));
         // add email parent id call
         // TODO: check if this behaviour is not dropped
         assertFalse(pushPut.has("identifier"));
@@ -289,7 +290,7 @@ public class SynchronizerIntegrationTests {
         OneSignal.sendTags(tagsJson);
         threadAndTaskWait();
 
-        assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
 
         ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(2);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
@@ -307,7 +308,7 @@ public class SynchronizerIntegrationTests {
 
         // Assert we are sending / retry for the push player first.
         assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
-        for(int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
+        for (int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
             ShadowOneSignalRestClient.Request emailPost = ShadowOneSignalRestClient.requests.get(i);
             assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, emailPost.method);
             assertEquals(1, emailPost.payload.getInt("device_type"));
@@ -334,7 +335,7 @@ public class SynchronizerIntegrationTests {
 
         // Assert we are sending / retry for the push player first.
         assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
-        for(int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
+        for (int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
             ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(i);
             assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
             assertEquals(ONESIGNAL_SMS_NUMBER, smsPost.payload.getString("sms_number"));
@@ -364,7 +365,7 @@ public class SynchronizerIntegrationTests {
 
         // Assert we are sending / retry for the push player first.
         assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
-        for(int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
+        for (int i = 1; i < ShadowOneSignalRestClient.networkCallCount; i++) {
             ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(i);
             assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
             assertEquals(ONESIGNAL_EMAIL_ADDRESS, smsPost.payload.getString("email"));
@@ -418,9 +419,9 @@ public class SynchronizerIntegrationTests {
         OneSignal.sendTags(tagsJson);
         threadAndTaskWait();
 
-        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
         assertEquals(tagsJson.toString(), smsPut.payload.getJSONObject("tags").toString());
@@ -437,9 +438,9 @@ public class SynchronizerIntegrationTests {
         OneSignal.sendTags(tagsJson);
         threadAndTaskWait();
 
-        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
         assertEquals(3, smsPut.payload.length());
@@ -653,7 +654,7 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
-    public void shouldFireOnSuccessOnlyAfterNetworkCallAfterLogout() throws Exception {
+    public void shouldFireOnSuccessOnlyAfterNetworkCallAfterEmailLogout() throws Exception {
         OneSignalInit();
         emailSetThenLogout();
         TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
@@ -663,6 +664,20 @@ public class SynchronizerIntegrationTests {
 
         assertTrue(testEmailUpdateHandler.emailFiredSuccess);
         assertNull(testEmailUpdateHandler.emailFiredFailure);
+    }
+
+    @Test
+    public void shouldFireOnSuccessOnlyAfterNetworkCallAfterSMSLogout() throws Exception {
+        OneSignalInit();
+        smsSetThenLogout();
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler);
+        assertNull(testSMSUpdateHandler.smsResult);
+        threadAndTaskWait();
+
+        assertNotNull(testSMSUpdateHandler.smsResult);
+        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.getString("sms_number"));
+        assertNull(testSMSUpdateHandler.smsFiredFailure);
     }
 
     // Should create a new email instead of updating existing player record when no auth hash
@@ -701,12 +716,9 @@ public class SynchronizerIntegrationTests {
         OneSignal.setSMSNumber(newSMS);
         threadAndTaskWait();
 
-        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
         assertEquals(newSMS, smsPost.payload.get("identifier"));
-
-        ShadowOneSignalRestClient.Request playerPut = ShadowOneSignalRestClient.requests.get(6);
-        assertEquals(newMockSMSPlayerId, playerPut.payload.get("parent_player_id"));
     }
 
     // Should update player with new email instead of creating a new one when auth hash is provided
@@ -744,12 +756,12 @@ public class SynchronizerIntegrationTests {
         OneSignal.setSMSNumber(newSMS, mockEmailHash);
         threadAndTaskWait();
 
-        ShadowOneSignalRestClient.Request pushPut = ShadowOneSignalRestClient.requests.get(4);
+        ShadowOneSignalRestClient.Request pushPut = ShadowOneSignalRestClient.requests.get(3);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, pushPut.method);
         assertEquals("players/" + PUSH_USER_ID, pushPut.url);
         assertEquals(newSMS, pushPut.payload.get("sms_number"));
 
-        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
         assertEquals("players/" + SMS_USER_ID, smsPut.url);
         assertEquals(newSMS, smsPut.payload.get("identifier"));
@@ -779,6 +791,14 @@ public class SynchronizerIntegrationTests {
         threadAndTaskWait();
     }
 
+    private void smsSetThenLogout() throws Exception {
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        OneSignal.logoutSMSNumber();
+        threadAndTaskWait();
+    }
+
     @Test
     public void shouldLogoutOfEmail() throws Exception {
         OneSignalInit();
@@ -792,6 +812,17 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
+    public void shouldLogoutOfSMS() throws Exception {
+        OneSignalInit();
+
+        smsSetThenLogout();
+
+        OSDeviceState deviceState = OneSignal.getDeviceState();
+        assertNull(deviceState.getSMSUserId());
+        assertNull(deviceState.getSMSNumber());
+    }
+
+    @Test
     public void logoutEmailShouldNotSendEmailPlayersRequest() throws Exception {
         // 1. Init OneSignal and set email
         OneSignalInit();
@@ -802,7 +833,6 @@ public class SynchronizerIntegrationTests {
         pauseActivity(blankActivityController);
         assertAndRunSyncService();
 
-        List<ShadowOneSignalRestClient.Request> requests = ShadowOneSignalRestClient.requests;
         assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
 
         ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
@@ -810,6 +840,23 @@ public class SynchronizerIntegrationTests {
 
         ShadowOneSignalRestClient.Request postEmail = ShadowOneSignalRestClient.requests.get(5);
         assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postEmail.url);
+    }
+
+    @Test
+    public void logoutSMSShouldNotSendSMSPlayersRequest() throws Exception {
+        // 1. Init OneSignal and set email
+        OneSignalInit();
+
+        smsSetThenLogout();
+
+        time.advanceSystemAndElapsedTimeBy(60);
+        pauseActivity(blankActivityController);
+        assertAndRunSyncService();
+
+        assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(3);
+        assertNotEquals("players/" + PUSH_USER_ID, postPush.url);
     }
 
     @Test
@@ -828,6 +875,22 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
+    public void shouldFireOnSuccessOfLogoutSMS() throws Exception {
+        OneSignalInit();
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+        OneSignal.logoutSMSNumber(testSMSUpdateHandler);
+        threadAndTaskWait();
+
+        assertNotNull(testSMSUpdateHandler.smsResult);
+        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.getString("sms_number"));
+        assertNull(testSMSUpdateHandler.smsFiredFailure);
+    }
+
+    @Test
     public void shouldFireOnFailureOfLogoutEmailOnNetworkFailure() throws Exception {
         OneSignalInit();
         TestEmailUpdateHandler testEmailUpdateHandler = new TestEmailUpdateHandler();
@@ -842,6 +905,24 @@ public class SynchronizerIntegrationTests {
 
         assertFalse(testEmailUpdateHandler.emailFiredSuccess);
         assertEquals(OneSignal.EmailErrorType.NETWORK, testEmailUpdateHandler.emailFiredFailure.getType());
+    }
+
+    @Test
+    public void shouldNotFireOnFailureOfLogoutSMSOnNetworkFailure() throws Exception {
+        OneSignalInit();
+        TestSMSUpdateHandler testSMSUpdateHandler = new TestSMSUpdateHandler();
+
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        ShadowOneSignalRestClient.failAll = true;
+        OneSignal.logoutSMSNumber(testSMSUpdateHandler);
+        threadAndTaskWait();
+
+        assertNotNull(testSMSUpdateHandler.smsResult);
+        assertEquals(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler.smsResult.getString("sms_number"));
+        assertNull(testSMSUpdateHandler.smsFiredFailure);
     }
 
     @Test
@@ -869,6 +950,34 @@ public class SynchronizerIntegrationTests {
         // Update Push record's parent_player_id
         ShadowOneSignalRestClient.Request playerPut2 = ShadowOneSignalRestClient.requests.get(7);
         assertEquals(newMockEmailPlayerId, playerPut2.payload.get("parent_player_id"));
+    }
+
+    @Test
+    public void shouldCreateNewSMSAfterLogout() throws Exception {
+        OneSignalInit();
+
+        smsSetThenLogout();
+
+        String newMockSMSPlayerId = "c007f967-98cc-11e4-bed1-118f05be4533";
+        String newSMSNumber = "new_sms_number";
+
+        ShadowOneSignalRestClient.smsUserId = newMockSMSPlayerId;
+        OneSignal.setSMSNumber(newSMSNumber);
+        threadAndTaskWait();
+
+        // There should not be a parent_player_id update, last SMS POST should be the last one
+        assertEquals(5, ShadowOneSignalRestClient.requests.size());
+
+        // Update Push record's sms field.
+        ShadowOneSignalRestClient.Request putPushSMS = ShadowOneSignalRestClient.requests.get(3);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, putPushSMS.method);
+        assertEquals("players/" + PUSH_USER_ID, putPushSMS.url);
+        assertEquals(newSMSNumber, putPushSMS.payload.get("sms_number"));
+
+        // Create new SMS record
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(4);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
+        assertEquals(newSMSNumber, smsPost.payload.get("identifier"));
     }
 
     // ####### external_id Tests ########
@@ -1060,11 +1169,11 @@ public class SynchronizerIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        ShadowOneSignalRestClient.Request registrationRequestAfterColdStart = ShadowOneSignalRestClient.requests.get(6);
+        ShadowOneSignalRestClient.Request registrationRequestAfterColdStart = ShadowOneSignalRestClient.requests.get(5);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, registrationRequestAfterColdStart.method);
         assertEquals(mockExternalIdHash, registrationRequestAfterColdStart.payload.getString("external_user_id_auth_hash"));
 
-        ShadowOneSignalRestClient.Request smsPostAfterColdStart = ShadowOneSignalRestClient.requests.get(7);
+        ShadowOneSignalRestClient.Request smsPostAfterColdStart = ShadowOneSignalRestClient.requests.get(6);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPostAfterColdStart.method);
         assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPostAfterColdStart.payload.getInt("device_type"));
         assertEquals(mockSMSlHash, smsPostAfterColdStart.payload.getString("sms_auth_hash"));
@@ -1086,7 +1195,7 @@ public class SynchronizerIntegrationTests {
         OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
         threadAndTaskWait();
 
-        ShadowOneSignalRestClient.Request setExternalIdOnSMSChannel = ShadowOneSignalRestClient.requests.get(6);
+        ShadowOneSignalRestClient.Request setExternalIdOnSMSChannel = ShadowOneSignalRestClient.requests.get(5);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, setExternalIdOnSMSChannel.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, setExternalIdOnSMSChannel.url);
         assertEquals(testExternalId, setExternalIdOnSMSChannel.payload.get("external_user_id"));
@@ -1112,9 +1221,9 @@ public class SynchronizerIntegrationTests {
         OneSignal.sendTags(tagsJson);
         threadAndTaskWait();
 
-        assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(7, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(7);
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(6);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
         assertEquals(4, smsPut.payload.length());
@@ -1257,14 +1366,14 @@ public class SynchronizerIntegrationTests {
         assertNotNull(didSMSlUpdateSucceed);
         assertNull(lastEmailUpdateFailure);
 
-        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(4);
+        ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(3);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
         assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
         assertFalse(removeIdRequest.payload.has("external_user_id_auth_hash"));
 
-        ShadowOneSignalRestClient.Request removeIdSMSRequest = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request removeIdSMSRequest = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdSMSRequest.method);
         assertEquals(removeIdSMSRequest.payload.getString("external_user_id"), "");
         assertEquals(mockSMSHash, removeIdSMSRequest.payload.getString("sms_auth_hash"));
@@ -1312,14 +1421,14 @@ public class SynchronizerIntegrationTests {
         OneSignal.removeExternalUserId();
         threadAndTaskWait();
 
-        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(4);
+        ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(3);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
         assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
         assertEquals(mockExternalIdHash, removeIdRequest.payload.getString("external_user_id_auth_hash"));
 
-        ShadowOneSignalRestClient.Request removeIdSMSRequest = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request removeIdSMSRequest = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdSMSRequest.method);
         assertEquals(removeIdSMSRequest.payload.getString("external_user_id"), "");
         assertEquals(mockSMSHash, removeIdSMSRequest.payload.getString("sms_auth_hash"));
@@ -1768,6 +1877,34 @@ public class SynchronizerIntegrationTests {
         OneSignal.logoutEmail();
         threadAndTaskWait();
 
+        // 3. Attempt a set external user id with callback
+        OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        // 4. Make sure lastExternalUserIdResponse has push with success : true
+        JSONObject expectedExternalUserIdResponse = new JSONObject(
+                "{" +
+                        "   \"push\" : {" +
+                        "      \"success\" : true" +
+                        "   }" +
+                        "}"
+        );
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+    }
+
+    @Test
+    public void sendExternalUserId_forPush_afterLoggingOutSMS_withCompletion() throws Exception {
+        String testExternalId = "test_ext_id";
+
+        // 1. Init OneSignal and set email
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER);
+        threadAndTaskWait();
+
+        // 2. Logout SMS
+        OneSignal.logoutSMSNumber();
+        threadAndTaskWait();
+
         // 4. Attempt a set external user id with callback
         OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
         threadAndTaskWait();
@@ -1810,7 +1947,7 @@ public class SynchronizerIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
 
-        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(6);
+        ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(5);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
         assertEquals("players/" + ShadowOneSignalRestClient.SMS_USER_ID + "/on_session", smsPost.url);
 
@@ -1899,16 +2036,16 @@ public class SynchronizerIntegrationTests {
         pauseActivity(blankActivityController);
         assertAndRunSyncService();
 
-        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request post = ShadowOneSignalRestClient.requests.get(3);
+        ShadowOneSignalRestClient.Request post = ShadowOneSignalRestClient.requests.get(2);
         assertFalse(post.url.contains("on_focus"));
 
-        ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(4);
+        ShadowOneSignalRestClient.Request postPush = ShadowOneSignalRestClient.requests.get(3);
         assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_focus", postPush.url);
         assertEquals(60, postPush.payload.getInt("active_time"));
 
-        ShadowOneSignalRestClient.Request postSMSl = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request postSMSl = ShadowOneSignalRestClient.requests.get(4);
         assertEquals("players/" + SMS_USER_ID + "/on_focus", postSMSl.url);
         assertEquals(60, postSMSl.payload.getInt("active_time"));
     }
