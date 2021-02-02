@@ -1521,6 +1521,45 @@ public class OneSignal {
       OneSignalStateSynchronizer.setSMSNumber(smsNumber, smsAuthHash);
    }
 
+   /**
+    * Call when user logs out of their account.
+    * This dissociates the device from the email address.
+    * This does not effect the subscription status of the email address itself.
+    */
+   public static void logoutSMSNumber() {
+      logoutSMSNumber(null);
+   }
+
+   public static void logoutSMSNumber(@Nullable final OSSMSUpdateHandler callback) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.LOGOUT_SMS_NUMBER)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.LOGOUT_SMS_NUMBER + " operation to a pending task queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running  " + OSTaskController.LOGOUT_SMS_NUMBER + " operation from pending task queue.");
+               logoutSMSNumber(callback);
+            }
+         });
+         return;
+      }
+
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.LOGOUT_SMS_NUMBER))
+         return;
+
+      if (getSMSId() == null) {
+         final String message = OSTaskController.LOGOUT_SMS_NUMBER + " not valid as sms number was not set or already logged out!";
+         if (callback != null)
+            callback.onFailure(new OSSMSUpdateError(SMSErrorType.INVALID_OPERATION, message));
+         logger.error(message);
+         return;
+      }
+
+      smsLogoutHandler = callback;
+      OneSignalStateSynchronizer.logoutSMS();
+   }
+
    public static void setEmail(@NonNull final String email, EmailUpdateHandler callback) {
       setEmail(email, null, callback);
    }
@@ -2526,12 +2565,6 @@ public class OneSignal {
    static void updateSMSIdDependents(String smsId) {
       saveSMSId(smsId);
       getCurrentSMSSubscriptionState(appContext).setSMSUserId(smsId);
-      try {
-         JSONObject updateJson = new JSONObject().put("parent_player_id", smsId);
-         OneSignalStateSynchronizer.updatePushState(updateJson);
-      } catch (JSONException e) {
-         e.printStackTrace();
-      }
    }
 
    // Start Remote params getters
@@ -3220,6 +3253,20 @@ public class OneSignal {
       if (emailUpdateHandler != null) {
          emailUpdateHandler.onFailure(new EmailUpdateError(EmailErrorType.NETWORK, "Failed due to network failure. Will retry on next sync."));
          emailUpdateHandler = null;
+      }
+   }
+
+   static void handleSuccessfulSMSlLogout(JSONObject result) {
+      if (smsLogoutHandler != null) {
+         smsLogoutHandler.onSuccess(result);
+         smsLogoutHandler = null;
+      }
+   }
+
+   static void handleFailedSMSLogout() {
+      if (smsLogoutHandler != null) {
+         smsLogoutHandler.onFailure(new OSSMSUpdateError(SMSErrorType.NETWORK, "Failed due to network failure. Will retry on next sync."));
+         smsLogoutHandler = null;
       }
    }
 

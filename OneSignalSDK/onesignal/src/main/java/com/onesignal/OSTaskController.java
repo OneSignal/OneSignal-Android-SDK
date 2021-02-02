@@ -19,6 +19,7 @@ class OSTaskController {
     static final String GET_TAGS = "getTags()";
     static final String SET_SMS_NUMBER = "setSMSNumber()";
     static final String SET_EMAIL = "setEmail()";
+    static final String LOGOUT_SMS_NUMBER = "logoutSMSNumber()";
     static final String LOGOUT_EMAIL = "logoutEmail()";
     static final String SYNC_HASHED_EMAIL = "syncHashedEmail()";
     static final String SET_EXTERNAL_USER_ID = "setExternalUserId()";
@@ -41,6 +42,7 @@ class OSTaskController {
             GET_TAGS,
             SET_SMS_NUMBER,
             SET_EMAIL,
+            LOGOUT_SMS_NUMBER,
             LOGOUT_EMAIL,
             SYNC_HASHED_EMAIL,
             SET_EXTERNAL_USER_ID,
