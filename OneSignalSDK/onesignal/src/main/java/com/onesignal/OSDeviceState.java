@@ -35,12 +35,16 @@ public class OSDeviceState {
     private final boolean pushDisabled;
     private final boolean subscribed;
     private final boolean emailSubscribed;
+    private final boolean smsSubscribed;
     private final String userId;
     private final String pushToken;
     private final String emailUserId;
     private final String emailAddress;
+    private final String smsUserId;
+    private final String smsNumber;
 
-    OSDeviceState(OSSubscriptionState subscriptionStatus, OSPermissionState permissionStatus, OSEmailSubscriptionState emailSubscriptionStatus) {
+    OSDeviceState(OSSubscriptionState subscriptionStatus, OSPermissionState permissionStatus,
+                  OSEmailSubscriptionState emailSubscriptionStatus, OSSMSSubscriptionState smsSubscriptionState) {
         areNotificationsEnabled = permissionStatus.areNotificationsEnabled();
         pushDisabled = subscriptionStatus.isPushDisabled();
         subscribed = subscriptionStatus.isSubscribed();
@@ -49,6 +53,9 @@ public class OSDeviceState {
         emailUserId = emailSubscriptionStatus.getEmailUserId();
         emailAddress = emailSubscriptionStatus.getEmailAddress();
         emailSubscribed = emailSubscriptionStatus.isSubscribed();
+        smsUserId = smsSubscriptionState.getSmsUserId();
+        smsNumber = smsSubscriptionState.getSMSNumber();
+        smsSubscribed = smsSubscriptionState.isSubscribed();
     }
 
     /**
@@ -123,6 +130,18 @@ public class OSDeviceState {
         return emailAddress;
     }
 
+    public boolean isSMSSubscribed() {
+        return smsSubscribed;
+    }
+
+    public String getSMSUserId() {
+        return smsUserId;
+    }
+
+    public String getSMSNumber() {
+        return smsNumber;
+    }
+
     public JSONObject toJSONObject() {
         JSONObject mainObj = new JSONObject();
 
@@ -135,6 +154,9 @@ public class OSDeviceState {
             mainObj.put("isEmailSubscribed", emailSubscribed);
             mainObj.put("emailUserId", emailUserId);
             mainObj.put("emailAddress", emailAddress);
+            mainObj.put("isSMSSubscribed", smsSubscribed);
+            mainObj.put("smsUserId", smsUserId);
+            mainObj.put("smsNumber", smsNumber);
         } catch (Throwable t) {
             t.printStackTrace();
         }

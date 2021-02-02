@@ -598,7 +598,7 @@ public class OneSignal {
    private static OSObservable<OSSMSSubscriptionObserver, OSSMSSubscriptionStateChanges> smsSubscriptionStateChangesObserver;
    static OSObservable<OSSMSSubscriptionObserver, OSSMSSubscriptionStateChanges> getSMSSubscriptionStateChangesObserver() {
       if (smsSubscriptionStateChangesObserver == null)
-         smsSubscriptionStateChangesObserver = new OSObservable<>("onOSSMSSubscriptionChanged", true);
+         smsSubscriptionStateChangesObserver = new OSObservable<>("onSMSSubscriptionChanged", true);
       return smsSubscriptionStateChangesObserver;
    }
    // End SMSSubscriptionState
@@ -616,7 +616,8 @@ public class OneSignal {
       OSSubscriptionState subscriptionStatus = getCurrentSubscriptionState(appContext);
       OSPermissionState permissionStatus = getCurrentPermissionState(appContext);
       OSEmailSubscriptionState emailSubscriptionStatus = getCurrentEmailSubscriptionState(appContext);
-      return new OSDeviceState(subscriptionStatus, permissionStatus, emailSubscriptionStatus);
+      OSSMSSubscriptionState smsSubscriptionStatus = getCurrentSMSSubscriptionState(appContext);
+      return new OSDeviceState(subscriptionStatus, permissionStatus, emailSubscriptionStatus, smsSubscriptionStatus);
    }
 
    private static class IAPUpdateJob {
@@ -2970,7 +2971,6 @@ public class OneSignal {
     * @param observer the instance of {@link OSSubscriptionObserver} that acts as the observer
     */
    public static void addSMSSubscriptionObserver(@NonNull OSSMSSubscriptionObserver observer) {
-
       if (appContext == null) {
          logger.error("OneSignal.initWithContext has not been called. Could not add sms subscription observer");
          return;
