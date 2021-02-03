@@ -2174,12 +2174,7 @@ public class OneSignal {
       logger.debug("startOrResumeApp from context: " + inContext + " isRoot: " + inContext.isTaskRoot() + " with launchIntent: " + launchIntent);
       // Make sure we have a launcher intent.
       if (launchIntent != null) {
-         if (inContext.isTaskRoot()) {
-            inContext.startActivity(launchIntent);
-         } else {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            inContext.startActivity(launchIntent);
-         }
+         inContext.startActivity(launchIntent);
          return true;
       }
 
