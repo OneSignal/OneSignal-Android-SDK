@@ -2627,6 +2627,10 @@ public class MainOneSignalClassRunner {
       OneSignal.enableVibrate(false);
       OneSignal.enableSound(false);
       OneSignal.promptLocation();
+	  OneSignal.getOneSignalNotificationsCount(new OneSignal.OSNotificationsCountHandler() {
+		  @Override
+		  public void notificationsAvailable(int count) {}
+	  });
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
          public void onSuccess(JSONObject response) {}

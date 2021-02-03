@@ -182,7 +182,7 @@ public class OneSignal {
       void tagsAvailable(JSONObject tags);
    }
    
-   public interface GetNotificationsCountHandler {
+   public interface OSNotificationsCountHandler {
       void notificationsAvailable(int count);
    }
 
@@ -2625,12 +2625,10 @@ public class OneSignal {
       runPromptLocation.run();
    }
    
-   public static void getOneSignalNotificationsCount(final GetNotificationsCountHandler getNotificationsCountHandler) {
+   public static void getOneSignalNotificationsCount(final OSNotificationsCountHandler getNotificationsCountHandler) {
       Runnable runGetOneSignalNotificationsCount = new Runnable() {
          @Override
          public void run() {
-            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
-
             OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
             String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
 
@@ -2644,9 +2642,8 @@ public class OneSignal {
                     null,                                                    // filter by row groups
                     null                                                     // sort order
             );
-            
-            //BadgeCountUpdater.updateCount(0, appContext);			
-			getNotificationsCountHandler.notificationsAvailable(cursor.getCount());
+            	
+            getNotificationsCountHandler.notificationsAvailable(cursor.getCount());
 
             cursor.close();
          }
