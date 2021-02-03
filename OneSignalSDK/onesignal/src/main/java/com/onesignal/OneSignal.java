@@ -2178,10 +2178,11 @@ public class OneSignal {
             inContext.startActivity(launchIntent);
          } else {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            PendingIntent.getActivity(inContext, 0, launchIntent, 0);
+            inContext.startActivity(launchIntent);
          }
          return true;
       }
+
       return false;
    }
 
