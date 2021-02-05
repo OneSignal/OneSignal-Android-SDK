@@ -2169,20 +2169,16 @@ public class OneSignal {
       sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
    }
 
-   static boolean startOrResumeApp(Activity inContext) {
-      Intent launchIntent = inContext.getPackageManager().getLaunchIntentForPackage(inContext.getPackageName());
-      logger.debug("startOrResumeApp from context: " + inContext + " isRoot: " + inContext.isTaskRoot() + " with launchIntent: " + launchIntent);
-      // Make sure we have a launcher intent.
-      if (launchIntent != null) {
-         if (inContext.isTaskRoot()) {
-            inContext.startActivity(launchIntent);
-         } else {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            PendingIntent.getActivity(inContext, 0, launchIntent, 0);
-         }
-         return true;
-      }
-      return false;
+   static boolean startOrResumeApp(Activity activity) {
+      Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
+      logger.debug("startOrResumeApp from context: " + activity + " isRoot: " + activity.isTaskRoot() + " with launchIntent: " + launchIntent);
+
+      // Not all apps have a launcher intent, such as one that only provides a homescreen widget
+      if (launchIntent == null)
+         return false;
+
+      activity.startActivity(launchIntent);
+      return true;
    }
 
    /**
