@@ -2169,7 +2169,14 @@ public class OneSignal {
       sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
    }
 
-   static boolean startOrResumeApp(Activity activity) {
+   // This opens the app in the same way an Android homescreen launcher does.
+   // This means we expect the following behavior:
+   //    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"
+   //    2. If the app is already running, instead the last activity will be resumed
+   //    3. If the app is not running (due to being push out of memory), the last activity will be resumed
+   //    4. If the app is no longer in the recent apps list, it is not resumed, same as #1 above.
+   //        - App is removed from the recent app's list if it is swiped away or "clear all" is pressed.
+   static boolean startOrResumeApp(@NonNull Activity activity) {
       Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
       logger.debug("startOrResumeApp from context: " + activity + " isRoot: " + activity.isTaskRoot() + " with launchIntent: " + launchIntent);
 
@@ -2177,7 +2184,13 @@ public class OneSignal {
       if (launchIntent == null)
          return false;
 
+      // Removing package from the intent, this treats the app as if it was started externally.
+      // This gives us the resume app behavior noted above.
+      // Android 11 no longer requires nulling this out to get this behavior.
+      launchIntent.setPackage(null);
+
       activity.startActivity(launchIntent);
+
       return true;
    }
 
