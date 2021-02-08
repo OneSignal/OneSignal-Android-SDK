@@ -39,7 +39,6 @@ import android.database.Cursor;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import androidx.test.core.app.ApplicationProvider;
 
@@ -123,6 +122,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -875,6 +875,17 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
       assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players/.*/on_session"));
       assertEquals("{\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"}", ShadowOneSignalRestClient.lastPost.toString());
+   }
+
+   @Test
+   public void testRequestMadeWithCorrectTimeZoneID() throws Exception {
+      // Will call create
+      TimeZone.setDefault(TimeZone.getTimeZone("Europe/London"));
+      OneSignalInit();
+      threadAndTaskWait();
+      ShadowOneSignalRestClient.lastUrl = null;
+      JSONObject jsonObject = new JSONObject(ShadowOneSignalRestClient.lastPost.toString());
+      assertEquals("Europe/London", jsonObject.get("timezone_id"));
    }
 
    @Test
