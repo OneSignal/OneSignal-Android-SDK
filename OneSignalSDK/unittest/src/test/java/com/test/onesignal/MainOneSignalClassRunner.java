@@ -195,6 +195,7 @@ public class MainOneSignalClassRunner {
 
    private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
    private static final String ONESIGNAL_NOTIFICATION_ID = "97d8e764-81c2-49b0-a644-713d052ae7d5";
+   private static final String TIMEZONE_ID = "Europe/London";
 
    @SuppressLint("StaticFieldLeak")
    private static Activity blankActivity;
@@ -879,13 +880,12 @@ public class MainOneSignalClassRunner {
 
    @Test
    public void testRequestMadeWithCorrectTimeZoneID() throws Exception {
-      // Will call create
-      TimeZone.setDefault(TimeZone.getTimeZone("Europe/London"));
+      //Sets Default timezone and initalizes onesignal
+      TimeZone.setDefault(TimeZone.getTimeZone(TIMEZONE_ID));
       OneSignalInit();
       threadAndTaskWait();
-      ShadowOneSignalRestClient.lastUrl = null;
       JSONObject jsonObject = new JSONObject(ShadowOneSignalRestClient.lastPost.toString());
-      assertEquals("Europe/London", jsonObject.get("timezone_id"));
+      assertEquals(TIMEZONE_ID, jsonObject.get("timezone_id"));
    }
 
    @Test
