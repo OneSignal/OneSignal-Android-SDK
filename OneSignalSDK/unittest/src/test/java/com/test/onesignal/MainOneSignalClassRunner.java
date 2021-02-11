@@ -884,8 +884,7 @@ public class MainOneSignalClassRunner {
       TimeZone.setDefault(TimeZone.getTimeZone(TIMEZONE_ID));
       OneSignalInit();
       threadAndTaskWait();
-      JSONObject jsonObject = new JSONObject(ShadowOneSignalRestClient.lastPost.toString());
-      assertEquals(TIMEZONE_ID, jsonObject.get("timezone_id"));
+      assertEquals(TIMEZONE_ID, ShadowOneSignalRestClient.lastPost.get("timezone_id"));
    }
 
    @Test
