@@ -427,6 +427,28 @@ public class SynchronizerIntegrationTests {
     }
 
     @Test
+    public void shouldSendTagsToSMSWithHashToken() throws Exception {
+        String mockSMSHash = new String(new char[64]).replace('\0', '0');
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSHash);
+        threadAndTaskWait();
+
+        JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+        OneSignal.sendTags(tagsJson);
+        threadAndTaskWait();
+
+        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
+        assertEquals(3, smsPut.payload.length());
+        assertTrue(smsPut.payload.has("app_id"));
+        assertEquals(tagsJson.toString(), smsPut.payload.getJSONObject("tags").toString());
+        assertEquals(mockSMSHash, smsPut.payload.getString("sms_auth_hash"));
+    }
+
+    @Test
     public void shouldSendTagsToEmailAndSMSAfterCreate() throws Exception {
         OneSignalInit();
         OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS);
@@ -1015,7 +1037,7 @@ public class SynchronizerIntegrationTests {
         String testExternalId = "test_ext_id";
         String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
 
-        String mockSMSlHash = new String(new char[64]).replace('\0', '0');
+        String mockSMSlHash = new String(new char[64]).replace('\0', '1');
 
         OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
         OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSlHash);
@@ -1046,6 +1068,83 @@ public class SynchronizerIntegrationTests {
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPostAfterColdStart.method);
         assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPostAfterColdStart.payload.getInt("device_type"));
         assertEquals(mockSMSlHash, smsPostAfterColdStart.payload.getString("sms_auth_hash"));
+    }
+
+    @Test
+    public void shouldSetExternalIdOnSMS() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+        String mockSMSlHash = new String(new char[64]).replace('\0', '1');
+
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSlHash);
+        threadAndTaskWait();
+
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
+        threadAndTaskWait();
+
+        ShadowOneSignalRestClient.Request setExternalIdOnSMSChannel = ShadowOneSignalRestClient.requests.get(6);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, setExternalIdOnSMSChannel.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, setExternalIdOnSMSChannel.url);
+        assertEquals(testExternalId, setExternalIdOnSMSChannel.payload.get("external_user_id"));
+        assertEquals(mockExternalIdHash, setExternalIdOnSMSChannel.payload.get("external_user_id_auth_hash"));
+        assertEquals(mockSMSlHash, setExternalIdOnSMSChannel.payload.get("sms_auth_hash"));
+    }
+
+    @Test
+    public void shouldSetExternalIdWithAuthHashOnSendTagsSMS() throws Exception {
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+        String mockSMSHash = new String(new char[64]).replace('\0', '0');
+
+        OneSignalInit();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSHash);
+        threadAndTaskWait();
+
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
+        threadAndTaskWait();
+
+        JSONObject tagsJson = new JSONObject("{\"test1\": \"value1\", \"test2\": \"value2\"}");
+        OneSignal.sendTags(tagsJson);
+        threadAndTaskWait();
+
+        assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(7);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
+        assertEquals(4, smsPut.payload.length());
+        assertTrue(smsPut.payload.has("app_id"));
+        assertEquals(tagsJson.toString(), smsPut.payload.getJSONObject("tags").toString());
+        assertEquals(mockSMSHash, smsPut.payload.getString("sms_auth_hash"));
+        assertEquals(mockExternalIdHash, smsPut.payload.getString("external_user_id_auth_hash"));
+    }
+
+    @Test
+    public void shouldNotSetExternalIdOnSMShWithLaterSMSNumber() throws Exception {
+        OneSignalInit();
+        threadAndTaskWait();
+
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+        String mockSMSlHash = new String(new char[64]).replace('\0', '1');
+
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
+        threadAndTaskWait();
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSlHash);
+        threadAndTaskWait();
+
+        ShadowOneSignalRestClient.Request setSMSNumberSMSChannelRequest = ShadowOneSignalRestClient.requests.get(4);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, setSMSNumberSMSChannelRequest.method);
+        assertTrue(setSMSNumberSMSChannelRequest.payload.has("identifier"));
+        assertTrue(setSMSNumberSMSChannelRequest.payload.has("sms_auth_hash"));
+        assertFalse(setSMSNumberSMSChannelRequest.payload.has("external_user_id"));
+        assertFalse(setSMSNumberSMSChannelRequest.payload.has("external_user_id_auth_hash"));
     }
 
     @Test
@@ -1714,6 +1813,12 @@ public class SynchronizerIntegrationTests {
         ShadowOneSignalRestClient.Request smsPost = ShadowOneSignalRestClient.requests.get(6);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, smsPost.method);
         assertEquals("players/" + ShadowOneSignalRestClient.SMS_USER_ID + "/on_session", smsPost.url);
+
+        // Check that the request only has app_id, device_type and device_player_id
+        assertEquals(3, smsPost.payload.length());
+        assertEquals(PUSH_USER_ID, smsPost.payload.get("device_player_id"));
+        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, smsPost.payload.get("device_type"));
+        assertTrue(smsPost.payload.has("app_id"));
     }
 
     // ####### on_focus Tests ########
@@ -1730,6 +1835,28 @@ public class SynchronizerIntegrationTests {
 
         assertOnFocusAtIndex(2, 60);
         assertRestCalls(3);
+    }
+
+    @Test
+    public void sendsOnFocusWithExternalId() throws Exception {
+        time.advanceSystemAndElapsedTimeBy(0);
+        OneSignalInit();
+        threadAndTaskWait();
+
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
+        threadAndTaskWait();
+
+        time.advanceSystemAndElapsedTimeBy(60);
+        pauseActivity(blankActivityController);
+        assertAndRunSyncService();
+
+        assertOnFocusAtIndex(3, 60);
+        assertRestCalls(4);
+        assertFalse(ShadowOneSignalRestClient.lastPost.has("external_user_id"));
+        assertFalse(ShadowOneSignalRestClient.lastPost.has("external_user_id_auth_hash"));
     }
 
     @Test
