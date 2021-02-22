@@ -28,6 +28,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private static final Object LOCK = new Object();
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
+    private static final String LIQUID_TAG_SCRIPT = "\n\n" +
+            "<script>\n" +
+            "    iamInfo.tags = %s;\n" +
+            "</script>";
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android");
         add("app");
@@ -758,9 +762,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
 
         inAppMessageShowing = true;
-
-        boolean hasLiquid = true; // placeholder
-        if (hasLiquid) {
+        waitForTags = false;
+        if (message.getHasLiquid()) {
             waitForTags = true;
             OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
                 @Override
@@ -827,10 +830,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     String taggedHTMLString(@NonNull String untaggedString) {
         String tagsDict = userTagsString;
-        String tagScript =  "\n\n" +
-                            "<script>\n" +
-                            "    iamInfo.tags = %s;\n" +
-                            "</script>";
+        String tagScript =  LIQUID_TAG_SCRIPT;
         return untaggedString + String.format(tagScript, tagsDict);
     }
 
