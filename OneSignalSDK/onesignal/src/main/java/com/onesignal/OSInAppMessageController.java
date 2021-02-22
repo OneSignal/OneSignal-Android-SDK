@@ -787,12 +787,25 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                     message.setDisplayDuration(displayDuration);
 
                     OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
-                    WebViewManager.showHTMLString(message, htmlStr);
+                    WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
         }, null);
+    }
+
+    String getTagsString() {
+        return "{player_name : \"placeholder\"}";
+    }
+
+    String taggedHTMLString(@NonNull String untaggedString) {
+        String tagsDict = getTagsString();
+        String tagScript =  "\n\n" +
+                            "<script>\n" +
+                            "    iamInfo.tags = %s;\n" +
+                            "</script>";
+        return untaggedString + String.format(tagScript, tagsDict);
     }
 
     void displayPreviewMessage(@NonNull String previewUUID) {
