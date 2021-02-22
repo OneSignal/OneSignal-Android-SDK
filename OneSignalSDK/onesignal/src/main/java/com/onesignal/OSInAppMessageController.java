@@ -70,6 +70,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private boolean inAppMessageShowing = false;
 
     @Nullable
+    private String userTagsString = null;
+
+    @Nullable
+    private String pendingHTMLContent = null;
+
+    private boolean waitForTags = false;
+
+    @Nullable
     Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
 
@@ -751,6 +759,25 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
         inAppMessageShowing = true;
 
+        boolean hasLiquid = true; // placeholder
+        if (hasLiquid) {
+            waitForTags = true;
+            OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
+                @Override
+                public void tagsAvailable(JSONObject tags) {
+                    waitForTags = false;
+                    if (tags != null) {
+                        userTagsString = tags.toString();;
+                    }
+                    if (pendingHTMLContent != null) {
+                        OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
+                        WebViewManager.showHTMLString(message, taggedHTMLString(pendingHTMLContent));
+                        pendingHTMLContent = null;
+                    }
+                }
+            });
+        }
+
         String htmlPath = htmlPathForMessage(message);
         OneSignalRestClient.get(htmlPath, new ResponseHandler() {
             @Override
@@ -785,7 +812,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
                     double displayDuration = jsonResponse.optDouble("display_duration");
                     message.setDisplayDuration(displayDuration);
-
+                    if (waitForTags) {
+                        pendingHTMLContent = htmlStr;
+                        return;
+                    }
                     OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
                     WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
                 } catch (JSONException e) {
@@ -795,12 +825,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }, null);
     }
 
-    String getTagsString() {
-        return "{player_name : \"placeholder\"}";
-    }
-
     String taggedHTMLString(@NonNull String untaggedString) {
-        String tagsDict = getTagsString();
+        String tagsDict = userTagsString;
         String tagScript =  "\n\n" +
                             "<script>\n" +
                             "    iamInfo.tags = %s;\n" +
