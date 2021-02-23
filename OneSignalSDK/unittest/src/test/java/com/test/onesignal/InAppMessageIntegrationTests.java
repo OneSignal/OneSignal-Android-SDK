@@ -57,7 +57,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
@@ -1283,7 +1282,6 @@ public class InAppMessageIntegrationTests {
         // Add trigger to make IAM display
         OneSignal.addTrigger("test_1", 2);
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-
         // Check impression request
         int requestSize = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);
@@ -1304,7 +1302,6 @@ public class InAppMessageIntegrationTests {
         // Set same trigger, should display again
         OneSignal.addTrigger("test_1", 2);
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-
         // Check impression request is sent again
         int requestSizeAfterRedisplay = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequestAfterRedisplay = ShadowOneSignalRestClient.requests.get(requestSizeAfterRedisplay - 1);
@@ -1828,6 +1825,40 @@ public class InAppMessageIntegrationTests {
         // Check influence id saved
         lastReceivedIds = trackerFactory.getIAMChannelTracker().getLastReceivedIds();
         assertEquals(1, lastReceivedIds.length());
+    }
+
+    @Test
+    public void testLiquidIAMDisplayWaitsForGetTags() throws Exception {
+        final OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndLiquid(
+                OSTriggerKind.CUSTOM, "test_1", OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2);
+
+        setMockRegistrationResponseWithMessages(new ArrayList<OSTestInAppMessage>() {{
+            add(message);
+        }});
+
+        // Init OneSignal IAM with redisplay
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Add trigger to make IAM display
+        OneSignal.addTrigger("test_1", 2);
+        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        // Wait for both getTags and get IAM HTML to be called
+        Awaitility.await()
+                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .until(() -> ShadowOneSignalRestClient.requests.size() == 4);
+        int requestSize = ShadowOneSignalRestClient.requests.size();
+        ShadowOneSignalRestClient.Request getTagsRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);
+        assertEquals("players/" + "df8f05be55ba-b2f7f966-d8cc-11e4-bed1" + "?app_id=" + "b2f7f966-d8cc-11e4-bed1-df8f05be55ba", getTagsRequest.url);
+        // Runnable for get tags is run
+        threadAndTaskWait();
+        // Runnable for webView is run from background thread to main thread
+        threadAndTaskWait();
+        // Check impression request
+        requestSize = ShadowOneSignalRestClient.requests.size();
+        ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);
+        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessage> messages) throws JSONException {

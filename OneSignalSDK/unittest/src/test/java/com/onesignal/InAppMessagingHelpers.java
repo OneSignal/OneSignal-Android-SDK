@@ -95,6 +95,17 @@ public class InAppMessagingHelpers {
         return json;
     }
 
+    public static OSTestInAppMessage buildTestMessageWithLiquid(final JSONArray triggerJson) throws JSONException {
+        JSONObject json = basicIAMJSONObject(triggerJson);
+        json.put("has_liquid", true);
+        return new OSTestInAppMessage(json);
+    }
+
+    public static OSTestInAppMessage buildTestMessageWithSingleTriggerAndLiquid(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
+        JSONArray triggersJson = basicTrigger(kind, key, operator, value);
+        return buildTestMessageWithLiquid(triggersJson);
+    }
+
     private static OSTestInAppMessage buildTestMessageWithMultipleDisplays(final JSONArray triggerJson, final int limit, final long delay) throws JSONException {
         JSONObject json = basicIAMJSONObject(triggerJson);
         json.put("redisplay",  new JSONObject() {{
