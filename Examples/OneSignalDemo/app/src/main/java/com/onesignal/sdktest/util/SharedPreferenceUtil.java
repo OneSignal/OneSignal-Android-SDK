@@ -25,7 +25,7 @@ public class SharedPreferenceUtil {
     }
 
     public static String getOneSignalAppId(Context context) {
-        return getSharedPreference(context).getString(OS_APP_ID_SHARED_PREF, "1bcc4195-2039-4b18-83d7-2ab5b98daf76");
+        return getSharedPreference(context).getString(OS_APP_ID_SHARED_PREF, "77e32082-ea27-42e3-a898-c72e141824ef");
     }
 
     public static boolean getUserPrivacyConsent(Context context) {

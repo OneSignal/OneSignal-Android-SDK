@@ -28,7 +28,6 @@
         android:roundIcon="@mipmap/ic_onesignal_launcher"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true"
         tools:ignore="GoogleAppIndexingWarning">
 
         <amazon:enable-feature
