@@ -770,7 +770,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 public void tagsAvailable(JSONObject tags) {
                     waitForTags = false;
                     if (tags != null) {
-                        userTagsString = tags.toString();;
+                        userTagsString = tags.toString();
                     }
                     if (pendingHTMLContent != null) {
                         OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
