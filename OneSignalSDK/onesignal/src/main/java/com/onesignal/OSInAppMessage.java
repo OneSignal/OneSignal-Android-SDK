@@ -233,9 +233,13 @@ class OSInAppMessage {
         this.displayedInSession = displayedInSession;
     }
 
-    boolean getHasLiquid() {return hasLiquid; }
+    boolean getHasLiquid() {
+        return hasLiquid;
+    }
 
-    void setHasLiquid(boolean hasLiquid) { this.hasLiquid = hasLiquid; }
+    void setHasLiquid(boolean hasLiquid) {
+        this.hasLiquid = hasLiquid;
+    }
 
     @NonNull
     Set<String> getClickedClickIds() {
