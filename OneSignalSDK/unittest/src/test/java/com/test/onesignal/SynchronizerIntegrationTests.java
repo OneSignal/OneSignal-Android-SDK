@@ -1813,11 +1813,11 @@ public class SynchronizerIntegrationTests {
         OneSignal.logoutEmail();
         threadAndTaskWait();
 
-        // 4. Attempt a set external user id with callback
+        // 3. Attempt a set external user id with callback
         OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
         threadAndTaskWait();
 
-        // 5. Make sure lastExternalUserIdResponse has push with success : true
+        // 4. Make sure lastExternalUserIdResponse has push with success : true
         JSONObject expectedExternalUserIdResponse = new JSONObject(
                 "{" +
                         "   \"push\" : {" +
