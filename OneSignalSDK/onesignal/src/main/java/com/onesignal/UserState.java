@@ -65,7 +65,7 @@ abstract class UserState {
         return new ImmutableJSONObject();
     }
 
-    void setDependValues(JSONObject dependValues) {
+    public void setDependValues(JSONObject dependValues) {
         synchronized (LOCK) {
             this.dependValues = dependValues;
         }

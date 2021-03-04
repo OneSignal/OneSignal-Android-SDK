@@ -20,10 +20,7 @@ abstract class UserStateSecondaryChannelSynchronizer extends UserStateSynchroniz
     abstract protected String getId();
 
     @Override
-    abstract void logoutEmail();
-
-    @Override
-    abstract void logoutSMS();
+    abstract void logoutChannel();
 
     abstract protected String getChannelKey();
     abstract protected String getAuthHashKey();
