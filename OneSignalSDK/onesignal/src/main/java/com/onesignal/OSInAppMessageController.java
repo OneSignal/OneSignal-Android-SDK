@@ -828,9 +828,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }, null);
     }
 
+    @NonNull
     String taggedHTMLString(@NonNull String untaggedString) {
         String tagsDict = userTagsString;
-        String tagScript =  LIQUID_TAG_SCRIPT;
+        String tagScript = LIQUID_TAG_SCRIPT;
         return untaggedString + String.format(tagScript, tagsDict);
     }
 
