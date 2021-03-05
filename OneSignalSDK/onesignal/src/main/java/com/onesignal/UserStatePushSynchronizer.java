@@ -181,6 +181,9 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     protected void addOnSessionOrCreateExtras(JSONObject jsonBody) {}
 
     @Override
+    void logoutChannel() {
+    }
+
     void logoutEmail() {
         try {
             getUserStateForModification().putOnDependValues(LOGOUT_EMAIL, true);
@@ -189,9 +192,26 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         }
     }
 
-    @Override
     void logoutSMS() {
+        UserState toSyncUserState = getToSyncUserState();
+        toSyncUserState.removeFromDependValues(SMS_AUTH_HASH_KEY);
+        toSyncUserState.removeFromSyncValues(SMS_NUMBER_KEY);
+        toSyncUserState.persistState();
 
+        UserState currentUserState = getCurrentUserState();
+        currentUserState.removeFromDependValues(SMS_AUTH_HASH_KEY);
+        String smsNumberLoggedOut = currentUserState.getSyncValues().optString(SMS_NUMBER_KEY);
+        currentUserState.removeFromSyncValues(SMS_NUMBER_KEY);
+
+        JSONObject result = new JSONObject();
+        try {
+            result.put(SMS_NUMBER_KEY, smsNumberLoggedOut);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Device successfully logged out of SMS number: " + result);
+        OneSignal.handleSuccessfulSMSlLogout(result);
     }
 
     @Override

@@ -27,11 +27,7 @@ public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchroni
     }
 
     @Override
-    void logoutEmail() {
-    }
-
-    @Override
-    void logoutSMS() {
+    void logoutChannel() {
         saveChannelId("");
 
         resetCurrentState();
