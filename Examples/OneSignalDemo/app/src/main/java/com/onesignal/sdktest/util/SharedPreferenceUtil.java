@@ -12,6 +12,7 @@ public class SharedPreferenceUtil {
     public static final  String OS_APP_ID_SHARED_PREF = "OS_APP_ID_SHARED_PREF";
     private static final String PRIVACY_CONSENT_SHARED_PREF = "PRIVACY_CONSENT_SHARED_PREF";
     public static final String USER_EMAIL_SHARED_PREF = "USER_EMAIL_SHARED_PREF";
+    public static final String USER_SMS_NUMBER_SHARED_PREF = "USER_SMS_NUMBER_SHARED_PREF";
     public static final String USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF";
     private static final String LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF";
     private static final String IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF";
@@ -58,6 +59,10 @@ public class SharedPreferenceUtil {
 
     public static void cacheUserEmail(Context context, String email) {
         getSharedPreference(context).edit().putString(USER_EMAIL_SHARED_PREF, email).apply();
+    }
+
+    public static void cacheUserSMSNumber(Context context, String smsNumber) {
+        getSharedPreference(context).edit().putString(USER_SMS_NUMBER_SHARED_PREF, smsNumber).apply();
     }
 
     public static void cacheUserExternalUserId(Context context, String userId) {
