@@ -11,6 +11,7 @@ public class ProfileUtil {
 
         APP_ID("App Id"),
         EMAIL("Email"),
+        SMS("SMS"),
         EXTERNAL_USER_ID("External User Id"),
 
         TAG("Tags"),
@@ -65,6 +66,21 @@ public class ProfileUtil {
         return true;
     }
 
+    public static boolean isSMSValid(TextInputLayout smsTextInputLayout) {
+        smsTextInputLayout.setErrorEnabled(false);
+        if (smsTextInputLayout.getEditText() != null) {
+            String smsNumber = smsTextInputLayout.getEditText().getText().toString().trim();
+            if (smsNumber.isEmpty()) {
+                smsTextInputLayout.setError(Text.SMS_IS_REQUIRED);
+                return false;
+            }
+        } else {
+            smsTextInputLayout.setError(Text.ERROR);
+            return false;
+        }
+        return true;
+    }
+
     private static boolean isExternalUserIdValid(TextInputLayout externalUserIdTextInputLayout) {
         externalUserIdTextInputLayout.setErrorEnabled(false);
         if (externalUserIdTextInputLayout.getEditText() != null) {
@@ -101,9 +117,10 @@ public class ProfileUtil {
                 return isAppIdValid(alertDialogTextInputLayout);
             case EMAIL:
                 return isEmailValid(alertDialogTextInputLayout);
+            case SMS:
+                return isSMSValid(alertDialogTextInputLayout);
             case EXTERNAL_USER_ID:
                 return isExternalUserIdValid(alertDialogTextInputLayout);
-
             case TAG:
             case TRIGGER:
                 return isKeyValid(alertDialogTextInputLayout);

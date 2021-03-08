@@ -27,6 +27,7 @@ import com.onesignal.sdktest.adapter.EnumSelectionRecyclerViewAdapter;
 import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
 import com.onesignal.sdktest.callback.EmailUpdateCallback;
 import com.onesignal.sdktest.callback.EnumSelectionCallback;
+import com.onesignal.sdktest.callback.SMSUpdateCallback;
 import com.onesignal.sdktest.callback.UpdateAlertDialogCallback;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
@@ -105,6 +106,10 @@ public class Dialog {
                             updateEmail(dialog, newContent);
                             break;
 
+                        case SMS:
+                            updateSMsNumber(dialog, newContent);
+                            break;
+
                         case EXTERNAL_USER_ID:
                             updateExternalUserId(dialog, newContent);
                             break;
@@ -163,6 +168,44 @@ public class Dialog {
                     @Override
                     public void onFailure() {
                         Log.d(Tag.ERROR, Text.EMAIL_SET_FAILURE);
+
+                        ((Activity) context).runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                toggleUpdateAlertDialogAttributes(false);
+
+                                dialog.dismiss();
+                                callback.onFailure();
+                            }
+                        });
+                    }
+                });
+            }
+
+            /**
+             * Updates the SMS number attached to the device and caches
+             */
+            private void updateSMsNumber(final DialogInterface dialog, final String smsNumber) {
+                currentUser.setSMSNumber(smsNumber, new SMSUpdateCallback() {
+                    @Override
+                    public void onSuccess() {
+                        SharedPreferenceUtil.cacheUserSMSNumber(context, smsNumber);
+                        Log.d(Tag.DEBUG, Text.SMS_SET_SUCCESSFULLY);
+
+                        ((Activity) context).runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                toggleUpdateAlertDialogAttributes(false);
+
+                                dialog.dismiss();
+                                callback.onSuccess(smsNumber);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        Log.d(Tag.ERROR, Text.SMS_SET_FAILURE);
 
                         ((Activity) context).runOnUiThread(new Runnable() {
                             @Override

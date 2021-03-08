@@ -46,6 +46,7 @@ import com.onesignal.sdktest.util.ProfileUtil;
 import com.onesignal.sdktest.util.Toaster;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,9 +80,18 @@ public class MainActivityViewModel implements ActivityViewModel {
     private TextView appIdTextView;
     // Email
     private RelativeLayout emailRelativeLayout;
+    private TextView emailHeaderTextView;
     private TextView emailTitleTextView;
     private TextView userEmailTextView;
     private Button logoutEmailButton;
+
+    // SMS
+    private RelativeLayout smsRelativeLayout;
+    private TextView smsHeaderTextView;
+    private TextView smsTitleTextView;
+    private TextView userSMSTextView;
+    private Button logoutSMSButton;
+
     // External User Id
     private RelativeLayout externalUserIdRelativeLayout;
     private TextView externalUserIdTitleTextView;
@@ -181,10 +191,17 @@ public class MainActivityViewModel implements ActivityViewModel {
         appIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_title_text_view);
         appIdTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_text_view);
 
+        emailHeaderTextView = getActivity().findViewById(R.id.main_activity_email_title_text_view);
         emailRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_email_relative_layout);
         emailTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_email_text_view);
         userEmailTextView = getActivity().findViewById(R.id.main_activity_account_details_user_email_text_view);
         logoutEmailButton = getActivity().findViewById(R.id.main_activity_email_logout_email_button);
+
+        smsHeaderTextView = getActivity().findViewById(R.id.main_activity_sms_title_text_view);
+        smsRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_sms_relative_layout);
+        smsTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_sms_text_view);
+        userSMSTextView = getActivity().findViewById(R.id.main_activity_account_details_user_sms_text_view);
+        logoutSMSButton = getActivity().findViewById(R.id.main_activity_sms_logout_sms_button);
 
         externalUserIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_relative_layout);
         externalUserIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_text_view);
@@ -244,8 +261,12 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(privacyConsentAllowButton, font.saralaBold);
         font.applyFont(appIdTitleTextView, font.saralaBold);
         font.applyFont(appIdTextView, font.saralaRegular);
+        font.applyFont(emailHeaderTextView, font.saralaBold);
         font.applyFont(emailTitleTextView, font.saralaBold);
         font.applyFont(userEmailTextView, font.saralaRegular);
+        font.applyFont(smsHeaderTextView, font.saralaBold);
+        font.applyFont(smsTitleTextView, font.saralaBold);
+        font.applyFont(userSMSTextView, font.saralaRegular);
         font.applyFont(externalUserIdTitleTextView, font.saralaBold);
         font.applyFont(userExternalUserIdTextView, font.saralaRegular);
         font.applyFont(tagsTitleTextView, font.saralaBold);
@@ -373,6 +394,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         });
 
         setupEmailButton();
+        setupSMSButton();
         setupExternalUserIdButton();
     }
 
@@ -411,6 +433,42 @@ public class MainActivityViewModel implements ActivityViewModel {
                     @Override
                     public void onFailure(OneSignal.EmailUpdateError error) {
                         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Logout email failed with error: " + error);
+                    }
+                });
+            }
+        });
+    }
+
+    private void setupSMSButton() {
+        boolean isSMSNumberSet = currentUser.isSMSNumberSet();
+        String smsNumber = isSMSNumberSet ? currentUser.getSMSNumber() : Text.SMS_NOT_SET;
+        userSMSTextView.setText(smsNumber);
+
+        smsRelativeLayout.setOnClickListener(v -> dialog.createUpdateAlertDialog(currentUser.getSMSNumber(), ProfileUtil.FieldType.SMS, new UpdateAlertDialogCallback() {
+            @Override
+            public void onSuccess(String update) {
+                userSMSTextView.setText(update);
+            }
+
+            @Override
+            public void onFailure() {
+
+            }
+        }));
+
+        logoutSMSButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                OneSignal.logoutSMSNumber(new OneSignal.OSSMSUpdateHandler() {
+                    @Override
+                    public void onSuccess(JSONObject result) {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Logout SMS ended successfully, result: " + result);
+                        MainActivityViewModel.this.getActivity().runOnUiThread(() -> userSMSTextView.setText(""));
+                    }
+
+                    @Override
+                    public void onFailure(OneSignal.OSSMSUpdateError error) {
+                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Logout SMS failed with error: " + error);
                     }
                 });
             }
