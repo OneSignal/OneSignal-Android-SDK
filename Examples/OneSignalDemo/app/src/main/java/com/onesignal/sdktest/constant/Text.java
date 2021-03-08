@@ -11,13 +11,19 @@ public class Text {
     public static final String EMAIL_SET_SUCCESSFULLY = "Email set successfully";
     public static final String EMAIL_SET_FAILURE = "Email set failure";
 
+    public static final String SMS_SET_SUCCESSFULLY = "SMS Number set successfully";
+    public static final String SMS_SET_FAILURE = "SMS Number set failure";
+
     public static final String APP_ID_IS_REQUIRED = "App id is required";
     public static final String INVALID_APP_ID = "Invalid app id";
 
     public static final String EMAIL_IS_REQUIRED = "Email is required";
     public static final String INVALID_EMAIL = "Invalid email";
 
+    public static final String SMS_IS_REQUIRED = "SMS number is required";
+
     public static final String EMAIL_NOT_SET = "Email not set";
+    public static final String SMS_NOT_SET = "SMS Number not set";
     public static final String EXTERNAL_USER_ID_NOT_SET = "External user id not set";
 
     public static final String EXTERNAL_USER_ID_IS_REQUIRED = "External user id is required";

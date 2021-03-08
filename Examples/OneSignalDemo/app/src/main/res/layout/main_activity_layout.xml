@@ -169,167 +169,287 @@
                     app:cardElevation="4dp">
 
                     <LinearLayout
+                        android:id="@+id/main_activity_account_details_linear_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <LinearLayout
-                            android:id="@+id/main_activity_account_details_linear_layout"
+                        <!-- App Id -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_account_details_app_id_relative_layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical">
+                            android:background="@drawable/ripple_selector_red_white"
+                            android:paddingStart="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
 
-                            <!-- App Id -->
-
-                            <RelativeLayout
-                                android:id="@+id/main_activity_account_details_app_id_relative_layout"
+                            <TextView
+                                android:id="@+id/main_activity_account_details_app_id_title_text_view"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:paddingStart="20dp"
-                                android:paddingEnd="20dp"
-                                android:paddingTop="12dp"
-                                android:paddingBottom="16dp"
-                                android:background="@drawable/ripple_selector_red_white">
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_account_details_app_id_text_view"
+                                android:layout_toLeftOf="@id/main_activity_account_details_app_id_text_view"
+                                android:text="@string/id_colon"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
 
-                                <TextView
-                                    android:id="@+id/main_activity_account_details_app_id_title_text_view"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_alignParentStart="true"
-                                    android:layout_alignParentLeft="true"
-                                    android:layout_centerVertical="true"
-                                    android:layout_toStartOf="@id/main_activity_account_details_app_id_text_view"
-                                    android:layout_toLeftOf="@id/main_activity_account_details_app_id_text_view"
-                                    android:text="@string/id_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText" />
-
-                                <TextView
-                                    android:id="@+id/main_activity_account_details_app_id_text_view"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_alignParentEnd="true"
-                                    android:layout_alignParentRight="true"
-                                    android:layout_centerVertical="true"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText" />
-
-                            </RelativeLayout>
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:background="@color/colorDivider"/>
-
-
-                            <!-- Email -->
-
-                            <RelativeLayout
-                                android:id="@+id/main_activity_account_details_email_relative_layout"
-                                android:layout_width="match_parent"
+                            <TextView
+                                android:id="@+id/main_activity_account_details_app_id_text_view"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:paddingStart="20dp"
-                                android:paddingEnd="20dp"
-                                android:paddingTop="12dp"
-                                android:paddingBottom="16dp"
-                                android:background="@drawable/ripple_selector_red_white">
+                                android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
+                                android:layout_centerVertical="true"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
 
-                                <TextView
-                                    android:id="@+id/main_activity_account_details_email_text_view"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_alignParentStart="true"
-                                    android:layout_alignParentLeft="true"
-                                    android:layout_centerVertical="true"
-                                    android:layout_toStartOf="@id/main_activity_account_details_user_email_text_view"
-                                    android:layout_toLeftOf="@id/main_activity_account_details_user_email_text_view"
-                                    android:text="@string/email_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText" />
+                        </RelativeLayout>
 
-                                <TextView
-                                    android:id="@+id/main_activity_account_details_user_email_text_view"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_alignParentEnd="true"
-                                    android:layout_alignParentRight="true"
-                                    android:layout_centerVertical="true"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText" />
-
-                            </RelativeLayout>
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:background="@color/colorDivider"/>
-
-
-                            <!-- External User Id -->
-
-                            <RelativeLayout
-                                android:id="@+id/main_activity_account_details_external_user_id_relative_layout"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:paddingStart="20dp"
-                                android:paddingEnd="20dp"
-                                android:paddingTop="12dp"
-                                android:paddingBottom="16dp"
-                                android:background="@drawable/ripple_selector_red_white">
-
-                                <TextView
-                                    android:id="@+id/main_activity_account_details_external_user_id_text_view"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_alignParentStart="true"
-                                    android:layout_alignParentLeft="true"
-                                    android:layout_centerVertical="true"
-                                    android:layout_toStartOf="@id/main_activity_account_details_user_external_user_id_text_view"
-                                    android:layout_toLeftOf="@id/main_activity_account_details_user_external_user_id_text_view"
-                                    android:text="@string/external_user_id_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText" />
-
-                                <TextView
-                                    android:id="@+id/main_activity_account_details_user_external_user_id_text_view"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_alignParentEnd="true"
-                                    android:layout_alignParentRight="true"
-                                    android:layout_centerVertical="true"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText" />
-
-                            </RelativeLayout>
-
-
-                        </LinearLayout>
-
-                        <LinearLayout
+                        <View
                             android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:layout_gravity="center"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
+                            android:layout_height="1dp"
+                            android:background="@color/colorDivider" />
 
-                            <Button
-                                android:id="@+id/main_activity_email_logout_email_button"
+                        <!-- External User Id -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_account_details_external_user_id_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/ripple_selector_red_white"
+                            android:paddingStart="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
+
+                            <TextView
+                                android:id="@+id/main_activity_account_details_external_user_id_text_view"
                                 android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:text="@string/logout_email"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_account_details_user_external_user_id_text_view"
+                                android:layout_toLeftOf="@id/main_activity_account_details_user_external_user_id_text_view"
+                                android:text="@string/external_user_id_colon"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
 
-                        </LinearLayout>
+                            <TextView
+                                android:id="@+id/main_activity_account_details_user_external_user_id_text_view"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
+                                android:layout_centerVertical="true"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
+
+                        </RelativeLayout>
+
                     </LinearLayout>
 
                 </androidx.cardview.widget.CardView>
 
             </LinearLayout>
 
+            <!-- Email -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_email_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_email_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
+                    android:text="@string/email"
+                    android:textColor="@color/colorDarkText" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_account_details_email_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/ripple_selector_red_white"
+                            android:paddingStart="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
+
+                            <TextView
+                                android:id="@+id/main_activity_account_details_email_text_view"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_account_details_user_email_text_view"
+                                android:layout_toLeftOf="@id/main_activity_account_details_user_email_text_view"
+                                android:text="@string/email_colon"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/main_activity_account_details_user_email_text_view"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
+                                android:layout_centerVertical="true"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
+
+                        </RelativeLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <Button
+                                android:id="@+id/main_activity_email_logout_email_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:text="@string/logout_email"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+
+            <!-- SMS -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_sms_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_sms_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
+                    android:text="@string/sms"
+                    android:textColor="@color/colorDarkText" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- SMS -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_account_details_sms_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="16dp"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <TextView
+                                android:id="@+id/main_activity_account_details_sms_text_view"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_account_details_user_sms_text_view"
+                                android:layout_toLeftOf="@id/main_activity_account_details_user_sms_text_view"
+                                android:text="@string/sms_colon"
+                                android:textSize="16sp"
+                                android:textColor="@color/colorDarkText" />
+
+                            <TextView
+                                android:id="@+id/main_activity_account_details_user_sms_text_view"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
+                                android:layout_centerVertical="true"
+                                android:textSize="16sp"
+                                android:textColor="@color/colorDarkText" />
+
+                        </RelativeLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <Button
+                                android:id="@+id/main_activity_sms_logout_sms_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:text="@string/logout_sms"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
 
             <!-- Location -->
 
