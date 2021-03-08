@@ -241,8 +241,8 @@ class OneSignalStateSynchronizer {
    }
 
    static void logoutSMS() {
-      getPushStateSynchronizer().logoutSMS();
       getSMSStateSynchronizer().logoutChannel();
+      getPushStateSynchronizer().logoutSMS();
    }
 
    static void setExternalUserId(String externalId, String externalIdAuthHash, final OneSignal.OSExternalUserIdUpdateCompletionHandler completionHandler) throws JSONException {
