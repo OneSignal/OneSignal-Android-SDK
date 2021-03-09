@@ -438,9 +438,9 @@ public class SynchronizerIntegrationTests {
         OneSignal.sendTags(tagsJson);
         threadAndTaskWait();
 
-        assertEquals(6, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(5, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(5);
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(4);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
         assertEquals(3, smsPut.payload.length());
@@ -1195,7 +1195,7 @@ public class SynchronizerIntegrationTests {
         OneSignal.setExternalUserId(testExternalId, mockExternalIdHash);
         threadAndTaskWait();
 
-        ShadowOneSignalRestClient.Request setExternalIdOnSMSChannel = ShadowOneSignalRestClient.requests.get(6);
+        ShadowOneSignalRestClient.Request setExternalIdOnSMSChannel = ShadowOneSignalRestClient.requests.get(5);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, setExternalIdOnSMSChannel.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, setExternalIdOnSMSChannel.url);
         assertEquals(testExternalId, setExternalIdOnSMSChannel.payload.get("external_user_id"));
@@ -1221,9 +1221,9 @@ public class SynchronizerIntegrationTests {
         OneSignal.sendTags(tagsJson);
         threadAndTaskWait();
 
-        assertEquals(8, ShadowOneSignalRestClient.networkCallCount);
+        assertEquals(7, ShadowOneSignalRestClient.networkCallCount);
 
-        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(7);
+        ShadowOneSignalRestClient.Request smsPut = ShadowOneSignalRestClient.requests.get(6);
         assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, smsPut.method);
         assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, smsPut.url);
         assertEquals(4, smsPut.payload.length());
