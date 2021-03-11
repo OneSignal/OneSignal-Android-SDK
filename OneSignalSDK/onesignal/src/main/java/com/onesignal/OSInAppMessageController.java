@@ -30,7 +30,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static final String LIQUID_TAG_SCRIPT = "\n\n" +
             "<script>\n" +
-            "    liquidPlayerTags = %s;\n" +
+            "    setPlayerTags(%s);\n" +
             "</script>";
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android");
