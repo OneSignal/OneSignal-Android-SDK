@@ -2,6 +2,7 @@ package com.onesignal.outcomes.data
 
 import android.content.ContentValues
 import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import androidx.annotation.WorkerThread
 import com.onesignal.OSLogger
 import com.onesignal.OSSharedPreferences
@@ -310,5 +311,22 @@ internal class OSOutcomeEventsCache(private val logger: OSLogger,
             }
         }
         return uniqueInfluences
+    }
+
+    /**
+     * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
+     */
+    @WorkerThread
+    @Synchronized
+    fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
+        val whereStr = "NOT EXISTS(" +
+                "SELECT NULL FROM " + notificationTableName + " n " +
+                "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
+                " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + OSInfluenceChannel.NOTIFICATION.toString().toLowerCase(Locale.ROOT) +
+                "\")"
+        dbHelper.delete(
+                OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
+                whereStr,
+                null)
     }
 }

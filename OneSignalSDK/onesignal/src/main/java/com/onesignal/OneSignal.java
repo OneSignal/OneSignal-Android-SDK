@@ -840,6 +840,7 @@ public class OneSignal {
 
          sessionManager.initSessionFromCache();
          outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
+         outcomeEventsController.cleanCachedUniqueOutcomes();
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();

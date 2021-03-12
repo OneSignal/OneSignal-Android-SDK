@@ -41,4 +41,8 @@ internal abstract class OSOutcomeEventsRepository(protected val logger: OSLogger
         logger.debug("OneSignal save unattributedUniqueOutcomeEvents: $unattributedUniqueOutcomeEvents")
         outcomeEventsCache.saveUnattributedUniqueOutcomeEventsSentByChannel(unattributedUniqueOutcomeEvents)
     }
+
+    override fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
+        outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications(notificationTableName, notificationIdColumnName);
+    }
 }

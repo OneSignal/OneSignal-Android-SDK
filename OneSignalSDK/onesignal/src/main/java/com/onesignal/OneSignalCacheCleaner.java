@@ -39,7 +39,6 @@ class OneSignalCacheCleaner {
                 Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
                 cleanCachedNotifications(writableDb);
-                cleanCachedUniqueOutcomeEventNotifications(writableDb);
             }
 
         }, OS_DELETE_CACHED_NOTIFICATIONS_THREAD).start();
@@ -84,27 +83,6 @@ class OneSignalCacheCleaner {
                 NotificationTable.TABLE_NAME,
                 whereStr,
                 whereArgs);
-    }
-
-    /**
-     * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
-     * <br/><br/>
-     * Note: This should only ever be called by {@link OneSignalCacheCleaner#cleanNotificationCache(OneSignalDbHelper)}
-     * <br/><br/>
-     *
-     * @see OneSignalCacheCleaner#cleanNotificationCache(OneSignalDbHelper)
-     */
-    private static void cleanCachedUniqueOutcomeEventNotifications(OneSignalDbHelper writableDb) {
-        String whereStr = "NOT EXISTS(" +
-                "SELECT NULL FROM " + NotificationTable.TABLE_NAME + " n " +
-                "WHERE" + " n." + NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
-                " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + OSInfluenceChannel.NOTIFICATION.toString().toLowerCase() +
-                "\")";
-
-        writableDb.delete(
-                OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
-                whereStr,
-                null);
     }
 
 }
