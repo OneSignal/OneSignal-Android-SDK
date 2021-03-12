@@ -95,12 +95,12 @@ class GenerateNotification {
    }
 
    @WorkerThread
-   static void fromJsonPayload(OSNotificationGenerationJob notificationJob) {
+   static boolean displayNotificationFromJsonPayload(OSNotificationGenerationJob notificationJob) {
       setStatics(notificationJob.getContext());
 
       isRunningOnMainThreadCheck();
 
-      showNotification(notificationJob);
+      return showNotification(notificationJob);
    }
 
    /**
@@ -263,7 +263,7 @@ class GenerateNotification {
    }
 
    // Put the message into a notification and post it.
-   private static void showNotification(OSNotificationGenerationJob notificationJob) {
+   private static boolean showNotification(OSNotificationGenerationJob notificationJob) {
       int notificationId = notificationJob.getAndroidId();
       JSONObject fcmJson = notificationJob.getJsonPayload();
       String group = fcmJson.optString("grp", null);
@@ -326,6 +326,10 @@ class GenerateNotification {
          addXiaomiSettings(oneSignalNotificationBuilder, notification);
          NotificationManagerCompat.from(currentContext).notify(notificationId, notification);
       }
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+         return OneSignalNotificationManager.notificationChannelEnabled(currentContext, notification.getChannelId());
+      return true;
    }
 
    private static Notification createGenericPendingIntentsForNotif(NotificationCompat.Builder notifBuilder, JSONObject gcmBundle, int notificationId) {

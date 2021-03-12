@@ -109,7 +109,7 @@ public class OSNotificationController {
       } else {
          // -1 is used to note never displayed
          notificationJob.getNotification().setAndroidNotificationId(-1);
-         NotificationBundleProcessor.processNotification(notificationJob, true);
+         NotificationBundleProcessor.processNotification(notificationJob, true, false);
          OneSignal.handleNotificationReceived(notificationJob);
       }
    }
