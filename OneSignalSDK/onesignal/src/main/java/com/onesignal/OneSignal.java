@@ -31,7 +31,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -433,6 +432,7 @@ public class OneSignal {
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
+   @Nullable private static OSNotificationDataController notificationCache;
 
    @Nullable private static AdvertisingIdentifierProvider adIdProvider;
    private static synchronized @Nullable AdvertisingIdentifierProvider getAdIdProvider() {
@@ -835,17 +835,21 @@ public class OneSignal {
 
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
+         // Prefs require a context to save
+         // If the previous state of appContext was null, kick off write in-case it was waiting
+         OneSignalPrefs.startDelayedWrite();
+         notificationCache = new OSNotificationDataController(getDBHelperInstance());
+         // Cleans out old cached data to prevent over using the storage on devices
+         notificationCache.cleanOldCachedData();
+
+         getInAppMessageController().cleanCachedInAppMessages();
+
          if (outcomeEventsFactory == null)
             outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
 
          sessionManager.initSessionFromCache();
          outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
          outcomeEventsController.cleanCachedUniqueOutcomes();
-         // Prefs require a context to save
-         // If the previous state of appContext was null, kick off write in-case it was waiting
-         OneSignalPrefs.startDelayedWrite();
-         // Cleans out old cached data to prevent over using the storage on devices
-         OneSignalCacheCleaner.cleanOldCachedData(appContext);
       }
    }
 
