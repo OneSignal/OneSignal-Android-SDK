@@ -177,17 +177,19 @@ class NotificationBundleProcessor {
     static void processNotification(OSNotificationGenerationJob notificationJob, boolean opened, boolean notificationDisabledByChannel) {
         saveNotification(notificationJob, opened);
 
+        String notificationId = notificationJob.getApiNotificationId();
+        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
+
         if (notificationDisabledByChannel) {
             // Notification channel disable, save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
             markRestoredNotificationAsDismissed(notificationJob);
+            return;
         }
 
         if (!notificationJob.isNotificationToDisplay())
             return;
 
-        String notificationId = notificationJob.getApiNotificationId();
         OneSignal.getSessionManager().onNotificationReceived(notificationId);
-        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
     }
 
    // Saving the notification provides the following:
