@@ -48,6 +48,9 @@ public class ShadowOneSignalRestClient {
    public static final String PUSH_USER_ID = "a2f7f967-e8cc-11e4-bed1-118f05be4511";
    public static final String EMAIL_USER_ID = "b007f967-98cc-11e4-bed1-118f05be4522";
    public static final String SMS_USER_ID = "d007f967-98cc-11e4-bed1-118f05be4522";
+   private static final String REQUIRES_USER_PRIVACY_CONSENT = "requires_user_privacy_consent";
+   private static final String RECEIVE_RECEIPTS_ENABLE = "receive_receipts_enable";
+
    public enum REST_METHOD {
       GET, POST, PUT
    }
@@ -205,7 +208,12 @@ public class ShadowOneSignalRestClient {
    }
 
    public static void setRemoteParamsRequirePrivacyConsent(boolean requirePrivacyConsent) throws JSONException {
-      JSONObject remoteParams = new JSONObject().put("requires_user_privacy_consent", requirePrivacyConsent);
+      JSONObject remoteParams = new JSONObject().put(REQUIRES_USER_PRIVACY_CONSENT, requirePrivacyConsent);
+      ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
+   }
+
+   public static void setRemoteParamsReceiveReceiptsEnable(boolean requirePrivacyConsent) throws JSONException {
+      JSONObject remoteParams = new JSONObject().put(RECEIVE_RECEIPTS_ENABLE, requirePrivacyConsent);
       ShadowOneSignalRestClient.setRemoteParamsGetHtmlResponse(remoteParams);
    }
 

@@ -2,7 +2,6 @@ package com.onesignal;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;

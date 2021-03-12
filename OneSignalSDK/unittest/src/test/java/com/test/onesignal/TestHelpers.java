@@ -41,6 +41,7 @@ import com.onesignal.ShadowNotificationReceivedEvent;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalDbHelper;
+import com.onesignal.ShadowOneSignalNotificationManager;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
@@ -130,6 +131,7 @@ public class TestHelpers {
       ShadowTimeoutHandler.resetStatics();
       ShadowGenerateNotification.resetStatics();
       ShadowNotificationReceivedEvent.resetStatics();
+      ShadowOneSignalNotificationManager.resetStatics();
 
       lastException = null;
    }

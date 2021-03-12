@@ -81,6 +81,7 @@ import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
+import com.onesignal.ShadowOneSignalNotificationManager;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
@@ -222,6 +223,7 @@ public class MainOneSignalClassRunner {
    private static OSSMSSubscriptionStateChanges lastSMSSubscriptionStateChanges;
 
    private static void cleanUp() throws Exception {
+      lastServiceNotificationReceivedEvent = null;
       lastNotificationOpenedBody = null;
       lastGetTags = null;
       lastEmailSubscriptionStateChanges = null;
@@ -1226,6 +1228,154 @@ public class MainOneSignalClassRunner {
       assertNull(lastNotificationOpenedBody);
       assertEquals("Robo test message", notificationReceivedBody);
    }
+
+   // Start Received Request tests (report_received)
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationReceivedSendReceivedRequest_WhenAppInBackground() throws Exception {
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+      fastColdRestartApp();
+
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+      // 1. initWithContext is called when startProcessing notification
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      // 2. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 3. Check that report_received where sent
+      assertEquals(4, ShadowOneSignalRestClient.requests.size());
+      assertEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationReceivedSendReceivedRequest_WhenAppInForeground() throws Exception {
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+
+      // 1. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 2. Check that report_received where sent
+      assertEquals(3, ShadowOneSignalRestClient.requests.size());
+      assertEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationReceivedNoSendReceivedRequest_WhenDisabled() throws Exception {
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(false);
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+
+      // 1. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 2. Check that report_received where sent
+      assertEquals(2, ShadowOneSignalRestClient.requests.size());
+      assertNotEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed() throws Exception {
+      // 1. Setup correct notification extension service class
+      startRemoteNotificationReceivedHandlerService("com.test.onesignal.MainOneSignalClassRunner$" +
+              "RemoteNotificationReceivedHandler_NoDisplay");
+
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+
+      // 2. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 3. Make sure service was called
+      assertNotNull(lastServiceNotificationReceivedEvent);
+
+      // 4. Check that report_received where sent
+      assertEquals(2, ShadowOneSignalRestClient.requests.size());
+      assertNotEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   @Config(sdk = 26, shadows = { ShadowGenerateNotification.class, ShadowOneSignalNotificationManager.class })
+   public void testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed_DisabledByChannel() throws Exception {
+      // 1. Setup correct notification extension service class
+      startRemoteNotificationReceivedHandlerService("com.test.onesignal.MainOneSignalClassRunner$" +
+              "RemoteNotificationReceivedHandler");
+
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+      ShadowOneSignalNotificationManager.setNotificationChannelEnabled(false);
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+
+      // 2. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 3. Make sure service was called
+      assertNotNull(lastServiceNotificationReceivedEvent);
+
+      // 4. Check that report_received where sent
+      assertEquals(2, ShadowOneSignalRestClient.requests.size());
+      assertNotEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   /**
+    * @see #testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed
+    */
+   public static class RemoteNotificationReceivedHandler_NoDisplay implements OneSignal.OSRemoteNotificationReceivedHandler {
+
+      @Override
+      public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent receivedEvent) {
+         lastServiceNotificationReceivedEvent = receivedEvent;
+
+         receivedEvent.complete(null);
+      }
+   }
+
+   /**
+    * @see #testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed_DisabledByChannel
+    */
+   public static class RemoteNotificationReceivedHandler implements OneSignal.OSRemoteNotificationReceivedHandler {
+
+      @Override
+      public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent receivedEvent) {
+         lastServiceNotificationReceivedEvent = receivedEvent;
+
+         receivedEvent.complete(receivedEvent.getNotification());
+      }
+   }
+
+   // End Received Request tests (report_received)
 
    @Test
    @Config(shadows = {ShadowBadgeCountUpdater.class})
