@@ -31,12 +31,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.app.NotificationManager;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -47,7 +45,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
-import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
@@ -432,7 +429,7 @@ public class OneSignal {
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
-   @Nullable private static OSNotificationDataController notificationCache;
+   @Nullable private static OSNotificationDataController notificationDataController;
 
    @Nullable private static AdvertisingIdentifierProvider adIdProvider;
    private static synchronized @Nullable AdvertisingIdentifierProvider getAdIdProvider() {
@@ -838,9 +835,9 @@ public class OneSignal {
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
-         notificationCache = new OSNotificationDataController(getDBHelperInstance());
+         notificationDataController = new OSNotificationDataController(getDBHelperInstance(), logger);
          // Cleans out old cached data to prevent over using the storage on devices
-         notificationCache.cleanOldCachedData();
+         notificationDataController.cleanOldCachedData();
 
          getInAppMessageController().cleanCachedInAppMessages();
 
@@ -2742,49 +2739,20 @@ public class OneSignal {
     * your app is restarted.
     */
    public static void clearOneSignalNotifications() {
-      Runnable runClearOneSignalNotifications = new Runnable() {
-         @Override
-         public void run() {
-            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
-
-            OneSignalDbHelper dbHelper = getDBHelperInstance();
-            String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
-
-            Cursor cursor = dbHelper.query(
-                    OneSignalDbContract.NotificationTable.TABLE_NAME,
-                    retColumn,
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
-                    null,
-                    null,                                                    // group by
-                    null,                                                    // filter by row groups
-                    null                                                     // sort order
-            );
-
-            if (cursor.moveToFirst()) {
-               do {
-                  int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-                  notificationManager.cancel(existingId);
-               } while (cursor.moveToNext());
+      if (taskController.shouldQueueTaskForInit(OSTaskController.CLEAR_NOTIFICATIONS) || notificationDataController == null) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.CLEAR_NOTIFICATIONS + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.CLEAR_NOTIFICATIONS + " operation from pending queue.");
+               clearOneSignalNotifications();
             }
+         });
+         return;
+      }
 
-            // Mark all notifications as dismissed unless they were already opened.
-            String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
-            ContentValues values = new ContentValues();
-            values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-            dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-
-            BadgeCountUpdater.updateCount(0, appContext);
-
-            cursor.close();
-         }
-      };
-
-      // DB access is a heavy task, dispatch to a thread if running on main thread
-      if (OSUtils.isRunningOnMainThread())
-         new Thread(runClearOneSignalNotifications, "OS_NOTIFICATIONS").start();
-      else
-         runClearOneSignalNotifications.run();
+      notificationDataController.clearOneSignalNotifications(new WeakReference<>(appContext));
    }
 
    /**
@@ -2794,43 +2762,34 @@ public class OneSignal {
     * @param id
     */
    public static void removeNotification(final int id) {
-      Runnable runCancelNotification = new Runnable() {
-         @Override
-         public void run() {
-            OneSignalDbHelper dbHelper = getDBHelperInstance();
-            String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
-                    NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                    NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
-
-            ContentValues values = new ContentValues();
-            values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-
-            int records = dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
-
-            if (records > 0)
-               NotificationSummaryManager.updatePossibleDependentSummaryOnDismiss(appContext, dbHelper, id);
-            BadgeCountUpdater.update(dbHelper, appContext);
-
-            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
-            notificationManager.cancel(id);
-         }
-      };
-
-      // DB access is a heavy task, dispatch to a thread if running on main thread
-      if (OSUtils.isRunningOnMainThread())
-         new Thread(runCancelNotification, "OS_NOTIFICATIONS").start();
-      else
-         runCancelNotification.run();
-   }
-
-   public static void removeGroupedNotifications(final String group) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.CANCEL_GROUPED_NOTIFICATIONS)) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.REMOVE_NOTIFICATION) || notificationDataController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.CANCEL_GROUPED_NOTIFICATIONS + " operation to a pending queue.");
+                 "Moving " + OSTaskController.REMOVE_NOTIFICATION + " operation to a pending queue.");
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.CANCEL_GROUPED_NOTIFICATIONS + " operation from pending queue.");
+               logger.debug("Running " + OSTaskController.REMOVE_NOTIFICATION + " operation from pending queue.");
+               removeNotification(id);
+            }
+         });
+         return;
+      }
+
+      // If applicable, check if the user provided privacy consent
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.REMOVE_NOTIFICATION))
+         return;
+
+      notificationDataController.removeNotification(id, new WeakReference<>(appContext));
+   }
+
+   public static void removeGroupedNotifications(final String group) {
+      if (taskController.shouldQueueTaskForInit(OSTaskController.REMOVE_GROUPED_NOTIFICATIONS) || notificationDataController == null) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskController.REMOVE_GROUPED_NOTIFICATIONS + " operation to a pending queue.");
+         taskController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskController.REMOVE_GROUPED_NOTIFICATIONS + " operation from pending queue.");
                removeGroupedNotifications(group);
             }
          });
@@ -2838,55 +2797,10 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.CANCEL_GROUPED_NOTIFICATIONS))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.REMOVE_GROUPED_NOTIFICATIONS))
          return;
 
-      Runnable runCancelGroupedNotifications = new Runnable() {
-         @Override
-         public void run() {
-            NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
-
-            OneSignalDbHelper dbHelper = getDBHelperInstance();
-
-            String[] retColumn = {NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
-
-            final String[] whereArgs = {group};
-
-            String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
-                    NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                    NotificationTable.COLUMN_NAME_OPENED + " = 0";
-
-            Cursor cursor = dbHelper.query(
-                    NotificationTable.TABLE_NAME,
-                    retColumn,
-                    whereStr,
-                    whereArgs,
-                    null, null, null);
-
-            while (cursor.moveToNext()) {
-               int notificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-               if (notificationId != -1)
-                  notificationManager.cancel(notificationId);
-            }
-            cursor.close();
-
-            whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
-                    NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                    NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
-
-            ContentValues values = new ContentValues();
-            values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
-
-            dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, whereArgs);
-            BadgeCountUpdater.update(dbHelper, appContext);
-         }
-      };
-
-      // DB access is a heavy task, dispatch to a thread if running on main thread
-      if (OSUtils.isRunningOnMainThread())
-         new Thread(runCancelGroupedNotifications, "OS_NOTIFICATIONS").start();
-      else
-         runCancelGroupedNotifications.run();
+      notificationDataController.removeGroupedNotifications(group, new WeakReference<>(appContext));
    }
 
    /**
@@ -3113,48 +3027,8 @@ public class OneSignal {
       return !getInAppMessageController().inAppMessagingEnabled();
    }
 
-   private static boolean isDuplicateNotification(String id) {
-      if (id == null || "".equals(id))
-         return false;
-
-      if (!OSNotificationWorkManager.addNotificationIdProcessed(id))
-         return true;
-
-      OneSignalDbHelper dbHelper = getDBHelperInstance();
-
-      String[] retColumn = {NotificationTable.COLUMN_NAME_NOTIFICATION_ID};
-      String[] whereArgs = {id};
-
-      Cursor cursor = dbHelper.query(
-              NotificationTable.TABLE_NAME,
-              retColumn,
-              NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",   // Where String
-              whereArgs,
-              null, null, null);
-
-      boolean exists = cursor.moveToFirst();
-
-      cursor.close();
-
-      if (exists) {
-         logger.debug("Duplicate FCM message received, skip processing of " + id);
-         return true;
-      }
-
-      return false;
-   }
-
-   static boolean notValidOrDuplicated(JSONObject jsonPayload) {
-      String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
-      if (id == null) {
-         logger.debug("Notification notValidOrDuplicated with id null");
-         return true;
-      }
-      if (OneSignal.isDuplicateNotification(id)) {
-         logger.debug("Notification notValidOrDuplicated with id duplicated");
-         return true;
-      }
-      return false;
+   static void notValidOrDuplicated(JSONObject jsonPayload, OSNotificationDataController.InvalidOrDuplicateNotificationCallback callback) {
+      notificationDataController.notValidOrDuplicated(jsonPayload, callback);
    }
 
    static String getNotificationIdFromFCMJson(@Nullable JSONObject fcmJson) {
@@ -3369,7 +3243,7 @@ public class OneSignal {
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+               logger.debug("Running " + OSTaskController.SEND_OUTCOME + " operation from pending queue.");
                sendOutcome(name, callback);
             }
          });
@@ -3394,7 +3268,7 @@ public class OneSignal {
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+               logger.debug("Running " + OSTaskController.SEND_UNIQUE_OUTCOME + " operation from pending queue.");
                sendUniqueOutcome(name, callback);
             }
          });
@@ -3419,7 +3293,7 @@ public class OneSignal {
          taskController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+               logger.debug("Running " + OSTaskController.SEND_OUTCOME_WITH_VALUE + " operation from pending queue.");
                sendOutcomeWithValue(name, value, callback);
             }
          });

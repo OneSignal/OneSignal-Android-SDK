@@ -73,24 +73,31 @@ class NotificationPayloadProcessorHMS {
         );
     }
 
-    public static void processDataMessageReceived(@NonNull Context context, @Nullable String data) {
+    public static void processDataMessageReceived(@NonNull final Context context, @Nullable String data) {
         OneSignal.initWithContext(context);
         if (data == null)
             return;
 
-        Bundle bundle = OSUtils.jsonStringToBundle(data);
+        final Bundle bundle = OSUtils.jsonStringToBundle(data);
         if (bundle == null)
             return;
 
-        NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
-        // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
-//      FCMBroadcastReceiver.completeWakefulIntent(intent);
+        NotificationBundleProcessor.ProcessBundleReceiverCallback bundleReceiverCallback = new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
 
-        // Return if the notification will NOT be handled by normal GcmIntentService display flow.
-        if (processedResult.processed())
-            return;
+            @Override
+            public void onBundleProcessed(@Nullable NotificationBundleProcessor.ProcessedBundleResult processedResult) {
+                // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+                //      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
-        // TODO: 4.0.0 or after - What is in GcmBroadcastReceiver should be split into a shared class to support FCM, HMS, and ADM
-        FCMBroadcastReceiver.startFCMService(context, bundle);
+                // Return if the notification will NOT be handled by normal GcmIntentService display flow.
+                if (processedResult != null && processedResult.processed())
+                    return;
+
+                // TODO: 4.0.0 or after - What is in GcmBroadcastReceiver should be split into a shared class to support FCM, HMS, and ADM
+                FCMBroadcastReceiver.startFCMService(context, bundle);
+            }
+        };
+        NotificationBundleProcessor.processBundleFromReceiver(context, bundle, bundleReceiverCallback);
+
     }
 }

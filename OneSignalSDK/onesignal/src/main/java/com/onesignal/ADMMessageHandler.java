@@ -31,6 +31,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.annotation.Nullable;
+
 import com.amazon.device.messaging.ADMMessageHandlerJobBase;
 import com.amazon.device.messaging.ADMMessageHandlerBase;
 import com.amazon.device.messaging.ADMMessageReceiver;
@@ -68,24 +70,30 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
 
    @Override
    protected void onMessage(Intent intent) {
-      Context context = getApplicationContext();
-      Bundle bundle = intent.getExtras();
-      
-      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
-      // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
-//      FCMBroadcastReceiver.completeWakefulIntent(intent);
+      final Context context = getApplicationContext();
+      final Bundle bundle = intent.getExtras();
 
-      if (processedResult.processed())
-         return;
+      NotificationBundleProcessor.ProcessBundleReceiverCallback bundleReceiverCallback = new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
+         @Override
+         public void onBundleProcessed(@Nullable NotificationBundleProcessor.ProcessedBundleResult processedResult) {
+            // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+            //      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
-      JSONObject payload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
-      OSNotification notification = new OSNotification(payload);
+            if (processedResult.processed())
+               return;
 
-      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
-      notificationJob.setJsonPayload(payload);
-      notificationJob.setContext(context);
-      notificationJob.setNotification(notification);
-      NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
+            JSONObject payload = NotificationBundleProcessor.bundleAsJSONObject(bundle);
+            OSNotification notification = new OSNotification(payload);
+
+            OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+            notificationJob.setJsonPayload(payload);
+            notificationJob.setContext(context);
+            notificationJob.setNotification(notification);
+            NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
+         }
+      };
+      NotificationBundleProcessor.processBundleFromReceiver(context, bundle, bundleReceiverCallback);
+
    }
 
    @Override

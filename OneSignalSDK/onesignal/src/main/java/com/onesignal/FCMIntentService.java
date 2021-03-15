@@ -34,6 +34,8 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.annotation.Nullable;
+
 import static com.onesignal.NotificationBundleProcessor.processBundleFromReceiver;
 
 /**
@@ -56,14 +58,18 @@ public class FCMIntentService extends IntentService {
     * Expect if a NotificationExtenderService is setup
     */
    @Override
-   protected void onHandleIntent(Intent intent) {
+   protected void onHandleIntent(final Intent intent) {
       Bundle bundle = intent.getExtras();
       if (bundle == null)
          return;
 
-      processBundleFromReceiver(this, bundle);
-
-      // Release the wake lock provided by the WakefulBroadcastReceiver.
-      FCMBroadcastReceiver.completeWakefulIntent(intent);
+      NotificationBundleProcessor.ProcessBundleReceiverCallback bundleReceiverCallback = new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
+         @Override
+         public void onBundleProcessed(@Nullable NotificationBundleProcessor.ProcessedBundleResult processedResult) {
+            // Release the wake lock provided by the WakefulBroadcastReceiver.
+            FCMBroadcastReceiver.completeWakefulIntent(intent);
+         }
+      };
+      processBundleFromReceiver(this, bundle, bundleReceiverCallback);
    }
 }

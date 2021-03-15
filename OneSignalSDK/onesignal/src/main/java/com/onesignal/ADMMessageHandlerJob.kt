@@ -9,22 +9,29 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
     override fun onMessage(context: Context?, intent: Intent?) {
         val bundle = intent?.extras
 
-        val processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle)
-        // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
-//      FCMBroadcastReceiver.completeWakefulIntent(intent);
+        val bundleReceiverCallback = object : NotificationBundleProcessor.ProcessBundleReceiverCallback {
+            override fun onBundleProcessed(processedResult: NotificationBundleProcessor.ProcessedBundleResult?) {
+                // TODO: Figure out the correct replacement or usage of completeWakefulIntent method
+                //      FCMBroadcastReceiver.completeWakefulIntent(intent);
 
-        if (processedResult.processed()) return
+                processedResult?.let {
+                    if (it.processed()) return
+                }
 
-        val payload = NotificationBundleProcessor.bundleAsJSONObject(bundle)
-        val notification = OSNotification(payload)
+                val payload = NotificationBundleProcessor.bundleAsJSONObject(bundle)
+                val notification = OSNotification(payload)
 
-        val notificationJob = OSNotificationGenerationJob(context).apply {
-            this.jsonPayload = payload
-            this.context = context
-            this.notification = notification
+                val notificationJob = OSNotificationGenerationJob(context).apply {
+                    this.jsonPayload = payload
+                    this.context = context
+                    this.notification = notification
+                }
+
+                NotificationBundleProcessor.processJobForDisplay(notificationJob, true)
+            }
         }
 
-        NotificationBundleProcessor.processJobForDisplay(notificationJob, true)
+        NotificationBundleProcessor.processBundleFromReceiver(context, bundle, bundleReceiverCallback)
     }
 
     override fun onRegistered(context: Context?, newRegistrationId: String?) {

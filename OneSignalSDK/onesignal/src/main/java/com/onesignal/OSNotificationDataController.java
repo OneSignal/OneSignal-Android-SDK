@@ -1,19 +1,29 @@
 package com.onesignal;
 
+import android.app.NotificationManager;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
 import android.os.Process;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
+
+import org.json.JSONObject;
+
+import java.lang.ref.WeakReference;
 
 class OSNotificationDataController {
 
     private final static long NOTIFICATION_CACHE_DATA_LIFETIME = 604_800L; // 7 days in second
 
-    private final static String OS_DELETE_CACHED_NOTIFICATIONS_THREAD = "OS_DELETE_CACHED_NOTIFICATIONS_THREAD";
+    private final static String OS_NOTIFICATIONS_THREAD = "OS_NOTIFICATIONS_THREAD";
 
     private final OneSignalDbHelper dbHelper;
+    private final OSLogger logger;
 
-    public OSNotificationDataController(OneSignalDbHelper dbHelper) {
+    public OSNotificationDataController(OneSignalDbHelper dbHelper, OSLogger logger) {
         this.dbHelper = dbHelper;
+        this.logger = logger;
     }
 
     /**
@@ -26,35 +36,233 @@ class OSNotificationDataController {
     }
 
     /**
-     * Cleans two notification tables
+     * Deletes notifications with created timestamps older than 7 days
+     * Cleans notification tables
      * 1. NotificationTable.TABLE_NAME
-     * 2. CachedUniqueOutcomeNotificationTable.TABLE_NAME
      */
     private void cleanNotificationCache() {
-        new Thread(new Runnable() {
+        Runnable notificationCacheCleaner = new BackgroundRunnable() {
             @Override
             public void run() {
-                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                super.run();
 
-                cleanCachedNotifications(dbHelper);
+                String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
+
+                String sevenDaysAgoInSeconds = String.valueOf((OneSignal.getTime().getCurrentTimeMillis() / 1_000L) - NOTIFICATION_CACHE_DATA_LIFETIME);
+                String[] whereArgs = new String[]{sevenDaysAgoInSeconds};
+
+                dbHelper.delete(
+                        NotificationTable.TABLE_NAME,
+                        whereStr,
+                        whereArgs);
             }
+        };
 
-        }, OS_DELETE_CACHED_NOTIFICATIONS_THREAD).start();
+        runRunnableOnThread(notificationCacheCleaner);
     }
 
-    /**
-     * Deletes notifications with created timestamps older than 7 days
-     */
-    private void cleanCachedNotifications(OneSignalDb writableDb) {
-        String whereStr = NotificationTable.COLUMN_NAME_CREATED_TIME + " < ?";
+    void clearOneSignalNotifications(final WeakReference<Context> weakReference) {
+        Runnable runClearOneSignalNotifications = new BackgroundRunnable() {
+            @Override
+            public void run() {
+                super.run();
 
-        String sevenDaysAgoInSeconds = String.valueOf((OneSignal.getTime().getCurrentTimeMillis() / 1_000L) - NOTIFICATION_CACHE_DATA_LIFETIME);
-        String[] whereArgs = new String[]{sevenDaysAgoInSeconds};
+                Context appContext = weakReference.get();
+                if (appContext == null)
+                    return;
 
-        writableDb.delete(
-                NotificationTable.TABLE_NAME,
-                whereStr,
-                whereArgs);
+                NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
+
+                String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
+
+                Cursor cursor = dbHelper.query(
+                        OneSignalDbContract.NotificationTable.TABLE_NAME,
+                        retColumn,
+                        OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
+                        null,
+                        null,                                                    // group by
+                        null,                                                    // filter by row groups
+                        null                                                     // sort order
+                );
+
+                if (cursor.moveToFirst()) {
+                    do {
+                        int existingId = cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+                        notificationManager.cancel(existingId);
+                    } while (cursor.moveToNext());
+                }
+
+                // Mark all notifications as dismissed unless they were already opened.
+                String whereStr = NotificationTable.COLUMN_NAME_OPENED + " = 0";
+                ContentValues values = new ContentValues();
+                values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+                dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+
+                BadgeCountUpdater.updateCount(0, appContext);
+
+                cursor.close();
+            }
+        };
+
+        runRunnableOnThread(runClearOneSignalNotifications);
     }
 
+    void removeGroupedNotifications(final String group, final WeakReference<Context> weakReference) {
+        Runnable runCancelGroupedNotifications = new BackgroundRunnable() {
+            @Override
+            public void run() {
+                super.run();
+
+                Context appContext = weakReference.get();
+                if (appContext == null)
+                    return;
+
+                NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
+
+                String[] retColumn = {NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
+
+                final String[] whereArgs = {group};
+
+                String whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+                        NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                        NotificationTable.COLUMN_NAME_OPENED + " = 0";
+
+                Cursor cursor = dbHelper.query(
+                        NotificationTable.TABLE_NAME,
+                        retColumn,
+                        whereStr,
+                        whereArgs,
+                        null, null, null);
+
+                while (cursor.moveToNext()) {
+                    int notificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+                    if (notificationId != -1)
+                        notificationManager.cancel(notificationId);
+                }
+                cursor.close();
+
+                whereStr = NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
+                        NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                        NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
+
+                ContentValues values = new ContentValues();
+                values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+
+                dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, whereArgs);
+                BadgeCountUpdater.update(dbHelper, appContext);
+            }
+        };
+
+        runRunnableOnThread(runCancelGroupedNotifications);
+    }
+
+    void removeNotification(final int id, final WeakReference<Context> weakReference) {
+        Runnable runCancelNotification = new BackgroundRunnable() {
+            @Override
+            public void run() {
+                super.run();
+
+                Context appContext = weakReference.get();
+                if (appContext == null)
+                    return;
+
+                String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + id + " AND " +
+                        NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                        NotificationTable.COLUMN_NAME_DISMISSED + " = 0";
+
+                ContentValues values = new ContentValues();
+                values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
+
+                int records = dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+
+                if (records > 0)
+                    NotificationSummaryManager.updatePossibleDependentSummaryOnDismiss(appContext, dbHelper, id);
+                BadgeCountUpdater.update(dbHelper, appContext);
+
+                NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(appContext);
+                notificationManager.cancel(id);
+            }
+        };
+
+        runRunnableOnThread(runCancelNotification);
+    }
+
+    void notValidOrDuplicated(JSONObject jsonPayload, final InvalidOrDuplicateNotificationCallback callback) {
+        String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
+        if (id == null) {
+            logger.debug("Notification notValidOrDuplicated with id null");
+            callback.onResult(true);
+            return;
+        }
+
+        isDuplicateNotification(id, callback);
+    }
+
+    private void isDuplicateNotification(final String id, final InvalidOrDuplicateNotificationCallback callback) {
+        if (id == null || "".equals(id)) {
+            callback.onResult(false);
+            return;
+        }
+
+        if (!OSNotificationWorkManager.addNotificationIdProcessed(id)) {
+            logger.debug("Notification notValidOrDuplicated with id duplicated");
+            callback.onResult(true);
+            return;
+        }
+
+        Runnable runCancelNotification = new BackgroundRunnable() {
+            @Override
+            public void run() {
+                super.run();
+
+                boolean result = false;
+                String[] retColumn = {NotificationTable.COLUMN_NAME_NOTIFICATION_ID};
+                String[] whereArgs = {id};
+
+                Cursor cursor = dbHelper.query(
+                        NotificationTable.TABLE_NAME,
+                        retColumn,
+                        NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",   // Where String
+                        whereArgs,
+                        null, null, null);
+
+                boolean exists = cursor.moveToFirst();
+
+                cursor.close();
+
+                if (exists) {
+                    logger.debug("Notification notValidOrDuplicated with id duplicated, duplicate FCM message received, skip processing of " + id);
+                    result = true;
+                }
+
+                callback.onResult(result);
+            }
+        };
+
+        runRunnableOnThread(runCancelNotification);
+    }
+
+    private void runRunnableOnThread(Runnable runnable) {
+        // DB access is a heavy task, dispatch to a thread if running on main thread
+        if (OSUtils.isRunningOnMainThread())
+            new Thread(runnable, OS_NOTIFICATIONS_THREAD).start();
+        else
+            runnable.run();
+    }
+
+    private static class BackgroundRunnable implements Runnable {
+        @Override
+        public void run() {
+            Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+        }
+    }
+
+    interface InvalidOrDuplicateNotificationCallback {
+
+        /**
+         * @param result is true if notification is invalid or duplicated, otherwise false
+         */
+        void onResult(boolean result);
+    }
 }
