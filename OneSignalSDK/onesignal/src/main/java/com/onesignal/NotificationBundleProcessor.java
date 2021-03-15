@@ -133,7 +133,7 @@ class NotificationBundleProcessor {
 
         int androidNotificationId = notificationJob.getAndroidIdWithoutCreate();
         boolean doDisplay = shouldDisplayNotif(notificationJob);
-        boolean notificationDisabledByChannel = false;
+        boolean notificationDisplayed = false;
 
         if (doDisplay) {
             androidNotificationId = notificationJob.getAndroidId();
@@ -144,12 +144,12 @@ class NotificationBundleProcessor {
                 return androidNotificationId;
             } else {
                 // Notification might end not displaying because the channel for that notification has notification disable
-                notificationDisabledByChannel = !GenerateNotification.displayNotificationFromJsonPayload(notificationJob);
+                notificationDisplayed = GenerateNotification.displayNotificationFromJsonPayload(notificationJob);
             }
         }
 
         if (!notificationJob.isRestoring() && !notificationJob.isIamPreview()) {
-            processNotification(notificationJob, opened, notificationDisabledByChannel);
+            processNotification(notificationJob, opened, notificationDisplayed);
 
             // No need to keep notification duplicate check on memory, we have database check at this point
             // Without removing duplicate, summary restoration might not happen
@@ -174,13 +174,10 @@ class NotificationBundleProcessor {
     /**
      * Save notification, updates Outcomes, and sends Received Receipt if they are enabled.
      */
-    static void processNotification(OSNotificationGenerationJob notificationJob, boolean opened, boolean notificationDisabledByChannel) {
+    static void processNotification(OSNotificationGenerationJob notificationJob, boolean opened, boolean notificationDisplayed) {
         saveNotification(notificationJob, opened);
 
-        String notificationId = notificationJob.getApiNotificationId();
-        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
-
-        if (notificationDisabledByChannel) {
+        if (!notificationDisplayed) {
             // Notification channel disable, save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
             markRestoredNotificationAsDismissed(notificationJob);
             return;
@@ -189,6 +186,9 @@ class NotificationBundleProcessor {
         if (!notificationJob.isNotificationToDisplay())
             return;
 
+        // Logic for when the notification is displayed
+        String notificationId = notificationJob.getApiNotificationId();
+        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
         OneSignal.getSessionManager().onNotificationReceived(notificationId);
     }
 
