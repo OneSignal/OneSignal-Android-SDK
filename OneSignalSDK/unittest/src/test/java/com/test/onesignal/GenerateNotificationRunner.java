@@ -761,17 +761,19 @@ public class GenerateNotificationRunner {
    }
    
    @Test
-   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() {
+   public void shouldNotShowNotificationWhenAlertIsBlankOrNull() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       bundle.remove("alert");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
-   
+      threadAndTaskWait();
+
       assertNoNotifications();
    
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("alert", "");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
-   
+      threadAndTaskWait();
+
       assertNoNotifications();
 
       assertNotificationDbRecords(2);
@@ -790,11 +792,13 @@ public class GenerateNotificationRunner {
       bundle.putString("grp", "test1");
       bundle.putString("collapse_key", "1");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
-   
+      threadAndTaskWait();
+
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
       bundle.putString("collapse_key", "1");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
 
       // Test - Summary created and sub notification. Summary will look the same as the normal notification.
       Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
@@ -829,6 +833,8 @@ public class GenerateNotificationRunner {
       // Make sure the notification got posted and the content is correct.
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
+
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
 
@@ -852,6 +858,8 @@ public class GenerateNotificationRunner {
 
       // Should not display a duplicate notification, count should still be 1
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
+
       readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, null, null, null, null, null, null);
       assertEquals(1, cursor.getCount());
@@ -861,6 +869,7 @@ public class GenerateNotificationRunner {
       // Display a second notification
       bundle = getBaseNotifBundle("UUID2");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
 
       // Go forward 4 weeks
       // Note: Does not effect the SQL function strftime
@@ -876,6 +885,8 @@ public class GenerateNotificationRunner {
       // First opened should of been cleaned up, 1 week old non opened notification should stay, and one new record.
       bundle = getBaseNotifBundle("UUID3");
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
+
       readableDb = dbHelper.getSQLiteDatabaseWithRetries();
       cursor = readableDb.query(NotificationTable.TABLE_NAME, new String[] { }, null, null, null, null, null);
 
@@ -1317,11 +1328,13 @@ public class GenerateNotificationRunner {
       // 3. Post 2 notifications with the same grp key so a summary is generated
       Bundle bundle = getBaseNotifBundle("UUID1");
       bundle.putString("grp", "test1");
+
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
 
       bundle = getBaseNotifBundle("UUID2");
       bundle.putString("grp", "test1");
+
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
       threadAndTaskWait();
 
@@ -1389,10 +1402,23 @@ public class GenerateNotificationRunner {
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
       OneSignal_setupNotificationServiceExtension();
 
-      // 3. Test that WorkManager begins processing the notification
-      boolean ret = FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
-      threadAndTaskWait();
-      assertTrue(ret);
+      final boolean[] callbackEnded = {false};
+      OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback processBundleReceiverCallback = new OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback() {
+         public void onBundleProcessed(OneSignalPackagePrivateHelper.ProcessedBundleResult processedResult) {
+            assertNotNull(processedResult);
+            // 3. Test that WorkManager begins processing the notification
+            assertTrue(processedResult.isProcessed());
+            callbackEnded[0] = true;
+         }
+      };
+
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle(), processBundleReceiverCallback);
+      Awaitility.await()
+              .atMost(new Duration(3, TimeUnit.SECONDS))
+              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .untilAsserted(() -> {
+                 assertTrue(callbackEnded[0]);
+              });
 
       // 4. Receive a notification with all data fields used
       FCMBroadcastReceiver_processBundle(blankActivity, getBundleWithAllOptionsSet());
@@ -2132,10 +2158,24 @@ public class GenerateNotificationRunner {
       blankActivityController.resume();
       threadAndTaskWait();
 
-      Bundle bundle = getBaseNotifBundle();
-      boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      final boolean[] callbackEnded = {false};
+      OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback processBundleReceiverCallback = new OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback() {
+         public void onBundleProcessed(OneSignalPackagePrivateHelper.ProcessedBundleResult processedResult) {
+            assertNotNull(processedResult);
+            assertTrue(processedResult.isProcessed());
+            callbackEnded[0] = true;
+         }
+      };
 
-      assertTrue(processResult);
+      Bundle bundle = getBaseNotifBundle();
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle, processBundleReceiverCallback);
+      Awaitility.await()
+              .atMost(new Duration(3, TimeUnit.SECONDS))
+              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .untilAsserted(() -> {
+                 assertTrue(callbackEnded[0]);
+              });
+
       assertNull(lastNotificationOpenedBody);
 
       assertEquals("Robo test message", notificationReceivedBody);
@@ -2146,6 +2186,7 @@ public class GenerateNotificationRunner {
       notificationReceivedBody = null;
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
 
       assertNull(lastNotificationOpenedBody);
       assertNull(notificationReceivedBody);
@@ -2156,6 +2197,7 @@ public class GenerateNotificationRunner {
       // Test that only NotificationReceivedHandler fires
       bundle = getBaseNotifBundle("UUID2");
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
 
       assertNull(lastNotificationOpenedBody);
       assertEquals("Robo test message", notificationReceivedBody);
