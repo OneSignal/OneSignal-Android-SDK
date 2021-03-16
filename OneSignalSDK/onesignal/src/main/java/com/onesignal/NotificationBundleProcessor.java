@@ -180,7 +180,7 @@ class NotificationBundleProcessor {
         if (!notificationDisplayed) {
             // Notification channel disable or not displayed
             // save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
-            markRestoredNotificationAsDismissed(notificationJob);
+            markNotificationAsDismissed(notificationJob);
             return;
         }
 
@@ -252,11 +252,11 @@ class NotificationBundleProcessor {
       }
    }
 
-    static void markRestoredNotificationAsDismissed(OSNotificationGenerationJob notifiJob) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Marking restored notifications as dismissed: " + notifiJob.toString());
+    static void markNotificationAsDismissed(OSNotificationGenerationJob notifiJob) {
         if (notifiJob.getAndroidIdWithoutCreate() == -1)
             return;
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Marking restored or disabled notifications as dismissed: " + notifiJob.toString());
         String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
 
         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.getContext());

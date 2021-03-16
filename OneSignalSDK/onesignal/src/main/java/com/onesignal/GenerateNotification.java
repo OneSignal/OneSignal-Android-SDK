@@ -328,7 +328,7 @@ class GenerateNotification {
       }
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-         return OneSignalNotificationManager.notificationChannelEnabled(currentContext, notification.getChannelId());
+         return OneSignalNotificationManager.areNotificationsEnabled(currentContext, notification.getChannelId());
       return true;
    }
 
