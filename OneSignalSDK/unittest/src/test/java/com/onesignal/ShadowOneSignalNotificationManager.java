@@ -15,7 +15,7 @@ public class ShadowOneSignalNotificationManager {
    }
 
    @Implementation
-   public static boolean notificationChannelEnabled(Context context, String channelId) {
+   public static boolean areNotificationsEnabled(Context context, String channelId) {
       return notificationChannelEnabled;
    }
 

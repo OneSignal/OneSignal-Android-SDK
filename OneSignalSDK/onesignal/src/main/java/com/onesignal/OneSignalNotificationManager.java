@@ -164,11 +164,16 @@ public class OneSignalNotificationManager {
     }
 
     @Nullable
-    public static boolean notificationChannelEnabled(Context context, String channelId) {
+    public static boolean areNotificationsEnabled(Context context, String channelId) {
+        boolean notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled();
+        if (!notificationsEnabled)
+            return false;
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             NotificationChannel channel = getNotificationManager(context).getNotificationChannel(channelId);
             return channel == null || channel.getImportance() != IMPORTANCE_NONE;
         }
+
         return true;
     }
 }
