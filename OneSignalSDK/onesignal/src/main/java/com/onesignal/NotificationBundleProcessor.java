@@ -178,13 +178,11 @@ class NotificationBundleProcessor {
         saveNotification(notificationJob, opened);
 
         if (!notificationDisplayed) {
-            // Notification channel disable, save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
+            // Notification channel disable or not displayed
+            // save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
             markRestoredNotificationAsDismissed(notificationJob);
             return;
         }
-
-        if (!notificationJob.isNotificationToDisplay())
-            return;
 
         // Logic for when the notification is displayed
         String notificationId = notificationJob.getApiNotificationId();
