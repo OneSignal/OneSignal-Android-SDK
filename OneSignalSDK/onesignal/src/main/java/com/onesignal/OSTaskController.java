@@ -32,7 +32,9 @@ class OSTaskController {
     static final String SET_REQUIRES_USER_PRIVACY_CONSENT = "setRequiresUserPrivacyConsent()";
     static final String UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED = "unsubscribeWhenNotificationsAreDisabled()";
     static final String HANDLE_NOTIFICATION_OPEN = "handleNotificationOpen()";
-    static final String CANCEL_GROUPED_NOTIFICATIONS = "cancelGroupedNotifications()";
+    static final String CLEAR_NOTIFICATIONS = "clearOneSignalNotifications()";
+    static final String REMOVE_GROUPED_NOTIFICATIONS = "removeGroupedNotifications()";
+    static final String REMOVE_NOTIFICATION = "removeNotification()";
     static final String PAUSE_IN_APP_MESSAGES = "pauseInAppMessages()";
     static final String APP_LOST_FOCUS = "onAppLostFocus()";
     static final String SEND_OUTCOME = "sendOutcome()";
@@ -58,7 +60,10 @@ class OSTaskController {
             APP_LOST_FOCUS,
             SEND_OUTCOME,
             SEND_UNIQUE_OUTCOME,
-            SEND_OUTCOME_WITH_VALUE
+            SEND_OUTCOME_WITH_VALUE,
+            REMOVE_GROUPED_NOTIFICATIONS,
+            REMOVE_NOTIFICATION,
+            CLEAR_NOTIFICATIONS
     ));
 
     // The concurrent queue in which we pin pending tasks upon finishing initialization

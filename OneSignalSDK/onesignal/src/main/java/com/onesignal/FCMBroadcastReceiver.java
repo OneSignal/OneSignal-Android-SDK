@@ -66,24 +66,30 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          return;
 
       OneSignal.initWithContext(context);
-      ProcessedBundleResult processedResult = processOrderBroadcast(context, intent, bundle);
 
-      // Null means this isn't a FCM message
-      if (processedResult == null) {
-         setSuccessfulResultCode();
-         return;
-      }
+      NotificationBundleProcessor.ProcessBundleReceiverCallback bundleReceiverCallback = new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
 
-      // Prevent other FCM receivers from firing if:
-      //   1. This is a duplicated FCM message
-      //   2. OR work manager is processing the notification
-      if (processedResult.isDup || processedResult.isWorkManagerProcessing) {
-         // Abort to prevent other FCM receivers from process this Intent.
-         setAbort();
-         return;
-      }
+         @Override
+         public void onBundleProcessed(@Nullable ProcessedBundleResult processedResult) {
+            // Null means this isn't a FCM message
+            if (processedResult == null) {
+               setSuccessfulResultCode();
+               return;
+            }
 
-      setSuccessfulResultCode();
+            // Prevent other FCM receivers from firing if:
+            //   1. This is a duplicated FCM message
+            //   2. OR work manager is processing the notification
+            if (processedResult.isDup || processedResult.isWorkManagerProcessing) {
+               // Abort to prevent other FCM receivers from process this Intent.
+               setAbort();
+               return;
+            }
+
+            setSuccessfulResultCode();
+         }
+      };
+      processOrderBroadcast(context, intent, bundle, bundleReceiverCallback);
    }
 
    private void setSuccessfulResultCode() {
@@ -109,19 +115,26 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
       }
    }
 
-   private static @Nullable ProcessedBundleResult processOrderBroadcast(Context context, Intent intent, Bundle bundle) {
+   private static void processOrderBroadcast(final Context context, Intent intent, final Bundle bundle,
+                                                                        final NotificationBundleProcessor.ProcessBundleReceiverCallback fcmBundleReceiver) {
       if (!isFCMMessage(intent))
-         return null;
+         fcmBundleReceiver.onBundleProcessed(null);
 
-      ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
+      NotificationBundleProcessor.ProcessBundleReceiverCallback bundleReceiverCallback = new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
+         @Override
+         public void onBundleProcessed(@Nullable ProcessedBundleResult processedResult) {
+            // Return if the notification will NOT be handled by normal FCMIntentService display flow.
+            if (processedResult!= null && processedResult.processed()){
+               fcmBundleReceiver.onBundleProcessed(processedResult);
+               return;
+            }
 
-      // Return if the notification will NOT be handled by normal FCMIntentService display flow.
-      if (processedResult.processed())
-         return processedResult;
+            startFCMService(context, bundle);
 
-      startFCMService(context, bundle);
-
-      return processedResult;
+            fcmBundleReceiver.onBundleProcessed(processedResult);
+         }
+      };
+      NotificationBundleProcessor.processBundleFromReceiver(context, bundle, bundleReceiverCallback);
    }
 
    static void startFCMService(Context context, Bundle bundle) {

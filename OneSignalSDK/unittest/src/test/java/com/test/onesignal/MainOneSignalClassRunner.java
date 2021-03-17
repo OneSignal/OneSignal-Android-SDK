@@ -39,6 +39,7 @@ import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
+import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.FocusDelaySyncJobService;
@@ -93,6 +94,8 @@ import com.onesignal.example.BlankActivity;
 import com.onesignal.example.MainActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
+import org.awaitility.Awaitility;
+import org.awaitility.Duration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -120,6 +123,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -1201,9 +1205,23 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       Bundle bundle = getBaseNotifBundle();
-      boolean processResult = FCMBroadcastReceiver_processBundle(blankActivity, bundle);
 
-      assertTrue(processResult);
+      final boolean[] callbackEnded = {false};
+      OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback processBundleReceiverCallback = new OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback() {
+         public void onBundleProcessed(OneSignalPackagePrivateHelper.ProcessedBundleResult processedResult) {
+            assertNotNull(processedResult);
+            assertTrue(processedResult.isProcessed());
+            callbackEnded[0] = true;
+         }
+      };
+
+      FCMBroadcastReceiver_processBundle(blankActivity, bundle, processBundleReceiverCallback);
+      Awaitility.await()
+              .atMost(new Duration(3, TimeUnit.SECONDS))
+              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .untilAsserted(() -> {
+                 assertTrue(callbackEnded[0]);
+              });
       assertNull(lastNotificationOpenedBody);
 
       assertEquals("Robo test message", notificationReceivedBody);
@@ -1214,6 +1232,7 @@ public class MainOneSignalClassRunner {
       notificationReceivedBody = null;
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
 
       assertNull(lastNotificationOpenedBody);
       assertNull(notificationReceivedBody);
@@ -1224,6 +1243,7 @@ public class MainOneSignalClassRunner {
       // Test that only NotificationReceivedHandler fires
       bundle = getBaseNotifBundle("UUID2");
       FCMBroadcastReceiver_processBundle(blankActivity, bundle);
+      threadAndTaskWait();
 
       assertNull(lastNotificationOpenedBody);
       assertEquals("Robo test message", notificationReceivedBody);

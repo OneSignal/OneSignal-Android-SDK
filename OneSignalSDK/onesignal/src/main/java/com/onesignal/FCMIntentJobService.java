@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import static com.onesignal.NotificationBundleProcessor.processBundleFromReceiver;
@@ -25,7 +26,12 @@ public class FCMIntentJobService extends JobIntentService {
         if (bundle == null)
             return;
 
-        processBundleFromReceiver(this, bundle);
+        processBundleFromReceiver(this, bundle, new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
+            @Override
+            public void onBundleProcessed(@Nullable NotificationBundleProcessor.ProcessedBundleResult processedResult) {
+
+            }
+        });
     }
 
     public static void enqueueWork(Context context, Intent intent) {

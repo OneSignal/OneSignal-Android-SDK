@@ -12,4 +12,5 @@ interface OSOutcomeEventsRepository {
     fun getNotCachedUniqueOutcome(name: String, influences: List<OSInfluence>): List<OSInfluence>
     fun getUnattributedUniqueOutcomeEventsSent(): Set<String>?
     fun saveUnattributedUniqueOutcomeEventsSent(unattributedUniqueOutcomeEvents: Set<String>)
+    fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String);
 }

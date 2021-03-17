@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Looper;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -138,9 +138,18 @@ public class OneSignalPackagePrivateHelper {
       NotificationBundleProcessor.processFromFCMIntentService(context, bundle);
    }
 
-   public static boolean FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
-      NotificationBundleProcessor.ProcessedBundleResult processedResult = NotificationBundleProcessor.processBundleFromReceiver(context, bundle);
-      return processedResult.processed();
+   public static void FCMBroadcastReceiver_processBundle(Context context, Bundle bundle) {
+      OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback bundleReceiverCallback = new OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback() {
+         @Override
+         public void onBundleProcessed(@Nullable OneSignalPackagePrivateHelper.ProcessedBundleResult processedResult) {
+         }
+      };
+
+      FCMBroadcastReceiver_processBundle(context, bundle, bundleReceiverCallback);
+   }
+
+   public static void FCMBroadcastReceiver_processBundle(Context context, Bundle bundle, OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback bundleReceiverCallback) {
+      NotificationBundleProcessor.processBundleFromReceiver(context, bundle, bundleReceiverCallback);
    }
 
    public static void FCMBroadcastReceiver_onReceived_withIntent(Context context, Intent intent) {
@@ -166,6 +175,30 @@ public class OneSignalPackagePrivateHelper {
       OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context, jsonPayload);
       notificationJob.setRestoring(restoring);
       return NotificationBundleProcessor.processJobForDisplay(notificationJob, true);
+   }
+
+   public static class ProcessBundleReceiverCallback implements com.onesignal.NotificationBundleProcessor.ProcessBundleReceiverCallback {
+
+      @Override
+      public void onBundleProcessed(@Nullable com.onesignal.NotificationBundleProcessor.ProcessedBundleResult processedResult) {
+         onBundleProcessed(new ProcessedBundleResult(processedResult));
+      }
+
+      public void onBundleProcessed(@Nullable ProcessedBundleResult processedResult) {
+
+      }
+   }
+
+   public static class ProcessedBundleResult extends NotificationBundleProcessor.ProcessedBundleResult {
+      com.onesignal.NotificationBundleProcessor.ProcessedBundleResult processedResult;
+
+      public ProcessedBundleResult(com.onesignal.NotificationBundleProcessor.ProcessedBundleResult processedResult) {
+         this.processedResult = processedResult;
+      }
+
+      public boolean isProcessed() {
+         return processedResult.processed();
+      }
    }
 
    public static class NotificationTable extends OneSignalDbContract.NotificationTable {

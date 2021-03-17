@@ -147,7 +147,6 @@ class OSInAppMessageRepository {
      * Note: This should only ever be called by {@link OSInAppMessageRepository#cleanCachedInAppMessages()}
      * <br/><br/>
      *
-     * @see OneSignalCacheCleaner#cleanCachedInAppMessages(OneSignalDbHelper)
      * @see OSInAppMessageRepository#cleanCachedInAppMessages()
      */
     private void cleanInAppMessageIds(Set<String> oldMessageIds) {
@@ -187,7 +186,6 @@ class OSInAppMessageRepository {
      * Note: This should only ever be called by {@link OSInAppMessageRepository#cleanCachedInAppMessages()}
      * <br/><br/>
      *
-     * @see OneSignalCacheCleaner#cleanCachedInAppMessages(OneSignalDbHelper)
      * @see OSInAppMessageRepository#cleanCachedInAppMessages()
      */
     private void cleanInAppMessageClickedClickIds(Set<String> oldClickedClickIds) {

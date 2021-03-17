@@ -62,6 +62,10 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
     @Override
     void setInAppMessagingEnabled(boolean enabled) { }
 
+    @Override
+    void cleanCachedInAppMessages() {
+    }
+
     @Nullable
     @Override
     Object getTriggerValue(String key) { return null; }

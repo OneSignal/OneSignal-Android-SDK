@@ -26,6 +26,7 @@ import java.util.Set;
 class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
     private static final Object LOCK = new Object();
+    private final static String OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD = "OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD";
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static final String LIQUID_TAG_SCRIPT = "\n\n" +
@@ -875,6 +876,23 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                 }
             }
         }, null);
+    }
+
+    /**
+     * Remove IAMs that the last display time was six month ago
+     * 1. Query for all old message ids and old clicked click ids
+     * 2. Delete old IAMs from SQL
+     * 3. Use queried data to clean SharedPreferences
+     */
+    void cleanCachedInAppMessages() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+
+                inAppMessageRepository.cleanCachedInAppMessages();
+            }
+        }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
     }
 
     /**

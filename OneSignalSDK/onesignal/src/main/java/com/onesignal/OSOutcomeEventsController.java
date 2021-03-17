@@ -1,6 +1,7 @@
 package com.onesignal;
 
 import android.os.Process;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -20,6 +21,8 @@ class OSOutcomeEventsController {
     private static final String OS_SAVE_OUTCOMES = "OS_SAVE_OUTCOMES";
     private static final String OS_SEND_SAVED_OUTCOMES = "OS_SEND_SAVED_OUTCOMES";
     private static final String OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS = "OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS";
+
+    private final static String OS_DELETE_CACHED_UNIQUE_OUTCOMES_NOTIFICATIONS_THREAD = "OS_DELETE_CACHED_UNIQUE_OUTCOMES_NOTIFICATIONS_THREAD";
 
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
     private Set<String> unattributedUniqueOutcomeEventsSentOnSession;
@@ -54,6 +57,21 @@ class OSOutcomeEventsController {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal cleanOutcomes for session");
         unattributedUniqueOutcomeEventsSentOnSession = OSUtils.newConcurrentSet();
         saveUnattributedUniqueOutcomeEvents();
+    }
+
+    /**
+     * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
+     */
+    void cleanCachedUniqueOutcomes() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
+
+                outcomeEventsFactory.getRepository().cleanCachedUniqueOutcomeEventNotifications(
+                        OneSignalDbContract.NotificationTable.TABLE_NAME, OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID);
+            }
+        }, OS_DELETE_CACHED_UNIQUE_OUTCOMES_NOTIFICATIONS_THREAD).start();
     }
 
     /**
