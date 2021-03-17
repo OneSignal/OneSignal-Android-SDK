@@ -24,6 +24,7 @@ class OSInAppMessage {
     private static final String IAM_REDISPLAY_STATS = "redisplay";
     private static final String DISPLAY_DURATION = "displayDuration";
     private static final String END_TIME = "end_time";
+    private static final String HAS_LIQUID = "has_liquid";
 
     /**
      * The unique identifier for this in-app message
@@ -64,6 +65,7 @@ class OSInAppMessage {
     private boolean actionTaken;
     private Date endTime;
     boolean isPreview;
+    private boolean hasLiquid;
 
     OSInAppMessage(boolean isPreview) {
         this.isPreview = isPreview;
@@ -83,6 +85,8 @@ class OSInAppMessage {
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
         this.clickedClickIds = new HashSet<>();
         this.endTime = parseEndTimeJson(json);
+        if (json.has(HAS_LIQUID))
+            this.hasLiquid = json.getBoolean(HAS_LIQUID);
 
         if (json.has(IAM_REDISPLAY_STATS))
             this.redisplayStats = new OSInAppMessageRedisplayStats(json.getJSONObject(IAM_REDISPLAY_STATS));
@@ -186,6 +190,8 @@ class OSInAppMessage {
                 json.put(END_TIME, endTimeString);
             }
 
+            json.put(HAS_LIQUID, hasLiquid);
+
         } catch (JSONException exception) {
             exception.printStackTrace();
         }
@@ -227,6 +233,14 @@ class OSInAppMessage {
         this.displayedInSession = displayedInSession;
     }
 
+    boolean getHasLiquid() {
+        return hasLiquid;
+    }
+
+    void setHasLiquid(boolean hasLiquid) {
+        this.hasLiquid = hasLiquid;
+    }
+
     @NonNull
     Set<String> getClickedClickIds() {
         return clickedClickIds;
@@ -266,6 +280,7 @@ class OSInAppMessage {
                 ", actionTaken=" + actionTaken +
                 ", isPreview=" + isPreview +
                 ", endTime=" + endTime +
+                ", hasLiquid=" + hasLiquid +
                 '}';
     }
 

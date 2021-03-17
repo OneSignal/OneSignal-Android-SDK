@@ -193,7 +193,6 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
                 );
 
         helper_startHMSOpenActivity(intent);
-
-        assertEquals("PGh0bWw+PC9odG1sPg==", ShadowOSWebView.lastData);
+        assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
     }
 }

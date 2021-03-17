@@ -28,6 +28,10 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private static final Object LOCK = new Object();
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
+    private static final String LIQUID_TAG_SCRIPT = "\n\n" +
+            "<script>\n" +
+            "    setPlayerTags(%s);\n" +
+            "</script>";
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android");
         add("app");
@@ -68,6 +72,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     private OSInAppMessagePrompt currentPrompt = null;
     private boolean inAppMessagingEnabled = true;
     private boolean inAppMessageShowing = false;
+
+    @Nullable
+    private String userTagsString = null;
+
+    @Nullable
+    private String pendingHTMLContent = null;
+
+    private boolean waitForTags = false;
 
     @Nullable
     Date lastTimeInAppDismissed = null;
@@ -743,6 +755,29 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
     }
 
+    private void getTagsForLiquidTemplating(@NonNull final OSInAppMessage message, final boolean isPreview) {
+        waitForTags = false;
+        if (isPreview || message.getHasLiquid()) {
+            waitForTags = true;
+            OneSignal.getTags(new OneSignal.OSGetTagsHandler() {
+                @Override
+                public void tagsAvailable(JSONObject tags) {
+                    waitForTags = false;
+                    if (tags != null) {
+                        userTagsString = tags.toString();
+                    }
+                    if (pendingHTMLContent != null) {
+                        if (!isPreview) {
+                            OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
+                        }
+                        WebViewManager.showHTMLString(message, taggedHTMLString(pendingHTMLContent));
+                        pendingHTMLContent = null;
+                    }
+                }
+            });
+        }
+    }
+
     private void displayMessage(@NonNull final OSInAppMessage message) {
         if (!inAppMessagingEnabled) {
             logger.verbose("In app messaging is currently paused, in app messages will not be shown!");
@@ -750,6 +785,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
 
         inAppMessageShowing = true;
+
+        getTagsForLiquidTemplating(message, false);
 
         String htmlPath = htmlPathForMessage(message);
         OneSignalRestClient.get(htmlPath, new ResponseHandler() {
@@ -785,9 +822,12 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
                     double displayDuration = jsonResponse.optDouble("display_duration");
                     message.setDisplayDuration(displayDuration);
-
+                    if (waitForTags) {
+                        pendingHTMLContent = htmlStr;
+                        return;
+                    }
                     OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
-                    WebViewManager.showHTMLString(message, htmlStr);
+                    WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -795,8 +835,18 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }, null);
     }
 
+    @NonNull
+    String taggedHTMLString(@NonNull String untaggedString) {
+        String tagsDict = userTagsString;
+        String tagScript = LIQUID_TAG_SCRIPT;
+        return untaggedString + String.format(tagScript, tagsDict);
+    }
+
     void displayPreviewMessage(@NonNull String previewUUID) {
         inAppMessageShowing = true;
+
+        final OSInAppMessage message = new OSInAppMessage(true);
+        getTagsForLiquidTemplating(message, true);
 
         String htmlPath = "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + OneSignal.appId;
         OneSignalRestClient.get(htmlPath, new ResponseHandler() {
@@ -813,12 +863,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");
 
-                    OSInAppMessage message = new OSInAppMessage(true);
-
                     double displayDuration = jsonResponse.optDouble("display_duration");
                     message.setDisplayDuration(displayDuration);
-
-                    WebViewManager.showHTMLString(message, htmlStr);
+                    if (waitForTags) {
+                        pendingHTMLContent = htmlStr;
+                        return;
+                    }
+                    WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
