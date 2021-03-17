@@ -105,11 +105,11 @@ public class OSNotificationController {
       if (restoring) {
          // If we are not displaying a restored notification make sure we mark it as dismissed
          // This will prevent it from being restored again
-         NotificationBundleProcessor.markRestoredNotificationAsDismissed(notificationJob);
+         NotificationBundleProcessor.markNotificationAsDismissed(notificationJob);
       } else {
          // -1 is used to note never displayed
          notificationJob.getNotification().setAndroidNotificationId(-1);
-         NotificationBundleProcessor.processNotification(notificationJob, true);
+         NotificationBundleProcessor.processNotification(notificationJob, true, false);
          OneSignal.handleNotificationReceived(notificationJob);
       }
    }
