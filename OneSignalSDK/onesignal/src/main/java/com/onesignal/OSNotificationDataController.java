@@ -12,7 +12,7 @@ import org.json.JSONObject;
 
 import java.lang.ref.WeakReference;
 
-class OSNotificationDataController {
+class OSNotificationDataController extends OSBackgroundManager {
 
     private final static long NOTIFICATION_CACHE_DATA_LIFETIME = 604_800L; // 7 days in second
 
@@ -58,7 +58,7 @@ class OSNotificationDataController {
             }
         };
 
-        runRunnableOnThread(notificationCacheCleaner);
+        runRunnableOnThread(notificationCacheCleaner, OS_NOTIFICATIONS_THREAD);
     }
 
     void clearOneSignalNotifications(final WeakReference<Context> weakReference) {
@@ -105,7 +105,7 @@ class OSNotificationDataController {
             }
         };
 
-        runRunnableOnThread(runClearOneSignalNotifications);
+        runRunnableOnThread(runClearOneSignalNotifications, OS_NOTIFICATIONS_THREAD);
     }
 
     void removeGroupedNotifications(final String group, final WeakReference<Context> weakReference) {
@@ -154,7 +154,7 @@ class OSNotificationDataController {
             }
         };
 
-        runRunnableOnThread(runCancelGroupedNotifications);
+        runRunnableOnThread(runCancelGroupedNotifications, OS_NOTIFICATIONS_THREAD);
     }
 
     void removeNotification(final int id, final WeakReference<Context> weakReference) {
@@ -185,7 +185,7 @@ class OSNotificationDataController {
             }
         };
 
-        runRunnableOnThread(runCancelNotification);
+        runRunnableOnThread(runCancelNotification, OS_NOTIFICATIONS_THREAD);
     }
 
     void notValidOrDuplicated(JSONObject jsonPayload, final InvalidOrDuplicateNotificationCallback callback) {
@@ -240,15 +240,7 @@ class OSNotificationDataController {
             }
         };
 
-        runRunnableOnThread(runCancelNotification);
-    }
-
-    private void runRunnableOnThread(Runnable runnable) {
-        // DB access is a heavy task, dispatch to a thread if running on main thread
-        if (OSUtils.isRunningOnMainThread())
-            new Thread(runnable, OS_NOTIFICATIONS_THREAD).start();
-        else
-            runnable.run();
+        runRunnableOnThread(runCancelNotification, OS_NOTIFICATIONS_THREAD);
     }
 
     interface InvalidOrDuplicateNotificationCallback {
