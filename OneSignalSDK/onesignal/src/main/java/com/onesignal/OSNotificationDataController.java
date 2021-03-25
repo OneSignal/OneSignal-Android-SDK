@@ -251,13 +251,6 @@ class OSNotificationDataController {
             runnable.run();
     }
 
-    private static class BackgroundRunnable implements Runnable {
-        @Override
-        public void run() {
-            Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-        }
-    }
-
     interface InvalidOrDuplicateNotificationCallback {
 
         /**
