@@ -2,7 +2,6 @@ package com.onesignal;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.os.Process;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,11 +22,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
+class OSInAppMessageController extends OSBackgroundManager implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
     private static final Object LOCK = new Object();
-    private final static String OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD = "OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD";
-    private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
+    private final static String OS_IAM_DB_ACCESS = "OS_IAM_DB_ACCESS";
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static final String LIQUID_TAG_SCRIPT = "\n\n" +
             "<script>\n" +
@@ -68,7 +66,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     // IAMs displayed with last displayed time and quantity of displays data
     // This is retrieved from a DB Table that take care of each object to be unique
     @NonNull
-    private List<OSInAppMessage> redisplayedInAppMessages;
+    private List<OSInAppMessage> redisplayedInAppMessages = new ArrayList<>();
 
     private OSInAppMessagePrompt currentPrompt = null;
     private boolean inAppMessagingEnabled = true;
@@ -141,9 +139,15 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
 
     protected void initRedisplayData(OneSignalDbHelper dbHelper) {
         inAppMessageRepository = getInAppMessageRepository(dbHelper);
-        redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
+        Runnable getCachedIAMRunnable =  new BackgroundRunnable() {
+            @Override
+            public void run() {
+                redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
+            }
+        };
 
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
+        runRunnableOnThread(getCachedIAMRunnable, OS_IAM_DB_ACCESS);
     }
 
     void resetSessionLaunchTime() {
@@ -725,13 +729,13 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         message.setTriggerChanged(false);
         message.setDisplayedInSession(true);
 
-        new Thread(new Runnable() {
+        Runnable saveIAMOnDBRunnable = new BackgroundRunnable() {
             @Override
             public void run() {
-                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
                 inAppMessageRepository.saveInAppMessage(message);
             }
-        }, OS_SAVE_IN_APP_MESSAGE).start();
+        };
+        runRunnableOnThread(saveIAMOnDBRunnable, OS_IAM_DB_ACCESS);
 
         // Update the data to enable future re displays
         // Avoid calling the repository data again
@@ -885,14 +889,14 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
      * 3. Use queried data to clean SharedPreferences
      */
     void cleanCachedInAppMessages() {
-        new Thread(new Runnable() {
+        Runnable cleanCachedIAMRunnable = new BackgroundRunnable() {
             @Override
             public void run() {
-                Thread.currentThread().setPriority(Process.THREAD_PRIORITY_BACKGROUND);
-
                 inAppMessageRepository.cleanCachedInAppMessages();
             }
-        }, OS_DELETE_CACHED_REDISPLAYED_IAMS_THREAD).start();
+        };
+
+        runRunnableOnThread(cleanCachedIAMRunnable, OS_IAM_DB_ACCESS);
     }
 
     /**
@@ -1001,6 +1005,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         return messageDisplayQueue;
     }
 
+    // Method for testing purposes
     @NonNull
     public List<OSInAppMessage> getRedisplayedInAppMessages() {
         return redisplayedInAppMessages;
