@@ -3049,36 +3049,6 @@ public class OneSignal {
       return null;
    }
 
-    static String getNotificationIdFromFCMBundle(@Nullable Bundle fcmBundle) {
-        if (fcmBundle == null || fcmBundle.isEmpty())
-            return null;
-
-      try {
-         if (fcmBundle.containsKey("custom")) {
-            JSONObject customJSON = new JSONObject(fcmBundle.getString("custom"));
-
-            if (customJSON.has("i"))
-               return customJSON.optString("i", null);
-            else
-               Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'i' field in custom.");
-         }
-         else
-            Log(LOG_LEVEL.DEBUG, "Not a OneSignal formatted FCM message. No 'custom' field in the bundle.");
-      } catch (Throwable t) {
-         Log(LOG_LEVEL.DEBUG, "Could not parse bundle, probably not a OneSignal notification.", t);
-      }
-
-      return null;
-   }
-
-   private static String getNotificationIdFromFCMJsonPayload(JSONObject fcmJson) {
-      try {
-         JSONObject customJSON = new JSONObject(fcmJson.optString("custom"));
-         return customJSON.optString("i", null);
-      } catch(Throwable t) {}
-      return null;
-   }
-
    static boolean isAppActive() {
       return initDone && isInForeground();
    }
