@@ -268,7 +268,7 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static ConcurrentLinkedQueue<Runnable> OneSignal_taskQueueWaitingForInit() {
-      return OneSignal.getTaskController().getTaskQueueWaitingForInit();
+      return OneSignal.getTaskRemoteController().getTaskQueueWaitingForInit();
    }
 
    public static boolean OneSignal_requiresUserPrivacyConsent() {

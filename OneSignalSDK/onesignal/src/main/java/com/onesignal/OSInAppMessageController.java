@@ -37,10 +37,13 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         add("all");
     }};
 
-    OSTriggerController triggerController;
+    private final OSLogger logger;
+    private final OSTaskController taskController;
+
     private OSSystemConditionController systemConditionController;
     private OSInAppMessageRepository inAppMessageRepository;
-    private OSLogger logger;
+
+    OSTriggerController triggerController;
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
@@ -65,8 +68,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     final private ArrayList<OSInAppMessage> messageDisplayQueue;
     // IAMs displayed with last displayed time and quantity of displays data
     // This is retrieved from a DB Table that take care of each object to be unique
-    @NonNull
-    private List<OSInAppMessage> redisplayedInAppMessages = new ArrayList<>();
+    @Nullable
+    private List<OSInAppMessage> redisplayedInAppMessages = null;
 
     private OSInAppMessagePrompt currentPrompt = null;
     private boolean inAppMessagingEnabled = true;
@@ -84,7 +87,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
 
-    protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSLogger logger) {
+    protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSTaskController controller, OSLogger logger) {
+        taskController = controller;
         messages = new ArrayList<>();
         dismissedMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
@@ -142,12 +146,34 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         Runnable getCachedIAMRunnable =  new BackgroundRunnable() {
             @Override
             public void run() {
-                redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
-                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
+                super.run();
+
+                synchronized (LOCK) {
+                    redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Retrieved IAMs from DB redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
+                }
             }
         };
 
-        runRunnableOnThread(getCachedIAMRunnable, OS_IAM_DB_ACCESS);
+        taskController.addTaskToQueue(getCachedIAMRunnable);
+        taskController.startPendingTasks();
+    }
+
+    boolean shouldRunTaskThroughQueue() {
+        synchronized (LOCK) {
+            return redisplayedInAppMessages == null && taskController.shouldRunTaskThroughQueue();
+        }
+    }
+
+    void executeRedisplayIAMDataDependantTask(Runnable task) {
+        synchronized (LOCK) {
+            if (shouldRunTaskThroughQueue()) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying task due to redisplay data not retrieved yet");
+                taskController.addTaskToQueue(task);
+            } else {
+                task.run();
+            }
+        }
     }
 
     void resetSessionLaunchTime() {
@@ -190,15 +216,24 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * Called after the device is registered from UserStateSynchronizer
      * which is the REST call to create the player record on_session
      */
-    void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException {
+    void receivedInAppMessageJson(@NonNull final JSONArray json) throws JSONException {
         // Cache copy for quick cold starts
         OneSignalPrefs.saveString(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CACHED_IAMS,
                 json.toString());
 
-        resetRedisplayMessagesBySession();
-        processInAppMessageJson(json);
+        executeRedisplayIAMDataDependantTask(new Runnable() {
+            @Override
+            public void run() {
+                resetRedisplayMessagesBySession();
+                try {
+                    processInAppMessageJson(json);
+                } catch (JSONException e) {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR processing InAppMessageJson JSON Response.", e);
+                }
+            }
+        });
     }
 
     private void resetRedisplayMessagesBySession() {
@@ -225,6 +260,17 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     private void evaluateInAppMessages() {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting evaluateInAppMessages");
+
+        if (shouldRunTaskThroughQueue()) {
+            taskController.addTaskToQueue(new Runnable() {
+                @Override
+                public void run() {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying evaluateInAppMessages due to redisplay data not retrieved yet");
+                    evaluateInAppMessages();
+                }
+            });
+            return;
+        }
 
         for (OSInAppMessage message : messages) {
             // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
@@ -732,6 +778,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         Runnable saveIAMOnDBRunnable = new BackgroundRunnable() {
             @Override
             public void run() {
+                super.run();
+
                 inAppMessageRepository.saveInAppMessage(message);
             }
         };
@@ -892,6 +940,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         Runnable cleanCachedIAMRunnable = new BackgroundRunnable() {
             @Override
             public void run() {
+                super.run();
+
                 inAppMessageRepository.cleanCachedInAppMessages();
             }
         };
@@ -960,6 +1010,11 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
+    private void checkRedisplayMessagesAndEvaluate(Collection<String> newTriggersKeys) {
+        makeRedisplayMessagesAvailableWithTriggers(newTriggersKeys);
+        evaluateInAppMessages();
+    }
+
     /**
      * Trigger logic
      * <p>
@@ -967,18 +1022,36 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * re-evaluate messages to see if we should display/redisplay a message now that the trigger
      * conditions have changed.
      */
-    void addTriggers(@NonNull Map<String, Object> newTriggers) {
+    void addTriggers(@NonNull final Map<String, Object> newTriggers) {
         logger.debug("Triggers added: " + newTriggers.toString());
         triggerController.addTriggers(newTriggers);
-        makeRedisplayMessagesAvailableWithTriggers(newTriggers.keySet());
-        evaluateInAppMessages();
+
+        if (shouldRunTaskThroughQueue())
+            taskController.addTaskToQueue(new Runnable() {
+                @Override
+                public void run() {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying addTriggers due to redisplay data not retrieved yet");
+                    checkRedisplayMessagesAndEvaluate(newTriggers.keySet());
+                }
+            });
+        else
+            checkRedisplayMessagesAndEvaluate(newTriggers.keySet());
     }
 
-    void removeTriggersForKeys(Collection<String> keys) {
+    void removeTriggersForKeys(final Collection<String> keys) {
         logger.debug("Triggers key to remove: " + keys.toString());
         triggerController.removeTriggersForKeys(keys);
-        makeRedisplayMessagesAvailableWithTriggers(keys);
-        evaluateInAppMessages();
+
+        if (shouldRunTaskThroughQueue())
+            taskController.addTaskToQueue(new Runnable() {
+                @Override
+                public void run() {
+                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying removeTriggersForKeys due to redisplay data not retrieved yet");
+                    checkRedisplayMessagesAndEvaluate(keys);
+                }
+            });
+        else
+            checkRedisplayMessagesAndEvaluate(keys);
     }
 
     Map<String, Object> getTriggers() {

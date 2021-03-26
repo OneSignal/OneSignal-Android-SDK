@@ -418,10 +418,11 @@ public class OneSignal {
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance(), getLogger());
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger());
    }
    private static OSTime time = new OSTimeImpl();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
+   private static OSTaskController taskController = new OSTaskController(logger);
    private static OSTaskRemoteController taskRemoteController = new OSTaskRemoteController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
