@@ -422,7 +422,7 @@ public class OneSignal {
    }
    private static OSTime time = new OSTimeImpl();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
-   private static OSTaskController taskController = new OSTaskController(remoteParamController, logger);
+   private static OSTaskRemoteController taskRemoteController = new OSTaskRemoteController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
    private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger, time);
@@ -638,13 +638,13 @@ public class OneSignal {
     * @return the builder you called this method on
     */
    public static void unsubscribeWhenNotificationsAreDisabled(final boolean set) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED + " operation from pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.UNSUBSCRIBE_WHEN_NOTIFICATION_ARE_DISABLED + " operation from pending task queue.");
                unsubscribeWhenNotificationsAreDisabled(set);
             }
          });
@@ -817,7 +817,7 @@ public class OneSignal {
       outcomeEventsController.sendSavedOutcomes();
 
       // Clean up any pending tasks that were queued up before initialization
-      taskController.startPendingTasks();
+      taskRemoteController.startPendingTasks();
    }
 
    static void onRemoteParamSet() {
@@ -1274,13 +1274,13 @@ public class OneSignal {
 
       if (!initDone) {
          // Make sure remote param call has finish in order to know if privacyConsent is required
-         if (taskController.shouldQueueTaskForInit(OSTaskController.APP_LOST_FOCUS)) {
+         if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.APP_LOST_FOCUS)) {
             logger.error("Waiting for remote params. " +
-                    "Moving " + OSTaskController.APP_LOST_FOCUS + " operation to a pending task queue.");
-            taskController.addTaskToQueue(new Runnable() {
+                    "Moving " + OSTaskRemoteController.APP_LOST_FOCUS + " operation to a pending task queue.");
+            taskRemoteController.addTaskToQueue(new Runnable() {
                @Override
                public void run() {
-                  logger.debug("Running " + OSTaskController.APP_LOST_FOCUS + " operation from a pending task queue.");
+                  logger.debug("Running " + OSTaskRemoteController.APP_LOST_FOCUS + " operation from a pending task queue.");
                   backgroundSyncLogic();
                }
             });
@@ -1484,13 +1484,13 @@ public class OneSignal {
     * @param callback Fire onSuccess or onFailure depending if the update successes or fails
     */
    public static void setSMSNumber(@NonNull final String smsNumber, final String smsAuthHash, final OSSMSUpdateHandler callback) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_SMS_NUMBER)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_SMS_NUMBER)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SET_SMS_NUMBER + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SET_SMS_NUMBER + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SET_SMS_NUMBER + " operation from a pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.SET_SMS_NUMBER + " operation from a pending task queue.");
                setSMSNumber(smsNumber, smsAuthHash, callback);
             }
          });
@@ -1498,7 +1498,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_SMS_NUMBER))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_SMS_NUMBER))
          return;
 
       if (TextUtils.isEmpty(smsNumber)) {
@@ -1533,13 +1533,13 @@ public class OneSignal {
    }
 
    public static void logoutSMSNumber(@Nullable final OSSMSUpdateHandler callback) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.LOGOUT_SMS_NUMBER)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.LOGOUT_SMS_NUMBER)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.LOGOUT_SMS_NUMBER + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.LOGOUT_SMS_NUMBER + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running  " + OSTaskController.LOGOUT_SMS_NUMBER + " operation from pending task queue.");
+               logger.debug("Running  " + OSTaskRemoteController.LOGOUT_SMS_NUMBER + " operation from pending task queue.");
                logoutSMSNumber(callback);
             }
          });
@@ -1547,11 +1547,11 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.LOGOUT_SMS_NUMBER))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.LOGOUT_SMS_NUMBER))
          return;
 
       if (getSMSId() == null) {
-         final String message = OSTaskController.LOGOUT_SMS_NUMBER + " not valid as sms number was not set or already logged out!";
+         final String message = OSTaskRemoteController.LOGOUT_SMS_NUMBER + " not valid as sms number was not set or already logged out!";
          if (callback != null)
             callback.onFailure(new OSSMSUpdateError(SMSErrorType.INVALID_OPERATION, message));
          logger.error(message);
@@ -1585,20 +1585,20 @@ public class OneSignal {
     * @param callback Fire onSuccess or onFailure depending if the update successes or fails
     */
    public static void setEmail(@NonNull final String email, @Nullable final String emailAuthHash, @Nullable final EmailUpdateHandler callback) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_EMAIL)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_EMAIL)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SET_EMAIL + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SET_EMAIL + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SET_EMAIL + " operation from a pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.SET_EMAIL + " operation from a pending task queue.");
                setEmail(email, emailAuthHash, callback);
             }
          });
          return;
       }
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_EMAIL))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_EMAIL))
          return;
 
       if (!OSUtils.isValidEmail(email)) {
@@ -1639,13 +1639,13 @@ public class OneSignal {
    }
 
    public static void logoutEmail(@Nullable final EmailUpdateHandler callback) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.LOGOUT_EMAIL)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.LOGOUT_EMAIL)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.LOGOUT_EMAIL + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.LOGOUT_EMAIL + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running  " + OSTaskController.LOGOUT_EMAIL + " operation from pending task queue.");
+               logger.debug("Running  " + OSTaskRemoteController.LOGOUT_EMAIL + " operation from pending task queue.");
                logoutEmail(callback);
             }
          });
@@ -1653,7 +1653,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.LOGOUT_EMAIL))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.LOGOUT_EMAIL))
          return;
 
       if (getEmailId() == null) {
@@ -1681,13 +1681,13 @@ public class OneSignal {
    }
 
    public static void setExternalUserId(@NonNull final String externalId, @Nullable final String externalIdAuthHash, @Nullable final OSExternalUserIdUpdateCompletionHandler completionCallback) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_EXTERNAL_USER_ID)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_EXTERNAL_USER_ID)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SET_EXTERNAL_USER_ID + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SET_EXTERNAL_USER_ID + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SET_EXTERNAL_USER_ID + " operation from pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.SET_EXTERNAL_USER_ID + " operation from pending task queue.");
                setExternalUserId(externalId, externalIdAuthHash, completionCallback);
             }
          });
@@ -1753,13 +1753,13 @@ public class OneSignal {
     * @see OneSignal#deleteTags
     */
    public static void sendTag(final String key, final String value) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_TAG)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_TAG)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SEND_TAG + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SEND_TAG + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SEND_TAG + " operation from pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.SEND_TAG + " operation from pending task queue.");
                sendTag(key, value);
             }
          });
@@ -1767,7 +1767,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SEND_TAG))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SEND_TAG))
          return;
 
       try {
@@ -1813,13 +1813,13 @@ public class OneSignal {
     *
     */
    public static void sendTags(final JSONObject keyValues, final ChangeTagsUpdateHandler changeTagsUpdateHandler) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_TAGS)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_TAGS)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SEND_TAGS + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SEND_TAGS + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SEND_TAGS + " operation from pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.SEND_TAGS + " operation from pending task queue.");
                sendTags(keyValues, changeTagsUpdateHandler);
             }
          });
@@ -1827,7 +1827,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SEND_TAGS))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SEND_TAGS))
          return;
 
       Runnable sendTagsRunnable = new Runnable() {
@@ -1875,9 +1875,9 @@ public class OneSignal {
       };
 
       // If pendingTaskExecutor is running, there might be sendTags tasks running, use it to run sendTagsRunnable to keep order call
-      if (taskController.shouldRunTaskThroughQueue()) {
-         logger.debug("Sending " + OSTaskController.SEND_TAGS + " operation to pending task queue.");
-         taskController.addTaskToQueue(sendTagsRunnable);
+      if (taskRemoteController.shouldRunTaskThroughQueue()) {
+         logger.debug("Sending " + OSTaskRemoteController.SEND_TAGS + " operation to pending task queue.");
+         taskRemoteController.addTaskToQueue(sendTagsRunnable);
          return;
       }
 
@@ -1976,13 +1976,13 @@ public class OneSignal {
     *                       Calls {@link OSGetTagsHandler#tagsAvailable(JSONObject) tagsAvailable} once the tags are available
     */
    public static void getTags(final OSGetTagsHandler getTagsHandler) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.GET_TAGS)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.GET_TAGS)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.GET_TAGS + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.GET_TAGS + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.GET_TAGS + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.GET_TAGS + " operation from pending queue.");
                getTags(getTagsHandler);
             }
          });
@@ -1990,7 +1990,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.GET_TAGS))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.GET_TAGS))
          return;
 
       if (getTagsHandler == null) {
@@ -2303,14 +2303,14 @@ public class OneSignal {
     */
    static void handleNotificationOpen(final Activity context, final JSONArray data, final boolean fromAlert, @Nullable final String notificationId) {
       // Delay call until remote params are set
-      if (taskController.shouldQueueTaskForInit(OSTaskController.HANDLE_NOTIFICATION_OPEN)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
                if (appContext != null) {
-                  logger.debug("Running " + OSTaskController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
+                  logger.debug("Running " + OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
                   handleNotificationOpen(context, data, fromAlert, notificationId);
                }
             }
@@ -2612,13 +2612,13 @@ public class OneSignal {
     * @param disable whether to subscribe the user to notifications or not
     */
    public static void disablePush(final boolean disable) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_SUBSCRIPTION)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_SUBSCRIPTION)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SET_SUBSCRIPTION + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SET_SUBSCRIPTION + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SET_SUBSCRIPTION + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.SET_SUBSCRIPTION + " operation from pending queue.");
                disablePush(disable);
             }
          });
@@ -2626,7 +2626,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.SET_SUBSCRIPTION))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_SUBSCRIPTION))
          return;
 
       getCurrentSubscriptionState(appContext).setPushDisabled(disable);
@@ -2637,13 +2637,13 @@ public class OneSignal {
     * This method will be replaced by remote params set
     */
    public static void setLocationShared(final boolean enable) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SET_LOCATION_SHARED)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LOCATION_SHARED)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SET_LOCATION_SHARED + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SET_LOCATION_SHARED + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SET_LOCATION_SHARED + " operation from pending task queue.");
+               logger.debug("Running " + OSTaskRemoteController.SET_LOCATION_SHARED + " operation from pending task queue.");
                setLocationShared(enable);
             }
          });
@@ -2689,13 +2689,13 @@ public class OneSignal {
    }
 
    static void promptLocation(@Nullable final OSPromptActionCompletionCallback callback, final boolean fallbackToSettings) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.PROMPT_LOCATION)) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.PROMPT_LOCATION)) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.PROMPT_LOCATION + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.PROMPT_LOCATION + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.PROMPT_LOCATION + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.PROMPT_LOCATION + " operation from pending queue.");
                promptLocation(callback, fallbackToSettings);
             }
          });
@@ -2703,7 +2703,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.PROMPT_LOCATION))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.PROMPT_LOCATION))
          return;
 
       LocationController.LocationHandler locationHandler = new LocationController.LocationPromptCompletionHandler() {
@@ -2715,7 +2715,7 @@ public class OneSignal {
          @Override
          public void onComplete(LocationController.LocationPoint point) {
             //if applicable, check if the user provided privacy consent
-            if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.PROMPT_LOCATION))
+            if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.PROMPT_LOCATION))
                return;
 
             if (point != null)
@@ -2739,13 +2739,13 @@ public class OneSignal {
     * your app is restarted.
     */
    public static void clearOneSignalNotifications() {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.CLEAR_NOTIFICATIONS) || notificationDataController == null) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.CLEAR_NOTIFICATIONS) || notificationDataController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.CLEAR_NOTIFICATIONS + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.CLEAR_NOTIFICATIONS + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.CLEAR_NOTIFICATIONS + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.CLEAR_NOTIFICATIONS + " operation from pending queue.");
                clearOneSignalNotifications();
             }
          });
@@ -2762,13 +2762,13 @@ public class OneSignal {
     * @param id
     */
    public static void removeNotification(final int id) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.REMOVE_NOTIFICATION) || notificationDataController == null) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.REMOVE_NOTIFICATION) || notificationDataController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.REMOVE_NOTIFICATION + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.REMOVE_NOTIFICATION + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.REMOVE_NOTIFICATION + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.REMOVE_NOTIFICATION + " operation from pending queue.");
                removeNotification(id);
             }
          });
@@ -2776,20 +2776,20 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.REMOVE_NOTIFICATION))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.REMOVE_NOTIFICATION))
          return;
 
       notificationDataController.removeNotification(id, new WeakReference<>(appContext));
    }
 
    public static void removeGroupedNotifications(final String group) {
-      if (taskController.shouldQueueTaskForInit(OSTaskController.REMOVE_GROUPED_NOTIFICATIONS) || notificationDataController == null) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.REMOVE_GROUPED_NOTIFICATIONS) || notificationDataController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.REMOVE_GROUPED_NOTIFICATIONS + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.REMOVE_GROUPED_NOTIFICATIONS + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.REMOVE_GROUPED_NOTIFICATIONS + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.REMOVE_GROUPED_NOTIFICATIONS + " operation from pending queue.");
                removeGroupedNotifications(group);
             }
          });
@@ -2797,7 +2797,7 @@ public class OneSignal {
       }
 
       // If applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskController.REMOVE_GROUPED_NOTIFICATIONS))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.REMOVE_GROUPED_NOTIFICATIONS))
          return;
 
       notificationDataController.removeGroupedNotifications(group, new WeakReference<>(appContext));
@@ -3004,11 +3004,11 @@ public class OneSignal {
    public static void pauseInAppMessages(final boolean pause) {
       if (appContext == null) {
          logger.error("Waiting initWithContext. " +
-                 "Moving " + OSTaskController.PAUSE_IN_APP_MESSAGES + " operation to a pending task queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.PAUSE_IN_APP_MESSAGES + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.PAUSE_IN_APP_MESSAGES + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.PAUSE_IN_APP_MESSAGES + " operation from pending queue.");
                pauseInAppMessages(pause);
             }
          });
@@ -3198,8 +3198,8 @@ public class OneSignal {
       return OneSignalDbHelper.getInstance(appContext);
    }
 
-   static OSTaskController getTaskController() {
-      return taskController;
+   static OSTaskController getTaskRemoteController() {
+      return taskRemoteController;
    }
 
    static FocusTimeController getFocusTimeController() {
@@ -3237,13 +3237,13 @@ public class OneSignal {
       }
 
       // Outcomes needs app id, delay until init is not done
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_OUTCOME) || outcomeEventsController == null) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_OUTCOME) || outcomeEventsController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SEND_OUTCOME + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SEND_OUTCOME + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SEND_OUTCOME + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.SEND_OUTCOME + " operation from pending queue.");
                sendOutcome(name, callback);
             }
          });
@@ -3262,13 +3262,13 @@ public class OneSignal {
          return;
 
       // Outcomes needs app id, delay until init is not done
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_UNIQUE_OUTCOME) || outcomeEventsController == null) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_UNIQUE_OUTCOME) || outcomeEventsController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SEND_UNIQUE_OUTCOME + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SEND_UNIQUE_OUTCOME + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SEND_UNIQUE_OUTCOME + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.SEND_UNIQUE_OUTCOME + " operation from pending queue.");
                sendUniqueOutcome(name, callback);
             }
          });
@@ -3287,13 +3287,13 @@ public class OneSignal {
          return;
 
       // Outcomes needs app id, delay until init is not done
-      if (taskController.shouldQueueTaskForInit(OSTaskController.SEND_OUTCOME_WITH_VALUE) || outcomeEventsController == null) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_OUTCOME_WITH_VALUE) || outcomeEventsController == null) {
          logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskController.SEND_OUTCOME_WITH_VALUE + " operation to a pending queue.");
-         taskController.addTaskToQueue(new Runnable() {
+                 "Moving " + OSTaskRemoteController.SEND_OUTCOME_WITH_VALUE + " operation to a pending queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
             @Override
             public void run() {
-               logger.debug("Running " + OSTaskController.SEND_OUTCOME_WITH_VALUE + " operation from pending queue.");
+               logger.debug("Running " + OSTaskRemoteController.SEND_OUTCOME_WITH_VALUE + " operation from pending queue.");
                sendOutcomeWithValue(name, value, callback);
             }
          });
