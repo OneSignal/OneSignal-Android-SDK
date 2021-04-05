@@ -6,13 +6,14 @@ import android.app.Activity;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -63,7 +64,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @NonNull private Activity activity;
     @NonNull private OSInAppMessage message;
 
-    private String currentActivityName = null;
+    @Nullable private String currentActivityName = null;
     private Integer lastPageHeight = null;
 
     interface OneSignalGenericCallback {
@@ -303,6 +304,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         this.activity = activity;
         this.currentActivityName = activity.getLocalClassName();
 
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message activity available " +
+                "currentActivityName: " + currentActivityName + " lastActivityName: " + lastActivityName );
+
         if (lastActivityName == null)
             showMessageView(null);
         else if (!lastActivityName.equals(currentActivityName)) {
@@ -310,14 +314,18 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             if (messageView != null)
                 messageView.removeAllViews();
             showMessageView(lastPageHeight);
-        } else
+        } else {
+            // Activity rotated
             calculateHeightAndShowWebViewAfterNewActivity();
+        }
     }
 
     @Override
-    void stopped(Activity activity) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message activity stopped, cleaning views");
-        if (messageView != null && currentActivityName.equals(activity.getLocalClassName()))
+    void stopped(@NonNull Activity activity) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message activity stopped, cleaning views, " +
+                "currentActivityName: " + currentActivityName + "\nactivity: " + this.activity + "\nmessageView: " + messageView);
+
+        if (messageView != null && activity.getLocalClassName().equals(currentActivityName))
             messageView.removeAllViews();
     }
 
