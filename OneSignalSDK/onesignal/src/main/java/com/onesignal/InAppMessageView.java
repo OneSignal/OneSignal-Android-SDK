@@ -600,4 +600,20 @@ class InAppMessageView {
                 endColor,
                 animCallback);
     }
+
+    @Override
+    public String toString() {
+        return "InAppMessageView{" +
+                "currentActivity=" + currentActivity +
+                ", pageWidth=" + pageWidth +
+                ", pageHeight=" + pageHeight +
+                ", dismissDuration=" + dismissDuration +
+                ", hasBackground=" + hasBackground +
+                ", shouldDismissWhenActive=" + shouldDismissWhenActive +
+                ", isDragging=" + isDragging +
+                ", disableDragDismiss=" + disableDragDismiss +
+                ", displayLocation=" + displayLocation +
+                ", webView=" + webView +
+                '}';
+    }
 }

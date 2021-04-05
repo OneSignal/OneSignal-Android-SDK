@@ -660,7 +660,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             // Make sure no message is ever added to the queue more than once
             if (!messageDisplayQueue.contains(message)) {
                 messageDisplayQueue.add(message);
-                logger.debug("In app message with id, " + message.messageId + ", added to the queue");
+                logger.debug("In app message with id: " + message.messageId + ", added to the queue");
             }
 
             attemptToShowInAppMessage();
@@ -683,7 +683,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 return;
             }
 
-            logger.debug("In app message is currently showing or there are no IAMs left in the queue!");
+            logger.debug("In app message is currently showing or there are no IAMs left in the queue! isInAppMessageShowing: " + isInAppMessageShowing());
         }
     }
 
@@ -726,7 +726,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     void messageWasDismissedByBackPress(@NonNull OSInAppMessage message) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSInAppMessageController messageWasDismissed by back press: " + message.toString());
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message OSInAppMessageController messageWasDismissed by back press: " + message.toString());
         // IAM was not dismissed by user, will be redisplay again until user dismiss it
         dismissCurrentMessage(message);
     }
@@ -753,7 +753,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                     return;
                 } else {
                     String removedMessageId = messageDisplayQueue.remove(0).messageId;
-                    logger.debug("In app message with id, " + removedMessageId + ", dismissed (removed) from the queue!");
+                    logger.debug("In app message with id: " + removedMessageId + ", dismissed (removed) from the queue!");
                 }
             }
 
