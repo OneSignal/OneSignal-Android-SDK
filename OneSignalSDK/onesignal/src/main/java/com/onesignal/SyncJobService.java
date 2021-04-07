@@ -32,7 +32,8 @@ import android.app.job.JobService;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.os.Build;
-import android.support.annotation.RequiresApi;
+
+import androidx.annotation.RequiresApi;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class SyncJobService extends JobService {

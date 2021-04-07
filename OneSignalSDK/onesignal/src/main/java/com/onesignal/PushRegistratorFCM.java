@@ -32,7 +32,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.util.Base64;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;

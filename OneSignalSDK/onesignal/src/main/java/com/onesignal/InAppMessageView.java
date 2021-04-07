@@ -9,10 +9,6 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.widget.PopupWindowCompat;
-import android.support.v7.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +18,11 @@ import android.webkit.WebView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
+import androidx.core.widget.PopupWindowCompat;
 
 import static com.onesignal.OSViewUtils.dpToPx;
 
@@ -72,7 +73,8 @@ class InAppMessageView {
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
     private boolean isDragging = false;
-    @NonNull private WebViewManager.Position displayLocation;
+    @NonNull
+    private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
     private DraggableRelativeLayout draggableRelativeLayout;

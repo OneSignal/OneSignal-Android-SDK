@@ -1,9 +1,10 @@
 package com.onesignal;
 
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.influence.model.OSInfluence;
 
@@ -203,7 +204,8 @@ class FocusTimeController {
       protected abstract void sendTime(@NonNull FocusEventType focusType);
       protected abstract void saveInfluences(List<OSInfluence> influences);
 
-      @Nullable private Long unsentActiveTime = null;
+      @Nullable
+      private Long unsentActiveTime = null;
 
       private long getUnsentActiveTime() {
          if (unsentActiveTime == null) {

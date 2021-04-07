@@ -30,7 +30,8 @@ package com.onesignal;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 // HMS Core creates a notification with an Intent when opened to start this Activity.
 //   Intent is defined via OneSignal's backend and is sent to HMS.

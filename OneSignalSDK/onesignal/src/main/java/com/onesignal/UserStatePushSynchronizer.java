@@ -1,6 +1,6 @@
 package com.onesignal;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
@@ -77,7 +77,8 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
     }
 
     @Override
-    @Nullable String getExternalId(boolean fromServer) {
+    @Nullable
+    String getExternalId(boolean fromServer) {
         synchronized(LOCK) {
             return toSyncUserState.getSyncValues().optString("external_user_id", null);
         }

@@ -42,10 +42,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.huawei.hms.api.HuaweiApiAvailability;
@@ -229,7 +231,7 @@ class OSUtils {
    private static boolean hasWakefulBroadcastReceiver() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.content.WakefulBroadcastReceiver.class != null;
+         return WakefulBroadcastReceiver.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -238,7 +240,7 @@ class OSUtils {
    private static boolean hasNotificationManagerCompat() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.app.NotificationManagerCompat.class != null;
+         return NotificationManagerCompat.class != null;
       } catch (Throwable e) {
          return false;
       }
@@ -247,7 +249,7 @@ class OSUtils {
    private static boolean hasJobIntentService() {
       try {
          // noinspection ConstantConditions
-         return android.support.v4.app.JobIntentService.class != null;
+         return JobIntentService.class != null;
       } catch (Throwable e) {
          return false;
       }

@@ -44,12 +44,13 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.RequiresApi;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -685,7 +686,10 @@ class GenerateNotification {
          // We are re-using the notifBuilder from the normal notification so if a developer as an
          //    extender setup all the settings will carry over.
          // Note: However their buttons will not carry over as we need to be setup with this new summaryNotificationId.
-         summaryBuilder.mActions.clear();
+         try {
+            summaryBuilder.mActions.clear();
+         } catch (Exception ex) {
+         }
          addNotificationActionButtons(gcmBundle, summaryBuilder, summaryNotificationId, group);
 
          summaryBuilder.setContentIntent(summaryContentIntent)

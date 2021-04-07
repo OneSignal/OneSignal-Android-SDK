@@ -1,6 +1,7 @@
 package com.onesignal;
 
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 
@@ -40,7 +41,8 @@ class UserStateEmailSynchronizer extends UserStateSynchronizer {
 
     // Email external id not readable from SDK
     @Override
-    @Nullable String getExternalId(boolean fromServer) {
+    @Nullable
+    String getExternalId(boolean fromServer) {
         return null;
     }
 

@@ -38,8 +38,9 @@ import android.database.Cursor;
 import android.os.Build;
 import android.os.Process;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.WorkerThread;
 import android.text.TextUtils;
+
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 

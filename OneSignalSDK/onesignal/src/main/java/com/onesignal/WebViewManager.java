@@ -6,13 +6,14 @@ import android.app.Activity;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -55,12 +56,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    @Nullable private OSWebView webView;
+    @Nullable
+    private OSWebView webView;
     @Nullable private InAppMessageView messageView;
 
     @Nullable protected static WebViewManager lastInstance = null;
 
-    @NonNull private Activity activity;
+    @NonNull
+    private Activity activity;
     @NonNull private OSInAppMessage message;
 
     private String currentActivityName = null;
