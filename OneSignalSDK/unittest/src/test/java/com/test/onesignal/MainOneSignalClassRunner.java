@@ -315,6 +315,23 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testAndroidDoesNotGetAdId() throws Exception {
+      // 2. Init OneSignal so the app id is cached
+      OneSignalInit();
+      threadAndTaskWait();
+
+      // 3. Make sure device_type is Amazon (2) in player create
+      assertAndroidPlayerCreateAtIndex(1);
+
+      // 4. Assert Player Create does NOT have an ad_id
+      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
+      JsonAsserts.doesNotContainKeys(request.payload, new ArrayList<String>() {{ add("ad_id"); }});
+
+      // 5. Assert we did NOT try to get a Google Ad id
+      assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
+   }
+
+   @Test
    public void testDeviceTypeIsAmazon_forPlayerCreate() throws Exception {
       // 1. Mock Amazon device type for this test
       ShadowOSUtils.supportsADM = true;
