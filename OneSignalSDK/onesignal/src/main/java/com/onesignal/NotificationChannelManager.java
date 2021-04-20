@@ -34,6 +34,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -44,6 +45,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,6 +60,7 @@ class NotificationChannelManager {
 
    private static final String DEFAULT_CHANNEL_ID = "fcm_fallback_notification_channel";
    private static final String RESTORE_CHANNEL_ID = "restored_OS_notifications";
+   private static final String CHANNEL_PREFIX = "OS_";
    private static final Pattern hexPattern = Pattern.compile("^([A-Fa-f0-9]{8})$");
    
    static String createNotificationChannel(OSNotificationGenerationJob notificationJob) {
@@ -216,7 +219,7 @@ class NotificationChannelManager {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
          return;
 
-      if (list == null)
+      if (list == null || list.length() == 0)
          return;
 
       NotificationManager notificationManager = OneSignalNotificationManager.getNotificationManager(context);
@@ -230,13 +233,25 @@ class NotificationChannelManager {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Could not create notification channel due to JSON payload error!", e);
          }
       }
-      
+
+      if (syncedChannelSet.isEmpty())
+         return;
+
+      List<NotificationChannel> existingChannels = new ArrayList<>();
+
+      try {
+         existingChannels  = notificationManager.getNotificationChannels();
+      } catch (NullPointerException e) {
+         // Catch issue caused by "Attempt to invoke virtual method 'boolean android.app.NotificationChannel.isDeleted()' on a null object reference"
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1291
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error when trying to delete notification channel: " + e.getMessage());
+      }
+
       // Delete old channels - Payload will include all changes for the app. Any extra OS_ ones must
-      //                         have been deleted from the dashboard and should be removed.
-      List<NotificationChannel> existingChannels = notificationManager.getNotificationChannels();
-      for(NotificationChannel existingChannel : existingChannels) {
+      //                       have been deleted from the dashboard and should be removed.
+      for (NotificationChannel existingChannel : existingChannels) {
          String id = existingChannel.getId();
-         if (id.startsWith("OS_") && !syncedChannelSet.contains(id))
+         if (id.startsWith(CHANNEL_PREFIX) && !syncedChannelSet.contains(id))
             notificationManager.deleteNotificationChannel(id);
       }
    }
