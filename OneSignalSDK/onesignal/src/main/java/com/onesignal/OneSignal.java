@@ -2570,7 +2570,7 @@ public class OneSignal {
       return remoteParamController.isGMSMissingPromptDisable();
    }
 
-   static boolean isLocationShared() {
+   public static boolean isLocationShared() {
       return remoteParamController.isLocationShared();
    }
 
