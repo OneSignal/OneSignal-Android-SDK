@@ -35,6 +35,7 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
+import java.lang.ref.WeakReference;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -194,11 +195,11 @@ class OSSyncService extends OSBackgroundSync {
    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
    static class LollipopSyncRunnable extends SyncRunnable {
 
-      private JobService jobService;
+      private WeakReference<JobService> jobService;
       private JobParameters jobParameters;
 
-      LollipopSyncRunnable(JobService caller, JobParameters jobParameters) {
-         this.jobService = caller;
+      LollipopSyncRunnable(JobService service, JobParameters jobParameters) {
+         this.jobService = new WeakReference<>(service);
          this.jobParameters = jobParameters;
       }
 
@@ -208,7 +209,9 @@ class OSSyncService extends OSBackgroundSync {
          // Reschedule if needed
          boolean reschedule = OSSyncService.getInstance().needsJobReschedule;
          OSSyncService.getInstance().needsJobReschedule = false;
-         jobService.jobFinished(jobParameters, reschedule);
+
+         if (jobService.get() != null)
+            jobService.get().jobFinished(jobParameters, reschedule);
       }
    }
 
@@ -217,16 +220,17 @@ class OSSyncService extends OSBackgroundSync {
     * calls Service#stopSelf during stopSync()
     */
    static class LegacySyncRunnable extends SyncRunnable {
-      Service callerService;
+      private WeakReference<Service> callerService;
 
-      LegacySyncRunnable(Service caller) {
-         callerService = caller;
+      LegacySyncRunnable(Service service) {
+         callerService = new WeakReference<>(service);
       }
 
       @Override
       protected void stopSync() {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "LegacySyncRunnable:Stopped");
-         callerService.stopSelf();
+         if (callerService.get() != null)
+            callerService.get().stopSelf();
       }
    }
 }
