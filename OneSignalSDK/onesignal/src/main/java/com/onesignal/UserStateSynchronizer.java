@@ -221,7 +221,8 @@ abstract class UserStateSynchronizer {
     boolean persist() {
         if (toSyncUserState != null) {
             synchronized (LOCK) {
-                boolean unSynced = currentUserState.generateJsonDiff(toSyncUserState, isSessionCall()) != null;
+                // In case current state is being clean in background, save toSyncUserState for next player sync
+                boolean unSynced = getCurrentUserState().generateJsonDiff(toSyncUserState, isSessionCall()) != null;
                 toSyncUserState.persistState();
                 return unSynced;
             }
