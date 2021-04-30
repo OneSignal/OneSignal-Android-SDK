@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import androidx.annotation.NonNull;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -92,7 +94,7 @@ abstract class UserState {
         }
     }
 
-    public void setSyncValues(JSONObject syncValues) {
+    public void setSyncValues(@NonNull JSONObject syncValues) {
         synchronized (LOCK) {
             this.syncValues = syncValues;
         }
@@ -297,21 +299,20 @@ abstract class UserState {
 
         String syncValuesStr = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ + persistKey,null);
+
+        JSONObject syncValues = new JSONObject();
         try {
-            JSONObject syncValues;
             if (syncValuesStr == null) {
-                syncValues = new JSONObject();
-                String gtRegistrationId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
+                String registrationId = OneSignalPrefs.getString(OneSignalPrefs.PREFS_ONESIGNAL,
                         OneSignalPrefs.PREFS_GT_REGISTRATION_ID,null);
-                syncValues.put("identifier", gtRegistrationId);
+                syncValues.put("identifier", registrationId);
             } else {
                 syncValues = new JSONObject(syncValuesStr);
             }
-
-            setSyncValues(syncValues);
         } catch (JSONException e) {
             e.printStackTrace();
         }
+        setSyncValues(syncValues);
     }
 
     void persistState() {
