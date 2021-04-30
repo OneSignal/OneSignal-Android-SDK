@@ -1,8 +1,10 @@
 package com.onesignal;
 
 class UserStateEmail extends UserState {
+    private static final String EMAIL = "email";
+
     UserStateEmail(String inPersistKey, boolean load) {
-        super("email" + inPersistKey, load);
+        super(EMAIL + inPersistKey, load);
     }
 
     @Override
