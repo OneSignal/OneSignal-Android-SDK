@@ -1398,7 +1398,6 @@ public class OneSignal {
          public void run() {
             try {
                registerUserTask();
-               OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
             } catch(JSONException t) {
                Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
             }
@@ -2537,8 +2536,6 @@ public class OneSignal {
       }
 
       OneSignalStateSynchronizer.refreshSecondaryChannelState();
-
-      OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
    }
 
    static void updateEmailIdDependents(String emailId) {
