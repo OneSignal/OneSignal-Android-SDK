@@ -432,8 +432,6 @@ public class OneSignal {
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
    @Nullable private static OSNotificationDataController notificationDataController;
 
-   @Nullable private static AdvertisingIdentifierProvider adIdProvider;
-
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
    private static String lastRegistrationId;

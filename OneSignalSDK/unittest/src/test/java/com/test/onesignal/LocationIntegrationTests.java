@@ -18,7 +18,6 @@ import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.MockSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFusedLocationApiWrapper;
@@ -75,7 +74,6 @@ import static org.robolectric.Shadows.shadowOf;
                 ShadowOneSignalRestClient.class,
                 ShadowPushRegistratorFCM.class,
                 ShadowOSUtils.class,
-                ShadowAdvertisingIdProviderGPS.class,
                 ShadowCustomTabsClient.class,
                 ShadowCustomTabsSession.class,
                 ShadowHmsInstanceId.class,

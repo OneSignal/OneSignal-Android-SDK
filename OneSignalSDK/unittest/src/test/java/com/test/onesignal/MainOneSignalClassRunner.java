@@ -67,7 +67,6 @@ import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.PermissionsActivity;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
@@ -179,7 +178,6 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowPushRegistratorADM.class,
             ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
-            ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,
             ShadowCustomTabsSession.class,
             ShadowNotificationManagerCompat.class,
@@ -315,23 +313,6 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testAndroidDoesNotGetAdId() throws Exception {
-      // 2. Init OneSignal so the app id is cached
-      OneSignalInit();
-      threadAndTaskWait();
-
-      // 3. Make sure device_type is Amazon (2) in player create
-      assertAndroidPlayerCreateAtIndex(1);
-
-      // 4. Assert Player Create does NOT have an ad_id
-      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
-      JsonAsserts.doesNotContainKeys(request.payload, new ArrayList<String>() {{ add("ad_id"); }});
-
-      // 5. Assert we did NOT try to get a Google Ad id
-      assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
-   }
-
-   @Test
    public void testDeviceTypeIsAmazon_forPlayerCreate() throws Exception {
       // 1. Mock Amazon device type for this test
       ShadowOSUtils.supportsADM = true;
@@ -345,26 +326,6 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   public void testAmazonDoesNotGetAdId() throws Exception {
-      // 1. Mock Amazon device type for this test
-      ShadowOSUtils.supportsADM = true;
-
-      // 2. Init OneSignal so the app id is cached
-      OneSignalInit();
-      threadAndTaskWait();
-
-      // 3. Make sure device_type is Amazon (2) in player create
-      assertAmazonPlayerCreateAtIndex(1);
-
-      // 4. Assert Player Create does NOT have an ad_id
-      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
-      JsonAsserts.doesNotContainKeys(request.payload, new ArrayList<String>() {{ add("ad_id"); }});
-
-      // 5. Assert we did NOT try to get a Google Ad id
-      assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
-   }
-
-   @Test
    public void testDeviceTypeIsHuawei_forPlayerCreate() throws Exception {
       // 1. Mock Amazon device type for this test
       ShadowOSUtils.supportsHMS(true);
@@ -375,26 +336,6 @@ public class MainOneSignalClassRunner {
 
       // 3. Make sure device_type is Huawei (13) in player create
       assertHuaweiPlayerCreateAtIndex(1);
-   }
-
-   @Test
-   public void testHuaweiDoesNotGetAdId() throws Exception {
-      // 1. Mock Huawei device type for this test
-      ShadowOSUtils.supportsHMS(true);
-
-      // 2. Init OneSignal so the app id is cached
-      OneSignalInit();
-      threadAndTaskWait();
-
-      // 3. Make sure device_type is Huawei (13) in player create
-      assertHuaweiPlayerCreateAtIndex(1);
-
-      // 4. Assert Player Create does NOT have an ad_id
-      ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
-      JsonAsserts.doesNotContainKeys(request.payload, new ArrayList<String>() {{ add("ad_id"); }});
-
-      // 5. Assert we did NOT try to get a Google Ad id
-      assertFalse(ShadowAdvertisingIdProviderGPS.calledGetIdentifier);
    }
 
    @Test
@@ -3289,15 +3230,6 @@ public class MainOneSignalClassRunner {
    @Test
    public void testNotificationOpenedProcessorHandlesEmptyIntent() {
       NotificationOpenedProcessor_processFromContext(blankActivity, new Intent());
-   }
-
-   @Test
-   public void shouldOpenChromeTab() throws Exception {
-      OneSignalInit();
-      threadAndTaskWait();
-
-      assertTrue(ShadowCustomTabsClient.bindCustomTabsServiceCalled);
-      assertTrue(ShadowCustomTabsSession.lastURL.toString().contains("https://onesignal.com/android_frame.html?app_id=b4f7f966-d8cc-11e4-bed1-df8f05be55ba&user_id=a2f7f967-e8cc-11e4-bed1-118f05be4511&ad_id=11111111-2222-3333-4444-555555555555&cbs_id="));
    }
 
    @Test
