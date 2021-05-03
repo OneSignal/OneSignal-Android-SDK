@@ -26,7 +26,6 @@ import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.OSOutcomeEvent;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFCMBroadcastReceiver;
@@ -105,7 +104,6 @@ public class TestHelpers {
       ShadowPushRegistratorADM.resetStatics();
       ShadowHmsInstanceId.resetStatics();
       ShadowPushRegistratorHMS.resetStatics();
-      ShadowAdvertisingIdProviderGPS.resetStatics();
 
       ShadowNotificationManagerCompat.enabled = true;
 

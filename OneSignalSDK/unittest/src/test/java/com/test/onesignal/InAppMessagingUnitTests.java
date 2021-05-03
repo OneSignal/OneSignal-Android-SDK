@@ -13,7 +13,6 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowDynamicTimer;
@@ -62,7 +61,6 @@ import static junit.framework.Assert.assertTrue;
             ShadowOneSignalRestClient.class,
             ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
-            ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,
             ShadowCustomTabsSession.class,
             ShadowNotificationManagerCompat.class,

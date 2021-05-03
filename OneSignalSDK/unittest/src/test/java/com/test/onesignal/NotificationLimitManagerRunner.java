@@ -7,7 +7,6 @@ import androidx.core.app.NotificationManagerCompat;
 
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationLimitManager;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGenerateNotification;
@@ -41,7 +40,6 @@ import static junit.framework.Assert.assertEquals;
             ShadowNotificationLimitManager.class,
             ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
-            ShadowAdvertisingIdProviderGPS.class,
             ShadowOneSignalRestClient.class,
             ShadowCustomTabsClient.class,
             ShadowCustomTabsSession.class,

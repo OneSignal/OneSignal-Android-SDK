@@ -47,8 +47,7 @@ public class StaticResetHelper {
          }
          return false;
       }));
-      
-      classes.add(new ClassState(OneSignalChromeTabAndroidFrame.class, null));
+
       classes.add(new ClassState(OneSignalDbHelper.class, null));
       classes.add(new ClassState(LocationController.class, null));
       classes.add(new ClassState(OSInAppMessageController.class, null));

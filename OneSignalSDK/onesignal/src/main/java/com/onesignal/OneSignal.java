@@ -432,8 +432,6 @@ public class OneSignal {
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
    @Nullable private static OSNotificationDataController notificationDataController;
 
-   @Nullable private static AdvertisingIdentifierProvider adIdProvider;
-
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
    private static String lastRegistrationId;
@@ -1398,7 +1396,6 @@ public class OneSignal {
          public void run() {
             try {
                registerUserTask();
-               OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
             } catch(JSONException t) {
                Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
             }
@@ -2537,8 +2534,6 @@ public class OneSignal {
       }
 
       OneSignalStateSynchronizer.refreshSecondaryChannelState();
-
-      OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
    }
 
    static void updateEmailIdDependents(String emailId) {
