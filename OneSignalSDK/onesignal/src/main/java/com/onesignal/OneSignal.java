@@ -49,6 +49,9 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.language.LanguageContext;
+import com.onesignal.language.LanguageProviderAppDefined;
+import com.onesignal.language.LanguageProviderDevice;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -416,6 +419,8 @@ public class OneSignal {
    private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
+   private static LanguageContext languageContext = null;
+
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
    static boolean isInitDone() {
@@ -732,6 +737,9 @@ public class OneSignal {
 
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
+
+      // Set Language Context to null
+      languageContext = new LanguageContext();
 
       subscribableStatus = osUtils.initializationChecker(context, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
@@ -1567,6 +1575,11 @@ public class OneSignal {
          return;
       }
       emailLogout.run();
+   }
+
+   public static void setLanguage(@NonNull final String language) {
+      languageContext.setStrategy(new LanguageProviderAppDefined());
+      //Implement the network call to store the language setting for the user
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
