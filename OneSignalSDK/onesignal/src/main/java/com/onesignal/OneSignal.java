@@ -47,6 +47,9 @@ import androidx.core.app.NotificationCompat;
 
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.language.LanguageContext;
+import com.onesignal.language.LanguageProviderAppDefined;
+import com.onesignal.language.LanguageProviderDevice;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -367,6 +370,8 @@ public class OneSignal {
    private static String emailId = null;
    private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
+
+   private static LanguageContext languageContext = null;
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
@@ -762,6 +767,9 @@ public class OneSignal {
             makeAndroidParamsRequest(lastAppId, getUserId(), false);
          return;
       }
+
+      // Set Language Context to null
+      languageContext = new LanguageContext();
 
       // Keep last subscribed Status if already set
       subscribableStatus = subscribableStatus != Integer.MAX_VALUE ? subscribableStatus : osUtils.initializationChecker(appContext, appId);
@@ -1651,6 +1659,11 @@ public class OneSignal {
 
       emailLogoutHandler = callback;
       OneSignalStateSynchronizer.logoutEmail();
+   }
+
+   public static void setLanguage(@NonNull final String language) {
+      languageContext.setStrategy(new LanguageProviderAppDefined());
+      //Implement the network call to store the language setting for the user
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
