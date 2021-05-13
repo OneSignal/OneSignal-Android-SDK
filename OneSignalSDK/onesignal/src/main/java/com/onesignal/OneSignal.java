@@ -2616,6 +2616,31 @@ public class OneSignal {
       OneSignalStateSynchronizer.setSubscription(!disable);
    }
 
+
+   /**
+    * This method will be replaced by remote params set
+    */
+   public static void setDisableGMSMissingPrompt(final boolean promptDisable) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_DISABLE_GMS_MISSING_PROMPT)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskRemoteController.SET_DISABLE_GMS_MISSING_PROMPT + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskRemoteController.SET_DISABLE_GMS_MISSING_PROMPT + " operation from pending task queue.");
+               setDisableGMSMissingPrompt(promptDisable);
+            }
+         });
+         return;
+      }
+
+      // Already set by remote params
+      if (getRemoteParamController().hasDisableGMSMissingPromptKey())
+         return;
+
+      getRemoteParamController().saveGMSMissingPromptDisable(promptDisable);
+   }
+
    /**
     * This method will be replaced by remote params set
     */

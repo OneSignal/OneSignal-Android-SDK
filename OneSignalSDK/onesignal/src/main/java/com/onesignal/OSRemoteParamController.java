@@ -47,7 +47,8 @@ class OSRemoteParamController {
         logger.debug("OneSignal saveInfluenceParams: " + remoteParams.influenceParams.toString());
         trackerFactory.saveInfluenceParams(remoteParams.influenceParams);
 
-        saveGMSMissingPromptDisable(remoteParams.disableGMSMissingPrompt);
+        if (remoteParams.disableGMSMissingPrompt != null)
+            saveGMSMissingPromptDisable(remoteParams.disableGMSMissingPrompt);
         if (remoteParams.unsubscribeWhenNotificationsDisabled != null)
             saveUnsubscribeWhenNotificationsAreDisabled(remoteParams.unsubscribeWhenNotificationsDisabled);
         if (remoteParams.locationShared != null)
@@ -62,6 +63,10 @@ class OSRemoteParamController {
 
     OneSignalRemoteParams.Params getRemoteParams() {
         return remoteParams;
+    }
+
+    boolean hasDisableGMSMissingPromptKey() {
+        return remoteParams != null && remoteParams.disableGMSMissingPrompt != null;
     }
 
     boolean hasLocationKey() {
