@@ -13,6 +13,7 @@ class OSTaskRemoteController extends OSTaskController {
     static final String LOGOUT_EMAIL = "logoutEmail()";
     static final String SYNC_HASHED_EMAIL = "syncHashedEmail()";
     static final String SET_EXTERNAL_USER_ID = "setExternalUserId()";
+    static final String SET_LANGUAGE = "setLanguage()";
     static final String SET_SUBSCRIPTION = "setSubscription()";
     static final String PROMPT_LOCATION = "promptLocation()";
     static final String IDS_AVAILABLE = "idsAvailable()";
@@ -39,6 +40,7 @@ class OSTaskRemoteController extends OSTaskController {
             LOGOUT_EMAIL,
             SYNC_HASHED_EMAIL,
             SET_EXTERNAL_USER_ID,
+            SET_LANGUAGE,
             SET_SUBSCRIPTION,
             PROMPT_LOCATION,
             IDS_AVAILABLE,

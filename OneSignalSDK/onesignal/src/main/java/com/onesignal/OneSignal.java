@@ -49,7 +49,6 @@ import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.language.LanguageContext;
 import com.onesignal.language.LanguageProviderAppDefined;
-import com.onesignal.language.LanguageProviderDevice;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -1422,7 +1421,7 @@ public class OneSignal {
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
       deviceInfo.put("timezone_id", getTimeZoneId());
-      deviceInfo.put("language", OSUtils.getCorrectedLanguage());
+      deviceInfo.put("language", languageContext.getLanguage());
       deviceInfo.put("sdk", VERSION);
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
@@ -1662,8 +1661,40 @@ public class OneSignal {
    }
 
    public static void setLanguage(@NonNull final String language) {
-      languageContext.setStrategy(new LanguageProviderAppDefined());
-      //Implement the network call to store the language setting for the user
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LANGUAGE)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskRemoteController.SET_LANGUAGE + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskRemoteController.SET_LANGUAGE + " operation from pending task queue.");
+               setLanguage(language);
+            }
+         });
+         return;
+      }
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
+         return;
+
+      if (language == null) {
+         logger.warning("Language can't be null");
+         return;
+      }
+
+      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined();
+      languageProviderAppDefined.setLanguage(language);
+      languageContext.setStrategy(languageProviderAppDefined);
+
+      try {
+         JSONObject deviceInfo = new JSONObject();
+         deviceInfo.put("language", languageContext.getLanguage());
+         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+      } catch (JSONException exception) {
+         String operation = language.equals("") ? "remove" : "set";
+         logger.error("Attempted to " + operation + " external ID but encountered a JSON exception");
+         exception.printStackTrace();
+      }
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
