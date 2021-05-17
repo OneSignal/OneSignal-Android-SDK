@@ -2948,6 +2948,43 @@ public class MainOneSignalClassRunner {
       assertEquals(60, postEmail.payload.getInt("active_time"));
    }
 
+   @Test
+   public void testSetLanguageOnPlayerCreate() throws Exception {
+      OneSignalInit();
+      OneSignal.setLanguage("fr");
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(1);
+
+      assertEquals("fr", lastRequest.payload.getString("language"));
+   }
+
+   @Test
+   public void testSetLanguagePUTRequest() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+      OneSignal.setLanguage("fr");
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(2);
+      assertEquals("fr", lastRequest.payload.getString("language"));
+   }
+
+   @Test
+   public void testSetLanguageOnSession() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      restartAppAndElapseTimeToNextSession(time);
+
+      OneSignalInit();
+      OneSignal.setLanguage("fr");
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(3);
+      assertEquals("fr", lastRequest.payload.getString("language"));
+   }
+
    /**
     * Similar workflow to testLocationPermissionPromptWithPrivacyConsent()
     * We want to provide consent but make sure that session time tracking works properly
