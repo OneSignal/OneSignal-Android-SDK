@@ -74,7 +74,6 @@ public class ShadowPushRegistratorFCM {
     @Implementation
     public void internalRegisterForPush(String senderId) {}
 
-
     public static void fireLastCallback() {
         lastCallback.complete(fail ? null : regId, fail ? -7 : 1);
     }

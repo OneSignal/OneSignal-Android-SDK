@@ -28,7 +28,10 @@ class GooglePlayServicesUpgradePrompt {
    }
 
    static void showUpdateGPSDialog() {
-      if (!OSUtils.isAndroidDeviceType() || !isGooglePlayStoreInstalled())
+      if (!OSUtils.isAndroidDeviceType())
+         return;
+
+      if (!isGooglePlayStoreInstalled() || OneSignal.getDisableGMSMissingPrompt())
          return;
 
       boolean userSelectedSkip =
@@ -44,7 +47,7 @@ class GooglePlayServicesUpgradePrompt {
          @Override
          public void run() {
             final Activity activity = OneSignal.getCurrentActivity();
-            if (activity == null || OneSignal.getDisableGMSMissingPrompt())
+            if (activity == null)
                return;
 
             // Load resource strings so a developer can customize this dialog
