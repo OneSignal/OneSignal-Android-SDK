@@ -62,7 +62,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -438,24 +437,6 @@ class OSUtils {
       if (bodyResId != 0)
          return resources.getString(bodyResId);
       return defaultStr;
-   }
-
-   static String getCorrectedLanguage() {
-      String lang = Locale.getDefault().getLanguage();
-
-      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/64
-      if (lang.equals("iw"))
-         return "he";
-      if (lang.equals("in"))
-         return "id";
-      if (lang.equals("ji"))
-         return "yi";
-
-      // https://github.com/OneSignal/OneSignal-Android-SDK/issues/98
-      if (lang.equals("zh"))
-         return lang + "-" + Locale.getDefault().getCountry();
-
-      return lang;
    }
 
    static boolean isValidEmail(String email) {
