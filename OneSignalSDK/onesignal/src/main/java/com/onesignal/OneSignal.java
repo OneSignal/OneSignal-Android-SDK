@@ -768,7 +768,7 @@ public class OneSignal {
       }
 
       // Set Language Context to null
-      languageContext = new LanguageContext();
+      languageContext = new LanguageContext(preferences);
 
       // Keep last subscribed Status if already set
       subscribableStatus = subscribableStatus != Integer.MAX_VALUE ? subscribableStatus : osUtils.initializationChecker(appContext, appId);
@@ -1682,7 +1682,7 @@ public class OneSignal {
          return;
       }
 
-      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined();
+      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
       languageProviderAppDefined.setLanguage(language);
       languageContext.setStrategy(languageProviderAppDefined);
 
