@@ -2616,6 +2616,18 @@ public class OneSignal {
       OneSignalStateSynchronizer.setSubscription(!disable);
    }
 
+
+   /**
+    * This method will be replaced by remote params set
+    */
+   public static void disableGMSMissingPrompt(final boolean promptDisable) {
+      // Already set by remote params
+      if (getRemoteParamController().hasDisableGMSMissingPromptKey())
+         return;
+
+      getRemoteParamController().saveGMSMissingPromptDisable(promptDisable);
+   }
+
    /**
     * This method will be replaced by remote params set
     */
