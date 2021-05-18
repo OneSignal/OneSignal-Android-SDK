@@ -285,7 +285,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     private @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
-        String languageIdentifier = OSUtils.getCorrectedLanguage();
+        String languageIdentifier = OneSignal.languageContext.getLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
             if (!message.variants.containsKey(variant))
