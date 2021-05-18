@@ -1,6 +1,5 @@
 package com.onesignal.language;
-import com.onesignal.OSUtils;
-import com.onesignal.OneSignalPrefs;
+import com.onesignal.OneSignal;
 import static com.onesignal.language.LanguageProviderAppDefined.PREFS_OS_LANGUAGE;
 
 /*
@@ -11,8 +10,8 @@ public class LanguageContext {
     private LanguageProvider strategy;
 
     public LanguageContext() {
-        if ( OneSignalPrefs.getString(
-                OneSignalPrefs.PREFS_ONESIGNAL, PREFS_OS_LANGUAGE, null) != null) {
+        if ( OneSignal.preferences.getString(
+                OneSignal.preferences.getPreferencesName(), PREFS_OS_LANGUAGE, null) != null) {
             this.strategy = new LanguageProviderAppDefined();
         }
         else {

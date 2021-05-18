@@ -419,7 +419,7 @@ public class OneSignal {
    private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
-   private static LanguageContext languageContext = null;
+   public static LanguageContext languageContext = null;
 
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
