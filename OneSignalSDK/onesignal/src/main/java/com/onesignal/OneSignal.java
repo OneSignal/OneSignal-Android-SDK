@@ -465,7 +465,7 @@ public class OneSignal {
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance());
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), languageContext);
    }
    private static OSLogger logger = new OSLogWrapper();
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
