@@ -739,7 +739,7 @@ public class OneSignal {
          mGoogleProjectNumber = googleProjectNumber;
 
       // Set Language Context to null
-      languageContext = new LanguageContext();
+      languageContext = new LanguageContext(preferences);
 
       subscribableStatus = osUtils.initializationChecker(context, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
@@ -1608,7 +1608,7 @@ public class OneSignal {
          return;
       }
 
-      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined();
+      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
       languageProviderAppDefined.setLanguage(language);
       languageContext.setStrategy(languageProviderAppDefined);
    }

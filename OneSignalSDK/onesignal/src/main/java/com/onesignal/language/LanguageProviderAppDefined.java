@@ -1,18 +1,23 @@
 package com.onesignal.language;
-import com.onesignal.OneSignal;
+import com.onesignal.OSSharedPreferences;
 
 public class LanguageProviderAppDefined implements LanguageProvider{
     public static final String PREFS_OS_LANGUAGE = "PREFS_OS_LANGUAGE";
+    private OSSharedPreferences preferences;
+
+    public LanguageProviderAppDefined(OSSharedPreferences preferences) {
+        this.preferences = preferences;
+    }
 
     public void setLanguage(String language) {
-        OneSignal.preferences.saveString(
-                OneSignal.preferences.getPreferencesName(),
+        preferences.saveString(
+                preferences.getPreferencesName(),
                 PREFS_OS_LANGUAGE,
                 language);
     }
 
     public String getLanguage() {
-        return OneSignal.preferences.getString(
-                OneSignal.preferences.getPreferencesName(), PREFS_OS_LANGUAGE, "en");
+        return preferences.getString(
+                preferences.getPreferencesName(), PREFS_OS_LANGUAGE, "en");
     }
 }
