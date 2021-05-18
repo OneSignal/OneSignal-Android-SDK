@@ -209,8 +209,8 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private static @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
-        String languageIdentifier = OSUtils.getCorrectedLanguage();
+    private @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
+        String languageIdentifier = OneSignal.languageContext.getLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
             if (!message.variants.containsKey(variant))
