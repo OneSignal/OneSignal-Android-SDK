@@ -422,7 +422,7 @@ public class OneSignal {
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger());
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger(), languageContext);
    }
    private static OSTime time = new OSTimeImpl();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
