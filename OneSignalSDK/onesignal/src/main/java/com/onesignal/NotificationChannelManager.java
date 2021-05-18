@@ -118,9 +118,9 @@ class NotificationChannelManager {
       JSONObject payloadWithText = channelPayload;
       if (channelPayload.has("langs")) {
          JSONObject langList = channelPayload.getJSONObject("langs");
-         String deviceLanguage = OneSignal.languageContext.getLanguage();
-         if (langList.has(deviceLanguage))
-            payloadWithText = langList.optJSONObject(deviceLanguage);
+         String language = LanguageContext.getInstance().getLanguage();
+         if (langList.has(language))
+            payloadWithText = langList.optJSONObject(language);
       }
       
       String channel_name = payloadWithText.optString("nm", "Miscellaneous");
