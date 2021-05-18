@@ -370,7 +370,7 @@ public class OneSignal {
    private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
 
-   private static LanguageContext languageContext = null;
+   public static LanguageContext languageContext = null;
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
@@ -429,7 +429,7 @@ public class OneSignal {
    private static OSTaskController taskController = new OSTaskController(logger);
    private static OSTaskRemoteController taskRemoteController = new OSTaskRemoteController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
-   private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
+   public static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
    private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger, time);
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
