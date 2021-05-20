@@ -402,13 +402,31 @@ class OSUtils {
       }
    }
 
-   static String getManifestMeta(Context context, String metaName) {
+   static Bundle getManifestMetaBundle(Context context) {
+
+      ApplicationInfo ai = null;
       try {
-         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         Bundle bundle = ai.metaData;
+         ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+      } catch (PackageManager.NameNotFoundException e) {
+         Log(OneSignal.LOG_LEVEL.ERROR, "Manifest application info not found", e);
+      }
+
+      return null;
+   }
+
+   static boolean getManifestMetaBoolean(Context context, String metaName) {
+      Bundle bundle = getManifestMetaBundle(context);
+      if (bundle != null) {
+         return bundle.getBoolean(metaName);
+      }
+
+      return false;
+   }
+
+   static String getManifestMeta(Context context, String metaName) {
+      Bundle bundle = getManifestMetaBundle(context);
+      if (bundle != null) {
          return bundle.getString(metaName);
-      } catch (Throwable t) {
-         Log(OneSignal.LOG_LEVEL.ERROR, "", t);
       }
 
       return null;

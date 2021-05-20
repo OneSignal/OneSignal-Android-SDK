@@ -2141,7 +2141,7 @@ public class OneSignal {
       int jsonArraySize = dataArray.length();
 
       boolean urlOpened = false;
-      boolean launchUrlSuppress = "true".equals(OSUtils.getManifestMeta(context, "com.onesignal.suppressLaunchURLs"));
+      boolean launchUrlSuppress = OSUtils.getManifestMetaBoolean(context, "com.onesignal.suppressLaunchURLs");
 
       for (int i = 0; i < jsonArraySize; i++) {
          try {
