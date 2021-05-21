@@ -33,17 +33,22 @@ import android.content.pm.PackageManager;
 import android.util.Base64;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.WorkerThread;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.FirebaseInstanceIdService;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+
 // TODO: 4.0.0 - Switch to using <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
 // Note: Starting with Firebase Messaging 17.1.0 onNewToken in FirebaseMessagingService should be
 //   used instead.
-
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
    // project_info.project_id
@@ -88,8 +93,9 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       return "FCM";
    }
 
+   @WorkerThread
    @Override
-   String getToken(String senderId) throws Throwable {
+   String getToken(String senderId) throws ExecutionException, InterruptedException, IOException {
       initFirebaseApp(senderId);
 
       try {
@@ -106,6 +112,7 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       return getTokenWithClassFirebaseInstanceId(senderId);
    }
 
+   @WorkerThread
    private String getTokenWithClassFirebaseInstanceId(String senderId) throws IOException {
       FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance(firebaseApp);
       return instanceId.getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE);
