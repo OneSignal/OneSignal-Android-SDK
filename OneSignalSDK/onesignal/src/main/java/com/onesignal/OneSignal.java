@@ -767,9 +767,6 @@ public class OneSignal {
          return;
       }
 
-      // Set Language Context to null
-      languageContext = new LanguageContext(preferences);
-
       // Keep last subscribed Status if already set
       subscribableStatus = subscribableStatus != Integer.MAX_VALUE ? subscribableStatus : osUtils.initializationChecker(appContext, appId);
       if (isSubscriptionStatusUninitializable())
@@ -830,6 +827,9 @@ public class OneSignal {
 
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
+         // Set Language Context to null
+         languageContext = new LanguageContext(preferences);
+
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
@@ -1677,11 +1677,6 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
          return;
 
-      if (language == null) {
-         logger.warning("Language can't be null");
-         return;
-      }
-
       LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
       languageProviderAppDefined.setLanguage(language);
       languageContext.setStrategy(languageProviderAppDefined);
@@ -1691,8 +1686,6 @@ public class OneSignal {
          deviceInfo.put("language", languageContext.getLanguage());
          OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
       } catch (JSONException exception) {
-         String operation = language.equals("") ? "remove" : "set";
-         logger.error("Attempted to " + operation + " external ID but encountered a JSON exception");
          exception.printStackTrace();
       }
    }
