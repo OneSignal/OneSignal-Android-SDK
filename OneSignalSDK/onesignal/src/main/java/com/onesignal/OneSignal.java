@@ -791,6 +791,8 @@ public class OneSignal {
       initDone = true;
 
       outcomeEventsController.sendSavedOutcomes();
+      // Set Language Context to null
+      languageContext = new LanguageContext(preferences);
 
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
@@ -1586,8 +1588,6 @@ public class OneSignal {
                deviceInfo.put("language", languageContext.getLanguage());
                OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
             } catch (JSONException exception) {
-               String operation = language.equals("") ? "remove" : "set";
-               logger.error("Attempted to " + operation + " external ID but encountered a JSON exception");
                exception.printStackTrace();
             }
          }
@@ -1602,11 +1602,6 @@ public class OneSignal {
 
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
          return;
-
-      if (language == null) {
-         logger.warning("Language can't be null");
-         return;
-      }
 
       LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
       languageProviderAppDefined.setLanguage(language);
