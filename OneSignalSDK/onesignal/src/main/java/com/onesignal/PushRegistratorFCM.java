@@ -30,11 +30,17 @@ package com.onesignal;
 import android.util.Base64;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.messaging.FirebaseMessaging;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
@@ -54,8 +60,9 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       return "FCM";
    }
 
+   @WorkerThread
    @Override
-   String getToken(String senderId) throws Throwable {
+   String getToken(String senderId) throws ExecutionException, InterruptedException, IOException {
       initFirebaseApp(senderId);
 
       try {
@@ -72,6 +79,7 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       return getTokenWithClassFirebaseInstanceId(senderId);
    }
 
+   @WorkerThread
    private String getTokenWithClassFirebaseInstanceId(String senderId) throws IOException {
       FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance(firebaseApp);
       return instanceId.getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE);
