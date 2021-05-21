@@ -1,7 +1,7 @@
 package com.onesignal.language;
 import com.onesignal.OSSharedPreferences;
 
-public class LanguageProviderAppDefined implements LanguageProvider{
+public class LanguageProviderAppDefined implements LanguageProvider {
     public static final String PREFS_OS_LANGUAGE = "PREFS_OS_LANGUAGE";
     private OSSharedPreferences preferences;
 
