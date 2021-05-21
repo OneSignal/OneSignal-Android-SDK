@@ -3,8 +3,8 @@ package com.test.onesignal;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Intent;
-import android.support.annotation.NonNull;
 
+import androidx.annotation.NonNull;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.NotificationOpenedActivityHMS;
