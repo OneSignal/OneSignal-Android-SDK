@@ -96,6 +96,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Field;
@@ -153,6 +154,7 @@ import static org.robolectric.Shadows.shadowOf;
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class GenerateNotificationRunner {
 
    private static int callbackCounter = 0;

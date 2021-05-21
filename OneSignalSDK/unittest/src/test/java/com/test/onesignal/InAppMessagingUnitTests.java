@@ -36,6 +36,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.ArrayList;
@@ -70,6 +71,7 @@ import static junit.framework.Assert.assertTrue;
         sdk = 26
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class InAppMessagingUnitTests {
 
     private static final String IAM_CLICK_ID = "button_id_123";

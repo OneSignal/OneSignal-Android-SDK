@@ -109,6 +109,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
@@ -188,6 +189,7 @@ import static org.robolectric.Shadows.shadowOf;
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 // Enable to ensure test order to consistency debug flaky test.
 // @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MainOneSignalClassRunner {

@@ -31,6 +31,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
@@ -63,6 +64,7 @@ import static org.robolectric.Shadows.shadowOf;
     sdk = 26
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     private static final String TEST_ACTION_ID = "myTestActionId";
