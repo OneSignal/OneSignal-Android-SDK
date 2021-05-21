@@ -16,7 +16,7 @@ public class LanguageContext {
 
     public LanguageContext(OSSharedPreferences preferences) {
         instance = this;
-        if ( preferences.getString(
+        if (preferences.getString(
                 preferences.getPreferencesName(), PREFS_OS_LANGUAGE, null) != null) {
             this.strategy = new LanguageProviderAppDefined(preferences);
         }

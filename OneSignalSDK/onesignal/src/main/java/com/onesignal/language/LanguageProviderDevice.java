@@ -2,7 +2,7 @@ package com.onesignal.language;
 
 import java.util.Locale;
 
-public class LanguageProviderDevice implements LanguageProvider{
+public class LanguageProviderDevice implements LanguageProvider {
     public String getLanguage() {
         String lang = Locale.getDefault().getLanguage();
 
