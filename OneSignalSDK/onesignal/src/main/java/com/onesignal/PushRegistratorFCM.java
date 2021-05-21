@@ -57,6 +57,10 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    @Override
    String getToken(String senderId) throws Throwable {
       initFirebaseApp(senderId);
+      return getTokenWithClassFirebaseInstanceId(senderId);
+   }
+
+   private String getTokenWithClassFirebaseInstanceId(String senderId) throws IOException {
       FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance(firebaseApp);
       return instanceId.getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE);
    }
