@@ -4,7 +4,7 @@ buildscript {
 
     ext {
         buildVersions = [
-                compileSdkVersion: 28,
+                compileSdkVersion: 29,
                 targetSdkVersion: 28
         ]
         androidGradlePluginVersion = '3.6.2'
