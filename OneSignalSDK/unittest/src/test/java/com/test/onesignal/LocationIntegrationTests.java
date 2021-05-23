@@ -233,7 +233,6 @@ public class LocationIntegrationTests {
         assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
 
         assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-        assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
 
         // Testing loc_bg
         blankActivityController.pause();
@@ -249,7 +248,6 @@ public class LocationIntegrationTests {
         assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
         assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
         assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-        assertEquals("11111111-2222-3333-4444-555555555555", ShadowOneSignalRestClient.lastPost.opt("ad_id"));
     }
 
     @Test
@@ -449,8 +447,6 @@ public class LocationIntegrationTests {
         assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
 
         assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-        // Currently not getting ad_id for HMS devices
-        assertNull(ShadowOneSignalRestClient.lastPost.opt("ad_id"));
 
         // Testing loc_bg
         blankActivityController.pause();
@@ -467,8 +463,6 @@ public class LocationIntegrationTests {
         assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
         assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
         assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-        // Currently not getting ad_id for HMS devices
-        assertNull(ShadowOneSignalRestClient.lastPost.opt("ad_id"));
     }
 
     @Test
