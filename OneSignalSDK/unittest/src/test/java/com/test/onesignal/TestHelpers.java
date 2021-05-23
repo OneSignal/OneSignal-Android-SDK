@@ -73,6 +73,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.JSONUtils;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_OSTaskController_ShutdownNow;
 import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -136,6 +137,7 @@ public class TestHelpers {
 
    public static void afterTestCleanup() throws Exception {
       try {
+         OneSignal_OSTaskController_ShutdownNow();
          stopAllOSThreads();
       } catch (Exception e) {
          e.printStackTrace();
