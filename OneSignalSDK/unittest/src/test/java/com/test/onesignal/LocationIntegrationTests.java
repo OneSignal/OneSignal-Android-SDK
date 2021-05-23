@@ -48,9 +48,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadows.ShadowApplication;
+import org.robolectric.annotation.LooperMode;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Method;
@@ -81,6 +83,7 @@ import static org.robolectric.Shadows.shadowOf;
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class LocationIntegrationTests {
 
     private static final String ONESIGNAL_APP_ID = "b4f7f966-d8cc-11e4-bed1-df8f05be55ba";
@@ -146,7 +149,7 @@ public class LocationIntegrationTests {
     @Test
     @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
     public void shouldUpdateAllLocationFieldsWhenTimeStampChanges() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
         OneSignalInit();
         threadAndTaskWait();
         assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
@@ -195,7 +198,7 @@ public class LocationIntegrationTests {
             ShadowFusedLocationApiWrapper.class },
             sdk = 19)
     public void testLocationSchedule() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_FINE_LOCATION");
         ShadowFusedLocationApiWrapper.lat = 1.0d;
         ShadowFusedLocationApiWrapper.log = 2.0d;
         ShadowFusedLocationApiWrapper.accuracy = 3.0f;
@@ -256,7 +259,7 @@ public class LocationIntegrationTests {
             ShadowFusedLocationApiWrapper.class },
             sdk = 19)
     public void testLocationFromSyncAlarm() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         ShadowFusedLocationApiWrapper.lat = 1.1d;
         ShadowFusedLocationApiWrapper.log = 2.1d;
@@ -301,7 +304,7 @@ public class LocationIntegrationTests {
     @Test
     @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
     public void shouldSendLocationToEmailRecord() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         OneSignalInit();
         OneSignal.setEmail("josh@onesignal.com");
@@ -318,7 +321,7 @@ public class LocationIntegrationTests {
     @Test
     @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
     public void shouldSendLocationToSMSRecord() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         OneSignalInit();
         OneSignal.setSMSNumber("123456789");
@@ -335,7 +338,7 @@ public class LocationIntegrationTests {
     @Test
     @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
     public void shouldRegisterWhenPromptingAfterInit() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
         ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
 
         // Test promptLocation right after init race condition
@@ -354,7 +357,7 @@ public class LocationIntegrationTests {
     @Test
     @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
     public void shouldCallOnSessionEvenIfSyncJobStarted() throws Exception {
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         OneSignalInit();
         threadAndTaskWait();
@@ -381,7 +384,7 @@ public class LocationIntegrationTests {
     @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
     public void shouldUpdateAllLocationFieldsWhenTimeStampChanges_Huawei() throws Exception {
         ShadowOSUtils.supportsHMS(true);
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
         OneSignalInit();
         threadAndTaskWait();
         assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
@@ -411,7 +414,7 @@ public class LocationIntegrationTests {
     }, sdk = 19)
     public void testLocationSchedule_Huawei() throws Exception {
         ShadowOSUtils.supportsHMS(true);
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_FINE_LOCATION");
         ShadowHMSFusedLocationProviderClient.lat = 1.0d;
         ShadowHMSFusedLocationProviderClient.log = 2.0d;
         ShadowHMSFusedLocationProviderClient.accuracy = 3.0f;
@@ -475,7 +478,7 @@ public class LocationIntegrationTests {
     }, sdk = 19)
     public void testLocationFromSyncAlarm_Huawei() throws Exception {
         ShadowOSUtils.supportsHMS(true);
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         ShadowHMSFusedLocationProviderClient.lat = 1.1d;
         ShadowHMSFusedLocationProviderClient.log = 2.1d;
@@ -520,7 +523,7 @@ public class LocationIntegrationTests {
     @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
     public void shouldSendLocationToEmailRecord_Huawei() throws Exception {
         ShadowOSUtils.supportsHMS(true);
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         OneSignalInit();
         OneSignal.setEmail("josh@onesignal.com");
@@ -538,7 +541,7 @@ public class LocationIntegrationTests {
     @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
     public void shouldSendLocationToSMSRecord_Huawei() throws Exception {
         ShadowOSUtils.supportsHMS(true);
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         OneSignalInit();
         OneSignal.setSMSNumber("123456789");
@@ -557,7 +560,7 @@ public class LocationIntegrationTests {
     public void shouldRegisterWhenPromptingAfterInit_Huawei() throws Exception {
         ShadowOSUtils.supportsHMS(true);
         ShadowHMSFusedLocationProviderClient.skipOnGetLocation = true;
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         // Test promptLocation right after init race condition
         OneSignalInit();
@@ -578,7 +581,7 @@ public class LocationIntegrationTests {
         ShadowOSUtils.supportsHMS(true);
         ShadowHMSFusedLocationProviderClient.shadowTask = true;
         ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
-        ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
+        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
 
         OneSignalInit();
         threadAndTaskWait();

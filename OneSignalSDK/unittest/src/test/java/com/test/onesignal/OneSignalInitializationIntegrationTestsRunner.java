@@ -20,6 +20,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.MIN_ON_SESSION_TIME_MILLIS;
@@ -41,6 +42,7 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 )
 
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class OneSignalInitializationIntegrationTestsRunner {
     private ActivityController<BlankActivity> blankActivityController;
     private MockOSTimeImpl time;

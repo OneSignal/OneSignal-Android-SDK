@@ -3,8 +3,8 @@ package com.test.onesignal;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Intent;
-import android.support.annotation.NonNull;
 
+import androidx.annotation.NonNull;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.NotificationOpenedActivityHMS;
@@ -31,6 +31,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
@@ -63,6 +64,7 @@ import static org.robolectric.Shadows.shadowOf;
     sdk = 26
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class NotificationOpenedActivityHMSIntegrationTestsRunner {
 
     private static final String TEST_ACTION_ID = "myTestActionId";

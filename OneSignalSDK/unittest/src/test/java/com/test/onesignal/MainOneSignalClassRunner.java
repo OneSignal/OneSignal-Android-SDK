@@ -106,10 +106,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowAlarmManager;
-import org.robolectric.shadows.ShadowApplication;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
 
@@ -188,6 +189,7 @@ import static org.robolectric.Shadows.shadowOf;
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 // Enable to ensure test order to consistency debug flaky test.
 // @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MainOneSignalClassRunner {
@@ -2040,7 +2042,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testOneSignalMethodsBeforeInit() throws Exception {
-      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowFusedLocationApiWrapper.lat = 1.0d;
       ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
@@ -2134,7 +2136,7 @@ public class MainOneSignalClassRunner {
    @Test
    @Config(shadows = {ShadowGoogleApiClientBuilder.class, ShadowGoogleApiClientCompatProxy.class, ShadowFusedLocationApiWrapper.class})
    public void testOneSignalEmptyPendingTaskQueue() throws Exception {
-      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowFusedLocationApiWrapper.lat = 1.0d;
       ShadowFusedLocationApiWrapper.log = 2.0d;
       ShadowFusedLocationApiWrapper.accuracy = 3.0f;
@@ -2405,7 +2407,7 @@ public class MainOneSignalClassRunner {
    @Config(sdk = 26, shadows = { ShadowGoogleApiClientCompatProxy.class, ShadowGMSLocationController.class })
    public void ensureSyncJobServiceRescheduleOnApiTimeout() throws Exception {
       ShadowGMSLocationController.apiFallbackTime = 0;
-      ShadowApplication.getInstance().grantPermissions("android.permission.ACCESS_FINE_LOCATION");
+      shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_FINE_LOCATION");
       ShadowGoogleApiClientCompatProxy.skipOnConnected = true;
 
       OneSignalInit();
