@@ -6,6 +6,11 @@
     void disconnect();
 }
 
+# Need to keep as these 2 methods are called with reflection from com.onesignal.PushRegistratorFCM
+-keep class com.google.firebase.iid.FirebaseInstanceId {
+    static com.google.firebase.iid.FirebaseInstanceId getInstance(com.google.firebase.FirebaseApp);
+    java.lang.String getToken(java.lang.String, java.lang.String);
+}
 
 -keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 
