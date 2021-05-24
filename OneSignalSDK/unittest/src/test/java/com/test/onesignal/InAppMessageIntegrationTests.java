@@ -1340,7 +1340,15 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // No schedule should happen, IAM should evaluate to true
-        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        Awaitility.await()
+            .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+            .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+            .untilAsserted(new ThrowingRunnable() {
+                @Override
+                public void run() throws Exception {
+                    assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                }
+            });
 
         // After IAM is added to display queue we now need to wait until it is shown
         Awaitility.await()
@@ -1378,7 +1386,7 @@ public class InAppMessageIntegrationTests {
         // No schedule should happen since session time period is very small, should evaluate to true on first run
         // Wait for redisplay logic
         Awaitility.await()
-                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
                 .untilAsserted(new ThrowingRunnable() {
                     @Override
