@@ -366,6 +366,17 @@ public class InAppMessageIntegrationTests {
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
                 .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1);
 
+        // After IAM is added to display queue we now need to wait until it is shown
+        Awaitility.await()
+                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+                    }
+                });
+
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
 
         // Check that the IAM is not displayed again
@@ -1330,6 +1341,17 @@ public class InAppMessageIntegrationTests {
 
         // No schedule should happen, IAM should evaluate to true
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+
+        // After IAM is added to display queue we now need to wait until it is shown
+        Awaitility.await()
+            .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+            .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+            .untilAsserted(new ThrowingRunnable() {
+                @Override
+                public void run() throws Exception {
+                    assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+                }
+            });
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
