@@ -149,9 +149,8 @@ public class InAppMessageIntegrationTests {
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
         OneSignal.setInAppMessageClickHandler(null);
-        TestHelpers.afterTestCleanup();
-
         InAppMessagingHelpers.clearTestState();
+        TestHelpers.afterTestCleanup();
     }
 
     @Test
