@@ -513,8 +513,12 @@ public class OneSignalPackagePrivateHelper {
 
    public static void dismissCurrentMessage() {
       com.onesignal.OSInAppMessage message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
-      if (message != null)
+      if (message != null) {
          OneSignal.getInAppMessageController().messageWasDismissed(message);
+      }
+      else {
+         System.out.println("No currently displaying IAM to dismiss!");
+      }
    }
 
    public static boolean isInAppMessageShowing() {
