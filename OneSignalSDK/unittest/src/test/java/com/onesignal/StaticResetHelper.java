@@ -59,7 +59,6 @@ public class StaticResetHelper {
          }
          return false;
       }));
-      classes.add(new ClassState(FocusTimeController.class, null));
       classes.add(new ClassState(OSSessionManager.class, null));
       classes.add(new ClassState(MockSessionManager.class, null));
       classes.add(new ClassState(OSNotificationWorkManager.class,  field -> {

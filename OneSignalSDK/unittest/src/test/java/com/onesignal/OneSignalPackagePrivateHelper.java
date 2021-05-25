@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,6 +30,8 @@ public class OneSignalPackagePrivateHelper {
    public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
 
    public static final long MIN_ON_SESSION_TIME_MILLIS = com.onesignal.OneSignal.MIN_ON_SESSION_TIME_MILLIS;
+
+   private static final String LOGCAT_TAG = "OS_PACKAGE_HELPER";
 
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
@@ -513,8 +516,11 @@ public class OneSignalPackagePrivateHelper {
 
    public static void dismissCurrentMessage() {
       com.onesignal.OSInAppMessage message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
-      if (message != null)
+      if (message != null) {
          OneSignal.getInAppMessageController().messageWasDismissed(message);
+      } else {
+         Log.e(LOGCAT_TAG, "No currently displaying IAM to dismiss!");
+      }
    }
 
    public static boolean isInAppMessageShowing() {

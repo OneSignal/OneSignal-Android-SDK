@@ -404,7 +404,7 @@ public class OneSignal {
    }
 
    private static OSLogger logger = new OSLogWrapper();
-   private static FocusTimeController focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
+   private static FocusTimeController focusTimeController;
    private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
          public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
@@ -412,7 +412,7 @@ public class OneSignal {
                OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before init!");
             if (outcomeEventsController != null)
                outcomeEventsController.cleanOutcomes();
-            focusTimeController.onSessionEnded(lastInfluences);
+            getFocusTimeController().onSessionEnded(lastInfluences);
          }
       };
 
@@ -891,7 +891,7 @@ public class OneSignal {
             activityLifecycleHandler.setNextResumeIsFirstActivity(true);
          }
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
-         focusTimeController.appForegrounded();
+         getFocusTimeController().appForegrounded();
       } else if (activityLifecycleHandler != null) {
          activityLifecycleHandler.setNextResumeIsFirstActivity(true);
       }
@@ -1289,7 +1289,7 @@ public class OneSignal {
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
 
-      focusTimeController.appBackgrounded();
+      getFocusTimeController().appBackgrounded();
 
       scheduleSyncService();
    }
@@ -1337,7 +1337,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
          return;
 
-      focusTimeController.appForegrounded();
+      getFocusTimeController().appForegrounded();
 
       doSessionInit();
 
@@ -3172,6 +3172,10 @@ public class OneSignal {
    }
 
    static FocusTimeController getFocusTimeController() {
+      if (focusTimeController == null) {
+         focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
+      }
+
       return focusTimeController;
    }
    /*

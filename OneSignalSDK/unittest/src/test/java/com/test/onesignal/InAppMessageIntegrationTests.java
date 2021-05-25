@@ -75,6 +75,7 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
@@ -149,9 +150,8 @@ public class InAppMessageIntegrationTests {
         ShadowDynamicTimer.shouldScheduleTimers = true;
         ShadowDynamicTimer.hasScheduledTimer = false;
         OneSignal.setInAppMessageClickHandler(null);
-        TestHelpers.afterTestCleanup();
-
         InAppMessagingHelpers.clearTestState();
+        TestHelpers.afterTestCleanup();
     }
 
     @Test
@@ -363,14 +363,28 @@ public class InAppMessageIntegrationTests {
         // for the correct amount of time, so all we are doing here is checking to
         // make sure the message actually gets displayed once the timer fires
         Awaitility.await()
-                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
                 .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1);
+
+        // After IAM is added to display queue we now need to wait until it is shown
+        Awaitility.await()
+                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .untilAsserted(new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+                    }
+                });
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
 
         // Check that the IAM is not displayed again
-        assertEquals(0, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        Awaitility.await()
+                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 0);
     }
 
     @Test
@@ -410,7 +424,12 @@ public class InAppMessageIntegrationTests {
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                    assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    try {
+                        assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    } catch (NullPointerException e) {
+                        // Awaitility won't retry if something is thrown, but will if an assert fails.
+                        fail("Should not throw");
+                    }
                 });
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
@@ -421,7 +440,12 @@ public class InAppMessageIntegrationTests {
                 .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                    assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    try {
+                        assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    } catch (NullPointerException e) {
+                        // Awaitility won't retry if something is thrown, but will if an assert fails.
+                        fail("Should not throw");
+                    }
                 });
 
 
@@ -1330,7 +1354,26 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
 
         // No schedule should happen, IAM should evaluate to true
-        assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+        Awaitility.await()
+            .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+            .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+            .untilAsserted(new ThrowingRunnable() {
+                @Override
+                public void run() throws Exception {
+                    assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
+                }
+            });
+
+        // After IAM is added to display queue we now need to wait until it is shown
+        Awaitility.await()
+            .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
+            .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+            .untilAsserted(new ThrowingRunnable() {
+                @Override
+                public void run() throws Exception {
+                    assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+                }
+            });
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
@@ -1357,7 +1400,7 @@ public class InAppMessageIntegrationTests {
         // No schedule should happen since session time period is very small, should evaluate to true on first run
         // Wait for redisplay logic
         Awaitility.await()
-                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
+                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
                 .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
                 .untilAsserted(new ThrowingRunnable() {
                     @Override

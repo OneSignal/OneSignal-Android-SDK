@@ -719,9 +719,10 @@ public class GenerateNotificationRunner {
    
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldUpdateBadgesWhenDismissingNotification() {
+   public void shouldUpdateBadgesWhenDismissingNotification() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    
