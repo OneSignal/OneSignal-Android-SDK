@@ -5,7 +5,9 @@ import com.onesignal.OSSharedPreferences;
 
 public class LanguageProviderAppDefined implements LanguageProvider {
     public static final String PREFS_OS_LANGUAGE = "PREFS_OS_LANGUAGE";
-    private OSSharedPreferences preferences;
+
+    private static final String DEFAULT_LANGUAGE = "en";
+    private final OSSharedPreferences preferences;
 
     public LanguageProviderAppDefined(OSSharedPreferences preferences) {
         this.preferences = preferences;
@@ -21,6 +23,6 @@ public class LanguageProviderAppDefined implements LanguageProvider {
     @NonNull
     public String getLanguage() {
         return preferences.getString(
-                preferences.getPreferencesName(), PREFS_OS_LANGUAGE, "en");
+                preferences.getPreferencesName(), PREFS_OS_LANGUAGE, DEFAULT_LANGUAGE);
     }
 }
