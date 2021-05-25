@@ -3167,6 +3167,10 @@ public class OneSignal {
       return taskRemoteController;
    }
 
+   static OSTaskController getTaskController() {
+      return taskController;
+   }
+
    static FocusTimeController getFocusTimeController() {
       return focusTimeController;
    }

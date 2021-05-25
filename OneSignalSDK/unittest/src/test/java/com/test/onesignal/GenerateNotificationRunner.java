@@ -86,6 +86,7 @@ import org.awaitility.Duration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -216,7 +217,12 @@ public class GenerateNotificationRunner {
 
    @AfterClass
    public static void afterEverything() throws Exception {
-      StaticResetHelper.restSetStaticFields();
+      TestHelpers.beforeTestInitAndCleanup();
+   }
+
+   @After
+   public void afterEachTest() throws Exception {
+      TestHelpers.afterTestCleanup();
    }
    
    public static Bundle getBaseNotifBundle() {

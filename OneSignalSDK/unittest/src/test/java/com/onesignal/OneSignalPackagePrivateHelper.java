@@ -271,6 +271,11 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.getTaskRemoteController().getTaskQueueWaitingForInit();
    }
 
+   public static void OneSignal_OSTaskController_ShutdownNow() {
+      OneSignal.getTaskRemoteController().shutdownNow();
+      OneSignal.getTaskController().shutdownNow();
+   }
+
    public static boolean OneSignal_requiresUserPrivacyConsent() {
       return OneSignal.requiresUserPrivacyConsent();
    }

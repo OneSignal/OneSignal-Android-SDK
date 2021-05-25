@@ -23,6 +23,8 @@ import com.onesignal.example.BlankActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -82,6 +84,16 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
         ShadowOSUtils.supportsHMS(true);
         // Set remote_params GET response
         setRemoteParamsGetHtmlResponse();
+    }
+
+    @AfterClass
+    public static void afterEverything() throws Exception {
+        TestHelpers.beforeTestInitAndCleanup();
+    }
+
+    @After
+    public void afterEachTest() throws Exception {
+        TestHelpers.afterTestCleanup();
     }
 
     private static @NonNull Intent helper_baseHMSOpenIntent() {
