@@ -440,7 +440,12 @@ public class InAppMessageIntegrationTests {
                 .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-                    assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    try {
+                        assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                    } catch (NullPointerException e) {
+                        // Awaitility won't retry if something is thrown, but will if an assert fails.
+                        fail("Should not throw");
+                    }
                 });
 
 
