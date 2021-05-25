@@ -5,22 +5,31 @@ import androidx.annotation.NonNull;
 import java.util.Locale;
 
 public class LanguageProviderDevice implements LanguageProvider {
-    public String getLanguage() {
-        String lang = Locale.getDefault().getLanguage();
+    private static final String HEBREW_INCORRECT = "iw";
+    private static final String HEBREW_CORRECTED = "he";
+    private static final String INDONESIAN_INCORRECT = "in";
+    private static final String INDONESIAN_CORRECTED = "id";
+    private static final String YIDDISH_INCORRECT = "ji";
+    private static final String YIDDISH_CORRECTED = "yi";
+    private static final String CHINESE = "zh";
 
-        // https://github.com/OneSignal/OneSignal-Android-SDK/issues/64
-        if (lang.equals("iw"))
-            return "he";
-        if (lang.equals("in"))
-            return "id";
-        if (lang.equals("ji"))
-            return "yi";
-
-        // https://github.com/OneSignal/OneSignal-Android-SDK/issues/98
-        if (lang.equals("zh"))
-            return lang + "-" + Locale.getDefault().getCountry();
     @NonNull
+    public String getLanguage() {
+        String language = Locale.getDefault().getLanguage();
 
-        return lang;
+        switch (language) {
+            // https://github.com/OneSignal/OneSignal-Android-SDK/issues/64
+            case HEBREW_INCORRECT:
+                return HEBREW_CORRECTED;
+            case INDONESIAN_INCORRECT:
+                return INDONESIAN_CORRECTED;
+            case YIDDISH_INCORRECT:
+                return YIDDISH_CORRECTED;
+            // https://github.com/OneSignal/OneSignal-Android-SDK/issues/98
+            case CHINESE:
+                return language + "-" + Locale.getDefault().getCountry();
+            default:
+                return language;
+        }
     }
 }

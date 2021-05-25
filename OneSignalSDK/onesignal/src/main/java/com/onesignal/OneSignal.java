@@ -1674,7 +1674,7 @@ public class OneSignal {
          return;
       }
 
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_LANGUAGE))
          return;
 
       LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
