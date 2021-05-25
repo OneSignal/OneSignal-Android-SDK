@@ -47,6 +47,8 @@ import androidx.core.app.NotificationCompat;
 
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.language.LanguageContext;
+import com.onesignal.language.LanguageProviderAppDefined;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -368,6 +370,8 @@ public class OneSignal {
    private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
 
+   private static LanguageContext languageContext = null;
+
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static OSNotificationOpenedHandler notificationOpenedHandler;
@@ -418,7 +422,7 @@ public class OneSignal {
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger());
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger(), languageContext);
    }
    private static OSTime time = new OSTimeImpl();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
@@ -823,6 +827,9 @@ public class OneSignal {
 
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
+         // Set Language Context to null
+         languageContext = new LanguageContext(preferences);
+
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
@@ -1414,7 +1421,7 @@ public class OneSignal {
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
       deviceInfo.put("timezone_id", getTimeZoneId());
-      deviceInfo.put("language", OSUtils.getCorrectedLanguage());
+      deviceInfo.put("language", languageContext.getLanguage());
       deviceInfo.put("sdk", VERSION);
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
@@ -1651,6 +1658,36 @@ public class OneSignal {
 
       emailLogoutHandler = callback;
       OneSignalStateSynchronizer.logoutEmail();
+   }
+
+   public static void setLanguage(@NonNull final String language) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LANGUAGE)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskRemoteController.SET_LANGUAGE + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskRemoteController.SET_LANGUAGE + " operation from pending task queue.");
+               setLanguage(language);
+            }
+         });
+         return;
+      }
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_LANGUAGE))
+         return;
+
+      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
+      languageProviderAppDefined.setLanguage(language);
+      languageContext.setStrategy(languageProviderAppDefined);
+
+      try {
+         JSONObject deviceInfo = new JSONObject();
+         deviceInfo.put("language", languageContext.getLanguage());
+         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+      } catch (JSONException exception) {
+         exception.printStackTrace();
+      }
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {

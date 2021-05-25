@@ -3,6 +3,8 @@ package com.onesignal;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.onesignal.language.LanguageContext;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,8 +19,8 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
      * This is a dummy controller that will be used for Android 4.3 and older devices
      * All methods should be overridden and as empty as possible (few return exceptions)
      */
-    OSInAppMessageDummyController(OneSignalDbHelper dbHelper, OSTaskController taskController, OSLogger logger) {
-        super(dbHelper, taskController, logger);
+    OSInAppMessageDummyController(OneSignalDbHelper dbHelper, OSTaskController taskController, OSLogger logger, LanguageContext languageContext) {
+        super(dbHelper, taskController, logger, languageContext);
     }
 
     @Override

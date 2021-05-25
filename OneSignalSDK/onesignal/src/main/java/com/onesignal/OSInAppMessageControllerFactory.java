@@ -29,21 +29,23 @@ package com.onesignal;
 
 import android.os.Build;
 
+import com.onesignal.language.LanguageContext;
+
 class OSInAppMessageControllerFactory {
 
     private static final Object LOCK = new Object();
 
     private OSInAppMessageController controller;
 
-    public OSInAppMessageController getController(OneSignalDbHelper dbHelper, OSTaskController taskController, OSLogger logger) {
+    public OSInAppMessageController getController(OneSignalDbHelper dbHelper, OSTaskController taskController, OSLogger logger, LanguageContext languageContext) {
         if (controller == null) {
             synchronized (LOCK) {
                 if (controller == null) {
                     // Make sure only Android 4.4 devices and higher can use IAMs
                     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
-                        controller = new OSInAppMessageDummyController(null, taskController, logger);
+                        controller = new OSInAppMessageDummyController(null, taskController, logger, languageContext);
                     else
-                        controller = new OSInAppMessageController(dbHelper, taskController, logger);
+                        controller = new OSInAppMessageController(dbHelper, taskController, logger, languageContext);
                 }
             }
         }
