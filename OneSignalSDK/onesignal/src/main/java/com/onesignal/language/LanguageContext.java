@@ -1,5 +1,9 @@
 package com.onesignal.language;
+
+import androidx.annotation.NonNull;
+
 import com.onesignal.OSSharedPreferences;
+
 import static com.onesignal.language.LanguageProviderAppDefined.PREFS_OS_LANGUAGE;
 
 /*
@@ -29,6 +33,7 @@ public class LanguageContext {
         this.strategy = strategy;
     }
 
+    @NonNull
     public String getLanguage() {
         return strategy.getLanguage();
     }
