@@ -30,6 +30,8 @@ public class OneSignalPackagePrivateHelper {
 
    public static final long MIN_ON_SESSION_TIME_MILLIS = com.onesignal.OneSignal.MIN_ON_SESSION_TIME_MILLIS;
 
+   private static final String LOGCAT_TAG = "OS_PACKAGE_HELPER";
+
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
    }
@@ -515,9 +517,8 @@ public class OneSignalPackagePrivateHelper {
       com.onesignal.OSInAppMessage message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
       if (message != null) {
          OneSignal.getInAppMessageController().messageWasDismissed(message);
-      }
-      else {
-         System.out.println("No currently displaying IAM to dismiss!");
+      } else {
+         Log.e(LOGCAT_TAG, "No currently displaying IAM to dismiss!");
       }
    }
 
