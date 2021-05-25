@@ -1,4 +1,6 @@
 package com.onesignal.language;
+import androidx.annotation.NonNull;
+
 import com.onesignal.OSSharedPreferences;
 
 public class LanguageProviderAppDefined implements LanguageProvider {
@@ -16,6 +18,7 @@ public class LanguageProviderAppDefined implements LanguageProvider {
                 language);
     }
 
+    @NonNull
     public String getLanguage() {
         return preferences.getString(
                 preferences.getPreferencesName(), PREFS_OS_LANGUAGE, "en");

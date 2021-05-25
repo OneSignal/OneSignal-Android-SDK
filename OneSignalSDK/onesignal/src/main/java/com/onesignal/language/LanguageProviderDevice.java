@@ -1,5 +1,7 @@
 package com.onesignal.language;
 
+import androidx.annotation.NonNull;
+
 import java.util.Locale;
 
 public class LanguageProviderDevice implements LanguageProvider {
@@ -17,6 +19,7 @@ public class LanguageProviderDevice implements LanguageProvider {
         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/98
         if (lang.equals("zh"))
             return lang + "-" + Locale.getDefault().getCountry();
+    @NonNull
 
         return lang;
     }
