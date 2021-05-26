@@ -6,6 +6,10 @@
     void disconnect();
 }
 
+# Need to keep as getToken as it is called with reflection from com.onesignal.PushRegistratorFCM
+-keep class com.google.firebase.messaging.FirebaseMessaging {
+    com.google.android.gms.tasks.Task getToken();
+}
 
 -keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 

@@ -44,6 +44,8 @@ import com.google.firebase.iid.FirebaseInstanceIdService;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.ExecutionException;
 
 // TODO: 4.0.0 - Switch to using <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
@@ -100,8 +102,8 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
       try {
          return getTokenWithClassFirebaseMessaging();
-      } catch (NoClassDefFoundError | NoSuchMethodError e) {
-         // Class or method wil be missing at runtime if firebase-message older than 21.0.0 is used.
+      } catch (Error e) {
+         // Class or method will be missing at runtime if firebase-message older than 21.0.0 is used.
          OneSignal.Log(
             OneSignal.LOG_LEVEL.INFO,
             "FirebaseMessaging.getToken not found, attempting to use FirebaseInstanceId.getToken"
@@ -124,9 +126,22 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
       //   the senderId is provided at runtime.
       FirebaseMessaging fcmInstance = firebaseApp.get(FirebaseMessaging.class);
+
+      Exception exception;
       // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
-      Task<String> tokenTask = fcmInstance.getToken();
-      return Tasks.await(tokenTask);
+      try {
+         Method getTokenMethod = fcmInstance.getClass().getMethod("getToken");
+         Object tokenTask = getTokenMethod.invoke(fcmInstance);
+         return Tasks.await((Task<String>)tokenTask);
+      } catch (NoSuchMethodException e) {
+         exception = e;
+      } catch (IllegalAccessException e) {
+         exception = e;
+      } catch (InvocationTargetException e) {
+         exception = e;
+      }
+
+      throw new Error("Reflection error on FirebaseMessaging.getToken()", exception);
    }
 
    private void initFirebaseApp(String senderId) {
