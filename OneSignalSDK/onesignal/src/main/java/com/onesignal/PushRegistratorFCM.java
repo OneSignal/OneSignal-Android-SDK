@@ -125,13 +125,17 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
       //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
       //   the senderId is provided at runtime.
-      FirebaseMessaging fcmInstance = firebaseApp.get(FirebaseMessaging.class);
+      FirebaseMessaging firebaseMessagingInstance = firebaseApp.get(FirebaseMessaging.class);
+
+      if (firebaseMessagingInstance == null) {
+         throw new Error("firebaseMessagingInstance is null");
+      }
 
       Exception exception;
       // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
       try {
-         Method getTokenMethod = fcmInstance.getClass().getMethod("getToken");
-         Object tokenTask = getTokenMethod.invoke(fcmInstance);
+         Method getTokenMethod = firebaseMessagingInstance.getClass().getMethod("getToken");
+         Object tokenTask = getTokenMethod.invoke(firebaseMessagingInstance);
          return Tasks.await((Task<String>)tokenTask);
       } catch (NoSuchMethodException e) {
          exception = e;
