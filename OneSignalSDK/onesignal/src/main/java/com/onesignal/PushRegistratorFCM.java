@@ -31,9 +31,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.util.Base64;
+import android.util.Log;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
@@ -101,6 +102,7 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
       initFirebaseApp(senderId);
 
       try {
+         Log.e("OneSignal", "BEFORE getTokenWithClassFirebaseMessaging");
          return getTokenWithClassFirebaseMessaging();
       } catch (Error e) {
          // Class or method will be missing at runtime if firebase-message older than 21.0.0 is used.
@@ -109,8 +111,10 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
             "FirebaseMessaging.getToken not found, attempting to use FirebaseInstanceId.getToken"
          );
       }
+      Log.e("OneSignal", "AFTER getTokenWithClassFirebaseMessaging");
 
       // Fallback for firebase-message versions older than 21.0.0
+      Log.e("OneSignal", "BEFORE getTokenWithClassFirebaseInstanceId");
       return getTokenWithClassFirebaseInstanceId(senderId);
    }
 

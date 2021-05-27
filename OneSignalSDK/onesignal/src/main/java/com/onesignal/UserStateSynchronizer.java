@@ -2,7 +2,7 @@ package com.onesignal;
 
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;

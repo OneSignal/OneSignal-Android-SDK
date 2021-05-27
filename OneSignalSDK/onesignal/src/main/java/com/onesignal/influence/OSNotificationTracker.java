@@ -1,6 +1,6 @@
 package com.onesignal.influence;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.onesignal.OSLogger;
 import com.onesignal.influence.model.OSInfluence;

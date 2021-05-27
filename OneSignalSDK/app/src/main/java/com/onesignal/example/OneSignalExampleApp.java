@@ -31,15 +31,17 @@ import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.StrictMode;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.multidex.MultiDexApplication;
+
 import android.util.Log;
 
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenResult;
 import com.onesignal.OneSignal;
 
-public class OneSignalExampleApp extends Application {
+public class OneSignalExampleApp extends MultiDexApplication {
 
    private static final String SHARED_PREFS_OS_APP_ID = "SHARED_PREFS_OS_APP_ID";
 
@@ -47,15 +49,15 @@ public class OneSignalExampleApp extends Application {
    public void onCreate() {
       super.onCreate();
 
-      StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
-              .detectAll()
-              .penaltyLog()
-              .build());
-
-      StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-              .detectAll()
-              .penaltyLog()
-              .build());
+//      StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+//              .detectAll()
+//              .penaltyLog()
+//              .build());
+//
+//      StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+//              .detectAll()
+//              .penaltyLog()
+//              .build());
 
       OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 

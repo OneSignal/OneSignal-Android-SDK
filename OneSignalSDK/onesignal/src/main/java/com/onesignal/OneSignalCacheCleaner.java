@@ -2,7 +2,7 @@ package com.onesignal;
 
 import android.content.Context;
 import android.os.Process;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.WorkerThread;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.model.OSInfluenceChannel;

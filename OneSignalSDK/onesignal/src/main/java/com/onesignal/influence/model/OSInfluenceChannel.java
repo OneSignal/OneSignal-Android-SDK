@@ -1,6 +1,6 @@
 package com.onesignal.influence.model;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 public enum OSInfluenceChannel {
     IAM("iam"),

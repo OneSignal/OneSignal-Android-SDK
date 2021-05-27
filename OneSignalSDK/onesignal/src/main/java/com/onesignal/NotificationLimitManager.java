@@ -5,7 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.RequiresApi;
+import androidx.annotation.RequiresApi;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 

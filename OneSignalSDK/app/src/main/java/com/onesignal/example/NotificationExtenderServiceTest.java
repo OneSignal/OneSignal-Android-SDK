@@ -1,12 +1,11 @@
 package com.onesignal.example;
 
-import android.support.v4.app.NotificationCompat;
+import androidx.core.app.NotificationCompat;
 
 import com.onesignal.OSNotificationPayload;
 import com.onesignal.NotificationExtenderService;
 import com.onesignal.OSNotificationReceivedResult;
 
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 
 public class NotificationExtenderServiceTest extends NotificationExtenderService {

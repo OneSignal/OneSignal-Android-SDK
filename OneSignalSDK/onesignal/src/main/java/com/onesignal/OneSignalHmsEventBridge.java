@@ -1,7 +1,7 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.huawei.hms.push.RemoteMessage;
 
