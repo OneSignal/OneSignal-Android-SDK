@@ -1594,6 +1594,12 @@ public class OneSignal {
       };
       runSetLanguage.run();
 
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         addTaskToQueue(new PendingTaskRunnable(runSetExternalUserId));
+         return;
+      }
+
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
          return;
 
