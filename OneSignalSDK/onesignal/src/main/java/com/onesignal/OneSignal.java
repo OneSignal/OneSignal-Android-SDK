@@ -1596,11 +1596,11 @@ public class OneSignal {
 
       // If either the app context is null or the waiting queue isn't done (to preserve operation order)
       if (appContext == null || shouldRunTaskThroughQueue()) {
-         addTaskToQueue(new PendingTaskRunnable(runSetExternalUserId));
+         addTaskToQueue(new PendingTaskRunnable(runSetLanguage));
          return;
       }
 
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_LANGUAGE))
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
          return;
 
       LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
