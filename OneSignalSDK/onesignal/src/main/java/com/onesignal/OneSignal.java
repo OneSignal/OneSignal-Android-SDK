@@ -791,8 +791,6 @@ public class OneSignal {
       initDone = true;
 
       outcomeEventsController.sendSavedOutcomes();
-      // Set Language Context to null
-      languageContext = new LanguageContext(preferences);
 
       // Clean up any pending tasks that were queued up before initialization
       startPendingTasks();
@@ -1583,6 +1581,10 @@ public class OneSignal {
       Runnable runSetLanguage = new Runnable() {
          @Override
          public void run() {
+            LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
+            languageProviderAppDefined.setLanguage(language);
+            languageContext.setStrategy(languageProviderAppDefined);
+
             try {
                JSONObject deviceInfo = new JSONObject();
                deviceInfo.put("language", languageContext.getLanguage());
@@ -1592,7 +1594,6 @@ public class OneSignal {
             }
          }
       };
-      runSetLanguage.run();
 
       // If either the app context is null or the waiting queue isn't done (to preserve operation order)
       if (appContext == null || shouldRunTaskThroughQueue()) {
@@ -1603,9 +1604,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
          return;
 
-      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
-      languageProviderAppDefined.setLanguage(language);
-      languageContext.setStrategy(languageProviderAppDefined);
+      runSetLanguage.run();
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
