@@ -658,7 +658,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "persistInAppMessageForRedisplay: " + message.toString() + " with msg array data: " + redisplayedInAppMessages.toString());
     }
 
-    private static @Nullable
+    private @Nullable
     String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 
