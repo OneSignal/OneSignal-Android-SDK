@@ -2975,7 +2975,7 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      restartAppAndElapseTimeToNextSession(time);
+      restartAppAndElapseTimeToNextSession();
 
       OneSignalInit();
       OneSignal.setLanguage("fr");
