@@ -652,6 +652,9 @@ public class OneSignal {
       ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application)appContext);
 
       if (wasAppContextNull) {
+         // Initialize languageContext
+         languageContext = new LanguageContext(preferences);
+
          if (outcomeEventsFactory == null)
             outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
 
@@ -738,7 +741,7 @@ public class OneSignal {
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
-      // Set Language Context to null
+      // Initialize languageContext
       languageContext = new LanguageContext(preferences);
 
       subscribableStatus = osUtils.initializationChecker(context, oneSignalAppId);
