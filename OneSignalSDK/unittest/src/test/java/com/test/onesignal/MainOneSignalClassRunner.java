@@ -2951,7 +2951,9 @@ public class MainOneSignalClassRunner {
    @Test
    public void testSetLanguageOnPlayerCreate() throws Exception {
       OneSignalInit();
+      ShadowPushRegistratorGCM.skipComplete = true;
       OneSignal.setLanguage("fr");
+      ShadowPushRegistratorGCM.fireLastCallback();
       threadAndTaskWait();
 
       ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(1);
@@ -2974,13 +2976,14 @@ public class MainOneSignalClassRunner {
    public void testSetLanguageOnSession() throws Exception {
       OneSignalInit();
       threadAndTaskWait();
-
       restartAppAndElapseTimeToNextSession();
-
+      // Simulate FCM / GCM not returning with a firebase token to delay /player create a bit
+      ShadowPushRegistratorGCM.skipComplete = true;
       OneSignalInit();
       OneSignal.setLanguage("fr");
+      // Simulate FCM / GCM now providing a token to us which will kick of a /player create call.
+      ShadowPushRegistratorGCM.fireLastCallback();
       threadAndTaskWait();
-
       ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(3);
       assertEquals("fr", lastRequest.payload.getString("language"));
    }
