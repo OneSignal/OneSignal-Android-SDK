@@ -741,9 +741,6 @@ public class OneSignal {
       if (!isGoogleProjectNumberRemote())
          mGoogleProjectNumber = googleProjectNumber;
 
-      // Initialize languageContext
-      languageContext = new LanguageContext(preferences);
-
       subscribableStatus = osUtils.initializationChecker(context, oneSignalAppId);
       if (isSubscriptionStatusUninitializable())
          return;
