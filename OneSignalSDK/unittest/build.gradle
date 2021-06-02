@@ -4,12 +4,12 @@ ext {
             versionCode: 1,
             versionName: '1.0'
     ]
-    androidTestCoreVersion = '1.2.0'
-    androidWorkTestVersion = '2.3.4'
+    androidTestCoreVersion = '1.3.0'
+    androidWorkTestVersion = '2.5.0'
     awaitilityVersion = '3.1.5'
     firebaseCoreVersion = '17.2.2'
     googlePlayServicesVersion = '17.0.0'
-    jUnitVersion = '4.12'
+    jUnitVersion = '4.13.2'
     reflectionsVersion = '0.9.12'
     roboelectricVersion = '4.4'
 }
