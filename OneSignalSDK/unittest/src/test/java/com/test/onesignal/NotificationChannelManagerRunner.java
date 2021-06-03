@@ -210,7 +210,7 @@ public class NotificationChannelManagerRunner {
    // Top level keys under no language key are considered the default language.
    @Test
    public void processChannelListWithMultiLanguage() throws Exception {
-      OneSignal.startInit(blankActivity);
+      OneSignal.setAppContext(blankActivity);
       threadAndTaskWait();
 
       JSONObject payload = createBasicChannelListPayload();
