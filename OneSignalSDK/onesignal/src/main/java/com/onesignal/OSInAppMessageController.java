@@ -9,6 +9,7 @@ import android.support.annotation.Nullable;
 
 import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
 import com.onesignal.OneSignalRestClient.ResponseHandler;
+import com.onesignal.language.LanguageContext;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,6 +35,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     public static final String IN_APP_MESSAGES_JSON_KEY = "in_app_messages";
     private static final String OS_SAVE_IN_APP_MESSAGE = "OS_SAVE_IN_APP_MESSAGE";
     private static final Object LOCK = new Object();
+    private final LanguageContext languageContext;
 
     OSTriggerController triggerController;
     private OSSystemConditionController systemConditionController;
@@ -70,7 +72,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
     Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
 
-    protected OSInAppMessageController(OneSignalDbHelper dbHelper) {
+    protected OSInAppMessageController(OneSignalDbHelper dbHelper, LanguageContext languageContext) {
         messages = new ArrayList<>();
         dismissedMessages = OSUtils.newConcurrentSet();
         messageDisplayQueue = new ArrayList<>();
@@ -78,6 +80,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         clickedClickIds = OSUtils.newConcurrentSet();
         triggerController = new OSTriggerController(this);
         systemConditionController = new OSSystemConditionController(this);
+        this.languageContext = languageContext;
 
         Set<String> tempDismissedSet = OneSignalPrefs.getStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
@@ -209,16 +212,16 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         }
     }
 
-    private static @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
-        String languageIdentifier = OSUtils.getCorrectedLanguage();
+    private @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
+        String language = languageContext.getLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
             if (!message.variants.containsKey(variant))
                 continue;
 
             HashMap<String, String> variantMap = message.variants.get(variant);
-            if (variantMap.containsKey(languageIdentifier))
-                return variantMap.get(languageIdentifier);
+            if (variantMap.containsKey(language))
+                return variantMap.get(language);
             return variantMap.get("default");
         }
 
@@ -655,7 +658,7 @@ class OSInAppMessageController implements OSDynamicTriggerControllerObserver, OS
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "persistInAppMessageForRedisplay: " + message.toString() + " with msg array data: " + redisplayedInAppMessages.toString());
     }
 
-    private static @Nullable
+    private @Nullable
     String htmlPathForMessage(OSInAppMessage message) {
         String variantId = variantIdForMessage(message);
 

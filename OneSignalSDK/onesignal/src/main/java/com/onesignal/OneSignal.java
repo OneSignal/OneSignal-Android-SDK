@@ -49,6 +49,9 @@ import com.onesignal.OneSignalDbContract.NotificationTable;
 import com.onesignal.influence.OSTrackerFactory;
 import com.onesignal.influence.model.OSInfluence;
 import com.onesignal.outcomes.OSOutcomeEventsFactory;
+import com.onesignal.language.LanguageContext;
+import com.onesignal.language.LanguageProviderAppDefined;
+import com.onesignal.language.LanguageProviderDevice;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -416,6 +419,8 @@ public class OneSignal {
    private static String userId = null, emailId = null;
    private static int subscribableStatus;
 
+   private static LanguageContext languageContext = null;
+
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
    static boolean isInitDone() {
@@ -460,7 +465,7 @@ public class OneSignal {
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance());
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), languageContext);
    }
    private static OSLogger logger = new OSLogWrapper();
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
@@ -647,6 +652,9 @@ public class OneSignal {
       ActivityLifecycleListener.registerActivityLifecycleCallbacks((Application)appContext);
 
       if (wasAppContextNull) {
+         // Initialize languageContext
+         languageContext = new LanguageContext(preferences);
+
          if (outcomeEventsFactory == null)
             outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
 
@@ -1394,7 +1402,7 @@ public class OneSignal {
       }
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
-      deviceInfo.put("language", OSUtils.getCorrectedLanguage());
+      deviceInfo.put("language", languageContext.getLanguage());
       deviceInfo.put("sdk", VERSION);
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
@@ -1567,6 +1575,36 @@ public class OneSignal {
          return;
       }
       emailLogout.run();
+   }
+
+   public static void setLanguage(@NonNull final String language) {
+      Runnable runSetLanguage = new Runnable() {
+         @Override
+         public void run() {
+            LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
+            languageProviderAppDefined.setLanguage(language);
+            languageContext.setStrategy(languageProviderAppDefined);
+
+            try {
+               JSONObject deviceInfo = new JSONObject();
+               deviceInfo.put("language", languageContext.getLanguage());
+               OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+            } catch (JSONException exception) {
+               exception.printStackTrace();
+            }
+         }
+      };
+
+      // If either the app context is null or the waiting queue isn't done (to preserve operation order)
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         addTaskToQueue(new PendingTaskRunnable(runSetLanguage));
+         return;
+      }
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("setLanguage()"))
+         return;
+
+      runSetLanguage.run();
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
