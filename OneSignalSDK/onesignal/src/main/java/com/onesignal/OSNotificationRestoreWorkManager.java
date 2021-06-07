@@ -77,7 +77,7 @@ class OSNotificationRestoreWorkManager {
             StringBuilder dbQuerySelection = OneSignalDbHelper.recentUninteractedWithNotificationsWhere();
             skipVisibleNotifications(context, dbQuerySelection);
 
-            queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection);
+            queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection, false);
 
             return Result.success();
         }
@@ -87,7 +87,8 @@ class OSNotificationRestoreWorkManager {
     private static void queryAndRestoreNotificationsAndBadgeCount(
             Context context,
             OneSignalDbHelper dbHelper,
-            StringBuilder dbQuerySelection) {
+            StringBuilder dbQuerySelection,
+            boolean needsWorkerThread) {
 
         OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
                 "Querying DB for notifications to restore: " + dbQuerySelection.toString());
@@ -104,7 +105,7 @@ class OSNotificationRestoreWorkManager {
                     OneSignalDbContract.NotificationTable._ID + " DESC", // sort order, new to old
                     NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
             );
-            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
+            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS, needsWorkerThread);
             BadgeCountUpdater.update(dbHelper, context);
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
@@ -144,7 +145,7 @@ class OSNotificationRestoreWorkManager {
      * @param cursor - Source cursor to generate notifications from
      * @param delay - Delay to slow down process to ensure we don't spike CPU and I/O on the device
      */
-    static void showNotificationsFromCursor(Context context, Cursor cursor, int delay) {
+    static void showNotificationsFromCursor(Context context, Cursor cursor, int delay, boolean needsWorkerThread) {
         if (!cursor.moveToFirst())
             return;
 
@@ -159,9 +160,10 @@ class OSNotificationRestoreWorkManager {
                     osNotificationId,
                     existingId,
                     fullData,
-                    true,
                     dateTime,
-                    false
+                    true,
+                    false,
+                    needsWorkerThread
             );
 
             if (delay > 0)

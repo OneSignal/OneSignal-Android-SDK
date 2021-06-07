@@ -36,6 +36,8 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import androidx.work.ListenableWorker;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -97,9 +99,10 @@ class NotificationBundleProcessor {
                             osNotificationId,
                             finalAndroidNotificationId,
                             jsonStrPayload,
-                            isRestoring,
                             shownTimeStamp,
-                            false);
+                            isRestoring,
+                            false,
+                            true);
 
                     // Delay to prevent CPU spikes.
                     // Normally more than one notification is restored at a time.
@@ -131,7 +134,7 @@ class NotificationBundleProcessor {
     }
 
     @WorkerThread
-    static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean fromBackgroundLogic) {
+    private static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean fromBackgroundLogic) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting processJobForDisplay opened: " + opened + " fromBackgroundLogic: " + fromBackgroundLogic);
         OSNotificationGenerationJob notificationJob = notificationController.getNotificationJob();
 
@@ -176,17 +179,22 @@ class NotificationBundleProcessor {
      */
     static void processNotification(OSNotificationGenerationJob notificationJob, boolean opened, boolean notificationDisplayed) {
         saveNotification(notificationJob, opened);
+        CallbackToFutureAdapter.Completer<ListenableWorker.Result>  callbackCompleter = notificationJob.getCallbackCompleter();
 
         if (!notificationDisplayed) {
             // Notification channel disable or not displayed
             // save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
             markNotificationAsDismissed(notificationJob);
+
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Process notification not displayed with callback completer: " + callbackCompleter);
+            if (callbackCompleter != null)
+                callbackCompleter.set(ListenableWorker.Result.success());
             return;
         }
 
         // Logic for when the notification is displayed
         String notificationId = notificationJob.getApiNotificationId();
-        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
+        OSReceiveReceiptController.getInstance().sendReceiveReceipt(callbackCompleter, notificationId);
         OneSignal.getSessionManager().onNotificationReceived(notificationId);
     }
 
@@ -425,9 +433,10 @@ class NotificationBundleProcessor {
                         osNotificationId,
                         androidNotificationId,
                         jsonPayload.toString(),
-                        isRestoring,
                         timestamp,
-                        isHighPriority);
+                        isRestoring,
+                        isHighPriority,
+                        true);
 
                 bundleResult.setWorkManagerProcessing(true);
                 notificationProcessingCallback.onResult(true);

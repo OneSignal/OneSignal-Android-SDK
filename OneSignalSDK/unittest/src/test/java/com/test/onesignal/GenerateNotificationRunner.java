@@ -121,6 +121,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getAccentColor;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setDelayTaskController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setupNotificationServiceExtension;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
@@ -1253,8 +1254,11 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowReceiveReceiptController.class, ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void shouldSendReceivedReceiptWhenEnabled() throws Exception {
+
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+
       String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
       OneSignal.setAppId(appId);
       OneSignal.initWithContext(blankActivity);
