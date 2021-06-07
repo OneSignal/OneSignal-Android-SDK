@@ -35,14 +35,11 @@ class OSRemoteParamController {
         );
         OneSignalPrefs.saveBool(
                 OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
-                remoteParams.receiveReceiptEnabled
-        );
-        OneSignalPrefs.saveBool(
-                OneSignalPrefs.PREFS_ONESIGNAL,
                 preferences.getOutcomesV2KeyName(),
                 remoteParams.influenceParams.outcomesV2ServiceEnabled
         );
+
+        saveReceiveReceiptEnabled(remoteParams.receiveReceiptEnabled);
 
         logger.debug("OneSignal saveInfluenceParams: " + remoteParams.influenceParams.toString());
         trackerFactory.saveInfluenceParams(remoteParams.influenceParams);
@@ -83,6 +80,22 @@ class OSRemoteParamController {
 
     void clearRemoteParams() {
         remoteParams = null;
+    }
+
+    private void saveReceiveReceiptEnabled(boolean receiveReceiptEnabled) {
+        OneSignalPrefs.saveBool(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
+                receiveReceiptEnabled
+        );
+    }
+
+    boolean isReceiveReceiptEnabled() {
+        return OneSignalPrefs.getBool(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_RECEIVE_RECEIPTS_ENABLED,
+                false
+        );
     }
 
     boolean getFirebaseAnalyticsEnabled() {

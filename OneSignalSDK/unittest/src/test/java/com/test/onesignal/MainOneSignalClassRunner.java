@@ -38,12 +38,14 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.FocusDelaySyncJobService;
 import com.onesignal.FocusDelaySyncService;
+import com.onesignal.MockDelayTaskController;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
@@ -133,6 +135,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_handleNotificationOpen;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setDelayTaskController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
@@ -1344,6 +1347,40 @@ public class MainOneSignalClassRunner {
       // 4. Check that report_received where sent
       assertEquals(2, ShadowOneSignalRestClient.requests.size());
       assertNotEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationReceivedNoSendReceivedRequest_Delay() throws Exception {
+      int delay = 2;
+      MockDelayTaskController mockDelayTaskController = new MockDelayTaskController(new MockOSLog());
+      mockDelayTaskController.setMockedRandomValue(delay);
+      mockDelayTaskController.setRunOnSameThread(false);
+      OneSignal_setDelayTaskController(mockDelayTaskController);
+
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      threadAndTaskWait();
+
+      long calledTime = System.currentTimeMillis();
+
+      // 1. Receive a notification in background
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 2. Check that report_received where sent
+      Awaitility.await()
+              .atMost(new Duration(3, TimeUnit.SECONDS))
+              .pollInterval(new Duration(1, TimeUnit.SECONDS))
+              .untilAsserted(() -> {
+                 assertEquals(3, ShadowOneSignalRestClient.requests.size());
+                 assertEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
+                 assertTrue(System.currentTimeMillis() - calledTime >= delay * 1000);
+              });
    }
 
    /**

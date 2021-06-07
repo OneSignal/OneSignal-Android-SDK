@@ -120,6 +120,10 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.setTrackerFactory(trackerFactory);
    }
 
+   public static void OneSignal_setDelayTaskController(OSDelayTaskController delayTaskController) {
+      OneSignal.setDelayTaskController(delayTaskController);
+   }
+
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
@@ -282,6 +286,7 @@ public class OneSignalPackagePrivateHelper {
    public static void OneSignal_OSTaskController_ShutdownNow() {
       OneSignal.getTaskRemoteController().shutdownNow();
       OneSignal.getTaskController().shutdownNow();
+      OneSignal.getDelayTaskController().shutdownNow();
    }
 
    public static boolean OneSignal_requiresUserPrivacyConsent() {

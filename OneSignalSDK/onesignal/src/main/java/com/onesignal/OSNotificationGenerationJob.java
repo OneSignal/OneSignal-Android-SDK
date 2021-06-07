@@ -30,15 +30,17 @@ package com.onesignal;
 import android.content.Context;
 import android.net.Uri;
 
-import androidx.core.app.NotificationCompat;
+import androidx.annotation.Nullable;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import androidx.work.ListenableWorker;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.security.SecureRandom;
 
 public class OSNotificationGenerationJob {
 
+    private CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter;
     private OSNotification notification;
     private Context context;
     private JSONObject jsonPayload;
@@ -54,6 +56,11 @@ public class OSNotificationGenerationJob {
     private Uri orgSound;
 
     OSNotificationGenerationJob(Context context) {
+        this(null, context);
+    }
+
+    OSNotificationGenerationJob(CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter, Context context) {
+        this.callbackCompleter = callbackCompleter;
         this.context = context;
     }
 
@@ -65,6 +72,11 @@ public class OSNotificationGenerationJob {
         this.context = context;
         this.jsonPayload = jsonPayload;
         this.notification = notification;
+    }
+
+    @Nullable
+    public CallbackToFutureAdapter.Completer<ListenableWorker.Result> getCallbackCompleter() {
+        return callbackCompleter;
     }
 
     /**
