@@ -154,7 +154,7 @@ abstract class OSBackgroundSync {
         PendingIntent pendingIntent = syncServicePendingIntent(context);
         AlarmManager alarm = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         long triggerAtMs = OneSignal.getTime().getCurrentTimeMillis() + delayMs;
-        alarm.set(AlarmManager.RTC_WAKEUP, triggerAtMs + delayMs, pendingIntent);
+        alarm.set(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent);
     }
 
     protected void cancelBackgroundSyncTask(Context context) {
