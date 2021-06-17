@@ -1,6 +1,9 @@
 package com.onesignal.sdktest.application;
 
 import android.app.Application;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.util.Log;
 
 import com.onesignal.OSNotification;
@@ -28,6 +31,15 @@ public class MainApplication extends Application {
         if (appId == null) {
             appId = getString(R.string.onesignal_app_id);
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
+        }
+        String color = getString(R.string.notification_accent_color);
+        ApplicationInfo ai;
+        try {
+            ai = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+            Bundle bundle = ai.metaData;
+            String accentcolor = bundle.getString("com.onesignal.NotificationAccentColor.DEFAULT");
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
         }
         OneSignal.setAppId(appId);
         OneSignal.initWithContext(this);

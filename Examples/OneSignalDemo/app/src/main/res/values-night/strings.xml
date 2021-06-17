@@ -54,6 +54,6 @@
 
     <string name="onesignal_app_id">0ba9731b-33bd-43f4-8b59-61172e27447d</string>
 
-    <string name="notification_accent_color">FFAAEAFF</string>
+    <string name="notification_accent_color">FF000000</string>
 
 </resources>

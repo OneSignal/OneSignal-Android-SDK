@@ -30,6 +30,10 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
 
+        <meta-data
+            android:name="com.onesignal.NotificationAccentColor.DEFAULT"
+            android:value="@string/notification_accent_color"/>`
+
         <amazon:enable-feature
             android:name="com.amazon.device.messaging"
             android:required="false"/>
