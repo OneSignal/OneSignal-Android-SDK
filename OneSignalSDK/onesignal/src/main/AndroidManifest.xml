@@ -132,9 +132,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- taskAffinity="" means no affinity with any task -->
         <activity
           android:name="com.onesignal.NotificationOpenedReceiver"
           android:noHistory="true"
+          android:excludeFromRecents="true"
+          android:taskAffinity=""
           android:theme="@android:style/Theme.Translucent.NoTitleBar"
           android:exported="true" />
 

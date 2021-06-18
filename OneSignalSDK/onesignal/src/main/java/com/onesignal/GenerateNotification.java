@@ -1,6 +1,6 @@
 /**
  * Modified MIT License
- * 
+ *
  * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -9,13 +9,13 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -111,7 +111,7 @@ class GenerateNotification {
       if (OSUtils.isRunningOnMainThread())
          throw new OSThrowable.OSMainThreadException("Process for showing a notification should never been done on Main Thread!");
    }
-   
+
    private static CharSequence getTitle(JSONObject fcmJson) {
       CharSequence title = fcmJson.optString("title", null);
 
@@ -134,10 +134,75 @@ class GenerateNotification {
       return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
    }
 
+   // Notes on attempts to fix bug where app resumes when it should not when OneSignal's auto start app is set to disable
+   //     - <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
+   // TODO:1: If the app has an Activity running the app is resumed by this when the OneSignal NotificationOpenReceiver Activity is finished
+   // TODO:2: Test if FLAG_ACTIVITY_NEW_TASK changes this behavior. NO
+   // TODO:3: FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TASK this "works" but has the side effect of also finishing any other tasks which we do NOT want.
+   // TODO:4: FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_NEW_DOCUMENT - WORKS! (tested Android 10)
+   //         - FLAG_ACTIVITY_NEW_DOCUMENT requires API 21 (5.0) however. FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET does the same thing, but not working on Android 4.4...
+   //         TODO:4.1: Test that normal resume behavior still works when we want it to
+   //         TODO:4.2: Adding FLAG_ACTIVITY_MULTIPLE_TASK fixes the behavior but breaks the recent task resuming (launcher resumes fine) on Android 4.4.
+   //         TODO:4.3: Adding FLAG_ACTIVITY_CLEAR_TASK - Nope, same issue as above
+   //         TODO:4.4: Remove FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET, has the same effects as above Android 4.4
+   //         TODO:4.5: Add FLAG_ACTIVITY_RESET_TASK_IF_NEEDED, same issue still
+   //         TODO:4.5: Add android:allowTaskReparenting="true", same issue.
+   //         TODO:4.6: android:excludeFromRecents="true", ends up showing nothing in the recent then...
+   //         TODO:4.7: Remove Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | FLAG_ACTIVITY_CLEAR_TASK, still removes all tasks
+   //         TODO:4.8: android:taskAffinity="", fixed it!
+
+
+   // Notes on fixing default auto launch app behavior
+   // TODO:5: Works on everything expect 5.0 it won't do anything if app is in background
+   //         TODO:5.1: Add back FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET doesn't help
+   //         TODO:5.2: Works! - Removed android:taskAffinity="com.onesignal.NotificationOpenedReceiver" (also "" doesn't work).
+
+
+   // TODO:Tests:Before startOrResumeApp fix:
+   //   1. Open Default Disabled - Cold start app. Should not show up in recents.
+   //      * Android 4.4 - Pass
+   //      * Android 10 - Pass
+   //      * Android 11 - Pass
+   //   2. Open Default Disabled - App in focus, should not change app at all.
+   //      * Android 4.4 - Pass
+   //      * Android 10 - Pass
+   //      * Android 11 - Pass
+   //   3. Open Default Disabled - App in background, should be able to resume from recents.
+   //      * Android 4.4 - Pass
+   //      * Android 10 - Pass
+   //      * Android 11 - Pass
+   //   4. Default - Cold start app. Should start app and recents should looks correct. Ensure backstace is correct
+   //      * Android 4.4 -
+   //      * Android 10 - Pass
+   //      * Android 11 - Pass
+   //   5. Default - App in focus, should not change app at all. Ensure backstace is correct and recents are correct.
+   //      * Android 4.4 -
+   //      * Android 10 - Pass
+   //      * Android 11 - Pass
+   //   6. Default - App in background, should be resume correctly. Ensure backstace is correct and recents are correct.
+   //      * Android 4.4 - Fail - This is restarting the app. (launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);) in startOrResumeApp fixes
+   //      * Android 10 - Pass
+   //      * Android 11 - Pass
+
+   /** Notes Summary of behavior */
+   // android:taskAffinity="" - Fixes Android 4.4 from resuming (when NotificationOpened.DEFAULT is DISABLED) but breaks resuming on Android 5.0 (seems ok on 10 and 11)
+   // Intent.FLAG_ACTIVITY_NEW_TASK || Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED - These both are needed to mimic what an Android Launcher does
+   //    - https://stackoverflow.com/questions/29321261/what-are-the-differences-between-flag-activity-reset-task-if-needed-and-flag-act
+   //    - https://stackoverflow.com/a/30446616/1244574
+
    private static Intent getNewBaseIntent(int notificationId) {
      return new Intent(currentContext, notificationOpenedClass)
              .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
-             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+
+      // Full list of flags from TODO:4: above that works on Android 10
+      /// .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+      // Work on everything expect for Default starting app where it is not resuming the app
+      //         .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+      // also these Activity flags in the AndroidManifest.xml
+//      android:excludeFromRecents="true"
+//      android:taskAffinity="com.onesignal.NotificationOpenedReceiver"
    }
 
    private static Intent getNewBaseDismissIntent(int notificationId) {
@@ -145,11 +210,11 @@ class GenerateNotification {
               .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
               .putExtra("dismissed", true);
    }
-   
+
    private static OneSignalNotificationBuilder getBaseOneSignalNotificationBuilder(OSNotificationGenerationJob notificationJob) {
       JSONObject fcmJson = notificationJob.getJsonPayload();
       OneSignalNotificationBuilder oneSignalNotificationBuilder = new OneSignalNotificationBuilder();
-      
+
       NotificationCompat.Builder notificationBuilder;
       try {
          String channelId = NotificationChannelManager.createNotificationChannel(notificationJob);
@@ -158,7 +223,7 @@ class GenerateNotification {
       } catch(Throwable t) {
          notificationBuilder = new NotificationCompat.Builder(currentContext);
       }
-      
+
       String message = fcmJson.optString("alert", null);
 
       notificationBuilder
@@ -173,7 +238,7 @@ class GenerateNotification {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
           !fcmJson.optString("title").equals(""))
          notificationBuilder.setContentTitle(getTitle(fcmJson));
-   
+
       try {
          BigInteger accentColor = getAccentColor(fcmJson);
          if (accentColor != null)
@@ -204,7 +269,7 @@ class GenerateNotification {
       }
 
       setAlertnessOptions(fcmJson, notificationBuilder);
-      
+
       oneSignalNotificationBuilder.compatBuilder = notificationBuilder;
       return oneSignalNotificationBuilder;
    }
@@ -284,7 +349,7 @@ class GenerateNotification {
       NotificationCompat.Builder notifBuilder = oneSignalNotificationBuilder.compatBuilder;
 
       addNotificationActionButtons(fcmJson, notifBuilder, notificationId, null);
-      
+
       try {
          addBackgroundImage(fcmJson, notifBuilder);
       } catch (Throwable t) {
@@ -292,7 +357,7 @@ class GenerateNotification {
       }
 
       applyNotificationExtender(notificationJob, notifBuilder);
-      
+
       // Keeps notification from playing sound + vibrating again
       if (notificationJob.isRestoring())
          removeNotifyOptions(notifBuilder);
@@ -392,7 +457,7 @@ class GenerateNotification {
       }
 
    }
-   
+
    // Removes custom sound set from the extender from non-summary notification before building it.
    //   This prevents the sound from playing twice or both the default sound + a custom one.
    private static Notification createSingleNotificationBeforeSummaryBuilder(OSNotificationGenerationJob notificationJob, NotificationCompat.Builder notifBuilder) {
@@ -400,7 +465,7 @@ class GenerateNotification {
       // Android 4.2 and older just post the summary only.
       boolean singleNotifWorkArounds = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N
                                        && !notificationJob.isRestoring();
-      
+
       if (singleNotifWorkArounds) {
          if (notificationJob.getOverriddenSound() != null && !notificationJob.getOverriddenSound().equals(notificationJob.getOrgSound()))
             notifBuilder.setSound(null);
@@ -449,32 +514,32 @@ class GenerateNotification {
 
       SecureRandom random = new SecureRandom();
       PendingIntent summaryDeleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(0).putExtra("summary", group));
-      
+
       Notification summaryNotification;
       Integer summaryNotificationId = null;
-   
+
       String firstFullData = null;
       Collection<SpannableString> summaryList = null;
-      
+
       OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
       Cursor cursor = null;
-      
+
       try {
          String[] retColumn = { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
              NotificationTable.COLUMN_NAME_FULL_DATA,
              NotificationTable.COLUMN_NAME_IS_SUMMARY,
              NotificationTable.COLUMN_NAME_TITLE,
              NotificationTable.COLUMN_NAME_MESSAGE };
-   
+
          String whereStr =  NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +   // Where String
              NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
              NotificationTable.COLUMN_NAME_OPENED + " = 0";
          String[] whereArgs = { group };
-         
+
          // Make sure to omit any old existing matching android ids in-case we are replacing it.
          if (!updateSummary && notificationJob.getAndroidId() != -1)
             whereStr += " AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " <> " + notificationJob.getAndroidId();
-         
+
          cursor = dbHelper.query(
              NotificationTable.TABLE_NAME,
              retColumn,
@@ -484,7 +549,7 @@ class GenerateNotification {
              null,                              // filter by row groups
              NotificationTable._ID + " DESC"    // sort order, new to old
          );
-         
+
          if (cursor.moveToFirst()) {
             SpannableString spannableString;
             summaryList = new ArrayList<>();
@@ -524,14 +589,14 @@ class GenerateNotification {
          if (cursor != null && !cursor.isClosed())
             cursor.close();
       }
-      
+
       if (summaryNotificationId == null) {
          summaryNotificationId = random.nextInt();
          createSummaryIdDatabaseEntry(dbHelper, group, summaryNotificationId);
       }
-      
+
       PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, fcmJson, group));
-      
+
       // 2 or more notifications with a group received, group them together as a single notification.
       if (summaryList != null &&
           ((updateSummary && summaryList.size() > 1) ||
@@ -550,7 +615,7 @@ class GenerateNotification {
          else {
             if (notificationJob.getOverriddenSound() != null)
                summaryBuilder.setSound(notificationJob.getOverriddenSound());
-   
+
             if (notificationJob.getOverriddenFlags() != null)
                summaryBuilder.setDefaults(notificationJob.getOverriddenFlags());
          }
@@ -584,7 +649,7 @@ class GenerateNotification {
          // Add the latest notification to the summary
          if (!updateSummary) {
             String line1Title = null;
-            
+
             if (notificationJob.getTitle() != null)
                line1Title = notificationJob.getTitle().toString();
 
@@ -592,9 +657,9 @@ class GenerateNotification {
                line1Title = "";
             else
                line1Title += " ";
-            
+
             String message = notificationJob.getBody().toString();
-            
+
             SpannableString spannableString = new SpannableString(line1Title + message);
             if (line1Title.length() > 0)
                spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 0, line1Title.length(), 0);
@@ -689,11 +754,11 @@ class GenerateNotification {
 
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
-   
+
    private static Intent createBaseSummaryIntent(int summaryNotificationId, JSONObject fcmJson, String group) {
      return getNewBaseIntent(summaryNotificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString()).putExtra("summary", group);
    }
-   
+
    private static void createSummaryIdDatabaseEntry(OneSignalDbHelper dbHelper, String group, int id) {
       // There currently isn't a visible notification from for this group_id.
       // Save the group summary notification id so it can be updated later.
@@ -783,29 +848,29 @@ class GenerateNotification {
       Bitmap bitmap = getBitmap(fcmJson.optString("licon"));
       if (bitmap == null)
          bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
-      
+
       if (bitmap == null)
          return null;
-   
+
       return resizeBitmapForLargeIconArea(bitmap);
    }
-   
+
    private static Bitmap getDefaultLargeIcon() {
       Bitmap bitmap = getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default");
       return resizeBitmapForLargeIconArea(bitmap);
    }
-   
+
    // Resize to prevent extra cropping and boarders.
    private static Bitmap resizeBitmapForLargeIconArea(Bitmap bitmap) {
       if (bitmap == null)
          return null;
-      
+
       try {
          int systemLargeIconHeight = (int) contextResources.getDimension(android.R.dimen.notification_large_icon_height);
          int systemLargeIconWidth = (int) contextResources.getDimension(android.R.dimen.notification_large_icon_width);
          int bitmapHeight = bitmap.getHeight();
          int bitmapWidth = bitmap.getWidth();
-      
+
          if (bitmapWidth > systemLargeIconWidth || bitmapHeight > systemLargeIconHeight) {
             int newWidth = systemLargeIconWidth, newHeight = systemLargeIconHeight;
             if (bitmapHeight > bitmapWidth) {
@@ -815,11 +880,11 @@ class GenerateNotification {
                float ratio = (float) bitmapHeight / (float) bitmapWidth;
                newHeight = (int) (newWidth * ratio);
             }
-         
+
             return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true);
          }
       } catch (Throwable t) {}
-   
+
       return bitmap;
    }
 
@@ -865,7 +930,7 @@ class GenerateNotification {
       if (name == null)
          return null;
       String trimmedName = name.trim();
-      
+
       if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://"))
          return getBitmapFromURL(trimmedName);
 
@@ -875,7 +940,7 @@ class GenerateNotification {
    private static int getResourceIcon(String iconName) {
       if (iconName == null)
          return 0;
-      
+
       String trimmedIconName = iconName.trim();
       if (!OSUtils.isValidResourceName(trimmedIconName))
          return 0;
@@ -899,20 +964,20 @@ class GenerateNotification {
 
      return getDefaultSmallIconId();
    }
-   
+
    private static int getDefaultSmallIconId() {
       int notificationIcon = getDrawableId("ic_stat_onesignal_default");
       if (notificationIcon != 0)
          return notificationIcon;
-   
+
       notificationIcon = getDrawableId("corona_statusbar_icon_default");
       if (notificationIcon != 0)
          return notificationIcon;
-   
+
       notificationIcon = getDrawableId("ic_os_notification_fallback_white_24dp");
       if (notificationIcon != 0)
          return notificationIcon;
-   
+
       return drawable.ic_popup_reminder;
    }
 
@@ -944,10 +1009,10 @@ class GenerateNotification {
    private static void addNotificationActionButtons(JSONObject fcmJson, NotificationCompat.Builder mBuilder, int notificationId, String groupSummary) {
       try {
          JSONObject customJson = new JSONObject(fcmJson.optString("custom"));
-         
+
          if (!customJson.has("a"))
             return;
-         
+
          JSONObject additionalDataJSON = customJson.getJSONObject("a");
          if (!additionalDataJSON.has("actionButtons"))
             return;
@@ -973,7 +1038,7 @@ class GenerateNotification {
             int buttonIcon = 0;
             if (button.has("icon"))
                buttonIcon = getResourceIcon(button.optString("icon"));
-            
+
             mBuilder.addAction(buttonIcon, button.optString("text"), buttonPIntent);
          }
       } catch (Throwable t) {
@@ -1013,7 +1078,7 @@ class GenerateNotification {
          buttonsIds.add(button.optString("id"));
       }
    }
-   
+
    private static int convertOSToAndroidPriority(int priority) {
       if (priority > 9)
          return NotificationCompat.PRIORITY_MAX;
@@ -1023,7 +1088,7 @@ class GenerateNotification {
          return NotificationCompat.PRIORITY_DEFAULT;
       if (priority > 2)
          return NotificationCompat.PRIORITY_LOW;
-      
+
       return NotificationCompat.PRIORITY_MIN;
    }
 }

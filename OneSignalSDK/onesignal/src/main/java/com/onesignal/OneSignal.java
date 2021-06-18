@@ -2390,6 +2390,10 @@ public class OneSignal {
       // Android 11 no longer requires nulling this out to get this behavior.
       launchIntent.setPackage(null);
 
+      // TODO: Fixes Android 4.4 restarting Activity issues.
+      //       - However on Android 11 this breaks cold start, but only if we don't add Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK to invisible NotificationOpenedReceiver class
+     launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+
       activity.startActivity(launchIntent);
 
       return true;
