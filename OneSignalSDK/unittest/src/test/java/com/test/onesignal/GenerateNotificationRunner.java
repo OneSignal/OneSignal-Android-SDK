@@ -854,7 +854,9 @@ public class GenerateNotificationRunner {
       // Time stamp should be set and within a small range.
       long currentTime = System.currentTimeMillis() / 1000;
       cursor.moveToFirst();
-      assertTrue(cursor.getLong(0) > currentTime - 2 && cursor.getLong(0) <= currentTime);
+      long displayTime = cursor.getLong(0);
+      // Display time on notification record is within 1 second
+      assertTrue((displayTime + 1_000) > currentTime && displayTime <= currentTime);
       cursor.close();
 
       // Should get marked as opened.
