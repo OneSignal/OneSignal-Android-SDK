@@ -2,11 +2,6 @@ ext {
     buildVersions = [
             minSdkVersion: 16
     ]
-
-    androidXVersion = '[1.0.0, 1.99.99]'
-    androidWorkVersion = '[2.0.0, 2.99.99]'
-    firebaseMessagingVersion = '[19.0.0, 22.99.99]'
-    googleGMSVersion = '[17.0.0, 17.99.99]'
 }
 
 apply plugin: 'com.android.library'
@@ -37,6 +32,9 @@ android {
 // api || implementation = compile and runtime
 
 // KEEP: version ranges, these get used in the released POM file for maven central
+// NOTE: To prevent consumers from getting alpha or beta version of dependencies listed here
+//         make sure the latest minor value is a known stable version. Using a range for the
+//         patch version is ok, since this allows getting bug fix versions.
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
@@ -44,27 +42,27 @@ dependencies {
 
     // play-services-location:16.0.0 is the last version before going to AndroidX
     // play-services-location:17.0.0 is the first version using AndroidX
-    compileOnly "com.google.android.gms:play-services-location:$googleGMSVersion"
+    compileOnly 'com.google.android.gms:play-services-location:[17.0.0, 18.0.99]'
 
     // play-services-base:16.1.0 is the last version before going to AndroidX
     // play-services-base:17.0.0 is the first version using AndroidX
     // Required for GoogleApiAvailability
-    implementation "com.google.android.gms:play-services-base:$googleGMSVersion"
+    implementation 'com.google.android.gms:play-services-base:[17.0.0, 17.6.99]'
 
     // firebase-messaging:18.0.0 is the last version before going to AndroidX
     // firebase-messaging:19.0.0 is the first version using AndroidX
-    api "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
+    api 'com.google.firebase:firebase-messaging:[19.0.0, 22.0.99]'
 
     // Huawei PushKit
     // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
     compileOnly "com.huawei.hms:push:$huaweiHMSPushVersion"
     compileOnly "com.huawei.hms:location:$huaweiHMSLocationVersion"
 
-    api "androidx.cardview:cardview:$androidXVersion"
-    api "androidx.legacy:legacy-support-v4:$androidXVersion"
-    api "androidx.browser:browser:$androidXVersion"
-    api "androidx.appcompat:appcompat:$androidXVersion"
-    api "androidx.work:work-runtime:$androidWorkVersion"
+    api 'androidx.cardview:cardview:[1.0.0, 1.0.99]'
+    api 'androidx.legacy:legacy-support-v4:[1.0.0, 1.0.99]'
+    api 'androidx.browser:browser:[1.0.0, 1.3.99]'
+    api 'androidx.appcompat:appcompat:[1.0.0, 1.3.99]'
+    api 'androidx.work:work-runtime:[2.0.0, 2.5.99]'
 }
 
 apply from: 'maven-push.gradle'
