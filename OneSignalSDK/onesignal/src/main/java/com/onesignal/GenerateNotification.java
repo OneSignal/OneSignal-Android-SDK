@@ -926,17 +926,28 @@ class GenerateNotification {
    }
 
    // Android 5.0 accent color to use, only works when AndroidManifest.xml is targetSdkVersion >= 21
-   private static BigInteger getAccentColor(JSONObject fcmJson) {
+   static BigInteger getAccentColor(JSONObject fcmJson) {
       try {
          if (fcmJson.has("bgac"))
             return new BigInteger(fcmJson.optString("bgac", null), 16);
-      } catch (Throwable t) {} // Can throw a parse error parse error.
+      } catch (Throwable t) {} // Can throw a parse error.
 
+      // Try to get "onesignal_notification_accent_color" from resources
+      // This will get the correct color for day and dark modes
       try {
-         String defaultColor = OSUtils.getManifestMeta(currentContext, "com.onesignal.NotificationAccentColor.DEFAULT");
-         if (defaultColor != null)
+         String defaultColor = getResourceString(OneSignal.appContext, "onesignal_notification_accent_color", null);
+         if (defaultColor != null) {
             return new BigInteger(defaultColor, 16);
-      } catch (Throwable t) {} // Can throw a parse error parse error.
+         }
+      } catch (Throwable t) {} // Can throw a parse error.
+
+      // Get accent color from Manifest
+      try {
+         String defaultColor = OSUtils.getManifestMeta(OneSignal.appContext, "com.onesignal.NotificationAccentColor.DEFAULT");
+         if (defaultColor != null) {
+            return new BigInteger(defaultColor, 16);
+         }
+      } catch (Throwable t) {} // Can throw a parse error.
 
       return null;
    }
