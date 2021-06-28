@@ -14,7 +14,6 @@ import androidx.work.WorkerParameters;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -107,7 +106,7 @@ class OSNotificationWorkManager {
             });
         }
 
-        private String doWork(@NotNull CallbackToFutureAdapter.Completer<Result> completer) {
+        private String doWork(@NonNull CallbackToFutureAdapter.Completer<Result> completer) {
             Data inputData = getInputData();
             try {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "NotificationWorker running doWork with data: " + inputData);
