@@ -77,7 +77,7 @@ class OSNotificationRestoreWorkManager {
             StringBuilder dbQuerySelection = OneSignalDbHelper.recentUninteractedWithNotificationsWhere();
             skipVisibleNotifications(context, dbQuerySelection);
 
-            queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection, false);
+            queryAndRestoreNotificationsAndBadgeCount(context, dbHelper, dbQuerySelection);
 
             return Result.success();
         }
@@ -87,8 +87,7 @@ class OSNotificationRestoreWorkManager {
     private static void queryAndRestoreNotificationsAndBadgeCount(
             Context context,
             OneSignalDbHelper dbHelper,
-            StringBuilder dbQuerySelection,
-            boolean needsWorkerThread) {
+            StringBuilder dbQuerySelection) {
 
         OneSignal.Log(OneSignal.LOG_LEVEL.INFO,
                 "Querying DB for notifications to restore: " + dbQuerySelection.toString());
@@ -105,7 +104,7 @@ class OSNotificationRestoreWorkManager {
                     OneSignalDbContract.NotificationTable._ID + " DESC", // sort order, new to old
                     NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
             );
-            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS, needsWorkerThread);
+            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS, false);
             BadgeCountUpdater.update(dbHelper, context);
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
