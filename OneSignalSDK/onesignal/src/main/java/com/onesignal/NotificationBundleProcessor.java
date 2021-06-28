@@ -347,23 +347,23 @@ class NotificationBundleProcessor {
             return;
         String collapse_id = notificationJob.getJsonPayload().optString("collapse_key");
 
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
-      Cursor cursor = dbHelper.query(
-              NotificationTable.TABLE_NAME,
-              new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
-              NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
-                      NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                      NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
-              new String[]{collapse_id},
-              null, null, null);
+        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
+        Cursor cursor = dbHelper.query(
+                NotificationTable.TABLE_NAME,
+                new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
+                NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
+                        NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                        NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
+                new String[]{collapse_id},
+                null, null, null);
 
-      if (cursor.moveToFirst()) {
-         int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-         notificationJob.setAndroidIdWithoutOverriding(androidNotificationId);
-      }
+        if (cursor.moveToFirst()) {
+            int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+            notificationJob.setAndroidIdWithoutOverriding(androidNotificationId);
+        }
 
-      cursor.close();
-   }
+        cursor.close();
+    }
 
     /**
      * Process bundle passed from FCM / HMS / ADM broadcast receiver
