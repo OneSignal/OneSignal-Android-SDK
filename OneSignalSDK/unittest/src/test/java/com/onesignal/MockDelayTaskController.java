@@ -1,6 +1,6 @@
 package com.onesignal;
 
-import org.jetbrains.annotations.NotNull;
+import androidx.annotation.NonNull;
 
 public class MockDelayTaskController extends OSDelayTaskController {
     private int mockedRandomValue = 0;
@@ -10,11 +10,11 @@ public class MockDelayTaskController extends OSDelayTaskController {
         super(logger);
     }
 
-    protected int getRandomNumber() {
+    protected int getRandomDelay() {
         return mockedRandomValue;
     }
 
-    public void delayTaskByRandom(@NotNull Runnable runnable) {
+    public void delayTaskByRandom(@NonNull Runnable runnable) {
         if (runOnSameThread) {
             runnable.run();
         } else {
