@@ -15,12 +15,12 @@ open class OSDelayTaskController(private val logger: OSLogger) {
         scheduledThreadPoolExecutor = ScheduledThreadPoolExecutor(1, JobThreadFactory())
     }
 
-    protected open fun getRandomNumber(): Int {
+    protected open fun getRandomDelay(): Int {
         return (Math.random() * (maxDelay - minDelay + 1) + minDelay).roundToInt()
     }
 
     open fun delayTaskByRandom(runnable: Runnable) {
-        val randomNum = getRandomNumber()
+        val randomNum = getRandomDelay()
 
         logger.debug("OSDelayTaskController delaying task $randomNum second from thread: ${Thread.currentThread()}")
         scheduledThreadPoolExecutor.schedule(runnable, randomNum.toLong(), TimeUnit.SECONDS)
