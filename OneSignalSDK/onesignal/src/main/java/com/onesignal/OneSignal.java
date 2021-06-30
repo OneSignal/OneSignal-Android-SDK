@@ -698,10 +698,12 @@ public class OneSignal {
          return;
       }
 
-      boolean wasAppContextNull = (appContext == null);
-      appContext = context.getApplicationContext();
       if (context instanceof Activity)
          appActivity = new WeakReference<>((Activity) context);
+
+      boolean wasAppContextNull = (appContext == null);
+      appContext = context.getApplicationContext();
+
       setupContextListeners(wasAppContextNull);
       setupPrivacyConsent(appContext);
 
@@ -756,12 +758,12 @@ public class OneSignal {
             logger.verbose("OneSignal SDK initialization delayed, " +
                     "waiting for privacy consent to be set.");
 
-         delayedInitParams = new DelayedConsentInitializationParameters(context, appId);
+         delayedInitParams = new DelayedConsentInitializationParameters(appContext, appId);
          String lastAppId = appId;
          // Set app id null since OneSignal was not init fully
          appId = null;
          // Wrapper SDK's call init twice and pass null as the appId on the first call
-         //  the app ID is required to download parameters, so do not download params until the appID is provided
+         // the app ID is required to download parameters, so do not download params until the appID is provided
          if (lastAppId != null && context != null)
             makeAndroidParamsRequest(lastAppId, getUserId(), false);
          return;
@@ -892,11 +894,13 @@ public class OneSignal {
 
    private static void handleActivityLifecycleHandler(Context context) {
       ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
-      setInForeground(OneSignal.getCurrentActivity() != null || context instanceof Activity);
+      boolean isContextActivity = context instanceof Activity;
+      boolean isCurrentActivityNull = OneSignal.getCurrentActivity() == null;
+      setInForeground(!isCurrentActivityNull || isContextActivity);
       logger.debug("OneSignal handleActivityLifecycleHandler inForeground: " + inForeground);
 
       if (inForeground) {
-         if (OneSignal.getCurrentActivity() == null && activityLifecycleHandler != null) {
+         if (isCurrentActivityNull && isContextActivity && activityLifecycleHandler != null) {
             activityLifecycleHandler.setCurActivity((Activity) context);
             activityLifecycleHandler.setNextResumeIsFirstActivity(true);
          }
@@ -1089,8 +1093,8 @@ public class OneSignal {
          delayedContext = appContext;
          logger.error("Trying to continue OneSignal with null delayed params");
       } else {
-         delayedAppId = delayedInitParams.appId;
-         delayedContext = delayedInitParams.context;
+         delayedAppId = delayedInitParams.getAppId();
+         delayedContext = delayedInitParams.getContext();
       }
 
       logger.debug("reassignDelayedInitParams with appContext: " + appContext);
