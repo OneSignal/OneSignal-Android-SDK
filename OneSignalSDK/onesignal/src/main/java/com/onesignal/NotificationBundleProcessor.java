@@ -110,7 +110,7 @@ class NotificationBundleProcessor {
                 }
             };
 
-            OneSignal.notValidOrDuplicated(jsonPayload, callback);
+            OneSignal.notValidOrDuplicated(context, jsonPayload, callback);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -474,7 +474,7 @@ class NotificationBundleProcessor {
             }
         };
 
-        OneSignal.notValidOrDuplicated(jsonPayload, callback);
+        OneSignal.notValidOrDuplicated(context, jsonPayload, callback);
     }
 
     static @NonNull

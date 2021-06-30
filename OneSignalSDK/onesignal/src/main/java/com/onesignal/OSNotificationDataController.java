@@ -6,6 +6,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Process;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
 import org.json.JSONObject;
@@ -188,7 +191,7 @@ class OSNotificationDataController extends OSBackgroundManager {
         runRunnableOnThread(runCancelNotification, OS_NOTIFICATIONS_THREAD);
     }
 
-    void notValidOrDuplicated(JSONObject jsonPayload, final InvalidOrDuplicateNotificationCallback callback) {
+    void notValidOrDuplicated(@Nullable JSONObject jsonPayload, @NonNull final InvalidOrDuplicateNotificationCallback callback) {
         String id = OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload);
         if (id == null) {
             logger.debug("Notification notValidOrDuplicated with id null");
@@ -199,7 +202,7 @@ class OSNotificationDataController extends OSBackgroundManager {
         isDuplicateNotification(id, callback);
     }
 
-    private void isDuplicateNotification(final String id, final InvalidOrDuplicateNotificationCallback callback) {
+    private void isDuplicateNotification(final String id, @NonNull final InvalidOrDuplicateNotificationCallback callback) {
         if (id == null || "".equals(id)) {
             callback.onResult(false);
             return;

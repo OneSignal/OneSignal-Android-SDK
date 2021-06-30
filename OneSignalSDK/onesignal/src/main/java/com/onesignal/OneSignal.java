@@ -833,14 +833,17 @@ public class OneSignal {
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
-         notificationDataController = new OSNotificationDataController(getDBHelperInstance(), logger);
+
+         OneSignalDbHelper dbHelper = getDBHelperInstance();
+         notificationDataController = new OSNotificationDataController(dbHelper, logger);
+
          // Cleans out old cached data to prevent over using the storage on devices
          notificationDataController.cleanOldCachedData();
 
          getInAppMessageController().cleanCachedInAppMessages();
 
          if (outcomeEventsFactory == null)
-            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
+            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, dbHelper, preferences);
 
          sessionManager.initSessionFromCache();
          outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
@@ -3059,7 +3062,21 @@ public class OneSignal {
       return !getInAppMessageController().inAppMessagingEnabled();
    }
 
-   static void notValidOrDuplicated(JSONObject jsonPayload, OSNotificationDataController.InvalidOrDuplicateNotificationCallback callback) {
+   /**
+    * Method that checks if notification is valid or duplicated.
+    *
+    * Method called from Notification processing. This might be called from a flow that doesn't call initWithContext yet.
+    * Check if notificationDataController is not init before processing notValidOrDuplicated
+    *
+    * @param context the context from where the notification was received
+    * @param jsonPayload the notification payload in a JSON format
+    * @param callback the callback to return the result since this method does DB access in another thread
+    * */
+   static void notValidOrDuplicated(Context context, JSONObject jsonPayload, @NonNull OSNotificationDataController.InvalidOrDuplicateNotificationCallback callback) {
+      if (notificationDataController == null) {
+          OneSignalDbHelper helper = OneSignal.getDBHelperInstance(context);
+          notificationDataController = new OSNotificationDataController(helper, logger);
+      }
       notificationDataController.notValidOrDuplicated(jsonPayload, callback);
    }
 
@@ -3198,6 +3215,10 @@ public class OneSignal {
 
    static OneSignalDbHelper getDBHelperInstance() {
       return OneSignalDbHelper.getInstance(appContext);
+   }
+
+   static OneSignalDbHelper getDBHelperInstance(Context context) {
+       return OneSignalDbHelper.getInstance(context);
    }
 
    static OSTaskController getTaskRemoteController() {
