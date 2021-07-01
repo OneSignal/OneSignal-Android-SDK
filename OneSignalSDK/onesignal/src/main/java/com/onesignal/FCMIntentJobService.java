@@ -26,6 +26,7 @@ public class FCMIntentJobService extends JobIntentService {
         if (bundle == null)
             return;
 
+        OneSignal.initWithContext(this);
         processBundleFromReceiver(this, bundle, new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
             @Override
             public void onBundleProcessed(@Nullable NotificationBundleProcessor.ProcessedBundleResult processedResult) {
