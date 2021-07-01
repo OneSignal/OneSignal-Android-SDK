@@ -43,7 +43,6 @@ public class OSNotificationGenerationJob {
     private Context context;
     private JSONObject jsonPayload;
     private boolean restoring;
-    private boolean iamPreview;
 
     private Long shownTimeStamp;
 
@@ -164,14 +163,6 @@ public class OSNotificationGenerationJob {
         this.restoring = restoring;
     }
 
-    public boolean isIamPreview() {
-        return iamPreview;
-    }
-
-    public void setIamPreview(boolean iamPreview) {
-        this.iamPreview = iamPreview;
-    }
-
     public Long getShownTimeStamp() {
         return shownTimeStamp;
     }
@@ -233,7 +224,6 @@ public class OSNotificationGenerationJob {
         return "OSNotificationGenerationJob{" +
                 "jsonPayload=" + jsonPayload +
                 ", isRestoring=" + restoring +
-                ", isIamPreview=" + iamPreview +
                 ", shownTimeStamp=" + shownTimeStamp +
                 ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
                 ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
