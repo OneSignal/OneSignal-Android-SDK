@@ -165,6 +165,11 @@ class NotificationBundleProcessor {
             String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(notificationController.getNotificationJob().getJsonPayload());
             OSNotificationWorkManager.removeNotificationIdProcessed(osNotificationId);
             OneSignal.handleNotificationReceived(notificationJob);
+        } else {
+            CallbackToFutureAdapter.Completer<ListenableWorker.Result>  callbackCompleter = notificationJob.getCallbackCompleter();
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Process notification restored or IAM with callback completer: " + callbackCompleter);
+            if (callbackCompleter != null)
+                callbackCompleter.set(ListenableWorker.Result.success());
         }
 
         return androidNotificationId;
