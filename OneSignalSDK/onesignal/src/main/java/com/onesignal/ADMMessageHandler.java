@@ -93,7 +93,6 @@ public class ADMMessageHandler extends ADMMessageHandlerBase {
          }
       };
       NotificationBundleProcessor.processBundleFromReceiver(context, bundle, bundleReceiverCallback);
-
    }
 
    @Override

@@ -366,7 +366,9 @@ class NotificationBundleProcessor {
       cursor.close();
    }
 
-    //  Process bundle passed from fcm / adm broadcast receiver.
+    /**
+     * Process bundle passed from FCM / HMS / ADM broadcast receiver
+     * */
     static void processBundleFromReceiver(Context context, final Bundle bundle, final ProcessBundleReceiverCallback bundleReceiverCallback) {
         final ProcessedBundleResult bundleResult = new ProcessedBundleResult();
 
