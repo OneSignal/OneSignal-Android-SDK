@@ -75,6 +75,7 @@ import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowReceiveReceiptController;
+import com.onesignal.ShadowResources;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.ShadowTimeoutHandler;
@@ -119,6 +120,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getAccentColor;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setupNotificationServiceExtension;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
@@ -246,7 +248,7 @@ public class GenerateNotificationRunner {
    private Intent createOpenIntent(Bundle bundle) {
       return createOpenIntent(ShadowRoboNotificationManager.lastNotifId, bundle);
    }
-   
+
    @Test
    @Config (sdk = 22, shadows = { ShadowGenerateNotification.class })
    public void shouldSetTitleCorrectly() throws Exception {
@@ -1413,7 +1415,6 @@ public class GenerateNotificationRunner {
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
       OneSignal_setupNotificationServiceExtension();
-
       final boolean[] callbackEnded = {false};
       OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback processBundleReceiverCallback = new OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback() {
          public void onBundleProcessed(OneSignalPackagePrivateHelper.ProcessedBundleResult processedResult) {
@@ -2303,6 +2304,59 @@ public class GenerateNotificationRunner {
 
       // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
+   }
+
+   /**
+    * Small icon accent color uses string.xml value in values-night when device in dark mode
+    */
+   @Test
+   @Config(qualifiers = "night")
+   public void shouldUseDarkIconAccentColorInDarkMode_hasMetaData() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      // Add the 'com.onesignal.NotificationAccentColor.DEFAULT' as 'FF0000AA' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationAccentColor.DEFAULT", "FF0000AA");
+
+      BigInteger defaultColor = OneSignal_getAccentColor(new JSONObject());
+      assertEquals("FFFF0000", defaultColor.toString(16).toUpperCase());
+   }
+
+   /**
+    * Small icon accent color uses string.xml value in values when device in day (non-dark) mode
+    */
+   @Test
+   public void shouldUseDayIconAccentColorInDayMode() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      BigInteger defaultColor = OneSignal_getAccentColor(new JSONObject());
+      assertEquals("FF00FF00", defaultColor.toString(16).toUpperCase());
+   }
+
+   /**
+    * Small icon accent color uses value from Manifest if there are no resource strings provided
+    */
+   @Test
+   @Config(shadows = { ShadowResources.class })
+   public void shouldUseManifestIconAccentColor() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+
+      // Add the 'com.onesignal.NotificationAccentColor.DEFAULT' as 'FF0000AA' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationAccentColor.DEFAULT", "FF0000AA");
+
+      BigInteger defaultColor = OneSignal_getAccentColor(new JSONObject());
+      assertEquals("FF0000AA", defaultColor.toString(16).toUpperCase());
+   }
+
+   /**
+    * Small icon accent color uses value of 'bgac' if available
+    */
+   @Test
+   public void shouldUseBgacAccentColor_hasMetaData() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      // Add the 'com.onesignal.NotificationAccentColor.DEFAULT' as 'FF0000AA' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationAccentColor.DEFAULT", "FF0000AA");
+      JSONObject fcmJson = new JSONObject();
+      fcmJson.put("bgac", "FF0F0F0F");
+      BigInteger defaultColor = OneSignal_getAccentColor(fcmJson);
+      assertEquals("FF0F0F0F", defaultColor.toString(16).toUpperCase());
    }
 
    /* Helpers */
