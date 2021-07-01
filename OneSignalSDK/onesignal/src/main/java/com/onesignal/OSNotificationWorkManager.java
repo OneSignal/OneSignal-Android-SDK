@@ -55,7 +55,6 @@ class OSNotificationWorkManager {
 
     static void beginEnqueueingWork(Context context, String osNotificationId, int androidNotificationId, String jsonPayload, long timestamp,
                                     boolean isRestoring, boolean isHighPriority, boolean needsWorkerThread) {
-
         if (!needsWorkerThread) {
             try {
                 JSONObject jsonPayloadObject = new JSONObject(jsonPayload);
