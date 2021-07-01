@@ -62,8 +62,8 @@ class NotificationBundleProcessor {
     public static final String PUSH_MINIFIED_BUTTON_TEXT = "n";
     public static final String PUSH_MINIFIED_BUTTON_ICON = "p";
 
-    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     private static final String ANDROID_NOTIFICATION_ID = "android_notif_id";
+    static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     static final String DEFAULT_ACTION = "__DEFAULT__";
 
     static void processFromFCMIntentService(final Context context, BundleCompat bundle) {
@@ -78,7 +78,7 @@ class NotificationBundleProcessor {
             final JSONObject jsonPayload = new JSONObject(jsonStrPayload);
             final boolean isRestoring = bundle.getBoolean("is_restoring", false);
             final long shownTimeStamp = bundle.getLong("timestamp");
-            final boolean isIamPreview = inAppPreviewPushUUID(jsonPayload) != null;
+            final boolean isIamPreview = OSInAppMessagePreviewHandler.inAppPreviewPushUUID(jsonPayload) != null;
 
             int androidNotificationId = 0;
             if (bundle.containsKey(ANDROID_NOTIFICATION_ID))
@@ -276,8 +276,7 @@ class NotificationBundleProcessor {
         BadgeCountUpdater.update(dbHelper, notifiJob.getContext());
    }
 
-    static @NonNull
-    JSONObject bundleAsJSONObject(Bundle bundle) {
+    static @NonNull JSONObject bundleAsJSONObject(Bundle bundle) {
         JSONObject json = new JSONObject();
         Set<String> keys = bundle.keySet();
 
@@ -381,7 +380,7 @@ class NotificationBundleProcessor {
         bundleResult.isOneSignalPayload = true;
         maximizeButtonsFromBundle(bundle);
 
-        if (inAppMessagePreviewHandled(bundleResult, bundle)) {
+        if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(bundleResult, bundle)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
             bundleReceiverCallback.onBundleProcessed(bundleResult);
             return;
@@ -401,40 +400,6 @@ class NotificationBundleProcessor {
         };
 
         startNotificationProcessing(context, bundle, bundleResult, processingCallback);
-    }
-
-    private static boolean inAppMessagePreviewHandled(ProcessedBundleResult bundleResult, Bundle bundle) {
-        JSONObject pushPayloadJson = bundleAsJSONObject(bundle);
-        // Show In-App message preview it is in the payload & the app is in focus
-        String previewUUID = inAppPreviewPushUUID(pushPayloadJson);
-        if (previewUUID != null) {
-            // If app is in focus display the IAMs preview now
-            if (OneSignal.isAppActive()) {
-                bundleResult.inAppPreviewShown = true;
-                OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    static @Nullable
-    String inAppPreviewPushUUID(JSONObject payload) {
-        JSONObject osCustom;
-        try {
-            osCustom = getCustomJSONObject(payload);
-        } catch (JSONException e) {
-            return null;
-        }
-
-        if (!osCustom.has(PUSH_ADDITIONAL_DATA_KEY))
-            return null;
-
-        JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
-        if (additionalData.has(IAM_PREVIEW_KEY))
-            return additionalData.optString(IAM_PREVIEW_KEY);
-        return null;
     }
 
     private static void startNotificationProcessing(final Context context,

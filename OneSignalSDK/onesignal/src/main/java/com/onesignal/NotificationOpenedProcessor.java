@@ -139,7 +139,7 @@ class NotificationOpenedProcessor {
    }
 
    static boolean handleIAMPreviewOpen(@NonNull Activity context, @NonNull JSONObject jsonData) {
-      String previewUUID = NotificationBundleProcessor.inAppPreviewPushUUID(jsonData);
+      String previewUUID = OSInAppMessagePreviewHandler.inAppPreviewPushUUID(jsonData);
       if (previewUUID == null)
          return false;
 
