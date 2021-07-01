@@ -140,7 +140,7 @@ class NotificationBundleProcessor {
         processCollapseKey(notificationJob);
 
         int androidNotificationId = notificationJob.getAndroidIdWithoutCreate();
-        boolean doDisplay = shouldDisplayNotif(notificationJob);
+        boolean doDisplay = shouldDisplayNotification(notificationJob);
         boolean notificationDisplayed = false;
 
         if (doDisplay) {
@@ -156,7 +156,7 @@ class NotificationBundleProcessor {
             }
         }
 
-        if (!notificationJob.isRestoring() && !notificationJob.isIamPreview()) {
+        if (!notificationJob.isRestoring()) {
             processNotification(notificationJob, opened, notificationDisplayed);
 
             // No need to keep notification duplicate check on memory, we have database check at this point
@@ -169,10 +169,9 @@ class NotificationBundleProcessor {
         return androidNotificationId;
     }
 
-    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notificationJob) {
-        // Validate that the current Android device is Android 4.4 or higher and the current job is a
-        //    preview push
-        if (notificationJob.isIamPreview() && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
+    private static boolean shouldDisplayNotification(OSNotificationGenerationJob notificationJob) {
+        // Validate that the current Android device is Android 4.4 or higher
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
             return false;
 
         // Otherwise, this is a normal notification and should be shown
