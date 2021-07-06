@@ -95,10 +95,16 @@ class GenerateNotification {
    }
 
    @WorkerThread
-   static boolean displayNotificationFromJsonPayload(OSNotificationGenerationJob notificationJob) {
+   static boolean displayNotification(OSNotificationGenerationJob notificationJob) {
       setStatics(notificationJob.getContext());
 
       isRunningOnMainThreadCheck();
+
+      return showNotification(notificationJob);
+   }
+
+   static boolean displayIAMPreviewNotification(OSNotificationGenerationJob notificationJob) {
+      setStatics(notificationJob.getContext());
 
       return showNotification(notificationJob);
    }
