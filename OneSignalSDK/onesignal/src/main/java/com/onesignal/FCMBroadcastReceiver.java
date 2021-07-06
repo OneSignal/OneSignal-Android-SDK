@@ -82,7 +82,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
             // Prevent other FCM receivers from firing if:
             //   1. This is a duplicated FCM message
             //   2. OR work manager is processing the notification
-            if (processedResult.isDup || processedResult.isWorkManagerProcessing) {
+            if (processedResult.isDup() || processedResult.isWorkManagerProcessing()) {
                // Abort to prevent other FCM receivers from process this Intent.
                setAbort();
                return;

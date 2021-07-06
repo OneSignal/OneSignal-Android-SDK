@@ -376,7 +376,7 @@ class NotificationBundleProcessor {
             return;
         }
 
-        bundleResult.isOneSignalPayload = true;
+        bundleResult.setOneSignalPayload(true);
         maximizeButtonsFromBundle(bundle);
 
         if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(bundleResult, bundle)) {
@@ -392,7 +392,7 @@ class NotificationBundleProcessor {
                 if (!notificationProcessed) {
                     // We already check for bundle == null under isOneSignalBundle
                     // At this point we know notification is duplicate
-                    bundleResult.isDup = true;
+                    bundleResult.setDup(true);
                 }
                 bundleReceiverCallback.onBundleProcessed(bundleResult);
             }
@@ -435,7 +435,7 @@ class NotificationBundleProcessor {
                         timestamp,
                         isHighPriority);
 
-                bundleResult.isWorkManagerProcessing = true;
+                bundleResult.setWorkManagerProcessing(true);
                 notificationProcessingCallback.onResult(true);
             }
         };
@@ -464,13 +464,37 @@ class NotificationBundleProcessor {
     }
 
     static class ProcessedBundleResult {
-        boolean isOneSignalPayload;
-        boolean isDup;
-        boolean inAppPreviewShown;
-        boolean isWorkManagerProcessing;
+        private boolean isOneSignalPayload;
+        private boolean isDup;
+        private boolean inAppPreviewShown;
+        private boolean isWorkManagerProcessing;
 
         boolean processed() {
             return !isOneSignalPayload || isDup || inAppPreviewShown || isWorkManagerProcessing;
+        }
+
+        void setOneSignalPayload(boolean oneSignalPayload) {
+            isOneSignalPayload = oneSignalPayload;
+        }
+
+        boolean isDup() {
+            return isDup;
+        }
+
+        void setDup(boolean dup) {
+            isDup = dup;
+        }
+
+        public void setInAppPreviewShown(boolean inAppPreviewShown) {
+            this.inAppPreviewShown = inAppPreviewShown;
+        }
+
+        public boolean isWorkManagerProcessing() {
+            return isWorkManagerProcessing;
+        }
+
+        public void setWorkManagerProcessing(boolean workManagerProcessing) {
+            isWorkManagerProcessing = workManagerProcessing;
         }
     }
 

@@ -19,7 +19,7 @@ class OSInAppMessagePreviewHandler {
         if (previewUUID != null) {
             // If app is in focus display the IAMs preview now
             if (OneSignal.isAppActive()) {
-                bundleResult.inAppPreviewShown = true;
+                bundleResult.setInAppPreviewShown(true);
                 OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
             }
             return true;
