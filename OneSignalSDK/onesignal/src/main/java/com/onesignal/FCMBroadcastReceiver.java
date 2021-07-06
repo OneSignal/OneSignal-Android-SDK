@@ -126,7 +126,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          @Override
          public void onBundleProcessed(@Nullable ProcessedBundleResult processedResult) {
             // Return if the notification will NOT be handled by normal FCMIntentService display flow.
-            if (processedResult!= null && processedResult.processed()){
+            if (processedResult!= null && processedResult.processed()) {
                fcmBundleReceiver.onBundleProcessed(processedResult);
                return;
             }

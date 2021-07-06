@@ -1,5 +1,6 @@
 package com.onesignal;
 
+import android.content.Context;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -12,15 +13,17 @@ import static com.onesignal.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY
 
 class OSInAppMessagePreviewHandler {
 
-    static boolean inAppMessagePreviewHandled(NotificationBundleProcessor.ProcessedBundleResult bundleResult, Bundle bundle) {
+    static boolean inAppMessagePreviewHandled(Context context, Bundle bundle) {
         JSONObject pushPayloadJson = NotificationBundleProcessor.bundleAsJSONObject(bundle);
         // Show In-App message preview it is in the payload & the app is in focus
         String previewUUID = inAppPreviewPushUUID(pushPayloadJson);
         if (previewUUID != null) {
             // If app is in focus display the IAMs preview now
             if (OneSignal.isAppActive()) {
-                bundleResult.setInAppPreviewShown(true);
                 OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
+            } else {
+                OSNotificationGenerationJob generationJob = new OSNotificationGenerationJob(context, pushPayloadJson);
+                GenerateNotification.displayIAMPreviewNotification(generationJob);
             }
             return true;
         }
@@ -28,7 +31,8 @@ class OSInAppMessagePreviewHandler {
         return false;
     }
 
-    static @Nullable String inAppPreviewPushUUID(JSONObject payload) {
+    @Nullable
+    static String inAppPreviewPushUUID(JSONObject payload) {
         JSONObject osCustom;
         try {
             osCustom = NotificationBundleProcessor.getCustomJSONObject(payload);

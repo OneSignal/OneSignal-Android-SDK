@@ -78,7 +78,6 @@ class NotificationBundleProcessor {
             final JSONObject jsonPayload = new JSONObject(jsonStrPayload);
             final boolean isRestoring = bundle.getBoolean("is_restoring", false);
             final long shownTimeStamp = bundle.getLong("timestamp");
-            final boolean isIamPreview = OSInAppMessagePreviewHandler.inAppPreviewPushUUID(jsonPayload) != null;
 
             int androidNotificationId = 0;
             if (bundle.containsKey(ANDROID_NOTIFICATION_ID))
@@ -89,7 +88,6 @@ class NotificationBundleProcessor {
                 @Override
                 public void onResult(boolean result) {
                     if (!isRestoring
-                            && !isIamPreview
                             && result)
                         return;
 
@@ -152,7 +150,7 @@ class NotificationBundleProcessor {
                 return androidNotificationId;
             } else {
                 // Notification might end not displaying because the channel for that notification has notification disable
-                notificationDisplayed = GenerateNotification.displayNotificationFromJsonPayload(notificationJob);
+                notificationDisplayed = GenerateNotification.displayNotification(notificationJob);
             }
         }
 
@@ -379,8 +377,9 @@ class NotificationBundleProcessor {
         bundleResult.setOneSignalPayload(true);
         maximizeButtonsFromBundle(bundle);
 
-        if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(bundleResult, bundle)) {
+        if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(context, bundle)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
+            bundleResult.setInAppPreviewShown(true);
             bundleReceiverCallback.onBundleProcessed(bundleResult);
             return;
         }
