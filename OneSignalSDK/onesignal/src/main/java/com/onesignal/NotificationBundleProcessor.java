@@ -168,11 +168,6 @@ class NotificationBundleProcessor {
     }
 
     private static boolean shouldDisplayNotification(OSNotificationGenerationJob notificationJob) {
-        // Validate that the current Android device is Android 4.4 or higher
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
-            return false;
-
-        // Otherwise, this is a normal notification and should be shown
         return notificationJob.hasExtender() || isStringNotEmpty(notificationJob.getJsonPayload().optString("alert"));
     }
 

@@ -1,6 +1,7 @@
 package com.onesignal;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -21,7 +22,7 @@ class OSInAppMessagePreviewHandler {
             // If app is in focus display the IAMs preview now
             if (OneSignal.isAppActive()) {
                 OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
-            } else {
+            } else if (shouldDisplayNotification()) {
                 OSNotificationGenerationJob generationJob = new OSNotificationGenerationJob(context, pushPayloadJson);
                 GenerateNotification.displayIAMPreviewNotification(generationJob);
             }
@@ -47,5 +48,10 @@ class OSInAppMessagePreviewHandler {
         if (additionalData.has(IAM_PREVIEW_KEY))
             return additionalData.optString(IAM_PREVIEW_KEY);
         return null;
+    }
+
+    private static boolean shouldDisplayNotification() {
+        // Validate that the current Android device is Android 4.4 or higher
+        return Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2;
     }
 }
