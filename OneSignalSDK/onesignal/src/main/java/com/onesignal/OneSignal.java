@@ -2425,7 +2425,7 @@ public class OneSignal {
               && !urlOpened
               && !defaultOpenActionDisabled
               && !inForeground
-              && startOrResumeApp(context);
+              // && startOrResumeApp(context); // TODO: Disabling in this commit only to test changes, in a follow up commit in this PR we will address this line
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
