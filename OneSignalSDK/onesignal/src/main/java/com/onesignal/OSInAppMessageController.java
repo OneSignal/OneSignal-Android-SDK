@@ -750,8 +750,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
         inAppMessageShowing = false;
         synchronized (messageDisplayQueue) {
-            if (messageDisplayQueue.size() > 0) {
-                if (message != null && !messageDisplayQueue.contains(message)) {
+            if (message != null && !message.isPreview && messageDisplayQueue.size() > 0) {
+                if (!messageDisplayQueue.contains(message)) {
                     logger.debug("Message already removed from the queue!");
                     return;
                 } else {
