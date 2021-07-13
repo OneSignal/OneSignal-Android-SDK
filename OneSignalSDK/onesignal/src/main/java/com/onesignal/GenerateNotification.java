@@ -127,23 +127,69 @@ class GenerateNotification {
       return currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo());
    }
 
-
    /**
-    * Notification delete is processed by Broadcast Receiver to avoid creation of activities that can end
-    * on weird UI interaction
+    * Creates a PendingIntent to attach to the notification click and it's action button(s).
+    * If the user interacts with the notification this normally starts the app or resumes it
+    *   unless the app developer disables this via a OneSignal meta-data AndroidManifest.xml setting
     */
-   private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
-      return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+   private static PendingIntent getNewActionPendingIntent(int requestCode, Intent oneSignalIntent) {
+      PendingIntent oneSignalActivityIntent = PendingIntent.getActivity(currentContext, requestCode, oneSignalIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+      // 1. Check if the App developer disabled the default action of opening / resuming the app.
+      boolean defaultOpenActionDisabled = getDefaultAppOpenDisabled();
+      if (defaultOpenActionDisabled) {
+         // Even though the default app open action is disabled we still need to attach OneSignal's
+         // invisible Activity to capture click event to report click counts and etc.
+         // You may be thinking why not use a BroadcastReceiver instead of an invisible
+         // Activity? This could be done in a 5.0.0 release but can't be changed now as it is
+         // unknown if the app developer will be starting there own Activity from their
+         // OSNotificationOpenedHandler and that would have side-effects.
+         return oneSignalActivityIntent;
+      }
+
+      // 2. Check if the app defines a launcher Activity. This is almost always true, one of the few
+      //      exceptions being an app that is only a widget.
+      Intent launchIntent = currentContext.getPackageManager().getLaunchIntentForPackage(currentContext.getPackageName());
+      if (launchIntent == null) {
+         return oneSignalActivityIntent;
+      }
+
+      // Removing "package" from the intent treats the app as if it was started externally.
+      //   - This is exactly what an Android Launcher does.
+      // This prevents another instance of the Activity from being created.
+      // Android 11 no longer requires nulling this out to get this behavior.
+      launchIntent.setPackage(null);
+
+      launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+
+      // Launch desired Activity we want the user to be take to the followed by
+      //   OneSignal's invisible notification open tracking Activity
+      // This allows OneSignal to track the click, fire OSNotificationOpenedHandler, etc while allowing
+      //   the app developer to set the Activity they want at notification creation time. (FUTURE API FEATURE)
+      // AKA "Reverse Activity Trampolining"
+      Intent[] intents = { launchIntent, oneSignalIntent };
+      return PendingIntent.getActivities(currentContext, requestCode, intents, PendingIntent.FLAG_UPDATE_CURRENT);
    }
 
    private static PendingIntent getNewDismissActionPendingIntent(int requestCode, Intent intent) {
       return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
    }
 
+   // An Intent that is used as a base for all notification open actions. Both notification clicks
+   //   as well as notification action button clicks.
    private static Intent getNewBaseIntent(int notificationId) {
+      // We use SINGLE_TOP and CLEAR_TOP as we don't want more than one OneSignal invisible click
+      //   tracking Activity instance around.
+      int intentFlags = Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP;
+      boolean defaultOpenActionDisabled = getDefaultAppOpenDisabled();
+      if (defaultOpenActionDisabled) {
+         // If we don't want the app to launch we put OneSignal's invisible click tracking Activity on it's own task
+         //   so it doesn't resume an existing one once it closes.
+         intentFlags |= Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET;
+      }
+
      return new Intent(currentContext, notificationOpenedClass)
              .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
-             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+             .addFlags(intentFlags);
    }
 
    private static Intent getNewBaseDismissIntent(int notificationId) {
@@ -1043,4 +1089,9 @@ class GenerateNotification {
       
       return NotificationCompat.PRIORITY_MIN;
    }
+
+   private static boolean getDefaultAppOpenDisabled() {
+      return "DISABLE".equals(OSUtils.getManifestMeta(currentContext, "com.onesignal.NotificationOpened.DEFAULT"));
+   }
+
 }
