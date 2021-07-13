@@ -356,7 +356,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message) {
        enableWebViewRemoteDebugging();
 
-       webView = new OSWebView(currentActivity);
+        try {
+            webView = new OSWebView(currentActivity);
+        }
+        catch (Resources.NotFoundException e) {
+            // Some older devices can crash when instantiating a WebView, due to a Resources$NotFoundException
+            // Creating with the application Context fixes this, but is not generally recommended for view creation
+            webView = new OSWebView(currentActivity.getApplicationContext());
+        }
 
        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
        webView.setVerticalScrollBarEnabled(false);
