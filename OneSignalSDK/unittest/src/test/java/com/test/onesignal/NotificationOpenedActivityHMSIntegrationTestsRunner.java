@@ -13,6 +13,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
@@ -61,7 +62,8 @@ import static org.robolectric.Shadows.shadowOf;
         ShadowOSWebView.class,
         ShadowOSViewUtils.class,
         ShadowCustomTabsClient.class,
-        ShadowCustomTabsSession.class
+        ShadowCustomTabsSession.class,
+            ShadowHmsInstanceId.class,
     },
     sdk = 26
 )
