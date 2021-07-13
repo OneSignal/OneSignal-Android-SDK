@@ -2685,6 +2685,10 @@ public class MainOneSignalClassRunner {
       OneSignal.deleteTags("[\"key1\", \"key2\"]");
       OneSignal.disablePush(false);
       OneSignal.promptLocation();
+	  OneSignal.getOneSignalNotificationsCount(new OneSignal.OSNotificationsCountHandler() {
+		  @Override
+		  public void notificationsAvailable(int count) {}
+	  });
       OneSignal.postNotification("{}", new OneSignal.PostNotificationResponseHandler() {
          @Override
          public void onSuccess(JSONObject response) {}

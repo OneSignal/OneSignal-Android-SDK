@@ -210,6 +210,10 @@ public class OneSignal {
        */
       void tagsAvailable(JSONObject tags);
    }
+   
+   public interface OSNotificationsCountHandler {
+      void notificationsAvailable(int count);
+   }
 
    public interface ChangeTagsUpdateHandler {
       void onSuccess(JSONObject tags);
@@ -2771,6 +2775,41 @@ public class OneSignal {
       };
 
       LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
+   }
+   
+   public static void getOneSignalNotificationsCount(final OSNotificationsCountHandler getNotificationsCountHandler) {
+      Runnable runGetOneSignalNotificationsCount = new Runnable() {
+         @Override
+         public void run() {
+            OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(appContext);
+            String[] retColumn = {OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID};
+
+            Cursor cursor = dbHelper.query(
+                    OneSignalDbContract.NotificationTable.TABLE_NAME,
+                    retColumn,
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
+                    null,
+                    null,                                                    // group by
+                    null,                                                    // filter by row groups
+                    null                                                     // sort order
+            );
+            	
+            getNotificationsCountHandler.notificationsAvailable(cursor.getCount());
+
+            cursor.close();
+         }
+      };
+
+      if (appContext == null || shouldRunTaskThroughQueue()) {
+         Log(LOG_LEVEL.ERROR, "OneSignal.init has not been called. " +
+                 "Could not get notifications count at this time - moving this operation to" +
+                 "a waiting task queue.");
+         addTaskToQueue(new PendingTaskRunnable(runGetOneSignalNotificationsCount));
+         return;
+      }
+
+      runGetOneSignalNotificationsCount.run();
    }
 
    /**
