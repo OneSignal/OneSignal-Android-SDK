@@ -1,4 +1,4 @@
-package com.onesignal.example;
+package com.onesignal.sdktest.notification;
 
 import android.util.Log;
 
