@@ -7,6 +7,7 @@ import androidx.annotation.WorkerThread;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,9 +18,27 @@ class OSInAppMessageRepository {
     final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
 
     private final OneSignalDbHelper dbHelper;
+    private final OSLogger logger;
 
-    OSInAppMessageRepository(OneSignalDbHelper dbHelper) {
+    OSInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger) {
         this.dbHelper = dbHelper;
+        this.logger = logger;
+    }
+
+    void getIAMPreviewData(String appId, String previewUUID, final OSInAppMessageRequestResponse requestResponse){
+        String htmlPath = "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + appId;
+        OneSignalRestClient.get(htmlPath, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                printHttpErrorForInAppMessageRequest("html", statusCode, response);
+                requestResponse.onFailure(response);
+            }
+
+            @Override
+            void onSuccess(String response) {
+                requestResponse.onSuccess(response);
+            }
+        }, null);
     }
 
     @WorkerThread
@@ -203,6 +222,15 @@ class OSInAppMessageRepository {
                         clickedClickIds);
             }
         }
+    }
+
+    private void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
+        logger.error("Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
+    }
+
+    interface OSInAppMessageRequestResponse {
+        void onSuccess(String response);
+        void onFailure(String response);
     }
 
 }

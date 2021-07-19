@@ -134,18 +134,18 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         if (tempClickedMessageIdsSet != null)
             clickedClickIds.addAll(tempClickedMessageIdsSet);
 
-        initRedisplayData(dbHelper);
+        initRedisplayData(dbHelper, logger);
     }
 
-    OSInAppMessageRepository getInAppMessageRepository(OneSignalDbHelper dbHelper) {
+    OSInAppMessageRepository getInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger) {
         if (inAppMessageRepository == null)
-            inAppMessageRepository = new OSInAppMessageRepository(dbHelper);
+            inAppMessageRepository = new OSInAppMessageRepository(dbHelper, logger);
 
         return inAppMessageRepository;
     }
 
-    protected void initRedisplayData(OneSignalDbHelper dbHelper) {
-        inAppMessageRepository = getInAppMessageRepository(dbHelper);
+    protected void initRedisplayData(OneSignalDbHelper dbHelper, OSLogger logger) {
+        inAppMessageRepository = getInAppMessageRepository(dbHelper, logger);
         Runnable getCachedIAMRunnable =  new BackgroundRunnable() {
             @Override
             public void run() {
@@ -906,17 +906,9 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         final OSInAppMessage message = new OSInAppMessage(true);
         getTagsForLiquidTemplating(message, true);
 
-        String htmlPath = "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + OneSignal.appId;
-        OneSignalRestClient.get(htmlPath, new ResponseHandler() {
+        inAppMessageRepository.getIAMPreviewData(OneSignal.appId, previewUUID, new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
             @Override
-            void onFailure(int statusCode, String response, Throwable throwable) {
-                printHttpErrorForInAppMessageRequest("html", statusCode, response);
-
-                dismissCurrentMessage(null);
-            }
-
-            @Override
-            void onSuccess(String response) {
+            public void onSuccess(String response) {
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
                     String htmlStr = jsonResponse.getString("html");
@@ -932,7 +924,12 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                     e.printStackTrace();
                 }
             }
-        }, null);
+
+            @Override
+            public void onFailure(String response) {
+                dismissCurrentMessage(null);
+            }
+        });
     }
 
     /**
