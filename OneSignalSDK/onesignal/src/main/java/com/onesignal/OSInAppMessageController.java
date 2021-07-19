@@ -251,8 +251,10 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             for (int i = 0; i < json.length(); i++) {
                 JSONObject messageJson = json.getJSONObject(i);
                 OSInAppMessage message = new OSInAppMessage(messageJson);
-
-                newMessages.add(message);
+                // Avoid null checks later if IAM already comes with null id
+                if (message.messageId != null) {
+                    newMessages.add(message);
+                }
             }
 
             messages = newMessages;
