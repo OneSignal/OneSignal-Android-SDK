@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.onesignal.OSDynamicTriggerController.OSDynamicTriggerControllerObserver;
-import com.onesignal.OneSignalRestClient.ResponseHandler;
 import com.onesignal.language.LanguageContext;
 
 import org.json.JSONArray;
@@ -104,39 +103,24 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         this.languageContext = languageContext;
         this.logger = logger;
 
-        Set<String> tempDismissedSet = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                null
-        );
+        inAppMessageRepository = getInAppMessageRepository(dbHelper, logger, sharedPreferences);
+        Set<String> tempDismissedSet = inAppMessageRepository.getDismissedMessagesId();
         if (tempDismissedSet != null)
             dismissedMessages.addAll(tempDismissedSet);
 
-        Set<String> tempImpressionsSet = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                null
-        );
+        Set<String> tempImpressionsSet = inAppMessageRepository.getImpressionesMessagesId();
         if (tempImpressionsSet != null)
             impressionedMessages.addAll(tempImpressionsSet);
 
-        Set<String> tempPageImpressionsSet = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
-                null
-        );
+        Set<String> tempPageImpressionsSet = inAppMessageRepository.getViewPageImpressionedIds();
         if (tempPageImpressionsSet != null)
             viewedPageIds.addAll(tempPageImpressionsSet);
 
-        Set<String> tempClickedMessageIdsSet = OneSignalPrefs.getStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                null
-        );
+        Set<String> tempClickedMessageIdsSet = inAppMessageRepository.getClickedMessagesId();
         if (tempClickedMessageIdsSet != null)
             clickedClickIds.addAll(tempClickedMessageIdsSet);
 
-        initRedisplayData(dbHelper, logger, sharedPreferences);
+        initRedisplayData();
     }
 
     OSInAppMessageRepository getInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger, OSSharedPreferences sharedPreferences) {
@@ -146,16 +130,15 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         return inAppMessageRepository;
     }
 
-    protected void initRedisplayData(OneSignalDbHelper dbHelper, OSLogger logger, OSSharedPreferences sharedPreferences) {
-        inAppMessageRepository = getInAppMessageRepository(dbHelper, logger, sharedPreferences);
-        Runnable getCachedIAMRunnable =  new BackgroundRunnable() {
+    protected void initRedisplayData() {
+        Runnable getCachedIAMRunnable = new BackgroundRunnable() {
             @Override
             public void run() {
                 super.run();
 
                 synchronized (LOCK) {
                     redisplayedInAppMessages = inAppMessageRepository.getCachedInAppMessages();
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Retrieved IAMs from DB redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
+                    logger.debug("Retrieved IAMs from DB redisplayedInAppMessages: " + redisplayedInAppMessages.toString());
                 }
             }
         };
@@ -173,7 +156,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     void executeRedisplayIAMDataDependantTask(Runnable task) {
         synchronized (LOCK) {
             if (shouldRunTaskThroughQueue()) {
-                OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying task due to redisplay data not retrieved yet");
+                logger.debug("Delaying task due to redisplay data not retrieved yet");
                 taskController.addTaskToQueue(task);
             } else {
                 task.run();
@@ -190,16 +173,12 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     void initWithCachedInAppMessages() {
         // Do not reload from cache if already loaded.
         if (!messages.isEmpty()) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages with already in memory messages: " + messages);
+            logger.debug("initWithCachedInAppMessages with already in memory messages: " + messages);
             return;
         }
 
-        String cachedInAppMessageString = OneSignalPrefs.getString(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_CACHED_IAMS,
-                null
-        );
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "initWithCachedInAppMessages: " + cachedInAppMessageString);
+        String cachedInAppMessageString = inAppMessageRepository.getSavedIAMs();
+        logger.debug("initWithCachedInAppMessages: " + cachedInAppMessageString);
 
         if (cachedInAppMessageString == null || cachedInAppMessageString.isEmpty())
             return;
@@ -223,10 +202,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      */
     void receivedInAppMessageJson(@NonNull final JSONArray json) throws JSONException {
         // Cache copy for quick cold starts
-        OneSignalPrefs.saveString(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_CACHED_IAMS,
-                json.toString());
+        inAppMessageRepository.saveIAMs(json.toString());
 
         executeRedisplayIAMDataDependantTask(new Runnable() {
             @Override
@@ -235,7 +211,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 try {
                     processInAppMessageJson(json);
                 } catch (JSONException e) {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "ERROR processing InAppMessageJson JSON Response.", e);
+                    logger.error("ERROR processing InAppMessageJson JSON Response.", e);
                 }
             }
         });
@@ -266,13 +242,13 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     private void evaluateInAppMessages() {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting evaluateInAppMessages");
+        logger.debug("Starting evaluateInAppMessages");
 
         if (shouldRunTaskThroughQueue()) {
             taskController.addTaskToQueue(new Runnable() {
                 @Override
                 public void run() {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying evaluateInAppMessages due to redisplay data not retrieved yet");
+                    logger.debug("Delaying evaluateInAppMessages due to redisplay data not retrieved yet");
                     evaluateInAppMessages();
                 }
             });
@@ -370,17 +346,17 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
         if (action.getTags() != null)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.getTags().toString());
+            logger.debug("Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.getTags().toString());
 
         if (action.getOutcomes().size() > 0)
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.getOutcomes().toString());
+            logger.debug("Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.getOutcomes().toString());
 
         // TODO: Add more action payload preview logs here in future
     }
 
     private void beginProcessingPrompts(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
         if (prompts.size() > 0) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM showing prompts from IAM: " + message.toString());
+            logger.debug("IAM showing prompts from IAM: " + message.toString());
             // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
             WebViewManager.dismissCurrentInAppMessage();
             showMultiplePrompts(message, prompts);
@@ -397,13 +373,13 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
 
         if (currentPrompt != null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle: " + currentPrompt.toString());
+            logger.debug("IAM prompt to handle: " + currentPrompt.toString());
             currentPrompt.setPrompted(true);
             currentPrompt.handlePrompt(new OneSignal.OSPromptActionCompletionCallback() {
                 @Override
                 public void onCompleted(OneSignal.PromptActionResult result) {
                     currentPrompt = null;
-                    OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "IAM prompt to handle finished with result: " + result);
+                    logger.debug("IAM prompt to handle finished with result: " + result);
 
                     // On preview mode we show informative alert dialogs
                     if (inAppMessage.isPreview && result == OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST)
@@ -413,7 +389,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 }
             });
         } else {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "No IAM prompt to handle, dismiss message: " + inAppMessage.messageId);
+            logger.debug("No IAM prompt to handle, dismiss message: " + inAppMessage.messageId);
             messageWasDismissed(inAppMessage);
         }
     }
@@ -485,7 +461,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
         // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
         if (viewedPageIds.contains(messagePrefixedPageId)) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Already sent page impression for id: " + pageId);
+            logger.verbose("Already sent page impression for id: " + pageId);
             return;
         }
 
@@ -560,20 +536,20 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             message.setDisplayedInSession(savedIAM.isDisplayedInSession());
 
             boolean triggerHasChanged = hasMessageTriggerChanged(message);
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay: " + message.toString() + " triggerHasChanged: " + triggerHasChanged);
+            logger.debug("setDataForRedisplay: " + message.toString() + " triggerHasChanged: " + triggerHasChanged);
 
             // Check if conditions are correct for redisplay
             if (triggerHasChanged &&
                     message.getRedisplayStats().isDelayTimeSatisfied() &&
                     message.getRedisplayStats().shouldDisplayAgain()) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "setDataForRedisplay message available for redisplay: " + message.messageId);
+                logger.debug("setDataForRedisplay message available for redisplay: " + message.messageId);
 
                 dismissedMessages.remove(message.messageId);
                 impressionedMessages.remove(message.messageId);
                 // Pages from different IAMs should not impact each other so we can clear the entire
                 // list when an IAM is dismissed or we are re-displaying the same one
                 viewedPageIds.clear();
-                inAppMessageRepository.saveViewedPageIdsToPrefs(viewedPageIds);
+                inAppMessageRepository.saveViewPageImpressionedIds(viewedPageIds);
                 message.clearClickIds();
             }
         }
@@ -615,7 +591,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 return;
             }
 
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "displayFirstIAMOnQueue: " + messageDisplayQueue);
+            logger.debug("displayFirstIAMOnQueue: " + messageDisplayQueue);
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (messageDisplayQueue.size() > 0 && !isInAppMessageShowing()) {
                 logger.debug("No IAM showing currently, showing first item in the queue!");
@@ -649,10 +625,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             dismissedMessages.add(message.messageId);
             // If failed we will retry on next session
             if (!failed) {
-                OneSignalPrefs.saveStringSet(
-                        OneSignalPrefs.PREFS_ONESIGNAL,
-                        OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                        dismissedMessages);
+                inAppMessageRepository.saveDismissedMessagesId(dismissedMessages);
 
                 // Don't keep track of last displayed time for a preview
                 lastTimeInAppDismissed = new Date();
@@ -666,7 +639,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     void messageWasDismissedByBackPress(@NonNull OSInAppMessage message) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "In app message OSInAppMessageController messageWasDismissed by back press: " + message.toString());
+        logger.debug("In app message OSInAppMessageController messageWasDismissed by back press: " + message.toString());
         // IAM was not dismissed by user, will be redisplay again until user dismiss it
         dismissCurrentMessage(message);
     }
@@ -881,7 +854,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      */
     @Override
     public void messageDynamicTriggerCompleted(String triggerId) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "messageDynamicTriggerCompleted called with triggerId: " + triggerId);
+        logger.debug("messageDynamicTriggerCompleted called with triggerId: " + triggerId);
         Set<String> triggerIds = new HashSet<>();
         triggerIds.add(triggerId);
         makeRedisplayMessagesAvailableWithTriggers(triggerIds);
@@ -896,7 +869,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      */
     @Override
     public void messageTriggerConditionChanged() {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "messageTriggerConditionChanged called");
+        logger.debug("messageTriggerConditionChanged called");
 
         // This method is called when a time-based trigger timer fires, meaning the message can
         //  probably be shown now. So the current message conditions should be re-evaluated
@@ -951,7 +924,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             taskController.addTaskToQueue(new Runnable() {
                 @Override
                 public void run() {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying addTriggers due to redisplay data not retrieved yet");
+                    logger.debug("Delaying addTriggers due to redisplay data not retrieved yet");
                     checkRedisplayMessagesAndEvaluate(newTriggers.keySet());
                 }
             });
@@ -967,7 +940,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             taskController.addTaskToQueue(new Runnable() {
                 @Override
                 public void run() {
-                    OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Delaying removeTriggersForKeys due to redisplay data not retrieved yet");
+                    logger.debug("Delaying removeTriggersForKeys due to redisplay data not retrieved yet");
                     checkRedisplayMessagesAndEvaluate(keys);
                 }
             });
