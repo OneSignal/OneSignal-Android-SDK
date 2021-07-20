@@ -40,6 +40,8 @@ import java.util.List;
 
 class OneSignalStateSynchronizer {
 
+   private static final Object LOCK = new Object();
+
    enum UserStateSynchronizerType {
       PUSH,
       EMAIL,
@@ -69,24 +71,36 @@ class OneSignalStateSynchronizer {
 
    // #1 UserStateSynchronizer -> Push Channel
    static UserStatePushSynchronizer getPushStateSynchronizer() {
-      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.PUSH) || userStateSynchronizers.get(UserStateSynchronizerType.PUSH) == null)
-         userStateSynchronizers.put(UserStateSynchronizerType.PUSH, new UserStatePushSynchronizer());
+      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.PUSH) || userStateSynchronizers.get(UserStateSynchronizerType.PUSH) == null) {
+         synchronized (LOCK) {
+            if (userStateSynchronizers.get(UserStateSynchronizerType.PUSH) == null)
+               userStateSynchronizers.put(UserStateSynchronizerType.PUSH, new UserStatePushSynchronizer());
+         }
+      }
 
       return (UserStatePushSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.PUSH);
    }
 
    // #2 UserStateSynchronizer -> Email Channel
    static UserStateEmailSynchronizer getEmailStateSynchronizer() {
-      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.EMAIL) || userStateSynchronizers.get(UserStateSynchronizerType.EMAIL) == null)
-         userStateSynchronizers.put(UserStateSynchronizerType.EMAIL, new UserStateEmailSynchronizer());
+      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.EMAIL) || userStateSynchronizers.get(UserStateSynchronizerType.EMAIL) == null) {
+         synchronized (LOCK) {
+            if (userStateSynchronizers.get(UserStateSynchronizerType.EMAIL) == null)
+               userStateSynchronizers.put(UserStateSynchronizerType.EMAIL, new UserStateEmailSynchronizer());
+         }
+      }
 
       return (UserStateEmailSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.EMAIL);
    }
 
    // #3 UserStateSynchronizer -> SMS Channel
    static UserStateSMSSynchronizer getSMSStateSynchronizer() {
-      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.SMS) || userStateSynchronizers.get(UserStateSynchronizerType.SMS) == null)
-         userStateSynchronizers.put(UserStateSynchronizerType.SMS, new UserStateSMSSynchronizer());
+      if (!userStateSynchronizers.containsKey(UserStateSynchronizerType.SMS) || userStateSynchronizers.get(UserStateSynchronizerType.SMS) == null) {
+         synchronized (LOCK) {
+            if (userStateSynchronizers.get(UserStateSynchronizerType.SMS) == null)
+               userStateSynchronizers.put(UserStateSynchronizerType.SMS, new UserStateSMSSynchronizer());
+         }
+      }
 
       return (UserStateSMSSynchronizer) userStateSynchronizers.get(UserStateSynchronizerType.SMS);
    }
