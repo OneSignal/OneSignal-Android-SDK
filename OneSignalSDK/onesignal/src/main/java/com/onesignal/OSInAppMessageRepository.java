@@ -49,7 +49,7 @@ class OSInAppMessageRepository {
                 void onSuccess(String response) {
                     printHttpSuccessForInAppMessageRequest("engagement", response);
                     // Persist success click to disk. Id already added to set before making the network call
-                    saveClickedMessages(clickedMessagesId);
+                    saveClickedMessagesId(clickedMessagesId);
                 }
 
                 @Override
@@ -79,7 +79,7 @@ class OSInAppMessageRepository {
                 @Override
                 void onSuccess(String response) {
                     printHttpSuccessForInAppMessageRequest("page impression", response);
-                    saveViewedPageIdsToPrefs(viewedPageIds);
+                    saveViewPageImpressionedIds(viewedPageIds);
                 }
 
                 @Override
@@ -371,11 +371,27 @@ class OSInAppMessageRepository {
         return "in_app_messages/" + messageId + "/variants/" + variantId + "/html?app_id=" + appId;
     }
 
-    private void saveClickedMessages(final Set<String> clickedClickIds) {
+    Set<String> getClickedMessagesId() {
+        return sharedPreferences.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                null
+        );
+    }
+
+    private void saveClickedMessagesId(final Set<String> clickedClickIds) {
         sharedPreferences.saveStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
                 clickedClickIds
+        );
+    }
+
+    Set<String> getImpressionesMessagesId() {
+        return sharedPreferences.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                null
         );
     }
 
@@ -386,11 +402,49 @@ class OSInAppMessageRepository {
                 impressionedMessages);
     }
 
-    void saveViewedPageIdsToPrefs(final Set<String> viewedPageIds) {
+    Set<String> getViewPageImpressionedIds() {
+        return sharedPreferences.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
+                null
+        );
+    }
+
+    void saveViewPageImpressionedIds(final Set<String> viewedPageIds) {
         sharedPreferences.saveStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
                 viewedPageIds);
+    }
+
+    Set<String> getDismissedMessagesId() {
+        return sharedPreferences.getStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                null
+        );
+    }
+
+    void saveDismissedMessagesId(final Set<String> dismissedMessages) {
+        sharedPreferences.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
+                dismissedMessages);
+    }
+
+    String getSavedIAMs() {
+        return sharedPreferences.getString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CACHED_IAMS,
+                null
+        );
+    }
+
+    void saveIAMs(final String inAppMessages) {
+        sharedPreferences.saveString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CACHED_IAMS,
+                inAppMessages);
     }
 
     private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
