@@ -3,6 +3,7 @@ package com.onesignal;
 import android.content.ContentValues;
 import android.database.Cursor;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 
 import org.json.JSONArray;
@@ -15,11 +16,14 @@ import java.util.Set;
 
 class OSInAppMessageRepository {
 
+    final static String IAM_DATA_RESPONSE_RETRY_KEY = "retry";
     final static long IAM_CACHE_DATA_LIFETIME = 15_552_000L; // 6 months in seconds
 
     private final OneSignalDbHelper dbHelper;
     private final OSLogger logger;
     private final OSSharedPreferences sharedPreferences;
+
+    private int htmlNetworkRequestAttemptCount = 0;
 
     OSInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger, OSSharedPreferences sharedPreferences) {
         this.dbHelper = dbHelper;
@@ -28,7 +32,7 @@ class OSInAppMessageRepository {
     }
 
     void sendIAMClick(final String appId, final String userId, final String variantId, final int deviceType, final String messageId,
-                      final String clickId, final boolean isFirstClick, final Set<String> clickedMessagesId, final OSInAppMessageRequestResponse requestResponse){
+                      final String clickId, final boolean isFirstClick, final Set<String> clickedMessagesId, final OSInAppMessageRequestResponse requestResponse) {
         try {
             JSONObject json = new JSONObject() {{
                 put("app_id", appId);
@@ -131,6 +135,44 @@ class OSInAppMessageRepository {
 
             @Override
             void onSuccess(String response) {
+                requestResponse.onSuccess(response);
+            }
+        }, null);
+    }
+
+    void getIAMData(String appId, String messageId, String variantId, final OSInAppMessageRequestResponse requestResponse) {
+        String htmlPath = htmlPathForMessage(messageId, variantId, appId);
+        OneSignalRestClient.get(htmlPath, new OneSignalRestClient.ResponseHandler() {
+            @Override
+            void onFailure(int statusCode, String response, Throwable throwable) {
+                printHttpErrorForInAppMessageRequest("html", statusCode, response);
+                JSONObject jsonObject = new JSONObject();
+
+                if (!OSUtils.shouldRetryNetworkRequest(statusCode) || htmlNetworkRequestAttemptCount >= OSUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT) {
+                    // Failure limit reached, reset
+                    htmlNetworkRequestAttemptCount = 0;
+                    try {
+                        jsonObject.put(IAM_DATA_RESPONSE_RETRY_KEY, false);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    // Failure limit not reached, increment by 1
+                    htmlNetworkRequestAttemptCount++;
+                    try {
+                        jsonObject.put(IAM_DATA_RESPONSE_RETRY_KEY, true);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+                requestResponse.onFailure(jsonObject.toString());
+            }
+
+            @Override
+            void onSuccess(String response) {
+                // Successful request, reset count
+                htmlNetworkRequestAttemptCount = 0;
+
                 requestResponse.onSuccess(response);
             }
         }, null);
@@ -317,6 +359,16 @@ class OSInAppMessageRepository {
                         clickedClickIds);
             }
         }
+    }
+
+    @Nullable
+    private String htmlPathForMessage(String messageId, String variantId, String appId) {
+        if (variantId == null) {
+            logger.error("Unable to find a variant for in-app message " + messageId);
+            return null;
+        }
+
+        return "in_app_messages/" + messageId + "/variants/" + variantId + "/html?app_id=" + appId;
     }
 
     private void saveClickedMessages(final Set<String> clickedClickIds) {
