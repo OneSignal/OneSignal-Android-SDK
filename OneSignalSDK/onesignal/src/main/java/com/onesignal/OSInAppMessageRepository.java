@@ -60,6 +60,36 @@ class OSInAppMessageRepository {
         }
     }
 
+    void sendIAMPageImpression(final String appId, final String userId, final String variantId, final int deviceType, final String messageId,
+                               final String pageId, final Set<String> viewedPageIds, final OSInAppMessageRequestResponse requestResponse) {
+        try {
+            JSONObject json = new JSONObject() {{
+                put("app_id", appId);
+                put("player_id", userId);
+                put("variant_id", variantId);
+                put("device_type", deviceType);
+                put("page_id", pageId);
+            }};
+
+            OneSignalRestClient.post("in_app_messages/" + messageId + "/pageImpression", json, new OneSignalRestClient.ResponseHandler() {
+                @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("page impression", response);
+                    saveViewedPageIdsToPrefs(viewedPageIds);
+                }
+
+                @Override
+                void onFailure(int statusCode, String response, Throwable throwable) {
+                    printHttpErrorForInAppMessageRequest("page impression", statusCode, response);
+                    requestResponse.onFailure(response);
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            logger.error("Unable to execute in-app message impression HTTP request due to invalid JSON");
+        }
+    }
+
     void sendIAMImpression(final String appId, final String userId, final String variantId, final int deviceType, final String messageId,
                            final Set<String> impressionedMessages, final OSInAppMessageRequestResponse requestResponse) {
         try {
@@ -301,8 +331,14 @@ class OSInAppMessageRepository {
         sharedPreferences.saveStringSet(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                // Post success, store impressioned messageId to disk
                 impressionedMessages);
+    }
+
+    void saveViewedPageIdsToPrefs(final Set<String> viewedPageIds) {
+        sharedPreferences.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
+                viewedPageIds);
     }
 
     private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
