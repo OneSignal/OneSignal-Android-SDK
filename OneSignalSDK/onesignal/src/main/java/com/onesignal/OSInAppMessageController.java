@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.onesignal.OSInAppMessageRepository.IAM_DATA_RESPONSE_RETRY_KEY;
+
 class OSInAppMessageController extends OSBackgroundManager implements OSDynamicTriggerControllerObserver, OSSystemConditionController.OSSystemConditionObserver {
 
     private static final Object LOCK = new Object();
@@ -87,7 +89,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     @Nullable
     Date lastTimeInAppDismissed = null;
-    private int htmlNetworkRequestAttemptCount = 0;
 
     protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSTaskController controller, OSLogger logger,
                                        OSSharedPreferences sharedPreferences, LanguageContext languageContext) {
@@ -304,14 +305,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
 
         return null;
-    }
-
-    private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
-        logger.debug("Successful post for in-app message " + requestType + " request: " + response);
-    }
-
-    private void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
-        logger.error("Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
     void onMessageWasShown(@NonNull final OSInAppMessage message) {
@@ -744,17 +737,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         logger.debug("persistInAppMessageForRedisplay: " + message.toString() + " with msg array data: " + redisplayedInAppMessages.toString());
     }
 
-    private @Nullable String htmlPathForMessage(OSInAppMessage message) {
-        String variantId = variantIdForMessage(message);
-
-        if (variantId == null) {
-            logger.error("Unable to find a variant for in-app message " + message.messageId);
-            return null;
-        }
-
-        return "in_app_messages/" + message.messageId + "/variants/" + variantId + "/html?app_id=" + OneSignal.appId;
-    }
-
     private void getTagsForLiquidTemplating(@NonNull final OSInAppMessage message, final boolean isPreview) {
         waitForTags = false;
         if (isPreview || message.getHasLiquid()) {
@@ -788,51 +770,46 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
         getTagsForLiquidTemplating(message, false);
 
-        String htmlPath = htmlPathForMessage(message);
-        OneSignalRestClient.get(htmlPath, new ResponseHandler() {
-            @Override
-            void onFailure(int statusCode, String response, Throwable throwable) {
-                inAppMessageShowing = false;
+        inAppMessageRepository.getIAMData(OneSignal.appId, message.messageId, variantIdForMessage(message),
+                new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
+                    @Override
+                    public void onSuccess(String response) {
+                        try {
+                            JSONObject jsonResponse = new JSONObject(response);
+                            String htmlStr = jsonResponse.getString("html");
 
-                printHttpErrorForInAppMessageRequest("html", statusCode, response);
-
-                if (!OSUtils.shouldRetryNetworkRequest(statusCode) || htmlNetworkRequestAttemptCount >= OSUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT) {
-                    // Failure limit reached, reset
-                    htmlNetworkRequestAttemptCount = 0;
-                    messageWasDismissed(message, true);
-                    return;
-                }
-
-                // Failure limit not reached, increment by 1
-                htmlNetworkRequestAttemptCount++;
-                // Retry displaying the same IAM
-                // Using the queueMessageForDisplay method follows safety checks to prevent issues
-                // like having 2 IAMs showing at once or duplicate IAMs in the queue
-                queueMessageForDisplay(message);
-            }
-
-            @Override
-            void onSuccess(String response) {
-                // Successful request, reset count
-                htmlNetworkRequestAttemptCount = 0;
-
-                try {
-                    JSONObject jsonResponse = new JSONObject(response);
-                    String htmlStr = jsonResponse.getString("html");
-
-                    double displayDuration = jsonResponse.optDouble("display_duration");
-                    message.setDisplayDuration(displayDuration);
-                    if (waitForTags) {
-                        pendingHTMLContent = htmlStr;
-                        return;
+                            double displayDuration = jsonResponse.optDouble("display_duration");
+                            message.setDisplayDuration(displayDuration);
+                            if (waitForTags) {
+                                pendingHTMLContent = htmlStr;
+                                return;
+                            }
+                            OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
+                            WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
-                    OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
-                    WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, null);
+
+                    @Override
+                    public void onFailure(String response) {
+                        inAppMessageShowing = false;
+                        try {
+                            JSONObject jsonResponse = new JSONObject(response);
+                            boolean retry = jsonResponse.getBoolean(IAM_DATA_RESPONSE_RETRY_KEY);
+                            if (retry) {
+                                // Retry displaying the same IAM
+                                // Using the queueMessageForDisplay method follows safety checks to prevent issues
+                                // like having 2 IAMs showing at once or duplicate IAMs in the queue
+                                queueMessageForDisplay(message);
+                            } else {
+                                messageWasDismissed(message, true);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
     }
 
     @NonNull
