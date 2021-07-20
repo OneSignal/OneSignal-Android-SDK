@@ -812,8 +812,6 @@ public class OneSignal {
       initDone = true;
       OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization done.");
 
-      outcomeEventsController.sendSavedOutcomes();
-
       // Clean up any pending tasks that were queued up before initialization
       taskRemoteController.startPendingTasks();
    }
@@ -1367,6 +1365,10 @@ public class OneSignal {
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
 
       OSSyncService.getInstance().cancelSyncTask(appContext);
+
+      // Avoid sending saved Outcomes when app in background, this will improve battery usage
+      if (outcomeEventsController != null)
+         outcomeEventsController.sendSavedOutcomes();
    }
 
    static void addNetType(JSONObject jsonObj) {

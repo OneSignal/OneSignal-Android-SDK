@@ -32,6 +32,8 @@ class OSOutcomeEventsController {
     @NonNull
     private final OSSessionManager osSessionManager;
 
+    private boolean savedOutcomesSent = false;
+
     public OSOutcomeEventsController(@NonNull OSSessionManager osSessionManager, @NonNull OSOutcomeEventsFactory outcomeEventsFactory) {
         this.osSessionManager = osSessionManager;
         this.outcomeEventsFactory = outcomeEventsFactory;
@@ -79,6 +81,9 @@ class OSOutcomeEventsController {
      * Cached outcomes come from the failure callback of the network request
      */
     void sendSavedOutcomes() {
+        // Only try to send saved outcomes once per session
+        if (savedOutcomesSent)
+            return;
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -88,6 +93,7 @@ class OSOutcomeEventsController {
                 for (OSOutcomeEventParams event : outcomeEvents) {
                     sendSavedOutcomeEvent(event);
                 }
+                savedOutcomesSent = true;
             }
         }, OS_SEND_SAVED_OUTCOMES).start();
     }
