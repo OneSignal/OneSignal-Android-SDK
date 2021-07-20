@@ -89,7 +89,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     Date lastTimeInAppDismissed = null;
     private int htmlNetworkRequestAttemptCount = 0;
 
-    protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSTaskController controller, OSLogger logger, LanguageContext languageContext) {
+    protected OSInAppMessageController(OneSignalDbHelper dbHelper, OSTaskController controller, OSLogger logger,
+                                       OSSharedPreferences sharedPreferences, LanguageContext languageContext) {
         taskController = controller;
         messages = new ArrayList<>();
         dismissedMessages = OSUtils.newConcurrentSet();
@@ -134,18 +135,18 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         if (tempClickedMessageIdsSet != null)
             clickedClickIds.addAll(tempClickedMessageIdsSet);
 
-        initRedisplayData(dbHelper, logger);
+        initRedisplayData(dbHelper, logger, sharedPreferences);
     }
 
-    OSInAppMessageRepository getInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger) {
+    OSInAppMessageRepository getInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger, OSSharedPreferences sharedPreferences) {
         if (inAppMessageRepository == null)
-            inAppMessageRepository = new OSInAppMessageRepository(dbHelper, logger);
+            inAppMessageRepository = new OSInAppMessageRepository(dbHelper, logger, sharedPreferences);
 
         return inAppMessageRepository;
     }
 
-    protected void initRedisplayData(OneSignalDbHelper dbHelper, OSLogger logger) {
-        inAppMessageRepository = getInAppMessageRepository(dbHelper, logger);
+    protected void initRedisplayData(OneSignalDbHelper dbHelper, OSLogger logger, OSSharedPreferences sharedPreferences) {
+        inAppMessageRepository = getInAppMessageRepository(dbHelper, logger, sharedPreferences);
         Runnable getCachedIAMRunnable =  new BackgroundRunnable() {
             @Override
             public void run() {
@@ -328,37 +329,20 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         if (variantId == null)
             return;
 
-        try {
-            JSONObject json = new JSONObject() {{
-                put("app_id", OneSignal.appId);
-                put("player_id", OneSignal.getUserId());
-                put("variant_id", variantId);
-                put("device_type", new OSUtils().getDeviceType());
-                put("first_impression", true);
-            }};
+        inAppMessageRepository.sendIAMImpression(OneSignal.appId, OneSignal.getUserId(), variantId,
+                new OSUtils().getDeviceType(), message.messageId, impressionedMessages,
+                new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
+                    @Override
+                    public void onSuccess(String response) {
+                        // Everything handle by repository
+                    }
 
-            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/impression", json, new ResponseHandler() {
-                @Override
-                void onSuccess(String response) {
-                    printHttpSuccessForInAppMessageRequest("impression", response);
-                    OneSignalPrefs.saveStringSet(
-                            OneSignalPrefs.PREFS_ONESIGNAL,
-                            OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                            // Post success, store impressioned messageId to disk
-                            impressionedMessages);
-                }
-
-                @Override
-                void onFailure(int statusCode, String response, Throwable throwable) {
-                    printHttpErrorForInAppMessageRequest("impression", statusCode, response);
-                    // Post failed, impressionedMessage should be removed and this way another post can be attempted
-                    impressionedMessages.remove(message.messageId);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
-        }
+                    @Override
+                    public void onFailure(String response) {
+                        // Post failed, impressioned Messages should be removed and this way another post can be attempted
+                        impressionedMessages.remove(message.messageId);
+                    }
+                });
     }
 
     void onPageChanged(@NonNull final OSInAppMessage message, @NonNull final JSONObject eventJson) {
