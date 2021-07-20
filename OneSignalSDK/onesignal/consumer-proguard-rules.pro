@@ -14,7 +14,6 @@
 
 -keep class com.onesignal.ActivityLifecycleListenerCompat** {*;}
 
-
 # Observer backcall methods are called with reflection
 -keep class com.onesignal.OSSubscriptionState {
     void changed(com.onesignal.OSPermissionState);
@@ -32,6 +31,10 @@
     void changed(com.onesignal.OSEmailSubscriptionState);
 }
 
+-keep class com.onesignal.OSSMSSubscriptionChangedInternalObserver {
+    void changed(com.onesignal.OSSMSSubscriptionState);
+}
+
 -keep class ** implements com.onesignal.OSPermissionObserver {
     void onOSPermissionChanged(com.onesignal.OSPermissionStateChanges);
 }
@@ -42,6 +45,10 @@
 
 -keep class ** implements com.onesignal.OSEmailSubscriptionObserver {
     void onOSEmailSubscriptionChanged(com.onesignal.OSEmailSubscriptionStateChanges);
+}
+
+-keep class ** implements com.onesignal.OSSMSSubscriptionObserver {
+    void onOSEmailSubscriptionChanged(com.onesignal.OSSMSSubscriptionStateChanges);
 }
 
 -keep class com.onesignal.shortcutbadger.impl.AdwHomeBadger { <init>(...); }
