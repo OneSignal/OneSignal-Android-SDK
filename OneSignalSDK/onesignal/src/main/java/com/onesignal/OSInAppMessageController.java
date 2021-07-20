@@ -481,14 +481,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private void saveViewedPageIdsToPrefs() {
-        OneSignalPrefs.saveStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_PAGE_IMPRESSIONED_IAMS,
-                // Post success, store impressioned pages to disk
-                viewedPageIds);
-    }
-
     private void fireRESTCallForPageChange(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessagePage page) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
@@ -506,33 +498,19 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
         viewedPageIds.add(messagePrefixedPageId);
 
-        try {
-            JSONObject json = new JSONObject() {{
-                put("app_id", OneSignal.appId);
-                put("player_id", OneSignal.getUserId());
-                put("variant_id", variantId);
-                put("device_type", new OSUtils().getDeviceType());
-                put("page_id", pageId);
-            }};
+        inAppMessageRepository.sendIAMPageImpression(OneSignal.appId, OneSignal.getUserId(), variantId, new OSUtils().getDeviceType(),
+                message.messageId, pageId, viewedPageIds, new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
+                    @Override
+                    public void onSuccess(String response) {
+                        // Everything handled by repository
+                    }
 
-            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/pageImpression", json, new ResponseHandler() {
-                @Override
-                void onSuccess(String response) {
-                    printHttpSuccessForInAppMessageRequest("page impression", response);
-                    saveViewedPageIdsToPrefs();
-                }
-
-                @Override
-                void onFailure(int statusCode, String response, Throwable throwable) {
-                    printHttpErrorForInAppMessageRequest("page impression", statusCode, response);
-                    // Post failed, viewed page should be removed and this way another post can be attempted
-                    viewedPageIds.remove(messagePrefixedPageId);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message impression HTTP request due to invalid JSON");
-        }
+                    @Override
+                    public void onFailure(String response) {
+                        // Post failed, viewed page should be removed and this way another post can be attempted
+                        viewedPageIds.remove(messagePrefixedPageId);
+                    }
+                });
     }
 
     private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
@@ -602,7 +580,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 // Pages from different IAMs should not impact each other so we can clear the entire
                 // list when an IAM is dismissed or we are re-displaying the same one
                 viewedPageIds.clear();
-                saveViewedPageIdsToPrefs();
+                inAppMessageRepository.saveViewedPageIdsToPrefs(viewedPageIds);
                 message.clearClickIds();
             }
         }
