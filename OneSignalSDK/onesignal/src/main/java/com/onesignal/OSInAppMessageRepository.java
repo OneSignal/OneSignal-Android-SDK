@@ -27,12 +27,37 @@ class OSInAppMessageRepository {
         this.sharedPreferences = sharedPreferences;
     }
 
-    private void saveImpressionedMessages(final Set<String> impressionedMessages) {
-        sharedPreferences.saveStringSet(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
-                // Post success, store impressioned messageId to disk
-                impressionedMessages);
+    void sendIAMClick(final String appId, final String userId, final String variantId, final int deviceType, final String messageId,
+                      final String clickId, final boolean isFirstClick, final Set<String> clickedMessagesId, final OSInAppMessageRequestResponse requestResponse){
+        try {
+            JSONObject json = new JSONObject() {{
+                put("app_id", appId);
+                put("device_type", deviceType);
+                put("player_id", userId);
+                put("click_id", clickId);
+                put("variant_id", variantId);
+                if (isFirstClick)
+                    put("first_click", true);
+            }};
+
+            OneSignalRestClient.post("in_app_messages/" + messageId + "/click", json, new OneSignalRestClient.ResponseHandler() {
+                @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("engagement", response);
+                    // Persist success click to disk. Id already added to set before making the network call
+                    saveClickedMessages(clickedMessagesId);
+                }
+
+                @Override
+                void onFailure(int statusCode, String response, Throwable throwable) {
+                    printHttpErrorForInAppMessageRequest("engagement", statusCode, response);
+                    requestResponse.onFailure(response);
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            logger.error("Unable to execute in-app message action HTTP request due to invalid JSON");
+        }
     }
 
     void sendIAMImpression(final String appId, final String userId, final String variantId, final int deviceType, final String messageId,
@@ -262,6 +287,22 @@ class OSInAppMessageRepository {
                         clickedClickIds);
             }
         }
+    }
+
+    private void saveClickedMessages(final Set<String> clickedClickIds) {
+        sharedPreferences.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                clickedClickIds
+        );
+    }
+
+    private void saveImpressionedMessages(final Set<String> impressionedMessages) {
+        sharedPreferences.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                // Post success, store impressioned messageId to disk
+                impressionedMessages);
     }
 
     private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {

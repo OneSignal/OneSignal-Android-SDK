@@ -258,6 +258,10 @@ class OSInAppMessage {
         clickedClickIds.add(clickId);
     }
 
+    void removeClickId(String clickId) {
+        clickedClickIds.remove(clickId);
+    }
+
     OSInAppMessageRedisplayStats getRedisplayStats() {
         return redisplayStats;
     }

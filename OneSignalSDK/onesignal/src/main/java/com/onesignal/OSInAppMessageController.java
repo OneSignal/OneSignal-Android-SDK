@@ -334,7 +334,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
                     @Override
                     public void onSuccess(String response) {
-                        // Everything handle by repository
+                        // Everything handled by repository
                     }
 
                     @Override
@@ -552,39 +552,19 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         // Track clickId per IAM
         message.addClickId(clickId);
 
-        try {
-            JSONObject json = new JSONObject() {{
-                put("app_id", OneSignal.getSavedAppId());
-                put("device_type", new OSUtils().getDeviceType());
-                put("player_id", OneSignal.getUserId());
-                put("click_id", clickId);
-                put("variant_id", variantId);
-                if (action.isFirstClick())
-                    put("first_click", true);
-            }};
+        inAppMessageRepository.sendIAMClick(OneSignal.appId, OneSignal.getUserId(), variantId, new OSUtils().getDeviceType(),
+                message.messageId, clickId, action.isFirstClick(), clickedClickIds, new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
+                    @Override
+                    public void onSuccess(String response) {
+                        // Everything handled by repository
+                    }
 
-            OneSignalRestClient.post("in_app_messages/" + message.messageId + "/click", json, new ResponseHandler() {
-                @Override
-                void onSuccess(String response) {
-                    printHttpSuccessForInAppMessageRequest("engagement", response);
-                    // Persist success click to disk. Id already added to set before making the network call
-                    OneSignalPrefs.saveStringSet(
-                            OneSignalPrefs.PREFS_ONESIGNAL,
-                            OneSignalPrefs.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
-                            clickedClickIds
-                    );
-                }
-
-                @Override
-                void onFailure(int statusCode, String response, Throwable throwable) {
-                    printHttpErrorForInAppMessageRequest("engagement", statusCode, response);
-                    clickedClickIds.remove(action.getClickId());
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Unable to execute in-app message action HTTP request due to invalid JSON");
-        }
+                    @Override
+                    public void onFailure(String response) {
+                        clickedClickIds.remove(clickId);
+                        message.removeClickId(clickId);
+                    }
+                });
     }
 
     /**
