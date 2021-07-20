@@ -19,13 +19,53 @@ class OSInAppMessageRepository {
 
     private final OneSignalDbHelper dbHelper;
     private final OSLogger logger;
+    private final OSSharedPreferences sharedPreferences;
 
-    OSInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger) {
+    OSInAppMessageRepository(OneSignalDbHelper dbHelper, OSLogger logger, OSSharedPreferences sharedPreferences) {
         this.dbHelper = dbHelper;
         this.logger = logger;
+        this.sharedPreferences = sharedPreferences;
     }
 
-    void getIAMPreviewData(String appId, String previewUUID, final OSInAppMessageRequestResponse requestResponse){
+    private void saveImpressionedMessages(final Set<String> impressionedMessages) {
+        sharedPreferences.saveStringSet(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
+                // Post success, store impressioned messageId to disk
+                impressionedMessages);
+    }
+
+    void sendIAMImpression(final String appId, final String userId, final String variantId, final int deviceType, final String messageId,
+                           final Set<String> impressionedMessages, final OSInAppMessageRequestResponse requestResponse) {
+        try {
+            JSONObject json = new JSONObject() {{
+                put("app_id", appId);
+                put("player_id", userId);
+                put("variant_id", variantId);
+                put("device_type", deviceType);
+                put("first_impression", true);
+            }};
+
+            OneSignalRestClient.post("in_app_messages/" + messageId + "/impression", json, new OneSignalRestClient.ResponseHandler() {
+                @Override
+                void onSuccess(String response) {
+                    printHttpSuccessForInAppMessageRequest("impression", response);
+                    saveImpressionedMessages(impressionedMessages);
+                }
+
+                @Override
+                void onFailure(int statusCode, String response, Throwable throwable) {
+                    printHttpErrorForInAppMessageRequest("impression", statusCode, response);
+                    requestResponse.onFailure(response);
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+            logger.error("Unable to execute in-app message impression HTTP request due to invalid JSON");
+        }
+    }
+
+    void getIAMPreviewData(String appId, String previewUUID, final OSInAppMessageRequestResponse requestResponse) {
         String htmlPath = "in_app_messages/device_preview?preview_id=" + previewUUID + "&app_id=" + appId;
         OneSignalRestClient.get(htmlPath, new OneSignalRestClient.ResponseHandler() {
             @Override
@@ -224,12 +264,17 @@ class OSInAppMessageRepository {
         }
     }
 
+    private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
+        logger.debug("Successful post for in-app message " + requestType + " request: " + response);
+    }
+
     private void printHttpErrorForInAppMessageRequest(String requestType, int statusCode, String response) {
         logger.error("Encountered a " + statusCode + " error while attempting in-app message " + requestType + " request: " + response);
     }
 
     interface OSInAppMessageRequestResponse {
         void onSuccess(String response);
+
         void onFailure(String response);
     }
 

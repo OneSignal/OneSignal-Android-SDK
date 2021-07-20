@@ -408,6 +408,10 @@ public class OneSignal {
    }
 
    private static OSLogger logger = new OSLogWrapper();
+   static OSLogger getLogger() {
+      return logger;
+   }
+
    private static FocusTimeController focusTimeController;
    private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
@@ -422,7 +426,7 @@ public class OneSignal {
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger(), languageContext);
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger(), getSharedPreferences(), languageContext);
    }
    private static OSTime time = new OSTimeImpl();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
@@ -431,6 +435,9 @@ public class OneSignal {
    private static OSTaskRemoteController taskRemoteController = new OSTaskRemoteController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
+   static OSSharedPreferences getSharedPreferences() {
+      return preferences;
+   }
    private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger, time);
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
@@ -1262,10 +1269,6 @@ public class OneSignal {
       if (errorResponse != null && atLogLevel(LOG_LEVEL.INFO))
          jsonError = "\n" + errorResponse + "\n";
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
-   }
-
-   static OSLogger getLogger() {
-      return logger;
    }
 
    // Returns true if there is active time that is unsynced.
