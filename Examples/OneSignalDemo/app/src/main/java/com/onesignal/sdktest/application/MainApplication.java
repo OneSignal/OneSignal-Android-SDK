@@ -41,7 +41,7 @@ public class MainApplication extends MultiDexApplication {
             OSNotification notification = notificationReceivedEvent.getNotification();
             JSONObject data = notification.getAdditionalData();
 
-            notificationReceivedEvent.complete(null);
+            notificationReceivedEvent.complete(notification);
         });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);

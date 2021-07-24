@@ -131,6 +131,14 @@ class GenerateNotification {
     * Creates a PendingIntent to attach to the notification click and it's action button(s).
     * If the user interacts with the notification this normally starts the app or resumes it
     *   unless the app developer disables this via a OneSignal meta-data AndroidManifest.xml setting
+    *
+    * The default behavior is to open the app in the same way an Android homescreen launcher does.
+    * This means we expect the following behavior:
+    *    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"
+    *    2. If the app is already running, instead the last activity will be resumed
+    *    3. If the app is not running (due to being push out of memory), the last activity will be resumed
+    *    4. If the app is no longer in the recent apps list, it is not resumed, same as #1 above.
+    *        - App is removed from the recent app's list if it is swiped away or "clear all" is pressed.
     */
    private static PendingIntent getNewActionPendingIntent(int requestCode, Intent oneSignalIntent) {
       PendingIntent oneSignalActivityIntent = PendingIntent.getActivity(currentContext, requestCode, oneSignalIntent, PendingIntent.FLAG_UPDATE_CURRENT);

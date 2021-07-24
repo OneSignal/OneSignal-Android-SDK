@@ -2180,6 +2180,11 @@ public class OneSignal {
       }
    }
 
+   // TODO: How to handle launch URL due to at notification generation changes.
+   // 1. (behavior change) Let app start then open browser
+   // 2. Move this code to GenerateNotifcation.java.
+   // 3. Detect URL is in notification and make it not start app automaticly. That why things work as before.
+
    private static boolean openURLFromNotification(Context context, JSONArray dataArray) {
 
       //if applicable, check if the user provided privacy consent
@@ -2367,6 +2372,8 @@ public class OneSignal {
          trackFirebaseAnalytics.trackOpenedEvent(generateNotificationOpenedResult(data));
 
       boolean urlOpened = false;
+      // TODO: Make this a helper method somewhere.
+      // TODO: Probably need to keep but consider if the reverse trampolining has any effect on this.
       boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(context, "com.onesignal.NotificationOpened.DEFAULT"));
 
       if (!defaultOpenActionDisabled)
@@ -2387,45 +2394,17 @@ public class OneSignal {
       sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
    }
 
-   // This opens the app in the same way an Android homescreen launcher does.
-   // This means we expect the following behavior:
-   //    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"
-   //    2. If the app is already running, instead the last activity will be resumed
-   //    3. If the app is not running (due to being push out of memory), the last activity will be resumed
-   //    4. If the app is no longer in the recent apps list, it is not resumed, same as #1 above.
-   //        - App is removed from the recent app's list if it is swiped away or "clear all" is pressed.
-   static boolean startOrResumeApp(@NonNull Activity activity) {
-      Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
-      logger.debug("startOrResumeApp from context: " + activity + " isRoot: " + activity.isTaskRoot() + " with launchIntent: " + launchIntent);
-
-      // Not all apps have a launcher intent, such as one that only provides a homescreen widget
-      if (launchIntent == null)
-         return false;
-
-      // Removing package from the intent, this treats the app as if it was started externally.
-      // This gives us the resume app behavior noted above.
-      // Android 11 no longer requires nulling this out to get this behavior.
-      launchIntent.setPackage(null);
-
-      activity.startActivity(launchIntent);
-
-      return true;
-   }
-
    /**
     * 1. App is not an alert
     * 2. Not a URL open
-    * 3. Manifest setting for com.onesignal.NotificationOpened.DEFAULT is not disabled
-    * 4. Manifest setting for com.onesignal.suppressLaunchURLs is not true
-    * 5. App is coming from the background
-    * 6. App open/resume intent exists
+    * 3. Manifest setting for com.onesignal.suppressLaunchURLs is not true
+    * 4. App is coming from the background
     */
    private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
       return !fromAlert
               && !urlOpened
               && !defaultOpenActionDisabled
-              && !inForeground
-              // && startOrResumeApp(context); // TODO: Disabling in this commit only to test changes, in a follow up commit in this PR we will address this line
+              && !inForeground;
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
