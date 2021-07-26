@@ -313,7 +313,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             // Navigate to new activity while displaying current IAM
             if (messageView != null)
                 messageView.removeAllViews();
-            showMessageView(lastPageHeight);
+            showMessageView(lastPageHeight); // removing this line prevented quick 2nd re-display in Jon's demo app
         } else {
             // Activity rotated
             calculateHeightAndShowWebViewAfterNewActivity();
