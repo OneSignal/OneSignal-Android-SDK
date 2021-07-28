@@ -4,6 +4,7 @@ import android.util.Log;
 
 import androidx.multidex.MultiDexApplication;
 
+import com.onesignal.OSInAppMessage;
 import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSIAMLifecycleHandler;
@@ -23,19 +24,19 @@ public class MainApplication extends MultiDexApplication {
 
         OSIAMLifecycleHandler handler = new OSIAMLifecycleHandler() {
             @Override
-            public void onWillDisplayInAppMessage(String message) {
+            public void onWillDisplayInAppMessage(OSInAppMessage message) {
                 return;
             }
             @Override
-            public void onDidDisplayInAppMessage(String message) {
+            public void onDidDisplayInAppMessage(OSInAppMessage message) {
                 return;
             }
             @Override
-            public void onWillDismissInAppMessage(String message) {
+            public void onWillDismissInAppMessage(OSInAppMessage message) {
                 return;
             }
             @Override
-            public void onDidDismissInAppMessage(String message) {
+            public void onDidDismissInAppMessage(OSInAppMessage message) {
                 return;
             }
         };

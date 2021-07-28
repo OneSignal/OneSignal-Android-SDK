@@ -15,7 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-class OSInAppMessageInternal {
+class OSInAppMessageInternal extends OSInAppMessage {
 
     private static final String IAM_ID = "id";
     private static final String IAM_VARIANTS = "variants";
@@ -24,12 +24,6 @@ class OSInAppMessageInternal {
     private static final String DISPLAY_DURATION = "displayDuration";
     private static final String END_TIME = "end_time";
     private static final String HAS_LIQUID = "has_liquid";
-
-    /**
-     * The unique identifier for this in-app message
-     */
-    @NonNull
-    public String messageId;
 
     /**
      * Allows in-app messages to use multiple language variants, or to have variations between
@@ -67,11 +61,12 @@ class OSInAppMessageInternal {
     private boolean hasLiquid;
 
     OSInAppMessageInternal(boolean isPreview) {
+        super("");
         this.isPreview = isPreview;
     }
 
     OSInAppMessageInternal(@NonNull String messageId, @NonNull Set<String> clickIds, boolean displayedInSession, OSInAppMessageRedisplayStats redisplayStats) {
-        this.messageId = messageId;
+        super(messageId);
         this.clickedClickIds = clickIds;
         this.displayedInSession = displayedInSession;
         this.redisplayStats = redisplayStats;
@@ -79,7 +74,7 @@ class OSInAppMessageInternal {
 
     OSInAppMessageInternal(JSONObject json) throws JSONException {
         // initialize simple root properties
-        this.messageId = json.getString(IAM_ID);
+        super(json.getString(IAM_ID));
         this.variants = parseVariants(json.getJSONObject(IAM_VARIANTS));
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
         this.clickedClickIds = new HashSet<>();
