@@ -27,17 +27,20 @@
 
 package com.onesignal;
 
-public abstract class OSIAMLifecycleHandler {
-    public void onWillDisplayInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "IAM Will Display");
+import androidx.annotation.NonNull;
+
+public class OSInAppMessage {
+
+    /**
+     * The unique identifier for this in-app message
+     */
+    @NonNull
+    public String messageId;
+
+    OSInAppMessage() {
     }
-    public void onDidDisplayInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "IAM Did Display");
-    }
-    public void onWillDismissInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "IAM Will Dismiss");
-    }
-    public void onDidDismissInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "IAM Did Dismiss");
+
+    OSInAppMessage(String messageId) {
+        this.messageId = messageId;
     }
 }
