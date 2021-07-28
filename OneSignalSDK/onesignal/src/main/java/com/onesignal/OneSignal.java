@@ -740,6 +740,10 @@ public class OneSignal {
       notificationWillShowInForegroundHandler = callback;
    }
 
+   public static void setIAMLifecycleHandler(@Nullable OSIAMLifecycleHandler handler) {
+
+   }
+
    public static void setNotificationOpenedHandler(@Nullable OSNotificationOpenedHandler callback) {
       notificationOpenedHandler = callback;
 
