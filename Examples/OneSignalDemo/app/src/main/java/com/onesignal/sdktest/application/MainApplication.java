@@ -5,6 +5,8 @@ import android.util.Log;
 import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.OSNotification;
+import com.onesignal.OSNotificationOpenedResult;
+import com.onesignal.OSIAMLifecycleHandler;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -18,6 +20,27 @@ public class MainApplication extends MultiDexApplication {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        OSIAMLifecycleHandler handler = new OSIAMLifecycleHandler() {
+            @Override
+            public void onWillDisplayInAppMessage(String message) {
+                return;
+            }
+            @Override
+            public void onDidDisplayInAppMessage(String message) {
+                return;
+            }
+            @Override
+            public void onWillDismissInAppMessage(String message) {
+                return;
+            }
+            @Override
+            public void onDidDismissInAppMessage(String message) {
+                return;
+            }
+        };
+
+        OneSignal.setIAMLifecycleHandler(handler);
 
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
