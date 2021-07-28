@@ -344,6 +344,19 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         logInAppMessagePreviewActions(action);
     }
 
+    /* IAM Lifecycle */
+    void onMessageWillDisplay(@NonNull final OSInAppMessageInternal message) {
+    }
+
+    void onMessageDidDisplay(@NonNull final OSInAppMessageInternal message) {
+    }
+
+    void onMessageWillDismiss(@NonNull final OSInAppMessageInternal message) {
+    }
+
+    void onMessageDidDismiss(@NonNull final OSInAppMessageInternal message) {
+    }
+
     private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
         if (action.getTags() != null)
             logger.debug("Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.getTags().toString());

@@ -7,6 +7,8 @@ import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOSTimeImpl;
+import com.onesignal.OSIAMLifecycleHandler;
+import com.onesignal.OSInAppMessage;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -107,6 +109,8 @@ public class InAppMessagingUnitTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
         lastAction = null;
+        lastMessage = null;
+        iamLifecycleCounter = 0;
 
         TestHelpers.beforeTestInitAndCleanup();
 
@@ -630,5 +634,56 @@ public class InAppMessagingUnitTests {
         assertEquals(ShadowOneSignalRestClient.pushUserId, iamPageImpressionRequest.payload.get("player_id"));
         assertEquals(1, iamPageImpressionRequest.payload.get("device_type"));
         assertEquals(InAppMessagingHelpers.IAM_PAGE_ID, iamPageImpressionRequest.payload.get("page_id"));
+    }
+
+    /* Tests for IAM Lifecycle */
+
+    private static @Nullable OSInAppMessage lastMessage;
+    private static int iamLifecycleCounter;
+    @Test
+    public void testIAMLifecycleEventsFlow() throws Exception {
+        OneSignal.setIAMLifecycleHandler(new OSIAMLifecycleHandler() {
+            @Override
+            public void onWillDisplayInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+
+            @Override
+            public void onDidDisplayInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+
+            @Override
+            public void onWillDismissInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+
+            @Override
+            public void onDidDismissInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+        });
+        threadAndTaskWait();
+
+        assertEquals(0, iamLifecycleCounter);
+        // maybe need threadAndTaskWait
+        OneSignalPackagePrivateHelper.onMessageWillDisplay(message);
+        assertEquals(1, iamLifecycleCounter);
+
+        OneSignalPackagePrivateHelper.onMessageDidDisplay(message);
+        assertEquals(2,iamLifecycleCounter);
+
+        OneSignalPackagePrivateHelper.onMessageWillDismiss(message);
+        assertEquals(3,iamLifecycleCounter);
+
+        OneSignalPackagePrivateHelper.onMessageDidDismiss(message);
+        assertEquals(4,iamLifecycleCounter);
+
+        assertNotNull(lastMessage);
+        assertEquals(lastMessage.messageId, message.messageId);
     }
 }
