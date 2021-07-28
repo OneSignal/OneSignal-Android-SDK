@@ -557,6 +557,25 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.getInAppMessageController().onPageChanged(message, eventJson);
    }
 
+   /* IAM Lifecycle */
+   public static void onMessageWillDisplay(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageWillDisplay(message);
+   }
+
+   public static void onMessageDidDisplay(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageDidDisplay(message);
+   }
+
+   public static void onMessageWillDismiss(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+   }
+
+   public static void onMessageDidDismiss(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageDidDismiss(message);
+   }
+
+
+
    public static List<OSTestInAppMessageInternal> getRedisplayInAppMessages() {
       List<OSInAppMessageInternal> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
       List<OSTestInAppMessageInternal> testMessages = new ArrayList<>();
