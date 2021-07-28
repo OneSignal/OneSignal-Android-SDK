@@ -11,7 +11,7 @@ import com.onesignal.MockOneSignalDBHelper;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.InAppMessageTable;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationTable;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageInternal;
 import com.onesignal.OSOutcomeEvent;
 import com.onesignal.ShadowOneSignalDbHelper;
 import com.onesignal.StaticResetHelper;
@@ -308,7 +308,7 @@ public class DatabaseRunner {
         writableDatabase.close();
 
         // Create an IAM
-        final OSTestInAppMessage inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+        final OSTestInAppMessageInternal inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
                 null,
                 OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator.NOT_EXISTS.toString(),
@@ -327,7 +327,7 @@ public class DatabaseRunner {
         ShadowOneSignalDbHelper.restSetStaticFields();
 
         // 4. Opening the DB will auto trigger the update.
-        List<OSTestInAppMessage> savedInAppMessages = TestHelpers.getAllInAppMessages(dbHelper);
+        List<OSTestInAppMessageInternal> savedInAppMessages = TestHelpers.getAllInAppMessages(dbHelper);
         assertEquals(savedInAppMessages.size(), 0);
 
         writableDatabase = dbHelper.getSQLiteDatabaseWithRetries();
@@ -335,10 +335,10 @@ public class DatabaseRunner {
         writableDatabase.insert(InAppMessageTable.TABLE_NAME, null, values);
         writableDatabase.close();
 
-        List<OSTestInAppMessage> savedInAppMessagesAfterCreation = TestHelpers.getAllInAppMessages(dbHelper);
+        List<OSTestInAppMessageInternal> savedInAppMessagesAfterCreation = TestHelpers.getAllInAppMessages(dbHelper);
 
         assertEquals(savedInAppMessagesAfterCreation.size(), 1);
-        OSTestInAppMessage savedInAppMessage = savedInAppMessagesAfterCreation.get(0);
+        OSTestInAppMessageInternal savedInAppMessage = savedInAppMessagesAfterCreation.get(0);
         assertEquals(savedInAppMessage.getRedisplayStats().getDisplayQuantity(), inAppMessage.getRedisplayStats().getDisplayQuantity());
         assertEquals(savedInAppMessage.getRedisplayStats().getLastDisplayTime(), inAppMessage.getRedisplayStats().getLastDisplayTime());
         assertEquals(savedInAppMessage.getClickedClickIds().toString(), inAppMessage.getClickedClickIds().toString());

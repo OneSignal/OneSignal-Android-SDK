@@ -10,7 +10,7 @@ import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageInternal;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import com.onesignal.ShadowCustomTabsClient;
@@ -79,7 +79,7 @@ public class InAppMessagingUnitTests {
     private static final int LIMIT = 5;
     private static final long DELAY = 60;
 
-    private static OSTestInAppMessage message;
+    private static OSTestInAppMessageInternal message;
 
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
@@ -142,7 +142,7 @@ public class InAppMessagingUnitTests {
      */
     private static boolean comparativeOperatorTest(OSTriggerOperator operator, Object triggerValue, Object localValue) throws JSONException {
         setLocalTriggerValue("test_property", localValue);
-        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_property", operator.toString(), triggerValue);
+        OSTestInAppMessageInternal testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_property", operator.toString(), triggerValue);
         return InAppMessagingHelpers.evaluateMessage(testMessage);
     }
 
@@ -160,7 +160,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageReDisplay() throws JSONException {
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -170,7 +170,7 @@ public class InAppMessagingUnitTests {
         assertEquals(-1, message.getRedisplayStats().getLastDisplayTime());
         assertEquals(0, message.getRedisplayStats().getDisplayQuantity());
 
-        OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+        OSTestInAppMessageInternal messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
                 null,
                 OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
@@ -185,7 +185,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayLimit() throws JSONException {
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -203,7 +203,7 @@ public class InAppMessagingUnitTests {
     public void testBuiltMessageRedisplayDelay() throws JSONException {
         MockOSTimeImpl time = new MockOSTimeImpl();
         OneSignal_setTime(time);
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -221,7 +221,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayCLickId() throws JSONException {
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -240,7 +240,7 @@ public class InAppMessagingUnitTests {
 
         assertFalse(message.isClickAvailable(IAM_CLICK_ID));
 
-        OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+        OSTestInAppMessageInternal messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
                 null,
                 OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
@@ -529,7 +529,7 @@ public class InAppMessagingUnitTests {
             }});
         }};
 
-        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
+        OSTestInAppMessageInternal testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
         assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
         assertTrue(ShadowDynamicTimer.hasScheduledTimer);
         assertTrue(roughlyEqualTimerValues(5.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
@@ -551,7 +551,7 @@ public class InAppMessagingUnitTests {
             }});
         }};
 
-        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
+        OSTestInAppMessageInternal testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
         assertTrue(InAppMessagingHelpers.evaluateMessage(testMessage));
     }
 

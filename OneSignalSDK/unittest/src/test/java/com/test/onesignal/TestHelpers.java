@@ -19,10 +19,9 @@ import androidx.work.testing.WorkManagerTestInitHelper;
 
 import com.onesignal.FocusDelaySyncJobService;
 import com.onesignal.MockOSTimeImpl;
-import com.onesignal.OneSignal;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageInternal;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.OSOutcomeEvent;
@@ -59,7 +58,6 @@ import junit.framework.Assert;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
@@ -72,7 +70,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.JSONUtils;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_OSTaskController_ShutdownNow;
 import static junit.framework.Assert.assertEquals;
 import static org.robolectric.Shadows.shadowOf;
@@ -439,7 +436,7 @@ public class TestHelpers {
       return cachedUniqueOutcomes;
    }
 
-   synchronized static void saveIAM(OSTestInAppMessage inAppMessage, OneSignalDb db) {
+   synchronized static void saveIAM(OSTestInAppMessageInternal inAppMessage, OneSignalDb db) {
       ContentValues values = new ContentValues();
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
       values.put(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
@@ -450,7 +447,7 @@ public class TestHelpers {
       db.insert(OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME, null, values);
    }
 
-   synchronized static List<OSTestInAppMessage> getAllInAppMessages(OneSignalDb db) throws JSONException {
+   synchronized static List<OSTestInAppMessageInternal> getAllInAppMessages(OneSignalDb db) throws JSONException {
       Cursor cursor = db.query(
               OneSignalPackagePrivateHelper.InAppMessageTable.TABLE_NAME,
               null,
@@ -461,7 +458,7 @@ public class TestHelpers {
               null
       );
 
-      List<OSTestInAppMessage> iams = new ArrayList<>();
+      List<OSTestInAppMessageInternal> iams = new ArrayList<>();
       if (cursor.moveToFirst())
          do {
             String messageId = cursor.getString(cursor.getColumnIndex(OneSignalPackagePrivateHelper.InAppMessageTable.COLUMN_NAME_MESSAGE_ID));
@@ -477,7 +474,7 @@ public class TestHelpers {
                clickIdsSet.add(clickIdsArray.getString(i));
             }
 
-            OSTestInAppMessage inAppMessage = new OSTestInAppMessage(messageId, displayQuantity, lastDisplay, displayed, clickIdsSet);
+            OSTestInAppMessageInternal inAppMessage = new OSTestInAppMessageInternal(messageId, displayQuantity, lastDisplay, displayed, clickIdsSet);
             iams.add(inAppMessage);
          } while (cursor.moveToNext());
 

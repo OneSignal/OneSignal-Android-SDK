@@ -13,10 +13,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Set;
 
-class OSInAppMessage {
+class OSInAppMessageInternal {
 
     private static final String IAM_ID = "id";
     private static final String IAM_VARIANTS = "variants";
@@ -67,18 +66,18 @@ class OSInAppMessage {
     boolean isPreview;
     private boolean hasLiquid;
 
-    OSInAppMessage(boolean isPreview) {
+    OSInAppMessageInternal(boolean isPreview) {
         this.isPreview = isPreview;
     }
 
-    OSInAppMessage(@NonNull String messageId, @NonNull Set<String> clickIds, boolean displayedInSession, OSInAppMessageRedisplayStats redisplayStats) {
+    OSInAppMessageInternal(@NonNull String messageId, @NonNull Set<String> clickIds, boolean displayedInSession, OSInAppMessageRedisplayStats redisplayStats) {
         this.messageId = messageId;
         this.clickedClickIds = clickIds;
         this.displayedInSession = displayedInSession;
         this.redisplayStats = redisplayStats;
     }
 
-    OSInAppMessage(JSONObject json) throws JSONException {
+    OSInAppMessageInternal(JSONObject json) throws JSONException {
         // initialize simple root properties
         this.messageId = json.getString(IAM_ID);
         this.variants = parseVariants(json.getJSONObject(IAM_VARIANTS));
@@ -292,7 +291,7 @@ class OSInAppMessage {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        OSInAppMessage that = (OSInAppMessage) o;
+        OSInAppMessageInternal that = (OSInAppMessageInternal) o;
         return messageId.equals(that.messageId);
     }
 

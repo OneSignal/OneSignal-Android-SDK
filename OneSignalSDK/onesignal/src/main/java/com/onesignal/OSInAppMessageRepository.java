@@ -179,7 +179,7 @@ class OSInAppMessageRepository {
     }
 
     @WorkerThread
-    synchronized void saveInAppMessage(OSInAppMessage inAppMessage) {
+    synchronized void saveInAppMessage(OSInAppMessageInternal inAppMessage) {
         ContentValues values = new ContentValues();
         values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
         values.put(OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
@@ -194,8 +194,8 @@ class OSInAppMessageRepository {
     }
 
     @WorkerThread
-    synchronized List<OSInAppMessage> getCachedInAppMessages() {
-        List<OSInAppMessage> inAppMessages = new ArrayList<>();
+    synchronized List<OSInAppMessageInternal> getCachedInAppMessages() {
+        List<OSInAppMessageInternal> inAppMessages = new ArrayList<>();
         Cursor cursor = null;
 
         try {
@@ -219,7 +219,7 @@ class OSInAppMessageRepository {
 
                     Set<String> clickIdsSet = OSUtils.newStringSetFromJSONArray(new JSONArray(clickIds));
 
-                    OSInAppMessage inAppMessage = new OSInAppMessage(messageId, clickIdsSet, displayed, new OSInAppMessageRedisplayStats(displayQuantity, lastDisplay));
+                    OSInAppMessageInternal inAppMessage = new OSInAppMessageInternal(messageId, clickIdsSet, displayed, new OSInAppMessageRedisplayStats(displayQuantity, lastDisplay));
                     inAppMessages.add(inAppMessage);
                 } while (cursor.moveToNext());
             }
