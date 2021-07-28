@@ -15,7 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-class OSInAppMessageInternal {
+class OSInAppMessageInternal extends OSInAppMessage {
 
     private static final String IAM_ID = "id";
     private static final String IAM_VARIANTS = "variants";
@@ -24,12 +24,6 @@ class OSInAppMessageInternal {
     private static final String DISPLAY_DURATION = "displayDuration";
     private static final String END_TIME = "end_time";
     private static final String HAS_LIQUID = "has_liquid";
-
-    /**
-     * The unique identifier for this in-app message
-     */
-    @NonNull
-    public String messageId;
 
     /**
      * Allows in-app messages to use multiple language variants, or to have variations between
