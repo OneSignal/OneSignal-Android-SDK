@@ -62,7 +62,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Nullable protected static WebViewManager lastInstance = null;
 
     @NonNull private Activity activity;
-    @NonNull private OSInAppMessage message;
+    @NonNull private OSInAppMessageInternal message;
 
     @Nullable private String currentActivityName = null;
     private Integer lastPageHeight = null;
@@ -71,7 +71,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         void onComplete();
     }
 
-    protected WebViewManager(@NonNull OSInAppMessage message, @NonNull Activity activity) {
+    protected WebViewManager(@NonNull OSInAppMessageInternal message, @NonNull Activity activity) {
         this.message = message;
         this.activity = activity;
     }
@@ -83,7 +83,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param message the message to show
      * @param htmlStr the html to display on the WebView
      */
-    static void showHTMLString(@NonNull final OSInAppMessage message, @NonNull final String htmlStr) {
+    static void showHTMLString(@NonNull final OSInAppMessageInternal message, @NonNull final String htmlStr) {
         final Activity currentActivity = OneSignal.getCurrentActivity();
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showHTMLString on currentActivity: " + currentActivity);
         /* IMPORTANT
@@ -124,7 +124,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessage message, @NonNull String htmlStr) {
+    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull String htmlStr) {
         try {
             final String base64Str = Base64.encodeToString(
                     htmlStr.getBytes("UTF-8"),

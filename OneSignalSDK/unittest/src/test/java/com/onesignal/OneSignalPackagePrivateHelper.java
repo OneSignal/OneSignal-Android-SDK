@@ -348,17 +348,17 @@ public class OneSignalPackagePrivateHelper {
 
    /** In-App Messaging Helpers */
 
-   public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
+   public static class OSTestInAppMessageInternal extends OSInAppMessageInternal {
 
-      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
+      public OSTestInAppMessageInternal(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
          super(messageId, clickIds, displayed, new OSInAppMessageRedisplayStats(displaysQuantity, lastDisplayTime));
       }
 
-      OSTestInAppMessage(JSONObject json) throws JSONException {
+      OSTestInAppMessageInternal(JSONObject json) throws JSONException {
          super(json);
       }
 
-      OSTestInAppMessage(com.onesignal.OSInAppMessage inAppMessage) throws JSONException {
+      OSTestInAppMessageInternal(OSInAppMessageInternal inAppMessage) throws JSONException {
          super(inAppMessage.toJSONObject());
       }
 
@@ -525,7 +525,7 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void dismissCurrentMessage() {
-      com.onesignal.OSInAppMessage message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
+      OSInAppMessageInternal message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
       if (message != null) {
          OneSignal.getInAppMessageController().messageWasDismissed(message);
       } else {
@@ -541,29 +541,29 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage().messageId;
    }
 
-   public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
+   public static ArrayList<OSInAppMessageInternal> getInAppMessageDisplayQueue() {
       return OneSignal.getInAppMessageController().getInAppMessageDisplayQueue();
    }
 
-   public static void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
+   public static void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessageInternal message, @NonNull final JSONObject actionJson) throws JSONException {
       OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, actionJson);
    }
 
-   public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+   public static void onMessageWasShown(@NonNull OSInAppMessageInternal message) {
       OneSignal.getInAppMessageController().onMessageWasShown(message);
    }
 
-   public static void onPageChanged(@NonNull com.onesignal.OSInAppMessage message, @NonNull final JSONObject eventJson) {
+   public static void onPageChanged(@NonNull OSInAppMessageInternal message, @NonNull final JSONObject eventJson) {
       OneSignal.getInAppMessageController().onPageChanged(message, eventJson);
    }
 
-   public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
-      List<OSInAppMessage> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
-      List<OSTestInAppMessage> testMessages = new ArrayList<>();
+   public static List<OSTestInAppMessageInternal> getRedisplayInAppMessages() {
+      List<OSInAppMessageInternal> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
+      List<OSTestInAppMessageInternal> testMessages = new ArrayList<>();
 
-      for (OSInAppMessage message : messages) {
+      for (OSInAppMessageInternal message : messages) {
          try {
-            OSTestInAppMessage testInAppMessage = new OSTestInAppMessage(message);
+            OSTestInAppMessageInternal testInAppMessage = new OSTestInAppMessageInternal(message);
             testInAppMessage.getRedisplayStats().setDisplayStats(message.getRedisplayStats());
             testMessages.add(testInAppMessage);
 
@@ -598,7 +598,7 @@ public class OneSignalPackagePrivateHelper {
          super.dismissAndAwaitNextMessage(callback);
       }
 
-      protected WebViewManager(@NonNull com.onesignal.OSInAppMessage message, @NonNull Activity activity) {
+      protected WebViewManager(@NonNull OSInAppMessageInternal message, @NonNull Activity activity) {
          super(message, activity);
       }
    }

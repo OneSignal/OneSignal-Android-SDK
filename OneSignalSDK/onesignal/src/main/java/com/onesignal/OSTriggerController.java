@@ -30,7 +30,7 @@ class OSTriggerController {
      * AND conditions. If all of the triggers in an inner array evaluate to true, it means the
      * message should be shown and the function returns true.
      */
-    boolean evaluateMessageTriggers(@NonNull OSInAppMessage message) {
+    boolean evaluateMessageTriggers(@NonNull OSInAppMessageInternal message) {
         // If there are no triggers then we display the In-App when a new session is triggered
         if (message.triggers.size() == 0)
             return true;
@@ -180,7 +180,7 @@ class OSTriggerController {
      *
      * If trigger key is part of message triggers, then return true, otherwise false
      * */
-    boolean isTriggerOnMessage(OSInAppMessage message, Collection<String> newTriggersKeys) {
+    boolean isTriggerOnMessage(OSInAppMessageInternal message, Collection<String> newTriggersKeys) {
         if (message.triggers == null)
             return false;
 
@@ -205,7 +205,7 @@ class OSTriggerController {
      *
      * If message has only dynamic trigger return true, otherwise false
      * */
-    boolean messageHasOnlyDynamicTriggers(OSInAppMessage message) {
+    boolean messageHasOnlyDynamicTriggers(OSInAppMessageInternal message) {
         if (message.triggers == null || message.triggers.isEmpty())
             return false;
 

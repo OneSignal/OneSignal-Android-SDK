@@ -35,20 +35,20 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
     void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException { }
 
     @Override
-    void onMessageActionOccurredOnMessage(@NonNull OSInAppMessage message, @NonNull JSONObject actionJson) { }
+    void onMessageActionOccurredOnMessage(@NonNull OSInAppMessageInternal message, @NonNull JSONObject actionJson) { }
 
     @Override
-    void onMessageActionOccurredOnPreview(@NonNull OSInAppMessage message, @NonNull JSONObject actionJson) { }
+    void onMessageActionOccurredOnPreview(@NonNull OSInAppMessageInternal message, @NonNull JSONObject actionJson) { }
 
     @Override
     boolean isInAppMessageShowing() { return false; }
 
     @Nullable
     @Override
-    OSInAppMessage getCurrentDisplayedInAppMessage() { return null; }
+    OSInAppMessageInternal getCurrentDisplayedInAppMessage() { return null; }
 
     @Override
-    public void messageWasDismissed(@NonNull OSInAppMessage message) { }
+    public void messageWasDismissed(@NonNull OSInAppMessageInternal message) { }
 
     @Override
     void displayPreviewMessage(@NonNull String previewUUID) { }

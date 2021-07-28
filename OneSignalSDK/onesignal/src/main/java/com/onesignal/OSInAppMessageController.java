@@ -51,7 +51,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
     @NonNull
-    private ArrayList<OSInAppMessage> messages;
+    private ArrayList<OSInAppMessageInternal> messages;
     // IAMs that have been dismissed by the user
     //   This mean they have already displayed to the user
     @NonNull
@@ -68,11 +68,11 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     final private Set<String> clickedClickIds;
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
     @NonNull
-    final private ArrayList<OSInAppMessage> messageDisplayQueue;
+    final private ArrayList<OSInAppMessageInternal> messageDisplayQueue;
     // IAMs displayed with last displayed time and quantity of displays data
     // This is retrieved from a DB Table that take care of each object to be unique
     @Nullable
-    private List<OSInAppMessage> redisplayedInAppMessages = null;
+    private List<OSInAppMessageInternal> redisplayedInAppMessages = null;
 
     private OSInAppMessagePrompt currentPrompt = null;
     private boolean inAppMessagingEnabled = true;
@@ -218,17 +218,17 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     private void resetRedisplayMessagesBySession() {
-        for (OSInAppMessage redisplayInAppMessage : redisplayedInAppMessages) {
+        for (OSInAppMessageInternal redisplayInAppMessage : redisplayedInAppMessages) {
             redisplayInAppMessage.setDisplayedInSession(false);
         }
     }
 
     private void processInAppMessageJson(@NonNull JSONArray json) throws JSONException {
         synchronized (LOCK) {
-            ArrayList<OSInAppMessage> newMessages = new ArrayList<>();
+            ArrayList<OSInAppMessageInternal> newMessages = new ArrayList<>();
             for (int i = 0; i < json.length(); i++) {
                 JSONObject messageJson = json.getJSONObject(i);
-                OSInAppMessage message = new OSInAppMessage(messageJson);
+                OSInAppMessageInternal message = new OSInAppMessageInternal(messageJson);
                 // Avoid null checks later if IAM already comes with null id
                 if (message.messageId != null) {
                     newMessages.add(message);
@@ -255,7 +255,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             return;
         }
 
-        for (OSInAppMessage message : messages) {
+        for (OSInAppMessageInternal message : messages) {
             // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
             if (triggerController.evaluateMessageTriggers(message)) {
                 setDataForRedisplay(message);
@@ -267,7 +267,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private @Nullable String variantIdForMessage(@NonNull OSInAppMessage message) {
+    private @Nullable String variantIdForMessage(@NonNull OSInAppMessageInternal message) {
         String language = languageContext.getLanguage();
 
         for (String variant : PREFERRED_VARIANT_ORDER) {
@@ -283,7 +283,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         return null;
     }
 
-    void onMessageWasShown(@NonNull final OSInAppMessage message) {
+    void onMessageWasShown(@NonNull final OSInAppMessageInternal message) {
         if (message.isPreview)
             return;
 
@@ -314,7 +314,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 });
     }
 
-    void onPageChanged(@NonNull final OSInAppMessage message, @NonNull final JSONObject eventJson) {
+    void onPageChanged(@NonNull final OSInAppMessageInternal message, @NonNull final JSONObject eventJson) {
         final OSInAppMessagePage newPage = new OSInAppMessagePage(eventJson);
         if (message.isPreview) {
             return;
@@ -322,7 +322,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         fireRESTCallForPageChange(message, newPage);
     }
 
-    void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
+    void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessageInternal message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.setFirstClick(message.takeActionAsUnique());
 
@@ -334,7 +334,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         fireOutcomesForClick(message.messageId, action.getOutcomes());
     }
 
-    void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
+    void onMessageActionOccurredOnPreview(@NonNull final OSInAppMessageInternal message, @NonNull final JSONObject actionJson) throws JSONException {
         final OSInAppMessageAction action = new OSInAppMessageAction(actionJson);
         action.setFirstClick(message.takeActionAsUnique());
 
@@ -354,7 +354,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         // TODO: Add more action payload preview logs here in future
     }
 
-    private void beginProcessingPrompts(OSInAppMessage message, final List<OSInAppMessagePrompt> prompts) {
+    private void beginProcessingPrompts(OSInAppMessageInternal message, final List<OSInAppMessagePrompt> prompts) {
         if (prompts.size() > 0) {
             logger.debug("IAM showing prompts from IAM: " + message.toString());
             // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
@@ -363,7 +363,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private void showMultiplePrompts(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
+    private void showMultiplePrompts(final OSInAppMessageInternal inAppMessage, final List<OSInAppMessagePrompt> prompts) {
         for (OSInAppMessagePrompt prompt : prompts) {
             // Don't show prompt twice
             if (!prompt.hasPrompted()) {
@@ -394,7 +394,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private void showAlertDialogMessage(final OSInAppMessage inAppMessage, final List<OSInAppMessagePrompt> prompts) {
+    private void showAlertDialogMessage(final OSInAppMessageInternal inAppMessage, final List<OSInAppMessagePrompt> prompts) {
         final String messageTitle = OneSignal.appContext.getString(R.string.location_not_available_title);
         final String message = OneSignal.appContext.getString(R.string.location_not_available_message);
         new AlertDialog.Builder(OneSignal.getCurrentActivity())
@@ -450,7 +450,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private void fireRESTCallForPageChange(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessagePage page) {
+    private void fireRESTCallForPageChange(@NonNull final OSInAppMessageInternal message, @NonNull final OSInAppMessagePage page) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
@@ -482,7 +482,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 });
     }
 
-    private void fireRESTCallForClick(@NonNull final OSInAppMessage message, @NonNull final OSInAppMessageAction action) {
+    private void fireRESTCallForClick(@NonNull final OSInAppMessageInternal message, @NonNull final OSInAppMessageAction action) {
         final String variantId = variantIdForMessage(message);
         if (variantId == null)
             return;
@@ -526,12 +526,12 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * For redisplay, the message need to be removed from the arrays that track the display/impression
      * For click counting, every message has it click id array
      */
-    private void setDataForRedisplay(OSInAppMessage message) {
+    private void setDataForRedisplay(OSInAppMessageInternal message) {
         boolean messageDismissed = dismissedMessages.contains(message.messageId);
         int index = redisplayedInAppMessages.indexOf(message);
 
         if (messageDismissed && index != -1) {
-            OSInAppMessage savedIAM = redisplayedInAppMessages.get(index);
+            OSInAppMessageInternal savedIAM = redisplayedInAppMessages.get(index);
             message.getRedisplayStats().setDisplayStats(savedIAM.getRedisplayStats());
             message.setDisplayedInSession(savedIAM.isDisplayedInSession());
 
@@ -555,7 +555,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private boolean hasMessageTriggerChanged(OSInAppMessage message) {
+    private boolean hasMessageTriggerChanged(OSInAppMessageInternal message) {
         // Message that only have dynamic trigger should display only once per session
         boolean messageHasOnlyDynamicTrigger = triggerController.messageHasOnlyDynamicTriggers(message);
         if (messageHasOnlyDynamicTrigger)
@@ -571,7 +571,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * Message has passed triggers and de-duplication logic.
      * Display message now or add it to the queue to be displayed.
      */
-    private void queueMessageForDisplay(@NonNull OSInAppMessage message) {
+    private void queueMessageForDisplay(@NonNull OSInAppMessageInternal message) {
         synchronized (messageDisplayQueue) {
             // Make sure no message is ever added to the queue more than once
             if (!messageDisplayQueue.contains(message)) {
@@ -608,7 +608,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     @Nullable
-    OSInAppMessage getCurrentDisplayedInAppMessage() {
+    OSInAppMessageInternal getCurrentDisplayedInAppMessage() {
         // When in app messaging is paused, the messageDisplayQueue might have IAMs, so return null
         return inAppMessageShowing ? messageDisplayQueue.get(0) : null;
     }
@@ -616,11 +616,11 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     /**
      * Called after an In-App message is closed and it's dismiss animation has completed
      */
-    void messageWasDismissed(@NonNull OSInAppMessage message) {
+    void messageWasDismissed(@NonNull OSInAppMessageInternal message) {
         messageWasDismissed(message, false);
     }
 
-    void messageWasDismissed(@NonNull OSInAppMessage message, boolean failed) {
+    void messageWasDismissed(@NonNull OSInAppMessageInternal message, boolean failed) {
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             // If failed we will retry on next session
@@ -638,7 +638,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         dismissCurrentMessage(message);
     }
 
-    void messageWasDismissedByBackPress(@NonNull OSInAppMessage message) {
+    void messageWasDismissedByBackPress(@NonNull OSInAppMessageInternal message) {
         logger.debug("In app message OSInAppMessageController messageWasDismissed by back press: " + message.toString());
         // IAM was not dismissed by user, will be redisplay again until user dismiss it
         dismissCurrentMessage(message);
@@ -649,7 +649,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      *
      * @param message The message dismissed, preview messages are null
      */
-    private void dismissCurrentMessage(@Nullable OSInAppMessage message) {
+    private void dismissCurrentMessage(@Nullable OSInAppMessageInternal message) {
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
         OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
 
@@ -681,7 +681,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private void persistInAppMessage(final OSInAppMessage message) {
+    private void persistInAppMessage(final OSInAppMessageInternal message) {
         long displayTimeSeconds = OneSignal.getTime().getCurrentTimeMillis() / 1000;
         message.getRedisplayStats().setLastDisplayTime(displayTimeSeconds);
         message.getRedisplayStats().incrementDisplayQuantity();
@@ -710,7 +710,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         logger.debug("persistInAppMessageForRedisplay: " + message.toString() + " with msg array data: " + redisplayedInAppMessages.toString());
     }
 
-    private void getTagsForLiquidTemplating(@NonNull final OSInAppMessage message, final boolean isPreview) {
+    private void getTagsForLiquidTemplating(@NonNull final OSInAppMessageInternal message, final boolean isPreview) {
         waitForTags = false;
         if (isPreview || message.getHasLiquid()) {
             waitForTags = true;
@@ -733,7 +733,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         }
     }
 
-    private void displayMessage(@NonNull final OSInAppMessage message) {
+    private void displayMessage(@NonNull final OSInAppMessageInternal message) {
         if (!inAppMessagingEnabled) {
             logger.verbose("In app messaging is currently paused, in app messages will not be shown!");
             return;
@@ -795,7 +795,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     void displayPreviewMessage(@NonNull String previewUUID) {
         inAppMessageShowing = true;
 
-        final OSInAppMessage message = new OSInAppMessage(true);
+        final OSInAppMessageInternal message = new OSInAppMessageInternal(true);
         getTagsForLiquidTemplating(message, true);
 
         inAppMessageRepository.getIAMPreviewData(OneSignal.appId, previewUUID, new OSInAppMessageRepository.OSInAppMessageRequestResponse() {
@@ -847,7 +847,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * Part of redisplay logic
      * <p>
      * Will update redisplay messages depending on dynamic triggers before setDataForRedisplay is called.
-     * @see OSInAppMessageController#setDataForRedisplay(OSInAppMessage)
+     * @see OSInAppMessageController#setDataForRedisplay(OSInAppMessageInternal)
      *
      * We can't depend only on messageTriggerConditionChanged, due to trigger evaluation to true before scheduling
      * @see OSInAppMessageController#messageTriggerConditionChanged()
@@ -865,7 +865,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * <p>
      * This will re evaluate messages due to dynamic triggers evaluating to true potentially
      *
-     * @see OSInAppMessageController#setDataForRedisplay(OSInAppMessage)
+     * @see OSInAppMessageController#setDataForRedisplay(OSInAppMessageInternal)
      */
     @Override
     public void messageTriggerConditionChanged() {
@@ -895,7 +895,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
      * - At least one Trigger has changed
      */
     private void makeRedisplayMessagesAvailableWithTriggers(Collection<String> newTriggersKeys) {
-        for (OSInAppMessage message : messages) {
+        for (OSInAppMessageInternal message : messages) {
             if (!message.isTriggerChanged() && redisplayedInAppMessages.contains(message) &&
                     triggerController.isTriggerOnMessage(message, newTriggersKeys)) {
                 logger.debug("Trigger changed for message: " + message.toString());
@@ -968,13 +968,13 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     @NonNull
-    public ArrayList<OSInAppMessage> getInAppMessageDisplayQueue() {
+    public ArrayList<OSInAppMessageInternal> getInAppMessageDisplayQueue() {
         return messageDisplayQueue;
     }
 
     // Method for testing purposes
     @NonNull
-    public List<OSInAppMessage> getRedisplayedInAppMessages() {
+    public List<OSInAppMessageInternal> getRedisplayedInAppMessages() {
         return redisplayedInAppMessages;
     }
 }
