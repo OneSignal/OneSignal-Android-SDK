@@ -346,15 +346,35 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     /* IAM Lifecycle */
     void onMessageWillDisplay(@NonNull final OSInAppMessageInternal message) {
+        if (OneSignal.inAppMessageLifecycleHandler == null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null");
+            return;
+        }
+        OneSignal.inAppMessageLifecycleHandler.onWillDisplayInAppMessage(message);
     }
 
     void onMessageDidDisplay(@NonNull final OSInAppMessageInternal message) {
+        if (OneSignal.inAppMessageLifecycleHandler == null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null");
+            return;
+        }
+        OneSignal.inAppMessageLifecycleHandler.onDidDisplayInAppMessage(message);
     }
 
     void onMessageWillDismiss(@NonNull final OSInAppMessageInternal message) {
+        if (OneSignal.inAppMessageLifecycleHandler == null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageWillDismiss: inAppMessageLifecycleHandler is null");
+            return;
+        }
+        OneSignal.inAppMessageLifecycleHandler.onWillDismissInAppMessage(message);
     }
 
     void onMessageDidDismiss(@NonNull final OSInAppMessageInternal message) {
+        if (OneSignal.inAppMessageLifecycleHandler == null) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null");
+            return;
+        }
+        OneSignal.inAppMessageLifecycleHandler.onDidDismissInAppMessage(message);
     }
 
     private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
