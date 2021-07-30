@@ -234,8 +234,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             }
 
             boolean close = body.getBoolean("close");
-            if (close)
+            if (close) {
+                if (message != null) {
+                    OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+                }
                 dismissAndAwaitNextMessage(null);
+            }
         }
 
         private void handlePageChange(JSONObject jsonObject) throws JSONException {
