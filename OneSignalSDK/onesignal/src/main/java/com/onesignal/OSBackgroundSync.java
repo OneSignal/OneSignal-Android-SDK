@@ -174,11 +174,21 @@ abstract class OSBackgroundSync {
         // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
         //          Some Samsung devices will throw the below exception otherwise.
         //          "java.lang.SecurityException: !@Too many alarms (500) registered"
+
+        final int flags;
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+
+        } else {
+            flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        }
+
         return PendingIntent.getService(
                 context,
                 getSyncTaskId(),
                 new Intent(context, getSyncServicePendingIntentClass()),
-                PendingIntent.FLAG_UPDATE_CURRENT
+                flags
         );
     }
 

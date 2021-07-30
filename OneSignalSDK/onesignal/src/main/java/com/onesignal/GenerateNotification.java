@@ -133,11 +133,29 @@ class GenerateNotification {
     * on weird UI interaction
     */
    private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
-      return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      final int flags;
+
+      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+         flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+
+      } else {
+         flags = PendingIntent.FLAG_UPDATE_CURRENT;
+      }
+
+      return PendingIntent.getActivity(currentContext, requestCode, intent, flags);
    }
 
    private static PendingIntent getNewDismissActionPendingIntent(int requestCode, Intent intent) {
-      return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      final int flags;
+
+      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+         flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+
+      } else {
+         flags = PendingIntent.FLAG_UPDATE_CURRENT;
+      }
+
+      return PendingIntent.getBroadcast(currentContext, requestCode, intent, flags);
    }
 
    private static Intent getNewBaseIntent(int notificationId) {
