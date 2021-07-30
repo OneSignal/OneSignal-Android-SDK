@@ -284,6 +284,9 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     void onMessageWasShown(@NonNull final OSInAppMessageInternal message) {
+
+        onMessageDidDisplay(message);
+
         if (message.isPreview)
             return;
 
@@ -344,10 +347,13 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         logInAppMessagePreviewActions(action);
     }
 
-    /* IAM Lifecycle */
+    /**
+     * IAM Lifecycle methods
+     * The following methods call the public inAppMessageLifecycleHandler callbacks
+     */
     void onMessageWillDisplay(@NonNull final OSInAppMessageInternal message) {
         if (OneSignal.inAppMessageLifecycleHandler == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null");
+            logger.verbose("OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null");
             return;
         }
         OneSignal.inAppMessageLifecycleHandler.onWillDisplayInAppMessage(message);
@@ -355,7 +361,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     void onMessageDidDisplay(@NonNull final OSInAppMessageInternal message) {
         if (OneSignal.inAppMessageLifecycleHandler == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null");
+            logger.verbose("OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null");
             return;
         }
         OneSignal.inAppMessageLifecycleHandler.onDidDisplayInAppMessage(message);
@@ -363,7 +369,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     void onMessageWillDismiss(@NonNull final OSInAppMessageInternal message) {
         if (OneSignal.inAppMessageLifecycleHandler == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageWillDismiss: inAppMessageLifecycleHandler is null");
+            logger.verbose("OSInAppMessageController onMessageWillDismiss: inAppMessageLifecycleHandler is null");
             return;
         }
         OneSignal.inAppMessageLifecycleHandler.onWillDismissInAppMessage(message);
@@ -371,11 +377,13 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     void onMessageDidDismiss(@NonNull final OSInAppMessageInternal message) {
         if (OneSignal.inAppMessageLifecycleHandler == null) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null");
+            logger.verbose("OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null");
             return;
         }
         OneSignal.inAppMessageLifecycleHandler.onDidDismissInAppMessage(message);
     }
+
+    /* End IAM Lifecycle methods */
 
     private void logInAppMessagePreviewActions(final OSInAppMessageAction action) {
         if (action.getTags() != null)
@@ -654,6 +662,9 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     void messageWasDismissed(@NonNull OSInAppMessageInternal message, boolean failed) {
+        if (!failed)
+            onMessageDidDismiss(message);
+
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
             // If failed we will retry on next session
@@ -791,6 +802,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                                 return;
                             }
                             OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
+                            onMessageWillDisplay(message);
                             WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
                         } catch (JSONException e) {
                             e.printStackTrace();
