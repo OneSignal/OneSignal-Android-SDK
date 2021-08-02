@@ -235,9 +235,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
             boolean close = body.getBoolean("close");
             if (close) {
-                if (message != null) {
-                    OneSignal.getInAppMessageController().onMessageWillDismiss(message);
-                }
                 dismissAndAwaitNextMessage(null);
             }
         }
@@ -409,6 +406,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             }
 
             @Override
+            public void onMessageWillDismiss() {
+                OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+            }
+
+            @Override
             public void onMessageWasDismissed() {
                 OneSignal.getInAppMessageController().messageWasDismissed(message);
                 removeActivityListener();
@@ -451,7 +453,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 callback.onComplete();
             return;
         }
-
+        if (message != null && messageView != null) {
+            OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+        }
         messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
             @Override
             public void onComplete() {
