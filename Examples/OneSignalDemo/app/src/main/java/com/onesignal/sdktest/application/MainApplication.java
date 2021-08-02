@@ -25,19 +25,19 @@ public class MainApplication extends MultiDexApplication {
         OSIAMLifecycleHandler handler = new OSIAMLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(OSInAppMessage message) {
-                return;
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDisplayInAppMessage");
             }
             @Override
             public void onDidDisplayInAppMessage(OSInAppMessage message) {
-                return;
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onDidDisplayInAppMessage");
             }
             @Override
             public void onWillDismissInAppMessage(OSInAppMessage message) {
-                return;
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDismissInAppMessage");
             }
             @Override
             public void onDidDismissInAppMessage(OSInAppMessage message) {
-                return;
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onDidDismissInAppMessage");
             }
         };
 
