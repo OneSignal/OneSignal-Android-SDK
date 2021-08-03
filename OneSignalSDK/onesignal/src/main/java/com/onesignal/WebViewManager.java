@@ -67,6 +67,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Nullable private String currentActivityName = null;
     private Integer lastPageHeight = null;
 
+    private boolean dismissing = false;
+
     interface OneSignalGenericCallback {
         void onComplete();
     }
@@ -448,7 +450,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * Trigger the {@link #messageView} dismiss animation flow
      */
     protected void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
-        if (messageView == null) {
+        if (messageView == null || dismissing) {
             if (callback != null)
                 callback.onComplete();
             return;
@@ -459,10 +461,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
             @Override
             public void onComplete() {
+                dismissing = false;
                 messageView = null;
                 if (callback != null)
                     callback.onComplete();
             }
         });
+        dismissing = true;
     }
 }
