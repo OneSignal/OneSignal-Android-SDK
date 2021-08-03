@@ -2299,7 +2299,7 @@ public class OneSignal {
     * <br/><br/>
     * @see OSNotificationWillShowInForegroundHandler
     */
-   static boolean shouldFireForegroundHandlers() {
+   static boolean shouldFireForegroundHandlers(OSNotificationGenerationJob notificationJob) {
       if (!isInForeground()) {
          OneSignal.onesignalLog(LOG_LEVEL.INFO, "App is in background, show notification");
          return false;
@@ -2307,6 +2307,12 @@ public class OneSignal {
 
       if (notificationWillShowInForegroundHandler == null) {
          OneSignal.onesignalLog(LOG_LEVEL.INFO, "No NotificationWillShowInForegroundHandler setup, show notification");
+         return false;
+      }
+
+      // Notification is restored. Don't fire for restored notifications.
+      if (notificationJob.isRestoring()) {
+         OneSignal.onesignalLog(LOG_LEVEL.INFO, "Not firing notificationWillShowInForegroundHandler for restored notifications");
          return false;
       }
 

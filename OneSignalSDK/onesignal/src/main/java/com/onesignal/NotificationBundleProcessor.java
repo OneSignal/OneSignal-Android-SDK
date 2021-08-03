@@ -146,7 +146,7 @@ class NotificationBundleProcessor {
 
         if (doDisplay) {
             androidNotificationId = notificationJob.getAndroidId();
-            if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers()) {
+            if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers(notificationJob)) {
                 notificationController.setFromBackgroundLogic(false);
                 OneSignal.fireForegroundHandlers(notificationController);
                 // Notification will be processed by foreground user complete or timer complete
