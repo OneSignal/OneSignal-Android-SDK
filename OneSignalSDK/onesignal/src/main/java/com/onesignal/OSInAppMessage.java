@@ -35,9 +35,14 @@ public class OSInAppMessage {
      * The unique identifier for this in-app message
      */
     @NonNull
-    public String messageId;
+    protected String messageId;
 
     OSInAppMessage(String messageId) {
         this.messageId = messageId;
     }
+
+    public String getMessageId() {
+        return messageId;
+    }
+
 }

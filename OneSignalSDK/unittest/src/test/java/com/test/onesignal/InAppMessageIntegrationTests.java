@@ -425,7 +425,7 @@ public class InAppMessageIntegrationTests {
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
                     try {
-                        assertEquals(message1.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                        assertEquals(message1.getMessageId(), OneSignalPackagePrivateHelper.getShowingInAppMessageId());
                     } catch (NullPointerException e) {
                         // Awaitility won't retry if something is thrown, but will if an assert fails.
                         fail("Should not throw");
@@ -441,7 +441,7 @@ public class InAppMessageIntegrationTests {
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
                     try {
-                        assertEquals(message2.messageId, OneSignalPackagePrivateHelper.getShowingInAppMessageId());
+                        assertEquals(message2.getMessageId(), OneSignalPackagePrivateHelper.getShowingInAppMessageId());
                     } catch (NullPointerException e) {
                         // Awaitility won't retry if something is thrown, but will if an assert fails.
                         fail("Should not throw");
@@ -663,7 +663,7 @@ public class InAppMessageIntegrationTests {
 
         // 3. Ensure click is sent
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
-        assertEquals("in_app_messages/" + message.messageId + "/click", iamImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", iamImpressionRequest.url);
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
         // 4. Call IAM clicked again, ensure a 2nd network call is not made.
@@ -758,7 +758,7 @@ public class InAppMessageIntegrationTests {
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
 
         // 3. Ensure outcome is sent
-        assertMeasureOnV2AtIndex(3, "outcome_name", new JSONArray().put(message.messageId), new JSONArray(), null, null);
+        assertMeasureOnV2AtIndex(3, "outcome_name", new JSONArray().put(message.getMessageId()), new JSONArray(), null, null);
     }
 
     @Test
@@ -840,7 +840,7 @@ public class InAppMessageIntegrationTests {
                 OneSignal.sendOutcome("test");
                 try {
                     // Ensure outcome is sent
-                    assertMeasureOnV2AtIndex(4, "test", new JSONArray().put(message.messageId), new JSONArray(), null, null);
+                    assertMeasureOnV2AtIndex(4, "test", new JSONArray().put(message.getMessageId()), new JSONArray(), null, null);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -920,7 +920,7 @@ public class InAppMessageIntegrationTests {
         OneSignal.sendOutcome("test1");
         try {
             // Ensure outcome is sent but with INDIRECT influence from IAM
-            assertMeasureOnV2AtIndex(5, "test1", null, null, new JSONArray().put(message.messageId), new JSONArray());
+            assertMeasureOnV2AtIndex(5, "test1", null, null, new JSONArray().put(message.getMessageId()), new JSONArray());
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -1007,7 +1007,7 @@ public class InAppMessageIntegrationTests {
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
         // Requests: Param request + Players Request + Click request
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
-        assertEquals("in_app_messages/" + message.messageId + "/click", ShadowOneSignalRestClient.requests.get(2).url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", ShadowOneSignalRestClient.requests.get(2).url);
     }
 
     @Test
@@ -1220,7 +1220,7 @@ public class InAppMessageIntegrationTests {
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
 
         // Now verify the most recent request was not a click request
-        boolean isIamClickUrl = mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/click");
+        boolean isIamClickUrl = mostRecentRequest.url.equals("in_app_messages/" + message.getMessageId() + "/click");
         assertFalse(isIamClickUrl);
     }
 
@@ -1241,7 +1241,7 @@ public class InAppMessageIntegrationTests {
         OneSignalPackagePrivateHelper.onMessageWasShown(message);
 
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequest.url);
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
         // Call message shown again and make sure no other requests were made, so the impression tracking exists locally
@@ -1286,7 +1286,7 @@ public class InAppMessageIntegrationTests {
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
 
         // Now verify the most recent request was not a impression request
-        boolean isImpressionUrl = mostRecentRequest.url.equals("in_app_messages/" + message.messageId + "/impression");
+        boolean isImpressionUrl = mostRecentRequest.url.equals("in_app_messages/" + message.getMessageId() + "/impression");
         assertFalse(isImpressionUrl);
     }
 
@@ -1309,7 +1309,7 @@ public class InAppMessageIntegrationTests {
         // Check impression request
         int requestSize = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequest.url);
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
@@ -1329,7 +1329,7 @@ public class InAppMessageIntegrationTests {
         // Check impression request is sent again
         int requestSizeAfterRedisplay = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequestAfterRedisplay = ShadowOneSignalRestClient.requests.get(requestSizeAfterRedisplay - 1);
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequestAfterRedisplay.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequestAfterRedisplay.url);
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
         // Check IAMs was removed from queue
@@ -1433,7 +1433,7 @@ public class InAppMessageIntegrationTests {
         TestOneSignalPrefs.saveStringSet(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
                 TestOneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
-                new HashSet<>(Collections.singletonList(message.messageId))
+                new HashSet<>(Collections.singletonList(message.getMessageId()))
         );
 
         // Check IAM was saved correctly
@@ -1600,7 +1600,7 @@ public class InAppMessageIntegrationTests {
         // Check impression request
         int requestSize = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequest.url);
 
         // Dismiss IAM will make display quantity increase and last display time to change
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
@@ -1634,7 +1634,7 @@ public class InAppMessageIntegrationTests {
         // Check impression request is sent again
         int requestSizeAfterRedisplay = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request iamImpressionRequestAfterRedisplay = ShadowOneSignalRestClient.requests.get(requestSizeAfterRedisplay - 1);
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequestAfterRedisplay.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequestAfterRedisplay.url);
 
         OneSignalPackagePrivateHelper.dismissCurrentMessage();
         // Check if data after dismiss is set correctly
@@ -1662,7 +1662,7 @@ public class InAppMessageIntegrationTests {
 
         // Ensure click is sent
         ShadowOneSignalRestClient.Request firstIAMClickRequest = ShadowOneSignalRestClient.requests.get(2);
-        assertEquals("in_app_messages/" + message.messageId + "/click", firstIAMClickRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", firstIAMClickRequest.url);
         assertEquals(3, ShadowOneSignalRestClient.requests.size());
 
         // Call IAM clicked again, ensure a 2nd network call isn't made.
@@ -1688,7 +1688,7 @@ public class InAppMessageIntegrationTests {
 
         // Call IAM clicked again, ensure a 2nd network call is made.
         ShadowOneSignalRestClient.Request secondIAMClickRequest = ShadowOneSignalRestClient.requests.get(3);
-        assertEquals("in_app_messages/" + message.messageId + "/click", secondIAMClickRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", secondIAMClickRequest.url);
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
 
         // Verify clickId was persisted locally
@@ -1707,7 +1707,7 @@ public class InAppMessageIntegrationTests {
         OneSignalPackagePrivateHelper.onMessageActionOccurredOnMessage(message, action);
 
         // Call IAM clicked again, ensure a 3nd network call isn't made.
-        assertEquals("in_app_messages/" + message.messageId + "/click", secondIAMClickRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", secondIAMClickRequest.url);
         assertEquals(4, ShadowOneSignalRestClient.requests.size());
     }
 
@@ -1732,8 +1732,8 @@ public class InAppMessageIntegrationTests {
 
         // 2. Cache IAMs as dismissed, impressioned, and clicked
         Set<String> messageIds = new HashSet<String>() {{
-            add(iam1.messageId);
-            add(iam2.messageId);
+            add(iam1.getMessageId());
+            add(iam2.getMessageId());
         }};
         TestOneSignalPrefs.saveStringSet(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
@@ -1764,14 +1764,14 @@ public class InAppMessageIntegrationTests {
                 TestOneSignalPrefs.PREFS_OS_DISMISSED_IAMS,
                 null);
         assertEquals(1, testDismissedMessages.size());
-        assertTrue(testDismissedMessages.contains(iam1.messageId));
+        assertTrue(testDismissedMessages.contains(iam1.getMessageId()));
 
         Set<String> testImpressionedMessages = TestOneSignalPrefs.getStringSet(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
                 TestOneSignalPrefs.PREFS_OS_IMPRESSIONED_IAMS,
                 null);
         assertEquals(1, testImpressionedMessages.size());
-        assertTrue(testImpressionedMessages.contains(iam1.messageId));
+        assertTrue(testImpressionedMessages.contains(iam1.getMessageId()));
 
         Set<String> testClickedClickIds = TestOneSignalPrefs.getStringSet(
                 TestOneSignalPrefs.PREFS_ONESIGNAL,
@@ -1783,7 +1783,7 @@ public class InAppMessageIntegrationTests {
         // 5. Make sure only IAM left is the IAM younger than 6 months
         List<OSTestInAppMessageInternal> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages(dbHelper);
         assertEquals(1, savedInAppMessagesAfterInit.size());
-        assertEquals(iam1.messageId, savedInAppMessagesAfterInit.get(0).messageId);
+        assertEquals(iam1.getMessageId(), savedInAppMessagesAfterInit.get(0).getMessageId());
     }
 
     @Test
@@ -1793,13 +1793,13 @@ public class InAppMessageIntegrationTests {
         final OSTestInAppMessageInternal inAppMessage = InAppMessagingHelpers.buildTestMessageWithSingleTriggerAndRedisplay(
                 OSTriggerKind.CUSTOM, "test_saved", OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerOperator.EQUAL_TO.toString(), 2, LIMIT, DELAY);
 
-        String firstID = inAppMessage.messageId + "_test";
-        inAppMessage.messageId = firstID;
+        String firstID = inAppMessage.getMessageId() + "_test";
+        inAppMessage.setMessageId(firstID);
         inAppMessage.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS + 1);
         TestHelpers.saveIAM(inAppMessage, dbHelper);
 
         inAppMessage.getRedisplayStats().setLastDisplayTime(currentTimeInSeconds - SIX_MONTHS_TIME_SECONDS - 1);
-        inAppMessage.messageId += "1";
+        inAppMessage.setMessageId(inAppMessage.getMessageId() + "1");
         TestHelpers.saveIAM(inAppMessage, dbHelper);
 
         List<OSTestInAppMessageInternal> savedInAppMessages = TestHelpers.getAllInAppMessages(dbHelper);
@@ -1823,7 +1823,7 @@ public class InAppMessageIntegrationTests {
         List<OSTestInAppMessageInternal> savedInAppMessagesAfterInit = TestHelpers.getAllInAppMessages(dbHelper);
         // Message with old display time should be removed
         assertEquals(1, savedInAppMessagesAfterInit.size());
-        assertEquals(firstID, savedInAppMessagesAfterInit.get(0).messageId);
+        assertEquals(firstID, savedInAppMessagesAfterInit.get(0).getMessageId());
     }
 
     @Test
@@ -1899,12 +1899,12 @@ public class InAppMessageIntegrationTests {
         // Runnable for webView is run from background thread to main thread
         threadAndTaskWait();
         ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(ShadowOneSignalRestClient.requests.size() - 1);
-        while (!lastRequest.url.equals("in_app_messages/" + message.messageId + "/impression")) {
+        while (!lastRequest.url.equals("in_app_messages/" + message.getMessageId() + "/impression")) {
             // Check impression request by waiting until animationEnd
             threadAndTaskWait();
             lastRequest = ShadowOneSignalRestClient.requests.get(ShadowOneSignalRestClient.requests.size() - 1);
         }
-        assertEquals("in_app_messages/" + message.messageId + "/impression", lastRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", lastRequest.url);
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessageInternal> messages) throws JSONException {
