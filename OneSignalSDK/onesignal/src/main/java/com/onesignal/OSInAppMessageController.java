@@ -663,8 +663,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     void messageWasDismissed(@NonNull OSInAppMessageInternal message, boolean failed) {
-        if (!failed)
-            onMessageDidDismiss(message);
 
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId);
@@ -680,6 +678,9 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             logger.debug("OSInAppMessageController messageWasDismissed dismissedMessages: " + dismissedMessages.toString());
         }
 
+        if (!shouldWaitForPromptsBeforeDismiss())
+            onMessageDidDismiss(message);
+
         dismissCurrentMessage(message);
     }
 
@@ -687,6 +688,10 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         logger.debug("In app message OSInAppMessageController messageWasDismissed by back press: " + message.toString());
         // IAM was not dismissed by user, will be redisplay again until user dismiss it
         dismissCurrentMessage(message);
+    }
+
+    private boolean shouldWaitForPromptsBeforeDismiss() {
+        return currentPrompt != null;
     }
 
     /**
@@ -698,7 +703,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
         OneSignal.getSessionManager().onDirectInfluenceFromIAMClickFinished();
 
-        if (currentPrompt != null) {
+        if (shouldWaitForPromptsBeforeDismiss()) {
             logger.debug("Stop evaluateMessageDisplayQueue because prompt is currently displayed");
             return;
         }
