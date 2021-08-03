@@ -391,6 +391,9 @@ class InAppMessageView {
 
         scheduleDismissRunnable = new Runnable() {
             public void run() {
+                if (messageController != null) {
+                    messageController.onMessageWillDismiss();
+                }
                 if (currentActivity != null) {
                     dismissAndAwaitNextMessage(null);
                     scheduleDismissRunnable = null;
