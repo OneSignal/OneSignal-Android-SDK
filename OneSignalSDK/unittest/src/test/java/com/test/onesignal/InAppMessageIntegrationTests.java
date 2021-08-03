@@ -1898,10 +1898,13 @@ public class InAppMessageIntegrationTests {
         threadAndTaskWait();
         // Runnable for webView is run from background thread to main thread
         threadAndTaskWait();
-        // Check impression request
-        requestSize = ShadowOneSignalRestClient.requests.size();
-        ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(ShadowOneSignalRestClient.requests.size() - 1);
+        while (!lastRequest.url.equals("in_app_messages/" + message.messageId + "/impression")) {
+            // Check impression request by waiting until animationEnd
+            threadAndTaskWait();
+            lastRequest = ShadowOneSignalRestClient.requests.get(ShadowOneSignalRestClient.requests.size() - 1);
+        }
+        assertEquals("in_app_messages/" + message.messageId + "/impression", lastRequest.url);
     }
 
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessageInternal> messages) throws JSONException {
