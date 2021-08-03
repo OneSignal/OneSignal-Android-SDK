@@ -152,7 +152,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessage() {
-        UUID.fromString(message.messageId); // Throws if invalid
+        UUID.fromString(message.getMessageId()); // Throws if invalid
         assertNotNull(message.variants);
     }
 
@@ -594,7 +594,7 @@ public class InAppMessagingUnitTests {
 
         // Ensure we make REST call to OneSignal to report click.
         ShadowOneSignalRestClient.Request iamClickRequest = ShadowOneSignalRestClient.requests.get(2);
-        assertEquals("in_app_messages/" + message.messageId + "/click", iamClickRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", iamClickRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamClickRequest.payload.get("app_id"));
         assertEquals(1, iamClickRequest.payload.get("device_type"));
         assertEquals(message.variants.get("android").get("en"), iamClickRequest.payload.get("variant_id"));
@@ -614,7 +614,7 @@ public class InAppMessagingUnitTests {
 
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
 
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamImpressionRequest.payload.get("app_id"));
         assertEquals(ShadowOneSignalRestClient.pushUserId, iamImpressionRequest.payload.get("player_id"));
         assertEquals(1, iamImpressionRequest.payload.get("device_type"));
@@ -629,7 +629,7 @@ public class InAppMessagingUnitTests {
 
         ShadowOneSignalRestClient.Request iamPageImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
 
-        assertEquals("in_app_messages/" + message.messageId + "/pageImpression", iamPageImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/pageImpression", iamPageImpressionRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamPageImpressionRequest.payload.get("app_id"));
         assertEquals(ShadowOneSignalRestClient.pushUserId, iamPageImpressionRequest.payload.get("player_id"));
         assertEquals(1, iamPageImpressionRequest.payload.get("device_type"));
@@ -684,6 +684,6 @@ public class InAppMessagingUnitTests {
         assertEquals(4,iamLifecycleCounter);
 
         assertNotNull(lastMessage);
-        assertEquals(lastMessage.messageId, message.messageId);
+        assertEquals(lastMessage.getMessageId(), message.getMessageId());
     }
 }
