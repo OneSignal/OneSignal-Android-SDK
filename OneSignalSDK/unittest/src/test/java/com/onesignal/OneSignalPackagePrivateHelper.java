@@ -362,6 +362,10 @@ public class OneSignalPackagePrivateHelper {
          super(inAppMessage.toJSONObject());
       }
 
+      public void setMessageId(String messageId) {
+         this.messageId = messageId;
+      }
+
       @Override
       protected ArrayList<ArrayList<OSTrigger>> parseTriggerJson(JSONArray triggersJson) throws JSONException {
          ArrayList<ArrayList<OSTrigger>> parsedTriggers = new ArrayList<>();
