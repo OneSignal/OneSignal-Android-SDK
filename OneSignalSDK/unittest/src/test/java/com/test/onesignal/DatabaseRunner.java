@@ -317,7 +317,7 @@ public class DatabaseRunner {
         inAppMessage.setDisplayedInSession(true);
 
         ContentValues values = new ContentValues();
-        values.put(InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.messageId);
+        values.put(InAppMessageTable.COLUMN_NAME_MESSAGE_ID, inAppMessage.getMessageId());
         values.put(InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY, inAppMessage.getRedisplayStats().getDisplayQuantity());
         values.put(InAppMessageTable.COLUMN_NAME_LAST_DISPLAY, inAppMessage.getRedisplayStats().getLastDisplayTime());
         values.put(InAppMessageTable.COLUMN_CLICK_IDS, inAppMessage.getClickedClickIds().toString());
