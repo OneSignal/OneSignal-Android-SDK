@@ -856,6 +856,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                         pendingHTMLContent = htmlStr;
                         return;
                     }
+                    onMessageWillDisplay(message);
                     WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
                 } catch (JSONException e) {
                     e.printStackTrace();
