@@ -67,7 +67,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Nullable private String currentActivityName = null;
     private Integer lastPageHeight = null;
 
-    private boolean dismissing = false;
+    // dismissFired prevents onDidDismiss from getting called multiple times
+    private boolean dismissFired = false;
+    // closing prevents IAM being redisplayed when the activity changes during an actionHandler
+    private boolean closing = false;
 
     interface OneSignalGenericCallback {
         void onComplete();
@@ -229,14 +232,16 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private void handleActionTaken(JSONObject jsonObject) throws JSONException {
             JSONObject body = jsonObject.getJSONObject("body");
             String id = body.optString("id", null);
+
+            closing = body.getBoolean("close");
+
             if (message.isPreview) {
                 OneSignal.getInAppMessageController().onMessageActionOccurredOnPreview(message, body);
             } else if (id != null) {
                 OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, body);
             }
 
-            boolean close = body.getBoolean("close");
-            if (close) {
+            if (closing) {
                 dismissAndAwaitNextMessage(null);
             }
         }
@@ -313,10 +318,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         if (lastActivityName == null)
             showMessageView(null);
         else if (!lastActivityName.equals(currentActivityName)) {
-            // Navigate to new activity while displaying current IAM
-            if (messageView != null)
-                messageView.removeAllViews();
-            showMessageView(lastPageHeight);
+            if (!closing) {
+                // Navigate to new activity while displaying current IAM
+                if (messageView != null)
+                    messageView.removeAllViews();
+                showMessageView(lastPageHeight);
+            }
         } else {
             // Activity rotated
             calculateHeightAndShowWebViewAfterNewActivity();
@@ -450,7 +457,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * Trigger the {@link #messageView} dismiss animation flow
      */
     protected void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
-        if (messageView == null || dismissing) {
+        if (messageView == null || dismissFired) {
             if (callback != null)
                 callback.onComplete();
             return;
@@ -461,12 +468,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
             @Override
             public void onComplete() {
-                dismissing = false;
+                dismissFired = false;
                 messageView = null;
                 if (callback != null)
                     callback.onComplete();
             }
         });
-        dismissing = true;
+        dismissFired = true;
     }
 }
