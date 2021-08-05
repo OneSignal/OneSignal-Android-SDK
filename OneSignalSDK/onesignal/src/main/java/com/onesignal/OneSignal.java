@@ -2180,45 +2180,6 @@ public class OneSignal {
       }
    }
 
-   // TODO: How to handle launch URL due to at notification generation changes.
-   // 1. (behavior change) Let app start then open browser
-   // 2. Move this code to GenerateNotifcation.java.
-   // 3. Detect URL is in notification and make it not start app automaticly. That why things work as before.
-
-   private static boolean openURLFromNotification(Context context, JSONArray dataArray) {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
-         return false;
-
-      int jsonArraySize = dataArray.length();
-
-      boolean urlOpened = false;
-      boolean launchUrlSuppress = OSUtils.getManifestMetaBoolean(context, "com.onesignal.suppressLaunchURLs");
-
-      for (int i = 0; i < jsonArraySize; i++) {
-         try {
-            JSONObject data = dataArray.getJSONObject(i);
-            if (!data.has("custom"))
-               continue;
-
-            JSONObject customJSON = new JSONObject(data.optString("custom"));
-
-            if (customJSON.has("u")) {
-               String url = customJSON.optString("u", null);
-               if (url != null && !launchUrlSuppress) {
-                  OSUtils.openURLInBrowser(url);
-                  urlOpened = true;
-               }
-            }
-         } catch (Throwable t) {
-            Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for launching a web URL.", t);
-         }
-      }
-
-      return urlOpened;
-   }
-
    private static void runNotificationOpenedCallback(final JSONArray dataArray) {
       if (notificationOpenedHandler == null) {
          unprocessedOpenedNotifs.add(dataArray);
@@ -2371,20 +2332,6 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackOpenedEvent(generateNotificationOpenedResult(data));
 
-      boolean urlOpened = false;
-      // TODO: Make this a helper method somewhere.
-      // TODO: Probably need to keep but consider if the reverse trampolining has any effect on this.
-      boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(context, "com.onesignal.NotificationOpened.DEFAULT"));
-
-      if (!defaultOpenActionDisabled)
-         urlOpened = openURLFromNotification(context, data);
-
-      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " defaultOpenActionDisabled: " + defaultOpenActionDisabled);
-      // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
-         applicationOpenedByNotification(notificationId);
-      }
-
       runNotificationOpenedCallback(data);
    }
 
@@ -2392,19 +2339,6 @@ public class OneSignal {
       // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
       appEntryState = AppEntryAction.NOTIFICATION_CLICK;
       sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
-   }
-
-   /**
-    * 1. App is not an alert
-    * 2. Not a URL open
-    * 3. Manifest setting for com.onesignal.suppressLaunchURLs is not true
-    * 4. App is coming from the background
-    */
-   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
-      return !fromAlert
-              && !urlOpened
-              && !defaultOpenActionDisabled
-              && !inForeground;
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
