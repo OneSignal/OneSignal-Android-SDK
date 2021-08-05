@@ -114,7 +114,8 @@ class GenerateNotificationOpenIntent(
         // Android 11 no longer requires nulling this out to get this behavior.
         launchIntent.setPackage(null)
         launchIntent.flags =
-            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
 
         return launchIntent
     }
