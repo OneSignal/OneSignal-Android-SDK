@@ -251,8 +251,9 @@ abstract class UserState {
                 sendJson.put(EMAIL_AUTH_HASH_KEY, syncValues.optString(EMAIL_AUTH_HASH_KEY));
             if (syncValues.has(SMS_AUTH_HASH_KEY))
                 sendJson.put(SMS_AUTH_HASH_KEY, syncValues.optString(SMS_AUTH_HASH_KEY));
-            if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH))
+            if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH) && !sendJson.has(EXTERNAL_USER_ID_AUTH_HASH)) {
                 sendJson.put(EXTERNAL_USER_ID_AUTH_HASH, syncValues.optString(EXTERNAL_USER_ID_AUTH_HASH));
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
