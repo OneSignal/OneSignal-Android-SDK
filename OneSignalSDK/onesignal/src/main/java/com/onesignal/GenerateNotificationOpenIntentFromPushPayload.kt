@@ -25,7 +25,7 @@ object GenerateNotificationOpenIntentFromPushPayload {
         return GenerateNotificationOpenIntent(
             context,
             payloadSpecificIntent,
-            OSNotificationOpenAppSettings.getDefaultAppOpenDisabled(context)
+            OSNotificationOpenAppSettings.getOpenApp(context)
         )
     }
 

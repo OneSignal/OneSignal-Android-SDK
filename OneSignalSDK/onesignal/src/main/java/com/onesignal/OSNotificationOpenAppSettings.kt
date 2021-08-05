@@ -10,8 +10,8 @@ object OSNotificationOpenAppSettings {
     /***
      * Should the default behavior of OneSignal be to always open / resume the app be disabled?
      */
-    fun getDefaultAppOpenDisabled(context: Context): Boolean {
-        return "DISABLE" == OSUtils.getManifestMeta(
+    fun getOpenApp(context: Context): Boolean {
+        return "DISABLE" != OSUtils.getManifestMeta(
             context,
             "com.onesignal.NotificationOpened.DEFAULT"
         )
