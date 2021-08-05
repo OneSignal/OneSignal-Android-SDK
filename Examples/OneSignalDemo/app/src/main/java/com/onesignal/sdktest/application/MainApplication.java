@@ -1,20 +1,19 @@
 package com.onesignal.sdktest.application;
 
-import android.app.Application;
 import android.util.Log;
 
+import androidx.multidex.MultiDexApplication;
+
 import com.onesignal.OSNotification;
-import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MainApplication extends Application {
+public class MainApplication extends MultiDexApplication {
 
     @Override
     public void onCreate() {
