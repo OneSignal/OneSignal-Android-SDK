@@ -35,7 +35,15 @@
             android:required="false"/>
 
         <!-- You must replace the names in the service and receiver tags
-    with names that are appropriate to your package. -->
+        with names that are appropriate to your package. -->
+
+        <service
+          android:name="com.onesignal.sdktest.notification.HmsMessageServiceAppLevel"
+          android:exported="false">
+          <intent-filter>
+            <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
+          </intent-filter>
+        </service>
 
         <service
             android:name="com.onesignal.ADMMessageHandlerJob"
