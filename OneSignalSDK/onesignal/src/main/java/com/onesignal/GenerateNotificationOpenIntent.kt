@@ -59,23 +59,20 @@ class GenerateNotificationOpenIntent(
         requestCode: Int,
         oneSignalIntent: Intent,
     ): PendingIntent? {
-        // OneSignal's invisible Activity to get the notification open event
-        val oneSignalActivityIntent = PendingIntent.getActivity(
-            context,
-            requestCode,
-            oneSignalIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val launchIntent =
-            getIntentVisible() ?:
+        val launchIntent = getIntentVisible()
+            ?:
             // Even though the default app open action is disabled we still need to attach OneSignal's
             // invisible Activity to capture click event to report click counts and etc.
             // You may be thinking why not use a BroadcastReceiver instead of an invisible
             // Activity? This could be done in a 5.0.0 release but can't be changed now as it is
             // unknown if the app developer will be starting there own Activity from their
             // OSNotificationOpenedHandler and that would have side-effects.
-            return oneSignalActivityIntent
+            return PendingIntent.getActivity(
+                context,
+                requestCode,
+                oneSignalIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            )
 
         // Launch desired Activity we want the user to be take to the followed by
         //   OneSignal's invisible notification open tracking Activity
