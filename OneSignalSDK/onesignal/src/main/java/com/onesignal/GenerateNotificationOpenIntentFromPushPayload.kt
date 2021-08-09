@@ -16,17 +16,17 @@ object GenerateNotificationOpenIntentFromPushPayload {
         context: Context,
         fcmPayload: JSONObject
     ): GenerateNotificationOpenIntent {
-
-        val payloadSpecificIntent = openBrowserIntent(
-            context,
-            fcmPayload
-        )
-
         return GenerateNotificationOpenIntent(
             context,
-            payloadSpecificIntent,
-            OSNotificationOpenAppSettings.getOpenApp(context)
+            openBrowserIntent(context, fcmPayload),
+            shouldOpenApp(context, fcmPayload)
         )
+    }
+
+    private fun shouldOpenApp(context: Context, fcmPayload: JSONObject): Boolean {
+        val isIAMPreviewNotification = NotificationBundleProcessor.inAppPreviewPushUUID(fcmPayload) != null
+        return isIAMPreviewNotification or
+            OSNotificationOpenAppSettings.getOpenApp(context)
     }
 
     private fun openBrowserIntent(
