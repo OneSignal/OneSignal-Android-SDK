@@ -28,7 +28,7 @@ object GenerateNotificationOpenIntentFromPushPayload {
     }
 
     private fun shouldOpenApp(shouldOpenApp: Boolean, fcmPayload: JSONObject): Boolean {
-        val isIAMPreviewNotification = NotificationBundleProcessor.inAppPreviewPushUUID(fcmPayload) != null
+        val isIAMPreviewNotification = OSInAppMessagePreviewHandler.inAppPreviewPushUUID(fcmPayload) != null
         return isIAMPreviewNotification or
             shouldOpenApp
     }
