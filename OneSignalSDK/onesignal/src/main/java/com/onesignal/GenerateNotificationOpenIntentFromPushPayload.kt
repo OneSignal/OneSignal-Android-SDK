@@ -7,45 +7,36 @@ import org.json.JSONObject
 
 /**
  * Create a GenerateNotificationOpenIntent instance based on:
- *    * OSNotificationOpenAppSettings
+ *    * OSNotificationOpenBehaviorFromPushPayload
  *    * Payload
  */
 object GenerateNotificationOpenIntentFromPushPayload {
-
     fun create(
         context: Context,
         fcmPayload: JSONObject
     ): GenerateNotificationOpenIntent {
+        val behavior = OSNotificationOpenBehaviorFromPushPayload(
+            context,
+            fcmPayload,
+        )
+
         return GenerateNotificationOpenIntent(
             context,
-            openBrowserIntent(context, fcmPayload),
-            shouldOpenApp(context, fcmPayload)
+            openBrowserIntent(behavior.uri),
+            shouldOpenApp(behavior.shouldOpenApp, fcmPayload)
         )
     }
 
-    private fun shouldOpenApp(context: Context, fcmPayload: JSONObject): Boolean {
+    private fun shouldOpenApp(shouldOpenApp: Boolean, fcmPayload: JSONObject): Boolean {
         val isIAMPreviewNotification = NotificationBundleProcessor.inAppPreviewPushUUID(fcmPayload) != null
         return isIAMPreviewNotification or
-            OSNotificationOpenAppSettings.getOpenApp(context)
+            shouldOpenApp
     }
 
     private fun openBrowserIntent(
-        context: Context,
-        fcmPayload: JSONObject
+        uri: Uri?,
     ): Intent? {
-        if (OSNotificationOpenAppSettings.getSuppressLaunchURL(context)) return null
-
-        val customJSON = JSONObject(fcmPayload.optString("custom"))
-
-        if (customJSON.has("u")) {
-            val url = customJSON.optString("u")
-            if (url != "") {
-                val uri = Uri.parse(url.trim { it <= ' ' })
-                return OSUtils.openURLInBrowserIntent(uri)
-            }
-        }
-
-        return null
+        if (uri == null) return null
+        return OSUtils.openURLInBrowserIntent(uri)
     }
-
 }
