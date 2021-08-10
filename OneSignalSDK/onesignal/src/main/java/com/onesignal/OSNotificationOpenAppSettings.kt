@@ -8,9 +8,10 @@ import android.content.Context
 object OSNotificationOpenAppSettings {
 
     /***
-     * Should the default behavior of OneSignal be to always open / resume the app be disabled?
+     * When the notification is tapped on should it show an Activity?
+     * This could be resuming / opening the app or opening the URL on the notification.
      */
-    fun getOpenApp(context: Context): Boolean {
+    fun getShouldOpenActivity(context: Context): Boolean {
         return "DISABLE" != OSUtils.getManifestMeta(
             context,
             "com.onesignal.NotificationOpened.DEFAULT"

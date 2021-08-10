@@ -89,9 +89,6 @@ class GenerateNotificationOpenIntent(
 
     // Return the provide intent if one was set, otherwise default to opening the app.
     private fun getIntentVisible(): Intent? {
-        // 1. Check if the App developer disabled the default action of opening / resuming the app.
-        if (!startApp) return null
-
         if (intent != null) return intent
         return getIntentAppOpen()
     }
@@ -99,6 +96,8 @@ class GenerateNotificationOpenIntent(
     // Provides the default launcher Activity, if the app has one.
     //   - This is almost always true, one of the few exceptions being an app that is only a widget.
     private fun getIntentAppOpen(): Intent? {
+        if (!startApp) return null
+
         val launchIntent =
             context.packageManager.getLaunchIntentForPackage(
                 context.packageName

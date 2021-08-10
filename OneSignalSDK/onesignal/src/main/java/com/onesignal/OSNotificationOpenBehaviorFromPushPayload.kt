@@ -11,13 +11,14 @@ class OSNotificationOpenBehaviorFromPushPayload(
 
     val shouldOpenApp: Boolean
         get() {
-            if (!OSNotificationOpenAppSettings.getOpenApp(context)) return false
+            if (!OSNotificationOpenAppSettings.getShouldOpenActivity(context)) return false
             if (uri != null) return false
             return true
         }
 
     val uri: Uri?
         get() {
+            if (!OSNotificationOpenAppSettings.getShouldOpenActivity(context)) return null
             if (OSNotificationOpenAppSettings.getSuppressLaunchURL(context)) return null
 
             val customJSON = JSONObject(fcmPayload.optString("custom"))
