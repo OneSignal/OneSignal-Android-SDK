@@ -2332,7 +2332,28 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackOpenedEvent(generateNotificationOpenedResult(data));
 
+      if (shouldInitDirectSessionFromNotificationOpen(context, data)) {
+         applicationOpenedByNotification(notificationId);
+      }
+
       runNotificationOpenedCallback(data);
+   }
+
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, final JSONArray data) {
+      if (inForeground) {
+         return false;
+      }
+
+      try {
+         JSONObject interactedNotificationData = data.getJSONObject(0);
+         return new OSNotificationOpenBehaviorFromPushPayload(
+            context,
+            interactedNotificationData
+         ).getShouldOpenApp();
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+      return true;
    }
 
    static void applicationOpenedByNotification(@Nullable final String notificationId) {
