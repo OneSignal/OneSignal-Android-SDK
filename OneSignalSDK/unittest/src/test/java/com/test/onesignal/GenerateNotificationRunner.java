@@ -1338,7 +1338,10 @@ public class GenerateNotificationRunner {
       assertReportReceivedAtIndex(
          2,
          "UUID",
-         new JSONObject().put("app_id", appId).put("player_id", ShadowOneSignalRestClient.pushUserId)
+         new JSONObject()
+                 .put("app_id", appId)
+                 .put("player_id", ShadowOneSignalRestClient.pushUserId)
+                 .put("device_type", 1)
       );
    }
 
