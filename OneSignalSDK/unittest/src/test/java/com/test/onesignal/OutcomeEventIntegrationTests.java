@@ -1141,6 +1141,55 @@ public class OutcomeEventIntegrationTests {
         assertMeasureAtIndex(1, ONESIGNAL_OUTCOME_NAME);
     }
 
+    @Test
+    public void testSendOutcomesFailWhenRequiresUserPrivacyConsent() throws Exception {
+        // Enable IAM v2
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger, time);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+
+        OneSignalInit();
+        threadAndTaskWait();
+        assertRestCalls(2);
+        OneSignal.setRequiresUserPrivacyConsent(true);
+
+        // Make sure session is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check that the task has been queued until consent is given
+        assertRestCalls(2);
+
+        // Send outcome event
+        OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Ensure still only 2 requests have been made
+        assertRestCalls(2);
+
+        OneSignal.provideUserConsent(true);
+        threadAndTaskWait();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Send outcome event
+        OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make sure session is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
+    }
+
     private void foregroundAppAfterClickingNotification() throws Exception {
         OneSignalInit();
         threadAndTaskWait();
