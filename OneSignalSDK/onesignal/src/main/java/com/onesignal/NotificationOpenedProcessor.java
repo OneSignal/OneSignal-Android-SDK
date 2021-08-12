@@ -143,7 +143,6 @@ class NotificationOpenedProcessor {
       if (previewUUID == null)
          return false;
 
-      OneSignal.startOrResumeApp(context);
       OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
       return true;
    }

@@ -43,12 +43,15 @@ class NotificationSummaryManager {
             cursor.close();
       }
    }
-   
+
    private static Cursor internalUpdateSummaryNotificationAfterChildRemoved(Context context, OneSignalDb db, String group, boolean dismissed) {
       Cursor cursor = db.query(
           NotificationTable.TABLE_NAME,
-          new String[] { NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, // return columns
-              NotificationTable.COLUMN_NAME_CREATED_TIME },
+          new String[] {
+              NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
+              NotificationTable.COLUMN_NAME_CREATED_TIME,
+              NotificationTable.COLUMN_NAME_FULL_DATA,
+          },
           NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " + // Where String
               NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
               NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
@@ -102,22 +105,22 @@ class NotificationSummaryManager {
       try {
          cursor.moveToFirst();
          Long datetime = cursor.getLong(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_CREATED_TIME));
+         String jsonStr = cursor.getString(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_FULL_DATA));
          cursor.close();
-   
+
          Integer androidNotifId = getSummaryNotificationId(db, group);
          if (androidNotifId == null)
             return cursor;
-         
+
          OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
          notificationJob.setRestoring(true);
          notificationJob.setShownTimeStamp(datetime);
-      
-         JSONObject payload = new JSONObject();
-         payload.put("grp", group);
-         notificationJob.setJsonPayload(payload);
-      
+         notificationJob.setJsonPayload(new JSONObject(jsonStr));
+
          GenerateNotification.updateSummaryNotification(notificationJob);
-      } catch (JSONException e) {}
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
       
       return cursor;
    }

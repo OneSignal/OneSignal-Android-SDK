@@ -2180,40 +2180,6 @@ public class OneSignal {
       }
    }
 
-   private static boolean openURLFromNotification(Context context, JSONArray dataArray) {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
-         return false;
-
-      int jsonArraySize = dataArray.length();
-
-      boolean urlOpened = false;
-      boolean launchUrlSuppress = OSUtils.getManifestMetaBoolean(context, "com.onesignal.suppressLaunchURLs");
-
-      for (int i = 0; i < jsonArraySize; i++) {
-         try {
-            JSONObject data = dataArray.getJSONObject(i);
-            if (!data.has("custom"))
-               continue;
-
-            JSONObject customJSON = new JSONObject(data.optString("custom"));
-
-            if (customJSON.has("u")) {
-               String url = customJSON.optString("u", null);
-               if (url != null && !launchUrlSuppress) {
-                  OSUtils.openURLInBrowser(url);
-                  urlOpened = true;
-               }
-            }
-         } catch (Throwable t) {
-            Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for launching a web URL.", t);
-         }
-      }
-
-      return urlOpened;
-   }
-
    private static void runNotificationOpenedCallback(final JSONArray dataArray) {
       if (notificationOpenedHandler == null) {
          unprocessedOpenedNotifs.add(dataArray);
@@ -2366,66 +2332,34 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackOpenedEvent(generateNotificationOpenedResult(data));
 
-      boolean urlOpened = false;
-      boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(context, "com.onesignal.NotificationOpened.DEFAULT"));
-
-      if (!defaultOpenActionDisabled)
-         urlOpened = openURLFromNotification(context, data);
-
-      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " defaultOpenActionDisabled: " + defaultOpenActionDisabled);
-      // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+      if (shouldInitDirectSessionFromNotificationOpen(context, data)) {
          applicationOpenedByNotification(notificationId);
       }
 
       runNotificationOpenedCallback(data);
    }
 
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, final JSONArray data) {
+      if (inForeground) {
+         return false;
+      }
+
+      try {
+         JSONObject interactedNotificationData = data.getJSONObject(0);
+         return new OSNotificationOpenBehaviorFromPushPayload(
+            context,
+            interactedNotificationData
+         ).getShouldOpenApp();
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+      return true;
+   }
+
    static void applicationOpenedByNotification(@Nullable final String notificationId) {
       // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
       appEntryState = AppEntryAction.NOTIFICATION_CLICK;
       sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
-   }
-
-   // This opens the app in the same way an Android homescreen launcher does.
-   // This means we expect the following behavior:
-   //    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"
-   //    2. If the app is already running, instead the last activity will be resumed
-   //    3. If the app is not running (due to being push out of memory), the last activity will be resumed
-   //    4. If the app is no longer in the recent apps list, it is not resumed, same as #1 above.
-   //        - App is removed from the recent app's list if it is swiped away or "clear all" is pressed.
-   static boolean startOrResumeApp(@NonNull Activity activity) {
-      Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
-      logger.debug("startOrResumeApp from context: " + activity + " isRoot: " + activity.isTaskRoot() + " with launchIntent: " + launchIntent);
-
-      // Not all apps have a launcher intent, such as one that only provides a homescreen widget
-      if (launchIntent == null)
-         return false;
-
-      // Removing package from the intent, this treats the app as if it was started externally.
-      // This gives us the resume app behavior noted above.
-      // Android 11 no longer requires nulling this out to get this behavior.
-      launchIntent.setPackage(null);
-
-      activity.startActivity(launchIntent);
-
-      return true;
-   }
-
-   /**
-    * 1. App is not an alert
-    * 2. Not a URL open
-    * 3. Manifest setting for com.onesignal.NotificationOpened.DEFAULT is not disabled
-    * 4. Manifest setting for com.onesignal.suppressLaunchURLs is not true
-    * 5. App is coming from the background
-    * 6. App open/resume intent exists
-    */
-   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
-      return !fromAlert
-              && !urlOpened
-              && !defaultOpenActionDisabled
-              && !inForeground
-              && startOrResumeApp(context);
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {

@@ -548,10 +548,16 @@ class OSUtils {
    }
 
    private static void openURLInBrowser(@NonNull Uri uri) {
+      Intent intent = openURLInBrowserIntent(uri);
+      OneSignal.appContext.startActivity(intent);
+   }
+
+   @NonNull
+   static Intent openURLInBrowserIntent(@NonNull Uri uri) {
       SchemaType type = uri.getScheme() != null ? SchemaType.fromString(uri.getScheme()) : null;
       if (type == null) {
-          type = SchemaType.HTTP;
-          if (!uri.toString().contains("://")) {
+         type = SchemaType.HTTP;
+         if (!uri.toString().contains("://")) {
             uri = Uri.parse("http://" + uri.toString());
          }
       }
@@ -568,11 +574,12 @@ class OSUtils {
             break;
       }
       intent.addFlags(
-              Intent.FLAG_ACTIVITY_NO_HISTORY |
-                      Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
-                      Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-                      Intent.FLAG_ACTIVITY_NEW_TASK);
-      OneSignal.appContext.startActivity(intent);
+          Intent.FLAG_ACTIVITY_NO_HISTORY |
+          Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
+          Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
+          Intent.FLAG_ACTIVITY_NEW_TASK
+      );
+      return intent;
    }
 
    // Creates a new Set<T> that supports reads and writes from more than one thread at a time
