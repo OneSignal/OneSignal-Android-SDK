@@ -74,11 +74,12 @@ class GenerateNotificationOpenIntent(
                 PendingIntent.FLAG_UPDATE_CURRENT
             )
 
-        // Launch desired Activity we want the user to be take to the followed by
-        //   OneSignal's invisible notification open tracking Activity
-        // This allows OneSignal to track the click, fire OSNotificationOpenedHandler, etc while allowing
-        //   the app developer to set the Activity they want at notification creation time. (FUTURE API FEATURE)
-        // AKA "Reverse Activity Trampolining"
+
+        // This setups up a "Reverse Activity Trampoline"
+        // The first Activity to launch will be oneSignalIntent, which is an invisible
+        // Activity to track the click, fire OSNotificationOpenedHandler, etc. This Activity
+        // will finish quickly and the destination Activity, launchIntent, will be shown to the user
+        // since it is the next in the back stack.
         return PendingIntent.getActivities(
             context,
             requestCode,
