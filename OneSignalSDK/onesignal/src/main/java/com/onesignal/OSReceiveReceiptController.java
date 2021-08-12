@@ -54,6 +54,7 @@ class OSReceiveReceiptController {
     void sendReceiveReceipt(final CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter, @NonNull final String notificationId) {
         final String appId = OneSignal.appId == null || OneSignal.appId.isEmpty() ? OneSignal.getSavedAppId() : OneSignal.appId;
         final String playerId = OneSignal.getUserId();
+        final int deviceType = new OSUtils().getDeviceType();
 
         if (!remoteParamController.isReceiveReceiptEnabled()) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "sendReceiveReceipt disable");
@@ -64,7 +65,7 @@ class OSReceiveReceiptController {
         Runnable receiveReceiptRunnable = new Runnable() {
             @Override
             public void run() {
-                repository.sendReceiveReceipt(appId, playerId, notificationId, new OneSignalRestClient.ResponseHandler() {
+                repository.sendReceiveReceipt(appId, playerId, deviceType, notificationId, new OneSignalRestClient.ResponseHandler() {
                     @Override
                     void onSuccess(String response) {
                         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Receive receipt sent for notificationID: " + notificationId);
