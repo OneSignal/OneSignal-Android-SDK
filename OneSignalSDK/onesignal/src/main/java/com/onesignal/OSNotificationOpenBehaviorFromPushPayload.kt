@@ -11,9 +11,8 @@ class OSNotificationOpenBehaviorFromPushPayload(
 
     val shouldOpenApp: Boolean
         get() {
-            if (!OSNotificationOpenAppSettings.getShouldOpenActivity(context)) return false
-            if (uri != null) return false
-            return true
+            return OSNotificationOpenAppSettings.getShouldOpenActivity(context)
+                    && uri == null
         }
 
     val uri: Uri?
