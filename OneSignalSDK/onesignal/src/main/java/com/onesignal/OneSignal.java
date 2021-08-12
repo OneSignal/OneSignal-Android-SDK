@@ -3290,6 +3290,10 @@ public class OneSignal {
          return;
       }
 
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendOutcome()")) {
+         return;
+      }
+
       // Outcomes needs app id, delay until init is not done
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_OUTCOME) || outcomeEventsController == null) {
          logger.error("Waiting for remote params. " +
@@ -3314,6 +3318,10 @@ public class OneSignal {
    public static void sendUniqueOutcome(@NonNull final String name, final OutcomeCallback callback) {
       if (!isValidOutcomeEntry(name))
          return;
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendUniqueOutcome()")) {
+         return;
+      }
 
       // Outcomes needs app id, delay until init is not done
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SEND_UNIQUE_OUTCOME) || outcomeEventsController == null) {
