@@ -178,7 +178,7 @@ abstract class OSBackgroundSync {
                 context,
                 getSyncTaskId(),
                 new Intent(context, getSyncServicePendingIntentClass()),
-                PendingIntent.FLAG_UPDATE_CURRENT
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
     }
 
