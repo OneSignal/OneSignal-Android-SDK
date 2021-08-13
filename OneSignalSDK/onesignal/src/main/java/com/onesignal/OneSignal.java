@@ -402,7 +402,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   private static final String VERSION = "040402";
+   private static final String VERSION = "040500";
    public static String getSdkVersionRaw() {
       return VERSION;
    }
