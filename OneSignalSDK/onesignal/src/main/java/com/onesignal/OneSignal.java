@@ -3238,6 +3238,10 @@ public class OneSignal {
          return;
       }
 
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendOutcome()")) {
+         return;
+      }
+
       outcomeEventsController.sendOutcomeEvent(name, callback);
    }
 
@@ -3260,6 +3264,10 @@ public class OneSignal {
                sendUniqueOutcome(name, callback);
             }
          });
+         return;
+      }
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendUniqueOutcome()")) {
          return;
       }
 
