@@ -59,6 +59,7 @@ class GenerateNotificationOpenIntent(
         requestCode: Int,
         oneSignalIntent: Intent,
     ): PendingIntent? {
+        val flags =  PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val launchIntent = getIntentVisible()
             ?:
             // Even though the default app open action is disabled we still need to attach OneSignal's
@@ -71,7 +72,7 @@ class GenerateNotificationOpenIntent(
                 context,
                 requestCode,
                 oneSignalIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT
+                flags
             )
 
 
@@ -84,7 +85,7 @@ class GenerateNotificationOpenIntent(
             context,
             requestCode,
             arrayOf(launchIntent, oneSignalIntent),
-            PendingIntent.FLAG_UPDATE_CURRENT
+            flags
         )
     }
 

@@ -128,7 +128,7 @@ class GenerateNotification {
    }
 
    private static PendingIntent getNewDismissActionPendingIntent(int requestCode, Intent intent) {
-      return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+      return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
    }
 
    private static Intent getNewBaseDismissIntent(int notificationId) {
