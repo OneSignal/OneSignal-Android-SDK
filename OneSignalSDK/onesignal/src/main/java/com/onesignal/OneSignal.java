@@ -376,7 +376,7 @@ public class OneSignal {
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static OSNotificationOpenedHandler notificationOpenedHandler;
    static OSInAppMessageClickHandler inAppMessageClickHandler;
-   static OSIAMLifecycleHandler inAppMessageLifecycleHandler;
+   static OSInAppMessageLifecycleHandler inAppMessageLifecycleHandler;
 
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
@@ -741,7 +741,7 @@ public class OneSignal {
       notificationWillShowInForegroundHandler = callback;
    }
 
-   public static void setIAMLifecycleHandler(@Nullable OSIAMLifecycleHandler handler) {
+   public static void setInAppMessageLifecycleHandler(@Nullable OSInAppMessageLifecycleHandler handler) {
       inAppMessageLifecycleHandler = handler;
    }
 

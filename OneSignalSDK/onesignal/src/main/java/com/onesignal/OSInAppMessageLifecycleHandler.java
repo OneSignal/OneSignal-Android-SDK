@@ -27,17 +27,17 @@
 
 package com.onesignal;
 
-public abstract class OSIAMLifecycleHandler {
+public abstract class OSInAppMessageLifecycleHandler {
     public void onWillDisplayInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSIAMLifecycleHandler: IAM Will Display: " + message.getMessageId());
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Will Display: " + message.getMessageId());
     }
     public void onDidDisplayInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSIAMLifecycleHandler: IAM Did Display: " + message.getMessageId());
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Did Display: " + message.getMessageId());
     }
     public void onWillDismissInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSIAMLifecycleHandler: IAM Will Dismiss: " + message.getMessageId());
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Will Dismiss: " + message.getMessageId());
     }
     public void onDidDismissInAppMessage(OSInAppMessage message) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSIAMLifecycleHandler: IAM Did Dismiss: " + message.getMessageId());
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Did Dismiss: " + message.getMessageId());
     }
 }
