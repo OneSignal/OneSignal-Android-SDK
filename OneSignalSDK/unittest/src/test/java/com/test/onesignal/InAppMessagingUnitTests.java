@@ -7,7 +7,7 @@ import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOSTimeImpl;
-import com.onesignal.OSIAMLifecycleHandler;
+import com.onesignal.OSInAppMessageLifecycleHandler;
 import com.onesignal.OSInAppMessage;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
@@ -642,7 +642,7 @@ public class InAppMessagingUnitTests {
     private static int iamLifecycleCounter;
     @Test
     public void testIAMLifecycleEventsFlow() throws Exception {
-        OneSignal.setIAMLifecycleHandler(new OSIAMLifecycleHandler() {
+        OneSignal.setInAppMessageLifecycleHandler(new OSInAppMessageLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(OSInAppMessage message) {
                 lastMessage = message;

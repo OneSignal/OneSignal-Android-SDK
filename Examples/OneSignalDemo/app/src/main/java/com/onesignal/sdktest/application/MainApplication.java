@@ -6,8 +6,7 @@ import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.OSInAppMessage;
 import com.onesignal.OSNotification;
-import com.onesignal.OSNotificationOpenedResult;
-import com.onesignal.OSIAMLifecycleHandler;
+import com.onesignal.OSInAppMessageLifecycleHandler;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -22,7 +21,7 @@ public class MainApplication extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
 
-        OSIAMLifecycleHandler handler = new OSIAMLifecycleHandler() {
+        OSInAppMessageLifecycleHandler handler = new OSInAppMessageLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(OSInAppMessage message) {
                 OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDisplayInAppMessage");
@@ -41,7 +40,7 @@ public class MainApplication extends MultiDexApplication {
             }
         };
 
-        OneSignal.setIAMLifecycleHandler(handler);
+        OneSignal.setInAppMessageLifecycleHandler(handler);
 
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
