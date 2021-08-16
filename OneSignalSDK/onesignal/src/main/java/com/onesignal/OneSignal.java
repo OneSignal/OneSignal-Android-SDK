@@ -376,7 +376,6 @@ public class OneSignal {
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static OSNotificationOpenedHandler notificationOpenedHandler;
    static OSInAppMessageClickHandler inAppMessageClickHandler;
-   static OSInAppMessageLifecycleHandler inAppMessageLifecycleHandler;
 
    // Is the init() of OneSignal SDK finished yet
    private static boolean initDone;
@@ -742,7 +741,7 @@ public class OneSignal {
    }
 
    public static void setInAppMessageLifecycleHandler(@Nullable OSInAppMessageLifecycleHandler handler) {
-      inAppMessageLifecycleHandler = handler;
+      getInAppMessageController().setInAppMessageLifecycleHandler(handler);
    }
 
    public static void setNotificationOpenedHandler(@Nullable OSNotificationOpenedHandler callback) {
