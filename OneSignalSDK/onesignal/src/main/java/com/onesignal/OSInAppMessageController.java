@@ -45,6 +45,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     private OSSystemConditionController systemConditionController;
     private OSInAppMessageRepository inAppMessageRepository;
+    private OSInAppMessageLifecycleHandler inAppMessageLifecycleHandler;
 
     OSTriggerController triggerController;
 
@@ -349,38 +350,42 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     /**
      * IAM Lifecycle methods
-     * The following methods call the public inAppMessageLifecycleHandler callbacks
+     * The following methods call the public OSInAppMessageLifecycleHandler callbacks
      */
+    void setInAppMessageLifecycleHandler(@Nullable OSInAppMessageLifecycleHandler handler) {
+        inAppMessageLifecycleHandler = handler;
+    }
+
     void onMessageWillDisplay(@NonNull final OSInAppMessageInternal message) {
-        if (OneSignal.inAppMessageLifecycleHandler == null) {
+        if (inAppMessageLifecycleHandler == null) {
             logger.verbose("OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null");
             return;
         }
-        OneSignal.inAppMessageLifecycleHandler.onWillDisplayInAppMessage(message);
+        inAppMessageLifecycleHandler.onWillDisplayInAppMessage(message);
     }
 
     void onMessageDidDisplay(@NonNull final OSInAppMessageInternal message) {
-        if (OneSignal.inAppMessageLifecycleHandler == null) {
+        if (inAppMessageLifecycleHandler == null) {
             logger.verbose("OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null");
             return;
         }
-        OneSignal.inAppMessageLifecycleHandler.onDidDisplayInAppMessage(message);
+        inAppMessageLifecycleHandler.onDidDisplayInAppMessage(message);
     }
 
     void onMessageWillDismiss(@NonNull final OSInAppMessageInternal message) {
-        if (OneSignal.inAppMessageLifecycleHandler == null) {
+        if (inAppMessageLifecycleHandler == null) {
             logger.verbose("OSInAppMessageController onMessageWillDismiss: inAppMessageLifecycleHandler is null");
             return;
         }
-        OneSignal.inAppMessageLifecycleHandler.onWillDismissInAppMessage(message);
+        inAppMessageLifecycleHandler.onWillDismissInAppMessage(message);
     }
 
     void onMessageDidDismiss(@NonNull final OSInAppMessageInternal message) {
-        if (OneSignal.inAppMessageLifecycleHandler == null) {
+        if (inAppMessageLifecycleHandler == null) {
             logger.verbose("OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null");
             return;
         }
-        OneSignal.inAppMessageLifecycleHandler.onDidDismissInAppMessage(message);
+        inAppMessageLifecycleHandler.onDidDismissInAppMessage(message);
     }
 
     /* End IAM Lifecycle methods */
