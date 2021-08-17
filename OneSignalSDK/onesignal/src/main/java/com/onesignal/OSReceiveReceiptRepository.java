@@ -28,6 +28,7 @@
 package com.onesignal;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,12 +39,15 @@ class OSReceiveReceiptRepository {
     private static final String PLAYER_ID = "player_id";
     private static final String DEVICE_TYPE = "device_type";
 
-    void sendReceiveReceipt(@NonNull String appId, @NonNull String playerId,  @NonNull int deviceType, @NonNull String notificationId, @NonNull OneSignalRestClient.ResponseHandler responseHandler) {
+    void sendReceiveReceipt(@NonNull String appId, @NonNull String playerId, @Nullable Integer deviceType, @NonNull String notificationId, @NonNull OneSignalRestClient.ResponseHandler responseHandler) {
         try {
             JSONObject jsonBody = new JSONObject()
                     .put(APP_ID, appId)
-                    .put(PLAYER_ID, playerId)
-                    .put(DEVICE_TYPE, deviceType);
+                    .put(PLAYER_ID, playerId);
+
+            if (deviceType != null) {
+                jsonBody.put(DEVICE_TYPE, deviceType);
+            }
 
             OneSignalRestClient.put("notifications/" + notificationId + "/report_received", jsonBody, responseHandler);
         } catch (JSONException e) {
