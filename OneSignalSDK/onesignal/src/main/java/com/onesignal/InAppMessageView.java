@@ -55,7 +55,6 @@ class InAppMessageView {
 
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
-    private static final int MARGIN_PX_SIZE = dpToPx(24);
     private static final int DRAG_THRESHOLD_PX_SIZE = dpToPx(4);
     private PopupWindow popupWindow;
 
@@ -69,6 +68,8 @@ class InAppMessageView {
     private final Handler handler = new Handler();
     private int pageWidth;
     private int pageHeight;
+    private int marginPxSizeWidth = dpToPx(24);
+    private int marginPxSizeHeight = dpToPx(24);
     private double dismissDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
@@ -194,22 +195,22 @@ class InAppMessageView {
 
     private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation, boolean disableDragging) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-        draggableParams.maxXPos = MARGIN_PX_SIZE;
-        draggableParams.maxYPos = MARGIN_PX_SIZE;
+        draggableParams.maxXPos = marginPxSizeWidth;
+        draggableParams.maxYPos = marginPxSizeHeight;
         draggableParams.draggingDisabled = disableDragging;
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
         switch (displayLocation) {
             case TOP_BANNER:
-                draggableParams.dragThresholdY = MARGIN_PX_SIZE - DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.dragThresholdY = marginPxSizeHeight - DRAG_THRESHOLD_PX_SIZE;
                 break;
             case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
-                draggableParams.dragThresholdY = MARGIN_PX_SIZE + DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.dragThresholdY = marginPxSizeHeight + DRAG_THRESHOLD_PX_SIZE;
                 break;
             case FULL_SCREEN:
-                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
+                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (marginPxSizeHeight * 2);
                 // fall through for FULL_SCREEN since it shares similar params to CENTER_MODAL
             case CENTER_MODAL:
                 int y = (getDisplayYSize() / 2) - (pageHeight / 2);
@@ -335,7 +336,7 @@ class InAppMessageView {
         cardView.setTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
         cardView.addView(webView);
 
-        draggableRelativeLayout.setPadding(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
+        draggableRelativeLayout.setPadding(marginPxSizeWidth, marginPxSizeHeight, marginPxSizeWidth, marginPxSizeHeight);
         draggableRelativeLayout.setClipChildren(false);
         draggableRelativeLayout.setClipToPadding(false);
         draggableRelativeLayout.addView(cardView);
@@ -543,7 +544,7 @@ class InAppMessageView {
         // Animate the message view from above the screen downward to the top
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
-                -height - MARGIN_PX_SIZE,
+                -height - marginPxSizeHeight,
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
@@ -555,7 +556,7 @@ class InAppMessageView {
         // Animate the message view from under the screen upward to the bottom
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
-                height + MARGIN_PX_SIZE,
+                height + marginPxSizeHeight,
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
