@@ -68,8 +68,10 @@ class InAppMessageView {
     private final Handler handler = new Handler();
     private int pageWidth;
     private int pageHeight;
-    private int marginPxSizeWidth = dpToPx(24);
-    private int marginPxSizeHeight = dpToPx(24);
+    private int marginPxSizeLeft = dpToPx(24);
+    private int marginPxSizeRight = dpToPx(24);
+    private int marginPxSizeTop = dpToPx(24);
+    private int marginPxSizeBottom = dpToPx(24);
     private double dismissDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
@@ -114,6 +116,16 @@ class InAppMessageView {
             shouldDismissWhenActive = false;
             finishAfterDelay(null);
         }
+    }
+
+    void useHeightMargins(boolean shouldUseMargin) {
+        marginPxSizeBottom = shouldUseMargin ? MARGIN_PX_SIZE : 0;
+        marginPxSizeTop = shouldUseMargin ? MARGIN_PX_SIZE : 0;
+    }
+
+    void useWidthMargins(boolean shouldUseMargin) {
+        marginPxSizeLeft = shouldUseMargin ? MARGIN_PX_SIZE : 0;
+        marginPxSizeRight = shouldUseMargin ? MARGIN_PX_SIZE : 0;
     }
 
     /**
@@ -196,22 +208,22 @@ class InAppMessageView {
 
     private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation, boolean disableDragging) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-        draggableParams.maxXPos = marginPxSizeWidth;
-        draggableParams.maxYPos = marginPxSizeHeight;
+        draggableParams.maxXPos = marginPxSizeRight;
+        draggableParams.maxYPos = marginPxSizeTop;
         draggableParams.draggingDisabled = disableDragging;
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
         switch (displayLocation) {
             case TOP_BANNER:
-                draggableParams.dragThresholdY = marginPxSizeHeight - DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.dragThresholdY = marginPxSizeTop - DRAG_THRESHOLD_PX_SIZE;
                 break;
             case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
-                draggableParams.dragThresholdY = marginPxSizeHeight + DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.dragThresholdY = marginPxSizeBottom + DRAG_THRESHOLD_PX_SIZE;
                 break;
             case FULL_SCREEN:
-                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (marginPxSizeHeight * 2);
+                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (marginPxSizeBottom + marginPxSizeTop);
                 // fall through for FULL_SCREEN since it shares similar params to CENTER_MODAL
             case CENTER_MODAL:
                 int y = (getDisplayYSize() / 2) - (pageHeight / 2);
@@ -343,7 +355,7 @@ class InAppMessageView {
         cardView.setTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
         cardView.addView(webView);
 
-        draggableRelativeLayout.setPadding(marginPxSizeWidth, marginPxSizeHeight, marginPxSizeWidth, marginPxSizeHeight);
+        draggableRelativeLayout.setPadding(marginPxSizeLeft, marginPxSizeTop, marginPxSizeRight, marginPxSizeBottom);
         draggableRelativeLayout.setClipChildren(false);
         draggableRelativeLayout.setClipToPadding(false);
         draggableRelativeLayout.addView(cardView);
@@ -551,7 +563,7 @@ class InAppMessageView {
         // Animate the message view from above the screen downward to the top
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
-                -height - marginPxSizeHeight,
+                -height - marginPxSizeTop,
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
@@ -563,7 +575,7 @@ class InAppMessageView {
         // Animate the message view from under the screen upward to the bottom
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
-                height + marginPxSizeHeight,
+                height + marginPxSizeBottom,
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
