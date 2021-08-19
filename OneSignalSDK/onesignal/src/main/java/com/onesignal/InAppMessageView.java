@@ -161,12 +161,12 @@ class InAppMessageView {
         );
         webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
-        LinearLayout.LayoutParams linearLayoutParams = hasBackground ? createParentLinearLayoutParams() : null;
+        RelativeLayout.LayoutParams relativeLayoutParams = hasBackground ? createParentRelativeLayoutParams() : null;
 
         showDraggableView(
                 displayLocation,
                 webViewLayoutParams,
-                linearLayoutParams,
+                relativeLayoutParams,
                 createDraggableLayoutParams(pageHeight, displayLocation, disableDragDismiss)
         );
     }
@@ -175,22 +175,23 @@ class InAppMessageView {
         return OSViewUtils.getWindowHeight(currentActivity);
     }
 
-    private LinearLayout.LayoutParams createParentLinearLayoutParams() {
-        LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(pageWidth, LinearLayout.LayoutParams.MATCH_PARENT);
-
+    private RelativeLayout.LayoutParams createParentRelativeLayoutParams() {
+        RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(pageWidth, RelativeLayout.LayoutParams.MATCH_PARENT);
         switch (displayLocation) {
             case TOP_BANNER:
-                linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                relativeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
                 break;
             case BOTTOM_BANNER:
-                linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                relativeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
                 break;
             case CENTER_MODAL:
             case FULL_SCREEN:
-                linearLayoutParams.gravity = Gravity.CENTER;
+                relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         }
 
-        return linearLayoutParams;
+        return relativeLayoutParams;
     }
 
     private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation, boolean disableDragging) {
@@ -229,7 +230,7 @@ class InAppMessageView {
 
     private void showDraggableView(final WebViewManager.Position displayLocation,
                                    final RelativeLayout.LayoutParams relativeLayoutParams,
-                                   final LinearLayout.LayoutParams linearLayoutParams,
+                                   final RelativeLayout.LayoutParams draggableRelativeLayoutParams,
                                    final DraggableRelativeLayout.Params webViewLayoutParams) {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
@@ -240,8 +241,8 @@ class InAppMessageView {
                 webView.setLayoutParams(relativeLayoutParams);
 
                 Context context = currentActivity.getApplicationContext();
-                setUpDraggableLayout(context, linearLayoutParams, webViewLayoutParams);
-                setUpParentLinearLayout(context);
+                setUpDraggableLayout(context, draggableRelativeLayoutParams, webViewLayoutParams);
+                setUpParentRelativeLayout(context);
                 createPopupWindow(parentRelativeLayout);
 
                 if (messageController != null) {
@@ -276,6 +277,10 @@ class InAppMessageView {
                 case BOTTOM_BANNER:
                     gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
                     break;
+                case CENTER_MODAL:
+                case FULL_SCREEN:
+                    gravity = Gravity.CENTER_HORIZONTAL;
+                    break;
             }
         }
 
@@ -293,8 +298,10 @@ class InAppMessageView {
                 0
         );
     }
+/*
 
-    private void setUpParentLinearLayout(Context context) {
+ */
+    private void setUpParentRelativeLayout(Context context) {
         parentRelativeLayout = new RelativeLayout(context);
         parentRelativeLayout.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         parentRelativeLayout.setClipChildren(false);
@@ -303,11 +310,11 @@ class InAppMessageView {
     }
 
     private void setUpDraggableLayout(final Context context,
-                                      LinearLayout.LayoutParams linearLayoutParams,
+                                      RelativeLayout.LayoutParams relativeLayoutParams,
                                       DraggableRelativeLayout.Params draggableParams) {
         draggableRelativeLayout = new DraggableRelativeLayout(context);
-        if (linearLayoutParams != null)
-            draggableRelativeLayout.setLayoutParams(linearLayoutParams);
+        if (relativeLayoutParams != null)
+            draggableRelativeLayout.setLayoutParams(relativeLayoutParams);
         draggableRelativeLayout.setParams(draggableParams);
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
