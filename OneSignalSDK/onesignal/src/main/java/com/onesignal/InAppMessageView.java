@@ -92,6 +92,7 @@ class InAppMessageView {
 
     void setWebView(WebView webView) {
         this.webView = webView;
+        this.webView.setBackgroundColor(Color.TRANSPARENT);
     }
 
     void setMessageController(InAppMessageViewListener messageController) {
@@ -372,6 +373,7 @@ class InAppMessageView {
         cardView.setClipChildren(false);
         cardView.setClipToPadding(false);
         cardView.setPreventCornerOverlap(false);
+        cardView.setBackgroundColor(Color.TRANSPARENT);
 
         return cardView;
     }
