@@ -598,8 +598,8 @@ public class OneSignalPackagePrivateHelper {
          super.dismissAndAwaitNextMessage(callback);
       }
 
-      protected WebViewManager(@NonNull com.onesignal.OSInAppMessage message, @NonNull Activity activity) {
-         super(message, activity);
+      protected WebViewManager(@NonNull com.onesignal.OSInAppMessage message, @NonNull Activity activity, @NonNull com.onesignal.OSInAppMessageContent content) {
+         super(message, activity, content);
       }
    }
 
