@@ -63,6 +63,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     @NonNull private Activity activity;
     @NonNull private OSInAppMessageInternal message;
+    @NonNull private OSInAppMessageContent messageContent;
 
     @Nullable private String currentActivityName = null;
     private Integer lastPageHeight = null;
@@ -76,9 +77,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         void onComplete();
     }
 
-    protected WebViewManager(@NonNull OSInAppMessageInternal message, @NonNull Activity activity) {
+    protected WebViewManager(@NonNull OSInAppMessageInternal message, @NonNull Activity activity, @NonNull OSInAppMessageContent content) {
         this.message = message;
         this.activity = activity;
+        this.messageContent = content;
     }
 
     /**
@@ -90,7 +92,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      */
     static void showMessageContent(@NonNull final OSInAppMessageInternal message, @NonNull final OSInAppMessageContent content) {
         final Activity currentActivity = OneSignal.getCurrentActivity();
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showHTMLString on currentActivity: " + currentActivity);
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showMessageContent on currentActivity: " + currentActivity);
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
         if (currentActivity != null) {
@@ -102,11 +104,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                     @Override
                     public void onComplete() {
                         lastInstance = null;
-                        initInAppMessage(currentActivity, message, content.getContentHtml());
+                        initInAppMessage(currentActivity, message, content);
                     }
                 });
             } else {
-                initInAppMessage(currentActivity, message, content.getContentHtml());
+                initInAppMessage(currentActivity, message, content);
             }
             return;
         }
@@ -129,14 +131,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull String htmlStr) {
+    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull OSInAppMessageContent content) {
         try {
             final String base64Str = Base64.encodeToString(
-                    htmlStr.getBytes("UTF-8"),
+                    content.getContentHtml().getBytes("UTF-8"),
                     Base64.NO_WRAP
             );
 
-            final WebViewManager webViewManager = new WebViewManager(message, currentActivity);
+            final WebViewManager webViewManager = new WebViewManager(message, currentActivity, content);
             lastInstance = webViewManager;
 
             // Web view must be created on the main thread.
@@ -199,7 +201,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             Position displayType = getDisplayLocation(jsonObject);
             int pageHeight = displayType == Position.FULL_SCREEN ? -1 : getPageHeightData(jsonObject);
             boolean dragToDismissDisabled = getDragToDismissDisabled(jsonObject);
-            createNewInAppMessageView(displayType, pageHeight, dragToDismissDisabled);
+            messageContent.setDisplayLocation(displayType);
+            messageContent.setPageHeight(pageHeight);
+            createNewInAppMessageView(dragToDismissDisabled);
         }
 
         private int getPageHeightData(JSONObject jsonObject) {
@@ -405,9 +409,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         webView.layout(0,0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity));
     }
 
-    private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight, boolean dragToDismissDisabled) {
-        lastPageHeight = pageHeight;
-        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration(), dragToDismissDisabled);
+    private void createNewInAppMessageView(boolean dragToDismissDisabled) {
+        lastPageHeight = messageContent.getPageHeight();
+        messageView = new InAppMessageView(webView, messageContent, dragToDismissDisabled);
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
             public void onMessageWasShown() {
