@@ -7,7 +7,7 @@ import org.json.JSONObject
 const val PAGE_ID = "pageId"
 const val PAGE_INDEX = "pageIndex"
 
-class OSInAppMessagePage constructor(jsonObject: JSONObject) {
+internal open class OSInAppMessagePage constructor(jsonObject: JSONObject) {
     var pageId: String? = null
     var pageIndex: String? = null
 
