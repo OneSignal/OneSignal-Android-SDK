@@ -19,7 +19,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 
@@ -84,12 +83,12 @@ class InAppMessageView {
     private InAppMessageViewListener messageController;
     private Runnable scheduleDismissRunnable;
 
-    InAppMessageView(@NonNull WebView webView, @NonNull WebViewManager.Position displayLocation, int pageHeight, double dismissDuration, boolean disableDragDismiss) {
+    InAppMessageView(@NonNull WebView webView, @NonNull OSInAppMessageContent content, boolean disableDragDismiss) {
         this.webView = webView;
-        this.displayLocation = displayLocation;
-        this.pageHeight = pageHeight;
+        this.displayLocation = content.getDisplayLocation();
+        this.pageHeight = content.getPageHeight();
         this.pageWidth = ViewGroup.LayoutParams.MATCH_PARENT;
-        this.dismissDuration = Double.isNaN(dismissDuration) ? 0 : dismissDuration;
+        this.dismissDuration = content.getDismissDuration() == null ? 0 : dismissDuration;
         this.hasBackground = !displayLocation.isBanner();
         this.disableDragDismiss = disableDragDismiss;
     }
@@ -117,17 +116,7 @@ class InAppMessageView {
             finishAfterDelay(null);
         }
     }
-
-    void useHeightMargins(boolean shouldUseMargin) {
-        marginPxSizeBottom = shouldUseMargin ? MARGIN_PX_SIZE : 0;
-        marginPxSizeTop = shouldUseMargin ? MARGIN_PX_SIZE : 0;
-    }
-
-    void useWidthMargins(boolean shouldUseMargin) {
-        marginPxSizeLeft = shouldUseMargin ? MARGIN_PX_SIZE : 0;
-        marginPxSizeRight = shouldUseMargin ? MARGIN_PX_SIZE : 0;
-    }
-
+    
     /**
      * This will fired when the device is rotated for example with a new provided height for the WebView
      * Called to shrink or grow the WebView when it receives a JS resize event with a new height.
