@@ -87,9 +87,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * Dismiss WebView if already showing one and the new one is a Preview
      *
      * @param message the message to show
-     * @param htmlStr the html to display on the WebView
+     * @param content the html to display on the WebView
      */
-    static void showHTMLString(@NonNull final OSInAppMessageInternal message, @NonNull final String htmlStr) {
+    static void showMessageContent(@NonNull final OSInAppMessageInternal message, @NonNull final OSInAppMessageContent content) {
         final Activity currentActivity = OneSignal.getCurrentActivity();
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showHTMLString on currentActivity: " + currentActivity);
         /* IMPORTANT
@@ -103,11 +103,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                     @Override
                     public void onComplete() {
                         lastInstance = null;
-                        initInAppMessage(currentActivity, message, htmlStr);
+                        initInAppMessage(currentActivity, message, content.getContentHtml());
                     }
                 });
             } else {
-                initInAppMessage(currentActivity, message, htmlStr);
+                initInAppMessage(currentActivity, message, content.getContentHtml());
             }
             return;
         }
@@ -118,7 +118,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                showHTMLString(message, htmlStr);
+                showMessageContent(message, content);
             }
         }, IN_APP_MESSAGE_INIT_DELAY);
     }
