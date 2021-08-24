@@ -62,16 +62,21 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     @Nullable protected static WebViewManager lastInstance = null;
 
     @NonNull private Activity activity;
-    @NonNull private OSInAppMessage message;
+    @NonNull private OSInAppMessageInternal message;
 
     @Nullable private String currentActivityName = null;
     private Integer lastPageHeight = null;
+
+    // dismissFired prevents onDidDismiss from getting called multiple times
+    private boolean dismissFired = false;
+    // closing prevents IAM being redisplayed when the activity changes during an actionHandler
+    private boolean closing = false;
 
     interface OneSignalGenericCallback {
         void onComplete();
     }
 
-    protected WebViewManager(@NonNull OSInAppMessage message, @NonNull Activity activity) {
+    protected WebViewManager(@NonNull OSInAppMessageInternal message, @NonNull Activity activity) {
         this.message = message;
         this.activity = activity;
     }
@@ -83,7 +88,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * @param message the message to show
      * @param htmlStr the html to display on the WebView
      */
-    static void showHTMLString(@NonNull final OSInAppMessage message, @NonNull final String htmlStr) {
+    static void showHTMLString(@NonNull final OSInAppMessageInternal message, @NonNull final String htmlStr) {
         final Activity currentActivity = OneSignal.getCurrentActivity();
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "in app message showHTMLString on currentActivity: " + currentActivity);
         /* IMPORTANT
@@ -124,7 +129,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessage message, @NonNull String htmlStr) {
+    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull String htmlStr) {
         try {
             final String base64Str = Base64.encodeToString(
                     htmlStr.getBytes("UTF-8"),
@@ -227,15 +232,18 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         private void handleActionTaken(JSONObject jsonObject) throws JSONException {
             JSONObject body = jsonObject.getJSONObject("body");
             String id = body.optString("id", null);
+
+            closing = body.getBoolean("close");
+
             if (message.isPreview) {
                 OneSignal.getInAppMessageController().onMessageActionOccurredOnPreview(message, body);
             } else if (id != null) {
                 OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, body);
             }
 
-            boolean close = body.getBoolean("close");
-            if (close)
+            if (closing) {
                 dismissAndAwaitNextMessage(null);
+            }
         }
 
         private void handlePageChange(JSONObject jsonObject) throws JSONException {
@@ -310,10 +318,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         if (lastActivityName == null)
             showMessageView(null);
         else if (!lastActivityName.equals(currentActivityName)) {
-            // Navigate to new activity while displaying current IAM
-            if (messageView != null)
-                messageView.removeAllViews();
-            showMessageView(lastPageHeight);
+            if (!closing) {
+                // Navigate to new activity while displaying current IAM
+                if (messageView != null)
+                    messageView.removeAllViews();
+                showMessageView(lastPageHeight);
+            }
         } else {
             // Activity rotated
             calculateHeightAndShowWebViewAfterNewActivity();
@@ -405,6 +415,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             }
 
             @Override
+            public void onMessageWillDismiss() {
+                OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+            }
+
+            @Override
             public void onMessageWasDismissed() {
                 OneSignal.getInAppMessageController().messageWasDismissed(message);
                 removeActivityListener();
@@ -442,19 +457,23 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
      * Trigger the {@link #messageView} dismiss animation flow
      */
     protected void dismissAndAwaitNextMessage(@Nullable final OneSignalGenericCallback callback) {
-        if (messageView == null) {
+        if (messageView == null || dismissFired) {
             if (callback != null)
                 callback.onComplete();
             return;
         }
-
+        if (message != null && messageView != null) {
+            OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+        }
         messageView.dismissAndAwaitNextMessage(new OneSignalGenericCallback() {
             @Override
             public void onComplete() {
+                dismissFired = false;
                 messageView = null;
                 if (callback != null)
                     callback.onComplete();
             }
         });
+        dismissFired = true;
     }
 }

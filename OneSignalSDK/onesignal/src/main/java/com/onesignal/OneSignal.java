@@ -740,6 +740,22 @@ public class OneSignal {
       notificationWillShowInForegroundHandler = callback;
    }
 
+   public static void setInAppMessageLifecycleHandler(@Nullable final OSInAppMessageLifecycleHandler handler) {
+      if (appContext == null) {
+         logger.error("Waiting initWithContext. " +
+                 "Moving " + OSTaskRemoteController.SET_IN_APP_MESSAGE_LIFECYCLE_HANDLER + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskRemoteController.SET_IN_APP_MESSAGE_LIFECYCLE_HANDLER + " operation from pending queue.");
+               setInAppMessageLifecycleHandler(handler);
+            }
+         });
+         return;
+      }
+      getInAppMessageController().setInAppMessageLifecycleHandler(handler);
+   }
+
    public static void setNotificationOpenedHandler(@Nullable OSNotificationOpenedHandler callback) {
       notificationOpenedHandler = callback;
 

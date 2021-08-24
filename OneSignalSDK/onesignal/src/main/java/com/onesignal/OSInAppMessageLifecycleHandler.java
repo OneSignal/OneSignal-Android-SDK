@@ -27,23 +27,17 @@
 
 package com.onesignal;
 
-import androidx.annotation.NonNull;
-
-public class OSInAppMessage {
-
-    /**
-     * The unique identifier for this in-app message
-     */
-    @NonNull
-    protected String messageId;
-
-    OSInAppMessage(@NonNull String messageId) {
-        this.messageId = messageId;
+public abstract class OSInAppMessageLifecycleHandler {
+    public void onWillDisplayInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Will Display: " + message.getMessageId());
     }
-
-    @NonNull
-    public String getMessageId() {
-        return messageId;
+    public void onDidDisplayInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Did Display: " + message.getMessageId());
     }
-
+    public void onWillDismissInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Will Dismiss: " + message.getMessageId());
+    }
+    public void onDidDismissInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Did Dismiss: " + message.getMessageId());
+    }
 }

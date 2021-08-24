@@ -61,6 +61,7 @@ class InAppMessageView {
 
     interface InAppMessageViewListener {
         void onMessageWasShown();
+        void onMessageWillDismiss();
         void onMessageWasDismissed();
     }
 
@@ -243,7 +244,6 @@ class InAppMessageView {
 
                 if (messageController != null) {
                     animateInAppMessage(displayLocation, draggableRelativeLayout, parentRelativeLayout);
-                    messageController.onMessageWasShown();
                 }
 
                 startDismissTimerIfNeeded();
@@ -310,6 +310,9 @@ class InAppMessageView {
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
             public void onDismiss() {
+                if (messageController != null) {
+                    messageController.onMessageWillDismiss();
+                }
                 finishAfterDelay(null);
             }
 
@@ -388,6 +391,9 @@ class InAppMessageView {
 
         scheduleDismissRunnable = new Runnable() {
             public void run() {
+                if (messageController != null) {
+                    messageController.onMessageWillDismiss();
+                }
                 if (currentActivity != null) {
                     dismissAndAwaitNextMessage(null);
                     scheduleDismissRunnable = null;
@@ -489,9 +495,7 @@ class InAppMessageView {
     private void animateInAppMessage(WebViewManager.Position displayLocation, View messageView, View backgroundView) {
         final CardView messageViewCardView = messageView.findViewWithTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
 
-        Animation.AnimationListener cardViewAnimCallback = null;
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M)
-            cardViewAnimCallback = createAnimationListenerForAndroidApi23Elevation(messageViewCardView);
+        Animation.AnimationListener cardViewAnimCallback = createAnimationListener(messageViewCardView);
 
         // Based on the location of the in app message apply and animation to match
         switch (displayLocation) {
@@ -508,7 +512,7 @@ class InAppMessageView {
         }
     }
 
-    private Animation.AnimationListener createAnimationListenerForAndroidApi23Elevation(final CardView messageViewCardView) {
+    private Animation.AnimationListener createAnimationListener(final CardView messageViewCardView) {
         return new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
@@ -518,7 +522,12 @@ class InAppMessageView {
             @Override
             public void onAnimationEnd(Animation animation) {
                 // For Android 6 API 23 devices, waits until end of animation to set elevation of CardView class
-                messageViewCardView.setCardElevation(dpToPx(5));
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
+                    messageViewCardView.setCardElevation(dpToPx(5));
+                }
+                if (messageController != null) {
+                    messageController.onMessageWasShown();
+                }
             }
 
             @Override

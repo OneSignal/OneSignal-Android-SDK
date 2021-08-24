@@ -28,6 +28,7 @@ class OSTaskRemoteController extends OSTaskController {
     static final String REMOVE_GROUPED_NOTIFICATIONS = "removeGroupedNotifications()";
     static final String REMOVE_NOTIFICATION = "removeNotification()";
     static final String PAUSE_IN_APP_MESSAGES = "pauseInAppMessages()";
+    static final String SET_IN_APP_MESSAGE_LIFECYCLE_HANDLER = "setInAppMessageLifecycleHandler()";
     static final String APP_LOST_FOCUS = "onAppLostFocus()";
     static final String SEND_OUTCOME = "sendOutcome()";
     static final String SEND_UNIQUE_OUTCOME = "sendUniqueOutcome()";
