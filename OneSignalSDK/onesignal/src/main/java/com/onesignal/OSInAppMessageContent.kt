@@ -18,7 +18,7 @@ internal open class OSInAppMessageContent constructor(jsonObject: JSONObject) {
     var rightMargin: Int? = 1
     // The following properties are populated from Javascript events
     var displayLocation: WebViewManager.Position? = null
-    var dismissDuration: Double? = null
+    var displayDuration: Double? = null
     var pageHeight: Int = 0
 
     init {
