@@ -71,7 +71,7 @@ class InAppMessageView {
     private int marginPxSizeRight = dpToPx(24);
     private int marginPxSizeTop = dpToPx(24);
     private int marginPxSizeBottom = dpToPx(24);
-    private double dismissDuration;
+    private double displayDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
     private boolean isDragging = false;
@@ -88,9 +88,30 @@ class InAppMessageView {
         this.displayLocation = content.getDisplayLocation();
         this.pageHeight = content.getPageHeight();
         this.pageWidth = ViewGroup.LayoutParams.MATCH_PARENT;
-        this.dismissDuration = content.getDismissDuration() == null ? 0 : dismissDuration;
+        this.displayDuration = content.getDisplayDuration() == null ? 0 : content.getDisplayDuration();
         this.hasBackground = !displayLocation.isBanner();
         this.disableDragDismiss = disableDragDismiss;
+        setMarginsFromContent(content);
+    }
+
+    /**
+     * For now we only support default margin or no margin.
+     * Any non-zero value will be treated as default margin
+     * @param content in app message content and style
+     */
+    private void setMarginsFromContent(OSInAppMessageContent content) {
+        if (content.getTopMargin() != null && content.getTopMargin() == 0) {
+            this.marginPxSizeTop = content.getTopMargin();
+        }
+        if (content.getBottomMargin() != null && content.getBottomMargin() == 0) {
+            this.marginPxSizeBottom = content.getBottomMargin();
+        }
+        if (content.getLeftMargin() != null && content.getLeftMargin() == 0) {
+            this.marginPxSizeLeft = content.getLeftMargin();
+        }
+        if (content.getRightMargin() != null && content.getRightMargin() == 0) {
+            this.marginPxSizeRight = content.getRightMargin();
+        }
     }
 
     void setWebView(WebView webView) {
@@ -299,9 +320,7 @@ class InAppMessageView {
                 0
         );
     }
-/*
 
- */
     private void setUpParentRelativeLayout(Context context) {
         parentRelativeLayout = new RelativeLayout(context);
         parentRelativeLayout.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -394,7 +413,7 @@ class InAppMessageView {
      * Schedule dismiss behavior, if IAM has a dismiss after X number of seconds timer.
      */
     private void startDismissTimerIfNeeded() {
-        if (dismissDuration <= 0)
+        if (displayDuration <= 0)
             return;
 
         if (scheduleDismissRunnable != null)
@@ -414,7 +433,7 @@ class InAppMessageView {
                 }
             }
         };
-        handler.postDelayed(scheduleDismissRunnable, (long) dismissDuration * 1_000);
+        handler.postDelayed(scheduleDismissRunnable, (long) displayDuration * 1_000);
     }
 
     // Do not add view until activity is ready
@@ -627,7 +646,7 @@ class InAppMessageView {
                 "currentActivity=" + currentActivity +
                 ", pageWidth=" + pageWidth +
                 ", pageHeight=" + pageHeight +
-                ", dismissDuration=" + dismissDuration +
+                ", displayDuration=" + displayDuration +
                 ", hasBackground=" + hasBackground +
                 ", shouldDismissWhenActive=" + shouldDismissWhenActive +
                 ", isDragging=" + isDragging +
