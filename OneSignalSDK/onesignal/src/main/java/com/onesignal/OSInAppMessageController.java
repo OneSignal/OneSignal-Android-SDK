@@ -790,8 +790,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     private OSInAppMessageContent parseMessageContentData(JSONObject data, OSInAppMessageInternal message) {
         OSInAppMessageContent content = new OSInAppMessageContent(data);
-        double displayDuration = data.optDouble("display_duration");
-        message.setDisplayDuration(displayDuration);
+        message.setDisplayDuration(content.getDisplayDuration());
         return content;
     }
 
