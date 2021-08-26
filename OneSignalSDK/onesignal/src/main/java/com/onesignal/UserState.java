@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static com.onesignal.UserStateSynchronizer.APP_ID;
 import static com.onesignal.UserStateSynchronizer.EMAIL_AUTH_HASH_KEY;
+import static com.onesignal.UserStateSynchronizer.EXTERNAL_USER_ID;
 import static com.onesignal.UserStateSynchronizer.EXTERNAL_USER_ID_AUTH_HASH;
 import static com.onesignal.UserStateSynchronizer.SMS_AUTH_HASH_KEY;
 
@@ -318,6 +319,17 @@ abstract class UserState {
 
     void persistState() {
         synchronized(LOCK) {
+            // pop the EXTERNAL_USER_ID_AUTH_HASH from the UserState
+            try {
+                if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH) &&
+                        ((syncValues.has(EXTERNAL_USER_ID) && syncValues.get(EXTERNAL_USER_ID).toString() == "") || !syncValues.has(EXTERNAL_USER_ID))) {
+                    syncValues.remove(EXTERNAL_USER_ID_AUTH_HASH);
+                    // should EXTERNAL_USER_ID also be removed or kept in state as ""?
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ + persistKey, syncValues.toString());
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
