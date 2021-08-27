@@ -13,11 +13,11 @@ internal object OSInfluenceConstants {
     const val INFLUENCE_IDS = "influence_ids"
 
     // OSInAppMessageTracker Constants
-    val IAM_TAG: String = OSInAppMessageTracker::class.java.canonicalName
+    val IAM_TAG: String = OSInAppMessageTracker::class.java.canonicalName as String
     const val IAM_ID_TAG = "iam_id"
 
     // OSNotificationTracker Constants
-    val NOTIFICATION_TAG: String = OSNotificationTracker::class.java.canonicalName
+    val NOTIFICATION_TAG: String = OSNotificationTracker::class.java.canonicalName as String
     const val DIRECT_TAG = "direct"
     const val NOTIFICATIONS_IDS = "notification_ids"
     const val NOTIFICATION_ID_TAG = "notification_id"

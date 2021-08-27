@@ -30,6 +30,7 @@ package com.test.onesignal;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
@@ -75,6 +76,7 @@ import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowReceiveReceiptController;
+import com.onesignal.ShadowResources;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.ShadowTimeoutHandler;
@@ -86,6 +88,7 @@ import org.awaitility.Duration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -96,6 +99,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Field;
@@ -117,6 +121,8 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProc
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_ProcessFromFCMIntentService_NoWrap;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationSummaryManager_updateSummaryNotificationAfterChildRemoved;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getAccentColor;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setDelayTaskController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setupNotificationServiceExtension;
 import static com.onesignal.OneSignalPackagePrivateHelper.createInternalPayloadBundle;
@@ -153,6 +159,7 @@ import static org.robolectric.Shadows.shadowOf;
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class GenerateNotificationRunner {
 
    private static int callbackCounter = 0;
@@ -214,7 +221,12 @@ public class GenerateNotificationRunner {
 
    @AfterClass
    public static void afterEverything() throws Exception {
-      StaticResetHelper.restSetStaticFields();
+      TestHelpers.beforeTestInitAndCleanup();
+   }
+
+   @After
+   public void afterEachTest() throws Exception {
+      TestHelpers.afterTestCleanup();
    }
    
    public static Bundle getBaseNotifBundle() {
@@ -238,7 +250,7 @@ public class GenerateNotificationRunner {
    private Intent createOpenIntent(Bundle bundle) {
       return createOpenIntent(ShadowRoboNotificationManager.lastNotifId, bundle);
    }
-   
+
    @Test
    @Config (sdk = 22, shadows = { ShadowGenerateNotification.class })
    public void shouldSetTitleCorrectly() throws Exception {
@@ -711,9 +723,10 @@ public class GenerateNotificationRunner {
    
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldUpdateBadgesWhenDismissingNotification() {
+   public void shouldUpdateBadgesWhenDismissingNotification() throws Exception {
       Bundle bundle = getBaseNotifBundle();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
       assertEquals(notifMessage, ShadowRoboNotificationManager.getLastShadowNotif().getContentText());
       assertEquals(1, ShadowBadgeCountUpdater.lastCount);
    
@@ -845,7 +858,9 @@ public class GenerateNotificationRunner {
       // Time stamp should be set and within a small range.
       long currentTime = System.currentTimeMillis() / 1000;
       cursor.moveToFirst();
-      assertTrue(cursor.getLong(0) > currentTime - 2 && cursor.getLong(0) <= currentTime);
+      long displayTime = cursor.getLong(0);
+      // Display time on notification record is within 1 second
+      assertTrue((displayTime + 1_000) > currentTime && displayTime <= currentTime);
       cursor.close();
 
       // Should get marked as opened.
@@ -1117,6 +1132,64 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
+   public void shouldSetContentIntentForLaunchURL() throws Exception {
+      generateNotificationWithLaunchURL();
+
+      Intent[] intents = lastNotificationIntents();
+      assertEquals(2, intents.length);
+      Intent intentLaunchURL = intents[0];
+      assertEquals("android.intent.action.VIEW", intentLaunchURL.getAction());
+      assertEquals("https://google.com", intentLaunchURL.getData().toString());
+
+      assertNotificationOpenedReceiver(intents[1]);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void shouldNotSetContentIntentForLaunchURLIfDefaultNotificationOpenIsDisabled() throws Exception {
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+      generateNotificationWithLaunchURL();
+
+      Intent[] intents = lastNotificationIntents();
+      assertEquals(1, intents.length);
+      assertNotificationOpenedReceiver(intents[0]);
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void shouldNotSetContentIntentForLaunchURLIfSuppress() throws Exception {
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.suppressLaunchURLs", true);
+      generateNotificationWithLaunchURL();
+
+      Intent[] intents = lastNotificationIntents();
+      assertEquals(2, intents.length);
+      assertOpenMainActivityIntent(intents[0]);
+      assertNotificationOpenedReceiver(intents[1]);
+   }
+
+   private Intent[] lastNotificationIntents() {
+      PendingIntent pendingIntent = ShadowRoboNotificationManager.getLastNotif().contentIntent;
+      // NOTE: This is fragile until this robolectric issue is fixed: https://github.com/robolectric/robolectric/issues/6660
+      return shadowOf(pendingIntent).getSavedIntents();
+   }
+
+   private void generateNotificationWithLaunchURL() throws Exception {
+      Bundle bundle = launchURLMockPayloadBundle();
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
+      threadAndTaskWait();
+   }
+
+   private void assertNotificationOpenedReceiver(@NonNull Intent intent) {
+      assertEquals("com.onesignal.NotificationOpenedReceiver", intent.getComponent().getClassName());
+   }
+
+   private void assertOpenMainActivityIntent(@NonNull Intent intent) {
+      assertEquals(Intent.ACTION_MAIN, intent.getAction());
+      assertTrue(intent.getCategories().contains(Intent.CATEGORY_LAUNCHER));
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void shouldSetAlertnessFieldsOnNormalPriority() {
       Bundle bundle = getBaseNotifBundle();
       bundle.putString("pri", "5"); // Notifications from dashboard have priority 5 by default
@@ -1197,6 +1270,17 @@ public class GenerateNotificationRunner {
       return bundle;
    }
 
+   @NonNull
+   private static Bundle launchURLMockPayloadBundle() throws JSONException {
+      Bundle bundle = new Bundle();
+      bundle.putString("alert", "test");
+      bundle.putString("custom", new JSONObject() {{
+         put("i", "UUID");
+         put("u", "https://google.com");
+      }}.toString());
+      return bundle;
+   }
+
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenInFocus() throws Exception {
@@ -1240,8 +1324,10 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowReceiveReceiptController.class, ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void shouldSendReceivedReceiptWhenEnabled() throws Exception {
+      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
+
       String appId = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
       OneSignal.setAppId(appId);
       OneSignal.initWithContext(blankActivity);
@@ -1252,7 +1338,10 @@ public class GenerateNotificationRunner {
       assertReportReceivedAtIndex(
          2,
          "UUID",
-         new JSONObject().put("app_id", appId).put("player_id", ShadowOneSignalRestClient.pushUserId)
+         new JSONObject()
+                 .put("app_id", appId)
+                 .put("player_id", ShadowOneSignalRestClient.pushUserId)
+                 .put("device_type", 1)
       );
    }
 
@@ -1402,7 +1491,6 @@ public class GenerateNotificationRunner {
       // 2. Add app context and setup the established notification extension service
       OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
       OneSignal_setupNotificationServiceExtension();
-
       final boolean[] callbackEnded = {false};
       OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback processBundleReceiverCallback = new OneSignalPackagePrivateHelper.ProcessBundleReceiverCallback() {
          public void onBundleProcessed(OneSignalPackagePrivateHelper.ProcessedBundleResult processedResult) {
@@ -2292,6 +2380,59 @@ public class GenerateNotificationRunner {
 
       // 5. Make sure 1 notification exists in DB
       assertNotificationDbRecords(1);
+   }
+
+   /**
+    * Small icon accent color uses string.xml value in values-night when device in dark mode
+    */
+   @Test
+   @Config(qualifiers = "night")
+   public void shouldUseDarkIconAccentColorInDarkMode_hasMetaData() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      // Add the 'com.onesignal.NotificationAccentColor.DEFAULT' as 'FF0000AA' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationAccentColor.DEFAULT", "FF0000AA");
+
+      BigInteger defaultColor = OneSignal_getAccentColor(new JSONObject());
+      assertEquals("FFFF0000", defaultColor.toString(16).toUpperCase());
+   }
+
+   /**
+    * Small icon accent color uses string.xml value in values when device in day (non-dark) mode
+    */
+   @Test
+   public void shouldUseDayIconAccentColorInDayMode() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      BigInteger defaultColor = OneSignal_getAccentColor(new JSONObject());
+      assertEquals("FF00FF00", defaultColor.toString(16).toUpperCase());
+   }
+
+   /**
+    * Small icon accent color uses value from Manifest if there are no resource strings provided
+    */
+   @Test
+   @Config(shadows = { ShadowResources.class })
+   public void shouldUseManifestIconAccentColor() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+
+      // Add the 'com.onesignal.NotificationAccentColor.DEFAULT' as 'FF0000AA' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationAccentColor.DEFAULT", "FF0000AA");
+
+      BigInteger defaultColor = OneSignal_getAccentColor(new JSONObject());
+      assertEquals("FF0000AA", defaultColor.toString(16).toUpperCase());
+   }
+
+   /**
+    * Small icon accent color uses value of 'bgac' if available
+    */
+   @Test
+   public void shouldUseBgacAccentColor_hasMetaData() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      // Add the 'com.onesignal.NotificationAccentColor.DEFAULT' as 'FF0000AA' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationAccentColor.DEFAULT", "FF0000AA");
+      JSONObject fcmJson = new JSONObject();
+      fcmJson.put("bgac", "FF0F0F0F");
+      BigInteger defaultColor = OneSignal_getAccentColor(fcmJson);
+      assertEquals("FF0F0F0F", defaultColor.toString(16).toUpperCase());
    }
 
    /* Helpers */

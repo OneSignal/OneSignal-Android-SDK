@@ -40,6 +40,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.onesignal.language.LanguageContext;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -116,9 +118,9 @@ class NotificationChannelManager {
       JSONObject payloadWithText = channelPayload;
       if (channelPayload.has("langs")) {
          JSONObject langList = channelPayload.getJSONObject("langs");
-         String deviceLanguage = OSUtils.getCorrectedLanguage();
-         if (langList.has(deviceLanguage))
-            payloadWithText = langList.optJSONObject(deviceLanguage);
+         String language = LanguageContext.getInstance().getLanguage();
+         if (langList.has(language))
+            payloadWithText = langList.optJSONObject(language);
       }
       
       String channel_name = payloadWithText.optString("nm", "Miscellaneous");

@@ -49,6 +49,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_areNotificationsEnabledForSubscribedState;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getDisableGMSMissingPrompt;
@@ -68,6 +69,7 @@ import static junit.framework.Assert.assertTrue;
         sdk = 21
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class RemoteParamsTests {
 
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";

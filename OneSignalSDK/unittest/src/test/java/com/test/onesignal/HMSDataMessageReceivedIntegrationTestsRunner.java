@@ -14,6 +14,8 @@ import com.onesignal.example.BlankActivity;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -63,6 +65,16 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
 
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
+    }
+
+    @AfterClass
+    public static void afterEverything() throws Exception {
+        TestHelpers.beforeTestInitAndCleanup();
+    }
+
+    @After
+    public void afterEachTest() throws Exception {
+        TestHelpers.afterTestCleanup();
     }
 
     private static @NonNull String helperBasicOSPayload() throws JSONException {

@@ -6,6 +6,8 @@ import com.onesignal.OneSignal;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.StaticResetHelper;
 
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,6 +43,16 @@ public class DeviceTypeTestsRunner {
     public void beforeEachTest() throws Exception {
         TestHelpers.beforeTestInitAndCleanup();
         OneSignal.initWithContext(ApplicationProvider.getApplicationContext());
+    }
+
+    @AfterClass
+    public static void afterEverything() throws Exception {
+        TestHelpers.beforeTestInitAndCleanup();
+    }
+
+    @After
+    public void afterEachTest() throws Exception {
+        TestHelpers.afterTestCleanup();
     }
 
     @Test

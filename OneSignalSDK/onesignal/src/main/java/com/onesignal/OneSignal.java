@@ -47,6 +47,8 @@ import androidx.core.app.NotificationCompat;
 
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
+import com.onesignal.language.LanguageContext;
+import com.onesignal.language.LanguageProviderAppDefined;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -368,6 +370,8 @@ public class OneSignal {
    private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
 
+   private static LanguageContext languageContext = null;
+
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static OSNotificationOpenedHandler notificationOpenedHandler;
@@ -398,13 +402,17 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   private static final String VERSION = "040301";
+   private static final String VERSION = "040501";
    public static String getSdkVersionRaw() {
       return VERSION;
    }
 
    private static OSLogger logger = new OSLogWrapper();
-   private static FocusTimeController focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
+   static OSLogger getLogger() {
+      return logger;
+   }
+
+   private static FocusTimeController focusTimeController;
    private static OSSessionManager.SessionListener sessionListener = new OSSessionManager.SessionListener() {
          @Override
          public void onSessionEnding(@NonNull List<OSInfluence> lastInfluences) {
@@ -412,27 +420,29 @@ public class OneSignal {
                OneSignal.Log(LOG_LEVEL.WARN, "OneSignal onSessionEnding called before init!");
             if (outcomeEventsController != null)
                outcomeEventsController.cleanOutcomes();
-            focusTimeController.onSessionEnded(lastInfluences);
+            getFocusTimeController().onSessionEnded(lastInfluences);
          }
       };
 
    private static OSInAppMessageControllerFactory inAppMessageControllerFactory = new OSInAppMessageControllerFactory();
    static OSInAppMessageController getInAppMessageController() {
-      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger());
+      return inAppMessageControllerFactory.getController(getDBHelperInstance(), taskController, getLogger(), getSharedPreferences(), languageContext);
    }
    private static OSTime time = new OSTimeImpl();
    private static OSRemoteParamController remoteParamController = new OSRemoteParamController();
+   private static OSDelayTaskController delayTaskController = new OSDelayTaskController(logger);
    private static OSTaskController taskController = new OSTaskController(logger);
    private static OSTaskRemoteController taskRemoteController = new OSTaskRemoteController(remoteParamController, logger);
    private static OneSignalAPIClient apiClient = new OneSignalRestClientWrapper();
    private static OSSharedPreferences preferences = new OSSharedPreferencesWrapper();
+   static OSSharedPreferences getSharedPreferences() {
+      return preferences;
+   }
    private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger, time);
    private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
    @Nullable private static OSNotificationDataController notificationDataController;
-
-   @Nullable private static AdvertisingIdentifierProvider adIdProvider;
 
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
@@ -696,10 +706,12 @@ public class OneSignal {
          return;
       }
 
-      boolean wasAppContextNull = (appContext == null);
-      appContext = context.getApplicationContext();
       if (context instanceof Activity)
          appActivity = new WeakReference<>((Activity) context);
+
+      boolean wasAppContextNull = (appContext == null);
+      appContext = context.getApplicationContext();
+
       setupContextListeners(wasAppContextNull);
       setupPrivacyConsent(appContext);
 
@@ -728,6 +740,22 @@ public class OneSignal {
       notificationWillShowInForegroundHandler = callback;
    }
 
+   public static void setInAppMessageLifecycleHandler(@Nullable final OSInAppMessageLifecycleHandler handler) {
+      if (appContext == null) {
+         logger.error("Waiting initWithContext. " +
+                 "Moving " + OSTaskRemoteController.SET_IN_APP_MESSAGE_LIFECYCLE_HANDLER + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskRemoteController.SET_IN_APP_MESSAGE_LIFECYCLE_HANDLER + " operation from pending queue.");
+               setInAppMessageLifecycleHandler(handler);
+            }
+         });
+         return;
+      }
+      getInAppMessageController().setInAppMessageLifecycleHandler(handler);
+   }
+
    public static void setNotificationOpenedHandler(@Nullable OSNotificationOpenedHandler callback) {
       notificationOpenedHandler = callback;
 
@@ -754,12 +782,12 @@ public class OneSignal {
             logger.verbose("OneSignal SDK initialization delayed, " +
                     "waiting for privacy consent to be set.");
 
-         delayedInitParams = new DelayedConsentInitializationParameters(context, appId);
+         delayedInitParams = new DelayedConsentInitializationParameters(appContext, appId);
          String lastAppId = appId;
          // Set app id null since OneSignal was not init fully
          appId = null;
          // Wrapper SDK's call init twice and pass null as the appId on the first call
-         //  the app ID is required to download parameters, so do not download params until the appID is provided
+         // the app ID is required to download parameters, so do not download params until the appID is provided
          if (lastAppId != null && context != null)
             makeAndroidParamsRequest(lastAppId, getUserId(), false);
          return;
@@ -825,17 +853,23 @@ public class OneSignal {
 
       // Do work here that should only happen once or at the start of a new lifecycle
       if (wasAppContextNull) {
+         // Set Language Context to null
+         languageContext = new LanguageContext(preferences);
+
          // Prefs require a context to save
          // If the previous state of appContext was null, kick off write in-case it was waiting
          OneSignalPrefs.startDelayedWrite();
-         notificationDataController = new OSNotificationDataController(getDBHelperInstance(), logger);
+
+         OneSignalDbHelper dbHelper = getDBHelperInstance();
+         notificationDataController = new OSNotificationDataController(dbHelper, logger);
+
          // Cleans out old cached data to prevent over using the storage on devices
          notificationDataController.cleanOldCachedData();
 
          getInAppMessageController().cleanCachedInAppMessages();
 
          if (outcomeEventsFactory == null)
-            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, getDBHelperInstance(), preferences);
+            outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, dbHelper, preferences);
 
          sessionManager.initSessionFromCache();
          outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
@@ -884,16 +918,18 @@ public class OneSignal {
 
    private static void handleActivityLifecycleHandler(Context context) {
       ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
-      setInForeground(OneSignal.getCurrentActivity() != null || context instanceof Activity);
+      boolean isContextActivity = context instanceof Activity;
+      boolean isCurrentActivityNull = OneSignal.getCurrentActivity() == null;
+      setInForeground(!isCurrentActivityNull || isContextActivity);
       logger.debug("OneSignal handleActivityLifecycleHandler inForeground: " + inForeground);
 
       if (inForeground) {
-         if (OneSignal.getCurrentActivity() == null && activityLifecycleHandler != null) {
+         if (isCurrentActivityNull && isContextActivity && activityLifecycleHandler != null) {
             activityLifecycleHandler.setCurActivity((Activity) context);
             activityLifecycleHandler.setNextResumeIsFirstActivity(true);
          }
          OSNotificationRestoreWorkManager.beginEnqueueingWork(context, false);
-         focusTimeController.appForegrounded();
+         getFocusTimeController().appForegrounded();
       } else if (activityLifecycleHandler != null) {
          activityLifecycleHandler.setNextResumeIsFirstActivity(true);
       }
@@ -1081,8 +1117,8 @@ public class OneSignal {
          delayedContext = appContext;
          logger.error("Trying to continue OneSignal with null delayed params");
       } else {
-         delayedAppId = delayedInitParams.appId;
-         delayedContext = delayedInitParams.context;
+         delayedAppId = delayedInitParams.getAppId();
+         delayedContext = delayedInitParams.getContext();
       }
 
       logger.debug("reassignDelayedInitParams with appContext: " + appContext);
@@ -1251,10 +1287,6 @@ public class OneSignal {
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
    }
 
-   static OSLogger getLogger() {
-      return logger;
-   }
-
    // Returns true if there is active time that is unsynced.
    @WorkerThread
    static void onAppLostFocus() {
@@ -1291,7 +1323,7 @@ public class OneSignal {
       if (trackAmazonPurchase != null)
          trackAmazonPurchase.checkListener();
 
-      focusTimeController.appBackgrounded();
+      getFocusTimeController().appBackgrounded();
 
       scheduleSyncService();
    }
@@ -1339,7 +1371,7 @@ public class OneSignal {
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppFocus"))
          return;
 
-      focusTimeController.appForegrounded();
+      getFocusTimeController().appForegrounded();
 
       doSessionInit();
 
@@ -1398,7 +1430,6 @@ public class OneSignal {
          public void run() {
             try {
                registerUserTask();
-               OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
             } catch(JSONException t) {
                Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
             }
@@ -1417,7 +1448,7 @@ public class OneSignal {
       deviceInfo.put("device_os", Build.VERSION.RELEASE);
       deviceInfo.put("timezone", getTimeZoneOffset());
       deviceInfo.put("timezone_id", getTimeZoneId());
-      deviceInfo.put("language", OSUtils.getCorrectedLanguage());
+      deviceInfo.put("language", languageContext.getLanguage());
       deviceInfo.put("sdk", VERSION);
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
@@ -1654,6 +1685,36 @@ public class OneSignal {
 
       emailLogoutHandler = callback;
       OneSignalStateSynchronizer.logoutEmail();
+   }
+
+   public static void setLanguage(@NonNull final String language) {
+      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LANGUAGE)) {
+         logger.error("Waiting for remote params. " +
+                 "Moving " + OSTaskRemoteController.SET_LANGUAGE + " operation to a pending task queue.");
+         taskRemoteController.addTaskToQueue(new Runnable() {
+            @Override
+            public void run() {
+               logger.debug("Running " + OSTaskRemoteController.SET_LANGUAGE + " operation from pending task queue.");
+               setLanguage(language);
+            }
+         });
+         return;
+      }
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_LANGUAGE))
+         return;
+
+      LanguageProviderAppDefined languageProviderAppDefined = new LanguageProviderAppDefined(preferences);
+      languageProviderAppDefined.setLanguage(language);
+      languageContext.setStrategy(languageProviderAppDefined);
+
+      try {
+         JSONObject deviceInfo = new JSONObject();
+         deviceInfo.put("language", languageContext.getLanguage());
+         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+      } catch (JSONException exception) {
+         exception.printStackTrace();
+      }
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
@@ -2135,40 +2196,6 @@ public class OneSignal {
       }
    }
 
-   private static boolean openURLFromNotification(Context context, JSONArray dataArray) {
-
-      //if applicable, check if the user provided privacy consent
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
-         return false;
-
-      int jsonArraySize = dataArray.length();
-
-      boolean urlOpened = false;
-      boolean launchUrlSuppress = "true".equals(OSUtils.getManifestMeta(context, "com.onesignal.suppressLaunchURLs"));
-
-      for (int i = 0; i < jsonArraySize; i++) {
-         try {
-            JSONObject data = dataArray.getJSONObject(i);
-            if (!data.has("custom"))
-               continue;
-
-            JSONObject customJSON = new JSONObject(data.optString("custom"));
-
-            if (customJSON.has("u")) {
-               String url = customJSON.optString("u", null);
-               if (url != null && !launchUrlSuppress) {
-                  OSUtils.openURLInBrowser(url);
-                  urlOpened = true;
-               }
-            }
-         } catch (Throwable t) {
-            Log(LOG_LEVEL.ERROR, "Error parsing JSON item " + i + "/" + jsonArraySize + " for launching a web URL.", t);
-         }
-      }
-
-      return urlOpened;
-   }
-
    private static void runNotificationOpenedCallback(final JSONArray dataArray) {
       if (notificationOpenedHandler == null) {
          unprocessedOpenedNotifs.add(dataArray);
@@ -2254,7 +2281,7 @@ public class OneSignal {
     * <br/><br/>
     * @see OSNotificationWillShowInForegroundHandler
     */
-   static boolean shouldFireForegroundHandlers() {
+   static boolean shouldFireForegroundHandlers(OSNotificationGenerationJob notificationJob) {
       if (!isInForeground()) {
          OneSignal.onesignalLog(LOG_LEVEL.INFO, "App is in background, show notification");
          return false;
@@ -2262,6 +2289,12 @@ public class OneSignal {
 
       if (notificationWillShowInForegroundHandler == null) {
          OneSignal.onesignalLog(LOG_LEVEL.INFO, "No NotificationWillShowInForegroundHandler setup, show notification");
+         return false;
+      }
+
+      // Notification is restored. Don't fire for restored notifications.
+      if (notificationJob.isRestoring()) {
+         OneSignal.onesignalLog(LOG_LEVEL.INFO, "Not firing notificationWillShowInForegroundHandler for restored notifications");
          return false;
       }
 
@@ -2315,66 +2348,34 @@ public class OneSignal {
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackOpenedEvent(generateNotificationOpenedResult(data));
 
-      boolean urlOpened = false;
-      boolean defaultOpenActionDisabled = "DISABLE".equals(OSUtils.getManifestMeta(context, "com.onesignal.NotificationOpened.DEFAULT"));
-
-      if (!defaultOpenActionDisabled)
-         urlOpened = openURLFromNotification(context, data);
-
-      logger.debug("handleNotificationOpen from context: " + context + " with fromAlert: " + fromAlert + " urlOpened: " + urlOpened + " defaultOpenActionDisabled: " + defaultOpenActionDisabled);
-      // Check if the notification click should lead to a DIRECT session
-      if (shouldInitDirectSessionFromNotificationOpen(context, fromAlert, urlOpened, defaultOpenActionDisabled)) {
+      if (shouldInitDirectSessionFromNotificationOpen(context, data)) {
          applicationOpenedByNotification(notificationId);
       }
 
       runNotificationOpenedCallback(data);
    }
 
+   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, final JSONArray data) {
+      if (inForeground) {
+         return false;
+      }
+
+      try {
+         JSONObject interactedNotificationData = data.getJSONObject(0);
+         return new OSNotificationOpenBehaviorFromPushPayload(
+            context,
+            interactedNotificationData
+         ).getShouldOpenApp();
+      } catch (JSONException e) {
+         e.printStackTrace();
+      }
+      return true;
+   }
+
    static void applicationOpenedByNotification(@Nullable final String notificationId) {
       // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
       appEntryState = AppEntryAction.NOTIFICATION_CLICK;
       sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
-   }
-
-   // This opens the app in the same way an Android homescreen launcher does.
-   // This means we expect the following behavior:
-   //    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"
-   //    2. If the app is already running, instead the last activity will be resumed
-   //    3. If the app is not running (due to being push out of memory), the last activity will be resumed
-   //    4. If the app is no longer in the recent apps list, it is not resumed, same as #1 above.
-   //        - App is removed from the recent app's list if it is swiped away or "clear all" is pressed.
-   static boolean startOrResumeApp(@NonNull Activity activity) {
-      Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
-      logger.debug("startOrResumeApp from context: " + activity + " isRoot: " + activity.isTaskRoot() + " with launchIntent: " + launchIntent);
-
-      // Not all apps have a launcher intent, such as one that only provides a homescreen widget
-      if (launchIntent == null)
-         return false;
-
-      // Removing package from the intent, this treats the app as if it was started externally.
-      // This gives us the resume app behavior noted above.
-      // Android 11 no longer requires nulling this out to get this behavior.
-      launchIntent.setPackage(null);
-
-      activity.startActivity(launchIntent);
-
-      return true;
-   }
-
-   /**
-    * 1. App is not an alert
-    * 2. Not a URL open
-    * 3. Manifest setting for com.onesignal.NotificationOpened.DEFAULT is not disabled
-    * 4. Manifest setting for com.onesignal.suppressLaunchURLs is not true
-    * 5. App is coming from the background
-    * 6. App open/resume intent exists
-    */
-   private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, boolean fromAlert, boolean urlOpened, boolean defaultOpenActionDisabled) {
-      return !fromAlert
-              && !urlOpened
-              && !defaultOpenActionDisabled
-              && !inForeground
-              && startOrResumeApp(context);
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
@@ -2537,8 +2538,6 @@ public class OneSignal {
       }
 
       OneSignalStateSynchronizer.refreshSecondaryChannelState();
-
-      OneSignalChromeTabAndroidFrame.setup(appId, userId, AdvertisingIdProviderGPS.getLastValue(), getRemoteParams());
    }
 
    static void updateEmailIdDependents(String emailId) {
@@ -2619,6 +2618,18 @@ public class OneSignal {
 
       getCurrentSubscriptionState(appContext).setPushDisabled(disable);
       OneSignalStateSynchronizer.setSubscription(!disable);
+   }
+
+
+   /**
+    * This method will be replaced by remote params set
+    */
+   public static void disableGMSMissingPrompt(final boolean promptDisable) {
+      // Already set by remote params
+      if (getRemoteParamController().hasDisableGMSMissingPromptKey())
+         return;
+
+      getRemoteParamController().saveGMSMissingPromptDisable(promptDisable);
    }
 
    /**
@@ -3015,7 +3026,21 @@ public class OneSignal {
       return !getInAppMessageController().inAppMessagingEnabled();
    }
 
-   static void notValidOrDuplicated(JSONObject jsonPayload, OSNotificationDataController.InvalidOrDuplicateNotificationCallback callback) {
+   /**
+    * Method that checks if notification is valid or duplicated.
+    *
+    * Method called from Notification processing. This might be called from a flow that doesn't call initWithContext yet.
+    * Check if notificationDataController is not init before processing notValidOrDuplicated
+    *
+    * @param context the context from where the notification was received
+    * @param jsonPayload the notification payload in a JSON format
+    * @param callback the callback to return the result since this method does DB access in another thread
+    * */
+   static void notValidOrDuplicated(Context context, JSONObject jsonPayload, @NonNull OSNotificationDataController.InvalidOrDuplicateNotificationCallback callback) {
+      if (notificationDataController == null) {
+          OneSignalDbHelper helper = OneSignal.getDBHelperInstance(context);
+          notificationDataController = new OSNotificationDataController(helper, logger);
+      }
       notificationDataController.notValidOrDuplicated(jsonPayload, callback);
    }
 
@@ -3125,6 +3150,7 @@ public class OneSignal {
    static OSTime getTime() {
       return time;
    }
+
    /*
     * Start Mock Injection module
     */
@@ -3144,6 +3170,10 @@ public class OneSignal {
       OneSignal.preferences = preferences;
    }
 
+   static void setDelayTaskController(OSDelayTaskController delayTaskController) {
+      OneSignal.delayTaskController = delayTaskController;
+   }
+
    static OSSessionManager.SessionListener getSessionListener() {
       return sessionListener;
    }
@@ -3156,11 +3186,27 @@ public class OneSignal {
       return OneSignalDbHelper.getInstance(appContext);
    }
 
+   static OneSignalDbHelper getDBHelperInstance(Context context) {
+       return OneSignalDbHelper.getInstance(context);
+   }
+
    static OSTaskController getTaskRemoteController() {
       return taskRemoteController;
    }
 
+   static OSTaskController getTaskController() {
+      return taskController;
+   }
+
+   static OSDelayTaskController getDelayTaskController() {
+      return delayTaskController;
+   }
+
    static FocusTimeController getFocusTimeController() {
+      if (focusTimeController == null) {
+         focusTimeController = new FocusTimeController(new OSFocusTimeProcessorFactory(), logger);
+      }
+
       return focusTimeController;
    }
    /*
@@ -3208,6 +3254,10 @@ public class OneSignal {
          return;
       }
 
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendOutcome()")) {
+         return;
+      }
+
       outcomeEventsController.sendOutcomeEvent(name, callback);
    }
 
@@ -3230,6 +3280,10 @@ public class OneSignal {
                sendUniqueOutcome(name, callback);
             }
          });
+         return;
+      }
+
+      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("sendUniqueOutcome()")) {
          return;
       }
 

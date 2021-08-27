@@ -44,6 +44,8 @@ public class OneSignalShadowPackageManager extends ShadowApplicationPackageManag
     public static void addManifestMetaData(String key, Object value) {
         if (value instanceof String) {
             metaData.putString(key, value.toString());
+        } else if (value instanceof Boolean) {
+            metaData.putBoolean(key, (Boolean) value);
         } else {
             // TODO: We should add any other cases we have for different values here
         }

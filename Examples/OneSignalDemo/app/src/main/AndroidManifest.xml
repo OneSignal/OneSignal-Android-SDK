@@ -35,7 +35,15 @@
             android:required="false"/>
 
         <!-- You must replace the names in the service and receiver tags
-    with names that are appropriate to your package. -->
+        with names that are appropriate to your package. -->
+
+        <service
+          android:name="com.onesignal.sdktest.notification.HmsMessageServiceAppLevel"
+          android:exported="false">
+          <intent-filter>
+            <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
+          </intent-filter>
+        </service>
 
         <service
             android:name="com.onesignal.ADMMessageHandlerJob"
@@ -49,7 +57,8 @@
 
         <receiver
             android:name="com.onesignal.ADMMessageHandler$Receiver"
-            android:permission="com.amazon.device.messaging.permission.SEND" >
+            android:permission="com.amazon.device.messaging.permission.SEND"
+            android:exported="true">
 
             <!-- To interact with ADM, your app must listen for the following intents. -->
             <intent-filter>
@@ -64,7 +73,9 @@
         <meta-data android:name="com.onesignal.NotificationServiceExtension"
             android:value="com.onesignal.sdktest.notification.NotificationServiceExtension" />
 
-        <activity android:name=".activity.SplashActivity">
+        <activity
+            android:name=".activity.SplashActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

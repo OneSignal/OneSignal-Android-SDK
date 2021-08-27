@@ -31,11 +31,19 @@ import android.content.Context;
 
 class DelayedConsentInitializationParameters {
 
-    Context context;
-    String appId;
+    private final Context context;
+    private final String appId;
 
     DelayedConsentInitializationParameters(Context delayContext, String delayAppId) {
         this.context = delayContext;
         this.appId = delayAppId;
+    }
+
+    Context getContext() {
+        return context;
+    }
+
+    String getAppId() {
+        return appId;
     }
 }

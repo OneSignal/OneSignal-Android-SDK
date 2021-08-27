@@ -311,7 +311,7 @@ public class ShadowOneSignalRestClient {
 
       String retJson;
 
-      if (nextSuccessfulRegistrationResponse != null) {
+      if (nextSuccessfulRegistrationResponse != null && url.contains("players")) {
          retJson = nextSuccessfulRegistrationResponse;
          nextSuccessfulRegistrationResponse = null;
       }

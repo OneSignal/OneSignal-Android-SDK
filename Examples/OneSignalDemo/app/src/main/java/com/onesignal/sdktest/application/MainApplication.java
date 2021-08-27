@@ -1,24 +1,46 @@
 package com.onesignal.sdktest.application;
 
-import android.app.Application;
 import android.util.Log;
 
+import androidx.multidex.MultiDexApplication;
+
+import com.onesignal.OSInAppMessage;
 import com.onesignal.OSNotification;
-import com.onesignal.OSNotificationOpenedResult;
+import com.onesignal.OSInAppMessageLifecycleHandler;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MainApplication extends Application {
+public class MainApplication extends MultiDexApplication {
 
     @Override
     public void onCreate() {
         super.onCreate();
+
+        OSInAppMessageLifecycleHandler handler = new OSInAppMessageLifecycleHandler() {
+            @Override
+            public void onWillDisplayInAppMessage(OSInAppMessage message) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDisplayInAppMessage");
+            }
+            @Override
+            public void onDidDisplayInAppMessage(OSInAppMessage message) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onDidDisplayInAppMessage");
+            }
+            @Override
+            public void onWillDismissInAppMessage(OSInAppMessage message) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDismissInAppMessage");
+            }
+            @Override
+            public void onDidDismissInAppMessage(OSInAppMessage message) {
+                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onDidDismissInAppMessage");
+            }
+        };
+
+        OneSignal.setInAppMessageLifecycleHandler(handler);
 
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
@@ -42,7 +64,7 @@ public class MainApplication extends Application {
             OSNotification notification = notificationReceivedEvent.getNotification();
             JSONObject data = notification.getAdditionalData();
 
-            notificationReceivedEvent.complete(null);
+            notificationReceivedEvent.complete(notification);
         });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);

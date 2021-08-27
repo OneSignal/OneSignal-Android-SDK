@@ -3,6 +3,8 @@ package com.onesignal;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.onesignal.language.LanguageContext;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,12 +19,13 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
      * This is a dummy controller that will be used for Android 4.3 and older devices
      * All methods should be overridden and as empty as possible (few return exceptions)
      */
-    OSInAppMessageDummyController(OneSignalDbHelper dbHelper, OSTaskController taskController, OSLogger logger) {
-        super(dbHelper, taskController, logger);
+    OSInAppMessageDummyController(OneSignalDbHelper dbHelper, OSTaskController taskController, OSLogger logger,
+                                  OSSharedPreferences sharedPreferences, LanguageContext languageContext) {
+        super(dbHelper, taskController, logger, sharedPreferences, languageContext);
     }
 
     @Override
-    public void initRedisplayData(OneSignalDbHelper dbHelper) {
+    public void initRedisplayData() {
     }
 
     @Override
@@ -32,20 +35,20 @@ class OSInAppMessageDummyController extends OSInAppMessageController {
     void receivedInAppMessageJson(@NonNull JSONArray json) throws JSONException { }
 
     @Override
-    void onMessageActionOccurredOnMessage(@NonNull OSInAppMessage message, @NonNull JSONObject actionJson) { }
+    void onMessageActionOccurredOnMessage(@NonNull OSInAppMessageInternal message, @NonNull JSONObject actionJson) { }
 
     @Override
-    void onMessageActionOccurredOnPreview(@NonNull OSInAppMessage message, @NonNull JSONObject actionJson) { }
+    void onMessageActionOccurredOnPreview(@NonNull OSInAppMessageInternal message, @NonNull JSONObject actionJson) { }
 
     @Override
     boolean isInAppMessageShowing() { return false; }
 
     @Nullable
     @Override
-    OSInAppMessage getCurrentDisplayedInAppMessage() { return null; }
+    OSInAppMessageInternal getCurrentDisplayedInAppMessage() { return null; }
 
     @Override
-    public void messageWasDismissed(@NonNull OSInAppMessage message) { }
+    public void messageWasDismissed(@NonNull OSInAppMessageInternal message) { }
 
     @Override
     void displayPreviewMessage(@NonNull String previewUUID) { }

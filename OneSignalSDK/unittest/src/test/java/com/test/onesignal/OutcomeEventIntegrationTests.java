@@ -16,7 +16,6 @@ import com.onesignal.OSSessionManager;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalShadowPackageManager;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowGMSLocationController;
@@ -48,6 +47,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowPausedSystemClock;
 
@@ -89,7 +89,6 @@ import static junit.framework.Assert.assertTrue;
                 ShadowPushRegistratorFCM.class,
                 ShadowGMSLocationController.class,
                 ShadowOSUtils.class,
-                ShadowAdvertisingIdProviderGPS.class,
                 ShadowCustomTabsClient.class,
                 ShadowCustomTabsSession.class,
                 ShadowNotificationManagerCompat.class,
@@ -97,6 +96,7 @@ import static junit.framework.Assert.assertTrue;
         },
         sdk = 26)
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class OutcomeEventIntegrationTests {
 
     private static final String ONESIGNAL_APP_ID = "b2f7f966-d8cc-11e4-bed1-df8f05be55ba";
@@ -1139,6 +1139,55 @@ public class OutcomeEventIntegrationTests {
         threadAndTaskWait();
 
         assertMeasureAtIndex(1, ONESIGNAL_OUTCOME_NAME);
+    }
+
+    @Test
+    public void testSendOutcomesFailWhenRequiresUserPrivacyConsent() throws Exception {
+        // Enable IAM v2
+        preferences = new MockOSSharedPreferences();
+        trackerFactory = new OSTrackerFactory(preferences, logger, time);
+        sessionManager = new MockSessionManager(sessionListener, trackerFactory, logger);
+        preferences.saveBool(preferences.getPreferencesName(), preferences.getOutcomesV2KeyName(), true);
+        OneSignal_setSharedPreferences(preferences);
+
+        OneSignalInit();
+        threadAndTaskWait();
+        assertRestCalls(2);
+        OneSignal.setRequiresUserPrivacyConsent(true);
+
+        // Make sure session is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Check that the task has been queued until consent is given
+        assertRestCalls(2);
+
+        // Send outcome event
+        OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Ensure still only 2 requests have been made
+        assertRestCalls(2);
+
+        OneSignal.provideUserConsent(true);
+        threadAndTaskWait();
+
+        // Send unique outcome event
+        OneSignal.sendUniqueOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Send outcome event
+        OneSignal.sendOutcome(ONESIGNAL_OUTCOME_NAME);
+        threadAndTaskWait();
+
+        // Make sure session is UNATTRIBUTED
+        assertNotificationChannelUnattributedInfluence();
+
+        // Check measure end point was most recent request and contains received notification
+        assertMeasureOnV2AtIndex(3, ONESIGNAL_OUTCOME_NAME, null, null, null, null);
     }
 
     private void foregroundAppAfterClickingNotification() throws Exception {

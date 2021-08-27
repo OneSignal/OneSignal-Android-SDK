@@ -7,13 +7,14 @@ import androidx.annotation.Nullable;
 
 import com.onesignal.InAppMessagingHelpers;
 import com.onesignal.MockOSTimeImpl;
+import com.onesignal.OSInAppMessageLifecycleHandler;
+import com.onesignal.OSInAppMessage;
 import com.onesignal.OSInAppMessageAction;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
-import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageInternal;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageAction;
 import com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
-import com.onesignal.ShadowAdvertisingIdProviderGPS;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowDynamicTimer;
@@ -37,6 +38,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.util.ArrayList;
@@ -62,7 +64,6 @@ import static junit.framework.Assert.assertTrue;
             ShadowOneSignalRestClient.class,
             ShadowPushRegistratorFCM.class,
             ShadowOSUtils.class,
-            ShadowAdvertisingIdProviderGPS.class,
             ShadowCustomTabsClient.class,
             ShadowCustomTabsSession.class,
             ShadowNotificationManagerCompat.class,
@@ -72,6 +73,7 @@ import static junit.framework.Assert.assertTrue;
         sdk = 26
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class InAppMessagingUnitTests {
 
     private static final String IAM_CLICK_ID = "button_id_123";
@@ -79,7 +81,7 @@ public class InAppMessagingUnitTests {
     private static final int LIMIT = 5;
     private static final long DELAY = 60;
 
-    private static OSTestInAppMessage message;
+    private static OSTestInAppMessageInternal message;
 
     @SuppressLint("StaticFieldLeak")
     private static Activity blankActivity;
@@ -107,6 +109,8 @@ public class InAppMessagingUnitTests {
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
         lastAction = null;
+        lastMessage = null;
+        iamLifecycleCounter = 0;
 
         TestHelpers.beforeTestInitAndCleanup();
 
@@ -142,13 +146,13 @@ public class InAppMessagingUnitTests {
      */
     private static boolean comparativeOperatorTest(OSTriggerOperator operator, Object triggerValue, Object localValue) throws JSONException {
         setLocalTriggerValue("test_property", localValue);
-        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_property", operator.toString(), triggerValue);
+        OSTestInAppMessageInternal testMessage = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(OSTriggerKind.CUSTOM, "test_property", operator.toString(), triggerValue);
         return InAppMessagingHelpers.evaluateMessage(testMessage);
     }
 
     @Test
     public void testBuiltMessage() {
-        UUID.fromString(message.messageId); // Throws if invalid
+        UUID.fromString(message.getMessageId()); // Throws if invalid
         assertNotNull(message.variants);
     }
 
@@ -160,7 +164,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageReDisplay() throws JSONException {
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -170,7 +174,7 @@ public class InAppMessagingUnitTests {
         assertEquals(-1, message.getRedisplayStats().getLastDisplayTime());
         assertEquals(0, message.getRedisplayStats().getDisplayQuantity());
 
-        OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+        OSTestInAppMessageInternal messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
                 null,
                 OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
@@ -185,7 +189,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayLimit() throws JSONException {
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -203,7 +207,7 @@ public class InAppMessagingUnitTests {
     public void testBuiltMessageRedisplayDelay() throws JSONException {
         MockOSTimeImpl time = new MockOSTimeImpl();
         OneSignal_setTime(time);
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -221,7 +225,7 @@ public class InAppMessagingUnitTests {
 
     @Test
     public void testBuiltMessageRedisplayCLickId() throws JSONException {
-        OSTestInAppMessage message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
+        OSTestInAppMessageInternal message = InAppMessagingHelpers.buildTestMessageWitRedisplay(
                 LIMIT,
                 DELAY
         );
@@ -240,7 +244,7 @@ public class InAppMessagingUnitTests {
 
         assertFalse(message.isClickAvailable(IAM_CLICK_ID));
 
-        OSTestInAppMessage messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
+        OSTestInAppMessageInternal messageWithoutDisplay = InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 OSTriggerKind.SESSION_TIME,
                 null,
                 OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
@@ -529,7 +533,7 @@ public class InAppMessagingUnitTests {
             }});
         }};
 
-        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
+        OSTestInAppMessageInternal testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
         assertFalse(InAppMessagingHelpers.evaluateMessage(testMessage));
         assertTrue(ShadowDynamicTimer.hasScheduledTimer);
         assertTrue(roughlyEqualTimerValues(5.0, ShadowDynamicTimer.mostRecentTimerDelaySeconds()));
@@ -551,7 +555,7 @@ public class InAppMessagingUnitTests {
             }});
         }};
 
-        OSTestInAppMessage testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
+        OSTestInAppMessageInternal testMessage = InAppMessagingHelpers.buildTestMessageWithMultipleTriggers(triggers);
         assertTrue(InAppMessagingHelpers.evaluateMessage(testMessage));
     }
 
@@ -590,7 +594,7 @@ public class InAppMessagingUnitTests {
 
         // Ensure we make REST call to OneSignal to report click.
         ShadowOneSignalRestClient.Request iamClickRequest = ShadowOneSignalRestClient.requests.get(2);
-        assertEquals("in_app_messages/" + message.messageId + "/click", iamClickRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/click", iamClickRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamClickRequest.payload.get("app_id"));
         assertEquals(1, iamClickRequest.payload.get("device_type"));
         assertEquals(message.variants.get("android").get("en"), iamClickRequest.payload.get("variant_id"));
@@ -610,7 +614,7 @@ public class InAppMessagingUnitTests {
 
         ShadowOneSignalRestClient.Request iamImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
 
-        assertEquals("in_app_messages/" + message.messageId + "/impression", iamImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/impression", iamImpressionRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamImpressionRequest.payload.get("app_id"));
         assertEquals(ShadowOneSignalRestClient.pushUserId, iamImpressionRequest.payload.get("player_id"));
         assertEquals(1, iamImpressionRequest.payload.get("device_type"));
@@ -625,10 +629,61 @@ public class InAppMessagingUnitTests {
 
         ShadowOneSignalRestClient.Request iamPageImpressionRequest = ShadowOneSignalRestClient.requests.get(2);
 
-        assertEquals("in_app_messages/" + message.messageId + "/pageImpression", iamPageImpressionRequest.url);
+        assertEquals("in_app_messages/" + message.getMessageId() + "/pageImpression", iamPageImpressionRequest.url);
         assertEquals(InAppMessagingHelpers.ONESIGNAL_APP_ID, iamPageImpressionRequest.payload.get("app_id"));
         assertEquals(ShadowOneSignalRestClient.pushUserId, iamPageImpressionRequest.payload.get("player_id"));
         assertEquals(1, iamPageImpressionRequest.payload.get("device_type"));
         assertEquals(InAppMessagingHelpers.IAM_PAGE_ID, iamPageImpressionRequest.payload.get("page_id"));
+    }
+
+    /* Tests for IAM Lifecycle */
+
+    private static @Nullable OSInAppMessage lastMessage;
+    private static int iamLifecycleCounter;
+    @Test
+    public void testIAMLifecycleEventsFlow() throws Exception {
+        OneSignal.setInAppMessageLifecycleHandler(new OSInAppMessageLifecycleHandler() {
+            @Override
+            public void onWillDisplayInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+
+            @Override
+            public void onDidDisplayInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+
+            @Override
+            public void onWillDismissInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+
+            @Override
+            public void onDidDismissInAppMessage(OSInAppMessage message) {
+                lastMessage = message;
+                iamLifecycleCounter++;
+            }
+        });
+        threadAndTaskWait();
+
+        assertEquals(0, iamLifecycleCounter);
+        // maybe need threadAndTaskWait
+        OneSignalPackagePrivateHelper.onMessageWillDisplay(message);
+        assertEquals(1, iamLifecycleCounter);
+
+        OneSignalPackagePrivateHelper.onMessageDidDisplay(message);
+        assertEquals(2,iamLifecycleCounter);
+
+        OneSignalPackagePrivateHelper.onMessageWillDismiss(message);
+        assertEquals(3,iamLifecycleCounter);
+
+        OneSignalPackagePrivateHelper.onMessageDidDismiss(message);
+        assertEquals(4,iamLifecycleCounter);
+
+        assertNotNull(lastMessage);
+        assertEquals(lastMessage.getMessageId(), message.getMessageId());
     }
 }

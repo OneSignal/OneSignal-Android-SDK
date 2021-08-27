@@ -41,8 +41,10 @@ import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.onesignal.NotificationBundleProcessor.ProcessedBundleResult;
 
-// This is the entry point when a FCM / GCM payload is received from the Google Play services app
-// TODO: 4.0.0 - Update to use <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+// This is the entry point when a FCM payload is received from the Google Play services app
+// OneSignal does not use FirebaseMessagingService.onMessageReceived as it does not allow multiple
+//   to be setup in an app. See the following issue for context on why this this important:
+//    - https://github.com/OneSignal/OneSignal-Android-SDK/issues/1355
 public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
 
    private static final String FCM_RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE";
@@ -80,7 +82,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
             // Prevent other FCM receivers from firing if:
             //   1. This is a duplicated FCM message
             //   2. OR work manager is processing the notification
-            if (processedResult.isDup || processedResult.isWorkManagerProcessing) {
+            if (processedResult.isDup() || processedResult.isWorkManagerProcessing()) {
                // Abort to prevent other FCM receivers from process this Intent.
                setAbort();
                return;
@@ -124,7 +126,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          @Override
          public void onBundleProcessed(@Nullable ProcessedBundleResult processedResult) {
             // Return if the notification will NOT be handled by normal FCMIntentService display flow.
-            if (processedResult!= null && processedResult.processed()){
+            if (processedResult!= null && processedResult.processed()) {
                fcmBundleReceiver.onBundleProcessed(processedResult);
                return;
             }
