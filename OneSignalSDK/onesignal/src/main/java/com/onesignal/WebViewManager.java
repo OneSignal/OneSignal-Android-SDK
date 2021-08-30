@@ -38,6 +38,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static final String TAG = WebViewManager.class.getCanonicalName();
     private static final int MARGIN_PX_SIZE = dpToPx(24);
     private static final int IN_APP_MESSAGE_INIT_DELAY = 200;
+    private final Object messageViewSyncLock = new Object() {};
 
     enum Position {
         TOP_BANNER,
@@ -343,23 +344,25 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     void lostFocus() {
         OneSignal.getInAppMessageController().messageWasDismissedByBackPress(message);
         removeActivityListener();
-        messageView = null;
+        setMessageView(null);
     }
 
     private void showMessageView(@Nullable Integer newHeight) {
-        if (messageView == null) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "No messageView found to update a with a new height.");
-            return;
-        }
+        synchronized (messageViewSyncLock) {
+            if (messageView == null) {
+                OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "No messageView found to update a with a new height.");
+                return;
+            }
 
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message, showing first one with height: " + newHeight);
-        messageView.setWebView(webView);
-        if (newHeight != null) {
-            lastPageHeight = newHeight;
-            messageView.updateHeight(newHeight);
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "In app message, showing first one with height: " + newHeight);
+            messageView.setWebView(webView);
+            if (newHeight != null) {
+                lastPageHeight = newHeight;
+                messageView.updateHeight(newHeight);
+            }
+            messageView.showView(activity);
+            messageView.checkIfShouldDismiss();
         }
-        messageView.showView(activity);
-        messageView.checkIfShouldDismiss();
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -405,9 +408,16 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         webView.layout(0,0, getWebViewMaxSizeX(activity), getWebViewMaxSizeY(activity));
     }
 
+    private void setMessageView(InAppMessageView view) {
+        synchronized (messageViewSyncLock) {
+            messageView = view;
+        }
+    }
+
     private void createNewInAppMessageView(@NonNull Position displayLocation, int pageHeight, boolean dragToDismissDisabled) {
         lastPageHeight = pageHeight;
-        messageView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration(), dragToDismissDisabled);
+        InAppMessageView newView = new InAppMessageView(webView, displayLocation, pageHeight, message.getDisplayDuration(), dragToDismissDisabled);
+        setMessageView(newView);
         messageView.setMessageController(new InAppMessageView.InAppMessageViewListener() {
             @Override
             public void onMessageWasShown() {
@@ -469,7 +479,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             @Override
             public void onComplete() {
                 dismissFired = false;
-                messageView = null;
+                setMessageView(null);
+
                 if (callback != null)
                     callback.onComplete();
             }
