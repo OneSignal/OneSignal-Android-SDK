@@ -100,18 +100,10 @@ class InAppMessageView {
      * @param content in app message content and style
      */
     private void setMarginsFromContent(OSInAppMessageContent content) {
-        if (content.getTopMargin() != null && content.getTopMargin() == 0) {
-            this.marginPxSizeTop = content.getTopMargin();
-        }
-        if (content.getBottomMargin() != null && content.getBottomMargin() == 0) {
-            this.marginPxSizeBottom = content.getBottomMargin();
-        }
-        if (content.getLeftMargin() != null && content.getLeftMargin() == 0) {
-            this.marginPxSizeLeft = content.getLeftMargin();
-        }
-        if (content.getRightMargin() != null && content.getRightMargin() == 0) {
-            this.marginPxSizeRight = content.getRightMargin();
-        }
+        this.marginPxSizeTop = content.getUseHeightMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeBottom = content.getUseHeightMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeLeft = content.getUseWidthMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeRight = content.getUseWidthMargin() ? dpToPx(24) : 0;
     }
 
     void setWebView(WebView webView) {
