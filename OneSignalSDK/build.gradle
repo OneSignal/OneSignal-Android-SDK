@@ -4,15 +4,16 @@ buildscript {
 
     ext {
         buildVersions = [
-                compileSdkVersion: 28,
+                compileSdkVersion: 29,
                 targetSdkVersion: 28
         ]
         androidGradlePluginVersion = '3.6.2'
+        androidConcurrentFutures = '1.1.0'
         googleServicesGradlePluginVersion = '4.3.2'
         huaweiAgconnectVersion = '1.2.1.301'
-        huaweiHMSPushVersion = '4.0.2.300'
+        huaweiHMSPushVersion = '5.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.3.72'
+        kotlinVersion = '1.4.32'
         onesignalGradlePluginVersion = '[0.12.6, 0.99.99]'
     }
 

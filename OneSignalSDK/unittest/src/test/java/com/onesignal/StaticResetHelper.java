@@ -17,6 +17,7 @@ public class StaticResetHelper {
    private static Collection<ClassState> classes = new ArrayList<>();
 
    public static void load() {
+      OSLogger logger = new OSLogWrapper();
       classes.add(new ClassState(OneSignal.class, field -> {
          if (field.getName().equals("unprocessedOpenedNotifis")) {
             field.set(null, new ArrayList<JSONArray>());
@@ -25,12 +26,13 @@ public class StaticResetHelper {
             field.set(null, new OSRemoteParamController());
             return true;
          } else if (field.getName().equals("taskController")) {
-            OSLogger logger = new OSLogWrapper();
             field.set(null, new OSTaskController(logger));
             return true;
          } else if (field.getName().equals("taskRemoteController")) {
-            OSLogger logger = new OSLogWrapper();
             field.set(null, new OSTaskRemoteController(OneSignal.getRemoteParamController(), logger));
+            return true;
+         } else if (field.getName().equals("delayTaskController")) {
+            field.set(null, new MockDelayTaskController(logger));
             return true;
          } else if (field.getName().equals("inAppMessageControllerFactory")) {
             field.set(null, new OSInAppMessageControllerFactory());
@@ -47,8 +49,7 @@ public class StaticResetHelper {
          }
          return false;
       }));
-      
-      classes.add(new ClassState(OneSignalChromeTabAndroidFrame.class, null));
+
       classes.add(new ClassState(OneSignalDbHelper.class, null));
       classes.add(new ClassState(LocationController.class, null));
       classes.add(new ClassState(OSInAppMessageController.class, null));
@@ -60,7 +61,6 @@ public class StaticResetHelper {
          }
          return false;
       }));
-      classes.add(new ClassState(FocusTimeController.class, null));
       classes.add(new ClassState(OSSessionManager.class, null));
       classes.add(new ClassState(MockSessionManager.class, null));
       classes.add(new ClassState(OSNotificationWorkManager.class,  field -> {

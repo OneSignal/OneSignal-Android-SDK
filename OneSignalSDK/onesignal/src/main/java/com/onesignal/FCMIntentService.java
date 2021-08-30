@@ -63,6 +63,7 @@ public class FCMIntentService extends IntentService {
       if (bundle == null)
          return;
 
+      OneSignal.initWithContext(this);
       NotificationBundleProcessor.ProcessBundleReceiverCallback bundleReceiverCallback = new NotificationBundleProcessor.ProcessBundleReceiverCallback() {
          @Override
          public void onBundleProcessed(@Nullable NotificationBundleProcessor.ProcessedBundleResult processedResult) {

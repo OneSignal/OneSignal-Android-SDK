@@ -28,7 +28,10 @@ class GooglePlayServicesUpgradePrompt {
    }
 
    static void showUpdateGPSDialog() {
-      if (!OSUtils.isAndroidDeviceType() || !isGooglePlayStoreInstalled())
+      if (!OSUtils.isAndroidDeviceType())
+         return;
+
+      if (!isGooglePlayStoreInstalled() || OneSignal.getDisableGMSMissingPrompt())
          return;
 
       boolean userSelectedSkip =

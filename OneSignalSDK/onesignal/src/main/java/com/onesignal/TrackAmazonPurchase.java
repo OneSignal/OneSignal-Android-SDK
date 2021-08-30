@@ -85,6 +85,8 @@ class TrackAmazonPurchase {
          logAmazonIAPListenerError(e);
       } catch (NoSuchFieldException e) {
          logAmazonIAPListenerError(e);
+      } catch (ClassCastException e) {
+         logAmazonIAPListenerError(e);
       }
    }
 

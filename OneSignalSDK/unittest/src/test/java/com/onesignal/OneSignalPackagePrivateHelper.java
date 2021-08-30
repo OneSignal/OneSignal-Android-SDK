@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,6 +17,7 @@ import org.json.JSONObject;
 import org.robolectric.util.Scheduler;
 
 import java.lang.reflect.Field;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,8 @@ public class OneSignalPackagePrivateHelper {
    public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
 
    public static final long MIN_ON_SESSION_TIME_MILLIS = com.onesignal.OneSignal.MIN_ON_SESSION_TIME_MILLIS;
+
+   private static final String LOGCAT_TAG = "OS_PACKAGE_HELPER";
 
    private static abstract class RunnableArg<T> {
       abstract void run(T object) throws Exception;
@@ -116,12 +120,20 @@ public class OneSignalPackagePrivateHelper {
       OneSignal.setTrackerFactory(trackerFactory);
    }
 
+   public static void OneSignal_setDelayTaskController(OSDelayTaskController delayTaskController) {
+      OneSignal.setDelayTaskController(delayTaskController);
+   }
+
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
    public static void OneSignal_handleNotificationOpen(Activity context, final JSONArray data, final boolean fromAlert, final String notificationId) {
       OneSignal.handleNotificationOpen(context, data, fromAlert, notificationId);
+   }
+
+   public static BigInteger OneSignal_getAccentColor(JSONObject fcmJson) {
+      return GenerateNotification.getAccentColor(fcmJson);
    }
 
    public static BundleCompat createInternalPayloadBundle(Bundle bundle) {
@@ -271,6 +283,12 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.getTaskRemoteController().getTaskQueueWaitingForInit();
    }
 
+   public static void OneSignal_OSTaskController_ShutdownNow() {
+      OneSignal.getTaskRemoteController().shutdownNow();
+      OneSignal.getTaskController().shutdownNow();
+      OneSignal.getDelayTaskController().shutdownNow();
+   }
+
    public static boolean OneSignal_requiresUserPrivacyConsent() {
       return OneSignal.requiresUserPrivacyConsent();
    }
@@ -330,18 +348,22 @@ public class OneSignalPackagePrivateHelper {
 
    /** In-App Messaging Helpers */
 
-   public static class OSTestInAppMessage extends com.onesignal.OSInAppMessage {
+   public static class OSTestInAppMessageInternal extends OSInAppMessageInternal {
 
-      public OSTestInAppMessage(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
+      public OSTestInAppMessageInternal(@NonNull String messageId, int displaysQuantity, long lastDisplayTime, boolean displayed, Set<String> clickIds) {
          super(messageId, clickIds, displayed, new OSInAppMessageRedisplayStats(displaysQuantity, lastDisplayTime));
       }
 
-      OSTestInAppMessage(JSONObject json) throws JSONException {
+      OSTestInAppMessageInternal(JSONObject json) throws JSONException {
          super(json);
       }
 
-      OSTestInAppMessage(com.onesignal.OSInAppMessage inAppMessage) throws JSONException {
+      OSTestInAppMessageInternal(OSInAppMessageInternal inAppMessage) throws JSONException {
          super(inAppMessage.toJSONObject());
+      }
+
+      public void setMessageId(String messageId) {
+         this.messageId = messageId;
       }
 
       @Override
@@ -507,9 +529,12 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static void dismissCurrentMessage() {
-      com.onesignal.OSInAppMessage message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
-      if (message != null)
+      OSInAppMessageInternal message = OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage();
+      if (message != null) {
          OneSignal.getInAppMessageController().messageWasDismissed(message);
+      } else {
+         Log.e(LOGCAT_TAG, "No currently displaying IAM to dismiss!");
+      }
    }
 
    public static boolean isInAppMessageShowing() {
@@ -520,29 +545,48 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.getInAppMessageController().getCurrentDisplayedInAppMessage().messageId;
    }
 
-   public static ArrayList<com.onesignal.OSInAppMessage> getInAppMessageDisplayQueue() {
+   public static ArrayList<OSInAppMessageInternal> getInAppMessageDisplayQueue() {
       return OneSignal.getInAppMessageController().getInAppMessageDisplayQueue();
    }
 
-   public static void onMessageActionOccurredOnMessage(@NonNull final com.onesignal.OSInAppMessage message, @NonNull final JSONObject actionJson) throws JSONException {
+   public static void onMessageActionOccurredOnMessage(@NonNull final OSInAppMessageInternal message, @NonNull final JSONObject actionJson) throws JSONException {
       OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, actionJson);
    }
 
-   public static void onMessageWasShown(@NonNull com.onesignal.OSInAppMessage message) {
+   public static void onMessageWasShown(@NonNull OSInAppMessageInternal message) {
       OneSignal.getInAppMessageController().onMessageWasShown(message);
    }
 
-   public static void onPageChanged(@NonNull com.onesignal.OSInAppMessage message, @NonNull final JSONObject eventJson) {
+   public static void onPageChanged(@NonNull OSInAppMessageInternal message, @NonNull final JSONObject eventJson) {
       OneSignal.getInAppMessageController().onPageChanged(message, eventJson);
    }
 
-   public static List<OSTestInAppMessage> getRedisplayInAppMessages() {
-      List<OSInAppMessage> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
-      List<OSTestInAppMessage> testMessages = new ArrayList<>();
+   /** IAM Lifecycle */
+   public static void onMessageWillDisplay(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageWillDisplay(message);
+   }
 
-      for (OSInAppMessage message : messages) {
+   public static void onMessageDidDisplay(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageDidDisplay(message);
+   }
+
+   public static void onMessageWillDismiss(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageWillDismiss(message);
+   }
+
+   public static void onMessageDidDismiss(@NonNull final OSInAppMessageInternal message) {
+      OneSignal.getInAppMessageController().onMessageDidDismiss(message);
+   }
+   
+   // End IAM Lifecycle
+
+   public static List<OSTestInAppMessageInternal> getRedisplayInAppMessages() {
+      List<OSInAppMessageInternal> messages = OneSignal.getInAppMessageController().getRedisplayedInAppMessages();
+      List<OSTestInAppMessageInternal> testMessages = new ArrayList<>();
+
+      for (OSInAppMessageInternal message : messages) {
          try {
-            OSTestInAppMessage testInAppMessage = new OSTestInAppMessage(message);
+            OSTestInAppMessageInternal testInAppMessage = new OSTestInAppMessageInternal(message);
             testInAppMessage.getRedisplayStats().setDisplayStats(message.getRedisplayStats());
             testMessages.add(testInAppMessage);
 
@@ -577,7 +621,7 @@ public class OneSignalPackagePrivateHelper {
          super.dismissAndAwaitNextMessage(callback);
       }
 
-      protected WebViewManager(@NonNull com.onesignal.OSInAppMessage message, @NonNull Activity activity) {
+      protected WebViewManager(@NonNull OSInAppMessageInternal message, @NonNull Activity activity) {
          super(message, activity);
       }
    }

@@ -95,7 +95,8 @@ class OSDynamicTriggerController {
             case LESS_THAN_OR_EQUAL_TO:
                 return currentTimeInterval <= timeInterval || roughlyEqual(timeInterval, currentTimeInterval);
             case GREATER_THAN:
-                return currentTimeInterval > timeInterval;
+                // Counting equal as greater. This way we don't need to schedule a Runnable for 1ms in the future.
+                return currentTimeInterval >= timeInterval;
             case GREATER_THAN_OR_EQUAL_TO:
                 return currentTimeInterval >= timeInterval || roughlyEqual(timeInterval, currentTimeInterval);
             case EQUAL_TO:

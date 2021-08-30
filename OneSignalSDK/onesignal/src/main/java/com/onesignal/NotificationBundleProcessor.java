@@ -36,6 +36,8 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import androidx.work.ListenableWorker;
 
 import com.onesignal.OneSignalDbContract.NotificationTable;
 
@@ -62,8 +64,8 @@ class NotificationBundleProcessor {
     public static final String PUSH_MINIFIED_BUTTON_TEXT = "n";
     public static final String PUSH_MINIFIED_BUTTON_ICON = "p";
 
-    private static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     private static final String ANDROID_NOTIFICATION_ID = "android_notif_id";
+    static final String IAM_PREVIEW_KEY = "os_in_app_message_preview_id";
     static final String DEFAULT_ACTION = "__DEFAULT__";
 
     static void processFromFCMIntentService(final Context context, BundleCompat bundle) {
@@ -78,7 +80,6 @@ class NotificationBundleProcessor {
             final JSONObject jsonPayload = new JSONObject(jsonStrPayload);
             final boolean isRestoring = bundle.getBoolean("is_restoring", false);
             final long shownTimeStamp = bundle.getLong("timestamp");
-            final boolean isIamPreview = inAppPreviewPushUUID(jsonPayload) != null;
 
             int androidNotificationId = 0;
             if (bundle.containsKey(ANDROID_NOTIFICATION_ID))
@@ -89,7 +90,6 @@ class NotificationBundleProcessor {
                 @Override
                 public void onResult(boolean result) {
                     if (!isRestoring
-                            && !isIamPreview
                             && result)
                         return;
 
@@ -99,9 +99,10 @@ class NotificationBundleProcessor {
                             osNotificationId,
                             finalAndroidNotificationId,
                             jsonStrPayload,
-                            isRestoring,
                             shownTimeStamp,
-                            false);
+                            isRestoring,
+                            false,
+                            true);
 
                     // Delay to prevent CPU spikes.
                     // Normally more than one notification is restored at a time.
@@ -110,7 +111,7 @@ class NotificationBundleProcessor {
                 }
             };
 
-            OneSignal.notValidOrDuplicated(jsonPayload, callback);
+            OneSignal.notValidOrDuplicated(context, jsonPayload, callback);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -133,30 +134,30 @@ class NotificationBundleProcessor {
     }
 
     @WorkerThread
-    static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean fromBackgroundLogic) {
+    private static int processJobForDisplay(OSNotificationController notificationController, boolean opened, boolean fromBackgroundLogic) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Starting processJobForDisplay opened: " + opened + " fromBackgroundLogic: " + fromBackgroundLogic);
         OSNotificationGenerationJob notificationJob = notificationController.getNotificationJob();
 
         processCollapseKey(notificationJob);
 
         int androidNotificationId = notificationJob.getAndroidIdWithoutCreate();
-        boolean doDisplay = shouldDisplayNotif(notificationJob);
+        boolean doDisplay = shouldDisplayNotification(notificationJob);
         boolean notificationDisplayed = false;
 
         if (doDisplay) {
             androidNotificationId = notificationJob.getAndroidId();
-            if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers()) {
+            if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers(notificationJob)) {
                 notificationController.setFromBackgroundLogic(false);
                 OneSignal.fireForegroundHandlers(notificationController);
                 // Notification will be processed by foreground user complete or timer complete
                 return androidNotificationId;
             } else {
                 // Notification might end not displaying because the channel for that notification has notification disable
-                notificationDisplayed = GenerateNotification.displayNotificationFromJsonPayload(notificationJob);
+                notificationDisplayed = GenerateNotification.displayNotification(notificationJob);
             }
         }
 
-        if (!notificationJob.isRestoring() && !notificationJob.isIamPreview()) {
+        if (!notificationJob.isRestoring()) {
             processNotification(notificationJob, opened, notificationDisplayed);
 
             // No need to keep notification duplicate check on memory, we have database check at this point
@@ -164,18 +165,17 @@ class NotificationBundleProcessor {
             String osNotificationId = OSNotificationFormatHelper.getOSNotificationIdFromJson(notificationController.getNotificationJob().getJsonPayload());
             OSNotificationWorkManager.removeNotificationIdProcessed(osNotificationId);
             OneSignal.handleNotificationReceived(notificationJob);
+        } else {
+            CallbackToFutureAdapter.Completer<ListenableWorker.Result>  callbackCompleter = notificationJob.getCallbackCompleter();
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Process notification restored or IAM with callback completer: " + callbackCompleter);
+            if (callbackCompleter != null)
+                callbackCompleter.set(ListenableWorker.Result.success());
         }
 
         return androidNotificationId;
     }
 
-    private static boolean shouldDisplayNotif(OSNotificationGenerationJob notificationJob) {
-        // Validate that the current Android device is Android 4.4 or higher and the current job is a
-        //    preview push
-        if (notificationJob.isIamPreview() && Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2)
-            return false;
-
-        // Otherwise, this is a normal notification and should be shown
+    private static boolean shouldDisplayNotification(OSNotificationGenerationJob notificationJob) {
         return notificationJob.hasExtender() || isStringNotEmpty(notificationJob.getJsonPayload().optString("alert"));
     }
 
@@ -184,17 +184,22 @@ class NotificationBundleProcessor {
      */
     static void processNotification(OSNotificationGenerationJob notificationJob, boolean opened, boolean notificationDisplayed) {
         saveNotification(notificationJob, opened);
+        CallbackToFutureAdapter.Completer<ListenableWorker.Result>  callbackCompleter = notificationJob.getCallbackCompleter();
 
         if (!notificationDisplayed) {
             // Notification channel disable or not displayed
             // save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
             markNotificationAsDismissed(notificationJob);
+
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Process notification not displayed with callback completer: " + callbackCompleter);
+            if (callbackCompleter != null)
+                callbackCompleter.set(ListenableWorker.Result.success());
             return;
         }
 
         // Logic for when the notification is displayed
         String notificationId = notificationJob.getApiNotificationId();
-        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
+        OSReceiveReceiptController.getInstance().sendReceiveReceipt(callbackCompleter, notificationId);
         OneSignal.getSessionManager().onNotificationReceived(notificationId);
     }
 
@@ -276,8 +281,7 @@ class NotificationBundleProcessor {
         BadgeCountUpdater.update(dbHelper, notifiJob.getContext());
    }
 
-    static @NonNull
-    JSONObject bundleAsJSONObject(Bundle bundle) {
+    static @NonNull JSONObject bundleAsJSONObject(Bundle bundle) {
         JSONObject json = new JSONObject();
         Set<String> keys = bundle.keySet();
 
@@ -348,25 +352,27 @@ class NotificationBundleProcessor {
             return;
         String collapse_id = notificationJob.getJsonPayload().optString("collapse_key");
 
-      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
-      Cursor cursor = dbHelper.query(
-              NotificationTable.TABLE_NAME,
-              new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
-              NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
-                      NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                      NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
-              new String[]{collapse_id},
-              null, null, null);
+        OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
+        Cursor cursor = dbHelper.query(
+                NotificationTable.TABLE_NAME,
+                new String[]{NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID}, // retColumn
+                NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
+                        NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                        NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
+                new String[]{collapse_id},
+                null, null, null);
 
-      if (cursor.moveToFirst()) {
-         int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-         notificationJob.setAndroidIdWithoutOverriding(androidNotificationId);
-      }
+        if (cursor.moveToFirst()) {
+            int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
+            notificationJob.setAndroidIdWithoutOverriding(androidNotificationId);
+        }
 
-      cursor.close();
-   }
+        cursor.close();
+    }
 
-    //  Process bundle passed from fcm / adm broadcast receiver.
+    /**
+     * Process bundle passed from FCM / HMS / ADM broadcast receiver
+     * */
     static void processBundleFromReceiver(Context context, final Bundle bundle, final ProcessBundleReceiverCallback bundleReceiverCallback) {
         final ProcessedBundleResult bundleResult = new ProcessedBundleResult();
 
@@ -376,11 +382,12 @@ class NotificationBundleProcessor {
             return;
         }
 
-        bundleResult.isOneSignalPayload = true;
+        bundleResult.setOneSignalPayload(true);
         maximizeButtonsFromBundle(bundle);
 
-        if (inAppMessagePreviewHandled(bundleResult, bundle)) {
+        if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(context, bundle)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
+            bundleResult.setInAppPreviewShown(true);
             bundleReceiverCallback.onBundleProcessed(bundleResult);
             return;
         }
@@ -392,47 +399,13 @@ class NotificationBundleProcessor {
                 if (!notificationProcessed) {
                     // We already check for bundle == null under isOneSignalBundle
                     // At this point we know notification is duplicate
-                    bundleResult.isDup = true;
+                    bundleResult.setDup(true);
                 }
                 bundleReceiverCallback.onBundleProcessed(bundleResult);
             }
         };
 
         startNotificationProcessing(context, bundle, bundleResult, processingCallback);
-    }
-
-    private static boolean inAppMessagePreviewHandled(ProcessedBundleResult bundleResult, Bundle bundle) {
-        JSONObject pushPayloadJson = bundleAsJSONObject(bundle);
-        // Show In-App message preview it is in the payload & the app is in focus
-        String previewUUID = inAppPreviewPushUUID(pushPayloadJson);
-        if (previewUUID != null) {
-            // If app is in focus display the IAMs preview now
-            if (OneSignal.isAppActive()) {
-                bundleResult.inAppPreviewShown = true;
-                OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    static @Nullable
-    String inAppPreviewPushUUID(JSONObject payload) {
-        JSONObject osCustom;
-        try {
-            osCustom = getCustomJSONObject(payload);
-        } catch (JSONException e) {
-            return null;
-        }
-
-        if (!osCustom.has(PUSH_ADDITIONAL_DATA_KEY))
-            return null;
-
-        JSONObject additionalData = osCustom.optJSONObject(PUSH_ADDITIONAL_DATA_KEY);
-        if (additionalData.has(IAM_PREVIEW_KEY))
-            return additionalData.optString(IAM_PREVIEW_KEY);
-        return null;
     }
 
     private static void startNotificationProcessing(final Context context,
@@ -465,16 +438,17 @@ class NotificationBundleProcessor {
                         osNotificationId,
                         androidNotificationId,
                         jsonPayload.toString(),
-                        isRestoring,
                         timestamp,
-                        isHighPriority);
+                        isRestoring,
+                        isHighPriority,
+                        true);
 
-                bundleResult.isWorkManagerProcessing = true;
+                bundleResult.setWorkManagerProcessing(true);
                 notificationProcessingCallback.onResult(true);
             }
         };
 
-        OneSignal.notValidOrDuplicated(jsonPayload, callback);
+        OneSignal.notValidOrDuplicated(context, jsonPayload, callback);
     }
 
     static @NonNull
@@ -498,13 +472,37 @@ class NotificationBundleProcessor {
     }
 
     static class ProcessedBundleResult {
-        boolean isOneSignalPayload;
-        boolean isDup;
-        boolean inAppPreviewShown;
-        boolean isWorkManagerProcessing;
+        private boolean isOneSignalPayload;
+        private boolean isDup;
+        private boolean inAppPreviewShown;
+        private boolean isWorkManagerProcessing;
 
         boolean processed() {
             return !isOneSignalPayload || isDup || inAppPreviewShown || isWorkManagerProcessing;
+        }
+
+        void setOneSignalPayload(boolean oneSignalPayload) {
+            isOneSignalPayload = oneSignalPayload;
+        }
+
+        boolean isDup() {
+            return isDup;
+        }
+
+        void setDup(boolean dup) {
+            isDup = dup;
+        }
+
+        public void setInAppPreviewShown(boolean inAppPreviewShown) {
+            this.inAppPreviewShown = inAppPreviewShown;
+        }
+
+        public boolean isWorkManagerProcessing() {
+            return isWorkManagerProcessing;
+        }
+
+        public void setWorkManagerProcessing(boolean workManagerProcessing) {
+            isWorkManagerProcessing = workManagerProcessing;
         }
     }
 

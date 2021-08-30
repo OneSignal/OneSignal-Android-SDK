@@ -5,10 +5,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.UUID;
 
-import static com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessage;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageInternal;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSTestTrigger.OSTriggerKind;
 
@@ -20,7 +19,7 @@ public class InAppMessagingHelpers {
     public static final String IAM_PAGE_ID = "12345678-1234-ABCD-1234-123456789012";
     public static final String IAM_HAS_LIQUID = "has_liquid";
 
-    public static boolean evaluateMessage(OSInAppMessage message) {
+    public static boolean evaluateMessage(OSInAppMessageInternal message) {
         return OneSignal.getInAppMessageController().triggerController.evaluateMessageTriggers(message);
     }
 
@@ -54,20 +53,20 @@ public class InAppMessagingHelpers {
         return wrap(wrap(triggerJson));
     }
 
-    public static OSTestInAppMessage buildTestMessageWitRedisplay(final int limit, final long delay) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWitRedisplay(final int limit, final long delay) throws JSONException {
         return buildTestMessageWithMultipleDisplays(null, limit, delay);
     }
 
     // Most tests build a test message using only one trigger.
     // This convenience method makes it easy to build such a message
-    public static OSTestInAppMessage buildTestMessageWithSingleTrigger(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithSingleTrigger(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
         JSONArray triggersJson = basicTrigger(kind, key, operator, value);
 
         return buildTestMessage(triggersJson);
     }
 
-    public static OSTestInAppMessage buildTestMessageWithSingleTriggerAndRedisplay(final OSTriggerKind kind, final String key, final String operator,
-                                                                                   final Object value, int limit, long delay) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithSingleTriggerAndRedisplay(final OSTriggerKind kind, final String key, final String operator,
+                                                                                           final Object value, int limit, long delay) throws JSONException {
         JSONArray triggersJson = basicTrigger(kind, key, operator, value);
 
         return buildTestMessageWithMultipleDisplays(triggersJson, limit, delay);
@@ -96,32 +95,32 @@ public class InAppMessagingHelpers {
         return json;
     }
 
-    public static OSTestInAppMessage buildTestMessageWithLiquid(final JSONArray triggerJson) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithLiquid(final JSONArray triggerJson) throws JSONException {
         JSONObject json = basicIAMJSONObject(triggerJson);
         json.put(IAM_HAS_LIQUID, true);
-        return new OSTestInAppMessage(json);
+        return new OSTestInAppMessageInternal(json);
     }
 
-    public static OSTestInAppMessage buildTestMessageWithSingleTriggerAndLiquid(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithSingleTriggerAndLiquid(final OSTriggerKind kind, final String key, final String operator, final Object value) throws JSONException {
         JSONArray triggersJson = basicTrigger(kind, key, operator, value);
         return buildTestMessageWithLiquid(triggersJson);
     }
 
-    private static OSTestInAppMessage buildTestMessageWithMultipleDisplays(final JSONArray triggerJson, final int limit, final long delay) throws JSONException {
+    private static OSTestInAppMessageInternal buildTestMessageWithMultipleDisplays(final JSONArray triggerJson, final int limit, final long delay) throws JSONException {
         JSONObject json = basicIAMJSONObject(triggerJson);
         json.put("redisplay",  new JSONObject() {{
             put("limit", limit);
             put("delay", delay);//in seconds
         }});
 
-        return new OSTestInAppMessage(json);
+        return new OSTestInAppMessageInternal(json);
     }
 
-    public static OSTestInAppMessage buildTestMessage(final JSONArray triggerJson) throws JSONException {
-        return new OSTestInAppMessage(basicIAMJSONObject(triggerJson));
+    public static OSTestInAppMessageInternal buildTestMessage(final JSONArray triggerJson) throws JSONException {
+        return new OSTestInAppMessageInternal(basicIAMJSONObject(triggerJson));
     }
 
-    public static OSTestInAppMessage buildTestMessageWithEndTime(final OSTriggerKind kind, final String key, final String operator, final Object value, final boolean pastEndTime) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithEndTime(final OSTriggerKind kind, final String key, final String operator, final Object value, final boolean pastEndTime) throws JSONException {
         JSONArray triggerJson = basicTrigger(kind, key, operator, value);
         JSONObject json = basicIAMJSONObject(triggerJson);
         if (pastEndTime) {
@@ -129,15 +128,15 @@ public class InAppMessagingHelpers {
         } else {
             json.put("end_time", "2200-01-01T00:00:00.000Z");
         }
-        return new OSTestInAppMessage(json);
+        return new OSTestInAppMessageInternal(json);
     }
 
-    public static OSTestInAppMessage buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OSTestTrigger>> triggers) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithMultipleTriggers(ArrayList<ArrayList<OSTestTrigger>> triggers) throws JSONException {
         JSONArray ors = buildTriggers(triggers);
         return buildTestMessage(ors);
     }
 
-    public static OSTestInAppMessage buildTestMessageWithMultipleTriggersAndRedisplay(ArrayList<ArrayList<OSTestTrigger>> triggers, int limit, long delay) throws JSONException {
+    public static OSTestInAppMessageInternal buildTestMessageWithMultipleTriggersAndRedisplay(ArrayList<ArrayList<OSTestTrigger>> triggers, int limit, long delay) throws JSONException {
         JSONArray ors = buildTriggers(triggers);
         return buildTestMessageWithMultipleDisplays(ors, limit, delay);
     }

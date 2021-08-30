@@ -105,6 +105,12 @@ class OSTaskController {
         return taskQueueWaitingForInit;
     }
 
+    void shutdownNow() {
+        if (pendingTaskExecutor != null) {
+            pendingTaskExecutor.shutdownNow();
+        }
+    }
+
     private static class PendingTaskRunnable implements Runnable {
         private OSTaskController controller;
         private Runnable innerTask;

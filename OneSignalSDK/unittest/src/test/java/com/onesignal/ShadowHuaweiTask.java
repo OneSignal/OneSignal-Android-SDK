@@ -48,6 +48,7 @@ public class ShadowHuaweiTask {
         result = null;
     }
 
+    // We will likely need to change this behavior when upgrading HMS Location to 5.0.0+
     @Implementation
     public Task addOnSuccessListener(OnSuccessListener var1) {
         successListener = var1;

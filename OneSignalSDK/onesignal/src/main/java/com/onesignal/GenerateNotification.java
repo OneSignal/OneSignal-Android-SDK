@@ -95,10 +95,16 @@ class GenerateNotification {
    }
 
    @WorkerThread
-   static boolean displayNotificationFromJsonPayload(OSNotificationGenerationJob notificationJob) {
+   static boolean displayNotification(OSNotificationGenerationJob notificationJob) {
       setStatics(notificationJob.getContext());
 
       isRunningOnMainThreadCheck();
+
+      return showNotification(notificationJob);
+   }
+
+   static boolean displayIAMPreviewNotification(OSNotificationGenerationJob notificationJob) {
+      setStatics(notificationJob.getContext());
 
       return showNotification(notificationJob);
    }
@@ -121,23 +127,8 @@ class GenerateNotification {
       return currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo());
    }
 
-
-   /**
-    * Notification delete is processed by Broadcast Receiver to avoid creation of activities that can end
-    * on weird UI interaction
-    */
-   private static PendingIntent getNewActionPendingIntent(int requestCode, Intent intent) {
-      return PendingIntent.getActivity(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-   }
-
    private static PendingIntent getNewDismissActionPendingIntent(int requestCode, Intent intent) {
-      return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-   }
-
-   private static Intent getNewBaseIntent(int notificationId) {
-     return new Intent(currentContext, notificationOpenedClass)
-             .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
-             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+      return PendingIntent.getBroadcast(currentContext, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
    }
 
    private static Intent getNewBaseDismissIntent(int notificationId) {
@@ -268,6 +259,11 @@ class GenerateNotification {
       JSONObject fcmJson = notificationJob.getJsonPayload();
       String group = fcmJson.optString("grp", null);
 
+      GenerateNotificationOpenIntent intentGenerator = GenerateNotificationOpenIntentFromPushPayload.INSTANCE.create(
+          currentContext,
+          fcmJson
+      );
+
       ArrayList<StatusBarNotification> grouplessNotifs = new ArrayList<>();
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
          /* Android 7.0 auto groups 4 or more notifications so we find these groupless active
@@ -283,7 +279,13 @@ class GenerateNotification {
       OneSignalNotificationBuilder oneSignalNotificationBuilder = getBaseOneSignalNotificationBuilder(notificationJob);
       NotificationCompat.Builder notifBuilder = oneSignalNotificationBuilder.compatBuilder;
 
-      addNotificationActionButtons(fcmJson, notifBuilder, notificationId, null);
+      addNotificationActionButtons(
+          fcmJson,
+          intentGenerator,
+          notifBuilder,
+          notificationId,
+          null
+      );
       
       try {
          addBackgroundImage(fcmJson, notifBuilder);
@@ -304,17 +306,33 @@ class GenerateNotification {
 
       Notification notification;
       if (group != null) {
-         createGenericPendingIntentsForGroup(notifBuilder, fcmJson, group, notificationId);
+         createGenericPendingIntentsForGroup(
+             notifBuilder,
+             intentGenerator,
+             fcmJson,
+             group,
+             notificationId
+         );
          notification = createSingleNotificationBeforeSummaryBuilder(notificationJob, notifBuilder);
 
          // Create PendingIntents for notifications in a groupless or defined summary
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
-                 group.equals(OneSignalNotificationManager.getGrouplessSummaryKey()))
-            createGrouplessSummaryNotification(notificationJob, grouplessNotifs.size() + 1);
+                 group.equals(OneSignalNotificationManager.getGrouplessSummaryKey())) {
+             createGrouplessSummaryNotification(
+                 notificationJob,
+                 intentGenerator,
+ grouplessNotifs.size() + 1
+             );
+         }
          else
             createSummaryNotification(notificationJob, oneSignalNotificationBuilder);
       } else {
-         notification = createGenericPendingIntentsForNotif(notifBuilder, fcmJson, notificationId);
+         notification = createGenericPendingIntentsForNotif(
+             notifBuilder,
+             intentGenerator,
+             fcmJson,
+             notificationId
+         );
       }
       // NotificationManagerCompat does not auto omit the individual notification on the device when using
       //   stacked notifications on Android 4.2 and older
@@ -332,18 +350,35 @@ class GenerateNotification {
       return true;
    }
 
-   private static Notification createGenericPendingIntentsForNotif(NotificationCompat.Builder notifBuilder, JSONObject gcmBundle, int notificationId) {
+   private static Notification createGenericPendingIntentsForNotif(
+       NotificationCompat.Builder notifBuilder,
+       GenerateNotificationOpenIntent intentGenerator,
+       JSONObject gcmBundle,
+       int notificationId
+   ) {
       Random random = new SecureRandom();
-      PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()));
+      PendingIntent contentIntent = intentGenerator.getNewActionPendingIntent(
+          random.nextInt(),
+          intentGenerator.getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString())
+      );
       notifBuilder.setContentIntent(contentIntent);
       PendingIntent deleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(notificationId));
       notifBuilder.setDeleteIntent(deleteIntent);
       return notifBuilder.build();
    }
 
-   private static void createGenericPendingIntentsForGroup(NotificationCompat.Builder notifBuilder, JSONObject gcmBundle, String group, int notificationId) {
+   private static void createGenericPendingIntentsForGroup(
+       NotificationCompat.Builder notifBuilder,
+       GenerateNotificationOpenIntent intentGenerator,
+       JSONObject gcmBundle,
+       String group,
+       int notificationId
+   ) {
       Random random = new SecureRandom();
-      PendingIntent contentIntent = getNewActionPendingIntent(random.nextInt(), getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group));
+      PendingIntent contentIntent = intentGenerator.getNewActionPendingIntent(
+          random.nextInt(),
+          intentGenerator.getNewBaseIntent(notificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group)
+      );
       notifBuilder.setContentIntent(contentIntent);
       PendingIntent deleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(notificationId).putExtra("grp", group));
       notifBuilder.setDeleteIntent(deleteIntent);
@@ -444,6 +479,10 @@ class GenerateNotification {
    private static void createSummaryNotification(OSNotificationGenerationJob notificationJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notificationJob.isRestoring();
       JSONObject fcmJson = notificationJob.getJsonPayload();
+      GenerateNotificationOpenIntent intentGenerator = GenerateNotificationOpenIntentFromPushPayload.INSTANCE.create(
+           currentContext,
+           fcmJson
+      );
 
       String group = fcmJson.optString("grp", null);
 
@@ -530,7 +569,10 @@ class GenerateNotification {
          createSummaryIdDatabaseEntry(dbHelper, group, summaryNotificationId);
       }
       
-      PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, fcmJson, group));
+      PendingIntent summaryContentIntent = intentGenerator.getNewActionPendingIntent(
+          random.nextInt(),
+          createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group)
+      );
       
       // 2 or more notifications with a group received, group them together as a single notification.
       if (summaryList != null &&
@@ -616,7 +658,13 @@ class GenerateNotification {
          //  extender setup all the settings will carry over.
          //  Note: However their buttons will not carry over as we need to be setup with this new summaryNotificationId.
          summaryBuilder.mActions.clear();
-         addNotificationActionButtons(fcmJson, summaryBuilder, summaryNotificationId, group);
+         addNotificationActionButtons(
+                 fcmJson,
+                 intentGenerator,
+                 summaryBuilder,
+                 summaryNotificationId,
+                 group
+         );
 
          summaryBuilder.setContentIntent(summaryContentIntent)
                        .setDeleteIntent(summaryDeleteIntent)
@@ -640,7 +688,11 @@ class GenerateNotification {
    }
 
    @RequiresApi(api = Build.VERSION_CODES.M)
-   private static void createGrouplessSummaryNotification(OSNotificationGenerationJob notificationJob, int grouplessNotifCount) {
+   private static void createGrouplessSummaryNotification(
+       OSNotificationGenerationJob notificationJob,
+       GenerateNotificationOpenIntent intentGenerator,
+       int grouplessNotifCount
+   ) {
       JSONObject fcmJson = notificationJob.getJsonPayload();
 
       Notification summaryNotification;
@@ -650,7 +702,10 @@ class GenerateNotification {
       String summaryMessage = grouplessNotifCount + " new messages";
       int summaryNotificationId = OneSignalNotificationManager.getGrouplessSummaryId();
 
-      PendingIntent summaryContentIntent = getNewActionPendingIntent(random.nextInt(), createBaseSummaryIntent(summaryNotificationId, fcmJson, group));
+      PendingIntent summaryContentIntent = intentGenerator.getNewActionPendingIntent(
+          random.nextInt(),
+          createBaseSummaryIntent(summaryNotificationId,intentGenerator, fcmJson, group)
+      );
       PendingIntent summaryDeleteIntent = getNewDismissActionPendingIntent(random.nextInt(), getNewBaseDismissIntent(0).putExtra("summary", group));
 
       NotificationCompat.Builder summaryBuilder = getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder;
@@ -690,8 +745,13 @@ class GenerateNotification {
       NotificationManagerCompat.from(currentContext).notify(summaryNotificationId, summaryNotification);
    }
    
-   private static Intent createBaseSummaryIntent(int summaryNotificationId, JSONObject fcmJson, String group) {
-     return getNewBaseIntent(summaryNotificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString()).putExtra("summary", group);
+   private static Intent createBaseSummaryIntent(
+       int summaryNotificationId,
+       GenerateNotificationOpenIntent intentGenerator,
+       JSONObject fcmJson,
+       String group
+   ) {
+     return intentGenerator.getNewBaseIntent(summaryNotificationId).putExtra(BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString()).putExtra("summary", group);
    }
    
    private static void createSummaryIdDatabaseEntry(OneSignalDbHelper dbHelper, String group, int id) {
@@ -926,22 +986,39 @@ class GenerateNotification {
    }
 
    // Android 5.0 accent color to use, only works when AndroidManifest.xml is targetSdkVersion >= 21
-   private static BigInteger getAccentColor(JSONObject fcmJson) {
+   static BigInteger getAccentColor(JSONObject fcmJson) {
       try {
          if (fcmJson.has("bgac"))
             return new BigInteger(fcmJson.optString("bgac", null), 16);
-      } catch (Throwable t) {} // Can throw a parse error parse error.
+      } catch (Throwable t) {} // Can throw a parse error.
 
+      // Try to get "onesignal_notification_accent_color" from resources
+      // This will get the correct color for day and dark modes
       try {
-         String defaultColor = OSUtils.getManifestMeta(currentContext, "com.onesignal.NotificationAccentColor.DEFAULT");
-         if (defaultColor != null)
+         String defaultColor = getResourceString(OneSignal.appContext, "onesignal_notification_accent_color", null);
+         if (defaultColor != null) {
             return new BigInteger(defaultColor, 16);
-      } catch (Throwable t) {} // Can throw a parse error parse error.
+         }
+      } catch (Throwable t) {} // Can throw a parse error.
+
+      // Get accent color from Manifest
+      try {
+         String defaultColor = OSUtils.getManifestMeta(OneSignal.appContext, "com.onesignal.NotificationAccentColor.DEFAULT");
+         if (defaultColor != null) {
+            return new BigInteger(defaultColor, 16);
+         }
+      } catch (Throwable t) {} // Can throw a parse error.
 
       return null;
    }
 
-   private static void addNotificationActionButtons(JSONObject fcmJson, NotificationCompat.Builder mBuilder, int notificationId, String groupSummary) {
+   private static void addNotificationActionButtons(
+       JSONObject fcmJson,
+       GenerateNotificationOpenIntent intentGenerator,
+       NotificationCompat.Builder mBuilder,
+       int notificationId,
+       String groupSummary
+   ) {
       try {
          JSONObject customJson = new JSONObject(fcmJson.optString("custom"));
          
@@ -958,7 +1035,7 @@ class GenerateNotification {
             JSONObject button = buttons.optJSONObject(i);
             JSONObject bundle = new JSONObject(fcmJson.toString());
 
-            Intent buttonIntent = getNewBaseIntent(notificationId);
+            Intent buttonIntent = intentGenerator.getNewBaseIntent(notificationId);
             buttonIntent.setAction("" + i); // Required to keep each action button from replacing extras of each other
             buttonIntent.putExtra("action_button", true);
             bundle.put(BUNDLE_KEY_ACTION_ID, button.optString("id"));
@@ -968,7 +1045,7 @@ class GenerateNotification {
             else if (fcmJson.has("grp"))
                buttonIntent.putExtra("grp", fcmJson.optString("grp"));
 
-            PendingIntent buttonPIntent = getNewActionPendingIntent(notificationId, buttonIntent);
+            PendingIntent buttonPIntent = intentGenerator.getNewActionPendingIntent(notificationId, buttonIntent);
 
             int buttonIcon = 0;
             if (button.has("icon"))

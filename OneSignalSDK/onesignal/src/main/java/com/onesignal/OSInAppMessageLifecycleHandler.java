@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2021 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,27 +27,17 @@
 
 package com.onesignal;
 
-import android.content.Context;
-
-import org.robolectric.annotation.Implements;
-
-@Implements(AdvertisingIdProviderGPS.class)
-public class ShadowAdvertisingIdProviderGPS {
-   
-   private static final String MOCK_ID = "11111111-2222-3333-4444-555555555555";
-
-   public static boolean calledGetIdentifier;
-
-   public static void resetStatics() {
-      calledGetIdentifier = false;
-   }
-   
-   public static String getLastValue() {
-      return MOCK_ID;
-   }
-   
-   public String getIdentifier(Context appContext) {
-      calledGetIdentifier = true;
-      return MOCK_ID;
-   }
+public abstract class OSInAppMessageLifecycleHandler {
+    public void onWillDisplayInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Will Display: " + message.getMessageId());
+    }
+    public void onDidDisplayInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Did Display: " + message.getMessageId());
+    }
+    public void onWillDismissInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Will Dismiss: " + message.getMessageId());
+    }
+    public void onDidDismissInAppMessage(OSInAppMessage message) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE, "OSInAppMessageLifecycleHandler: IAM Did Dismiss: " + message.getMessageId());
+    }
 }

@@ -30,6 +30,8 @@ package com.onesignal;
 import android.content.Context;
 
 import androidx.annotation.Nullable;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import androidx.work.ListenableWorker;
 
 import org.json.JSONObject;
 
@@ -40,6 +42,7 @@ public class OSNotificationController {
    // The extension service app AndroidManifest.xml meta data tag key name
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension";
 
+   private final CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter;
    private final OSNotificationGenerationJob notificationJob;
    private boolean restoring;
    private boolean fromBackgroundLogic;
@@ -48,9 +51,12 @@ public class OSNotificationController {
       this.restoring = restoring;
       this.fromBackgroundLogic = fromBackgroundLogic;
       this.notificationJob = notificationJob;
+      this.callbackCompleter = notificationJob.getCallbackCompleter();
    }
 
-   OSNotificationController(Context context, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
+   OSNotificationController(CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter,
+                            Context context, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
+      this.callbackCompleter = callbackCompleter;
       this.restoring = restoring;
       this.fromBackgroundLogic = fromBackgroundLogic;
 
@@ -64,7 +70,7 @@ public class OSNotificationController {
     * @see OSNotificationGenerationJob
     */
    private OSNotificationGenerationJob createNotificationJobFromCurrent(Context context, JSONObject jsonPayload, Long timestamp) {
-      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(callbackCompleter, context);
       notificationJob.setJsonPayload(jsonPayload);
       notificationJob.setShownTimeStamp(timestamp);
       notificationJob.setRestoring(restoring);
