@@ -7,7 +7,7 @@
 
 ---
 
-[OneSignal](https://onesignal.com/) is a free push notification service for mobile apps. This plugin makes it easy to integrate your native Android or Amazon app with OneSignal.
+[OneSignal](https://onesignal.com/) is a free email, sms, push notification, and in-app message service for mobile apps. This plugin makes it easy to integrate your native Android or Amazon app with OneSignal.
 
 <p align="center"><img src="https://app.onesignal.com/images/android_notification_image.gif" width="400" alt="Android Notification"></p>
 
