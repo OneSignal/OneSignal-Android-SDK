@@ -83,7 +83,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     private String userTagsString = null;
 
     @Nullable
-    private String pendingHTMLContent = null;
+    private OSInAppMessageContent pendingMessageContent = null;
 
     private boolean waitForTags = false;
 
@@ -775,16 +775,23 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                     if (tags != null) {
                         userTagsString = tags.toString();
                     }
-                    if (pendingHTMLContent != null) {
+                    if (pendingMessageContent != null) {
                         if (!isPreview) {
                             OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
                         }
-                        WebViewManager.showHTMLString(message, taggedHTMLString(pendingHTMLContent));
-                        pendingHTMLContent = null;
+                        pendingMessageContent.setContentHtml(taggedHTMLString(pendingMessageContent.getContentHtml()));
+                        WebViewManager.showMessageContent(message, pendingMessageContent);
+                        pendingMessageContent = null;
                     }
                 }
             });
         }
+    }
+
+    private OSInAppMessageContent parseMessageContentData(JSONObject data, OSInAppMessageInternal message) {
+        OSInAppMessageContent content = new OSInAppMessageContent(data);
+        message.setDisplayDuration(content.getDisplayDuration());
+        return content;
     }
 
     private void displayMessage(@NonNull final OSInAppMessageInternal message) {
@@ -803,17 +810,19 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                     public void onSuccess(String response) {
                         try {
                             JSONObject jsonResponse = new JSONObject(response);
-                            String htmlStr = jsonResponse.getString("html");
-
-                            double displayDuration = jsonResponse.optDouble("display_duration");
-                            message.setDisplayDuration(displayDuration);
+                            OSInAppMessageContent content =  parseMessageContentData(jsonResponse, message);
+                            if (content.getContentHtml() == null) {
+                                logger.debug("displayMessage:OnSuccess: No HTML retrieved from loadMessageContent");
+                                return;
+                            }
                             if (waitForTags) {
-                                pendingHTMLContent = htmlStr;
+                                pendingMessageContent = content;
                                 return;
                             }
                             OneSignal.getSessionManager().onInAppMessageReceived(message.messageId);
                             onMessageWillDisplay(message);
-                            WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
+                            content.setContentHtml(taggedHTMLString(content.getContentHtml()));
+                            WebViewManager.showMessageContent(message, content);
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -858,16 +867,18 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             public void onSuccess(String response) {
                 try {
                     JSONObject jsonResponse = new JSONObject(response);
-                    String htmlStr = jsonResponse.getString("html");
-
-                    double displayDuration = jsonResponse.optDouble("display_duration");
-                    message.setDisplayDuration(displayDuration);
+                    OSInAppMessageContent content =  parseMessageContentData(jsonResponse, message);
+                    if (content.getContentHtml() == null) {
+                        logger.debug("displayPreviewMessage:OnSuccess: No HTML retrieved from loadMessageContent");
+                        return;
+                    }
                     if (waitForTags) {
-                        pendingHTMLContent = htmlStr;
+                        pendingMessageContent = content;
                         return;
                     }
                     onMessageWillDisplay(message);
-                    WebViewManager.showHTMLString(message, taggedHTMLString(htmlStr));
+                    content.setContentHtml(taggedHTMLString(content.getContentHtml()));
+                    WebViewManager.showMessageContent(message, content);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }

@@ -19,7 +19,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 
@@ -55,7 +54,6 @@ class InAppMessageView {
 
     private static final int ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600;
     private static final int ACTIVITY_INIT_DELAY = 200;
-    private static final int MARGIN_PX_SIZE = dpToPx(24);
     private static final int DRAG_THRESHOLD_PX_SIZE = dpToPx(4);
     private PopupWindow popupWindow;
 
@@ -69,7 +67,11 @@ class InAppMessageView {
     private final Handler handler = new Handler();
     private int pageWidth;
     private int pageHeight;
-    private double dismissDuration;
+    private int marginPxSizeLeft = dpToPx(24);
+    private int marginPxSizeRight = dpToPx(24);
+    private int marginPxSizeTop = dpToPx(24);
+    private int marginPxSizeBottom = dpToPx(24);
+    private double displayDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
     private boolean isDragging = false;
@@ -81,14 +83,27 @@ class InAppMessageView {
     private InAppMessageViewListener messageController;
     private Runnable scheduleDismissRunnable;
 
-    InAppMessageView(@NonNull WebView webView, @NonNull WebViewManager.Position displayLocation, int pageHeight, double dismissDuration, boolean disableDragDismiss) {
+    InAppMessageView(@NonNull WebView webView, @NonNull OSInAppMessageContent content, boolean disableDragDismiss) {
         this.webView = webView;
-        this.displayLocation = displayLocation;
-        this.pageHeight = pageHeight;
+        this.displayLocation = content.getDisplayLocation();
+        this.pageHeight = content.getPageHeight();
         this.pageWidth = ViewGroup.LayoutParams.MATCH_PARENT;
-        this.dismissDuration = Double.isNaN(dismissDuration) ? 0 : dismissDuration;
+        this.displayDuration = content.getDisplayDuration() == null ? 0 : content.getDisplayDuration();
         this.hasBackground = !displayLocation.isBanner();
         this.disableDragDismiss = disableDragDismiss;
+        setMarginsFromContent(content);
+    }
+
+    /**
+     * For now we only support default margin or no margin.
+     * Any non-zero value will be treated as default margin
+     * @param content in app message content and style
+     */
+    private void setMarginsFromContent(OSInAppMessageContent content) {
+        this.marginPxSizeTop = content.getUseHeightMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeBottom = content.getUseHeightMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeLeft = content.getUseWidthMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeRight = content.getUseWidthMargin() ? dpToPx(24) : 0;
     }
 
     void setWebView(WebView webView) {
@@ -114,7 +129,7 @@ class InAppMessageView {
             finishAfterDelay(null);
         }
     }
-
+    
     /**
      * This will fired when the device is rotated for example with a new provided height for the WebView
      * Called to shrink or grow the WebView when it receives a JS resize event with a new height.
@@ -160,12 +175,12 @@ class InAppMessageView {
         );
         webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
-        LinearLayout.LayoutParams linearLayoutParams = hasBackground ? createParentLinearLayoutParams() : null;
+        RelativeLayout.LayoutParams relativeLayoutParams = hasBackground ? createParentRelativeLayoutParams() : null;
 
         showDraggableView(
                 displayLocation,
                 webViewLayoutParams,
-                linearLayoutParams,
+                relativeLayoutParams,
                 createDraggableLayoutParams(pageHeight, displayLocation, disableDragDismiss)
         );
     }
@@ -174,42 +189,43 @@ class InAppMessageView {
         return OSViewUtils.getWindowHeight(currentActivity);
     }
 
-    private LinearLayout.LayoutParams createParentLinearLayoutParams() {
-        LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(pageWidth, LinearLayout.LayoutParams.MATCH_PARENT);
-
+    private RelativeLayout.LayoutParams createParentRelativeLayoutParams() {
+        RelativeLayout.LayoutParams relativeLayoutParams = new RelativeLayout.LayoutParams(pageWidth, RelativeLayout.LayoutParams.MATCH_PARENT);
         switch (displayLocation) {
             case TOP_BANNER:
-                linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+                relativeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
                 break;
             case BOTTOM_BANNER:
-                linearLayoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                relativeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
                 break;
             case CENTER_MODAL:
             case FULL_SCREEN:
-                linearLayoutParams.gravity = Gravity.CENTER;
+                relativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         }
 
-        return linearLayoutParams;
+        return relativeLayoutParams;
     }
 
     private DraggableRelativeLayout.Params createDraggableLayoutParams(int pageHeight, WebViewManager.Position displayLocation, boolean disableDragging) {
         DraggableRelativeLayout.Params draggableParams = new DraggableRelativeLayout.Params();
-        draggableParams.maxXPos = MARGIN_PX_SIZE;
-        draggableParams.maxYPos = MARGIN_PX_SIZE;
+        draggableParams.maxXPos = marginPxSizeRight;
+        draggableParams.maxYPos = marginPxSizeTop;
         draggableParams.draggingDisabled = disableDragging;
         draggableParams.messageHeight = pageHeight;
         draggableParams.height = getDisplayYSize();
 
         switch (displayLocation) {
             case TOP_BANNER:
-                draggableParams.dragThresholdY = MARGIN_PX_SIZE - DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.dragThresholdY = marginPxSizeTop - DRAG_THRESHOLD_PX_SIZE;
                 break;
             case BOTTOM_BANNER:
                 draggableParams.posY = getDisplayYSize() - pageHeight;
-                draggableParams.dragThresholdY = MARGIN_PX_SIZE + DRAG_THRESHOLD_PX_SIZE;
+                draggableParams.dragThresholdY = marginPxSizeBottom + DRAG_THRESHOLD_PX_SIZE;
                 break;
             case FULL_SCREEN:
-                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (MARGIN_PX_SIZE * 2);
+                draggableParams.messageHeight = pageHeight = getDisplayYSize() - (marginPxSizeBottom + marginPxSizeTop);
                 // fall through for FULL_SCREEN since it shares similar params to CENTER_MODAL
             case CENTER_MODAL:
                 int y = (getDisplayYSize() / 2) - (pageHeight / 2);
@@ -228,7 +244,7 @@ class InAppMessageView {
 
     private void showDraggableView(final WebViewManager.Position displayLocation,
                                    final RelativeLayout.LayoutParams relativeLayoutParams,
-                                   final LinearLayout.LayoutParams linearLayoutParams,
+                                   final RelativeLayout.LayoutParams draggableRelativeLayoutParams,
                                    final DraggableRelativeLayout.Params webViewLayoutParams) {
         OSUtils.runOnMainUIThread(new Runnable() {
             @Override
@@ -239,8 +255,8 @@ class InAppMessageView {
                 webView.setLayoutParams(relativeLayoutParams);
 
                 Context context = currentActivity.getApplicationContext();
-                setUpDraggableLayout(context, linearLayoutParams, webViewLayoutParams);
-                setUpParentLinearLayout(context);
+                setUpDraggableLayout(context, draggableRelativeLayoutParams, webViewLayoutParams);
+                setUpParentRelativeLayout(context);
                 createPopupWindow(parentRelativeLayout);
 
                 if (messageController != null) {
@@ -275,6 +291,10 @@ class InAppMessageView {
                 case BOTTOM_BANNER:
                     gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
                     break;
+                case CENTER_MODAL:
+                case FULL_SCREEN:
+                    gravity = Gravity.CENTER_HORIZONTAL;
+                    break;
             }
         }
 
@@ -293,7 +313,7 @@ class InAppMessageView {
         );
     }
 
-    private void setUpParentLinearLayout(Context context) {
+    private void setUpParentRelativeLayout(Context context) {
         parentRelativeLayout = new RelativeLayout(context);
         parentRelativeLayout.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         parentRelativeLayout.setClipChildren(false);
@@ -302,11 +322,11 @@ class InAppMessageView {
     }
 
     private void setUpDraggableLayout(final Context context,
-                                      LinearLayout.LayoutParams linearLayoutParams,
+                                      RelativeLayout.LayoutParams relativeLayoutParams,
                                       DraggableRelativeLayout.Params draggableParams) {
         draggableRelativeLayout = new DraggableRelativeLayout(context);
-        if (linearLayoutParams != null)
-            draggableRelativeLayout.setLayoutParams(linearLayoutParams);
+        if (relativeLayoutParams != null)
+            draggableRelativeLayout.setLayoutParams(relativeLayoutParams);
         draggableRelativeLayout.setParams(draggableParams);
         draggableRelativeLayout.setListener(new DraggableRelativeLayout.DraggableListener() {
             @Override
@@ -335,7 +355,7 @@ class InAppMessageView {
         cardView.setTag(IN_APP_MESSAGE_CARD_VIEW_TAG);
         cardView.addView(webView);
 
-        draggableRelativeLayout.setPadding(MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE, MARGIN_PX_SIZE);
+        draggableRelativeLayout.setPadding(marginPxSizeLeft, marginPxSizeTop, marginPxSizeRight, marginPxSizeBottom);
         draggableRelativeLayout.setClipChildren(false);
         draggableRelativeLayout.setClipToPadding(false);
         draggableRelativeLayout.addView(cardView);
@@ -385,7 +405,7 @@ class InAppMessageView {
      * Schedule dismiss behavior, if IAM has a dismiss after X number of seconds timer.
      */
     private void startDismissTimerIfNeeded() {
-        if (dismissDuration <= 0)
+        if (displayDuration <= 0)
             return;
 
         if (scheduleDismissRunnable != null)
@@ -405,7 +425,7 @@ class InAppMessageView {
                 }
             }
         };
-        handler.postDelayed(scheduleDismissRunnable, (long) dismissDuration * 1_000);
+        handler.postDelayed(scheduleDismissRunnable, (long) displayDuration * 1_000);
     }
 
     // Do not add view until activity is ready
@@ -543,7 +563,7 @@ class InAppMessageView {
         // Animate the message view from above the screen downward to the top
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
-                -height - MARGIN_PX_SIZE,
+                -height - marginPxSizeTop,
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
@@ -555,7 +575,7 @@ class InAppMessageView {
         // Animate the message view from under the screen upward to the bottom
         OneSignalAnimate.animateViewByTranslation(
                 messageView,
-                height + MARGIN_PX_SIZE,
+                height + marginPxSizeBottom,
                 0f,
                 IN_APP_BANNER_ANIMATION_DURATION_MS,
                 new OneSignalBounceInterpolator(0.1, 8.0),
@@ -618,7 +638,7 @@ class InAppMessageView {
                 "currentActivity=" + currentActivity +
                 ", pageWidth=" + pageWidth +
                 ", pageHeight=" + pageHeight +
-                ", dismissDuration=" + dismissDuration +
+                ", displayDuration=" + displayDuration +
                 ", hasBackground=" + hasBackground +
                 ", shouldDismissWhenActive=" + shouldDismissWhenActive +
                 ", isDragging=" + isDragging +
