@@ -2,6 +2,8 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 
 import androidx.test.core.app.ApplicationProvider;
 
@@ -1470,6 +1472,250 @@ public class SynchronizerIntegrationTests {
         assertEquals(mockSMSHash, removeIdSMSRequest.payload.getString("sms_auth_hash"));
     }
 
+    // The external_user_id_auth_hash should be removed from the user state
+    @Test
+    public void shouldPopAuthHash_afterRemoveExternalUserIdFromPushWithAuthHash() throws Exception {
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // Check that external_user_id_auth_hash is in syncValues
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        assertEquals(testExternalId, syncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, syncValues.getString("external_user_id_auth_hash"));
+
+        // Call to remove external user ID
+        OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        JSONObject expectedExternalUserIdResponse = new JSONObject(
+                "{" +
+                        "   \"push\" : {" +
+                        "      \"success\" : true" +
+                        "   }" +
+                        "}"
+        );
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+        assertEquals(3, ShadowOneSignalRestClient.networkCallCount);
+
+        ShadowOneSignalRestClient.Request removeIdRequest = ShadowOneSignalRestClient.requests.get(2);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, removeIdRequest.method);
+        assertEquals(removeIdRequest.payload.getString("external_user_id"), "");
+        assertEquals(mockExternalIdHash, removeIdRequest.payload.getString("external_user_id_auth_hash"));
+
+        // Check that external_user_id_auth_hash is no longer in syncValues and has "" as external_user_id
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences newPrefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        syncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        assertFalse(syncValues.has("external_user_id_auth_hash"));
+        assertEquals("", syncValues.getString("external_user_id"));
+    }
+
+    @Test
+    public void shouldPopAuthHash_afterRemoveExternalUserIdFromPushAndEmailWithAuthHash() throws Exception {
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+        String testEmail = "test@test.com";
+        String mockEmailHash = new String(new char[64]).replace('\0', '1');
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Attempt to set email and email hash
+        OneSignal.setEmail(testEmail, mockEmailHash, getEmailUpdateHandler());
+        threadAndTaskWait();
+
+        // 3. Attempt to set external Id with auth hash
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+        threadAndTaskWait();
+
+        // 4. Check the user state for push and email
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        JSONObject pushSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        JSONObject emailSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_emailCURRENT_STATE", null));
+
+        assertEquals(testExternalId, pushSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, pushSyncValues.getString("external_user_id_auth_hash"));
+
+        assertEquals(testExternalId, emailSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, emailSyncValues.getString("external_user_id_auth_hash"));
+
+        // 5. Call to remove external user ID
+        OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        JSONObject expectedExternalUserIdResponse = new JSONObject(
+                "{" +
+                        "   \"push\" : {" +
+                        "      \"success\" : true" +
+                        "   }" + ", " +
+                        "   \"email\" : {" +
+                        "      \"success\" : true" +
+                        "   }" +
+                        "}"
+        );
+
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+        assertTrue(didEmailUpdateSucceed);
+        assertNull(lastEmailUpdateFailure);
+
+        // 6. Check that external_user_id_auth_hash is no longer in syncValues and has "" as external_user_id
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences newPrefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        pushSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        emailSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_emailCURRENT_STATE", null));
+
+        assertFalse(pushSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", pushSyncValues.getString("external_user_id"));
+
+        assertFalse(emailSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", emailSyncValues.getString("external_user_id"));
+    }
+
+    @Test
+    public void shouldPopAuthHash_afterRemoveExternalUserIdFromPushAndSMSWithAuthHash() throws Exception {
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+        String mockSMSHash = new String(new char[64]).replace('\0', '1');
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Attempt to set SMS and SMS hash
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSHash, null);
+        threadAndTaskWait();
+
+        // 3. Attempt to set external Id with auth hash
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+        threadAndTaskWait();
+
+        // 4. Check the user state for sms and email
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        JSONObject pushSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        JSONObject smsSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_smsCURRENT_STATE", null));
+
+        assertEquals(testExternalId, pushSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, pushSyncValues.getString("external_user_id_auth_hash"));
+
+        assertEquals(testExternalId, smsSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, smsSyncValues.getString("external_user_id_auth_hash"));
+
+        // 5. Call to remove external user ID
+        OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        JSONObject expectedExternalUserIdResponse = new JSONObject(
+                "{" +
+                        "   \"push\" : {" +
+                        "      \"success\" : true" +
+                        "   }" + ", " +
+                        "   \"sms\" : {" +
+                        "      \"success\" : true" +
+                        "   }" +
+                        "}"
+        );
+
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+        // 6. Check that external_user_id_auth_hash is no longer in syncValues and has "" as external_user_id
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences newPrefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        pushSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        smsSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_smsCURRENT_STATE", null));
+
+        assertFalse(pushSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", pushSyncValues.getString("external_user_id"));
+
+        assertFalse(smsSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", smsSyncValues.getString("external_user_id"));
+    }
+
+    @Test
+    public void shouldPopAuthHash_afterRemoveExternalUserIdFromPushAndEmailAndSMSWithAuthHash() throws Exception {
+        String testExternalId = "test_ext_id";
+        String mockExternalIdHash = new String(new char[64]).replace('\0', '0');
+        String mockEmailHash = new String(new char[64]).replace('\0', '1');
+        String mockSMSHash = new String(new char[64]).replace('\0', '2');
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Attempt to set SMS and SMS hash
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, mockSMSHash, null);
+        threadAndTaskWait();
+
+        // 3. Attempt to set email and email hash
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS, mockEmailHash, null);
+        threadAndTaskWait();
+
+        // 4. Attempt to set external Id with auth hash
+        OneSignal.setExternalUserId(testExternalId, mockExternalIdHash, null);
+        threadAndTaskWait();
+
+        // 5. Check the user state for sms and email and push
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        JSONObject pushSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        JSONObject smsSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_smsCURRENT_STATE", null));
+        JSONObject emailSyncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_emailCURRENT_STATE", null));
+
+        assertEquals(testExternalId, pushSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, pushSyncValues.getString("external_user_id_auth_hash"));
+
+        assertEquals(testExternalId, smsSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, smsSyncValues.getString("external_user_id_auth_hash"));
+
+        assertEquals(testExternalId, emailSyncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash, emailSyncValues.getString("external_user_id_auth_hash"));
+
+        // 6. Call to remove external user ID
+        OneSignal.removeExternalUserId(getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        JSONObject expectedExternalUserIdResponse = new JSONObject(
+                "{" +
+                        "   \"push\" : {" +
+                        "      \"success\" : true" +
+                        "   }," +
+                        "   \"email\" : {" +
+                        "      \"success\" : true" +
+                        "   }," +
+                        "   \"sms\" : {" +
+                        "      \"success\" : true" +
+                        "   }" +
+                        "}"
+        );
+
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+        // 7. Check that external_user_id_auth_hash is no longer in syncValues and has "" as external_user_id
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences newPrefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        pushSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        smsSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_smsCURRENT_STATE", null));
+        emailSyncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_emailCURRENT_STATE", null));
+
+        assertFalse(pushSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", pushSyncValues.getString("external_user_id"));
+
+        assertFalse(smsSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", smsSyncValues.getString("external_user_id"));
+
+        assertFalse(emailSyncValues.has("external_user_id_auth_hash"));
+        assertEquals("", emailSyncValues.getString("external_user_id"));
+    }
+
     @Test
     public void doesNotSendSameExternalId() throws Exception {
         String testExternalId = "test_ext_id";
@@ -1640,6 +1886,64 @@ public class SynchronizerIntegrationTests {
 
         // 6. Make sure lastExternalUserIdResponse is equal to the expected response
         assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+    }
+
+    @Test
+    public void sendDifferentExternalUserId_withAuthHash_withCompletionHandler() throws Exception {
+        String testExternalId1 = "test_ext_id_1";
+        String mockExternalIdHash1 = new String(new char[64]).replace('\0', '0');
+
+        // 1. Init OneSignal
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 2. Attempt to set external user id and auth hash with callback
+        OneSignal.setExternalUserId(testExternalId1, mockExternalIdHash1, getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        // 3. Make sure lastExternalUserIdResponse is equal to the expected response
+        JSONObject expectedExternalUserIdResponse = new JSONObject(
+                "{" +
+                        "   \"push\" : {" +
+                        "      \"success\" : true" +
+                        "   }" +
+                        "}"
+        );
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+        // 4. Check the external user id and auth hash values in syncValues
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences prefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        JSONObject syncValues = new JSONObject(prefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        assertEquals(testExternalId1, syncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash1, syncValues.getString("external_user_id_auth_hash"));
+
+        // 5. Change test external user id and auth hash to send
+        String testExternalId2 = "test_ext_id_2";
+        String mockExternalIdHash2 = new String(new char[64]).replace('\0', '1');
+
+        // 6. Attempt to set same another external user id and auth hash with callback
+        OneSignal.setExternalUserId(testExternalId2, mockExternalIdHash2, getExternalUserIdUpdateCompletionHandler());
+        threadAndTaskWait();
+
+        // 7. Make sure lastExternalUserIdResponse is equal to the expected response
+        assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+
+        // 8. Check that the correct external user id and auth hash values were sent in the two requests
+        ShadowOneSignalRestClient.Request externalIdRequest1 = ShadowOneSignalRestClient.requests.get(2);
+        assertEquals(testExternalId1, externalIdRequest1.payload.getString("external_user_id"));
+        assertEquals(mockExternalIdHash1, externalIdRequest1.payload.getString("external_user_id_auth_hash"));
+
+        ShadowOneSignalRestClient.Request externalIdRequest2 = ShadowOneSignalRestClient.requests.get(3);
+        assertEquals(testExternalId2, externalIdRequest2.payload.getString("external_user_id"));
+        assertEquals(mockExternalIdHash2, externalIdRequest2.payload.getString("external_user_id_auth_hash"));
+
+        // 9. Check the external user id and auth hash values in syncValues
+        TestHelpers.flushBufferedSharedPrefs();
+        final SharedPreferences newPrefs = blankActivity.getSharedPreferences(OneSignal.class.getSimpleName(), Context.MODE_PRIVATE);
+        syncValues = new JSONObject(newPrefs.getString("ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE", null));
+        assertEquals(testExternalId2, syncValues.getString("external_user_id"));
+        assertEquals(mockExternalIdHash2, syncValues.getString("external_user_id_auth_hash"));
     }
 
     @Test
