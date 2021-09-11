@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import android.os.Bundle;
+
 import com.huawei.hms.push.HmsMessageService;
 import com.huawei.hms.push.RemoteMessage;
 
@@ -20,15 +22,18 @@ import com.huawei.hms.push.RemoteMessage;
  */
 public class HmsMessageServiceOneSignal extends HmsMessageService {
 
+
     /**
      * When an app calls the getToken method to apply for a token from the server,
      * if the server does not return the token during current method calling, the server can return the token through this method later.
      * This method callback must be completed in 10 seconds. Otherwise, you need to start a new Job for callback processing.
+     *
      * @param token token
+     * @param bundle bundle
      */
     @Override
-    public void onNewToken(String token) {
-        OneSignalHmsEventBridge.onNewToken(this, token);
+    public void onNewToken(String token, Bundle bundle) {
+        OneSignalHmsEventBridge.onNewToken(this, token, bundle);
     }
 
     /**

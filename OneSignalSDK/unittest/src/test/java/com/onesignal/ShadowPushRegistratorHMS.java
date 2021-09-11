@@ -23,7 +23,7 @@ public class ShadowPushRegistratorHMS {
         if (backgroundSuccessful) {
             // prepare required since doTimeOutWait will be run from a new background thread.
             Looper.prepare();
-            new HmsMessageServiceOneSignal().onNewToken(ShadowHmsInstanceId.DEFAULT_MOCK_HMS_TOKEN_VALUE);
+            new HmsMessageServiceOneSignal().onNewToken(ShadowHmsInstanceId.DEFAULT_MOCK_HMS_TOKEN_VALUE, null);
         }
     }
 }
