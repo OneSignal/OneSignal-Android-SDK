@@ -1,5 +1,7 @@
 package com.onesignal.sdktest.notification;
 
+import android.os.Bundle;
+
 import com.huawei.hms.push.HmsMessageService;
 import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.OneSignal;
@@ -7,19 +9,21 @@ import com.onesignal.OneSignalHmsEventBridge;
 
 public class HmsMessageServiceAppLevel extends HmsMessageService {
 
+
     /**
      * When an app calls the getToken method to apply for a token from the server,
      * if the server does not return the token during current method calling, the server can return the token through this method later.
      * This method callback must be completed in 10 seconds. Otherwise, you need to start a new Job for callback processing.
      *
      * @param token token
+     * @param bundle bundle
      */
     @Override
-    public void onNewToken(String token) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onNewToken refresh token:" + token);
+    public void onNewToken(String token, Bundle bundle) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onNewToken refresh token:" + token + " bundle: " + bundle);
 
         // Forward event on to OneSignal SDK
-        OneSignalHmsEventBridge.onNewToken(this, token);
+        OneSignalHmsEventBridge.onNewToken(this, token, bundle);
     }
 
     /**

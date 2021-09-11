@@ -75,7 +75,7 @@ dependencies {
     // Test local OneSignal SDK
     gmsImplementation(project(':onesignal'))
 
-    huaweiImplementation 'com.huawei.hms:push:5.0.0.300'
+    huaweiImplementation 'com.huawei.hms:push:5.3.0.304'
     huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
     // Omit Google / Firebase libraries for Huawei builds.
     huaweiImplementation(project(':onesignal')) {

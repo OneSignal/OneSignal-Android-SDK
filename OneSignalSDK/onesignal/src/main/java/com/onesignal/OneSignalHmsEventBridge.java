@@ -1,8 +1,10 @@
 package com.onesignal;
 
 import android.content.Context;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.huawei.hms.push.RemoteMessage;
 
@@ -16,9 +18,14 @@ import com.huawei.hms.push.RemoteMessage;
  */
 public class OneSignalHmsEventBridge {
 
-    public static void onNewToken(@NonNull Context context, @NonNull String token) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "HmsMessageServiceOneSignal.onNewToken - HMS token: " + token);
+    public static void onNewToken(@NonNull Context context, @NonNull String token, @Nullable Bundle bundle) {
+        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "HmsMessageServiceOneSignal.onNewToken - HMS token: " + token + " Bundle: " + bundle);
         PushRegistratorHMS.fireCallback(token);
+    }
+
+    @Deprecated
+    public static void onNewToken(@NonNull Context context, @NonNull String token) {
+        onNewToken(context, token, null);
     }
 
     public static void onMessageReceived(@NonNull Context context, @NonNull RemoteMessage message) {
