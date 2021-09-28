@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static com.onesignal.UserStateSynchronizer.APP_ID;
 import static com.onesignal.UserStateSynchronizer.EMAIL_AUTH_HASH_KEY;
+import static com.onesignal.UserStateSynchronizer.EXTERNAL_USER_ID;
 import static com.onesignal.UserStateSynchronizer.EXTERNAL_USER_ID_AUTH_HASH;
 import static com.onesignal.UserStateSynchronizer.SMS_AUTH_HASH_KEY;
 
@@ -251,8 +252,9 @@ abstract class UserState {
                 sendJson.put(EMAIL_AUTH_HASH_KEY, syncValues.optString(EMAIL_AUTH_HASH_KEY));
             if (syncValues.has(SMS_AUTH_HASH_KEY))
                 sendJson.put(SMS_AUTH_HASH_KEY, syncValues.optString(SMS_AUTH_HASH_KEY));
-            if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH))
+            if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH) && !sendJson.has(EXTERNAL_USER_ID_AUTH_HASH)) {
                 sendJson.put(EXTERNAL_USER_ID_AUTH_HASH, syncValues.optString(EXTERNAL_USER_ID_AUTH_HASH));
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -317,6 +319,18 @@ abstract class UserState {
 
     void persistState() {
         synchronized(LOCK) {
+            // pop the EXTERNAL_USER_ID_AUTH_HASH if in process of removing external user ID
+            // external_user_id is either "" or not present
+            try {
+                if (syncValues.has(EXTERNAL_USER_ID_AUTH_HASH) &&
+                        ((syncValues.has(EXTERNAL_USER_ID) && syncValues.get(EXTERNAL_USER_ID).toString() == "") || !syncValues.has(EXTERNAL_USER_ID))) {
+                    syncValues.remove(EXTERNAL_USER_ID_AUTH_HASH);
+                    // the auth_hash is popped above but external user id may still remain as ""
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
                     OneSignalPrefs.PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ + persistKey, syncValues.toString());
             OneSignalPrefs.saveString(OneSignalPrefs.PREFS_ONESIGNAL,
