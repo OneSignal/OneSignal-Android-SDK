@@ -204,6 +204,8 @@ class OneSignalPrefs {
                             editor.putLong(key, (Long)value);
                         else if (value instanceof Set)
                             editor.putStringSet(key, (Set<String>)value);
+                        else if (value == null)
+                            editor.remove(key);
                     }
                     prefHash.clear();
                 }
