@@ -344,13 +344,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             messageView.removeAllViews();
     }
 
-    @Override
-    void lostFocus() {
-        OneSignal.getInAppMessageController().messageWasDismissedByBackPress(message);
-        removeActivityListener();
-        setMessageView(null);
-    }
-
     private void showMessageView(@Nullable Integer newHeight) {
         synchronized (messageViewSyncLock) {
             if (messageView == null) {

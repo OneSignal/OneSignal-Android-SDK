@@ -276,9 +276,6 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         public void run() {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler running AppFocusRunnable");
             backgrounded = true;
-            for (Map.Entry<String, ActivityAvailableListener> entry : sActivityAvailableListeners.entrySet()) {
-                entry.getValue().lostFocus();
-            }
             OneSignal.onAppLostFocus();
             completed = true;
         }

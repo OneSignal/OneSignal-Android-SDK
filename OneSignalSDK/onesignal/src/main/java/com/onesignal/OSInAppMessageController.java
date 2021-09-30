@@ -688,12 +688,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         dismissCurrentMessage(message);
     }
 
-    void messageWasDismissedByBackPress(@NonNull OSInAppMessageInternal message) {
-        logger.debug("In app message OSInAppMessageController messageWasDismissed by back press: " + message.toString());
-        // IAM was not dismissed by user, will be redisplay again until user dismiss it
-        dismissCurrentMessage(message);
-    }
-
     private boolean shouldWaitForPromptsBeforeDismiss() {
         return currentPrompt != null;
     }
