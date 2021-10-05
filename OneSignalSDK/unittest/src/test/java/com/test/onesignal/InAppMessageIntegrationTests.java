@@ -605,14 +605,14 @@ public class InAppMessageIntegrationTests {
     }
 
     @Test
-    public void doNotReshowInAppUntilTriggerIfAppBackPressed() throws Exception {
+    public void testReshowInAppMessageIfAppBackgrounded() throws Exception {
         // 1. Start app
         initializeSdkWithMultiplePendingMessages();
         // 2. Trigger showing In App and dismiss it
         OneSignal.addTrigger("test_2", 2);
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
-        // 3. Emulate back pressing
+        // 3. Emulate backgrounding app
         pauseActivity(blankActivityController);
         blankActivityController.destroy();
         threadAndTaskWait();
@@ -621,7 +621,7 @@ public class InAppMessageIntegrationTests {
         OneSignalInit();
         threadAndTaskWait();
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
-        assertFalse(OneSignalPackagePrivateHelper.isInAppMessageShowing());
+        assertTrue(OneSignalPackagePrivateHelper.isInAppMessageShowing());
     }
 
     @Test
