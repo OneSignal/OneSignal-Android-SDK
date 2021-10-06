@@ -1015,11 +1015,21 @@ public class OneSignal {
          mPushRegistrator = new PushRegistratorADM();
       else if (OSUtils.isAndroidDeviceType()) {
          if (OSUtils.hasFCMLibrary())
-            mPushRegistrator = new PushRegistratorFCM();
+            mPushRegistrator = getPushRegistratorFCM();
       } else
          mPushRegistrator = new PushRegistratorHMS();
 
       return mPushRegistrator;
+   }
+
+   @NonNull
+   static private PushRegistratorFCM getPushRegistratorFCM() {
+      OneSignalRemoteParams.FCMParams fcmRemoteParams = remoteParamController.getRemoteParams().fcmParams;
+      PushRegistratorFCM.Params fcmParams = null;
+      if (fcmRemoteParams != null) {
+         fcmParams = new PushRegistratorFCM.Params(fcmRemoteParams.projectId, fcmRemoteParams.appId, fcmRemoteParams.apiKey);
+      }
+      return new PushRegistratorFCM(appContext, fcmParams);
    }
 
    private static void registerForPushToken() {
