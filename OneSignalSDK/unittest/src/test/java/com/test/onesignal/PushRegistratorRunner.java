@@ -29,12 +29,19 @@ package com.test.onesignal;
 
 import android.app.Activity;
 
+import androidx.annotation.NonNull;
+
+import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.PushRegistratorFCM;
 import com.onesignal.PushRegistrator;
-import com.onesignal.ShadowFirebaseCloudMessaging;
+import com.onesignal.ShadowFirebaseApp;
 import com.onesignal.ShadowGooglePlayServicesUtil;
+import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,68 +49,90 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
+
+import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 import static junit.framework.Assert.assertTrue;
 
 @Config(packageName = "com.onesignal.example",
         shadows = {
             ShadowGooglePlayServicesUtil.class,
-            ShadowFirebaseCloudMessaging.class },
-        sdk = 21
+            ShadowOSUtils.class,
+            ShadowOneSignalRestClient.class,
+            ShadowFirebaseApp.class,
+        },
+        sdk = 28
 )
 @RunWith(RobolectricTestRunner.class)
+@LooperMode(LooperMode.Mode.LEGACY)
 public class PushRegistratorRunner {
 
    private Activity blankActivity;
-   private static boolean callbackFired;
 
    @BeforeClass // Runs only once, before any tests
    public static void setUpClass() throws Exception {
       ShadowLog.stream = System.out;
       TestHelpers.beforeTestSuite();
+      StaticResetHelper.saveStaticValues();
    }
 
    @Before // Before each test
-   public void beforeEachTest() {
+   public void beforeEachTest() throws Exception {
+      TestHelpers.beforeTestInitAndCleanup();
       blankActivity = Robolectric.buildActivity(BlankActivity.class).create().get();
-      callbackFired = false;
-      ShadowFirebaseCloudMessaging.exists = true;
+   }
+
+   @After
+   public void afterEachTest() throws Exception {
+      TestHelpers.afterTestCleanup();
+   }
+
+   static private class RegisteredHandler implements PushRegistrator.RegisteredHandler {
+      private final Thread testThread;
+      public boolean callbackFired;
+
+      RegisteredHandler(@NonNull Thread testThread) {
+         this.testThread = testThread;
+      }
+
+      @Override
+      public void complete(String id, int status) {
+         callbackFired = true;
+         testThread.interrupt();
+      }
+   }
+
+   private void initOneSignalAndWait() throws Exception {
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setAppId("11111111-2222-3333-4444-555555555555");
+      threadAndTaskWait();
+   }
+
+   private boolean performRegisterForPush() throws Exception {
+      initOneSignalAndWait();
+
+      RegisteredHandler registeredHandler = new RegisteredHandler(Thread.currentThread());
+
+      PushRegistratorFCM pushReg = new PushRegistratorFCM(blankActivity, null);
+      pushReg.registerForPush(blankActivity, "123456789", registeredHandler);
+      try {Thread.sleep(5000);} catch (Throwable t) {}
+
+      return registeredHandler.callbackFired;
    }
 
    @Test
-   public void testGooglePlayServicesAPKMissingOnDevice() {
-      PushRegistratorFCM pushReg = new PushRegistratorFCM();
-      final Thread testThread = Thread.currentThread();
-
-      pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
-         @Override
-         public void complete(String id, int status) {
-            callbackFired = true;
-            testThread.interrupt();
-         }
-      });
-      try {Thread.sleep(5000);} catch (Throwable t) {}
-
+   public void testGooglePlayServicesAPKMissingOnDevice() throws Exception {
+      ShadowOSUtils.isGMSInstalledAndEnabled = false;
+      boolean callbackFired = performRegisterForPush();
       assertTrue(callbackFired);
    }
 
    @Test
-   public void testFCMPartOfGooglePlayServicesMissing() {
-      PushRegistratorFCM pushReg = new PushRegistratorFCM();
-      ShadowFirebaseCloudMessaging.exists = false;
-
-      final Thread testThread = Thread.currentThread();
-
-      pushReg.registerForPush(blankActivity, "", new PushRegistrator.RegisteredHandler() {
-         @Override
-         public void complete(String id, int status) {
-            callbackFired = true;
-            testThread.interrupt();
-         }
-      });
-      try {Thread.sleep(5000);} catch (Throwable t) {}
-
+   public void testFCMPartOfGooglePlayServicesMissing() throws Exception {
+      ShadowOSUtils.isGMSInstalledAndEnabled = true;
+      boolean callbackFired = performRegisterForPush();
       assertTrue(callbackFired);
    }
 }
