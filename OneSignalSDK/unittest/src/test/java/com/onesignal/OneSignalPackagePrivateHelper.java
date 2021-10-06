@@ -240,7 +240,11 @@ public class OneSignalPackagePrivateHelper {
 
    public static class FCMBroadcastReceiver extends com.onesignal.FCMBroadcastReceiver {}
 
-   public static class PushRegistratorFCM extends com.onesignal.PushRegistratorFCM {}
+   public static class PushRegistratorFCM extends com.onesignal.PushRegistratorFCM {
+      public PushRegistratorFCM(@NonNull Context context, @Nullable Params params) {
+         super(context, params);
+      }
+   }
 
    public static class OneSignalRestClient extends com.onesignal.OneSignalRestClient {
       public static abstract class ResponseHandler extends com.onesignal.OneSignalRestClient.ResponseHandler {
