@@ -47,49 +47,41 @@ import java.util.concurrent.ExecutionException;
 
 class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
+   private static final String FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME";
+
    static class Params {
-      @Nullable String projectId;
-      @Nullable String appId;
-      @Nullable String apiKey;
+      // project_info.project_id
+      private static final String FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public";
+      // client.client_info.mobilesdk_app_id
+      private static final String FCM_DEFAULT_APP_ID = "1:754795614042:android:c682b8144a8dd52bc1ad63";
+      // client.api_key.current_key
+      private static final String FCM_DEFAULT_API_KEY_BASE64 = "QUl6YVN5QW5UTG41LV80TWMyYTJQLWRLVWVFLWFCdGd5Q3JqbFlV";
+
+      @NonNull private final String projectId;
+      @NonNull private final String appId;
+      @NonNull private final String apiKey;
+
+      Params() {
+         this(null, null, null);
+      }
+
       Params(
          @Nullable String projectId,
          @Nullable String appId,
          @Nullable String apiKey
       ) {
-         this.projectId = projectId;
-         this.appId = appId;
-         this.apiKey = apiKey;
+         this.projectId = projectId != null ? projectId : FCM_DEFAULT_PROJECT_ID;
+         this.appId = appId != null ? appId : FCM_DEFAULT_APP_ID;
+
+         String defaultApiKey = new String(Base64.decode(FCM_DEFAULT_API_KEY_BASE64, Base64.DEFAULT));
+         this.apiKey = apiKey != null ? apiKey : defaultApiKey;
       }
    }
-
-   private static class ParamsInternal {
-      @NonNull String projectId;
-      @NonNull String appId;
-      @NonNull String apiKey;
-      ParamsInternal(
-              @NonNull String projectId,
-              @NonNull String appId,
-              @NonNull String apiKey
-      ) {
-         this.projectId = projectId;
-         this.appId = appId;
-         this.apiKey = apiKey;
-      }
-   }
-
-   // project_info.project_id
-   private static final String FCM_DEFAULT_PROJECT_ID = "onesignal-shared-public";
-   // client.client_info.mobilesdk_app_id
-   private static final String FCM_DEFAULT_APP_ID = "1:754795614042:android:c682b8144a8dd52bc1ad63";
-   // client.api_key.current_key
-   private static final String FCM_DEFAULT_API_KEY_BASE64 = "QUl6YVN5QW5UTG41LV80TWMyYTJQLWRLVWVFLWFCdGd5Q3JqbFlV";
-
-   private static final String FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME";
 
    private FirebaseApp firebaseApp;
 
    @NonNull private final Context context;
-   @NonNull private final ParamsInternal params;
+   @NonNull private final Params params;
 
    PushRegistratorFCM(
        @NonNull Context context,
@@ -97,22 +89,12 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    ) {
       this.context = context;
 
-      String projectId = FCM_DEFAULT_PROJECT_ID;
-      String appId = FCM_DEFAULT_APP_ID;
-      String apiKey = new String(Base64.decode(FCM_DEFAULT_API_KEY_BASE64, Base64.DEFAULT));
-
-      if (params != null) {
-         if (params.projectId != null) {
-            projectId = params.projectId;
-         }
-         if (params.appId != null) {
-            appId = params.appId;
-         }
-         if (params.apiKey != null) {
-            apiKey = params.apiKey;
-         }
+      if (params == null) {
+         this.params = new Params();
       }
-      this.params = new ParamsInternal(projectId, appId, apiKey);
+      else {
+         this.params = params;
+      }
    }
 
    @Override
