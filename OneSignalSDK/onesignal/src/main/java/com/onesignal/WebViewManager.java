@@ -146,7 +146,18 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             OSUtils.runOnMainUIThread(new Runnable() {
                 @Override
                 public void run() {
-                    webViewManager.setupWebView(currentActivity, base64Str);
+                    // This try-catch is added to address this error when OSWebView is created
+                    // MissingWebViewPackageException: Failed to load WebView provider: No WebView installed
+                    try {
+                        webViewManager.setupWebView(currentActivity, base64Str);
+                    } catch (Exception e) {
+                        if (e.getMessage() != null && e.getMessage().contains("WebView")) {
+                            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error setting up WebView: ", e);
+                            e.printStackTrace();
+                        } else {
+                            throw e;
+                        }
+                    }
                 }
             });
         } catch (UnsupportedEncodingException e) {
