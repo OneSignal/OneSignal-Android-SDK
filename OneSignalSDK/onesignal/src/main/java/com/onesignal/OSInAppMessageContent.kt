@@ -12,6 +12,7 @@ internal open class OSInAppMessageContent constructor(jsonObject: JSONObject) {
     var contentHtml: String? = null
     var useHeightMargin: Boolean = true
     var useWidthMargin: Boolean = true
+    var isFullScreen: Boolean = false
     // The following properties are populated from Javascript events
     var displayLocation: WebViewManager.Position? = null
     var displayDuration: Double? = null
@@ -23,5 +24,6 @@ internal open class OSInAppMessageContent constructor(jsonObject: JSONObject) {
         var styles: JSONObject? = jsonObject.optJSONObject(STYLES)
         useHeightMargin = !(styles?.optBoolean(REMOVE_HEIGHT_MARGIN, false) ?: false)
         useWidthMargin = !(styles?.optBoolean(REMOVE_WIDTH_MARGIN, false) ?: false)
+        isFullScreen = !useHeightMargin
     }
 }
