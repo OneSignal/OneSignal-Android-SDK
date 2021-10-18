@@ -145,7 +145,8 @@ class OSInAppMessageInternal extends OSInAppMessage {
         return parsedTriggers;
     }
 
-    JSONObject toJSONObject() {
+    @Override
+    public JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {

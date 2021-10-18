@@ -29,7 +29,12 @@ package com.onesignal;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class OSInAppMessage {
+
+    public static final String IAM_ID = "messageId";
 
     /**
      * The unique identifier for this in-app message
@@ -44,6 +49,18 @@ public class OSInAppMessage {
     @NonNull
     public String getMessageId() {
         return messageId;
+    }
+
+    public JSONObject toJSONObject() {
+        JSONObject mainObj = new JSONObject();
+        try {
+            mainObj.put(IAM_ID, messageId);
+        }
+        catch(JSONException e) {
+            e.printStackTrace();
+        }
+
+        return mainObj;
     }
 
 }
