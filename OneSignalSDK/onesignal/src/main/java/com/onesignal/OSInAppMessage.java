@@ -29,6 +29,9 @@ package com.onesignal;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class OSInAppMessage {
 
     /**
@@ -44,6 +47,18 @@ public class OSInAppMessage {
     @NonNull
     public String getMessageId() {
         return messageId;
+    }
+
+    public JSONObject toJSONObject() {
+        JSONObject mainObj = new JSONObject();
+        try {
+            mainObj.put("messageId", messageId);
+        }
+        catch(JSONException e) {
+            e.printStackTrace();
+        }
+
+        return mainObj;
     }
 
 }
