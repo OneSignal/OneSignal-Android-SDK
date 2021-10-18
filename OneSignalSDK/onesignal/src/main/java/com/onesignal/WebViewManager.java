@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import static android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -132,7 +134,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull OSInAppMessageContent content) {
+    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull final OSInAppMessageContent content) {
         try {
             final String base64Str = Base64.encodeToString(
                     content.getContentHtml().getBytes("UTF-8"),
@@ -146,7 +148,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             OSUtils.runOnMainUIThread(new Runnable() {
                 @Override
                 public void run() {
-                    webViewManager.setupWebView(currentActivity, base64Str);
+                    webViewManager.setupWebView(currentActivity, base64Str, content.isFullScreen());
                 }
             });
         } catch (UnsupportedEncodingException e) {
@@ -363,7 +365,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message) {
+    private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message, final boolean isFullScreen) {
        enableWebViewRemoteDebugging();
 
        webView = new OSWebView(currentActivity);
@@ -375,7 +377,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
        // Setup receiver for page events / data from JS
        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
-
+       if (isFullScreen) {
+           webView.setSystemUiVisibility(SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+       }
        blurryRenderingWebViewForKitKatWorkAround(webView);
 
        OSViewUtils.decorViewReady(currentActivity, new Runnable() {
