@@ -5,11 +5,13 @@ import static android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
 import android.view.View;
+import android.view.Window;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
@@ -134,7 +136,20 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
+    private static void setContentSafeAreaInsets(OSInAppMessageContent content, @NonNull final Activity activity) {
+        String html = content.getContentHtml();
+        String safeAreaInsetsScript = OSJavaScriptInterface.SET_SAFE_AREA_INSETS_SCRIPT;
+        int[] insets = OSViewUtils.getWindowInsets(activity);
+        String safeAreaJSObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0] ,insets[1],insets[2],insets[3]);
+        safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject);
+        html += safeAreaInsetsScript;
+        content.setContentHtml(html);
+    }
+
     private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull final OSInAppMessageContent content) {
+        if (content.isFullScreen()) {
+            setContentSafeAreaInsets(content, currentActivity);
+        }
         try {
             final String base64Str = Base64.encodeToString(
                     content.getContentHtml().getBytes("UTF-8"),
@@ -172,9 +187,21 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         static final String JS_OBJ_NAME = "OSAndroid";
         static final String GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()";
+        static final String SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)";
+        static final String SAFE_AREA_JS_OBJECT = "{\n" +
+                "   top: %d\n" +
+                "   bottom: %d\n" +
+                "   right: %d\n" +
+                "   left: %d\n" +
+                "}";
+        static final String SET_SAFE_AREA_INSETS_SCRIPT = "\n\n" +
+                "<script>\n" +
+                "    setSafeAreaInsets(%s);\n" +
+                "</script>";
 
         static final String EVENT_TYPE_KEY = "type";
         static final String EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete";
+        static final String EVENT_TYPE_RESIZE = "resize";
         static final String EVENT_TYPE_ACTION_TAKEN = "action_taken";
         static final String EVENT_TYPE_PAGE_CHANGE = "page_change";
 
@@ -199,6 +226,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                         if (!messageView.isDragging())
                             handleActionTaken(jsonObject);
                         break;
+                    case EVENT_TYPE_RESIZE:
+                        handleResize();
+                        break;
                     case EVENT_TYPE_PAGE_CHANGE:
                         handlePageChange(jsonObject);
                         break;
@@ -208,6 +238,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+        }
+
+        private void handleResize() {
+            int[] insets = OSViewUtils.getWindowInsets(activity);
+            String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
+            String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
+            webView.evaluateJavascript(safeAreaInsetsFunction, null);
         }
 
         private void handleRenderComplete(JSONObject jsonObject) {
@@ -308,6 +345,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 // At time point the webView isn't attached to a view
                 // Set the WebView to the max screen size then run JS to evaluate the height.
                 setWebViewToMaxSize(activity);
+                int[] insets = OSViewUtils.getWindowInsets(activity);
+                String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
+                String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
+                webView.evaluateJavascript(safeAreaInsetsFunction, null);
                 webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(final String value) {
