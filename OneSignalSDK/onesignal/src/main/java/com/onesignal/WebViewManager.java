@@ -231,10 +231,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handleResize() {
-            int[] insets = OSViewUtils.getWindowInsets(activity);
-            String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
-            String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
-            webView.evaluateJavascript(safeAreaInsetsFunction, null);
+            updateSafeAreaInsets();
         }
 
         private void handleRenderComplete(JSONObject jsonObject) {
@@ -314,6 +311,13 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
+    private void updateSafeAreaInsets() {
+        int[] insets = OSViewUtils.getWindowInsets(activity);
+        String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
+        String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
+        webView.evaluateJavascript(safeAreaInsetsFunction, null);
+    }
+
     // Every time an Activity is shown we update the height of the WebView since the available
     //   screen size may have changed. (Expect for Fullscreen)
     private void calculateHeightAndShowWebViewAfterNewActivity() {
@@ -335,10 +339,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 // At time point the webView isn't attached to a view
                 // Set the WebView to the max screen size then run JS to evaluate the height.
                 setWebViewToMaxSize(activity);
-                int[] insets = OSViewUtils.getWindowInsets(activity);
-                String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
-                String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
-                webView.evaluateJavascript(safeAreaInsetsFunction, null);
+                updateSafeAreaInsets();
                 webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(final String value) {
