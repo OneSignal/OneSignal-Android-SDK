@@ -37,16 +37,6 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
             "<script>\n" +
             "    setPlayerTags(%s);\n" +
             "</script>";
-    private static final String SET_SAFE_AREA_INSETS_SCRIPT = "\n\n" +
-            "<script>\n" +
-            "    setSafeAreaInsets(%s);\n" +
-            "</script>";
-    private static final String SAFE_AREA_JS_OBJECT = "{\n" +
-            "   top: %d\n" +
-            "   bottom: %d\n" +
-            "   right: %d\n" +
-            "   left: %d\n" +
-            "}";
     private static ArrayList<String> PREFERRED_VARIANT_ORDER = new ArrayList<String>() {{
         add("android");
         add("app");
@@ -798,33 +788,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
 
     private OSInAppMessageContent parseMessageContentData(JSONObject data, OSInAppMessageInternal message) {
         OSInAppMessageContent content = new OSInAppMessageContent(data);
-        if (content.isFullScreen()) {
-            setContentSafeAreaInsets(content);
-        }
         message.setDisplayDuration(content.getDisplayDuration());
         return content;
-    }
-
-    private void setContentSafeAreaInsets(OSInAppMessageContent content) {
-        String html = content.getContentHtml();
-        String safeAreaInsetsScript = SET_SAFE_AREA_INSETS_SCRIPT;
-        int[] insets = getSafeAreaInsets();
-        String safeAreaJSObject = String.format(SAFE_AREA_JS_OBJECT, insets[0] ,insets[1],insets[2],insets[3]);
-        safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject);
-        html += safeAreaInsetsScript;
-        content.setContentHtml(html);
-    }
-
-    private int[] getSafeAreaInsets() {
-        Rect rectangle = new Rect();
-        Window window = OneSignal.getCurrentActivity().getWindow();
-        window.getDecorView().getWindowVisibleDisplayFrame(rectangle);
-        View contentView = window.findViewById(Window.ID_ANDROID_CONTENT);
-        int topInset = rectangle.top - contentView.getTop();
-        int bottomInset = contentView.getBottom() - rectangle.bottom;
-        int rightInset = rectangle.right - contentView.getRight();
-        int leftInset = contentView.getLeft() - rectangle.left;
-        return new int[] {topInset, bottomInset, rightInset, leftInset};
     }
 
     private void displayMessage(@NonNull final OSInAppMessageInternal message) {

@@ -75,6 +75,30 @@ class OSViewUtils {
        return rect;
     }
 
+    static int[] getWindowInsets(@NonNull Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return getWindowInsetsAPI23Plus(activity);
+        } else {
+            Rect frame = getWindowVisibleDisplayFrame(activity);
+            View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
+            int topInset = frame.top - contentView.getTop();
+            int bottomInset = contentView.getBottom() - frame.bottom;
+            int rightInset = frame.right - contentView.getRight();
+            int leftInset = contentView.getLeft() - frame.left;
+            return new int[]{topInset, bottomInset, rightInset, leftInset};
+        }
+    }
+
+    // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
+    @TargetApi(Build.VERSION_CODES.M)
+    private static int[] getWindowInsetsAPI23Plus(@NonNull Activity activity) {
+        View decorView = activity.getWindow().getDecorView();
+        // Use use stable heights as SystemWindowInset subtracts the keyboard
+        WindowInsets windowInsets = decorView.getRootWindowInsets();
+        return new int[] {windowInsets.getStableInsetTop(), windowInsets.getStableInsetBottom(),
+                windowInsets.getStableInsetRight(), windowInsets.getStableInsetLeft()};
+    }
+
     static int getWindowWidth(@NonNull Activity activity) {
         return getWindowVisibleDisplayFrame(activity).width();
     }
