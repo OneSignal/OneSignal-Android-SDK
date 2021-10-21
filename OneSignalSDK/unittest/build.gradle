@@ -7,7 +7,7 @@ ext {
     androidTestCoreVersion = '1.3.0'
     androidWorkTestVersion = '2.5.0'
     awaitilityVersion = '3.1.5'
-    firebaseCoreVersion = '17.2.2'
+    firebaseAnalytics = '19.0.1'
     googlePlayServicesVersion = '17.0.0'
     jUnitVersion = '4.13.2'
     reflectionsVersion = '0.9.12'
@@ -62,9 +62,8 @@ dependencies {
     // Use local OneSignal SDK
     implementation(project(':onesignal'))
 
-    // Required to shadow firebase analytics classes
     implementation "com.google.android.gms:play-services-location:$googlePlayServicesVersion"
-    implementation "com.google.firebase:firebase-core:$firebaseCoreVersion"
+    implementation "com.google.firebase:firebase-analytics:$firebaseAnalytics"
 
     implementation "com.huawei.hms:push:$huaweiHMSPushVersion"
     implementation "com.huawei.hms:location:$huaweiHMSLocationVersion"
