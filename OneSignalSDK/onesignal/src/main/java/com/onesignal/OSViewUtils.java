@@ -76,19 +76,17 @@ class OSViewUtils {
     }
 
     static int[] getWindowInsets(@NonNull Activity activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return getWindowInsetsAPI23Plus(activity);
-        } else {
-            Rect frame = getWindowVisibleDisplayFrame(activity);
-            View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
-            int topInset = frame.top - contentView.getTop();
-            int bottomInset = contentView.getBottom() - frame.bottom;
-            int rightInset = frame.right - contentView.getRight();
-            int leftInset = contentView.getLeft() - frame.left;
-            return new int[]{topInset, bottomInset, rightInset, leftInset};
-        }
+        Rect frame = getWindowVisibleDisplayFrame(activity);
+        View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
+        int topInset = frame.top - contentView.getTop();
+        int bottomInset = contentView.getBottom() - frame.bottom;
+        int rightInset = frame.right - contentView.getRight();
+        int leftInset = contentView.getLeft() - frame.left;
+        return new int[]{topInset, bottomInset, rightInset, leftInset};
     }
-
+    /*
+    Not using this method for now because the bottom value is not correct (we don't cover the bottom buttons)
+     */
     // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
     @TargetApi(Build.VERSION_CODES.M)
     private static int[] getWindowInsetsAPI23Plus(@NonNull Activity activity) {

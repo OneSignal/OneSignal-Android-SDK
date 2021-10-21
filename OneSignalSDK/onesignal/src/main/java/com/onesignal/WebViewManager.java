@@ -179,10 +179,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         static final String GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()";
         static final String SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)";
         static final String SAFE_AREA_JS_OBJECT = "{\n" +
-                "   top: %d\n" +
-                "   bottom: %d\n" +
-                "   right: %d\n" +
-                "   left: %d\n" +
+                "   top: %d,\n" +
+                "   bottom: %d,\n" +
+                "   right: %d,\n" +
+                "   left: %d,\n" +
                 "}";
         static final String SET_SAFE_AREA_INSETS_SCRIPT = "\n\n" +
                 "<script>\n" +
