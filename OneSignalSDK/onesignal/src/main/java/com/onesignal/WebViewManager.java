@@ -231,7 +231,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handleResize() {
-            updateSafeAreaInsets();
+            if (messageContent.isFullScreen()) {
+                updateSafeAreaInsets();
+            }
         }
 
         private void handleRenderComplete(JSONObject jsonObject) {
