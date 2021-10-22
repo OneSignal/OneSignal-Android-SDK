@@ -45,7 +45,7 @@ public class MainApplication extends MultiDexApplication {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
 
         // OneSignal Initialization
-        String appId = SharedPreferenceUtil.getOneSignalAppId(this);
+        String appId = null;//SharedPreferenceUtil.getOneSignalAppId(this);
         // If cached app id is null use the default, otherwise use cached.
         if (appId == null) {
             appId = getString(R.string.onesignal_app_id);
