@@ -12,6 +12,8 @@ import android.os.Looper;
 import android.util.Base64;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;

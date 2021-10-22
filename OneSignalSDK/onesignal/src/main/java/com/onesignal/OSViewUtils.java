@@ -76,6 +76,9 @@ class OSViewUtils {
     }
 
     static int[] getWindowInsets(@NonNull Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+        }
         Rect frame = getWindowVisibleDisplayFrame(activity);
         View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
         int topInset = frame.top - contentView.getTop();
@@ -88,11 +91,12 @@ class OSViewUtils {
     Not using this method for now because the bottom value is not correct (we don't cover the bottom buttons)
      */
     // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
-    @TargetApi(Build.VERSION_CODES.M)
-    private static int[] getWindowInsetsAPI23Plus(@NonNull Activity activity) {
+    @TargetApi(Build.VERSION_CODES.P)
+    private static int[] getWindowInsetsAPI28Plus(@NonNull Activity activity) {
         View decorView = activity.getWindow().getDecorView();
         // Use use stable heights as SystemWindowInset subtracts the keyboard
         WindowInsets windowInsets = decorView.getRootWindowInsets();
+        //if windowInsets.getDisplayCutout().
         return new int[] {windowInsets.getStableInsetTop(), windowInsets.getStableInsetBottom(),
                 windowInsets.getStableInsetRight(), windowInsets.getStableInsetLeft()};
     }
