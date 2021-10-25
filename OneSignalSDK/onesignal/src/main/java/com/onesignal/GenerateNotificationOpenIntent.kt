@@ -17,19 +17,9 @@ class GenerateNotificationOpenIntent(
     ): Intent {
         // We use SINGLE_TOP and CLEAR_TOP as we don't want more than one OneSignal invisible click
         //   tracking Activity instance around.
-        var intentFlags =
+        val intentFlags =
             Intent.FLAG_ACTIVITY_SINGLE_TOP or
             Intent.FLAG_ACTIVITY_CLEAR_TOP
-        if (!startApp) {
-            // If we don't want the app to launch we put OneSignal's invisible click tracking Activity on it's own task
-            //   so it doesn't resume an existing one once it closes.
-            intentFlags =
-                intentFlags or (
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
-                )
-        }
 
         return Intent(
             context,
