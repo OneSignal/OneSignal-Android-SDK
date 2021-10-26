@@ -1180,7 +1180,7 @@ public class GenerateNotificationRunner {
    }
 
    private void assertNotificationOpenedReceiver(@NonNull Intent intent) {
-      assertEquals("com.onesignal.NotificationOpenedReceiver", intent.getComponent().getClassName());
+      assertEquals(com.onesignal.NotificationOpenedReceiverAndroid22AndOlder.class.getName(), intent.getComponent().getClassName());
    }
 
    private void assertOpenMainActivityIntent(@NonNull Intent intent) {

@@ -140,6 +140,12 @@
           android:theme="@android:style/Theme.Translucent.NoTitleBar"
           android:exported="true" />
 
+        <activity
+            android:name="com.onesignal.NotificationOpenedReceiverAndroid22AndOlder"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true" />
     </application>
 
     <!-- NOTE: See release version for tags with placeholders -->

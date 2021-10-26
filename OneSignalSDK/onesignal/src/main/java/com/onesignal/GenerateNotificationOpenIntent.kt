@@ -10,26 +10,56 @@ class GenerateNotificationOpenIntent(
     private val startApp: Boolean
 ) {
 
-    private val notificationOpenedClass: Class<*> = NotificationOpenedReceiver::class.java
+    private val notificationOpenedClassAndroid23Plus: Class<*> = NotificationOpenedReceiver::class.java
+    private val notificationOpenedClassAndroid22AndOlder: Class<*> = NotificationOpenedReceiverAndroid22AndOlder::class.java
 
     fun getNewBaseIntent(
         notificationId: Int,
     ): Intent {
-        // We use SINGLE_TOP and CLEAR_TOP as we don't want more than one OneSignal invisible click
-        //   tracking Activity instance around.
-        val intentFlags =
-            Intent.FLAG_ACTIVITY_SINGLE_TOP or
-            Intent.FLAG_ACTIVITY_CLEAR_TOP
+        val intent =
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
+                getNewBaseIntentAndroidAPI23Plus()
+            else
+                getNewBaseIntentAndroidAPI22AndOlder()
 
-        return Intent(
-            context,
-            notificationOpenedClass
-        )
+        return intent
         .putExtra(
             GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
             notificationId
         )
-        .addFlags(intentFlags)
+        // We use SINGLE_TOP and CLEAR_TOP as we don't want more than one OneSignal invisible click
+        //   tracking Activity instance around.
+        .addFlags(
+            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+            Intent.FLAG_ACTIVITY_CLEAR_TOP
+        )
+    }
+
+    private fun getNewBaseIntentAndroidAPI23Plus(): Intent {
+        return Intent(
+            context,
+            notificationOpenedClassAndroid23Plus
+        )
+    }
+
+    // See NotificationOpenedReceiverAndroid22AndOlder.java for details
+    private fun getNewBaseIntentAndroidAPI22AndOlder(): Intent {
+        val intent = Intent(
+            context,
+            notificationOpenedClassAndroid22AndOlder
+        )
+
+        if (getIntentVisible() == null) {
+            // If we don't show a visible Activity put OneSignal's invisible click tracking
+            // Activity on it's own task so it doesn't resume an existing one once it closes.
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
+            )
+        }
+
+        return intent
     }
 
     /**
