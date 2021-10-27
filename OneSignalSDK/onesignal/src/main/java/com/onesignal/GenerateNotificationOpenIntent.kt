@@ -3,6 +3,7 @@ package com.onesignal
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.RequiresApi
 
 class GenerateNotificationOpenIntent(
     private val context: Context,
@@ -35,6 +36,7 @@ class GenerateNotificationOpenIntent(
         )
     }
 
+    @RequiresApi(android.os.Build.VERSION_CODES.M)
     private fun getNewBaseIntentAndroidAPI23Plus(): Intent {
         return Intent(
             context,
@@ -43,6 +45,7 @@ class GenerateNotificationOpenIntent(
     }
 
     // See NotificationOpenedReceiverAndroid22AndOlder.java for details
+    @Deprecated("Use getNewBaseIntentAndroidAPI23Plus instead for Android 6+")
     private fun getNewBaseIntentAndroidAPI22AndOlder(): Intent {
         val intent = Intent(
             context,
