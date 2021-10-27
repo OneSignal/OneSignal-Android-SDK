@@ -44,7 +44,7 @@ class GenerateNotificationOpenIntent(
         )
     }
 
-    // See NotificationOpenedReceiverAndroid22AndOlder.java for details
+    // See NotificationOpenedReceiverAndroid22AndOlder.kt for details
     @Deprecated("Use getNewBaseIntentAndroidAPI23Plus instead for Android 6+")
     private fun getNewBaseIntentAndroidAPI22AndOlder(): Intent {
         val intent = Intent(

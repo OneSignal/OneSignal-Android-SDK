@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2021 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,27 +24,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+package com.onesignal
 
-package com.onesignal;
+import android.app.Activity
+import android.content.Intent
+import android.os.Bundle
 
-import android.app.Activity;
-import android.content.Intent;
-import android.os.Bundle;
+/**
+ * This is the same as NotificationOpenedReceiver expect it doesn't contain
+ * android:taskAffinity="" in it's AndroidManifest.xml entry. This is to
+ * account for the resume behavior not working on Android API 22 and older.
+ *
+ * In Android 5.x and older, android:taskAffinity="" starts a new task as
+ * expected, however the allowTaskReparenting behavior does not happen which
+ * results in the app not resuming, when using reverse Activity trampoline.
+ * Oddly enough cold starts of the app were not a problem.
+ */
+class NotificationOpenedReceiverAndroid22AndOlder : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        NotificationOpenedProcessor.processFromContext(this, intent)
+        finish()
+    }
 
-public class NotificationOpenedReceiver extends Activity {
-
-   @Override
-   protected void onCreate(Bundle savedInstanceState) {
-      super.onCreate(savedInstanceState);
-      NotificationOpenedProcessor.processFromContext(this, getIntent());
-      finish();
-   }
-
-   @Override
-   protected void onNewIntent(Intent intent) {
-      super.onNewIntent(intent);
-      NotificationOpenedProcessor.processFromContext(this, getIntent());
-      finish();
-   }
-
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        NotificationOpenedProcessor.processFromContext(this, getIntent())
+        finish()
+    }
 }
