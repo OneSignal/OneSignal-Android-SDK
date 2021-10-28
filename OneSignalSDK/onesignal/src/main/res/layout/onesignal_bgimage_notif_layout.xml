@@ -7,6 +7,7 @@
     <!--android:textAppearance="@android:style/TextAppearance.StatusBar.EventContent.Title"-->
 
     <RelativeLayout android:id="@+id/os_bgimage_notif_bgimage_align_layout"
+                    android:layoutDirection="ltr"
                     android:layout_width="wrap_content"
                     android:layout_height="64dp"
                     android:paddingLeft="0dp"
