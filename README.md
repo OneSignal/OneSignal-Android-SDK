@@ -3,7 +3,7 @@
 </p>
 
 ### OneSignal Android Push Notification Plugin
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.onesignal/OneSignal/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.onesignal/OneSignal) [![Build Status](https://travis-ci.org/OneSignal/OneSignal-Android-SDK.svg?branch=master)](https://travis-ci.org/OneSignal/OneSignal-Android-SDK)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.onesignal/OneSignal/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.onesignal/OneSignal) [![Build Status](https://app.travis-ci.com/OneSignal/OneSignal-Android-SDK.svg?branch=main)](https://app.travis-ci.com/OneSignal/OneSignal-Android-SDK)
 
 ---
 
@@ -21,11 +21,11 @@ See OneSignal's [Android Native SDK API](https://documentation.onesignal.com/doc
 See this repository's [release tags](https://github.com/OneSignal/OneSignal-Android-SDK/releases) for a complete change log of every released version.
 
 #### Support
-Please visit this repository's [Github issue tracker](https://github.com/OneSignal/OneSignal-Android-SDK/issues) for feature requests and bug reports related specificly to the SDK.
+Please visit this repository's [Github issue tracker](https://github.com/OneSignal/OneSignal-Android-SDK/issues) for feature requests and bug reports related specifically to the SDK.
 For account issues and support please contact OneSignal support from the [OneSignal.com](https://onesignal.com) dashboard.
 
 #### Demo Project
 To make things easier, we have published demo projects in the `/Examples` folder of this repository.
 
 #### Supports:
-* Tested from Android 4.0.3 (API level 15) to Android 11 (30)
+* Tested from Android 4.1.0 (API level 16) to Android 12 (31)
