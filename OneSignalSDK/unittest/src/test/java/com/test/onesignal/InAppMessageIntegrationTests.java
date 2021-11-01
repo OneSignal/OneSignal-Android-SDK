@@ -1911,7 +1911,7 @@ public class InAppMessageIntegrationTests {
         final JSONArray jsonMessages = new JSONArray();
 
         for (OSTestInAppMessageInternal message : messages)
-            jsonMessages.put(message.toJSONObject());
+            jsonMessages.put(InAppMessagingHelpers.convertIAMtoJSONObject(message));
 
         ShadowOneSignalRestClient.setNextSuccessfulRegistrationResponse(new JSONObject() {{
             put("id", "df8f05be55ba-b2f7f966-d8cc-11e4-bed1");
