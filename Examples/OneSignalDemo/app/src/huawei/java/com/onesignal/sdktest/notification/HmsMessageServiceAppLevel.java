@@ -9,7 +9,6 @@ import com.onesignal.OneSignalHmsEventBridge;
 
 public class HmsMessageServiceAppLevel extends HmsMessageService {
 
-
     /**
      * When an app calls the getToken method to apply for a token from the server,
      * if the server does not return the token during current method calling, the server can return the token through this method later.

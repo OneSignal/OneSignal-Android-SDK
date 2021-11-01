@@ -18,11 +18,18 @@ import com.huawei.hms.push.RemoteMessage;
  */
 public class OneSignalHmsEventBridge {
 
+    /**
+     * Method used by last HMS push version 5.3.0.304 and upper
+     */
     public static void onNewToken(@NonNull Context context, @NonNull String token, @Nullable Bundle bundle) {
         OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "HmsMessageServiceOneSignal.onNewToken - HMS token: " + token + " Bundle: " + bundle);
         PushRegistratorHMS.fireCallback(token);
     }
 
+    /**
+     * This method is being deprecated
+     * @see OneSignalHmsEventBridge#onNewToken(Context, String, Bundle)
+     */
     @Deprecated
     public static void onNewToken(@NonNull Context context, @NonNull String token) {
         onNewToken(context, token, null);
