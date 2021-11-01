@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2017 OneSignal
+ * Copyright 2021 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,20 +26,4 @@
  */
 package com.onesignal
 
-import android.app.Activity
-import android.content.Intent
-import android.os.Bundle
-
-class NotificationOpenedReceiver : Activity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        NotificationOpenedProcessor.processFromContext(this, intent)
-        finish()
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        NotificationOpenedProcessor.processFromContext(this, getIntent())
-        finish()
-    }
-}
+class NotificationOpenedReceiver : NotificationOpenedReceiverBase()
