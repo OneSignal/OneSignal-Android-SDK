@@ -22,7 +22,6 @@ import com.huawei.hms.push.RemoteMessage;
  */
 public class HmsMessageServiceOneSignal extends HmsMessageService {
 
-
     /**
      * When an app calls the getToken method to apply for a token from the server,
      * if the server does not return the token during current method calling, the server can return the token through this method later.
@@ -33,7 +32,17 @@ public class HmsMessageServiceOneSignal extends HmsMessageService {
      */
     @Override
     public void onNewToken(String token, Bundle bundle) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HmsMessageServiceOneSignal onNewToken refresh token:" + token);
+
         OneSignalHmsEventBridge.onNewToken(this, token, bundle);
+    }
+
+    @Deprecated
+    @Override
+    public void onNewToken(String token) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HmsMessageServiceOneSignal onNewToken refresh token:" + token);
+
+        OneSignalHmsEventBridge.onNewToken(this, token);
     }
 
     /**

@@ -19,10 +19,19 @@ public class HmsMessageServiceAppLevel extends HmsMessageService {
      */
     @Override
     public void onNewToken(String token, Bundle bundle) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onNewToken refresh token:" + token + " bundle: " + bundle);
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HmsMessageServiceAppLevel onNewToken refresh token:" + token + " bundle: " + bundle);
 
         // Forward event on to OneSignal SDK
         OneSignalHmsEventBridge.onNewToken(this, token, bundle);
+    }
+
+    @Deprecated
+    @Override
+    public void onNewToken(String token) {
+        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HmsMessageServiceAppLevel onNewToken refresh token:" + token);
+
+        // Forward event on to OneSignal SDK
+        OneSignalHmsEventBridge.onNewToken(this, token);
     }
 
     /**
