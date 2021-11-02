@@ -1131,6 +1131,21 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Config(sdk = 23, shadows = { ShadowGenerateNotification.class })
+   public void shouldUseCorrectActivityForAndroid23Plus() throws Exception {
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      Intent[] intents = lastNotificationIntents();
+      assertEquals("android.intent.action.MAIN", intents[0].getAction());
+      assertEquals(
+         com.onesignal.NotificationOpenedReceiver.class.getName(),
+         intents[1].getComponent().getClassName()
+      );
+      assertEquals(2, intents.length);
+   }
+
+   @Test
    @Config(shadows = { ShadowGenerateNotification.class })
    public void shouldSetContentIntentForLaunchURL() throws Exception {
       generateNotificationWithLaunchURL();
@@ -1180,7 +1195,7 @@ public class GenerateNotificationRunner {
    }
 
    private void assertNotificationOpenedReceiver(@NonNull Intent intent) {
-      assertEquals("com.onesignal.NotificationOpenedReceiver", intent.getComponent().getClassName());
+      assertEquals(com.onesignal.NotificationOpenedReceiverAndroid22AndOlder.class.getName(), intent.getComponent().getClassName());
    }
 
    private void assertOpenMainActivityIntent(@NonNull Intent intent) {
