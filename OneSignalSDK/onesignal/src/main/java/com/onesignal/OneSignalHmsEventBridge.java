@@ -8,6 +8,8 @@ import androidx.annotation.Nullable;
 
 import com.huawei.hms.push.RemoteMessage;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * If you have your own {@link com.huawei.hms.push.HmsMessageService} defined in your app please also
  * call {@link OneSignalHmsEventBridge#onNewToken} and {@link OneSignalHmsEventBridge#onMessageReceived}
@@ -18,12 +20,18 @@ import com.huawei.hms.push.RemoteMessage;
  */
 public class OneSignalHmsEventBridge {
 
+    private static final AtomicBoolean firstToken = new AtomicBoolean(true);
+
     /**
      * Method used by last HMS push version 5.3.0.304 and upper
      */
     public static void onNewToken(@NonNull Context context, @NonNull String token, @Nullable Bundle bundle) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "HmsMessageServiceOneSignal.onNewToken - HMS token: " + token + " Bundle: " + bundle);
-        PushRegistratorHMS.fireCallback(token);
+        if (firstToken.compareAndSet(true, false)) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "OneSignalHmsEventBridge onNewToken - HMS token: " + token + " Bundle: " + bundle);
+            PushRegistratorHMS.fireCallback(token);
+        } else {
+            OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "OneSignalHmsEventBridge ignoring onNewToken - HMS token: " + token + " Bundle: " + bundle);
+        }
     }
 
     /**
