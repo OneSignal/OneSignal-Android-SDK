@@ -259,7 +259,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         private int getPageHeightData(JSONObject jsonObject) {
             try {
-                return WebViewManager.pageRectToViewHeight(activity, jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY));
+                return pageRectToViewHeight(activity, jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY));
             } catch (JSONException e) {
                 return -1;
             }
@@ -306,7 +306,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static int pageRectToViewHeight(final @NonNull Activity activity, @NonNull JSONObject jsonObject) {
+    private int pageRectToViewHeight(final @NonNull Activity activity, @NonNull JSONObject jsonObject) {
         try {
             int pageHeight = jsonObject.getJSONObject("rect").getInt("height");
             int pxHeight = OSViewUtils.dpToPx(pageHeight);
@@ -507,12 +507,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static int getWebViewMaxSizeX(Activity activity) {
-        return OSViewUtils.getWindowWidth(activity) - (MARGIN_PX_SIZE * 2);
+    private int getWebViewMaxSizeX(Activity activity) {
+        int margin = messageContent.isFullScreen() ? 0 : (MARGIN_PX_SIZE * 2);
+        return OSViewUtils.getWindowWidth(activity) - margin; //- (MARGIN_PX_SIZE * 2);
     }
 
-    private static int getWebViewMaxSizeY(Activity activity) {
-       return OSViewUtils.getWindowHeight(activity) - (MARGIN_PX_SIZE * 2);
+    private int getWebViewMaxSizeY(Activity activity) {
+        int margin = messageContent.isFullScreen() ? 0 : (MARGIN_PX_SIZE * 2);
+       return OSViewUtils.getWindowHeight(activity) - margin;
     }
 
     private void removeActivityListener() {
