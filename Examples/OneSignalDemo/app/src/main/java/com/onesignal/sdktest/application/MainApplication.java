@@ -68,7 +68,7 @@ public class MainApplication extends MultiDexApplication {
         });
 
         OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
-        OneSignal.pauseInAppMessages(false);
+        OneSignal.pauseInAppMessages(true);
         OneSignal.setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
