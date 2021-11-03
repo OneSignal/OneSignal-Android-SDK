@@ -79,13 +79,15 @@ class OSViewUtils {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 
         }
+        int displayDensity = (int)Resources.getSystem().getDisplayMetrics().density;
         Rect frame = getWindowVisibleDisplayFrame(activity);
         View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
         int topInset = frame.top - contentView.getTop();
         int bottomInset = contentView.getBottom() - frame.bottom;
         int rightInset = frame.right - contentView.getRight();
         int leftInset = contentView.getLeft() - frame.left;
-        return new int[]{topInset, bottomInset, rightInset, leftInset};
+        return new int[]{topInset/displayDensity, bottomInset/displayDensity,
+                rightInset/displayDensity, leftInset/displayDensity};
     }
     /*
     Not using this method for now because the bottom value is not correct (we don't cover the bottom buttons)
