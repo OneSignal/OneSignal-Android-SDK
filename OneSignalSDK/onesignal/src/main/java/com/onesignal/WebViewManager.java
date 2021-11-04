@@ -1,6 +1,5 @@
 package com.onesignal;
 
-import static android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -335,7 +334,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
             return;
 
         // Don't need a CSS / HTML height update for fullscreen
-        if (messageView.getDisplayPosition() == Position.FULL_SCREEN) {
+        if (messageView.getDisplayPosition() == Position.FULL_SCREEN && !messageContent.isFullScreen()) {
             showMessageView(null);
             return;
         }
@@ -433,7 +432,9 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
        // Setup receiver for page events / data from JS
        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
        if (isFullScreen) {
-           webView.setSystemUiVisibility(SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+           webView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                                         View.SYSTEM_UI_FLAG_IMMERSIVE |
+                                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
        }
        blurryRenderingWebViewForKitKatWorkAround(webView);
 
