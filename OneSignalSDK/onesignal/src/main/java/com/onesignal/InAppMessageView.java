@@ -1,6 +1,6 @@
 package com.onesignal;
 
-import static android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -18,11 +18,9 @@ import androidx.cardview.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
-import android.widget.FrameLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 
@@ -71,10 +69,10 @@ class InAppMessageView {
     private final Handler handler = new Handler();
     private int pageWidth;
     private int pageHeight;
-    private int marginPxSizeLeft = 0;
-    private int marginPxSizeRight = 0;
-    private int marginPxSizeTop = 0;
-    private int marginPxSizeBottom = 0;
+    private int marginPxSizeLeft = dpToPx(24);
+    private int marginPxSizeRight = dpToPx(24);
+    private int marginPxSizeTop = dpToPx(24);
+    private int marginPxSizeBottom = dpToPx(24);
     private double displayDuration;
     private boolean hasBackground;
     private boolean shouldDismissWhenActive = false;
@@ -104,10 +102,10 @@ class InAppMessageView {
      * @param content in app message content and style
      */
     private void setMarginsFromContent(OSInAppMessageContent content) {
-        this.marginPxSizeTop = 0;
-        this.marginPxSizeBottom = 0;
-        this.marginPxSizeLeft = 0;
-        this.marginPxSizeRight = 0;
+        this.marginPxSizeTop = content.getUseHeightMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeBottom = content.getUseHeightMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeLeft = content.getUseWidthMargin() ? dpToPx(24) : 0;
+        this.marginPxSizeRight = content.getUseWidthMargin() ? dpToPx(24) : 0;
     }
 
     void setWebView(WebView webView) {
@@ -280,8 +278,8 @@ class InAppMessageView {
     private void createPopupWindow(@NonNull RelativeLayout parentRelativeLayout) {
         popupWindow = new PopupWindow(
                 parentRelativeLayout,
-                WindowManager.LayoutParams.FILL_PARENT ,
-                WindowManager.LayoutParams.FILL_PARENT ,
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
                 true
         );
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -289,30 +287,9 @@ class InAppMessageView {
         // NOTE: This seems like the key to getting fullscreen under notches working?!
         popupWindow.setClippingEnabled(false);
 
-//        popupWindow.setOverlapAnchor(false);
-
         View container = (View)popupWindow.getContentView();
         System.out.println("container: " + container);
         System.out.println("container.getClass: " + container.getClass());
-
-        container.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE
-                        // Set the content to appear under the system bars so that the
-                        // content doesn't resize when the system bars hide and show.
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        // Hide the nav bar and status bar
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
-
-
-        // Windows layout
-        // LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-        // LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-
-//        popupWindow.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-//        popupWindow.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 
         int gravity = 0;
         if (!hasBackground) {
@@ -325,7 +302,7 @@ class InAppMessageView {
                     break;
                 case CENTER_MODAL:
                 case FULL_SCREEN:
-                    gravity = Gravity.NO_GRAVITY;
+                    gravity = Gravity.CENTER_HORIZONTAL;
                     break;
             }
         }
@@ -343,64 +320,6 @@ class InAppMessageView {
                 0,
                 0
         );
-
-        FrameLayout rootView = (FrameLayout)popupWindow.getContentView().getRootView();
-        System.out.println("rootView: " + rootView);
-        System.out.println("rootView.getClass: " + rootView.getClass());
-//        rootView.setFitsSystemWindows(true);
-
-        // crashes, to soon to get insets
-//        System.out.println("rootView.getRootWindowInsets(): " + rootView.getRootWindowInsets());
-//        System.out.println("rootView.getRootWindowInsets().top: " + rootView.getRootWindowInsets().getStableInsetTop());
-
-//        rootView.setTop(0);
-//        rootView.setSystemUiVisibility(SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-
-        rootView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE
-                        // Set the content to appear under the system bars so that the
-                        // content doesn't resize when the system bars hide and show.
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        // Hide the nav bar and status bar
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
-
-
-//        rootView.layout(0,0,0,0);
-//        rootView.forceLayout();
-
-//        rootView.setLayoutParams(new FrameLayout.LayoutParams(9999,9999));
-
-//        rootView.setBackgroundColor(0);
-
-//        int windowLocation[] = new int[2];
-//        rootView.getLocationInWindow(windowLocation);
-//        System.out.println("rootView.getLocationInWindow(): " + windowLocation);
-//
-//        int screenLocation[] = new int[2];
-//        rootView.getLocationOnScreen(screenLocation);
-//        System.out.println("rootView.getLocationOnScreen(): " + screenLocation);
-
-        // android.widget.PopupWindow$PopupDecorView
-
-        // Seems these are all zero
-//        rootView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-//                                                    @Override
-//                                                    public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-//                                                        System.out.println("OnApplyWindowInsetsListener: " + insets);
-//                                                        return null;
-//                                                    }
-//                                                });
-
-
-//        popupWindow.showAtLocation(
-//                currentActivity.getWindow().getDecorView(),
-//                gravity,
-//                0,
-//                -20
-//        );
     }
 
     private void setUpParentRelativeLayout(Context context) {
