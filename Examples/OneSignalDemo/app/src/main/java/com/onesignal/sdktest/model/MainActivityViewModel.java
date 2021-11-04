@@ -177,8 +177,8 @@ public class MainActivityViewModel implements ActivityViewModel {
         recyclerViewBuilder = new RecyclerViewBuilder(context);
         toaster = new Toaster(context);
 
-        appBarLayout = getActivity().findViewById(R.id.main_activity_app_bar_layout);
-        toolbar = getActivity().findViewById(R.id.main_activity_toolbar);
+//        appBarLayout = getActivity().findViewById(R.id.main_activity_app_bar_layout);
+//        toolbar = getActivity().findViewById(R.id.main_activity_toolbar);
         privacyConsentLinearLayout = getActivity().findViewById(R.id.main_activity_privacy_consent_linear_layout);
         nestedScrollView = getActivity().findViewById(R.id.main_activity_nested_scroll_view);
 
@@ -301,8 +301,8 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     @Override
     public void setupToolbar() {
-        toolbar.setTitle(Text.EMPTY);
-        getAppCompatActivity().setSupportActionBar(toolbar);
+//        toolbar.setTitle(Text.EMPTY);
+//        getAppCompatActivity().setSupportActionBar(toolbar);
     }
 
     @Override
@@ -342,7 +342,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         int scrollVisibility = hasConsent ? View.VISIBLE : View.GONE;
         privacyConsentLinearLayout.setVisibility(consentVisibility);
         nestedScrollView.setVisibility(scrollVisibility);
-        appBarLayout.setExpanded(true);
+//        appBarLayout.setExpanded(true);
 
         privacyConsentAllowButton.setOnClickListener(v -> {
             togglePrivacyConsent(true);
@@ -738,7 +738,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         if (shouldScrollTop) {
             if (nestedScrollView != null) {
                 nestedScrollView.smoothScrollTo(0, 0);
-                appBarLayout.setExpanded(true);
+//                appBarLayout.setExpanded(true);
             }
         }
         return shouldScrollTop;
@@ -759,7 +759,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         privacyConsentLinearLayout.setVisibility(consentVisibility);
         nestedScrollView.setVisibility(scrollVisibility);
 
-        appBarLayout.setExpanded(true);
+//        appBarLayout.setExpanded(true);
     }
 
 }

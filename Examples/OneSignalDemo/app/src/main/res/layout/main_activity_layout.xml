@@ -7,49 +7,6 @@
     android:fitsSystemWindows="true"
     tools:context=".activity.MainActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/main_activity_app_bar_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay"
-        android:clipChildren="false"
-        android:clipToPadding="false"
-        app:layout_behavior="com.onesignal.sdktest.ui.FixAppBarLayoutBehavior">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/main_activity_toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/colorPrimary"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            app:popupTheme="@style/AppTheme.PopupOverlay"
-            app:layout_scrollFlags="snap|scroll|enterAlways">
-
-            <RelativeLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="start|center_vertical"
-                android:clipChildren="false"
-                android:clipToPadding="false">
-
-                <ImageView
-                    android:layout_width="148dp"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentStart="true"
-                    android:layout_alignParentLeft="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginStart="-8dp"
-                    android:layout_marginLeft="-8dp"
-                    android:src="@drawable/onesignal_rectangle"
-                    android:tint="@android:color/white" />
-
-            </RelativeLayout>
-
-        </androidx.appcompat.widget.Toolbar>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
     <LinearLayout
         android:id="@+id/main_activity_privacy_consent_linear_layout"
         android:layout_width="wrap_content"
@@ -124,19 +81,19 @@
     <androidx.core.widget.NestedScrollView
         android:id="@+id/main_activity_nested_scroll_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:paddingTop="10dp"
-            android:paddingBottom="12dp"
             android:clipChildren="false"
             android:clipToPadding="false"
             android:descendantFocusability="blocksDescendants"
-            android:orientation="vertical">
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingTop="10dp"
+            android:paddingBottom="12dp">
 
             <LinearLayout
                 android:id="@+id/main_activity_account_linear_layout"
@@ -151,20 +108,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/app"
                     android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -397,11 +354,11 @@
                             android:id="@+id/main_activity_account_details_sms_relative_layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:background="@drawable/ripple_selector_red_white"
                             android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
                             android:paddingTop="12dp"
-                            android:paddingBottom="16dp"
-                            android:background="@drawable/ripple_selector_red_white">
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
 
                             <TextView
                                 android:id="@+id/main_activity_account_details_sms_text_view"
@@ -413,8 +370,8 @@
                                 android:layout_toStartOf="@id/main_activity_account_details_user_sms_text_view"
                                 android:layout_toLeftOf="@id/main_activity_account_details_user_sms_text_view"
                                 android:text="@string/sms_colon"
-                                android:textSize="16sp"
-                                android:textColor="@color/colorDarkText" />
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
 
                             <TextView
                                 android:id="@+id/main_activity_account_details_user_sms_text_view"
@@ -423,8 +380,8 @@
                                 android:layout_alignParentEnd="true"
                                 android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
-                                android:textSize="16sp"
-                                android:textColor="@color/colorDarkText" />
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
 
                         </RelativeLayout>
 
@@ -466,20 +423,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/location"
                     android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -494,13 +451,13 @@
                             android:id="@+id/main_activity_location_shared_relative_layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="16dp"
+                            android:background="@drawable/ripple_selector_red_white"
                             android:clipChildren="false"
                             android:clipToPadding="false"
-                            android:background="@drawable/ripple_selector_red_white">
+                            android:paddingStart="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -510,27 +467,27 @@
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/main_activity_location_shared_switch"
                                 android:layout_toLeftOf="@id/main_activity_location_shared_switch"
-                                android:paddingEnd="6dp"
-                                android:paddingRight="6dp"
                                 android:clipChildren="false"
                                 android:clipToPadding="false"
-                                android:orientation="vertical">
+                                android:orientation="vertical"
+                                android:paddingEnd="6dp"
+                                android:paddingRight="6dp">
 
                                 <TextView
                                     android:id="@+id/main_activity_location_shared_text_view"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:text="@string/location_shared_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText"
+                                    android:textSize="16sp" />
 
                                 <TextView
                                     android:id="@+id/main_activity_location_shared_info_text_view"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/location_shared_description"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText"
+                                    android:textSize="13sp" />
 
                             </LinearLayout>
 
@@ -549,19 +506,19 @@
                             android:layout_width="match_parent"
                             android:layout_height="56dp"
                             android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
+                            android:orientation="vertical">
 
                             <Button
                                 android:id="@+id/main_activity_location_prompt_location_button"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:text="@string/prompt_location"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
                                 android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
+                                android:text="@string/prompt_location"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
 
                         </LinearLayout>
 
@@ -587,20 +544,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/settings"
                     android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -615,13 +572,13 @@
                             android:id="@+id/main_activity_settings_subscription_relative_layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="16dp"
+                            android:background="@drawable/ripple_selector_red_white"
                             android:clipChildren="false"
                             android:clipToPadding="false"
-                            android:background="@drawable/ripple_selector_red_white">
+                            android:paddingStart="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -631,27 +588,27 @@
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/main_activity_settings_subscription_switch"
                                 android:layout_toLeftOf="@id/main_activity_settings_subscription_switch"
-                                android:paddingEnd="6dp"
-                                android:paddingRight="6dp"
                                 android:clipChildren="false"
                                 android:clipToPadding="false"
-                                android:orientation="vertical">
+                                android:orientation="vertical"
+                                android:paddingEnd="6dp"
+                                android:paddingRight="6dp">
 
                                 <TextView
                                     android:id="@+id/main_activity_settings_subscription_text_view"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:text="@string/subscribe_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText"
+                                    android:textSize="16sp" />
 
                                 <TextView
                                     android:id="@+id/main_activity_settings_subscription_info_text_view"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/app_settings_notifications_description"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText"
+                                    android:textSize="13sp" />
 
                             </LinearLayout>
 
@@ -669,7 +626,7 @@
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="1dp"
-                            android:background="@color/colorDivider"/>
+                            android:background="@color/colorDivider" />
 
 
                         <!-- Pause In-App Messages -->
@@ -678,13 +635,13 @@
                             android:id="@+id/main_activity_settings_pause_in_app_messages_relative_layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="16dp"
+                            android:background="@drawable/ripple_selector_red_white"
                             android:clipChildren="false"
                             android:clipToPadding="false"
-                            android:background="@drawable/ripple_selector_red_white">
+                            android:paddingStart="20dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="20dp"
+                            android:paddingBottom="16dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -694,27 +651,27 @@
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/main_activity_settings_pause_in_app_messages_switch"
                                 android:layout_toLeftOf="@id/main_activity_settings_pause_in_app_messages_switch"
-                                android:paddingEnd="6dp"
-                                android:paddingRight="6dp"
                                 android:clipChildren="false"
                                 android:clipToPadding="false"
-                                android:orientation="vertical">
+                                android:orientation="vertical"
+                                android:paddingEnd="6dp"
+                                android:paddingRight="6dp">
 
                                 <TextView
                                     android:id="@+id/main_activity_settings_pause_in_app_messages_text_view"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:text="@string/pause_in_app_messages_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText"
+                                    android:textSize="16sp" />
 
                                 <TextView
                                     android:id="@+id/main_activity_settings_pause_in_app_messages_info_text_view"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/app_settings_pause_in_app_messages_description"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorDarkText"
+                                    android:textSize="13sp" />
 
                             </LinearLayout>
 
@@ -722,8 +679,8 @@
                                 android:id="@+id/main_activity_settings_pause_in_app_messages_switch"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_alignParentRight="true"
                                 android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
                                 android:theme="@style/SwitchTheme" />
 
@@ -733,19 +690,19 @@
                             android:layout_width="match_parent"
                             android:layout_height="56dp"
                             android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
+                            android:orientation="vertical">
 
                             <Button
                                 android:id="@+id/main_activity_settings_revoke_consent_button"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:text="@string/revoke_consent"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
                                 android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
+                                android:text="@string/revoke_consent"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
 
                         </LinearLayout>
 
@@ -772,20 +729,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/tags"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -798,9 +755,9 @@
                             android:id="@+id/main_activity_tags_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
                             android:clipChildren="false"
-                            android:clipToPadding="false">
+                            android:clipToPadding="false"
+                            android:nestedScrollingEnabled="false">
 
                             <!-- Populated with the Tags added -->
 
@@ -811,30 +768,30 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:gravity="center"
                             android:layout_marginTop="12dp"
                             android:layout_marginBottom="12dp"
+                            android:gravity="center"
                             android:text="@string/no_tags_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textColor="@color/colorDarkText"
+                            android:textSize="18sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="56dp"
                             android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
+                            android:orientation="vertical">
 
                             <Button
                                 android:id="@+id/main_activity_add_tags_button"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:text="@string/add_tag"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
                                 android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
+                                android:text="@string/add_tag"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
 
                         </LinearLayout>
 
@@ -861,21 +818,21 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/push_notification"
-                    android:textColor="@color/colorDarkText"/>
+                    android:textColor="@color/colorDarkText" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_push_notification_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:nestedScrollingEnabled="false"
                     android:clipChildren="false"
-                    android:clipToPadding="false">
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
 
                     <!-- Populated with the Notification enum -->
 
@@ -900,20 +857,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/outcomes"
                     android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -926,19 +883,19 @@
                             android:layout_width="match_parent"
                             android:layout_height="56dp"
                             android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
+                            android:orientation="vertical">
 
                             <Button
                                 android:id="@+id/main_activity_outcomes_send_outcome_button"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:text="@string/send_outcome"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
                                 android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
+                                android:text="@string/send_outcome"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
 
                         </LinearLayout>
 
@@ -965,20 +922,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/triggers"
                     android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="16dp"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -991,9 +948,9 @@
                             android:id="@+id/main_activity_in_app_messages_triggers_recycler_view"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
                             android:clipChildren="false"
-                            android:clipToPadding="false">
+                            android:clipToPadding="false"
+                            android:nestedScrollingEnabled="false">
 
                             <!-- Populated with the Triggers added -->
 
@@ -1004,30 +961,30 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:gravity="center"
                             android:layout_marginTop="12dp"
                             android:layout_marginBottom="12dp"
+                            android:gravity="center"
                             android:text="@string/no_triggers_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textColor="@color/colorDarkText"
+                            android:textSize="18sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="56dp"
                             android:layout_gravity="center"
+                            android:background="@color/colorPrimary"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
+                            android:orientation="vertical">
 
                             <Button
                                 android:id="@+id/main_activity_add_triggers_button"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:text="@string/add_trigger"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
                                 android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
+                                android:text="@string/add_trigger"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
 
                         </LinearLayout>
 
@@ -1054,9 +1011,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/in_app_messaging"
                     android:textColor="@color/colorDarkText" />
 
@@ -1064,11 +1021,11 @@
                     android:id="@+id/main_activity_in_app_messaging_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:nestedScrollingEnabled="false"
                     android:clipChildren="false"
-                    android:clipToPadding="false">
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
 
                     <!-- Populated with the In App Message enum -->
 

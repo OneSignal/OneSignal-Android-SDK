@@ -81,11 +81,11 @@ class OSViewUtils {
         }
         Rect frame = getWindowVisibleDisplayFrame(activity);
         View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
-        int topInset = frame.top - contentView.getTop();
-        int bottomInset = contentView.getBottom() - frame.bottom;
-        int rightInset = frame.right - contentView.getRight();
-        int leftInset = contentView.getLeft() - frame.left;
-        return new int[]{topInset, bottomInset, rightInset, leftInset};
+        float topInset = (frame.top - contentView.getTop()) / Resources.getSystem().getDisplayMetrics().density;
+        float bottomInset = (contentView.getBottom() - frame.bottom) / Resources.getSystem().getDisplayMetrics().density;;
+        float rightInset = (frame.right - contentView.getRight()) / Resources.getSystem().getDisplayMetrics().density;;
+        float leftInset = (contentView.getLeft() - frame.left) / Resources.getSystem().getDisplayMetrics().density;;
+        return new int[]{Math.round(topInset), Math.round(bottomInset), Math.round(rightInset), Math.round(leftInset)};
     }
     /*
     Not using this method for now because the bottom value is not correct (we don't cover the bottom buttons)
@@ -126,8 +126,8 @@ class OSViewUtils {
             return decorView.getHeight();
 
         return decorView.getHeight() -
-               windowInsets.getStableInsetBottom() -
-               windowInsets.getStableInsetTop();
+               windowInsets.getStableInsetBottom();
+//               windowInsets.getStableInsetTop();
     }
 
     private static int getWindowHeightLollipop(@NonNull Activity activity) {
