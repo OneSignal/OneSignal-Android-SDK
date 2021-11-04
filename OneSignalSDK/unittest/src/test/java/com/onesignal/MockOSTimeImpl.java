@@ -44,6 +44,11 @@ public class MockOSTimeImpl extends OSTimeImpl {
         setMockedTime(getCurrentTimeMillis() + ms);
     }
 
+    public void advanceThreadTimeBy(long sec) {
+        long ms = sec * 1_000L;
+        setMockedCurrentThreadTimeMillis(getCurrentThreadTimeMillis() + ms);
+    }
+
     public void advanceSystemAndElapsedTimeBy(long sec) {
         long ms = sec * 1_000L;
         setMockedElapsedTime(getCurrentTimeMillis() + ms);

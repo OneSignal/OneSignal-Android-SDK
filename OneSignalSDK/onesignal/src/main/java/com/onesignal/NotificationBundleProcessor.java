@@ -27,10 +27,12 @@
 
 package com.onesignal;
 
+import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
+import static com.onesignal.OSUtils.isStringNotEmpty;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -46,9 +48,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Set;
-
-import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
-import static com.onesignal.OSUtils.isStringNotEmpty;
 
 /** Processes the Bundle received from a push.
  * This class handles both processing bundles from a BroadcastReceiver or from a Service
@@ -228,6 +227,7 @@ class NotificationBundleProcessor {
             values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
 
             dbHelper.update(NotificationTable.TABLE_NAME, values, whereStr, null);
+             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Notification calling BadgeCountUpdater.update from isNotificationToDisplay true");
             BadgeCountUpdater.update(dbHelper, context);
          }
 
@@ -249,8 +249,8 @@ class NotificationBundleProcessor {
             values.put(NotificationTable.COLUMN_NAME_MESSAGE, notificationJob.getBody().toString());
 
          // Set expire_time
-         long sentTime = jsonPayload.optLong("google.sent_time", OneSignal.getTime().getCurrentThreadTimeMillis()) / 1_000L;
-         int ttl = jsonPayload.optInt("google.ttl", OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+         long sentTime = jsonPayload.optLong(OSNotificationController.GOOGLE_SENT_TIME_KEY, OneSignal.getTime().getCurrentThreadTimeMillis()) / 1_000L;
+         int ttl = jsonPayload.optInt(OSNotificationController.GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
          long expireTime = sentTime + ttl;
          values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
 
@@ -258,8 +258,10 @@ class NotificationBundleProcessor {
 
          dbHelper.insertOrThrow(NotificationTable.TABLE_NAME, null, values);
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Notification saved values: " + values.toString());
-         if (!opened)
+         if (!opened) {
+             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Notification calling BadgeCountUpdater.update from opened false");
             BadgeCountUpdater.update(dbHelper, context);
+         }
       } catch (JSONException e) {
          e.printStackTrace();
       }

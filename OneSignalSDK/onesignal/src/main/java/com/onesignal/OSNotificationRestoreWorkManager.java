@@ -105,6 +105,7 @@ class OSNotificationRestoreWorkManager {
                     NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
             );
             showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS, false);
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Notification calling BadgeCountUpdater.update from restored work");
             BadgeCountUpdater.update(dbHelper, context);
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);

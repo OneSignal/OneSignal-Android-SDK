@@ -36,6 +36,7 @@ public class OSNotificationReceivedEvent {
 
    // Timeout time in seconds before auto calling
    private static final long PROCESS_NOTIFICATION_TIMEOUT = 25 * 1_000L;
+   private static final String COMPLETE_NOTIFICATION_THREAD = "OS_COMPLETE_NOTIFICATION";
 
    private final OSNotificationController controller;
    private final OSTimeoutHandler timeoutHandler;
@@ -83,7 +84,7 @@ public class OSNotificationReceivedEvent {
             public void run() {
                processNotification(notification);
             }
-         }, "OS_COMPLETE_NOTIFICATION").start();
+         }, COMPLETE_NOTIFICATION_THREAD).start();
          return;
       }
 

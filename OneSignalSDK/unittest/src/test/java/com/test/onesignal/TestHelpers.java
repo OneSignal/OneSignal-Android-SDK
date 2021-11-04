@@ -25,6 +25,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.OSTestInAppMessageInternal;
 import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.OSOutcomeEvent;
+import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFCMBroadcastReceiver;
@@ -128,6 +129,7 @@ public class TestHelpers {
       ShadowGenerateNotification.resetStatics();
       ShadowNotificationReceivedEvent.resetStatics();
       ShadowOneSignalNotificationManager.resetStatics();
+      ShadowBadgeCountUpdater.resetStatics();
 
       lastException = null;
    }

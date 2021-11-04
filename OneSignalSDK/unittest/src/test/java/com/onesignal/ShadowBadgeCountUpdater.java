@@ -41,4 +41,8 @@ public class ShadowBadgeCountUpdater {
    public static void updateCount(int count, Context context) {
       lastCount = count;
    }
+
+   public static void resetStatics() {
+      lastCount = 0;
+   }
 }

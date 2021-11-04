@@ -206,7 +206,6 @@ class NotificationOpenedProcessor {
       } else
          whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0);
 
-
       clearStatusBarNotifications(context, writableDb, summaryGroup);
       writableDb.update(NotificationTable.TABLE_NAME, newContentValuesWithConsumed(intent), whereStr, whereArgs);
       BadgeCountUpdater.update(writableDb, context);
