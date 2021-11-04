@@ -27,6 +27,10 @@
 
 package com.onesignal;
 
+import static com.onesignal.OSUtils.isStringNotEmpty;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
+
 import android.content.Context;
 
 import androidx.annotation.Nullable;
@@ -35,12 +39,12 @@ import androidx.work.ListenableWorker;
 
 import org.json.JSONObject;
 
-import static com.onesignal.OSUtils.isStringNotEmpty;
-
 public class OSNotificationController {
 
    // The extension service app AndroidManifest.xml meta data tag key name
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension";
+   static final String GOOGLE_SENT_TIME_KEY = "google.sent_time";
+   static final String GOOGLE_TTL_KEY = "google.ttl";
 
    private final CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter;
    private final OSNotificationGenerationJob notificationJob;
@@ -88,13 +92,14 @@ public class OSNotificationController {
    void processNotification(OSNotification originalNotification, @Nullable OSNotification notification) {
       if (notification != null) {
          boolean display = isStringNotEmpty(notification.getBody());
-         if (!display) {
-            // Save as processed to prevent possible duplicate calls from canonical ids
-            notDisplayNotificationLogic(originalNotification);
-         } else {
+         boolean ttl = isNotificationWithinTTL();
+         if (display && ttl) {
             // Set modified notification
             notificationJob.setNotification(notification);
             NotificationBundleProcessor.processJobForDisplay(this, fromBackgroundLogic);
+         } else {
+            // Save as processed to prevent possible duplicate calls from canonical ids
+            notDisplayNotificationLogic(originalNotification);
          }
          // Delay to prevent CPU spikes
          // Normally more than one notification is restored at a time
@@ -118,6 +123,32 @@ public class OSNotificationController {
          NotificationBundleProcessor.processNotification(notificationJob, true, false);
          OneSignal.handleNotificationReceived(notificationJob);
       }
+   }
+
+   public boolean isNotificationWithinTTL() {
+      boolean useTtl = OneSignal.getRemoteParamController().isRestoreTTLFilterActive();
+      if (!useTtl)
+         return true;
+
+      JSONObject jsonPayload = notificationJob.getJsonPayload();
+      long currentTime = OneSignal.getTime().getCurrentThreadTimeMillis();
+      long currentTimeInSeconds = currentTime / 1_000;
+      long sentTime;
+      // If available TTL times comes in seconds, by default is 3 days in seconds
+      int ttl;
+
+      if (jsonPayload.has(GOOGLE_TTL_KEY)) {
+         sentTime = jsonPayload.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
+         ttl = jsonPayload.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+      } else if (jsonPayload.has(HMS_TTL_KEY)) {
+         sentTime = jsonPayload.optLong(HMS_SENT_TIME_KEY, currentTime) / 1_000;
+         ttl = jsonPayload.optInt(HMS_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+      } else {
+         // If no TTL provided display notification
+         return true;
+      }
+
+      return sentTime + ttl > currentTimeInSeconds;
    }
 
    public OSNotificationGenerationJob getNotificationJob() {

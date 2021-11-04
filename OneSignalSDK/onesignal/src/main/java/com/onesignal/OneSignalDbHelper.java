@@ -451,7 +451,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
          NotificationTable.COLUMN_NAME_IS_SUMMARY   + " = 0"
       );
 
-      boolean useTtl = OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,true);
+      boolean useTtl = OneSignal.getRemoteParamController().isRestoreTTLFilterActive();
       if (useTtl) {
          String expireTimeWhere = " AND " + NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec;
          where.append(expireTimeWhere);
