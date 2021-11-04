@@ -5,15 +5,11 @@ import static android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.graphics.Rect;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
@@ -353,7 +349,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 // At time point the webView isn't attached to a view
                 // Set the WebView to the max screen size then run JS to evaluate the height.
                 setWebViewToMaxSize(activity);
-                updateSafeAreaInsets();
+                if (messageContent.isFullScreen()) {
+                    updateSafeAreaInsets();
+                }
+
                 webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(final String value) {
@@ -509,7 +508,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
     private int getWebViewMaxSizeX(Activity activity) {
         int margin = messageContent.isFullScreen() ? 0 : (MARGIN_PX_SIZE * 2);
-        return OSViewUtils.getWindowWidth(activity) - margin; //- (MARGIN_PX_SIZE * 2);
+        return OSViewUtils.getWindowWidth(activity) - margin;
     }
 
     private int getWebViewMaxSizeY(Activity activity) {

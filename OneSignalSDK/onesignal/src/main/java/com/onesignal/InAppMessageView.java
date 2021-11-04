@@ -78,6 +78,7 @@ class InAppMessageView {
     private boolean shouldDismissWhenActive = false;
     private boolean isDragging = false;
     private boolean disableDragDismiss = false;
+    private OSInAppMessageContent messageContent;
     @NonNull private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
@@ -93,6 +94,7 @@ class InAppMessageView {
         this.displayDuration = content.getDisplayDuration() == null ? 0 : content.getDisplayDuration();
         this.hasBackground = !displayLocation.isBanner();
         this.disableDragDismiss = disableDragDismiss;
+        this.messageContent = content;
         setMarginsFromContent(content);
     }
 
@@ -307,11 +309,14 @@ class InAppMessageView {
             }
         }
 
-        // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
-        //  cut off in immersive mode.
+        // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
+        // does not allow content to bleed under notches but panel does.
+        int displayType = this.messageContent.isFullScreen() ?
+                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL :
+                WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG;
         PopupWindowCompat.setWindowLayoutType(
                 popupWindow,
-                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL
+                displayType
         );
 
         popupWindow.showAtLocation(

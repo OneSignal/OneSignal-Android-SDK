@@ -76,29 +76,13 @@ class OSViewUtils {
     }
 
     static int[] getWindowInsets(@NonNull Activity activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-
-        }
         Rect frame = getWindowVisibleDisplayFrame(activity);
         View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
         float topInset = (frame.top - contentView.getTop()) / Resources.getSystem().getDisplayMetrics().density;
-        float bottomInset = (contentView.getBottom() - frame.bottom) / Resources.getSystem().getDisplayMetrics().density;;
-        float rightInset = (frame.right - contentView.getRight()) / Resources.getSystem().getDisplayMetrics().density;;
-        float leftInset = (contentView.getLeft() - frame.left) / Resources.getSystem().getDisplayMetrics().density;;
+        float bottomInset = (contentView.getBottom() - frame.bottom) / Resources.getSystem().getDisplayMetrics().density;
+        float rightInset = (frame.right - contentView.getRight()) / Resources.getSystem().getDisplayMetrics().density;
+        float leftInset = (contentView.getLeft() - frame.left) / Resources.getSystem().getDisplayMetrics().density;
         return new int[]{Math.round(topInset), Math.round(bottomInset), Math.round(rightInset), Math.round(leftInset)};
-    }
-    /*
-    Not using this method for now because the bottom value is not correct (we don't cover the bottom buttons)
-     */
-    // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
-    @TargetApi(Build.VERSION_CODES.P)
-    private static int[] getWindowInsetsAPI28Plus(@NonNull Activity activity) {
-        View decorView = activity.getWindow().getDecorView();
-        // Use use stable heights as SystemWindowInset subtracts the keyboard
-        WindowInsets windowInsets = decorView.getRootWindowInsets();
-        //if windowInsets.getDisplayCutout().
-        return new int[] {windowInsets.getStableInsetTop(), windowInsets.getStableInsetBottom(),
-                windowInsets.getStableInsetRight(), windowInsets.getStableInsetLeft()};
     }
 
     static int getWindowWidth(@NonNull Activity activity) {
@@ -126,8 +110,8 @@ class OSViewUtils {
             return decorView.getHeight();
 
         return decorView.getHeight() -
-               windowInsets.getStableInsetBottom();
-//               windowInsets.getStableInsetTop();
+               windowInsets.getStableInsetBottom() -
+               windowInsets.getStableInsetTop();
     }
 
     private static int getWindowHeightLollipop(@NonNull Activity activity) {
