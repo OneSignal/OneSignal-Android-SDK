@@ -8,7 +8,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
+import androidx.work.ListenableWorker;
 
+import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.json.JSONArray;
@@ -28,6 +31,10 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.robolectric.Shadows.shadowOf;
 
 public class OneSignalPackagePrivateHelper {
+
+   public static final String GOOGLE_SENT_TIME_KEY = OSNotificationController.GOOGLE_SENT_TIME_KEY;
+   public static final String GOOGLE_TTL_KEY = OSNotificationController.GOOGLE_TTL_KEY;
+
    public static final String IN_APP_MESSAGES_JSON_KEY = com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
 
    public static final long MIN_ON_SESSION_TIME_MILLIS = com.onesignal.OneSignal.MIN_ON_SESSION_TIME_MILLIS;
@@ -177,6 +184,10 @@ public class OneSignalPackagePrivateHelper {
       intent.putExtras(bundle);
       receiver.onReceive(context,intent);
       threadAndTaskWait();
+   }
+
+   public static void HMSEventBridge_onMessageReceive(final Context context, final RemoteMessage message) {
+      OneSignalHmsEventBridge.onMessageReceived(context, message);
    }
 
    public static void HMSProcessor_processDataMessageReceived(final Context context, final String jsonStrPayload) {

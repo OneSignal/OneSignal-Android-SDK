@@ -8,6 +8,9 @@ import androidx.annotation.Nullable;
 
 import com.huawei.hms.push.RemoteMessage;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -19,6 +22,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * OneSignal automatically gets these events.
  */
 public class OneSignalHmsEventBridge {
+
+    public static final String HMS_TTL_KEY = "hms.ttl";
+    public static final String HMS_SENT_TIME_KEY = "hms.sent_time";
 
     private static final AtomicBoolean firstToken = new AtomicBoolean(true);
 
@@ -44,6 +50,15 @@ public class OneSignalHmsEventBridge {
     }
 
     public static void onMessageReceived(@NonNull Context context, @NonNull RemoteMessage message) {
-        NotificationPayloadProcessorHMS.processDataMessageReceived(context, message.getData());
+        String data = message.getData();
+        try {
+            JSONObject messageDataJSON = new JSONObject(message.getData());
+            messageDataJSON.put(HMS_TTL_KEY, message.getTtl());
+            messageDataJSON.put(HMS_SENT_TIME_KEY, message.getSentTime());
+            data = messageDataJSON.toString();
+        } catch (JSONException e) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON");
+        }
+        NotificationPayloadProcessorHMS.processDataMessageReceived(context, data);
     }
 }

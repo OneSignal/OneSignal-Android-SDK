@@ -2,9 +2,14 @@ package com.test.onesignal;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.os.Bundle;
 
+import com.huawei.hms.push.RemoteMessage;
+import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationPayloadProcessorHMS;
+import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGenerateNotification;
+import com.onesignal.ShadowHmsRemoteMessage;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowRoboNotificationManager;
@@ -28,9 +33,11 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
 
+import static com.onesignal.OneSignalPackagePrivateHelper.HMSEventBridge_onMessageReceive;
 import static com.onesignal.OneSignalPackagePrivateHelper.HMSProcessor_processDataMessageReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_ROOT_CUSTOM;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 
@@ -50,6 +57,8 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
 
     private static final String ALERT_TEST_MESSAGE_BODY = "Test Message body";
 
+    private MockOSTimeImpl time;
+
     @BeforeClass // Runs only once, before any tests
     public static void setUpClass() throws Exception {
         ShadowLog.stream = System.out;
@@ -62,6 +71,9 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
         TestHelpers.beforeTestInitAndCleanup();
 
         ShadowOSUtils.supportsHMS(true);
+
+        time = new MockOSTimeImpl();
+        OneSignal_setTime(time);
 
         blankActivityController = Robolectric.buildActivity(BlankActivity.class).create();
         blankActivity = blankActivityController.get();
@@ -104,6 +116,26 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
         threadAndTaskWait();
 
         assertEquals(ALERT_TEST_MESSAGE_BODY, ShadowRoboNotificationManager.getLastShadowNotif().getBigText());
+    }
+
+    @Test
+    @Config(shadows = { ShadowGenerateNotification.class, ShadowHmsRemoteMessage.class, ShadowBadgeCountUpdater.class })
+    public void ttl_shouldNotDisplayNotification() throws Exception {
+        blankActivityController.pause();
+
+        long sentTime = 1_635_971_895_940L;
+        int ttl = 60;
+
+        time.setMockedCurrentThreadTimeMillis(sentTime * 1_000);
+
+        ShadowHmsRemoteMessage.data = helperBasicOSPayload();
+        ShadowHmsRemoteMessage.ttl = ttl;
+        ShadowHmsRemoteMessage.sentTime = sentTime;
+
+        HMSEventBridge_onMessageReceive(blankActivity, new RemoteMessage(new Bundle()));
+        threadAndTaskWait();
+
+        assertEquals(0, ShadowBadgeCountUpdater.lastCount);
     }
 
     // NOTE: More tests can be added but they would be duplicated with GenerateNotificationRunner

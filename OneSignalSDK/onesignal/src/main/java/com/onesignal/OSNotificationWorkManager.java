@@ -1,5 +1,7 @@
 package com.onesignal;
 
+import static com.onesignal.OSUtils.isStringNotEmpty;
+
 import android.content.Context;
 
 import androidx.annotation.NonNull;
@@ -18,8 +20,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Set;
-
-import static com.onesignal.OSUtils.isStringNotEmpty;
 
 class OSNotificationWorkManager {
 
