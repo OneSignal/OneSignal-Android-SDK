@@ -74,7 +74,6 @@ dependencies {
 
     testImplementation "androidx.test:core:$androidTestCoreVersion"
     testImplementation "androidx.work:work-testing:$androidWorkTestVersion"
-    testImplementation("androidx.concurrent:concurrent-futures:$androidConcurrentFutures")
 
     testImplementation "org.robolectric:robolectric:$roboelectricVersion"
     testImplementation "org.awaitility:awaitility:$awaitilityVersion"

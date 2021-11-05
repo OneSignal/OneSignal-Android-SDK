@@ -104,7 +104,7 @@ class OSNotificationRestoreWorkManager {
                     OneSignalDbContract.NotificationTable._ID + " DESC", // sort order, new to old
                     NotificationLimitManager.MAX_NUMBER_OF_NOTIFICATIONS_STR // limit
             );
-            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS, false);
+            showNotificationsFromCursor(context, cursor, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS);
             BadgeCountUpdater.update(dbHelper, context);
         } catch (Throwable t) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
@@ -144,7 +144,7 @@ class OSNotificationRestoreWorkManager {
      * @param cursor - Source cursor to generate notifications from
      * @param delay - Delay to slow down process to ensure we don't spike CPU and I/O on the device
      */
-    static void showNotificationsFromCursor(Context context, Cursor cursor, int delay, boolean needsWorkerThread) {
+    static void showNotificationsFromCursor(Context context, Cursor cursor, int delay) {
         if (!cursor.moveToFirst())
             return;
 
@@ -161,8 +161,7 @@ class OSNotificationRestoreWorkManager {
                     fullData,
                     dateTime,
                     true,
-                    false,
-                    needsWorkerThread
+                    false
             );
 
             if (delay > 0)
