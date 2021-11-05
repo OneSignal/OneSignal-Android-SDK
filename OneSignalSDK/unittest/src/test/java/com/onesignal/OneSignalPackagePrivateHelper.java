@@ -8,8 +8,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.concurrent.futures.CallbackToFutureAdapter;
-import androidx.work.ListenableWorker;
 
 import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.influence.data.OSTrackerFactory;

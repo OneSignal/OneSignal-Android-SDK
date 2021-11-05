@@ -28,8 +28,6 @@
 package com.onesignal;
 
 import androidx.annotation.NonNull;
-import androidx.concurrent.futures.CallbackToFutureAdapter;
-import androidx.work.ListenableWorker;
 
 class OSReceiveReceiptController {
 
@@ -51,14 +49,13 @@ class OSReceiveReceiptController {
         return sInstance;
     }
 
-    void sendReceiveReceipt(final CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter, @NonNull final String notificationId) {
+    void sendReceiveReceipt(@NonNull final String notificationId) {
         final String appId = OneSignal.appId == null || OneSignal.appId.isEmpty() ? OneSignal.getSavedAppId() : OneSignal.appId;
         final String playerId = OneSignal.getUserId();
         Integer deviceType = null;
 
         if (!remoteParamController.isReceiveReceiptEnabled()) {
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "sendReceiveReceipt disable");
-            endCallbackCompleterWithSuccess(callbackCompleter);
             return;
         }
 
@@ -78,24 +75,16 @@ class OSReceiveReceiptController {
                     @Override
                     void onSuccess(String response) {
                         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Receive receipt sent for notificationID: " + notificationId);
-                        endCallbackCompleterWithSuccess(callbackCompleter);
                     }
 
                     @Override
                     void onFailure(int statusCode, String response, Throwable throwable) {
                         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Receive receipt failed with statusCode: " + statusCode + " response: " + response);
-                        endCallbackCompleterWithSuccess(callbackCompleter);
                     }
                 });
             }
         };
 
         taskController.delayTaskByRandom(receiveReceiptRunnable);
-    }
-
-    private void endCallbackCompleterWithSuccess(CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter) {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Receive receipt ending with success callback completer: " + callbackCompleter);
-        if (callbackCompleter != null)
-            callbackCompleter.set(ListenableWorker.Result.success());
     }
 }
