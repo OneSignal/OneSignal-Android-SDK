@@ -1907,11 +1907,32 @@ public class InAppMessageIntegrationTests {
         assertEquals("in_app_messages/" + message.getMessageId() + "/impression", lastRequest.url);
     }
 
+    // Test toJSONObject() method currently only checks JSON for "messageId"
+    @Test
+    public void testInAppMessageInternalToJSONObject_messageId() throws Exception {
+        // 1. Create a basic test IAM
+        OSTestInAppMessageInternal iam = InAppMessagingHelpers.buildTestMessage(null);
+
+        // 2. Set a message ID for the IAM
+        String messageId = new String(new char[64]).replace('\0', '0');
+        iam.setMessageId(messageId);
+
+        // 3. Init
+        OneSignalInit();
+        threadAndTaskWait();
+
+        // 4. call toJSONObject() on IAM
+        JSONObject testJsonObj = iam.toJSONObject();
+
+        // 5. Check "messageId" in JSON Object
+        assertEquals(messageId, testJsonObj.optString("messageId"));
+    }
+
     private void setMockRegistrationResponseWithMessages(ArrayList<OSTestInAppMessageInternal> messages) throws JSONException {
         final JSONArray jsonMessages = new JSONArray();
 
         for (OSTestInAppMessageInternal message : messages)
-            jsonMessages.put(message.toJSONObject());
+            jsonMessages.put(InAppMessagingHelpers.convertIAMtoJSONObject(message));
 
         ShadowOneSignalRestClient.setNextSuccessfulRegistrationResponse(new JSONObject() {{
             put("id", "df8f05be55ba-b2f7f966-d8cc-11e4-bed1");

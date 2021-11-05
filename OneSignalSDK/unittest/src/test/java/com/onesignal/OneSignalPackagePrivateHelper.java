@@ -362,10 +362,6 @@ public class OneSignalPackagePrivateHelper {
          super(json);
       }
 
-      OSTestInAppMessageInternal(OSInAppMessageInternal inAppMessage) throws JSONException {
-         super(inAppMessage.toJSONObject());
-      }
-
       public void setMessageId(String messageId) {
          this.messageId = messageId;
       }
@@ -590,7 +586,8 @@ public class OneSignalPackagePrivateHelper {
 
       for (OSInAppMessageInternal message : messages) {
          try {
-            OSTestInAppMessageInternal testInAppMessage = new OSTestInAppMessageInternal(message);
+            JSONObject json = InAppMessagingHelpers.convertIAMtoJSONObject(message);
+            OSTestInAppMessageInternal testInAppMessage = new OSTestInAppMessageInternal(json);
             testInAppMessage.getRedisplayStats().setDisplayStats(message.getRedisplayStats());
             testMessages.add(testInAppMessage);
 

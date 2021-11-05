@@ -17,7 +17,9 @@ import java.util.Set;
 
 class OSInAppMessageInternal extends OSInAppMessage {
 
-    private static final String IAM_ID = "id";
+    // "id" is expected instead of "messageId" when parsing JSON from the backend
+    private static final String ID = "id";
+    private static final String IAM_ID = "messageId";
     private static final String IAM_VARIANTS = "variants";
     private static final String IAM_TRIGGERS = "triggers";
     private static final String IAM_REDISPLAY_STATS = "redisplay";
@@ -74,7 +76,8 @@ class OSInAppMessageInternal extends OSInAppMessage {
 
     OSInAppMessageInternal(JSONObject json) throws JSONException {
         // initialize simple root properties
-        super(json.getString(IAM_ID));
+        // "id" is expected instead of "messageId" when parsing JSON from the backend
+        super(json.getString(ID));
         this.variants = parseVariants(json.getJSONObject(IAM_VARIANTS));
         this.triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS));
         this.clickedClickIds = new HashSet<>();
@@ -145,7 +148,8 @@ class OSInAppMessageInternal extends OSInAppMessage {
         return parsedTriggers;
     }
 
-    JSONObject toJSONObject() {
+    @Override
+    public JSONObject toJSONObject() {
         JSONObject json = new JSONObject();
 
         try {

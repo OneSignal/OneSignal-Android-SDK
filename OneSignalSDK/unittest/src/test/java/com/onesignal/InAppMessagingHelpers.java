@@ -19,6 +19,20 @@ public class InAppMessagingHelpers {
     public static final String IAM_PAGE_ID = "12345678-1234-ABCD-1234-123456789012";
     public static final String IAM_HAS_LIQUID = "has_liquid";
 
+    // unit tests will create an IAM based off JSON of another IAM
+    // toJSONObject uses key of "messageId" so we need to replace that with "id" for creating IAM
+    public static JSONObject convertIAMtoJSONObject(OSInAppMessageInternal inAppMessage) {
+        JSONObject json = inAppMessage.toJSONObject();
+        try {
+            json.put("id", json.get("messageId"));
+            json.remove("messageId");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return json;
+    }
+
     public static boolean evaluateMessage(OSInAppMessageInternal message) {
         return OneSignal.getInAppMessageController().triggerController.evaluateMessageTriggers(message);
     }
