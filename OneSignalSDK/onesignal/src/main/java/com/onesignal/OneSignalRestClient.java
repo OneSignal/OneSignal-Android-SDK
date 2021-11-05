@@ -40,6 +40,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class OneSignalRestClient {
    static abstract class ResponseHandler {
@@ -158,6 +160,18 @@ class OneSignalRestClient {
 
          if (jsonBody != null) {
             String strJsonBody = jsonBody.toString();
+
+            Pattern eidPattern = Pattern.compile("(?<=\"external_user_id\":\").*\\\\/.*?(?=\",|\"\\})");
+            Matcher eidMatcher = eidPattern.matcher(strJsonBody);
+
+            if (eidMatcher.find()) {
+               String matched = eidMatcher.group(0);
+               if (matched != null) {
+                  String unescapedEID = matched.replace("\\/", "/");
+                  strJsonBody = eidMatcher.replaceAll(unescapedEID);
+               }
+            }
+
             OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: " + method + " SEND JSON: " + strJsonBody);
 
             byte[] sendBytes = strJsonBody.getBytes("UTF-8");
