@@ -48,8 +48,6 @@ dependencies {
     // Required for GoogleApiAvailability
     implementation 'com.google.android.gms:play-services-base:[17.0.0, 17.6.99]'
 
-    implementation("androidx.concurrent:concurrent-futures:$androidConcurrentFutures")
-
     // firebase-messaging:18.0.0 is the last version before going to AndroidX
     // firebase-messaging:19.0.0 is the first version using AndroidX
     api 'com.google.firebase:firebase-messaging:[19.0.0, 22.0.99]'

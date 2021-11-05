@@ -34,8 +34,6 @@ import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
 import android.content.Context;
 
 import androidx.annotation.Nullable;
-import androidx.concurrent.futures.CallbackToFutureAdapter;
-import androidx.work.ListenableWorker;
 
 import org.json.JSONObject;
 
@@ -46,7 +44,6 @@ public class OSNotificationController {
    static final String GOOGLE_SENT_TIME_KEY = "google.sent_time";
    static final String GOOGLE_TTL_KEY = "google.ttl";
 
-   private final CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter;
    private final OSNotificationGenerationJob notificationJob;
    private boolean restoring;
    private boolean fromBackgroundLogic;
@@ -55,12 +52,9 @@ public class OSNotificationController {
       this.restoring = restoring;
       this.fromBackgroundLogic = fromBackgroundLogic;
       this.notificationJob = notificationJob;
-      this.callbackCompleter = notificationJob.getCallbackCompleter();
    }
 
-   OSNotificationController(CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter,
-                            Context context, OSNotification notification, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
-      this.callbackCompleter = callbackCompleter;
+   OSNotificationController(Context context, OSNotification notification, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
       this.restoring = restoring;
       this.fromBackgroundLogic = fromBackgroundLogic;
 
@@ -74,7 +68,7 @@ public class OSNotificationController {
     * @see OSNotificationGenerationJob
     */
    private OSNotificationGenerationJob createNotificationJobFromCurrent(Context context, OSNotification notification, JSONObject jsonPayload, Long timestamp) {
-      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(callbackCompleter, context);
+      OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(context);
       notificationJob.setJsonPayload(jsonPayload);
       notificationJob.setShownTimeStamp(timestamp);
       notificationJob.setRestoring(restoring);
