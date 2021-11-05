@@ -68,9 +68,9 @@ class PushRegistratorHMS implements PushRegistrator {
         if (!TextUtils.isEmpty(pushToken)) {
             OneSignal.Log(LOG_LEVEL.INFO, "Device registered for HMS, push token = " + pushToken);
             callback.complete(pushToken, UserState.PUSH_STATUS_SUBSCRIBED);
-        }
-        else
+        } else {
             waitForOnNewPushTokenEvent(callback);
+        }
     }
 
     private static void doTimeOutWait() {
@@ -82,7 +82,7 @@ class PushRegistratorHMS implements PushRegistrator {
 
     // If EMUI 9.x or older getToken will always return null.
     // We must wait for HmsMessageService.onNewToken to fire instead.
-    void waitForOnNewPushTokenEvent(@NonNull RegisteredHandler callback) {
+    private void waitForOnNewPushTokenEvent(@NonNull RegisteredHandler callback) {
         doTimeOutWait();
         if (!callbackSuccessful) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "HmsMessageServiceOneSignal.onNewToken timed out.");
