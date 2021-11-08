@@ -2,10 +2,6 @@ package com.onesignal;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.graphics.Insets;
-import android.graphics.Rect;
-import android.view.View;
-import android.view.Window;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

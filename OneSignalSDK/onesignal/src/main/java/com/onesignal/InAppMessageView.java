@@ -18,6 +18,7 @@ import androidx.cardview.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
@@ -278,12 +279,15 @@ class InAppMessageView {
      * @param parentRelativeLayout root layout to attach to the pop up window
      */
     private void createPopupWindow(@NonNull RelativeLayout parentRelativeLayout) {
+
         popupWindow = new PopupWindow(
                 parentRelativeLayout,
                 hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
                 hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
                 true
         );
+
+        OSViewUtils.getWindowHeight(currentActivity);
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popupWindow.setTouchable(true);
         // NOTE: This seems like the key to getting fullscreen under notches working?!

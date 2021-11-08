@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import java.io.UnsupportedEncodingException;
 
 import static com.onesignal.OSViewUtils.dpToPx;
+import static com.onesignal.OSViewUtils.getFullbleedWindowWidth;
 
 // Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
 //   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.
@@ -136,7 +137,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private static void setContentSafeAreaInsets(OSInAppMessageContent content, @NonNull final Activity activity) {
         String html = content.getContentHtml();
         String safeAreaInsetsScript = OSJavaScriptInterface.SET_SAFE_AREA_INSETS_SCRIPT;
-        int[] insets = OSViewUtils.getWindowInsets(activity);
+        int[] insets = OSViewUtils.getCutoutAndStatusBarInsets(activity);
         String safeAreaJSObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0] ,insets[1],insets[2],insets[3]);
         safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject);
         html += safeAreaInsetsScript;
@@ -321,7 +322,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void updateSafeAreaInsets() {
-        int[] insets = OSViewUtils.getWindowInsets(activity);
+        int[] insets = OSViewUtils.getCutoutAndStatusBarInsets(activity);
         String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
         String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
         webView.evaluateJavascript(safeAreaInsetsFunction, null);
@@ -433,8 +434,11 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
        if (isFullScreen) {
            webView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                                         View.SYSTEM_UI_FLAG_IMMERSIVE |
-                                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+                   View.SYSTEM_UI_FLAG_IMMERSIVE |
+                   View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+               webView.setFitsSystemWindows(false);
+           }
        }
        blurryRenderingWebViewForKitKatWorkAround(webView);
 
@@ -508,7 +512,12 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private int getWebViewMaxSizeX(Activity activity) {
-        int margin = messageContent.isFullScreen() ? 0 : (MARGIN_PX_SIZE * 2);
+        if (messageContent.isFullScreen()) {
+            return getFullbleedWindowWidth(activity);
+        } else {
+
+        }
+        int margin = (MARGIN_PX_SIZE * 2);
         return OSViewUtils.getWindowWidth(activity) - margin;
     }
 
