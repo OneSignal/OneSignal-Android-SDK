@@ -1,6 +1,5 @@
 package com.onesignal;
 
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -145,7 +144,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull final OSInAppMessageContent content) {
-        if (content.isFullScreen()) {
+        if (content.isFullBleed()) {
             setContentSafeAreaInsets(content, currentActivity);
         }
         try {
@@ -163,7 +162,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 public void run() {
                     // Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"
                     try {
-                        webViewManager.setupWebView(currentActivity, base64Str, content.isFullScreen());
+                        webViewManager.setupWebView(currentActivity, base64Str, content.isFullBleed());
                     } catch (Exception e) {
                         // Need to check error message to only catch MissingWebViewPackageException as it isn't public
                         if (e.getMessage() != null && e.getMessage().contains("No WebView installed")) {
@@ -239,7 +238,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handleResize() {
-            if (messageContent.isFullScreen()) {
+            if (messageContent.isFullBleed()) {
                 updateSafeAreaInsets();
             }
         }
@@ -334,8 +333,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         if (messageView == null)
             return;
 
-        // Don't need a CSS / HTML height update for fullscreen
-        if (messageView.getDisplayPosition() == Position.FULL_SCREEN && !messageContent.isFullScreen()) {
+        // Don't need a CSS / HTML height update for fullscreen unless its fullbleed
+        if (messageView.getDisplayPosition() == Position.FULL_SCREEN && !messageContent.isFullBleed()) {
             showMessageView(null);
             return;
         }
@@ -349,7 +348,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 // At time point the webView isn't attached to a view
                 // Set the WebView to the max screen size then run JS to evaluate the height.
                 setWebViewToMaxSize(activity);
-                if (messageContent.isFullScreen()) {
+                if (messageContent.isFullBleed()) {
                     updateSafeAreaInsets();
                 }
 
@@ -512,7 +511,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private int getWebViewMaxSizeX(Activity activity) {
-        if (messageContent.isFullScreen()) {
+        if (messageContent.isFullBleed()) {
             return getFullbleedWindowWidth(activity);
         } else {
 
@@ -522,7 +521,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private int getWebViewMaxSizeY(Activity activity) {
-        int margin = messageContent.isFullScreen() ? 0 : (MARGIN_PX_SIZE * 2);
+        int margin = messageContent.isFullBleed() ? 0 : (MARGIN_PX_SIZE * 2);
        return OSViewUtils.getWindowHeight(activity) - margin;
     }
 
