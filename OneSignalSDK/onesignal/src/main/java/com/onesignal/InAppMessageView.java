@@ -396,7 +396,7 @@ class InAppMessageView {
         cardView.setClipChildren(false);
         cardView.setClipToPadding(false);
         cardView.setPreventCornerOverlap(false);
-        cardView.setBackgroundColor(Color.TRANSPARENT);
+        cardView.setCardBackgroundColor(Color.TRANSPARENT);
 
         return cardView;
     }
