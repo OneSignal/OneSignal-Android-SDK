@@ -62,6 +62,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -649,4 +650,7 @@ class OSUtils {
       return true;
    }
 
+   static int getRandomDelay(int minDelay, int maxDelay) {
+      return new Random().nextInt(maxDelay + 1 - minDelay) + minDelay;
+   }
 }

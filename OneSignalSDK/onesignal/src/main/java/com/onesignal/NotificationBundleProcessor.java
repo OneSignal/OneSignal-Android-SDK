@@ -185,7 +185,8 @@ class NotificationBundleProcessor {
 
         // Logic for when the notification is displayed
         String notificationId = notificationJob.getApiNotificationId();
-        OSReceiveReceiptController.getInstance().sendReceiveReceipt(notificationId);
+        Context context = notificationJob.getContext();
+        OSReceiveReceiptController.getInstance().beginEnqueueingWork(context, notificationId);
         OneSignal.getSessionManager().onNotificationReceived(notificationId);
     }
 
