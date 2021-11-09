@@ -45,7 +45,6 @@ import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.FocusDelaySyncJobService;
 import com.onesignal.FocusDelaySyncService;
-import com.onesignal.MockDelayTaskController;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
@@ -135,7 +134,6 @@ import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProc
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_handleNotificationOpen;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
-import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setDelayTaskController;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionManager;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
