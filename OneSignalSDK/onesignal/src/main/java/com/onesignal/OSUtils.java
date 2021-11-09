@@ -649,4 +649,7 @@ class OSUtils {
       return true;
    }
 
+   static int getRandomDelay(int minDelay, int maxDelay) {
+      return (int) Math.round(Math.random() * (maxDelay - minDelay + 1) + minDelay);
+   }
 }
