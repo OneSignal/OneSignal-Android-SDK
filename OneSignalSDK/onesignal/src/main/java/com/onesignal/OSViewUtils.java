@@ -83,7 +83,9 @@ class OSViewUtils {
         float leftInset = 0;
         float topInset = (frame.top - contentView.getTop()) / Resources.getSystem().getDisplayMetrics().density;
         float bottomInset = (contentView.getBottom() - frame.bottom) / Resources.getSystem().getDisplayMetrics().density;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // API 29 is the only version where the IAM bleeds under cutouts in immersize mode
+        // All other versions will not need left and right insets.
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
             DisplayCutout cutout = activity.getWindowManager().getDefaultDisplay().getCutout();
             if (cutout != null) {
                 rightInset = cutout.getSafeInsetRight() / Resources.getSystem().getDisplayMetrics().density;
