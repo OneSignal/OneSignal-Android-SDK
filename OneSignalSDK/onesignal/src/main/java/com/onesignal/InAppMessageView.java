@@ -18,7 +18,6 @@ import androidx.cardview.widget.CardView;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.WebView;
@@ -287,15 +286,10 @@ class InAppMessageView {
                 true
         );
 
-        OSViewUtils.getWindowHeight(currentActivity);
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popupWindow.setTouchable(true);
-        // NOTE: This seems like the key to getting fullscreen under notches working?!
+        // NOTE: This is required for getting fullscreen under notches working in portrait mode
         popupWindow.setClippingEnabled(false);
-
-        View container = (View)popupWindow.getContentView();
-        System.out.println("container: " + container);
-        System.out.println("container.getClass: " + container.getClass());
 
         int gravity = 0;
         if (!hasBackground) {
@@ -315,7 +309,7 @@ class InAppMessageView {
 
         // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
         // does not allow content to bleed under notches but panel does.
-        int displayType = this.messageContent.isFullScreen() ?
+        int displayType = this.messageContent.isFullBleed() ?
                 WindowManager.LayoutParams.TYPE_APPLICATION_PANEL :
                 WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG;
         PopupWindowCompat.setWindowLayoutType(
