@@ -31,9 +31,6 @@ public class StaticResetHelper {
          } else if (field.getName().equals("taskRemoteController")) {
             field.set(null, new OSTaskRemoteController(OneSignal.getRemoteParamController(), logger));
             return true;
-         } else if (field.getName().equals("delayTaskController")) {
-            field.set(null, new MockDelayTaskController(logger));
-            return true;
          } else if (field.getName().equals("inAppMessageControllerFactory")) {
             field.set(null, new OSInAppMessageControllerFactory());
             return true;
